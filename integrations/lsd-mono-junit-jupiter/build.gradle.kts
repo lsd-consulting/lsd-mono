@@ -9,8 +9,8 @@ base.archivesName.set("lsd-mono-junit-jupiter")
 description = "LSD Mono JUnit Jupiter 6 integration — extension for living sequence diagram reports"
 
 dependencies {
-    // Prefer published lsd-core; do not wire the modules/lsd-core git submodule into this build.
-    api(libs.lsd.core)
+    // First-party greenfield core (not Maven lsd-core / not modules/lsd-core submodule).
+    api(project(":integrations:lsd-mono-core"))
 
     // Compile against Jupiter 6 API so LsdExtension can implement Extension callbacks.
     api(libs.junit.jupiter.api)
@@ -20,6 +20,8 @@ dependencies {
 }
 
 tasks.test {
+    systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
+    // Legacy key still honoured by mono LsdProperties fallbacks
     systemProperty("lsd.core.report.outputDir", "build/reports/lsd-test")
 }
 

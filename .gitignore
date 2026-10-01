@@ -23,3 +23,7 @@ Thumbs.db
 # Local / secrets
 local.properties
 *.log
+
+# report-next / Node (optional local Vite builds)
+**/node_modules/
+**/report-next/dist/

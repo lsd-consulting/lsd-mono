@@ -2,6 +2,7 @@
 kotlin = "2.4.20"
 jvm = "21"
 junit = "6.1.3"
+# Legacy published lsd-core — reference only; mono builds use :integrations:lsd-mono-core
 lsd-core = "9.0.1"
 
 [libraries]
@@ -14,7 +15,8 @@ junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.re
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
 
-# Published LSD core (prefer Maven Central over building the modules/lsd-core submodule)
+# Legacy Maven Central lsd-core — do not use for first-party mono modules.
+# Prefer project(":integrations:lsd-mono-core").
 lsd-core = { module = "io.github.lsd-consulting:lsd-core", version.ref = "lsd-core" }
 
 [plugins]

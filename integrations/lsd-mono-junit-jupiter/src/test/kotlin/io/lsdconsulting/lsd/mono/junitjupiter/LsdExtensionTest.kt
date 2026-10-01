@@ -1,14 +1,14 @@
 package io.lsdconsulting.lsd.mono.junitjupiter
 
-import com.lsd.core.LsdContext
-import org.junit.jupiter.api.Assertions.assertEquals
+import io.lsdconsulting.lsd.mono.core.LsdContext
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
 /**
- * Smoke test that Jupiter 6 can load [LsdExtension] and complete a successful scenario.
+ * Smoke test that Jupiter 6 can load [LsdExtension] and complete a successful scenario
+ * via first-party [LsdContext] (lsd-mono-core).
  * Report HTML is written by the extension's [AfterAllCallback] (after this class finishes).
  */
 @ExtendWith(LsdExtension::class)

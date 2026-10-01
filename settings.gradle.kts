@@ -22,10 +22,12 @@ rootProject.name = "lsd-mono"
 
 // First-party mono projects (not git submodules). See integrations/README.md.
 // Names include "mono" so they do not clash with published lsd-consulting libs.
+include("integrations:lsd-mono-core")
+project(":integrations:lsd-mono-core").projectDir = file("integrations/lsd-mono-core")
+
 include("integrations:lsd-mono-junit-jupiter")
 project(":integrations:lsd-mono-junit-jupiter").projectDir = file("integrations/lsd-mono-junit-jupiter")
 
-// Submodules under modules/ (e.g. lsd-core) keep their own independent Gradle
-// builds and are NOT included here by default. To wire one later as a composite:
-//   includeBuild("modules/lsd-core")
-// See README.md.
+// Submodules under modules/ (e.g. lsd-core) are reference/inspiration only —
+// NOT included as Gradle projects and NOT the mono core artifact.
+// Optional later: includeBuild("modules/lsd-core") for composite experiments.

@@ -1,10 +1,10 @@
 package io.lsdconsulting.lsd.mono.junitjupiter
 
-import com.lsd.core.LsdContext
-import com.lsd.core.domain.Status
-import com.lsd.core.escapeHtml
-import com.lsd.core.properties.LsdProperties.getBoolean
-import com.lsd.core.report.PopupContent.popupHyperlink
+import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.escapeHtml
+import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.report.PopupContent.popupHyperlink
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -20,15 +20,17 @@ import java.util.regex.Pattern
  * JUnit Jupiter 6 extension that turns each test into an LSD scenario and writes
  * living sequence diagram reports when the test class finishes.
  *
+ * Uses first-party [LsdContext] from `lsd-mono-core` (greenfield), not Maven lsd-core.
+ *
  * This extension does not capture interaction events by itself — use
- * [LsdContext.capture] (or interceptors) inside tests, and optionally
- * [LsdPostTestProcessing] for late capture before the diagram is built.
+ * [LsdContext.capture] (or interceptors) inside tests once event types land, and
+ * optionally [LsdPostTestProcessing] for late capture before the diagram is built.
  */
 class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
 
     private val lsdContext: LsdContext = LsdContext.instance
     private val idGenerator = lsdContext.idGenerator
-    private val hideStacktrace = getBoolean("lsd.junit.hideStacktrace")
+    private val hideStacktrace = LsdProperties.hideStacktrace()
 
     override fun testSuccessful(context: ExtensionContext) {
         lsdContext.completeScenario(

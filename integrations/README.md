@@ -1,13 +1,16 @@
 # integrations/
 
-First-party monorepo Gradle projects that integrate LSD with third-party frameworks
-(versioned alongside this repo). These are **not** git submodules.
+First-party monorepo Gradle projects (versioned alongside this repo). These are
+**not** git submodules.
 
 Directory / project / artifact names include **`mono`** so they do not clash with
-existing published `lsd-consulting` libraries (e.g. Maven Central `lsd-junit-jupiter`).
+existing published `lsd-consulting` libraries (e.g. Maven Central `lsd-core`,
+`lsd-junit-jupiter`).
 
 | Path | Artifact | Purpose |
 |------|----------|---------|
-| `lsd-mono-junit-jupiter/` | `lsd-mono-junit-jupiter` | JUnit Jupiter **6** extension for LSD reports |
+| `lsd-mono-core/` | `lsd-mono-core` | Greenfield core: report-next UI spike + Kotlin capture/report façade |
+| `lsd-mono-junit-jupiter/` | `lsd-mono-junit-jupiter` | JUnit Jupiter **6** extension → depends on `:integrations:lsd-mono-core` |
 
-Contrast with `modules/`, which holds independently owned git submodules (e.g. `lsd-core`).
+**Product path:** `lsd-mono-core` is the mono core artifact (seeded from the
+report-next spike). Do **not** treat `modules/lsd-core` as the product core.

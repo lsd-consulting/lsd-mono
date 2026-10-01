@@ -14,8 +14,10 @@ tasks.register("printLayout") {
             """
             LSD Mono layout:
               build-logic/       — shared Gradle conventions (included build)
-              integrations/      — first-party third-party integration modules
-              modules/           — git submodules (source ownership)
+              integrations/      — first-party greenfield modules
+                lsd-mono-core/           — core + report-next spike
+                lsd-mono-junit-jupiter/  — JUnit 6 → mono-core
+              modules/           — git submodules (reference only; not mono core)
               gradle/            — version catalog + wrapper
             """.trimIndent()
         )
