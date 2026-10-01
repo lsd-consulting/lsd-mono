@@ -1,7 +1,8 @@
 # LSD Mono
 
 Local-only Gradle monorepo for LSD Consulting work. It owns shared build
-conventions and holds related repositories as git submodules under `modules/`.
+conventions, first-party integration modules, and related repositories as git
+submodules under `modules/`.
 
 ## Status
 
@@ -12,9 +13,11 @@ Do not push or create a GitHub repository unless that is decided explicitly late
 
 ```
 lsd-mono/
-├── build-logic/          # Included Gradle build (convention plugins, catalog wiring)
-├── modules/              # Git submodules (source ownership)
-│   └── lsd-core/         # https://github.com/lsd-consulting/lsd-core.git
+├── build-logic/                      # Included Gradle build (convention plugins)
+├── integrations/                     # First-party mono Gradle projects (versioned here)
+│   └── lsd-mono-junit-jupiter/       # JUnit Jupiter 6 / LSD reporting extension
+├── modules/                          # Git submodules (source ownership)
+│   └── lsd-core/                     # https://github.com/lsd-consulting/lsd-core.git
 ├── gradle/
 │   ├── libs.versions.toml
 │   └── wrapper/
@@ -25,6 +28,11 @@ lsd-mono/
 
 - **`build-logic/`** — shared config: version catalog from `gradle/libs.versions.toml`,
   and convention plugins such as `lsd.kotlin-jvm` and `lsd.common`.
+- **`integrations/`** — monorepo-owned libraries that integrate LSD with third-party
+  frameworks (included as Gradle subprojects). Names include **`mono`**
+  (e.g. `lsd-mono-junit-jupiter`) so they do not clash with published
+  `lsd-consulting` artifacts. Keep these out of `modules/` so submodule layout
+  stays unambiguous.
 - **`modules/`** — submodules for source ownership. Submodule projects keep their
   own Gradle builds; the root does **not** require building them to succeed.
 
@@ -37,7 +45,8 @@ lsd-mono/
 
 ```bash
 cd lsd-mono
-./gradlew projects          # scaffold + included build-logic
+./gradlew projects          # scaffold + included build-logic + integrations
+./gradlew build             # build first-party projects (e.g. :integrations:lsd-mono-junit-jupiter)
 ./gradlew printLayout       # layout reminder
 ```
 
@@ -59,12 +68,13 @@ plugins {
 }
 ```
 
-## Submodules vs Gradle composite
+## Submodules vs first-party projects
 
 | Concern | Approach |
 |---------|----------|
-| Source ownership / version pin | Git submodule under `modules/` |
-| Build from root today | Not required; submodule builds stay independent |
+| Source ownership / version pin of external repos | Git submodule under `modules/` |
+| Versioned third-party integrations owned by this mono | Gradle project under `integrations/` with a `mono` name |
+| Build from root today | `integrations/*` included; `modules/*` stay independent |
 | Optional composite later | `includeBuild("modules/lsd-core")` in root `settings.gradle.kts` |
 
 ## Adding another submodule
@@ -75,4 +85,4 @@ git add .gitmodules modules/<repo>
 git commit -m "Add modules/<repo> submodule"
 ```
 
-See also `modules/README.md`.
+See also `modules/README.md` and `integrations/README.md`.
