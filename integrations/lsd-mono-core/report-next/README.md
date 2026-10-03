@@ -77,7 +77,7 @@ Absolute paths (this machine):
 | Runtime | **Vanilla TS** (no React/Vue) | Tiny shipped JS; reports stay self-contained; no framework tax in the jar later |
 | Diagrams | **Custom SVG** from domain events | Full CSS/a11y control, clickable message hits, activations, notes, dividers — no PlantUML / Mermaid runtime in the browser |
 | Colour | **OKLCH tokens** + dark/light/high contrast | `d` or the theme button cycles dark → light → high contrast. Persisted as `lsd-report-next-theme`. Print uses a light page. |
-| Overlays | **`<dialog>`** | Native focus trap / Esc; replaces CSS `:target` hash overlays |
+| Inspector | **Side panel** | Keeps the diagram active; lazy payloads, copy, focus return, and `#msg=` deep links |
 | Typography | Geist → system-ui fallback | Product feel when online; readable offline via system fonts |
 | State | In-memory filter/selection | Spike-sized; maps cleanly to a future Preact/lit island if needed |
 
@@ -92,16 +92,16 @@ Compared to `lsd-core` main / Option A shell refresh:
 | Capability | lsd-core today (incl. shell refresh) | This spike |
 |------------|--------------------------------------|------------|
 | Sequence look | PlantUML mono SVG | Custom SVG with participant cards, activation bars, duration chips, glow-on-hover |
-| Message detail | CSS `:target` hash overlays | Modal `<dialog>` + copy payload + type/from→to pills |
-| Navigation | Sticky chips + jump menu | Sidebar + status histogram + `j`/`k` keyboard nav |
-| Search | Scenario title filter | Title + description + facts |
+| Message detail | CSS `:target` hash overlays | Side inspector + lazy payload + copy + type/from→to pills |
+| Navigation | Sticky chips + jump menu | Sidebar + status histogram + `j`/`k` keyboard nav, diagram Up/Down/Enter, minimap, and deep links |
+| Search | Scenario title filter | Title + description + facts, plus in-diagram message/note find |
 | Theme | Light-only GitHub-ish tokens | Dark-first + light + persisted preference |
 | Mobile | Improved in Option A | Sidebar collapses to grid; toolbar wraps; diagram scrolls horizontally |
 | Offline chrome | CDN d3 / hljs / mark.js (unless embed #354) | No diagram CDN; fonts optional |
-| a11y | Partial | Focus rings, `aria-pressed` / `aria-current`, Tab onto messages, reduced-motion |
+| a11y | Partial | Focus rings, `aria-pressed` / `aria-current`, one tab stop with message navigation, real position metadata, reduced-motion, and axe checks |
 | Feel | Test-report artifact | Product UI you’d book as a “report experience” |
 
-Honest gaps vs production PlantUML today: sprite includes, component diagrams, `newpage` split, short arrows, full colour/skinparam fidelity. Those are migration work, not spike goals.
+Remaining gaps: sprite includes and full PlantUML colour/skinparam fidelity are intentionally out; the opt-in component graph is not yet embedded in the sequence shell; payload pretty-print/size limits and density modes remain open. Sections, short arrows, notes, delays, spacers, clickable arrows, and the major accessibility/UX checks are shipped.
 
 ---
 
@@ -148,12 +148,9 @@ Replace PlantUML + Handlebars with custom SVG (this spike) as the only engine.
 - Keep PlantUML for **component** diagrams until a second renderer exists.
 - Option A chrome can ship now on `lsd-core` without blocking this track.
 
-### Suggested sequencing
+### Current Mono path
 
-1. Ship Option A on `lsd-core` (responsive chrome, low risk).
-2. Stabilize a **ReportJson** schema from existing domain (no UI rewrite required).
-3. Embed this shell as `lsd.core.reportEngine=next` experimental.
-4. Decision gate: custom SVG vs keep PlantUML+postprocess vs Mermaid — based on parity + jar size + mobile readability.
+The JVM façade now emits `ReportJson` and injects it into the packaged shell. The remaining product work is Gradle-wired Vite packaging, optional component-graph embedding, and the open payload/density polish listed above.
 
 ---
 
@@ -175,7 +172,7 @@ Replace PlantUML + Handlebars with custom SVG (this spike) as the only engine.
 - No public GitHub repo / no npm publish  
 - No merge into `lsd-core` / no #355 pollution  
 - No PlantUML parity matrix completion  
-- No JVM emitter yet (sample data is hand-authored TS)
+- The demo sample data is hand-authored TS; captured reports are emitted by the parent JVM façade
 
 ---
 

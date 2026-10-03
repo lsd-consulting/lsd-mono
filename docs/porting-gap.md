@@ -4,7 +4,7 @@ Next steps: docs/next-steps.md
 
 **Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
-**Inspected (local tree, slices through P1 diagram UX, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
+**Inspected (local tree, through the UX checks, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
 
 Legacy is **inspiration and migration API only** — not the product path. Generating PlantUML as the product renderer is explicitly **out**.
 
@@ -37,7 +37,7 @@ These are **implemented**, not stubs, unless noted.
 | Scenario / report / index / clear / clearScenarioEvents | `LsdContext.kt` |
 | `ReportJson` + `window.__LSD_REPORT__` injection into shell | `report/ReportWriter.renderShell`; locked by `CaptureToJsonTest` |
 | Minimal listing HTML + `report.json` / `*-report.json` | `ReportWriter.writeReport` |
-| report-next chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light theme, keyboard (`/ j k Enter d ? Esc`), message `<dialog>` + copy | `report-next/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
+| report-next chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, minimap, message deep links, and reduced-motion support | `report-next/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
 | Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report-next/src/lib/sequence-diagram.ts` |
 | JUnit Jupiter 6 extension + `@LsdPostTestProcessing` | `LsdExtension.kt` — success / fail / disabled / aborted / nested / post-processing; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
 | Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — **no longer used by the JUnit extension**. Left as a migration shim only. |
@@ -45,10 +45,6 @@ These are **implemented**, not stubs, unless noted.
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
 | Component graph from captured messages | `report/ComponentGraph.kt`. Opt-in `lsd.mono.components.enabled` (default **false**). Per-scenario `components` on report JSON, combined `components.json` + labelled SVG. **Landed 2026-10-03.** Not PlantUML. |
 | Diagram zoom, fit, hide columns, in-diagram find | report-next toolbar on the sequence diagram. Out / Fit / In, ctrl or meta + wheel, fit-to-width (clamped). Hide/show is in-memory per diagram: the column goes, messages and anchored notes that need it are omitted, other columns reflow. Find highlights message labels and notes with a `[match]` cue and a live count. **Landed 2026-10-03.** Not colour-only. Virtualisation and the sticky header stay. |
-
-**Stubs / thin surfaces (do not treat as done):**
-
-- Module README still says injection is deferred; code + `CaptureToJsonTest` show injection **works** — README is stale. Component reports are no longer a stub.
 
 ---
 
@@ -73,7 +69,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |--|--|
 | **Legacy** | Caps events per diagram (`ReportOptions.maxEventsPerDiagram`) and splits — a workaround for PlantUML SVG size / browser pain. |
 | **Shipped** | `report-next/src/lib/layout.ts` lays out rows in CSS pixels. `virtualRowRange` paints only the scroll window plus overscan. Sticky participant header sits inside the diagram scrollport so names stay visible. Full event list stays in JSON. |
-| **Still open** | Density modes. Browser check vs legacy is docs/next-steps.md (not the N≥500 note here). Zoom and fit landed in the diagram UX slice; horizontal scroll is the pan. |
+| **Still open** | Density modes. Zoom and fit landed in the diagram UX slice; horizontal scroll is the pan. |
 | **Test** | `layout.test.ts` (`npm test` in `report-next`) — scrollTop + viewport → row range, including sticky-header inset and overscan. |
 
 #### P1 — Note left / note right — **landed 2026-10-03**
@@ -148,23 +144,23 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### 3.2 Report generation parity
 
-#### P0 — Multi-scenario report UX already works; harden contract + status rollup tests
+#### P0 — Multi-scenario report UX and status rollup — **landed 2026-10-03**
 
 | | |
 |--|--|
 | **Legacy** | Multiple `completeScenario` → one HTML report with contents menu when `scenarios.size > 1`; overall status from worst of ERROR > FAILURE > SUCCESS (`LsdContext.determineOverallStatus`). |
-| **Mono today** | Same multi-scenario JSON model + report-next sidebar; overall status CSS on listing/index. Covered partially by capture tests, not a dedicated multi-status golden. |
-| **Greenfield** | Keep JSON as source of truth; ensure index + listing + shell all share status vocabulary (`success` / `warn` / `error`). |
-| **Priority** | **P0** (tests + contract polish) |
-| **Test** | Golden JSON: 3 scenarios (success/warn/error); assert rollup and filter chips counts. |
+| **Mono** | Same multi-scenario JSON model + report-next sidebar; overall status uses the `success` / `warn` / `error` vocabulary across listing and index. |
+| **Shipped** | JSON contract and the three-scenario success/warn/error rollup are locked by `MultiScenarioStatusGoldenTest` and `multi-scenario-status.json`. |
+| **Test** | Golden JSON asserts per-scenario status and report-level rollup. |
+
 
 #### P0 — Message payload / popup UX in the **product** shell
 
 | | |
 |--|--|
 | **Legacy** | Message labels are PlantUML links to `#id` overlays; `DataHolder` list feeds popup content; `PopupContent.popupHyperlink` for arbitrary HTML (e.g. stacktraces). `javascript` partial loads `custom.js` for scroll/open helpers. |
-| **Mono today** | Message `data` opens report-next `<dialog>` (good). **JUnit failures landed 2026-10-03** as scenario `error: { headline, message, stack }` — plain-text `description`, no `:target` overlay. report-next shows the message as escaped text and opens the stack in the existing dialog (`Show stack trace`). `PopupContent` remains unused by the extension. |
-| **Still open** | Pretty-print / size limits for message payloads (P1). Browser check that the dialog copy button works. |
+| **Mono today** | Message `data` opens the report-next side inspector. **JUnit failures landed 2026-10-03** as scenario `error: { headline, message, stack }` — plain-text `description`, no `:target` overlay. report-next shows the message as escaped text and opens the stack in the inspector (`Show stack trace`). `PopupContent` remains unused by the extension. |
+| **Still open** | Pretty-print / size limits for message payloads (P1). Browser check that the inspector copy button works. |
 | **Priority** | **P1** for payload polish. The JUnit structured-failure slice is **done**. |
 | **Test** | `LsdExtensionOutcomesTest` (TempDir, deterministic ids) asserts failed/aborted JSON has `headline` / `message` / `stack` and no `overlay`. `scenario-summary.test.ts` locks escaped message HTML and that the stack is not inlined. |
 
@@ -231,25 +227,18 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ---
 
-### 3.4 UX the spike still lacks for large diagrams
+### 3.4 UX gaps that remain
 
-| Capability | report-next **has** | Still **needed** | Priority |
-|------------|---------------------|------------------|----------|
-| Sticky topbar / sidebar | Yes (`position: sticky` in `app.css`) | Sticky **participant header** inside the diagram scrollport — **landed 2026-10-03** | done |
-| Search | Scenarios + facts, plus in-diagram label/note find (`[match]` text, underline, live count) — **landed 2026-10-03** | Scenario search stays separate | done |
-| Themes | Dark/light + high contrast, persisted (`ui/theme.ts`, key `lsd-report-next-theme`). Print stylesheet forces a light page and hides search, filters, theme, zoom, and section jumps. **Landed 2026-10-03** | — | done |
-| Keyboard | `/ j k Enter d ? Esc` | Diagram-local nav (next message with data) | P1 |
-| Message detail | `<dialog>` + copy | Structured pretty-print for XML/JSON; size limits | P1 |
-| Virtualisation | **Yes** — `virtualRowRange` + overscan (`layout.ts`) | Recycle DOM nodes (today the window SVG is rebuilt on scroll) | done (rebuild is enough for now) |
-| Zoom / fit | Out / Fit / In, ctrl or meta + wheel, fit-to-width. Horizontal scroll is the pan. **Landed 2026-10-03** | Minimap, density modes | done (minimap still out) |
-| Hide / focus participants | **Yes** — in-memory show/hide. Hidden state is the words `shown` / `hidden` plus `aria-pressed`, not colour alone. **Landed 2026-10-03** | Focus-only mode | done |
-| Section / page nav | **Yes** — in-diagram jump list scrolls to the section row | — | done |
+The large-diagram UX baseline is shipped: sticky participant header, scenario and in-diagram search, dark/light/high-contrast themes, keyboard message navigation, 24-pixel message hit targets, real `aria-posinset` / `aria-setsize`, side inspector with lazy payloads, minimap and `#msg=` links, zoom/fit, participant toggles, reduced motion, and axe/theme/Fit checks. These are not open tasks.
 
-**Themes.** Dark, light, and high contrast persist in `report-next/src/ui/theme.ts` (`localStorage` key `lsd-report-next-theme`, values `dark` | `light` | `contrast`, `prefers-color-scheme` fallback, `data-theme` on the document). Cycle with the theme button or `d`: dark → light → high contrast → dark. The button text is `HC` in high contrast and its accessible name states the theme. Print CSS (`@media print` in `app.css`) forces a light background and hides interactive chrome. **Landed 2026-10-03.**
+| Area | Remaining work | Priority |
+|------|----------------|----------|
+| Large diagrams | Density modes; the virtual window SVG is rebuilt on scroll rather than recycling nodes. | P2 |
+| Message payloads | Pretty-print / size limits for payloads; browser check that the inspector copy button works. | P1 |
+| Metrics navigation | Focus highlight when an insight target is outside the virtual window beyond a scroll. | P1 |
+| Component graph | Render the graph inside the report-next shell; add UI smoke coverage. | P1 |
 
-**Accessibility.** Do not rely on colour alone for status (`success` / `warn` / `error`), message types, or theme. High contrast pairs status words with border style (solid / dashed / double) and histogram patterns. A coloured activation bar adds a hatch and the words `coloured activation`.
-
----
+**Themes and accessibility.** Dark, light, and high contrast persist in `report-next/src/ui/theme.ts`. Status, message types, and coloured activation use text, border, hatch, or shape cues in addition to colour. Print CSS forces a light page and paints every row so virtualisation does not clip printed output.
 
 ### 3.5 Integrations beyond JUnit smoke
 
@@ -258,7 +247,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | Companion junit module drives capture; core provides context + popups. |
-| **Shipped** | `ScenarioError` / scenario JSON `error` (`headline`, `message`, `stack`). Descriptions are plain text (`Test passed` / `Test failed` / `Test aborted` / `Test disabled: …`). Disabled maps to `warn` with no `error` object. Aborted maps to `warn` **with** `error`. report-next renders the message as text and the stack via the message dialog. Combined component graph is opt-in (`lsd.mono.components.enabled`, default false) and is a real graph when enabled (**landed 2026-10-03**). |
+| **Shipped** | `ScenarioError` / scenario JSON `error` (`headline`, `message`, `stack`). Descriptions are plain text (`Test passed` / `Test failed` / `Test aborted` / `Test disabled: …`). Disabled maps to `warn` with no `error` object. Aborted maps to `warn` **with** `error`. report-next renders the message as text and the stack via the side inspector. Combined component graph is opt-in (`lsd.mono.components.enabled`, default false) and is a real graph when enabled (**landed 2026-10-03**). |
 | **Still open** | Hide-stacktrace covered by the property but not a dedicated test. No browser click-through of “Show stack trace”. |
 | **Test** | `LsdExtensionOutcomesTest`: success, failed, disabled, aborted, nested class, `@LsdPostTestProcessing` captures `post-processing`, components file absent unless enabled. When enabled, the file is an SVG graph (`sync, lost x3`), not the old placeholder. |
 
@@ -286,31 +275,20 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ---
 
-## 4. Suggested port order (slices)
+## 4. Completed slices (history)
 
-1. **P0 — JSON contract freeze + multi-scenario / status goldens**  
-   Lock `ReportJson` as the migration boundary; fix stale README claims.  
-   Slice 1 landed 2026-10-03: golden `multi-scenario-status.json` locks per-scenario `success` / `warn` / `error` and report-level rollup `error`.
+The following slices are complete and remain here as migration history rather than open work:
 
-2. **P0 — Sections + large-diagram virtualisation + sticky participant header**  
-   Replace `newpage` / `maxEventsPerDiagram` splits with continuous, scrollable UX.  
-   Slice 2 landed 2026-10-03: `kind: "section"` (`LsdContext.section` / DSL `section`), jump list, one diagram, activations kept across sections, `virtualRowRange` + sticky participant header. Zoom/pan stays P1. Colour-blind cues are tracked next to the theme note and were not part of this slice.
+1. JSON contract freeze and multi-scenario/status goldens.
+2. Sections, continuous large-diagram virtualisation, and sticky participant header.
+3. JUnit structured failures and extension outcome coverage.
+4. Remaining sequence event kinds: notes, delay, spacer, short arrows, LOST, and BI_DIRECTIONAL.
+5. Metrics insights, properties, and label truncation.
+6. Component graph generation (combined and per-scenario SVG).
+7. Diagram UX: zoom, fit, participant toggles, in-diagram find, keyboard navigation, inspector, minimap, deep links, reduced motion, and accessibility checks.
+8. Lifeline colour, timestamps, print, high contrast, clickable arrows, and browser performance results.
 
-3. **P0 — JUnit structured failures + richer extension tests**  
-   Slice 3 landed 2026-10-03: scenario `error` (`headline`, `message`, `stack`), plain-text descriptions, extension outcomes test (success / fail / disabled / aborted / nested / post-processing), components report opt-in via `lsd.mono.components.enabled` (default off). The graph itself landed in slice 6.
-
-4. **P1 — Remaining sequence event kinds** — **landed 2026-10-03**: note left/right, delay, spacer, short arrows, LOST X / BI dual heads (shape + label cues). Zoom stayed later.
-
-5. **P1 — Metrics insights + ReportOptions/properties**; label truncation. **Landed 2026-10-03.** `lsd.mono.metrics.enabled` defaults on. `options.labelMaxWidth` (default 200). Insights are `bottleneck` or `slowest` (max 5). No diagram theme, no max-events split, no zoom. Component graph is slice 6.
-
-6. **P1 — Component graph** from messages (combined + per-scenario) in SVG. **Landed 2026-10-03.** `lsd.mono.components.enabled` (default false). Edge rule matches legacy types; responses and short arrows are excluded; duplicates collapse to one edge with `count`. `components.json` + labelled SVG. Not inside the sequence shell. No zoom/pan.
-
-
-7. **P1 — Diagram UX polish** — **landed 2026-10-03.** Zoom (Out / Fit / In and ctrl or meta + wheel), fit-to-width, hide/show participant columns (page memory only; a message or anchored note that needs a hidden column is omitted and the other columns reflow), in-diagram find for message labels and notes (`[match]` text plus underline, live count that names hits on a hidden column). Not colour-only. The sticky participant header and virtual rows stay; scroll offsets are divided by the zoom scale before the row window is chosen. Scenario search is unchanged.
-
-8. **P2 — lifeline colour, timestamps, print, high contrast** — **landed 2026-10-03.** Optional activate `colour` (hatch + `coloured activation` when set; default bar unchanged). Optional `createdAt` sorted before JSON and layout. Print CSS is a light page and hides search, filters, the theme button, zoom, and section jumps; `beforeprint` paints every row so the virtual window is not a clipped page. High contrast is the third persisted theme (`contrast`). Status is a word plus a border style, not hue alone.
-
-**Still later:** docs/next-steps.md (browser performance check vs legacy, Gradle-wired Vite `build:single`, interceptor modules).
+Open implementation work is tracked in `docs/next-steps.md` and the **Still open** rows above.
 
 ---
 
@@ -330,8 +308,8 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### Browser / UI (later, selective)
 
-- Playwright/Puppeteer smoke on injected shell: open dialog, theme toggle, search filter, keyboard j/k.
-- Performance budget: see docs/next-steps.md (compare with legacy on 100 / 500 / 2000 events). Not run yet.
+- Browser checks still needed: inspector copy button, JUnit “Show stack trace”, and component-graph rendering once it is in the report-next shell.
+- The large-diagram performance comparison is complete; results are in `docs/perf-results.md`.
 - Not every PR — nightly or labeled jobs.
 
 ### What not to golden

@@ -64,14 +64,14 @@ git submodule update --init --recursive
 
 ## Capture (lsd-mono-core)
 
-`LsdContext` records participants, facts, and sequence events (sync/async message,
-response, note, logical divider, activate/deactivate) and writes report-next JSON
+`LsdContext` records participants, facts, sections, notes, delays, spacers, sequence events (sync/async, responses, short, lost, and bi-directional messages), lifeline actions, and timestamps, and writes report-next JSON
 (`report.json` plus `<title>-report.json`). The packaged SVG shell
-`lsd-report-next.single.html` reads `window.__LSD_REPORT__` when ReportWriter
-injects it, otherwise it falls back to sample data. Dev (`report-next` Vite) uses
-the same global in `src/main.ts` — no Gradle Vite build required.
+`lsd-report-next.single.html` reads the captured `window.__LSD_REPORT__` that
+`ReportWriter` injects. When opened directly it falls back to sample data. Dev
+(`report-next` Vite) uses the same global in `src/main.ts`; Gradle does not yet
+run the Vite build.
 
-Still deferred: PlantUML, component diagrams, newpage / time-delay / vertical space.
+Still open: Gradle-wired Vite packaging, root README usage examples, and Mono-named interceptor modules. PlantUML is intentionally out; component graphs are available as a separate opt-in report and are not yet embedded in the sequence shell.
 
 ## Using convention plugins
 

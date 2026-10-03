@@ -39,16 +39,14 @@ lsd-mono-core/
   - `*-report.json` — ReportJson-shaped payload (aligned with spike `types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
   - copies classpath `lsd-report-next.single.html` beside the report as the
-    interactive demo shell (still sample-data-driven until JSON injection lands)
+    interactive shell with captured `ReportJson` injected (the demo falls back to sample data when opened directly)
   - `index.html` aggregating report files
 
 **Deferred / optional**
 
 - Full Vite production build from Gradle (run manually: `cd report-next && npm ci && npm run build:single`)
-- Injecting live ReportJson into the interactive SVG shell (spike still binds
-  sample data in `main.ts`)
-- PlantUML / Handlebars / full legacy domain parity (messages, participants,
-  component diagrams) — migrate gradually; use `modules/lsd-core` as reference only
+- Rendering the opt-in component graph inside the sequence shell
+- PlantUML / Handlebars compatibility — intentionally out of the Mono product path; use `modules/lsd-core` as reference only
 
 ## Kotlin API (migration-oriented)
 
