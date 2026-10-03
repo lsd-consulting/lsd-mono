@@ -120,3 +120,68 @@ Search and zoom still pass (2000: find 33 ms, zoom 35 ms, `needle-2000` shows `[
 ### Verdict of this rerun
 
 Mono at 2000 events is still usable with the backing data in memory. First interactive moved from **112 ms to 183 ms**, and the heap from **2.5 MB to 9.6 MB** (11.7 MB with the popup open). The DOM stayed flat at **274** nodes (baseline 276) and **318** once the dialog is open. Opening an arrow is about **35 ms** for both the top message and message 1000. No long tasks on the mono pages. Legacy numbers are in the same band as the baseline; those files were not rebuilt.
+
+## Wide participants (3 Oct 2026, 20:11 BST)
+
+This is a **separate run** from the 4-participant tables above. It does not replace them.
+
+Same machine (Apple M3 Max, macOS, headless Chromium **140.0.7339.16**, Playwright 1.55.0), viewport 1440×900. The diagram's own scrollport is 963×611 inside that viewport (sidebar and the stage cap). Scripts: [`docs/perf/generate-wide.mjs`](perf/generate-wide.mjs) and [`docs/perf/measure-wide.mjs`](perf/measure-wide.mjs). HTML opened with `file://` from `docs/perf-samples/` (gitignored).
+
+### What this is next to
+
+The 4-participant, 2000-event rerun above is the baseline for "lots of messages": first interactive **183 ms**, JS heap **9.6 MB (9,635,680)** with the payloads **inlined** in the HTML, DOM **274**. After payloads were split out of the HTML, that same 4-participant page on disk is **454,967 bytes** (~455 KB) plus a sibling `mono-2000-payloads.js` (5,643,568 bytes). That lazy page was not remeasured in the browser for this section. The wide run below is the lazy shape from the start: method, path, and status stay on the message, and the rest of the JSON loads when the inspector opens.
+
+### Fixture
+
+Participants cycle through actor, database, queue, component, entity, and boundary, so the header shapes are in the measurement. Names are short (`User 01`, `Orders 02`, `Queue 03`, …). Messages hop across the columns, and every 25th message spans the first participant to the last. The first message is a one-column hop on the left, so Fit has a top label near the origin. Each message has the same ~2.7 KB popup body as the earlier payload fixture (`arrow-payload`, `orderId`). No search and no zoom-button timing. One click, on message 1, after Fit. JSON is already expanded when the inspector opens. That click is included in the times below.
+
+| Participants | Messages | HTML | Sibling payloads |
+|--------------|----------|------|------------------|
+| 20 | 400 | 160,806 bytes | 1,112,471 bytes |
+| 50 | 400 | 162,247 bytes | 1,112,531 bytes |
+| 100 | 400 | 165,078 bytes | 1,113,011 bytes |
+| 100 | 2000 | 471,608 bytes | 5,619,888 bytes |
+
+Logical diagram width is 2,804 / 7,004 / 14,004 px (140 px column gap). At 100% zoom the scrollport's horizontal overflow is 1,841 / 6,041 / 13,041 px.
+
+### Browser (after the scrollport fix below)
+
+First interactive is wall time from `goto` (`waitUntil: commit`) until `.seq-sticky-header` is visible. The sweep is 2 s of `requestAnimationFrame`, moving vertical and horizontal scroll together. Heap is CDP `JSHeapUsedSize`. DOM counts are `getElementsByTagName('*').length`. Header nodes are elements inside `.seq-sticky-header` only. Those grow with the participant count. Message rows stay virtualised: 100 participants is 1,101 nodes at both 400 and 2,000 messages.
+
+| Participants | Messages | First interactive ms | FCP ms | p95 frame ms | Longest frame ms | Heap after load | Heap after scroll | Heap after popup | DOM | Header nodes | Popup ms | Long tasks |
+|--------------|----------|----------------------|--------|--------------|-------------------|-----------------|-------------------|------------------|-----|--------------|----------|------------|
+| 20 | 400 | 112 | 136 | 16.8 | 16.8 | 2,684,412 | 2,179,872 | 5,122,800 | 435 | 109 | 66 | 0 |
+| 50 | 400 | 95 | 116 | 16.8 | 16.8 | 2,749,808 | 2,464,652 | 5,685,772 | 685 | 269 | 66 | 0 |
+| 100 | 400 | 100 | 120 | 16.8 | 16.8 | 3,157,360 | 2,855,036 | 4,638,824 | 1,101 | 535 | 66 | 0 |
+| 100 | 2000 | 104 | 124 | 16.8 | 16.8 | 4,626,280 | 5,723,108 | 12,258,316 | 1,101 | 535 | 89 | 0 |
+
+Popup DOM is 7 nodes higher (442 / 692 / 1,108 / 1,108). The 100×2000 popup heap (12.3 MB) is the sibling payload script being parsed on that click. The other three clicks also load their ~1.1 MB sibling. Heap moves around with GC. It is not a DOM-size signal.
+
+Horizontal scroll works on all four. `.seq-scroll` is `overflow: auto`. Setting `scrollLeft` to the maximum lands on it (1,841 / 6,041 / 13,041). The last participant label is then inside the scrollport and the first label is off the left edge, so the sticky header moves with the horizontal scroll rather than staying painted at the left. During the vertical sweep the header stays stuck to the top of the scrollport. No label bounding boxes overlap at 100% zoom (0 overlaps at 20, 50, and 100). Shapes in the 100-participant header: 17 actor, 17 database, 17 queue, 17 component, 16 entity, 16 boundary.
+
+Fit, after the zoom animation settles (`scrollTop` 0):
+
+| Participants | Fit zoom | Top label in the scrollport | Label size | Horizontal overflow left after Fit |
+|--------------|----------|------------------------------|------------|-------------------------------------|
+| 20 | 34% | yes (`hop`, message 1) | 7×5 px | 0 (scroll width equals the 963 px client width) |
+| 50 | 25% (the floor) | yes | 5×4 px | 788 px |
+| 100 | 25% (the floor) | yes | 5×4 px | 2,538 px |
+
+The visible word is `hop`. The DOM text is `hophop` because the SVG `<title>` repeats it. 50 and 100 participants do not fit the width: zoom stops at 25%, so Fit still leaves a horizontal scrollbar. The top label is on screen, but only a few pixels tall. That is the clamp, not a clip of the label box.
+
+The show/hide buttons wrap. Their block is 96 px tall at 20 participants, 232 px at 50, and 436 px at 100. At 100 participants the diagram header's document position is about y=954, which is below this 900 px viewport until the page itself is scrolled. The buttons do not overflow horizontally (953 px scroll width in a 953 px row). Labels in the header do not collide.
+
+### What was broken, and the small fix
+
+The first pass, before the CSS change, still scrolled horizontally, and the header labels did not overlap. Vertical scrolling did not. `.seq-stage` was capped at 612 px, but its auto row sized to the drawing, so `.seq-scroll` grew to the content. On the 100×2000 page that was client height **104,149** equal to the scroll height, **15,482** DOM nodes (every row painted), **22** frames in the 2 s sweep, p95 **150 ms**, **20** long tasks up to **148 ms**, first interactive **245 ms**. The page scroll height stayed about 1,700 px, so the drawing below the stage could not be reached.
+
+The change is only the stage row: `grid-template-rows: minmax(0, min(68vh, 640px))` and `overflow: hidden`, with the print rule turning that clip off. Remeasured numbers are the table above. Scrollport client height is **611** px on every case. 100 participants is **1,101** nodes at both 400 and 2,000 messages, frame p95 is **16.8 ms**, and there were no long tasks.
+
+### Samples (local, gitignored)
+
+- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-p20-m400-diagram.html`
+- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-p50-m400-diagram.html`
+- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-p100-m400-diagram.html`
+- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-p100-m2000-diagram.html`
+
+Each has a sibling `*-payloads.js` in the same directory.

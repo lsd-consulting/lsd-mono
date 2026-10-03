@@ -2,10 +2,14 @@
 .seq-stage {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 14px;
+  /* An auto row sizes to the drawing. The scrollport then grows with it,
+     paints outside this stage, and cannot be scrolled. Cap the row. */
+  grid-template-rows: minmax(0, min(68vh, 640px));
   gap: 0;
   align-items: stretch;
   max-height: min(68vh, 640px);
   min-height: 220px;
+  overflow: hidden;
 }
 .seq-minimap {
   position: relative;
@@ -356,5 +360,5 @@
 
 @media print {
   .seq-minimap { display: none; }
-  .seq-stage { display: block; }
+  .seq-stage { display: block; overflow: visible; max-height: none; height: auto; }
 }
