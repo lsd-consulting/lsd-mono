@@ -91,8 +91,13 @@ export interface MessageEvent {
   type: MessageType
   colour?: string
   durationMs?: number
-  /** Payload shown in overlay — string or structured JSON-ish */
+  /**
+   * First-paint summary. Method, path, and status stay here.
+   * When `payloadId` is set, this is only those fields (or absent) and the JSON body loads on open.
+   */
   data?: unknown
+  /** Key into the payload sidecar (`scenarioId/messageId`). Absent when `data` is the whole payload. */
+  payloadId?: string
   createdAt?: string
 }
 
@@ -139,7 +144,7 @@ export interface ReportOptions {
 export interface ScenarioError {
   headline: string
   message: string
-  /** Omitted when the producer hid the stacktrace. Shown in the message dialog, not inline HTML. */
+  /** Omitted when the producer hid the stacktrace. Shown in the inspector, not inline HTML. */
   stack?: string
 }
 

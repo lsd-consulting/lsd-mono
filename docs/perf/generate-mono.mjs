@@ -1,11 +1,13 @@
 /**
  * Rebuild the mono perf HTML (100 / 500 / 2000) with a few KB of popup
- * payload on every arrow. Injects into the packaged single-file shell.
+ * payload on every arrow. Method, path, and status stay in the HTML.
+ * Bodies are written to a sibling payloads script and load when the inspector opens.
  *
  * Usage: node generate-mono.mjs <shell.html> <out-dir>
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
+import { shellParts } from '../../integrations/lsd-mono-core/report-next/src/lib/payloads.ts'
 
 const shellPath = process.argv[2]
 const outDir = process.argv[3]
@@ -138,11 +140,14 @@ console.log('payload bytes', sampleBytes)
 
 for (const size of [100, 500, 2000]) {
   const report = reportFor(size)
-  let json = JSON.stringify(report, null, 2)
-  json = json.replace(/</g, '\\u003c')
-  const html = shell.slice(0, idx) + `<script>window.__LSD_REPORT__=${json};</script>\n` + shell.slice(idx)
+  const parts = shellParts(report, `mono-${size}-payloads.js`)
+  if (!parts.payloadsJs) throw new Error('expected deferred payloads')
+  if (parts.htmlScript.includes('arrow-payload')) throw new Error('body leaked into the report script')
+  const html = shell.slice(0, idx) + parts.htmlScript + shell.slice(idx)
   const file = path.join(outDir, `mono-${size}-diagram.html`)
+  const payloadsFile = path.join(outDir, `mono-${size}-payloads.js`)
   writeFileSync(file, html)
+  writeFileSync(payloadsFile, parts.payloadsJs)
   const messages = report.scenarios[0].events.filter((e) => e.kind === 'message')
-  console.log(`wrote ${file} messages=${messages.length} htmlBytes=${Buffer.byteLength(html)}`)
+  console.log(`wrote ${file} messages=${messages.length} htmlBytes=${Buffer.byteLength(html)} payloadBytes=${Buffer.byteLength(parts.payloadsJs)}`)
 }

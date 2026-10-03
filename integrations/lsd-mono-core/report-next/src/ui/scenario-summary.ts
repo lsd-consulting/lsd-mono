@@ -18,7 +18,7 @@ export function scenarioHaystack(s: Scenario): string {
 /**
  * Narrative [description] may still be HTML (sample reports).
  * Failure message and stack are structured fields: message is escaped text,
- * stack is not inlined (the shell opens it in the message dialog).
+ * stack is not inlined (the shell opens it in the inspector).
  */
 export function scenarioDescriptionHtml(s: Scenario): string {
   const error = s.error

@@ -216,8 +216,9 @@ for (const spec of pages) {
 
       async function openArrow(messageId) {
         await page.evaluate(() => {
-          const dialog = document.querySelector('#msg-dialog')
-          if (dialog && dialog.open) dialog.close()
+          const panel = document.querySelector('#inspector')
+          const close = document.querySelector('#inspector-close')
+          if (panel && !panel.hidden && close) close.click()
         })
         await scrollUntil(messageId)
         const button = page.locator(`button.msg-open[data-message-id="${messageId}"]`)
@@ -225,11 +226,12 @@ for (const spec of pages) {
         const label = await button.getAttribute('aria-label')
         const t0 = Date.now()
         await button.click()
+        await page.locator('#inspector-json').click()
         await page.waitForFunction((id) => {
-          const dialog = document.querySelector('#msg-dialog')
-          const pre = document.querySelector('#dialog-pre')
+          const panel = document.querySelector('#inspector')
+          const pre = document.querySelector('#inspector-pre')
           const text = pre ? pre.textContent || '' : ''
-          return Boolean(dialog && dialog.open && text.includes('arrow-payload') && text.includes('"orderId": "ord_' + id + '"'))
+          return Boolean(panel && !panel.hidden && text.includes('arrow-payload') && text.includes('"orderId": "ord_' + id + '"'))
         }, messageId, { timeout: 5000 })
         return { ms: Date.now() - t0, label, messageId, count }
       }

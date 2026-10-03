@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, copyFileSync } from 'fs'
 import { join } from 'path'
+import { pathToFileURL } from 'node:url'
 
 const root = new URL('..', import.meta.url).pathname
 const dist = join(root, 'dist')
@@ -39,4 +40,16 @@ ${js}
 const out = join(dist, 'lsd-report-next.html')
 writeFileSync(out, single)
 copyFileSync(out, join(root, 'lsd-report-next.single.html'))
+if (js.includes('import.meta') || js.includes('pm_visa')) {
+  throw new Error('single-file shell still contains a module import or a demo payload body')
+}
+const payloadsMod = await import(pathToFileURL(join(root, 'src/data/sample-payloads.ts')).href)
+const payloadJs =
+  'window.__LSD_PAYLOADS__=' +
+  JSON.stringify(payloadsMod.samplePayloads).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026') +
+  ';\n'
+const payloadOut = join(root, 'lsd-report-payloads.js')
+writeFileSync(payloadOut, payloadJs)
+writeFileSync(join(dist, 'lsd-report-payloads.js'), payloadJs)
 console.log('Wrote', out, `and lsd-report-next.single.html (${(single.length / 1024).toFixed(1)} KB)`)
+console.log('Wrote', payloadOut, `(${(payloadJs.length / 1024).toFixed(1)} KB)`)

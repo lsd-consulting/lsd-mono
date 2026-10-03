@@ -3,11 +3,17 @@ import './styles/diagram.css'
 import { sampleReport } from './data/sample-report'
 import type { MessageEvent, Report, Scenario, Status } from './types'
 import { scenarioDescriptionHtml, scenarioHaystack } from './ui/scenario-summary'
+import { bindInspector, delegateMessageOpen, inspectorMarkup, type InspectorController } from './ui/inspector'
+import { loadExternalPayloads, payloadKey } from './lib/payloads'
 
 declare global {
   interface Window {
     /** Set by lsd-mono-core ReportWriter before this bundle boots. Dev: assign before load to preview a capture. */
     __LSD_REPORT__?: Report
+    /** Full message payloads, loaded when the inspector opens. Not part of the first paint. */
+    __LSD_PAYLOADS__?: Record<string, unknown>
+    /** Sibling script that assigns `__LSD_PAYLOADS__`. Relative to the report HTML. */
+    __LSD_PAYLOADS_SRC__?: string
   }
 }
 import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from './lib/diagram-a11y'
@@ -21,7 +27,7 @@ import {
   syncDiagramWindow,
 } from './lib/sequence-diagram'
 import { applyTheme, getPreferredTheme, themeButtonLabel, themeGlyph, toggleTheme, type Theme } from './ui/theme'
-import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, pretty, statusLabel } from './ui/format'
+import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
 import { insightsListHtml } from './ui/insights'
 
 interface State {
@@ -46,6 +52,7 @@ const app = document.querySelector('#app')!
 
 /** Arrow that opened the inspector. Close returns focus here. */
 let invoker: { scenarioId: string; messageId: string } | null = null
+let inspector: InspectorController | null = null
 
 function counts() {
   return report.scenarios.reduce(
@@ -120,22 +127,12 @@ function renderShell(): void {
         <ul class="scenario-nav" id="scenario-nav"></ul>
       </aside>
       <main class="main" id="main"></main>
+      ${inspectorMarkup()}
     </div>
-    <dialog class="message-dialog" id="msg-dialog">
-      <div class="dialog-head">
-        <h2 id="dialog-title">Message</h2>
-        <button type="button" class="icon-btn" id="dialog-copy" title="Copy payload">⧉</button>
-        <button type="button" class="icon-btn" id="dialog-close" title="Close (Esc)" aria-label="Close">✕</button>
-      </div>
-      <div class="dialog-body">
-        <div class="meta-row" id="dialog-meta"></div>
-        <pre id="dialog-pre"></pre>
-      </div>
-    </dialog>
     <div class="help-toast" id="help" data-open="false" role="note">
       <strong style="color:var(--text)">Keyboard</strong><br/>
       <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> next/prev scenario · <kbd>Enter</kbd> open/close<br/>
-      In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages · <kbd>Enter</kbd> opens that arrow<br/>
+      In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages · <kbd>Enter</kbd> opens the side panel<br/>
       <kbd>d</kbd> theme (dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close
     </div>
   `
@@ -180,15 +177,16 @@ function bindChrome(): void {
     document.querySelector('#help')!.setAttribute('data-open', String(state.helpOpen))
   })
 
-  const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
-  document.querySelector('#dialog-close')!.addEventListener('click', () => dialog.close())
-  dialog.addEventListener('close', () => {
-    const messageId = focusTargetAfterClose(invoker?.messageId ?? null)
-    const scenarioId = invoker?.scenarioId
-    invoker = null
-    if (!messageId || !scenarioId) return
-    const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenarioId)} .seq-scroll`)
-    if (scroll) focusDiagramMessage(scroll, messageId)
+  inspector = bindInspector(document, {
+    loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
+    onClose: (opened) => {
+      const messageId = focusTargetAfterClose(opened?.messageId ?? null)
+      const scenarioId = opened?.scenarioId
+      invoker = null
+      if (!messageId || !scenarioId) return
+      const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenarioId)} .seq-scroll`)
+      if (scroll) focusDiagramMessage(scroll, messageId)
+    },
   })
 
   const main = document.querySelector<HTMLElement>('#main')!
@@ -201,14 +199,12 @@ function bindChrome(): void {
       if (scroll) scroll.scrollTop = Number(jump.dataset.jumpY)
       return
     }
-    const openBtn = target.closest<HTMLButtonElement>('button.msg-open')
-    if (openBtn) {
-      const scenario = scenarioFrom(openBtn)
-      const messageId = openBtn.dataset.messageId
-      if (scenario && messageId) {
-        const msg = findMessage(scenario, messageId)
-        if (msg) openMessage(scenario, msg)
-      }
+    if (
+      delegateMessageOpen(ev, (node) => messageFromNode(node), (scenarioId, message) => {
+        const scenario = report.scenarios.find((item) => item.id === scenarioId)
+        if (scenario) openMessage(scenario, message)
+      })
+    ) {
       return
     }
     const showMsg = target.closest<HTMLButtonElement>('[data-show-message]')
@@ -293,18 +289,6 @@ function bindChrome(): void {
     if (!scenario || !mid) return
     const msg = findMessage(scenario, mid)
     if (msg) openMessage(scenario, msg)
-  })
-  document.querySelector('#dialog-copy')!.addEventListener('click', async () => {
-    const text = document.querySelector('#dialog-pre')!.textContent ?? ''
-    try {
-      await navigator.clipboard.writeText(text)
-      ;(document.querySelector('#dialog-copy') as HTMLButtonElement).textContent = '✓'
-      setTimeout(() => {
-        ;(document.querySelector('#dialog-copy') as HTMLButtonElement).textContent = '⧉'
-      }, 1200)
-    } catch {
-      /* ignore */
-    }
   })
 }
 
@@ -450,40 +434,36 @@ function scenarioHtml(s: Scenario, index: number): string {
 
 function openError(scenario: Scenario): void {
   const err = scenario.error
-  if (!err) return
+  if (!err || !inspector) return
   invoker = null
-  const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
-  document.querySelector('#dialog-title')!.textContent = err.headline
-  document.querySelector('#dialog-meta')!.innerHTML = `
-    <span class="pill">${escapeHtml(scenario.status)}</span>
-    <span class="pill">${escapeHtml(err.headline)}</span>`
-  document.querySelector('#dialog-pre')!.textContent = [err.message, err.stack].filter(Boolean).join('\n\n')
-  if (!dialog.open) dialog.showModal()
-}
-
-function payloadPills(data: unknown): string {
-  if (!data || typeof data !== 'object') return ''
-  const record = data as Record<string, unknown>
-  const pills: string[] = []
-  if (typeof record.method === 'string' && record.method) pills.push(`<span class="pill">${escapeHtml(record.method)}</span>`)
-  if (typeof record.path === 'string' && record.path) pills.push(`<span class="pill">${escapeHtml(record.path)}</span>`)
-  if (record.status != null && record.status !== '') pills.push(`<span class="pill">${escapeHtml(String(record.status))}</span>`)
-  return pills.join('')
+  inspector.openError({
+    status: scenario.status,
+    headline: err.headline,
+    message: err.message,
+    stack: err.stack,
+  })
 }
 
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
+  if (!inspector) return
   invoker = { scenarioId: scenario.id, messageId: msg.id }
-  const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
-  document.querySelector('#dialog-title')!.textContent = msg.label
-  document.querySelector('#dialog-meta')!.innerHTML = `
-    <span class="pill">${msg.type}</span>
-    <span class="pill">${escapeHtml(msg.from)} → ${escapeHtml(msg.to)}</span>
-    ${msg.durationMs != null ? `<span class="pill">${msg.durationMs} ms</span>` : ''}
-    ${payloadPills(msg.data)}
-    <span class="pill">${escapeHtml(scenario.id)}</span>`
-  document.querySelector('#dialog-pre')!.textContent =
-    msg.data !== undefined ? pretty(msg.data) : '(no payload)'
-  if (!dialog.open) dialog.showModal()
+  inspector.openMessage(scenario.id, msg)
+}
+
+function messageFromNode(node: Element): { scenarioId: string; message: MessageEvent } | null {
+  const scenario = scenarioFrom(node)
+  const messageId = node.getAttribute('data-message-id')
+  if (!scenario || !messageId) return null
+  const message = findMessage(scenario, messageId)
+  if (!message) return null
+  return { scenarioId: scenario.id, message }
+}
+
+async function loadMessagePayload(scenarioId: string, messageId: string): Promise<unknown> {
+  const map = await loadExternalPayloads(report === sampleReport)
+  const key = payloadKey(scenarioId, messageId)
+  if (key in map) return map[key]
+  return undefined
 }
 
 function visibleIds(): string[] {
@@ -505,14 +485,9 @@ function moveSelection(delta: number): void {
 function onKey(e: KeyboardEvent): void {
   const target = e.target as HTMLElement
   const typing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
-  const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
 
   if (e.key === 'Escape') {
-    if (dialog.open) {
-      dialog.close()
-      e.preventDefault()
-      return
-    }
+    if (inspector?.isOpen()) return
     if (state.helpOpen) {
       state.helpOpen = false
       document.querySelector('#help')!.setAttribute('data-open', 'false')
@@ -528,6 +503,7 @@ function onKey(e: KeyboardEvent): void {
 
   if (typing) return
   if (target.closest('button.msg-open')) return
+  if (target.closest('#inspector')) return
 
   if (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
     e.preventDefault()

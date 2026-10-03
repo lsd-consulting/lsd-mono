@@ -123,7 +123,8 @@ describe('renderRowSvg fragments', () => {
     expect(html).toContain('<button type="button" class="msg-open"')
     expect(html).toContain('aria-label="Open place order"')
     expect(html).toContain('data-message-id="m-data"')
-    expect(html).toContain('aria-haspopup="dialog"')
+    expect(html).not.toContain('aria-haspopup')
+    expect(html).not.toContain('aria-modal')
     expect(html).toContain('aria-setsize="1"')
     expect(html).toContain('aria-posinset="1"')
     expect(html).toContain('tabindex="0"')
@@ -146,6 +147,24 @@ describe('renderRowSvg fragments', () => {
       participants,
     )
     expect(html).not.toContain('msg-open')
+  })
+
+  it('opens an arrow whose body is deferred behind a payload id', () => {
+    const html = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-lazy',
+        from: 'api',
+        to: 'db',
+        label: 'place order',
+        type: 'SYNCHRONOUS',
+        payloadId: 'sc/m-lazy',
+      }),
+      400,
+      participants,
+    )
+    expect(html).toContain('class="msg-open"')
+    expect(html).not.toContain('ord_1')
   })
 
   it('includes lost X marker and type cue for LOST messages', () => {

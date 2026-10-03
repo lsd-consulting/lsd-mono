@@ -150,6 +150,14 @@ describe('reduced motion and find', () => {
     expect(zoomScrollBehavior(false)).toBe('smooth')
   })
 
+  it('treats a deferred payload id as focusable when the body is not on the message', () => {
+    const deferred: DiagramEvent[] = [
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS', payloadId: 's/m' },
+    ]
+    expect(messagePlaces(deferred, new Set())[0].focusable).toBe(true)
+    expect(findOpensMessage(deferred, 'place', new Set())).toBe('m')
+  })
+
   it('Find opens the same payload message as Enter', () => {
     const id = findOpensMessage(events, 'charge', new Set())
     expect(id).toBe('m3')

@@ -139,6 +139,8 @@ data class MessageEventJson(
     val colour: String? = null,
     val durationMs: Long? = null,
     val data: Any? = null,
+    /** Set when [data] is only method/path/status and the rest lives in the payload sidecar. */
+    val payloadId: String? = null,
     val createdAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
@@ -153,6 +155,7 @@ data class MessageEventJson(
                 if (colour != null) add("colour" to JsonString(colour))
                 if (durationMs != null) add("durationMs" to JsonNumber(durationMs.toString()))
                 if (data != null) add("data" to anyToJson(data))
+                if (payloadId != null) add("payloadId" to JsonString(payloadId))
                 if (createdAt != null) add("createdAt" to JsonString(createdAt))
             },
         )
@@ -336,3 +339,69 @@ private fun ParticipantJson.toJsonValue(): JsonValue =
     )
 
 private fun obj(fields: List<Pair<String, JsonValue>>): JsonObject = JsonObject(fields)
+
+/**
+ * Report injected into the HTML shell. Method, path, and status stay on the message.
+ * Any other payload field is removed from this copy and returned for the sidecar script.
+ * [ReportJson.toJson] is unchanged so `report.json` still has the full capture.
+ */
+fun ReportJson.forShell(): ShellReport {
+    val payloads = linkedMapOf<String, Any?>()
+    val light =
+        copy(
+            scenarios =
+                scenarios.map { scenario ->
+                    scenario.copy(
+                        events =
+                            scenario.events.map { event ->
+                                if (event !is MessageEventJson) event
+                                else splitMessageForShell(scenario.id, event, payloads)
+                            },
+                    )
+                },
+        )
+    return ShellReport(light, payloads)
+}
+
+data class ShellReport(
+    val report: ReportJson,
+    val payloads: Map<String, Any?>,
+)
+
+private fun splitMessageForShell(
+    scenarioId: String,
+    event: MessageEventJson,
+    payloads: MutableMap<String, Any?>,
+): MessageEventJson {
+    val data = event.data ?: return event
+    val split = splitPayload(data)
+    if (!split.defer) return event
+    val id = "$scenarioId/${event.id}"
+    payloads[id] = data
+    return event.copy(data = split.summary, payloadId = id)
+}
+
+private data class PayloadSplit(val summary: Map<String, Any?>?, val defer: Boolean)
+
+private fun splitPayload(data: Any?): PayloadSplit {
+    if (data !is Map<*, *>) return PayloadSplit(summary = null, defer = true)
+    val summary = linkedMapOf<String, Any?>()
+    var defer = false
+    for ((key, value) in data) {
+        val name = key?.toString() ?: continue
+        if (isSummaryField(name, value)) summary[name] = value
+        else defer = true
+    }
+    if (!defer) return PayloadSplit(summary = null, defer = false)
+    return PayloadSplit(summary = summary.takeIf { it.isNotEmpty() }, defer = true)
+}
+
+private fun isSummaryField(name: String, value: Any?): Boolean =
+    when (name) {
+        "method", "path" -> value is String && value.isNotEmpty()
+        "status" -> (value is String && value.isNotEmpty()) || value is Number
+        else -> false
+    }
+
+fun shellPayloadScript(payloads: Map<String, Any?>): String =
+    "window.__LSD_PAYLOADS__=${anyToJson(payloads).render()};\n"

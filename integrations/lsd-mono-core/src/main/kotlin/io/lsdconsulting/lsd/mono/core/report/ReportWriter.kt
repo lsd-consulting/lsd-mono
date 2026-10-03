@@ -11,6 +11,8 @@ import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
+import io.lsdconsulting.lsd.mono.core.model.forShell
+import io.lsdconsulting.lsd.mono.core.model.shellPayloadScript
 import io.lsdconsulting.lsd.mono.core.model.toJson
 import java.io.File
 import java.nio.file.Files
@@ -19,11 +21,15 @@ import java.nio.file.Path
 /**
  * Writes ReportJson, a minimal HTML listing, and the report-next single-file shell
  * with `window.__LSD_REPORT__` injected so the SVG UI renders the captured scenario.
+ * Message bodies are not in that script. They are written beside the diagram as
+ * `<title>-payloads.js` and loaded when the inspector opens.
  * Embedded sample data is only the fallback when that global is absent.
  */
 object ReportWriter {
     private const val SPIKE_RESOURCE = "/lsd-mono-core/report-next/lsd-report-next.single.html"
     private const val SPIKE_FILENAME = "lsd-report-next.single.html"
+    private const val SAMPLE_PAYLOAD_RESOURCE = "/lsd-mono-core/report-next/lsd-report-payloads.js"
+    private const val SAMPLE_PAYLOAD_FILENAME = "lsd-report-payloads.js"
 
     fun writeReport(
         report: ReportJson,
@@ -35,7 +41,12 @@ object ReportWriter {
         val jsonPath = outputDir.resolve("$safeName-report.json").toPath()
         val htmlPath = outputDir.resolve("$safeName-report.html").toPath()
         val diagramName = "$safeName-diagram.html"
-        val shell = renderShell(report)
+        val payloadsName = "$safeName-payloads.js"
+        val shellBundle = report.forShell()
+        if (shellBundle.payloads.isNotEmpty()) {
+            Files.writeString(outputDir.resolve(payloadsName).toPath(), shellPayloadScript(shellBundle.payloads))
+        }
+        val shell = renderShell(shellBundle.report, payloadsName.takeIf { shellBundle.payloads.isNotEmpty() })
 
         Files.writeString(jsonPath, report.toJson())
         Files.writeString(outputDir.resolve("report.json").toPath(), report.toJson())
@@ -114,8 +125,11 @@ object ReportWriter {
 
     private fun copySpikeShellIfAbsent(outputDir: File) {
         val dest = outputDir.resolve(SPIKE_FILENAME)
-        if (dest.exists()) return
-        dest.writeText(readShellTemplate())
+        if (!dest.exists()) dest.writeText(readShellTemplate())
+        val payloads = outputDir.resolve(SAMPLE_PAYLOAD_FILENAME)
+        if (payloads.exists()) return
+        val stream = ReportWriter::class.java.getResourceAsStream(SAMPLE_PAYLOAD_RESOURCE) ?: return
+        payloads.writeText(stream.bufferedReader().use { it.readText() })
     }
 
     /**
@@ -123,9 +137,12 @@ object ReportWriter {
      * Inject the captured report immediately before that script so file:// viewing works.
      * `<` in JSON is escaped so a payload cannot close the script tag.
      */
-    private fun renderShell(report: ReportJson): String {
+    private fun renderShell(report: ReportJson, payloadsFile: String?): String {
         val template = readShellTemplate()
-        val injection = "<script>window.__LSD_REPORT__=${report.toJson().trim()};</script>\n"
+        val src =
+            if (payloadsFile == null) ""
+            else "window.__LSD_PAYLOADS_SRC__=\"${payloadsFile.replace("\\", "\\\\").replace("\"", "\\\"")}\";"
+        val injection = "<script>${src}window.__LSD_REPORT__=${report.toJson().trim()};</script>\n"
         val marker = "<script>"
         val idx = template.indexOf(marker)
         return if (idx < 0) injection + template else template.substring(0, idx) + injection + template.substring(idx)

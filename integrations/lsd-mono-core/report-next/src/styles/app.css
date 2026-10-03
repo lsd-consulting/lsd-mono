@@ -150,8 +150,11 @@ mark {
 /* ——— Shell ——— */
 .shell {
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   min-height: calc(100dvh - var(--topbar-h));
+}
+.shell.with-inspector {
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) minmax(260px, 380px);
 }
 
 .sidebar {
@@ -408,36 +411,60 @@ mark {
 }
 .footer-note a { color: var(--text-muted); }
 
-/* ——— Dialog ——— */
-dialog.message-dialog {
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 2px);
+/* ——— Inspector (side panel, not a modal) ——— */
+.inspector {
+  border-left: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  box-shadow: var(--shadow), var(--shadow-pop);
-  padding: 0;
-  width: min(640px, calc(100vw - 32px));
-  max-height: min(80dvh, 720px);
+  position: sticky;
+  top: var(--topbar-h);
+  align-self: start;
+  max-height: calc(100dvh - var(--topbar-h));
+  overflow: auto;
+  min-width: 0;
 }
-dialog.message-dialog::backdrop {
-  background: oklch(0.1 0.02 250 / 0.55);
-  backdrop-filter: blur(4px);
+.inspector:focus {
+  outline: none;
 }
-.dialog-head {
+.inspector-head {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
 }
-.dialog-head h2 {
+.inspector-head h2 {
   margin: 0; flex: 1;
   font-size: 1rem; letter-spacing: -0.02em;
 }
-.dialog-body {
-  padding: 16px;
-  overflow: auto;
-  max-height: calc(min(80dvh, 720px) - 60px);
+.inspector-head .icon-btn {
+  width: auto;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 650;
 }
-.dialog-body pre {
+.inspector-body {
+  padding: 16px;
+}
+#inspector-lead {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+#inspector-json {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+#inspector-json:focus-visible { outline: none; box-shadow: var(--focus); }
+.inspector-body pre {
   margin: 0;
   font-family: var(--mono);
   font-size: 12.5px;
@@ -486,7 +513,14 @@ dialog.message-dialog::backdrop {
 }
 
 @media (max-width: 860px) {
-  .shell { grid-template-columns: 1fr; }
+  .shell,
+  .shell.with-inspector { grid-template-columns: 1fr; }
+  .inspector {
+    position: static;
+    max-height: 50vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
   .sidebar {
     position: static;
     height: auto;
@@ -598,7 +632,7 @@ dialog.message-dialog::backdrop {
   .seq-toolbar,
   .section-jump,
   .hist,
-  .dialog-head button {
+  .inspector-head button {
     display: none !important;
   }
   .topbar,

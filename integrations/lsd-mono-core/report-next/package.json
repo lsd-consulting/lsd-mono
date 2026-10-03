@@ -9,10 +9,11 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "build:static": "vite build",
-    "build:single": "npm run build && node scripts/inline-single.mjs",
+    "build:single": "npm run build && node --experimental-strip-types scripts/inline-single.mjs",
     "test": "vitest run"
   },
   "devDependencies": {
+    "happy-dom": "^20.14.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
     "vitest": "^3.2.4"

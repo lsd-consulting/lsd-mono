@@ -5,6 +5,12 @@ import { eventHiddenByColumns, type Rect } from './diagram-view'
 /** WCAG 2.5.8 minimum target, in CSS pixels. The arrow stroke stays thin. */
 export const MIN_HIT_CSS = 24
 
+/** An arrow can be opened when it has a summary, a deferred payload, or both. */
+export function messageHasPayload(event: { data?: unknown; payloadId?: string | null }): boolean {
+  if (event.payloadId) return true
+  return event.data !== undefined && event.data !== null
+}
+
 export interface MessagePlace {
   id: string
   /** 1-based index among drawn message events, not among painted rows. */
@@ -37,7 +43,7 @@ export function messagePlaces(events: DiagramEvent[], hiddenIds: ReadonlySet<str
     id: event.id,
     posinset: index + 1,
     setsize,
-    focusable: event.data !== undefined && event.data !== null,
+    focusable: messageHasPayload(event),
   }))
 }
 
@@ -241,7 +247,7 @@ export function findOpensMessage(
   for (const event of events) {
     if (event.kind !== 'message') continue
     if (eventHiddenByColumns(event, hiddenIds)) continue
-    if (event.data == null) continue
+    if (!messageHasPayload(event)) continue
     if (!event.label.toLowerCase().includes(q)) continue
     return event.id
   }
