@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.capture.SequenceEventBuilder
+import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Fact
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
@@ -8,13 +9,16 @@ import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Note
+import io.lsdconsulting.lsd.mono.core.domain.NotePlacement
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantIds
 import io.lsdconsulting.lsd.mono.core.domain.Scenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
+import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.core.model.EventJson
 import io.lsdconsulting.lsd.mono.core.model.FactJson
@@ -28,6 +32,7 @@ import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioErrorJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
+import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import java.io.File
@@ -38,8 +43,9 @@ import java.time.ZoneId
 /**
  * Capture + report façade inspired by legacy `com.lsd.core.LsdContext`.
  *
- * **Mirrored:** participants, facts, `capture` of messages / responses / notes /
- * logical dividers / lifelines, scenario completion, report + index writers.
+ * **Mirrored:** participants, facts, `capture` of messages / responses / notes
+ * (over / left / right) / delays / spacers / short arrows / logical dividers /
+ * lifelines, scenario completion, report + index writers.
  * Completing a report serialises [ReportJson] (the report-next shape) and injects
  * it into the interactive SVG shell.
  *
@@ -47,7 +53,7 @@ import java.time.ZoneId
  * event stream and do not drop lifeline activations.
  *
  * **Deferred:** PlantUML / component diagrams, legacy include-files,
- * TimeDelay, VerticalSpace, NoteLeft/NoteRight, short inbound/outbound arrows.
+ * zoom/fit, bottleneck metrics, activate colour.
  */
 open class LsdContext {
 
@@ -138,7 +144,17 @@ open class LsdContext {
     }
 
     fun note(text: String, over: String) {
-        capture(Note(id = idGenerator.next(), text = text, over = over))
+        capture(Note(id = idGenerator.next(), text = text, over = over, placement = NotePlacement.OVER))
+    }
+
+    @JvmOverloads
+    fun noteLeft(text: String, of: String? = null) {
+        capture(Note(id = idGenerator.next(), text = text, over = of, placement = NotePlacement.LEFT))
+    }
+
+    @JvmOverloads
+    fun noteRight(text: String, of: String? = null) {
+        capture(Note(id = idGenerator.next(), text = text, over = of, placement = NotePlacement.RIGHT))
     }
 
     fun divider(label: String) {
@@ -151,6 +167,42 @@ open class LsdContext {
      */
     fun section(title: String) {
         capture(Section(id = idGenerator.next(), title = title))
+    }
+
+    @JvmOverloads
+    fun delay(label: String? = null) {
+        capture(Delay(id = idGenerator.next(), label = label))
+    }
+
+    @JvmOverloads
+    fun spacer(heightPx: Int? = null) {
+        capture(Spacer(id = idGenerator.next(), heightPx = heightPx))
+    }
+
+    @JvmOverloads
+    fun shortInbound(to: String, label: String = "") {
+        capture(
+            Message(
+                id = idGenerator.next(),
+                from = "",
+                to = to,
+                label = label,
+                type = MessageType.SHORT_INBOUND,
+            ),
+        )
+    }
+
+    @JvmOverloads
+    fun shortOutbound(from: String, label: String = "") {
+        capture(
+            Message(
+                id = idGenerator.next(),
+                from = from,
+                to = "",
+                label = label,
+                type = MessageType.SHORT_OUTBOUND,
+            ),
+        )
     }
 
     fun activate(participant: String) {
@@ -230,25 +282,42 @@ open class LsdContext {
 
     private fun bind(event: SequenceEvent): SequenceEvent =
         when (event) {
-            is Message ->
-                event.copy(
-                    id = event.id.ifBlank { idGenerator.next() },
-                    from = resolve(event.from).id,
-                    to = resolve(event.to).id,
-                )
+            is Message -> bindMessage(event)
             is Note ->
                 event.copy(
                     id = event.id.ifBlank { idGenerator.next() },
-                    over = resolve(event.over).id,
+                    over = event.over?.takeIf { it.isNotBlank() }?.let { resolve(it).id },
                 )
             is Divider -> event.copy(id = event.id.ifBlank { idGenerator.next() })
             is Section -> event.copy(id = event.id.ifBlank { idGenerator.next() })
+            is Delay -> event.copy(id = event.id.ifBlank { idGenerator.next() })
+            is Spacer -> event.copy(id = event.id.ifBlank { idGenerator.next() })
             is Lifeline ->
                 event.copy(
                     id = event.id.ifBlank { idGenerator.next() },
                     participantId = resolve(event.participantId).id,
                 )
         }
+
+    private fun bindMessage(event: Message): Message {
+        val id = event.id.ifBlank { idGenerator.next() }
+        return when (event.type) {
+            MessageType.SHORT_INBOUND -> {
+                val toRef = event.to.ifBlank { event.from }
+                event.copy(id = id, from = "", to = resolve(toRef).id)
+            }
+            MessageType.SHORT_OUTBOUND -> {
+                val fromRef = event.from.ifBlank { event.to }
+                event.copy(id = id, from = resolve(fromRef).id, to = "")
+            }
+            else ->
+                event.copy(
+                    id = id,
+                    from = resolve(event.from).id,
+                    to = resolve(event.to).id,
+                )
+        }
+    }
 
     private fun resolve(ref: String): Participant {
         participants[ref]?.let { return it }
@@ -271,13 +340,12 @@ open class LsdContext {
         events.forEach { event ->
             when (event) {
                 is Message -> {
-                    ids.add(event.from)
-                    ids.add(event.to)
+                    if (event.from.isNotBlank()) ids.add(event.from)
+                    if (event.to.isNotBlank()) ids.add(event.to)
                 }
-                is Note -> ids.add(event.over)
+                is Note -> event.over?.let { ids.add(it) }
                 is Lifeline -> ids.add(event.participantId)
-                is Divider -> Unit
-                is Section -> Unit
+                is Divider, is Section, is Delay, is Spacer -> Unit
             }
         }
         return participants.values.filter { it.id in ids }
@@ -335,9 +403,17 @@ open class LsdContext {
                     durationMs = durationMs,
                     data = data,
                 )
-            is Note -> NoteEventJson(id = id, text = text, over = over)
+            is Note ->
+                NoteEventJson(
+                    id = id,
+                    text = text,
+                    over = over,
+                    placement = placement.name.lowercase(),
+                )
             is Divider -> DividerEventJson(id = id, label = label)
             is Section -> SectionEventJson(id = id, title = title)
+            is Delay -> DelayEventJson(id = id, label = label)
+            is Spacer -> SpacerEventJson(id = id, heightPx = heightPx)
             is Lifeline ->
                 LifelineEventJson(
                     kind = if (action == LifelineAction.ACTIVATE) "activate" else "deactivate",

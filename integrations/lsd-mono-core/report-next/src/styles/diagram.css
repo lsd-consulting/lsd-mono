@@ -147,3 +147,54 @@
   font-weight: 750;
   letter-spacing: 0.01em;
 }
+
+.note-place-cue {
+  fill: var(--text-faint);
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.note-left .note-card {
+  stroke-dasharray: 3 2;
+}
+.note-right .note-card {
+  stroke-dasharray: 1 0;
+  stroke-width: 1.6;
+}
+
+.delay-line {
+  stroke: var(--border);
+  stroke-dasharray: 2 6;
+  stroke-width: 1.5;
+}
+.delay-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.spacer-ticks {
+  stroke: var(--border);
+  stroke-dasharray: 1 10;
+  stroke-width: 1;
+  opacity: 0.7;
+}
+
+.msg-type-cue {
+  fill: var(--text-faint);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--mono);
+}
+.message[data-msg-type="LOST"] .msg-path {
+  stroke-linecap: round;
+}
+.message[data-msg-type="BI_DIRECTIONAL"] .msg-path {
+  stroke-width: 2.2;
+}
+.message-short .msg-path {
+  stroke-dasharray: none;
+}

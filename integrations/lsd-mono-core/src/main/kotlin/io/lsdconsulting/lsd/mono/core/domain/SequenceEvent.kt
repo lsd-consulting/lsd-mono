@@ -6,9 +6,12 @@ package io.lsdconsulting.lsd.mono.core.domain
  * A [Section] is the greenfield replacement for PlantUML `newpage`: a titled row
  * in one continuous diagram. Activations are not closed at section boundaries.
  *
- * Deferred vs legacy `com.lsd.core.domain.SequenceEvent` (no report-next equivalent,
- * or PlantUML-only): NoteLeft / NoteRight, PageTitle, TimeDelay, VerticalSpace,
- * MessageType.SHORT_INBOUND / SHORT_OUTBOUND.
+ * Notes use [NotePlacement] (`over` / `left` / `right`) instead of separate
+ * NoteLeft / NoteRight types. [Delay] and [Spacer] replace PlantUML `...` / `|||`.
+ * [MessageType.SHORT_INBOUND] / [MessageType.SHORT_OUTBOUND] draw from/to a
+ * phantom diagram edge — not a fake participant.
+ *
+ * Deferred vs legacy: PageTitle as its own event, activate colour, timestamps.
  */
 sealed class SequenceEvent {
     abstract val id: String
@@ -20,6 +23,14 @@ enum class MessageType {
     ASYNCHRONOUS,
     LOST,
     BI_DIRECTIONAL,
+    SHORT_INBOUND,
+    SHORT_OUTBOUND,
+}
+
+enum class NotePlacement {
+    OVER,
+    LEFT,
+    RIGHT,
 }
 
 data class Message @JvmOverloads constructor(
@@ -33,10 +44,15 @@ data class Message @JvmOverloads constructor(
     val durationMs: Long? = null,
 ) : SequenceEvent()
 
-data class Note(
+/**
+ * Note card. [placement] defaults to [NotePlacement.OVER] (requires [over]).
+ * Left/right may omit [over] (diagram-edge note) or set it as the anchor lifeline.
+ */
+data class Note @JvmOverloads constructor(
     override val id: String,
     val text: String,
-    val over: String,
+    val over: String? = null,
+    val placement: NotePlacement = NotePlacement.OVER,
 ) : SequenceEvent()
 
 data class Divider(
@@ -48,6 +64,18 @@ data class Divider(
 data class Section(
     override val id: String,
     val title: String,
+) : SequenceEvent()
+
+/** Time-delay ellipsis row (`...label...` in PlantUML). */
+data class Delay @JvmOverloads constructor(
+    override val id: String,
+    val label: String? = null,
+) : SequenceEvent()
+
+/** Vertical spacer (`|||` / sized `||N||` in PlantUML). [heightPx] defaults in the UI. */
+data class Spacer @JvmOverloads constructor(
+    override val id: String,
+    val heightPx: Int? = null,
 ) : SequenceEvent()
 
 enum class LifelineAction { ACTIVATE, DEACTIVATE }

@@ -1,0 +1,189 @@
+import { describe, expect, it } from 'vitest'
+import type { LayoutRow } from './layout'
+import { LEFT_PAD, SHORT_STUB, layoutRows } from './layout'
+import {
+  arrowMarker,
+  messageArrowSpec,
+  noteLayout,
+  renderRowSvg,
+  shortMessageEndpoints,
+} from './sequence-diagram'
+import type { DiagramEvent, Participant } from '../types'
+
+const participants: Participant[] = [
+  { id: 'api', name: 'Api', type: 'PARTICIPANT', colour: '#34d399' },
+  { id: 'db', name: 'Db', type: 'DATABASE', colour: '#94a3b8' },
+]
+
+function rowFor(event: DiagramEvent): LayoutRow {
+  return layoutRows([event])[0]
+}
+
+describe('messageArrowSpec', () => {
+  it('gives LOST an X tip and a text cue (not colour-only)', () => {
+    expect(messageArrowSpec('LOST')).toEqual({
+      dashed: false,
+      start: 'none',
+      end: 'lost',
+      typeCue: 'lost',
+    })
+  })
+
+  it('gives BI_DIRECTIONAL dual filled heads and a cue', () => {
+    expect(messageArrowSpec('BI_DIRECTIONAL')).toEqual({
+      dashed: false,
+      start: 'filled',
+      end: 'filled',
+      typeCue: '↔',
+    })
+  })
+})
+
+describe('arrowMarker', () => {
+  it('draws an X path for lost tips', () => {
+    const svg = arrowMarker('mk_lost', '#34d399', 'lost')
+    expect(svg).toContain('M2 2 L10 10')
+    expect(svg).toContain('M10 2 L2 10')
+    expect(svg).not.toContain('L10 5 L0 10 z')
+  })
+
+  it('draws a filled triangle for sync tips', () => {
+    const svg = arrowMarker('mk_f', '#34d399', 'filled')
+    expect(svg).toContain('L10 5 L0 10 z')
+  })
+})
+
+describe('shortMessageEndpoints', () => {
+  it('draws SHORT_INBOUND from a stub left of the lifeline to the participant', () => {
+    const px = LEFT_PAD
+    const { x1, x2 } = shortMessageEndpoints('SHORT_INBOUND', px, 400)
+    expect(x2).toBeLessThan(px)
+    expect(x1).toBeLessThan(x2)
+    expect(x2 - x1).toBeLessThanOrEqual(SHORT_STUB)
+  })
+
+  it('draws SHORT_OUTBOUND from the lifeline toward the right edge', () => {
+    const px = LEFT_PAD
+    const { x1, x2 } = shortMessageEndpoints('SHORT_OUTBOUND', px, 400)
+    expect(x1).toBeGreaterThan(px)
+    expect(x2).toBeGreaterThan(x1)
+    expect(x2 - x1).toBeLessThanOrEqual(SHORT_STUB)
+  })
+})
+
+describe('noteLayout', () => {
+  const index = new Map([
+    ['api', 0],
+    ['db', 1],
+  ])
+
+  it('places over notes on the anchor lifeline', () => {
+    const layout = noteLayout('over', 'api', index, 400)
+    expect(layout.placement).toBe('over')
+    expect(layout.x).toBe(LEFT_PAD)
+  })
+
+  it('offsets left notes left of the anchor', () => {
+    const over = noteLayout('over', 'api', index, 400)
+    const left = noteLayout('left', 'api', index, 400)
+    expect(left.placement).toBe('left')
+    expect(left.x).toBeLessThan(over.x)
+  })
+
+  it('offsets right notes right of the anchor', () => {
+    const over = noteLayout('over', 'api', index, 400)
+    const right = noteLayout('right', 'api', index, 400)
+    expect(right.placement).toBe('right')
+    expect(right.x).toBeGreaterThan(over.x)
+  })
+})
+
+describe('renderRowSvg fragments', () => {
+  it('includes lost X marker and type cue for LOST messages', () => {
+    const svg = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-lost',
+        from: 'api',
+        to: 'db',
+        label: 'drop',
+        type: 'LOST',
+      }),
+      400,
+      participants,
+    )
+    expect(svg).toContain('data-msg-type="LOST"')
+    expect(svg).toContain('[lost]')
+    expect(svg).toContain('M2 2 L10 10')
+  })
+
+  it('includes marker-start and marker-end for BI_DIRECTIONAL', () => {
+    const svg = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-bi',
+        from: 'api',
+        to: 'db',
+        label: 'sync',
+        type: 'BI_DIRECTIONAL',
+      }),
+      400,
+      participants,
+    )
+    expect(svg).toContain('data-msg-type="BI_DIRECTIONAL"')
+    expect(svg).toContain('marker-start=')
+    expect(svg).toContain('marker-end=')
+    expect(svg).toContain('[↔]')
+  })
+
+  it('renders short inbound/outbound without inventing a second participant', () => {
+    const inbound = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-in',
+        from: '',
+        to: 'api',
+        label: 'found',
+        type: 'SHORT_INBOUND',
+      }),
+      400,
+      participants,
+    )
+    expect(inbound).toContain('data-msg-type="SHORT_INBOUND"')
+    expect(inbound).toContain('[in]')
+    expect(inbound).toContain('message-short')
+
+    const outbound = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-out',
+        from: 'api',
+        to: '',
+        label: 'emit',
+        type: 'SHORT_OUTBOUND',
+      }),
+      400,
+      participants,
+    )
+    expect(outbound).toContain('data-msg-type="SHORT_OUTBOUND"')
+    expect(outbound).toContain('[out]')
+  })
+
+  it('marks left and right note placement in the SVG', () => {
+    const left = renderRowSvg(
+      rowFor({ kind: 'note', id: 'n1', text: 'L', over: 'api', placement: 'left' }),
+      400,
+      participants,
+    )
+    expect(left).toContain('data-placement="left"')
+    expect(left).toContain('note-left')
+
+    const right = renderRowSvg(
+      rowFor({ kind: 'note', id: 'n2', text: 'R', over: 'api', placement: 'right' }),
+      400,
+      participants,
+    )
+    expect(right).toContain('data-placement="right"')
+    expect(right).toContain('note-right')
+  })
+})

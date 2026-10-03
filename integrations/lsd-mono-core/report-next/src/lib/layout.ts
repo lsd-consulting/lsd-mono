@@ -15,9 +15,18 @@ export const ROW_H = {
   note: 40,
   divider: 36,
   section: 48,
+  delay: 36,
+  spacer: 24,
   activate: 8,
   deactivate: 8,
 } as const
+
+/** Short arrow stub length from lifeline toward the diagram edge (not a fake participant). */
+export const SHORT_STUB = 48
+export const EDGE_INSET = 16
+export const DEFAULT_SPACER_H = ROW_H.spacer
+export const MIN_SPACER_H = 12
+export const MAX_SPACER_H = 240
 
 export interface LayoutRow {
   index: number
@@ -53,6 +62,13 @@ export function eventRowHeight(event: DiagramEvent): number {
       return ROW_H.divider
     case 'section':
       return ROW_H.section
+    case 'delay':
+      return ROW_H.delay
+    case 'spacer': {
+      const h = event.heightPx
+      if (h == null || Number.isNaN(h)) return DEFAULT_SPACER_H
+      return Math.min(MAX_SPACER_H, Math.max(MIN_SPACER_H, h))
+    }
     case 'activate':
       return ROW_H.activate
     case 'deactivate':

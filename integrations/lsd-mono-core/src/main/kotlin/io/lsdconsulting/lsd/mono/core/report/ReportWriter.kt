@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.report
 
 import io.lsdconsulting.lsd.mono.core.escapeHtml
+import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
@@ -9,6 +10,7 @@ import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
+import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.core.model.toJson
 import java.io.File
 import java.nio.file.Files
@@ -242,9 +244,14 @@ object ReportWriter {
                 val label =
                     when (event) {
                         is MessageEventJson -> "${event.from} → ${event.to}: ${event.label} (${event.type})"
-                        is NoteEventJson -> "note over ${event.over}: ${event.text}"
+                        is NoteEventJson -> {
+                            val anchor = event.over?.let { " $it" }.orEmpty()
+                            "note ${event.placement}$anchor: ${event.text}"
+                        }
                         is DividerEventJson -> "—— ${event.label}"
                         is SectionEventJson -> "section: ${event.title}"
+                        is DelayEventJson -> "delay${event.label?.let { ": $it" }.orEmpty()}"
+                        is SpacerEventJson -> "spacer${event.heightPx?.let { " ${it}px" }.orEmpty()}"
                         is LifelineEventJson -> "${event.kind} ${event.participantId}"
                     }
                 "<li>${label.escapeHtml()}</li>"

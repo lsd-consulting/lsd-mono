@@ -99,16 +99,47 @@ data class MessageEventJson(
 data class NoteEventJson(
     val id: String,
     val text: String,
-    val over: String,
+    /** Anchor participant. Required for placement `over`; optional for left/right. */
+    val over: String? = null,
+    val placement: String = "over",
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
-            listOf(
-                "kind" to JsonString("note"),
-                "id" to JsonString(id),
-                "text" to JsonString(text),
-                "over" to JsonString(over),
-            ),
+            buildList {
+                add("kind" to JsonString("note"))
+                add("id" to JsonString(id))
+                add("text" to JsonString(text))
+                if (over != null) add("over" to JsonString(over))
+                add("placement" to JsonString(placement))
+            },
+        )
+}
+
+data class DelayEventJson(
+    val id: String,
+    val label: String? = null,
+) : EventJson() {
+    internal override fun toJsonValue(): JsonValue =
+        obj(
+            buildList {
+                add("kind" to JsonString("delay"))
+                add("id" to JsonString(id))
+                if (label != null) add("label" to JsonString(label))
+            },
+        )
+}
+
+data class SpacerEventJson(
+    val id: String,
+    val heightPx: Int? = null,
+) : EventJson() {
+    internal override fun toJsonValue(): JsonValue =
+        obj(
+            buildList {
+                add("kind" to JsonString("spacer"))
+                add("id" to JsonString(id))
+                if (heightPx != null) add("heightPx" to JsonNumber(heightPx.toString()))
+            },
         )
 }
 

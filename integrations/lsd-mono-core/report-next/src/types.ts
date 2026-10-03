@@ -16,6 +16,10 @@ export type MessageType =
   | 'ASYNCHRONOUS'
   | 'LOST'
   | 'BI_DIRECTIONAL'
+  | 'SHORT_INBOUND'
+  | 'SHORT_OUTBOUND'
+
+export type NotePlacement = 'over' | 'left' | 'right'
 
 export interface Participant {
   id: string
@@ -29,7 +33,9 @@ export interface NoteEvent {
   kind: 'note'
   id: string
   text: string
-  over: string // participant id
+  /** Anchor participant. Required for placement `over`; optional for left/right. */
+  over?: string
+  placement?: NotePlacement
 }
 
 export interface DividerEvent {
@@ -45,6 +51,20 @@ export interface SectionEvent {
   title: string
 }
 
+/** Time-delay ellipsis (`...label...`). */
+export interface DelayEvent {
+  kind: 'delay'
+  id: string
+  label?: string
+}
+
+/** Vertical spacer. Optional height in CSS pixels. */
+export interface SpacerEvent {
+  kind: 'spacer'
+  id: string
+  heightPx?: number
+}
+
 export interface ActivateEvent {
   kind: 'activate' | 'deactivate'
   id: string
@@ -54,7 +74,9 @@ export interface ActivateEvent {
 export interface MessageEvent {
   kind: 'message'
   id: string
+  /** Empty for SHORT_INBOUND (phantom edge). */
   from: string
+  /** Empty for SHORT_OUTBOUND (phantom edge). */
   to: string
   label: string
   type: MessageType
@@ -64,7 +86,14 @@ export interface MessageEvent {
   data?: unknown
 }
 
-export type DiagramEvent = MessageEvent | NoteEvent | DividerEvent | SectionEvent | ActivateEvent
+export type DiagramEvent =
+  | MessageEvent
+  | NoteEvent
+  | DividerEvent
+  | SectionEvent
+  | DelayEvent
+  | SpacerEvent
+  | ActivateEvent
 
 export interface Fact {
   key: string

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramEvent } from '../types'
-import { activationSpans, layoutRows, virtualRowRange } from './layout'
+import { activationSpans, eventRowHeight, layoutRows, virtualRowRange } from './layout'
 
 function uniform(count: number, height = 50): { y: number; height: number }[] {
   return Array.from({ length: count }, (_, i) => ({ y: i * height, height }))
@@ -68,5 +68,15 @@ describe('activationSpans', () => {
     expect(spans[0].participantId).toBe('api')
     expect(spans[0].y0).toBeLessThan(section.y)
     expect(spans[0].y1).toBeGreaterThan(section.y + section.height)
+  })
+})
+
+describe('eventRowHeight', () => {
+  it('maps delay and spacer kinds, clamping custom spacer height', () => {
+    expect(eventRowHeight({ kind: 'delay', id: 'd1', label: 'wait' })).toBe(36)
+    expect(eventRowHeight({ kind: 'spacer', id: 's1' })).toBe(24)
+    expect(eventRowHeight({ kind: 'spacer', id: 's2', heightPx: 80 })).toBe(80)
+    expect(eventRowHeight({ kind: 'spacer', id: 's3', heightPx: 4 })).toBe(12)
+    expect(eventRowHeight({ kind: 'spacer', id: 's4', heightPx: 999 })).toBe(240)
   })
 })

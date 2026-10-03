@@ -1,15 +1,18 @@
 package io.lsdconsulting.lsd.mono.core.capture
 
 import io.lsdconsulting.lsd.mono.core.IdGenerator
+import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
 import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Note
+import io.lsdconsulting.lsd.mono.core.domain.NotePlacement
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
+import io.lsdconsulting.lsd.mono.core.domain.Spacer
 
 /**
  * Builds a [SequenceEvent] using the context's [IdGenerator] so deterministic ids stay consistent.
@@ -85,9 +88,27 @@ infix fun LifelineAction.lifeline(participant: String): SequenceEventBuilder =
 infix fun LifelineAction.lifeline(participant: Participant): SequenceEventBuilder = lifeline(participant.id)
 
 fun noteOver(participant: String, text: String): SequenceEventBuilder =
-    SequenceEventBuilder { ids -> Note(id = ids.next(), text = text, over = participant) }
+    SequenceEventBuilder { ids ->
+        Note(id = ids.next(), text = text, over = participant, placement = NotePlacement.OVER)
+    }
 
 fun noteOver(participant: Participant, text: String): SequenceEventBuilder = noteOver(participant.id, text)
+
+/** Note left of an optional anchor participant (migration-friendly vs legacy NoteLeft). */
+fun noteLeft(text: String, of: String? = null): SequenceEventBuilder =
+    SequenceEventBuilder { ids ->
+        Note(id = ids.next(), text = text, over = of, placement = NotePlacement.LEFT)
+    }
+
+fun noteLeft(text: String, of: Participant): SequenceEventBuilder = noteLeft(text, of.id)
+
+/** Note right of an optional anchor participant (migration-friendly vs legacy NoteRight). */
+fun noteRight(text: String, of: String? = null): SequenceEventBuilder =
+    SequenceEventBuilder { ids ->
+        Note(id = ids.next(), text = text, over = of, placement = NotePlacement.RIGHT)
+    }
+
+fun noteRight(text: String, of: Participant): SequenceEventBuilder = noteRight(text, of.id)
 
 /** Legacy name for a diagram section break (`== label ==` in PlantUML). */
 fun logicalDivider(label: String): SequenceEventBuilder =
@@ -99,3 +120,39 @@ fun logicalDivider(label: String): SequenceEventBuilder =
  */
 fun section(title: String): SequenceEventBuilder =
     SequenceEventBuilder { ids -> Section(id = ids.next(), title = title) }
+
+/** Time delay (`...` / `...label...`). */
+fun delay(label: String? = null): SequenceEventBuilder =
+    SequenceEventBuilder { ids -> Delay(id = ids.next(), label = label) }
+
+/** Vertical spacer (`|||` / sized). */
+fun spacer(heightPx: Int? = null): SequenceEventBuilder =
+    SequenceEventBuilder { ids -> Spacer(id = ids.next(), heightPx = heightPx) }
+
+/** Short inbound arrow from diagram edge to [to] (no fake participant). */
+fun shortInbound(to: String, label: String = ""): SequenceEventBuilder =
+    SequenceEventBuilder { ids ->
+        Message(
+            id = ids.next(),
+            from = "",
+            to = to,
+            label = label,
+            type = MessageType.SHORT_INBOUND,
+        )
+    }
+
+fun shortInbound(to: Participant, label: String = ""): SequenceEventBuilder = shortInbound(to.id, label)
+
+/** Short outbound arrow from [from] toward diagram edge (no fake participant). */
+fun shortOutbound(from: String, label: String = ""): SequenceEventBuilder =
+    SequenceEventBuilder { ids ->
+        Message(
+            id = ids.next(),
+            from = from,
+            to = "",
+            label = label,
+            type = MessageType.SHORT_OUTBOUND,
+        )
+    }
+
+fun shortOutbound(from: Participant, label: String = ""): SequenceEventBuilder = shortOutbound(from.id, label)

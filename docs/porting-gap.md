@@ -2,7 +2,7 @@
 
 **Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
-**Inspected (local tree, slices through JUnit structured failures, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
+**Inspected (local tree, slices through P1 remaining sequence event kinds, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
 
 Legacy is **inspiration and migration API only** — not the product path. Generating PlantUML as the product renderer is explicitly **out**.
 
@@ -26,8 +26,9 @@ These are **implemented**, not stubs, unless noted.
 |------|----------|
 | Participants (name/id/alias/colour + types ACTOR, PARTICIPANT, DATABASE, QUEUE, ENTITY, BOUNDARY) | `integrations/lsd-mono-core/.../domain/Participant.kt`; auto-register on capture in `LsdContext.bind` / `resolve` |
 | Facts | `addFact` → `FactJson` in report |
-| Messages: SYNCHRONOUS, SYNCHRONOUS_RESPONSE, ASYNCHRONOUS, LOST, BI_DIRECTIONAL (+ colour, data, durationMs) | `domain/SequenceEvent.kt` `MessageType`; JSON `MessageEventJson` |
-| Note **over** participant | `Note` + DSL `noteOver` |
+| Messages: SYNCHRONOUS, SYNCHRONOUS_RESPONSE, ASYNCHRONOUS, LOST, BI_DIRECTIONAL, SHORT_INBOUND, SHORT_OUTBOUND (+ colour, data, durationMs) | `domain/SequenceEvent.kt` `MessageType`; JSON `MessageEventJson` — short types + distinct LOST/BI SVG **landed 2026-10-03** |
+| Note over / left / right | `Note` + `NotePlacement` + DSL `noteOver` / `noteLeft` / `noteRight` — **landed 2026-10-03** |
+| Delay + spacer | `Delay` / `Spacer` + DSL `delay` / `spacer` — **landed 2026-10-03** |
 | Logical dividers | `Divider` / `logicalDivider` |
 | Lifeline activate / deactivate | `Lifeline` + DSL `LifelineAction.lifeline` |
 | Kotlin capture DSL (`"A" messages "B" withLabel …`) | `capture/CaptureDsl.kt` |
@@ -44,7 +45,6 @@ These are **implemented**, not stubs, unless noted.
 
 - `completeComponentsReport` → placeholder HTML only (`ReportWriter.writeComponentsStub`). The JUnit extension calls it only when `lsd.mono.components.enabled=true` (default **false**). Still not a component graph.
 - Captured metrics are a **simple** message count + summed `durationMs`, not legacy bottleneck-tree metrics (`com.lsd.core.report.model.Metrics`).
-- LOST / BI_DIRECTIONAL are in the **domain + JSON**, but the SVG renderer does **not** yet give them distinct arrow semantics (no lost-X / bi-arrow styling in `sequence-diagram.ts`).
 - Module README still says injection is deferred; code + `CaptureToJsonTest` show injection **works** — README is stale.
 
 ---
@@ -73,45 +73,37 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | **Still open** | Zoom / pan / fit-width (P1). Density modes. Browser FPS check with N≥500. |
 | **Test** | `layout.test.ts` (`npm test` in `report-next`) — scrollTop + viewport → row range, including sticky-header inset and overscan. |
 
-#### P1 — Note left / note right
+#### P1 — Note left / note right — **landed 2026-10-03**
 
 | | |
 |--|--|
-| **Legacy** | `NoteLeft` / `NoteRight` (± optional `ofParticipant`) → PlantUML `note left` / `note right` (`adapter/puml/SequenceDiagramMarkup.kt`). Mono only has `Note` over a participant. |
-| **Why** | Common in approval fixtures and migration samples (`approval/LsdContextTest.java` uses left/right notes). |
-| **Greenfield** | Extend note event: `placement: "over" \| "left" \| "right"` (+ optional anchor participant). SVG positions card relative to lifeline. |
-| **Priority** | **P1** |
-| **Test** | Golden JSON kinds; unit SVG layout fixtures for left/right/over. |
+| **Legacy** | `NoteLeft` / `NoteRight` (± optional `ofParticipant`) → PlantUML `note left` / `note right`. |
+| **Shipped** | Single `Note` with `placement: over \| left \| right` and optional `over` anchor. DSL `noteOver` / `noteLeft` / `noteRight`; `LsdContext.noteLeft` / `noteRight`. SVG offsets left/right of the lifeline (or diagram centre when unanchored) and adds a placement text cue (not colour-only). |
+| **Test** | `RemainingSequenceEventKindsTest`; `sequence-diagram.test.ts` (`noteLayout` / placement attrs). |
 
-#### P1 — Time delay & vertical space
+#### P1 — Time delay & vertical space — **landed 2026-10-03**
 
 | | |
 |--|--|
-| **Legacy** | `TimeDelay` (`...label...`) and `VerticalSpace` (`\|\|\|` / sized) in `SequenceEvent.kt` / markup. |
-| **Why** | Communicate wait / pacing without inventing fake messages. |
-| **Greenfield** | `kind: "delay"` (optional label) and `kind: "spacer"` (optional heightPx). Lightweight SVG rows — not PlantUML ellipsis. |
-| **Priority** | **P1** |
-| **Test** | Golden JSON; unit row-height mapping. |
+| **Legacy** | `TimeDelay` / `VerticalSpace`. |
+| **Shipped** | `Delay` (`kind: "delay"`, optional label) and `Spacer` (`kind: "spacer"`, optional `heightPx`). Ellipsis / tick SVG rows. Row heights via `eventRowHeight` (spacer clamped 12–240). |
+| **Test** | `RemainingSequenceEventKindsTest`; `layout.test.ts` (`eventRowHeight`). |
 
-#### P1 — Short inbound / outbound arrows
+#### P1 — Short inbound / outbound arrows — **landed 2026-10-03**
 
 | | |
 |--|--|
-| **Legacy** | `MessageType.SHORT_INBOUND` / `SHORT_OUTBOUND` render as `?->` / `->?` (`SequenceDiagramMarkup.kt`). Absent from mono `MessageType` and report-next `types.ts`. |
-| **Why** | Models unknown peer / found-message style traffic in integration tests. |
-| **Greenfield** | Add message types; SVG draws arrow from/to diagram edge (phantom column), not a fake participant. |
-| **Priority** | **P1** |
-| **Test** | Golden JSON types; unit SVG edge-message geometry. |
+| **Legacy** | `SHORT_INBOUND` / `SHORT_OUTBOUND` as `?->` / `->?`. |
+| **Shipped** | Message types + DSL `shortInbound` / `shortOutbound`. Phantom end is an empty `from`/`to` string — **no** `?` participant. SVG stub toward the diagram edge (`shortMessageEndpoints`) with `[in]` / `[out]` text cues. |
+| **Test** | `RemainingSequenceEventKindsTest`; `sequence-diagram.test.ts` (geometry + fragments). |
 
-#### P1 — Distinct LOST / BI_DIRECTIONAL rendering
+#### P1 — Distinct LOST / BI_DIRECTIONAL rendering — **landed 2026-10-03**
 
 | | |
 |--|--|
-| **Legacy** | Lost (`->x`) and bi-directional (`<->`) arrows in PlantUML markup. |
-| **Why** | Domain already accepts these types in mono; UI under-delivers. |
-| **Greenfield** | Markers + stroke rules in `sequence-diagram.ts` (X tip / dual heads). |
-| **Priority** | **P1** |
-| **Test** | Unit snapshot of SVG fragment per type (or structured layout DTO). |
+| **Legacy** | Lost (`->x`) and bi-directional (`<->`) arrows. |
+| **Shipped** | `messageArrowSpec` + markers in `sequence-diagram.ts`: LOST = X tip + `[lost]` cue; BI = dual filled heads + `↔` cue. Colour is never the only cue. |
+| **Test** | `sequence-diagram.test.ts` (marker paths, marker-start/end, type cues). |
 
 #### P2 — Lifeline activate colour
 
@@ -311,7 +303,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 3. **P0 — JUnit structured failures + richer extension tests**  
    Slice 3 landed 2026-10-03: scenario `error` (`headline`, `message`, `stack`), plain-text descriptions, extension outcomes test (success / fail / disabled / aborted / nested / post-processing), components stub opt-in via `lsd.mono.components.enabled` (default off). No component graph.
 
-4. **P1 — Remaining sequence event kinds** (note left/right, delay, spacer, short arrows) + LOST/BI SVG semantics.
+4. **P1 — Remaining sequence event kinds** — **landed 2026-10-03**: note left/right, delay, spacer, short arrows, LOST X / BI dual heads (shape + label cues). Zoom, metrics, component graph stay later.
 
 5. **P1 — Metrics insights + ReportOptions/properties**; label truncation.
 
@@ -337,7 +329,7 @@ Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied
 ### Unit (Kotlin + TS)
 
 - **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder; metrics tree (port ideas from `MetricsTest`); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent.
-- **TypeScript:** `report-next/src/lib/layout.test.ts` locks `virtualRowRange` (scrollTop + viewport, overscan, sticky header inset) and activation spans across a section. `scenario-summary.test.ts` locks escaped failure text (no overlay, stack not inlined). Run `npm test` in `report-next` (vitest). Marker choice for message types is still open.
+- **TypeScript:** `layout.test.ts` locks `virtualRowRange` and `eventRowHeight` (delay/spacer). `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report-next` (vitest).
 
 ### Browser / UI (later, selective)
 
