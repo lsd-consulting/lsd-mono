@@ -5,6 +5,7 @@ import type { MessageEvent, Report, Scenario, Status } from './types'
 import { scenarioDescriptionHtml, scenarioHaystack } from './ui/scenario-summary'
 import { bindInspector, delegateMessageOpen, inspectorMarkup, type InspectorController } from './ui/inspector'
 import { loadExternalPayloads, payloadKey } from './lib/payloads'
+import { clearMessageHash, parseMessageHash, writeMessageHash } from './lib/message-url'
 
 declare global {
   interface Window {
@@ -53,6 +54,39 @@ const app = document.querySelector('#app')!
 /** Arrow that opened the inspector. Close returns focus here. */
 let invoker: { scenarioId: string; messageId: string } | null = null
 let inspector: InspectorController | null = null
+/** Suppress hashchange while we write the open-message token ourselves. */
+let writingHash = false
+
+function reportLocation(): { hash: string; replace?: (url: string) => void } {
+  return {
+    get hash() {
+      return window.location.hash
+    },
+    set hash(value: string) {
+      window.location.hash = value.startsWith('#') ? value.slice(1) : value
+    },
+    replace(url: string) {
+      try {
+        const next = url === '#' || url === '' ? `${window.location.pathname}${window.location.search}` : url
+        window.history.replaceState(null, '', next)
+      } catch {
+        window.location.hash = url.startsWith('#') ? url.slice(1) : url
+      }
+    },
+  }
+}
+
+function setOpenMessageHash(scenarioId: string, messageId: string): void {
+  writingHash = true
+  writeMessageHash(reportLocation(), { scenarioId, messageId })
+  writingHash = false
+}
+
+function clearOpenMessageHash(): void {
+  writingHash = true
+  clearMessageHash(reportLocation())
+  writingHash = false
+}
 
 function counts() {
   return report.scenarios.reduce(
@@ -180,6 +214,7 @@ function bindChrome(): void {
   inspector = bindInspector(document, {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onClose: (opened) => {
+      clearOpenMessageHash()
       const messageId = focusTargetAfterClose(opened?.messageId ?? null)
       const scenarioId = opened?.scenarioId
       invoker = null
@@ -267,6 +302,10 @@ function bindChrome(): void {
           ev.preventDefault()
           ev.stopPropagation()
           focusDiagramMessage(scrollKey, action.messageId)
+          if (inspector?.isOpen()) {
+            const msg = findMessage(scenario, action.messageId)
+            if (msg) openMessage(scenario, msg)
+          }
           return
         }
         if (action.type === 'open' && action.messageId) {
@@ -436,6 +475,7 @@ function openError(scenario: Scenario): void {
   const err = scenario.error
   if (!err || !inspector) return
   invoker = null
+  clearOpenMessageHash()
   inspector.openError({
     status: scenario.status,
     headline: err.headline,
@@ -447,7 +487,30 @@ function openError(scenario: Scenario): void {
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
   if (!inspector) return
   invoker = { scenarioId: scenario.id, messageId: msg.id }
+  setOpenMessageHash(scenario.id, msg.id)
   inspector.openMessage(scenario.id, msg)
+}
+
+/** Open the message named in the URL hash (file:// safe). Payload still loads on open. */
+function applyOpenMessageFromHash(): void {
+  if (writingHash) return
+  const ref = parseMessageHash(window.location.hash)
+  if (!ref) return
+  const scenario = report.scenarios.find((item) => item.id === ref.scenarioId)
+  if (!scenario) return
+  const msg = findMessage(scenario, ref.messageId)
+  if (!msg) return
+  const already =
+    inspector?.isOpen() && invoker?.scenarioId === ref.scenarioId && invoker?.messageId === ref.messageId
+  state.selectedId = scenario.id
+  state.openIds.add(scenario.id)
+  renderNav()
+  renderMain()
+  requestAnimationFrame(() => {
+    const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenario.id)} .seq-scroll`)
+    if (scroll) focusDiagramMessage(scroll, msg.id)
+    if (!already) openMessage(scenario, msg)
+  })
 }
 
 function messageFromNode(node: Element): { scenarioId: string; message: MessageEvent } | null {
@@ -504,6 +567,8 @@ function onKey(e: KeyboardEvent): void {
   if (typing) return
   if (target.closest('button.msg-open')) return
   if (target.closest('#inspector')) return
+  if (target.closest('.seq-minimap')) return
+  if (target.closest('.seq-scroll')) return
 
   if (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
     e.preventDefault()
@@ -539,7 +604,11 @@ function onKey(e: KeyboardEvent): void {
 
 applyTheme(getPreferredTheme())
 renderShell()
+applyOpenMessageFromHash()
+window.addEventListener('hashchange', () => applyOpenMessageFromHash())
 window.addEventListener('keydown', onKey)
 window.addEventListener('resize', () => {
-  document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => syncDiagramWindow(el))
+  document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => {
+    syncDiagramWindow(el)
+  })
 })

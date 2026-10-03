@@ -54,6 +54,13 @@ import {
   zoomScrollBehavior,
   type MessagePlace,
 } from './diagram-a11y'
+import {
+  densityBins,
+  fractionFromPointer,
+  minimapViewportRange,
+  scrubScrollTop,
+  scrollTopFromMinimapFraction,
+} from './minimap'
 
 export interface MountedDiagram {
   scenario: Scenario
@@ -304,13 +311,21 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
     <div class="seq-diagram">
       ${jump}
       ${toolbarHtml(scenario, view)}
-      <div class="seq-scroll" data-scenario-id="${escapeXml(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeXml(scenario.title)}">
-        <div class="seq-sticky-header" style="width:${width * zoom}px">${headerSvg(scenario, width, view.hidden, zoom)}</div>
-        <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
-          <div class="seq-window"></div>
+      <div class="seq-stage">
+        <div class="seq-scroll" data-scenario-id="${escapeXml(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeXml(scenario.title)}">
+          <div class="seq-sticky-header" style="width:${width * zoom}px">${headerSvg(scenario, width, view.hidden, zoom)}</div>
+          <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
+            <div class="seq-window"></div>
+          </div>
         </div>
+        ${minimapMarkup()}
       </div>
     </div>`
+}
+
+/** One track, one canvas, one window marker. Never one node per event. */
+export function minimapMarkup(): string {
+  return `<div class="seq-minimap" role="slider" aria-orientation="vertical" aria-label="Diagram overview" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><canvas class="seq-minimap-canvas" aria-hidden="true"></canvas><div class="seq-minimap-window" aria-hidden="true"></div></div>`
 }
 
 /** When true, paint every row so print is not clipped to the virtual window. */
@@ -380,6 +395,7 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
       btn?.focus({ preventScroll: true })
     }
   }
+  syncMinimap(scrollport)
 }
 
 /** SVG viewBox top. Includes the label drawn above the first painted row. */
@@ -428,6 +444,7 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
     const hits = classifySearchHits(diagram.scenario.events, view.query, view.hidden)
     count.textContent = searchCountLabel(hits.total, hits.hidden, view.query)
   }
+  paintMinimapDensity(scrollport)
 }
 
 function commitZoom(
@@ -573,6 +590,7 @@ export function bindDiagramScroll(root: ParentNode): void {
       applyDiagramFrame(scroll)
       syncDiagramWindow(scroll)
     })
+    bindMinimap(diagram, scroll)
   })
 }
 
@@ -901,6 +919,134 @@ function messageOpenButton(
 }
 
 let movingFocus = false
+
+const MINIMAP_BINS = 48
+
+/** Draw density ticks into the canvas. Bin count is fixed; event count is not. */
+export function paintMinimapDensity(scrollport: HTMLElement): void {
+  const id = scrollport.dataset.scenarioId
+  if (!id) return
+  const diagram = mounted.get(id)
+  const root = scrollport.closest('.seq-diagram')
+  const canvas = root?.querySelector<HTMLCanvasElement>('.seq-minimap-canvas')
+  if (!diagram || !canvas) return
+  const view = diagramView(id)
+  const track = canvas.parentElement
+  const cssW = Math.max(8, track?.clientWidth || 12)
+  const cssH = Math.max(32, track?.clientHeight || scrollport.clientHeight || DEFAULT_VIEWPORT)
+  const dpr = typeof devicePixelRatio === 'number' && devicePixelRatio > 0 ? devicePixelRatio : 1
+  canvas.width = Math.round(cssW * dpr)
+  canvas.height = Math.round(cssH * dpr)
+  canvas.style.width = `${cssW}px`
+  canvas.style.height = `${cssH}px`
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, cssW, cssH)
+  const contentHeight = Math.max(1, diagram.height * view.zoom)
+  const bins = densityBins(
+    diagram.rows.map((row) => row.y * view.zoom),
+    contentHeight,
+    MINIMAP_BINS,
+  )
+  const max = Math.max(1, ...bins)
+  const gap = 1
+  const binH = cssH / bins.length
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.55)'
+  bins.forEach((count, index) => {
+    if (!count) return
+    const w = Math.max(2, (count / max) * (cssW - 2))
+    ctx.fillRect(cssW - w, index * binH + gap / 2, w, Math.max(1, binH - gap))
+  })
+  syncMinimap(scrollport)
+}
+
+/** Move the viewport marker to match the scrollport. */
+export function syncMinimap(scrollport: HTMLElement): void {
+  const id = scrollport.dataset.scenarioId
+  if (!id) return
+  const diagram = mounted.get(id)
+  const root = scrollport.closest('.seq-diagram')
+  const minimap = root?.querySelector<HTMLElement>('.seq-minimap')
+  const marker = minimap?.querySelector<HTMLElement>('.seq-minimap-window')
+  if (!diagram || !minimap || !marker) return
+  const view = diagramView(id)
+  const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
+  const cssHeader = header?.offsetHeight || HEADER_BLOCK_H * view.zoom
+  const contentHeight = diagram.height * view.zoom
+  const range = minimapViewportRange({
+    scrollTop: scrollport.scrollTop,
+    viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
+    headerHeight: cssHeader,
+    contentHeight,
+  })
+  marker.style.top = `${range.top * 100}%`
+  marker.style.height = `${Math.max(range.height * 100, 2)}%`
+  const value = Math.round(range.top * 100)
+  minimap.setAttribute('aria-valuenow', String(value))
+  minimap.setAttribute('aria-valuetext', `${value}% through diagram`)
+}
+
+function bindMinimap(diagramRoot: HTMLElement, scrollport: HTMLElement): void {
+  const minimap = diagramRoot.querySelector<HTMLElement>('.seq-minimap')
+  if (!minimap) return
+  paintMinimapDensity(scrollport)
+
+  const readMetrics = () => {
+    const id = scrollport.dataset.scenarioId
+    const diagram = id ? mounted.get(id) : undefined
+    const view = id ? diagramView(id) : undefined
+    const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
+    const zoom = view?.zoom ?? 1
+    return {
+      headerHeight: header?.offsetHeight || HEADER_BLOCK_H * zoom,
+      contentHeight: (diagram?.height ?? 0) * zoom,
+      viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
+    }
+  }
+
+  const jumpTo = (clientY: number) => {
+    const rect = minimap.getBoundingClientRect()
+    const fraction = fractionFromPointer(clientY, rect.top, rect.height)
+    const metrics = readMetrics()
+    // Direct assignment: never an animated glide (honours reduced motion).
+    scrollport.scrollTop = scrollTopFromMinimapFraction({ fractionY: fraction, ...metrics })
+    syncDiagramWindow(scrollport)
+  }
+
+  let dragging = false
+  minimap.addEventListener('pointerdown', (ev) => {
+    if (ev.button !== 0) return
+    dragging = true
+    minimap.setPointerCapture(ev.pointerId)
+    jumpTo(ev.clientY)
+    ev.preventDefault()
+  })
+  minimap.addEventListener('pointermove', (ev) => {
+    if (!dragging) return
+    jumpTo(ev.clientY)
+  })
+  const endDrag = (ev: PointerEvent) => {
+    if (!dragging) return
+    dragging = false
+    if (minimap.hasPointerCapture(ev.pointerId)) minimap.releasePointerCapture(ev.pointerId)
+  }
+  minimap.addEventListener('pointerup', endDrag)
+  minimap.addEventListener('pointercancel', endDrag)
+
+  minimap.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return
+    ev.preventDefault()
+    ev.stopPropagation()
+    const metrics = readMetrics()
+    scrollport.scrollTop = scrubScrollTop({
+      scrollTop: scrollport.scrollTop,
+      direction: ev.key === 'ArrowDown' ? 1 : -1,
+      ...metrics,
+    })
+    syncDiagramWindow(scrollport)
+  })
+}
 
 function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches

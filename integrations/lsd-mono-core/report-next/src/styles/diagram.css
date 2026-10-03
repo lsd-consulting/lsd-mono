@@ -1,4 +1,47 @@
 .seq-diagram { display: flex; flex-direction: column; gap: 8px; }
+.seq-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px;
+  gap: 0;
+  align-items: stretch;
+  max-height: min(68vh, 640px);
+  min-height: 220px;
+}
+.seq-minimap {
+  position: relative;
+  width: 14px;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface-2) 80%, var(--surface));
+  cursor: ns-resize;
+  touch-action: none;
+  outline: none;
+}
+.seq-minimap:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.seq-minimap-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.seq-minimap-window {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  border-radius: 3px;
+  border: 1px solid var(--accent);
+  background: color-mix(in oklab, var(--accent) 28%, transparent);
+  pointer-events: none;
+  box-sizing: border-box;
+  min-height: 6px;
+}
 .section-jump {
   display: flex;
   flex-wrap: wrap;
@@ -22,8 +65,9 @@
   background: var(--accent-soft);
 }
 .seq-scroll {
-  max-height: min(68vh, 640px);
-  min-height: 220px;
+  max-height: none;
+  min-height: 0;
+  height: 100%;
   overflow: auto;
   position: relative;
   border-top: 1px solid var(--border);
@@ -291,4 +335,9 @@
 /* Zoom scales the drawing. It does not reflow the sequence into one column. */
 @media (prefers-reduced-motion: reduce) {
   .seq-scroll { scroll-behavior: auto; }
+}
+
+@media print {
+  .seq-minimap { display: none; }
+  .seq-stage { display: block; }
 }
