@@ -10,7 +10,7 @@ object LsdProperties {
     const val OUTPUT_DIR = "lsd.mono.report.outputDir"
     const val DETERMINISTIC_IDS = "lsd.mono.ids.deterministic"
     const val HIDE_STACKTRACE = "lsd.mono.junit.hideStacktrace"
-    /** When true, [io.lsdconsulting.lsd.mono.core.LsdContext.completeComponentsReport] is invoked by the JUnit extension. Default false — the stub is not a component graph. */
+    /** When true, reports include a component graph and the JUnit extension writes the combined graph. Default false. */
     const val COMPONENTS_REPORT = "lsd.mono.components.enabled"
     /**
      * Duration insights and the simple message-count metrics. Default **true**,
@@ -69,7 +69,7 @@ object LsdProperties {
     fun hideStacktrace(): Boolean =
         getBoolean(HIDE_STACKTRACE, getBoolean("lsd.junit.hideStacktrace", false))
 
-    /** Combined component stub is opt-in until a real renderer exists. */
+    /** Combined component graph is opt-in. Default false. */
     @JvmStatic
     fun componentsReportEnabled(): Boolean =
         getBoolean(COMPONENTS_REPORT, false)

@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.junitjupiter
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.capture.messages
 import io.lsdconsulting.lsd.mono.core.capture.withLabel
+import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -107,15 +108,22 @@ class LsdExtensionOutcomesTest {
     }
 
     @Test
-    fun `components stub is written only when enabled and is not a graph`() {
+    fun `components report is a real graph when enabled`() {
         System.setProperty("lsd.mono.components.enabled", "true")
         execute(LsdComponentsOptInFixture::class.java)
 
-        val stub = tempDir.resolve("components-report.html").readText()
-        assertTrue(stub.contains("deferred"), stub)
-        assertFalse(stub.contains("<svg"), stub)
+        val html = tempDir.resolve("components-report.html").readText()
+        assertTrue(html.contains("<svg"), html)
+        assertTrue(html.contains("sync, lost x3"), html)
+        assertFalse(html.contains("deferred"), html)
+        val components = tempDir.resolve("components.json").readText()
+        assertTrue(components.contains(""""count": 3"""), components)
+        assertTrue(components.contains(""""from": "a""""), components)
+        assertTrue(components.contains(""""to": "b""""), components)
+        assertFalse(components.contains("SYNCHRONOUS_RESPONSE"), components)
         val json = tempDir.resolve("LsdComponentsOptInFixture-report.json").readText()
         assertTrue(json.contains(""""description": "Test passed""""))
+        assertTrue(json.contains(""""components""""), json)
         assertFalse(json.contains(""""error""""))
     }
 
@@ -189,6 +197,11 @@ class LsdOutcomeFixtures {
 class LsdComponentsOptInFixture {
     @Test
     fun `passes`() {
-        LsdContext.instance.addFact("components", "opt-in")
+        val lsd = LsdContext.instance
+        lsd.addFact("components", "opt-in")
+        lsd.capture("A" messages "B" withLabel "one")
+        lsd.capture("A" messages "B" withLabel "two")
+        lsd.message("A", "B", "dropped", MessageType.LOST)
+        lsd.response("B", "A", "ack")
     }
 }

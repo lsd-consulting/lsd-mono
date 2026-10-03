@@ -8,6 +8,7 @@ import io.lsdconsulting.lsd.mono.core.json.JsonString
 import io.lsdconsulting.lsd.mono.core.json.JsonValue
 import io.lsdconsulting.lsd.mono.core.json.anyToJson
 import io.lsdconsulting.lsd.mono.core.json.render
+import io.lsdconsulting.lsd.mono.core.report.toJsonValue
 
 /**
  * Report JSON aligned with report-next `src/types.ts` (`Report` / `Scenario` / `DiagramEvent`).
@@ -57,6 +58,11 @@ data class ScenarioJson(
     val events: List<EventJson> = emptyList(),
     /** Present for failed/aborted scenarios. Omitted from JSON when null. */
     val error: ScenarioErrorJson? = null,
+    /**
+     * Per-scenario component graph. Present only when `lsd.mono.components.enabled=true`.
+     * Omitted from JSON when null (the default).
+     */
+    val components: ComponentGraphJson? = null,
 )
 
 data class FactJson(
@@ -83,6 +89,33 @@ data class InsightJson(
     val messageId: String,
     val totalMs: Long,
     val isolatedMs: Long,
+)
+
+/**
+ * One component in the architecture graph. [id] matches message `from` / `to`
+ * (participant id after capture). [type] is the participant type, not an edge colour.
+ */
+data class ComponentNodeJson(
+    val id: String,
+    val name: String,
+    val type: String = "PARTICIPANT",
+)
+
+/**
+ * One from→to dependency. [types] are included message types in first-seen order.
+ * [count] is how many of those messages collapsed onto this edge.
+ * The shell labels the type in text; colour is not the cue.
+ */
+data class ComponentEdgeJson(
+    val from: String,
+    val to: String,
+    val types: List<String>,
+    val count: Int,
+)
+
+data class ComponentGraphJson(
+    val nodes: List<ComponentNodeJson> = emptyList(),
+    val edges: List<ComponentEdgeJson> = emptyList(),
 )
 
 data class ParticipantJson(
@@ -238,6 +271,7 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
             if (insights.isNotEmpty()) add("insights" to JsonArray(insights.map { it.toJsonValue() }))
             add("participants" to JsonArray(participants.map { it.toJsonValue() }))
             add("events" to JsonArray(events.map { it.toJsonValue() }))
+            if (components != null) add("components" to components.toJsonValue())
         },
     )
 

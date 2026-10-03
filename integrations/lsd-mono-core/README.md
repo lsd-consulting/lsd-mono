@@ -34,7 +34,7 @@ lsd-mono-core/
 
 - Kotlin library compiles and tests
 - `LsdContext` façade: facts, `completeScenario`, `completeReport`, `createIndex`,
-  `completeComponentsReport` (stub), `clear`, id generation, HTML escape, popup helper
+  `completeComponentsReport` (opt-in component graph), `clear`, id generation, HTML escape, popup helper
 - Report writer emits:
   - `*-report.json` — ReportJson-shaped payload (aligned with spike `types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)

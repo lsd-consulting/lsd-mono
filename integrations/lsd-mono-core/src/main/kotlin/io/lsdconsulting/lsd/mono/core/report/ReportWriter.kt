@@ -97,26 +97,18 @@ object ReportWriter {
         return index
     }
 
-    fun writeComponentsStub(
-        title: String,
+    /**
+     * Real component graph: `components.json` plus an SVG page.
+     * Edge types are labelled in the SVG (not colour-only). Not the old placeholder.
+     */
+    fun writeComponentsReport(
+        document: ComponentsDocument,
         outputDir: File,
     ): Path {
         outputDir.mkdirs()
+        Files.writeString(outputDir.resolve("components.json").toPath(), document.toJson())
         val path = outputDir.resolve("components-report.html").toPath()
-        val html =
-            """
-            <!DOCTYPE html>
-            <html lang="en">
-            <head><meta charset="UTF-8"/><title>${title.escapeHtml()}</title></head>
-            <body>
-              <h1>${title.escapeHtml()}</h1>
-              <p>Component diagram rendering is <strong>deferred</strong> in lsd-mono-core
-                 (greenfield path uses report-next sequence SVG; PlantUML component
-                 diagrams remain legacy reference only).</p>
-            </body>
-            </html>
-            """.trimIndent()
-        Files.writeString(path, html)
+        Files.writeString(path, renderComponentsHtml(document))
         return path
     }
 

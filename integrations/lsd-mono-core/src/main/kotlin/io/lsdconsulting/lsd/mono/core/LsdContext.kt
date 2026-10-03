@@ -34,8 +34,12 @@ import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.report.ComponentsDocument
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.report.ScenarioComponentGraph
 import io.lsdconsulting.lsd.mono.core.report.capturedMetrics
+import io.lsdconsulting.lsd.mono.core.report.combineComponentGraphs
+import io.lsdconsulting.lsd.mono.core.report.componentGraph
 import java.io.File
 import java.nio.file.Path
 import java.time.OffsetDateTime
@@ -57,8 +61,12 @@ import java.time.ZoneId
  * slowest-message insights. Gated by [ReportOptions.metricsEnabled] (default on).
  * Labels in the shell truncate to [ReportOptions.labelMaxWidth].
  *
- * **Deferred:** PlantUML / component diagrams, legacy include-files,
- * zoom/fit, activate colour.
+ * **Components:** opt-in graph (`lsd.mono.components.enabled`) derived from
+ * captured messages. Per-scenario on the report JSON, plus a combined
+ * `components.json` and labelled SVG from [completeComponentsReport].
+ * Not PlantUML.
+ *
+ * **Deferred:** legacy include-files, zoom/fit, activate colour.
  */
 open class LsdContext {
 
@@ -70,6 +78,11 @@ open class LsdContext {
         get() = File(LsdProperties.outputDirectory())
 
     private val scenarios: MutableList<Scenario> = ArrayList()
+    /**
+     * Scenarios kept after [completeReport] so [completeComponentsReport] can union
+     * them. Retained only when components are enabled; cleared by that report or [clear].
+     */
+    private val componentSnapshots: MutableList<Scenario> = ArrayList()
     private val reportFiles: MutableList<ReportFile> = ArrayList()
     private val participants = linkedMapOf<String, Participant>()
     private val currentFacts: MutableList<Fact> = ArrayList()
@@ -246,6 +259,11 @@ open class LsdContext {
     }
 
     fun completeReport(title: String): Path {
+        if (LsdProperties.componentsReportEnabled()) {
+            componentSnapshots.addAll(scenarios)
+        } else {
+            componentSnapshots.clear()
+        }
         val report = buildReportJson(title)
         val path =
             ReportWriter.writeReport(
@@ -266,14 +284,37 @@ open class LsdContext {
         return path
     }
 
-    fun completeComponentsReport(title: String): Path =
-        ReportWriter.writeComponentsStub(title, outputDirectory)
+    /**
+     * Writes `components.json` and `components-report.html` (a real SVG, not a stub).
+     * Unions scenarios completed since the previous components report. [completeReport]
+     * keeps those scenarios only when `lsd.mono.components.enabled=true`.
+     */
+    fun completeComponentsReport(title: String): Path {
+        val sources = if (componentSnapshots.isNotEmpty()) componentSnapshots.toList() else scenarios.toList()
+        val scenarioGraphs =
+            sources.map { scenario ->
+                ScenarioComponentGraph(
+                    title = scenario.title,
+                    graph = componentGraph(scenario.events, scenario.participants),
+                )
+            }
+        val document =
+            ComponentsDocument(
+                title = title,
+                combined = combineComponentGraphs(scenarioGraphs.map { it.graph }),
+                scenarios = scenarioGraphs,
+            )
+        return ReportWriter.writeComponentsReport(document, outputDirectory).also {
+            componentSnapshots.clear()
+        }
+    }
 
     fun createIndex(): Path = ReportWriter.writeIndex(reportFiles.toList(), outputDirectory)
 
     fun clear() {
         idGenerator = IdGenerator(LsdProperties.deterministicIds())
         scenarios.clear()
+        componentSnapshots.clear()
         reportFiles.clear()
         participants.clear()
         currentFacts.clear()
@@ -393,6 +434,12 @@ open class LsdContext {
                     )
                 },
             events = events.map { it.toEventJson() },
+            components =
+                if (LsdProperties.componentsReportEnabled()) {
+                    componentGraph(events, participants)
+                } else {
+                    null
+                },
         )
     }
 

@@ -2,7 +2,7 @@
 
 **Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
-**Inspected (local tree, slices through P1 metrics insights, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
+**Inspected (local tree, slices through P1 component graph, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
 
 Legacy is **inspiration and migration API only** — not the product path. Generating PlantUML as the product renderer is explicitly **out**.
 
@@ -41,11 +41,11 @@ These are **implemented**, not stubs, unless noted.
 | Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — **no longer used by the JUnit extension**. Left as a migration shim only. |
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdProperties.kt`, `ReportOptions.kt` |
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
+| Component graph from captured messages | `report/ComponentGraph.kt`. Opt-in `lsd.mono.components.enabled` (default **false**). Per-scenario `components` on report JSON, combined `components.json` + labelled SVG. **Landed 2026-10-03.** Not PlantUML. |
 
 **Stubs / thin surfaces (do not treat as done):**
 
-- `completeComponentsReport` → placeholder HTML only (`ReportWriter.writeComponentsStub`). The JUnit extension calls it only when `lsd.mono.components.enabled=true` (default **false**). Still not a component graph.
-- Module README still says injection is deferred; code + `CaptureToJsonTest` show injection **works** — README is stale.
+- Module README still says injection is deferred; code + `CaptureToJsonTest` show injection **works** — README is stale. Component reports are no longer a stub.
 
 ---
 
@@ -221,15 +221,14 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### 3.3 Component diagrams
 
-#### P1 — Component / architecture view (non-PlantUML)
+#### P1 — Component / architecture view (non-PlantUML) — **landed 2026-10-03**
 
 | | |
 |--|--|
 | **Legacy** | Per-scenario component SVG via PlantUML (`ComponentDiagramGenerator`) + combined `completeComponentsReport` over `combinedEvents`. Filters message types to SYNCHRONOUS / ASYNCHRONOUS / BI_DIRECTIONAL / LOST; distinct edges by from→to. |
-| **Mono** | Stub HTML only. |
-| **Greenfield** | Derive a graph from the same `ReportJson` messages (nodes = participants, edges = distinct from→to with types). Render with SVG or a small canvas/WebGL later — **not** PlantUML. Combined report = union of edges across scenarios completed so far. |
-| **Priority** | **P1** |
-| **Test** | Unit graph builder golden (nodes/edges JSON); UI smoke later. |
+| **Shipped** | `report/ComponentGraph.kt`. Nodes are participants on an included edge. Same from→to collapses to one edge with a `count` and the distinct types in first-seen order. **Excluded:** `SYNCHRONOUS_RESPONSE` (return arrow, not a dependency) and `SHORT_INBOUND` / `SHORT_OUTBOUND` (phantom diagram edge). Opt-in `lsd.mono.components.enabled` (default false): each scenario JSON gets `components`, and `completeComponentsReport` writes `components.json` plus `components-report.html`. The SVG labels every edge (`sync`, `async`, `lost`, `bi`, plus count) and uses a marker shape (filled, open, cross, both-ways, or diamond when mixed). Stroke colour is shared. Not PlantUML. Zoom/pan is not part of this slice. |
+| **Still open** | Rendering the graph inside the report-next shell (the sequence shell ignores the extra JSON field). UI smoke later. |
+| **Test** | `ComponentGraphTest` (collapse + count, lost kept, response and short arrows dropped, combined union, property gate, SVG label/marker). `LsdExtensionOutcomesTest` writes the real graph when enabled. |
 
 ---
 
@@ -260,9 +259,9 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | Companion junit module drives capture; core provides context + popups. |
-| **Shipped** | `ScenarioError` / scenario JSON `error` (`headline`, `message`, `stack`). Descriptions are plain text (`Test passed` / `Test failed` / `Test aborted` / `Test disabled: …`). Disabled maps to `warn` with no `error` object. Aborted maps to `warn` **with** `error`. report-next renders the message as text and the stack via the message dialog. Combined components stub is opt-in (`lsd.mono.components.enabled`, default false) — no component graph. |
+| **Shipped** | `ScenarioError` / scenario JSON `error` (`headline`, `message`, `stack`). Descriptions are plain text (`Test passed` / `Test failed` / `Test aborted` / `Test disabled: …`). Disabled maps to `warn` with no `error` object. Aborted maps to `warn` **with** `error`. report-next renders the message as text and the stack via the message dialog. Combined component graph is opt-in (`lsd.mono.components.enabled`, default false) and is a real graph when enabled (**landed 2026-10-03**). |
 | **Still open** | Hide-stacktrace covered by the property but not a dedicated test. No browser click-through of “Show stack trace”. |
-| **Test** | `LsdExtensionOutcomesTest`: success, failed, disabled, aborted, nested class, `@LsdPostTestProcessing` captures `post-processing`, components file absent unless enabled. |
+| **Test** | `LsdExtensionOutcomesTest`: success, failed, disabled, aborted, nested class, `@LsdPostTestProcessing` captures `post-processing`, components file absent unless enabled. When enabled, the file is an SVG graph (`sync, lost x3`), not the old placeholder. |
 
 #### P1 — Listener / interceptor migration path
 
@@ -299,13 +298,14 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
    Slice 2 landed 2026-10-03: `kind: "section"` (`LsdContext.section` / DSL `section`), jump list, one diagram, activations kept across sections, `virtualRowRange` + sticky participant header. Zoom/pan stays P1. Colour-blind cues are tracked next to the theme note and were not part of this slice.
 
 3. **P0 — JUnit structured failures + richer extension tests**  
-   Slice 3 landed 2026-10-03: scenario `error` (`headline`, `message`, `stack`), plain-text descriptions, extension outcomes test (success / fail / disabled / aborted / nested / post-processing), components stub opt-in via `lsd.mono.components.enabled` (default off). No component graph.
+   Slice 3 landed 2026-10-03: scenario `error` (`headline`, `message`, `stack`), plain-text descriptions, extension outcomes test (success / fail / disabled / aborted / nested / post-processing), components report opt-in via `lsd.mono.components.enabled` (default off). The graph itself landed in slice 6.
 
-4. **P1 — Remaining sequence event kinds** — **landed 2026-10-03**: note left/right, delay, spacer, short arrows, LOST X / BI dual heads (shape + label cues). Zoom, metrics, component graph stay later.
+4. **P1 — Remaining sequence event kinds** — **landed 2026-10-03**: note left/right, delay, spacer, short arrows, LOST X / BI dual heads (shape + label cues). Zoom stayed later.
 
-5. **P1 — Metrics insights + ReportOptions/properties**; label truncation. **Landed 2026-10-03.** `lsd.mono.metrics.enabled` defaults on. `options.labelMaxWidth` (default 200). Insights are `bottleneck` or `slowest` (max 5). No diagram theme, no max-events split, no component graph, no zoom.
+5. **P1 — Metrics insights + ReportOptions/properties**; label truncation. **Landed 2026-10-03.** `lsd.mono.metrics.enabled` defaults on. `options.labelMaxWidth` (default 200). Insights are `bottleneck` or `slowest` (max 5). No diagram theme, no max-events split, no zoom. Component graph is slice 6.
 
-6. **P1 — Component graph** from messages (combined + per-scenario) in SVG.
+6. **P1 — Component graph** from messages (combined + per-scenario) in SVG. **Landed 2026-10-03.** `lsd.mono.components.enabled` (default false). Edge rule matches legacy types; responses and short arrows are excluded; duplicates collapse to one edge with `count`. `components.json` + labelled SVG. Not inside the sequence shell. No zoom/pan.
+
 
 7. **P1 — Diagram UX polish** (zoom/fit, hide participants, in-diagram search).
 
@@ -326,7 +326,7 @@ Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied
 
 ### Unit (Kotlin + TS)
 
-- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder; metrics tree (`BottleneckInsightsTest` — isolated duration order and the metrics property gate); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent.
+- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder (`ComponentGraphTest` — nodes, counted edges, response exclusion, combined union, SVG type label); metrics tree (`BottleneckInsightsTest` — isolated duration order and the metrics property gate); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent.
 - **TypeScript:** `layout.test.ts` locks `virtualRowRange` and `eventRowHeight` (delay/spacer). `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement / label truncation. `insights.test.ts` locks rank text (not colour-only) and ellipsis. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report-next` (vitest).
 
 ### Browser / UI (later, selective)

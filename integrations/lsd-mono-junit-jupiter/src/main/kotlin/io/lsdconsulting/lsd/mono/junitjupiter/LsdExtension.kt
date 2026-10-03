@@ -28,7 +28,7 @@ import java.util.regex.Pattern
  * [LsdContext.capture] (or [LsdContext.message]) inside the test, and optionally
  * [LsdPostTestProcessing] for late capture before the scenario is completed.
  *
- * The combined components stub is written only when `lsd.mono.components.enabled=true`.
+ * The combined component graph (`components.json` + SVG) is written only when `lsd.mono.components.enabled=true`.
  */
 class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
 
