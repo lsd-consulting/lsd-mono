@@ -27,3 +27,6 @@ project(":modules:lsd-mono-core").projectDir = file("modules/lsd-mono-core")
 
 include("modules:lsd-mono-junit-jupiter")
 project(":modules:lsd-mono-junit-jupiter").projectDir = file("modules/lsd-mono-junit-jupiter")
+
+include("modules:lsd-mono-cucumber-8")
+project(":modules:lsd-mono-cucumber-8").projectDir = file("modules/lsd-mono-cucumber-8")

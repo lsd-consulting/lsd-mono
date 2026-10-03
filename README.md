@@ -2,7 +2,7 @@
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. `lsd-mono-core` is the capture API and the report UI. `lsd-mono-junit-jupiter` completes a scenario for each JUnit Jupiter 6 test.
 
-This repository is local. It has no remote. Do not push unless that is decided later.
+Origin is https://github.com/lsd-consulting/lsd-mono.git. Do not push unless that is decided.
 
 ## Depend on it
 
@@ -12,10 +12,11 @@ From another project in this build:
 dependencies {
     implementation(project(":modules:lsd-mono-core"))
     testImplementation(project(":modules:lsd-mono-junit-jupiter"))
+    testImplementation(project(":modules:lsd-mono-cucumber-8"))
 }
 ```
 
-The artifacts are `io.lsdconsulting:lsd-mono-core` and `io.lsdconsulting:lsd-mono-junit-jupiter`, version `0.0.1-SNAPSHOT`. They are not published. JDK 21.
+The artifacts are `io.lsdconsulting:lsd-mono-core`, `io.lsdconsulting:lsd-mono-junit-jupiter`, and `io.lsdconsulting:lsd-mono-cucumber-8`, version `0.0.1-SNAPSHOT`. They are not published. JDK 21. Cucumber support is major 8.
 
 ## Capture a scenario
 
@@ -95,6 +96,19 @@ class PlaceOrderTest {
 
 Open `build/reports/lsd/PlaceOrderTest-diagram.html`. Use the same `addParticipants` and `capture` calls as the scenario above when you want the shapes.
 
+## From a Cucumber scenario
+
+`LsdCucumberPlugin` (`io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`) completes the scenario after each Cucumber scenario and writes the report after the feature. Capture inside the step definitions. Do not call `completeScenario` or `completeReport` yourself.
+
+Register it in `src/test/resources/junit-platform.properties`:
+
+```properties
+cucumber.plugin=io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin
+cucumber.glue=com.example.steps
+```
+
+Use Cucumber 8 (`cucumber-java8` and `cucumber-junit-platform-engine`). A feature file named `place_order.feature` is written to `build/reports/lsd/place_order-diagram.html`. The module README has the step definitions for the diagram below.
+
 ## What the report looks like
 
 The diagram for the scenario above. Customer, Orders, and Order events use their types. The response and the async publish show the direction.
@@ -128,6 +142,7 @@ JDK 21. `:modules:lsd-mono-core:build` runs the Vite shell build (`npm ci`, then
 ```
 modules/lsd-mono-core/            lsd-mono-core, report UI in report/
 modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
+modules/lsd-mono-cucumber-8/      Cucumber 8 plugin
 build-logic/                      convention plugins (lsd.kotlin-jvm)
 ```
 

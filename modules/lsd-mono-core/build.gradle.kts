@@ -18,6 +18,59 @@ dependencies {
     "readmeImplementation"(sourceSets.named("main").get().output)
 }
 
+
+// Jupiter 6 major line. Catalog still requests 6.1.3. The range is the floor and ceiling
+// so Dependabot can bump patch and minor inside 6, but not 4.x, 5.x, or 7+.
+// junit-bom 6.x manages org.junit.platform on that same major (6.1.3 today), not 1.x.
+dependencies {
+    testImplementation(platform(libs.junit.bom))
+    constraints {
+        testImplementation(libs.junit.bom) {
+            version { strictly("[6,7)") }
+        }
+        testImplementation("org.junit.jupiter:junit-jupiter") {
+            version { strictly("[6,7)") }
+        }
+        testImplementation("org.junit.jupiter:junit-jupiter-api") {
+            version { strictly("[6,7)") }
+        }
+        testImplementation("org.junit.jupiter:junit-jupiter-engine") {
+            version { strictly("[6,7)") }
+        }
+        testImplementation("org.junit.jupiter:junit-jupiter-params") {
+            version { strictly("[6,7)") }
+        }
+        testImplementation("org.junit.platform:junit-platform-commons") {
+            version { strictly("[6,7)") }
+        }
+        testImplementation("org.junit.platform:junit-platform-engine") {
+            version { strictly("[6,7)") }
+        }
+        testImplementation("org.junit.platform:junit-platform-launcher") {
+            version { strictly("[6,7)") }
+        }
+    }
+}
+
+configurations.configureEach {
+    resolutionStrategy.componentSelection {
+        all {
+            if (candidate.group == "junit" && candidate.module == "junit") {
+                reject("blocked junit:junit:${candidate.version}; JUnit 4 is not used")
+            }
+            if (candidate.group == "org.junit.vintage") {
+                reject("blocked ${candidate.group}:${candidate.module}:${candidate.version}")
+            }
+            if (candidate.group == "org.junit.jupiter" || candidate.group == "org.junit.platform" || candidate.group == "org.junit") {
+                val major = candidate.version.substringBefore('.').toIntOrNull()
+                if (major != 6) {
+                    reject("strictly [6,7) rejected ${candidate.group}:${candidate.module}:${candidate.version}")
+                }
+            }
+        }
+    }
+}
+
 tasks.test {
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
 }
@@ -106,7 +159,11 @@ tasks.register<Exec>("reportTest") {
     dependsOn(reportSingle)
     workingDir = reportDir.asFile
     withNodeOnPath()
-    commandLine("npm", "test")
+    // Gradle resolves a bare "npm" against the client PATH, which is still Node 17's
+    // absence when nvm is not sourced. Put Node 22 on PATH inside the shell instead.
+    val nodeBin = node22BinDir()?.absolutePath
+    val script = if (nodeBin != null) "export PATH=\"$nodeBin:\$PATH\"; npm test" else "npm test"
+    commandLine("sh", "-c", script)
 }
 
 // Not a source dir: sourcesJar must not treat the generated shell as project source.
@@ -155,5 +212,6 @@ tasks.register<Exec>("readmeSamples") {
     outputs.file(readmeDocsDir.file("zoom.gif"))
     val reportOut = readmeReportDir.get().asFile.absolutePath
     val docsOut = readmeDocsDir.asFile.absolutePath
-    commandLine("node", "scripts/readme-samples.mjs", reportOut, docsOut)
+    val node = node22BinDir()?.resolve("node")?.takeIf { it.canExecute() }?.absolutePath ?: "node"
+    commandLine(node, "scripts/readme-samples.mjs", reportOut, docsOut)
 }

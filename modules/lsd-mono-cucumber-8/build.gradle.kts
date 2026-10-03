@@ -4,9 +4,9 @@ plugins {
 }
 
 version = "0.0.1-SNAPSHOT"
-base.archivesName.set("lsd-mono-junit-jupiter")
+base.archivesName.set("lsd-mono-cucumber-8")
 
-description = "LSD Mono JUnit Jupiter 6 integration — extension for living sequence diagram reports"
+description = "LSD Mono Cucumber 8 integration — plugin for living sequence diagram reports"
 
 val readmeSourceSet = sourceSets.create("readme")
 
@@ -14,24 +14,49 @@ dependencies {
     // First-party greenfield core (not Maven lsd-core).
     api(project(":modules:lsd-mono-core"))
 
-    // Compile against Jupiter 6 API so LsdExtension can implement Extension callbacks.
-    api(libs.junit.jupiter.api)
-
+    // Concrete Cucumber 8 from the catalog (8.0.4). The constraints below are the major range.
+    api(libs.cucumber.plugin)
+    testImplementation(libs.cucumber.java8)
+    testImplementation(libs.cucumber.junit.platform.engine)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.platform.launcher)
 
-    // readme source set does not inherit main deps; need core for LsdContext.
+    // readme source set does not inherit main deps.
     "readmeImplementation"(sourceSets.named("main").get().output)
     "readmeImplementation"(project(":modules:lsd-mono-core"))
+    "readmeImplementation"(libs.cucumber.java8)
+    "readmeImplementation"(libs.cucumber.junit.platform.engine)
 }
 
-
-// Jupiter 6 major line. Catalog still requests 6.1.3. The range is the floor and ceiling
-// so Dependabot can bump patch and minor inside 6, but not 4.x, 5.x, or 7+.
-// junit-bom 6.x manages org.junit.platform on that same major (6.1.3 today), not 1.x.
+// Cucumber 8 major line for every io.cucumber artifact this module resolves.
+// Catalog still requests 8.0.4. strictly [8,9) blocks 7.x and 9+ and still lets
+// Dependabot bump patch and minor inside 8. Not a single-patch lock.
+// cucumber-groovy has no 8.x on Maven Central (latest is 6.10.4) and is not a dependency.
 dependencies {
+    implementation(platform(libs.cucumber.bom))
     testImplementation(platform(libs.junit.bom))
+    "readmeImplementation"(platform(libs.cucumber.bom))
     constraints {
+        // Cucumber-JVM modules that share the 8.x line. Other io.cucumber coordinates
+        // (messages, gherkin, formatters, cucumber-expressions) use their own versions
+        // and are aligned by cucumber-bom, not forced into [8,9).
+        listOf(
+            "cucumber-bom",
+            "cucumber-plugin",
+            "cucumber-java8",
+            "cucumber-java",
+            "cucumber-core",
+            "cucumber-junit-platform-engine",
+            "cucumber-junit",
+            "cucumber-gherkin",
+            "cucumber-gherkin-messages",
+            "datatable",
+            "docstring",
+        ).forEach { artifact ->
+            implementation("io.cucumber:$artifact") {
+                version { strictly("[8,9)") }
+            }
+        }
         testImplementation(libs.junit.bom) {
             version { strictly("[6,7)") }
         }
@@ -42,9 +67,6 @@ dependencies {
             version { strictly("[6,7)") }
         }
         testImplementation("org.junit.jupiter:junit-jupiter-engine") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.jupiter:junit-jupiter-params") {
             version { strictly("[6,7)") }
         }
         testImplementation("org.junit.platform:junit-platform-commons") {
@@ -62,6 +84,31 @@ dependencies {
 configurations.configureEach {
     resolutionStrategy.componentSelection {
         all {
+            val cucumber8Line = setOf(
+                "cucumber-bom",
+                "cucumber-plugin",
+                "cucumber-java8",
+                "cucumber-java",
+                "cucumber-core",
+                "cucumber-junit-platform-engine",
+                "cucumber-junit",
+                "cucumber-testng",
+                "cucumber-spring",
+                "cucumber-picocontainer",
+                "cucumber-guice",
+                "cucumber-cdi",
+                "cucumber-gherkin",
+                "cucumber-gherkin-messages",
+                "datatable",
+                "docstring",
+                "cucumber-groovy",
+            )
+            if (candidate.group == "io.cucumber" && candidate.module in cucumber8Line) {
+                val major = candidate.version.substringBefore('.').toIntOrNull()
+                if (major != 8) {
+                    reject("strictly [8,9) rejected ${candidate.group}:${candidate.module}:${candidate.version}")
+                }
+            }
             if (candidate.group == "junit" && candidate.module == "junit") {
                 reject("blocked junit:junit:${candidate.version}; JUnit 4 is not used")
             }
@@ -79,19 +126,15 @@ configurations.configureEach {
 }
 
 tasks.test {
-    useJUnitPlatform {
-        // Engine fixtures are launched explicitly from LsdExtensionOutcomesTest.
-        excludeTags("lsd-fixture")
-    }
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
-    // Legacy key still honoured by mono LsdProperties fallbacks
     systemProperty("lsd.core.report.outputDir", "build/reports/lsd-test")
+    systemProperty("cucumber.publish.enabled", "false")
 }
 
 tasks.jar {
     manifest {
         attributes(
-            "Implementation-Title" to "lsd-mono-junit-jupiter",
+            "Implementation-Title" to "lsd-mono-cucumber-8",
             "Implementation-Version" to project.version,
         )
     }
@@ -128,16 +171,19 @@ val readmeReportDir = layout.buildDirectory.dir("readme-report")
 val readmeDocsDir = layout.projectDirectory.dir("docs/readme")
 val coreProject = project(":modules:lsd-mono-core")
 val coreReportDir = coreProject.layout.projectDirectory.dir("report")
+val readmeFeature = layout.projectDirectory.file(
+    "src/readme/resources/io/lsdconsulting/lsd/mono/cucumber/readme/place_order.feature",
+)
 
 tasks.register<JavaExec>("captureReadmeReport") {
     group = "documentation"
     description =
-        "Capture the JUnit README scenario and write its report HTML (same titles LsdExtension would use)."
-    // Shell must be on the core classpath for ReportWriter.
+        "Run the Cucumber README scenario through LsdCucumberPlugin and write its report HTML."
     dependsOn(coreProject.tasks.named("copyReportShell"))
     dependsOn(coreProject.tasks.named("classes"))
     classpath = readmeSourceSet.runtimeClasspath
-    mainClass.set("io.lsdconsulting.lsd.mono.junitjupiter.readme.JunitReadmeSampleKt")
+    mainClass.set("io.lsdconsulting.lsd.mono.cucumber.readme.CucumberReadmeSampleKt")
+    args(readmeFeature.asFile.absolutePath)
     javaLauncher.set(
         javaToolchains.launcherFor {
             languageVersion.set(JavaLanguageVersion.of(21))
@@ -145,7 +191,9 @@ tasks.register<JavaExec>("captureReadmeReport") {
     )
     systemProperty("lsd.mono.report.outputDir", readmeReportDir.get().asFile.absolutePath)
     systemProperty("lsd.mono.ids.deterministic", "true")
+    systemProperty("cucumber.publish.enabled", "false")
     outputs.dir(readmeReportDir)
+    inputs.file(readmeFeature)
 }
 
 tasks.register<Exec>("readmeSamples") {
@@ -153,7 +201,6 @@ tasks.register<Exec>("readmeSamples") {
     description =
         "Regenerate docs/readme PNG and GIF samples from the current report UI. Not part of build or check."
     dependsOn("captureReadmeReport")
-    // Reuse the core report's Playwright screenshot script and node_modules.
     workingDir = coreReportDir.asFile
     withNodeOnPath()
     inputs.dir(readmeReportDir)

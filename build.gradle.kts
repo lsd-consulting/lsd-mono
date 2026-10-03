@@ -17,6 +17,7 @@ tasks.register("printLayout") {
               modules/           — first-party greenfield modules
                 lsd-mono-core/           — core + report UI
                 lsd-mono-junit-jupiter/  — JUnit 6 → mono-core
+                lsd-mono-cucumber-8/     — Cucumber 8 → mono-core
               gradle/            — version catalog + wrapper
             """.trimIndent()
         )

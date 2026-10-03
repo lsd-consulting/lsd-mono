@@ -2,6 +2,8 @@
 kotlin = "2.4.20"
 jvm = "21"
 junit = "6.1.3"
+# Latest Cucumber 8 on Maven Central. Modules constrain this line to strictly [8,9).
+cucumber = "8.0.4"
 # Legacy published lsd-core — reference only; mono builds use :modules:lsd-mono-core
 lsd-core = "9.0.1"
 
@@ -14,6 +16,12 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jun
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
+
+# Cucumber 8. Concrete version is requested here; lsd-mono-cucumber-8 constrains the group to [8,9).
+cucumber-bom = { module = "io.cucumber:cucumber-bom", version.ref = "cucumber" }
+cucumber-plugin = { module = "io.cucumber:cucumber-plugin", version.ref = "cucumber" }
+cucumber-java8 = { module = "io.cucumber:cucumber-java8", version.ref = "cucumber" }
+cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
 
 # Legacy Maven Central lsd-core — do not use for first-party mono modules.
 # Prefer project(":modules:lsd-mono-core").
