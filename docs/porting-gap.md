@@ -251,13 +251,15 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |------------|---------------------|------------------|----------|
 | Sticky topbar / sidebar | Yes (`position: sticky` in `app.css`) | Sticky **participant header** inside diagram scrollport | P0 |
 | Search | Scenarios + facts | Optional in-diagram message/label search + highlight | P1 |
-| Themes | Dark/light + persist (`ui/theme.ts`) | High-contrast / print stylesheet | P2 |
+| Themes | Dark/light + persist (**already shipped**, `ui/theme.ts`) | High-contrast / print stylesheet only | P2 |
 | Keyboard | `/ j k Enter d ? Esc` | Diagram-local nav (next message with data) | P1 |
 | Message detail | `<dialog>` + copy | Structured pretty-print for XML/JSON; size limits | P1 |
 | Virtualisation | **No** — full SVG | Row windowing + recycle | **P0** |
 | Zoom / pan | Horizontal overflow scroll only | Pinch/trackpad zoom, fit-to-width, minimap optional | P1 |
 | Hide / focus participants | **No** | Toggle columns for wide diagrams (legacy #79-class need) | P1 |
 | Section / page nav | **No** | Jump list for sections (see Newpage replacement) | **P0** |
+
+**Theme is not a gap.** Dark/light with persistence is **already shipped** in `report-next/src/ui/theme.ts` (`localStorage` key `lsd-report-next-theme`, `prefers-color-scheme` fallback, `data-theme` on the document). Do not rebuild it. **P2** is only a high-contrast / print stylesheet.
 
 ---
 
@@ -300,7 +302,8 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 ## 4. Suggested port order (slices)
 
 1. **P0 — JSON contract freeze + multi-scenario / status goldens**  
-   Lock `ReportJson` as the migration boundary; fix stale README claims.
+   Lock `ReportJson` as the migration boundary; fix stale README claims.  
+   Slice 1 landed 2026-10-03: golden `multi-scenario-status.json` locks per-scenario `success` / `warn` / `error` and report-level rollup `error`.
 
 2. **P0 — Sections + large-diagram virtualisation + sticky participant header**  
    Replace `newpage` / `maxEventsPerDiagram` splits with continuous, scrollable UX.

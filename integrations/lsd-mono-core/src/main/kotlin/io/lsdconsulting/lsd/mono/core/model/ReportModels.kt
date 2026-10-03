@@ -21,6 +21,11 @@ data class ReportJson(
     val title: String,
     val generatedAt: String,
     val generator: String,
+    /**
+     * Worst scenario outcome: `error` > `warn` > `success`
+     * (legacy ERROR > FAILURE > SUCCESS). `success` when there are no scenarios.
+     */
+    val status: String,
     val scenarios: List<ScenarioJson>,
 )
 
@@ -134,6 +139,7 @@ fun ReportJson.toJson(): String =
             "title" to JsonString(title),
             "generatedAt" to JsonString(generatedAt),
             "generator" to JsonString(generator),
+            "status" to JsonString(status),
             "scenarios" to JsonArray(scenarios.map { it.toJsonValue() }),
         ),
     ).render() + "\n"

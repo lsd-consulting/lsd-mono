@@ -84,5 +84,7 @@ export interface Report {
   title: string
   generatedAt: string
   generator: string
+  /** Worst scenario status (error > warn > success). Present on mono-core reports. */
+  status?: Status
   scenarios: Scenario[]
 }

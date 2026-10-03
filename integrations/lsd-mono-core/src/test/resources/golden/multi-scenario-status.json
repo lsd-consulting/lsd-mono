@@ -1,0 +1,53 @@
+{
+  "title": "Status mix",
+  "generatedAt": "SCRUBBED",
+  "generator": "lsd-mono-core 0.0.1-SNAPSHOT",
+  "status": "error",
+  "scenarios": [
+    {
+      "id": "1",
+      "title": "checkout happy path",
+      "status": "success",
+      "description": "placed",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "0"
+        }
+      ],
+      "participants": [],
+      "events": []
+    },
+    {
+      "id": "2",
+      "title": "payment declined",
+      "status": "warn",
+      "description": "card rejected",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "0"
+        }
+      ],
+      "participants": [],
+      "events": []
+    },
+    {
+      "id": "3",
+      "title": "inventory outage",
+      "status": "error",
+      "description": "timeout",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "0"
+        }
+      ],
+      "participants": [],
+      "events": []
+    }
+  ]
+}

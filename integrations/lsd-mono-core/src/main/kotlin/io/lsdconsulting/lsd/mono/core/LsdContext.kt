@@ -165,18 +165,17 @@ open class LsdContext {
 
     fun completeReport(title: String): Path {
         val report = buildReportJson(title)
-        val overall = determineOverallStatus(scenarios)
         val path =
             ReportWriter.writeReport(
                 report = report,
                 outputDir = outputDirectory,
-                statusCss = overall,
+                statusCss = report.status,
             )
         reportFiles.add(
             ReportFile(
                 filename = path.fileName.toString(),
                 title = report.title,
-                status = overall,
+                status = report.status,
             ),
         )
         scenarios.clear()
@@ -262,6 +261,7 @@ open class LsdContext {
             title = title,
             generatedAt = OffsetDateTime.now(ZoneId.of("Europe/London")).toString(),
             generator = "lsd-mono-core 0.0.1-SNAPSHOT",
+            status = determineOverallStatus(scenarios),
             scenarios = scenarios.map { scenario -> scenario.toJsonModel() },
         )
 
