@@ -1,83 +1,134 @@
 # LSD Mono
 
-Local-only Gradle monorepo for LSD Consulting work. It owns shared build
-conventions and first-party greenfield libraries (including **lsd-mono-core**).
+LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. `lsd-mono-core` is the capture API and the report UI. `lsd-mono-junit-jupiter` completes a scenario for each JUnit Jupiter 6 test.
 
-## Status
+This repository is local. It has no remote. Do not push unless that is decided later.
 
-**Local only.** This repo is initialised with `git init` and has **no remotes**.
-Do not push or create a GitHub repository unless that is decided explicitly later.
+## Depend on it
 
-**Greenfield product path:** first-party modules under `modules/` (notably
-`lsd-mono-core`, whose report UI lives in `modules/lsd-mono-core/report`). Legacy behaviour for
-comparison lives upstream at
-[lsd-consulting/lsd-core](https://github.com/lsd-consulting/lsd-core) — it is not
-vendored into this tree.
-
-## Layout
-
-```
-lsd-mono/
-├── build-logic/                         # Included Gradle build (convention plugins)
-├── modules/                             # First-party mono Gradle projects
-│   ├── lsd-mono-core/                   # Greenfield core + report UI
-│   └── lsd-mono-junit-jupiter/          # JUnit Jupiter 6 extension → mono-core
-├── gradle/
-│   ├── libs.versions.toml
-│   └── wrapper/
-├── settings.gradle.kts
-├── build.gradle.kts
-└── README.md
-```
-
-- **`build-logic/`** — shared config: version catalog from `gradle/libs.versions.toml`,
-  and convention plugins such as `lsd.kotlin-jvm` and `lsd.common`.
-- **`modules/`** — monorepo-owned libraries. Names include **`mono`**
-  so they do not clash with published `lsd-consulting` artifacts.
-
-## Prerequisites
-
-- JDK 21+ (toolchain configured for 21 in convention plugins)
-- Optional: Node.js 20+ only if you want to run/build the Vite report UI in
-  `modules/lsd-mono-core/report` outside Gradle (Gradle tasks use Node 22 via nvm when present)
-
-## Quick start
-
-```bash
-cd lsd-mono
-./gradlew projects          # scaffold + included build-logic + modules
-./gradlew build             # :modules:lsd-mono-core + :modules:lsd-mono-junit-jupiter
-./gradlew printLayout       # layout reminder
-```
-
-## Capture (lsd-mono-core)
-
-`LsdContext` records participants, facts, sections, notes, delays, spacers, sequence events (sync/async, responses, short, lost, and bi-directional messages), lifeline actions, and timestamps, and writes report JSON
-(`report.json` plus `<title>-report.json`). The packaged SVG shell
-`lsd-report.single.html` reads the captured `window.__LSD_REPORT__` that
-`ReportWriter` injects. When opened directly it falls back to sample data. Dev
-(`report` Vite) uses the same global in `src/main.ts`. Gradle runs the Vite
-`build:single` and vitest tasks as part of `:modules:lsd-mono-core:build`.
-
-Still open: root README usage examples, and Mono-named interceptor modules. PlantUML is intentionally out; component graphs are available as a separate opt-in report and are not yet embedded in the sequence shell.
-
-## Using convention plugins
-
-In a monorepo-owned module’s `build.gradle.kts`:
+From another project in this build:
 
 ```kotlin
-plugins {
-    id("lsd.kotlin-jvm")
+dependencies {
+    implementation(project(":modules:lsd-mono-core"))
+    testImplementation(project(":modules:lsd-mono-junit-jupiter"))
 }
 ```
 
-## First-party projects vs legacy
+The artifacts are `io.lsdconsulting:lsd-mono-core` and `io.lsdconsulting:lsd-mono-junit-jupiter`, version `0.0.1-SNAPSHOT`. They are not published. JDK 21.
 
-| Concern | Approach |
-|---------|----------|
-| Greenfield core + report UI | `modules/lsd-mono-core` (Gradle project) |
-| JUnit / other integrations | `modules/lsd-mono-*` depending on `:modules:lsd-mono-core` |
-| Legacy lsd-core behaviour | Upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) — not in this tree |
-| Build from root today | `modules/*` included |
+## Capture a scenario
 
-See also `modules/README.md`.
+```kotlin
+import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.capture.messages
+import io.lsdconsulting.lsd.mono.core.capture.withData
+import io.lsdconsulting.lsd.mono.core.capture.withLabel
+import io.lsdconsulting.lsd.mono.core.capture.withType
+import io.lsdconsulting.lsd.mono.core.domain.MessageType
+import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
+import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
+import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
+import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
+
+val lsd = LsdContext()
+lsd.addParticipants(
+    ACTOR.called("Customer"),
+    PARTICIPANT.called("Checkout"),
+    DATABASE.called("Orders"),
+    QUEUE.called("Order events"),
+)
+lsd.addFact("orderId", "ord-1001")
+lsd.capture(
+    "Customer" messages "Checkout" withLabel "POST /orders" withData mapOf(
+        "method" to "POST",
+        "path" to "/orders",
+        "status" to 201,
+        "body" to mapOf("sku" to "SOCK-1", "qty" to 2),
+    ),
+)
+lsd.activate("Checkout")
+lsd.capture("Checkout" messages "Orders" withLabel "insert order")
+lsd.response("Orders", "Checkout", "row saved")
+lsd.capture(
+    "Checkout" messages "Order events" withLabel "order.placed" withType MessageType.ASYNCHRONOUS withData mapOf(
+        "orderId" to "ord-1001",
+        "sku" to "SOCK-1",
+    ),
+)
+lsd.response("Checkout", "Customer", "201 Created")
+lsd.deactivate("Checkout")
+lsd.completeScenario("Place an order", "Customer checks out two pairs of socks.")
+val listing = lsd.completeReport("Place an order")
+lsd.createIndex()
+```
+
+`completeReport` writes under `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it). Open `Place-an-order-diagram.html`. That file is the report. `Place-an-order-report.html` is only a short listing, and `createIndex()` adds `index.html` when you have written more than one.
+
+Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Any other fields load from `Place-an-order-payloads.js` when the panel opens.
+
+The participant type is the header shape. `ACTOR` is a person, `DATABASE` a cylinder, `QUEUE` stacked plates. `ENTITY` is a circle and `BOUNDARY` a circle with a bar. Anything else, including `PARTICIPANT`, is a rounded box. Sync responses and async messages draw an arrow head at the destination.
+
+## From a JUnit test
+
+`LsdExtension` completes the scenario after each test and writes the report after the class. Capture inside the test. Do not call `completeScenario` or `completeReport` yourself.
+
+```kotlin
+import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.capture.messages
+import io.lsdconsulting.lsd.mono.core.capture.withLabel
+import io.lsdconsulting.lsd.mono.junitjupiter.LsdExtension
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+
+@ExtendWith(LsdExtension::class)
+class PlaceOrderTest {
+    private val lsd = LsdContext.instance
+
+    @Test
+    fun `places an order`() {
+        lsd.addFact("orderId", "ord-1001")
+        lsd.capture("Customer" messages "Checkout" withLabel "POST /orders")
+    }
+}
+```
+
+Open `build/reports/lsd/PlaceOrderTest-diagram.html`. Use the same `addParticipants` and `capture` calls as the scenario above when you want the shapes.
+
+## What the report looks like
+
+The diagram for the scenario above. Customer, Orders, and Order events use their types. The response and the async publish show the direction.
+
+![Place an order, with participant shapes and arrow heads](docs/readme/diagram.png)
+
+Clicking `POST /orders` opens the payload.
+
+![Inspector open on the order JSON](docs/readme/inspector.png)
+
+Zoom until the diagram scrolls.
+
+![Zooming into the diagram and scrolling it](docs/readme/zoom.gif)
+
+Regenerate those three files from the current UI:
+
+```bash
+./gradlew :modules:lsd-mono-core:readmeSamples
+```
+
+The task captures the scenario with `LsdContext`, then screenshots the packaged shell with headless Chromium. It uses Node 22 from nvm when that is installed, and it does not change the default Node alias. It is not part of `build` or `check`.
+
+## Build
+
+```bash
+./gradlew build
+```
+
+JDK 21. `:modules:lsd-mono-core:build` runs the Vite shell build (`npm ci`, then `npm run build:single`) and vitest is on `check`. Those tasks also prepend Node 22 and leave the default alias alone.
+
+```
+modules/lsd-mono-core/            lsd-mono-core, report UI in report/
+modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
+build-logic/                      convention plugins (lsd.kotlin-jvm)
+```
+
+Legacy behaviour for comparison is upstream at [lsd-core](https://github.com/lsd-consulting/lsd-core). It is not in this tree.

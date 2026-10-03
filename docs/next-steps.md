@@ -4,11 +4,11 @@
 
 ---
 
-## 1. README examples and usage instructions
+## 1. README examples and usage instructions — done
 
-Extend the root `README.md` with example-led guidance adapted from the upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) README style, for Mono rather than copied from the legacy API. Show how to depend on `lsd-mono-core`, use `LsdContext` from `io.lsdconsulting.lsd.mono.core`, and capture a small scenario with the Kotlin DSL. Explain how to complete the report and open/view the generated modern report HTML, including a short realistic scenario and the key capture/report steps. Keep the examples focused on the modern web report and do not introduce PlantUML markup or legacy names.
+The root `README.md` is example-led for the current Mono API: depend on `lsd-mono-core` / `lsd-mono-junit-jupiter`, capture with `LsdContext` and the Kotlin DSL (`"A" messages "B"`), set participant types, `completeReport`, and open `*-diagram.html`. `LsdExtension` is the JUnit Jupiter 6 path. Sample images live in `docs/readme/` (`diagram.png`, `inspector.png`, `zoom.gif`).
 
-This is documentation of the current Mono API, not a request to change the API in this step.
+`:modules:lsd-mono-core:readmeSamples` regenerates them. It runs `captureReadmeReport` (the README scenario through `LsdContext`) and then headless Chromium against that shell, using Node 22 via nvm the same way as the other npm tasks. It is not on `build` or `check`.
 
 ---
 

@@ -10,9 +10,12 @@ base.archivesName.set("lsd-mono-core")
 description =
     "LSD Mono core — greenfield report UI + thin Kotlin capture/report façade (not legacy lsd-core)"
 
+val readmeSourceSet = sourceSets.create("readme")
+
 dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
+    "readmeImplementation"(sourceSets.named("main").get().output)
 }
 
 tasks.test {
@@ -117,4 +120,40 @@ tasks.named<ProcessResources>("processResources") {
 
 tasks.named("check") {
     dependsOn("reportTest")
+}
+
+// README samples are slow and write docs/. They are not on build or check.
+val readmeReportDir = layout.buildDirectory.dir("readme-report")
+val readmeDocsDir = rootProject.layout.projectDirectory.dir("docs/readme")
+
+tasks.register<JavaExec>("captureReadmeReport") {
+    group = "documentation"
+    description = "Capture the README scenario and write its report HTML."
+    classpath = readmeSourceSet.runtimeClasspath
+    mainClass.set("io.lsdconsulting.lsd.mono.core.readme.ReadmeSampleKt")
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+    systemProperty("lsd.mono.report.outputDir", readmeReportDir.get().asFile.absolutePath)
+    systemProperty("lsd.mono.ids.deterministic", "true")
+    outputs.dir(readmeReportDir)
+}
+
+tasks.register<Exec>("readmeSamples") {
+    group = "documentation"
+    description =
+        "Regenerate docs/readme PNG and GIF samples from the current report UI. Not part of build or check."
+    dependsOn("captureReadmeReport")
+    workingDir = reportDir.asFile
+    withNodeOnPath()
+    inputs.dir(readmeReportDir)
+    inputs.file(reportDir.file("scripts/readme-samples.mjs"))
+    outputs.file(readmeDocsDir.file("diagram.png"))
+    outputs.file(readmeDocsDir.file("inspector.png"))
+    outputs.file(readmeDocsDir.file("zoom.gif"))
+    val reportOut = readmeReportDir.get().asFile.absolutePath
+    val docsOut = readmeDocsDir.asFile.absolutePath
+    commandLine("node", "scripts/readme-samples.mjs", reportOut, docsOut)
 }
