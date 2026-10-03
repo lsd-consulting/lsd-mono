@@ -62,6 +62,17 @@ git clone --recurse-submodules <path-or-url>
 git submodule update --init --recursive
 ```
 
+## Capture (lsd-mono-core)
+
+`LsdContext` records participants, facts, and sequence events (sync/async message,
+response, note, logical divider, activate/deactivate) and writes report-next JSON
+(`report.json` plus `<title>-report.json`). The packaged SVG shell
+`lsd-report-next.single.html` reads `window.__LSD_REPORT__` when ReportWriter
+injects it, otherwise it falls back to sample data. Dev (`report-next` Vite) uses
+the same global in `src/main.ts` — no Gradle Vite build required.
+
+Still deferred: PlantUML, component diagrams, newpage / time-delay / vertical space.
+
 ## Using convention plugins
 
 In a monorepo-owned module’s `build.gradle.kts`:

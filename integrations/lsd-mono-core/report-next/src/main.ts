@@ -2,6 +2,13 @@ import './styles/app.css'
 import './styles/diagram.css'
 import { sampleReport } from './data/sample-report'
 import type { MessageEvent, Report, Scenario, Status } from './types'
+
+declare global {
+  interface Window {
+    /** Set by lsd-mono-core ReportWriter before this bundle boots. Dev: assign before load to preview a capture. */
+    __LSD_REPORT__?: Report
+  }
+}
 import { findMessage, renderSequenceSvg } from './lib/sequence-diagram'
 import { applyTheme, getPreferredTheme, toggleTheme } from './ui/theme'
 import { formatGeneratedAt, pretty, statusLabel } from './ui/format'
@@ -14,7 +21,7 @@ interface State {
   helpOpen: boolean
 }
 
-const report: Report = sampleReport
+const report: Report = window.__LSD_REPORT__ ?? sampleReport
 
 const state: State = {
   query: '',

@@ -22,9 +22,9 @@ import java.util.regex.Pattern
  *
  * Uses first-party [LsdContext] from `lsd-mono-core` (greenfield), not Maven lsd-core.
  *
- * This extension does not capture interaction events by itself — use
- * [LsdContext.capture] (or interceptors) inside tests once event types land, and
- * optionally [LsdPostTestProcessing] for late capture before the diagram is built.
+ * This extension does not capture interaction events by itself. Call
+ * [LsdContext.capture] (or [LsdContext.message]) inside the test, and optionally
+ * [LsdPostTestProcessing] for late capture before the scenario is completed.
  */
 class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
 

@@ -1,6 +1,8 @@
 package io.lsdconsulting.lsd.mono.junitjupiter
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.capture.messages
+import io.lsdconsulting.lsd.mono.core.capture.withLabel
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -19,6 +21,7 @@ class LsdExtensionTest {
     @Test
     fun `extension completes a successful scenario`() {
         lsd.addFact("framework", "junit-jupiter-6")
+        lsd.capture("Test" messages "LsdMono" withLabel "ping")
         assertTrue(true)
     }
 

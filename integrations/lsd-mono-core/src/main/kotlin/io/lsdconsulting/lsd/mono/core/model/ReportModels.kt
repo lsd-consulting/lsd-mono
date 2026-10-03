@@ -1,8 +1,15 @@
 package io.lsdconsulting.lsd.mono.core.model
 
+import io.lsdconsulting.lsd.mono.core.json.JsonArray
+import io.lsdconsulting.lsd.mono.core.json.JsonNumber
+import io.lsdconsulting.lsd.mono.core.json.JsonObject
+import io.lsdconsulting.lsd.mono.core.json.JsonString
+import io.lsdconsulting.lsd.mono.core.json.JsonValue
+import io.lsdconsulting.lsd.mono.core.json.anyToJson
+import io.lsdconsulting.lsd.mono.core.json.render
+
 /**
- * ReportJson-shaped models aligned with report-next `src/types.ts`.
- * Sequence events / participants are optional for the thin façade today.
+ * Report JSON aligned with report-next `src/types.ts` (`Report` / `Scenario` / `DiagramEvent`).
  */
 data class ReportFile(
     val filename: String,
@@ -25,7 +32,7 @@ data class ScenarioJson(
     val facts: List<FactJson>,
     val metrics: List<MetricJson> = emptyList(),
     val participants: List<ParticipantJson> = emptyList(),
-    val events: List<Map<String, Any?>> = emptyList(),
+    val events: List<EventJson> = emptyList(),
 )
 
 data class FactJson(
@@ -42,5 +49,118 @@ data class ParticipantJson(
     val id: String,
     val name: String,
     val type: String = "PARTICIPANT",
+    val alias: String? = null,
     val colour: String? = null,
 )
+
+sealed class EventJson {
+    internal abstract fun toJsonValue(): JsonValue
+}
+
+data class MessageEventJson(
+    val id: String,
+    val from: String,
+    val to: String,
+    val label: String,
+    val type: String,
+    val colour: String? = null,
+    val durationMs: Long? = null,
+    val data: Any? = null,
+) : EventJson() {
+    internal override fun toJsonValue(): JsonValue =
+        obj(
+            buildList {
+                add("kind" to JsonString("message"))
+                add("id" to JsonString(id))
+                add("from" to JsonString(from))
+                add("to" to JsonString(to))
+                add("label" to JsonString(label))
+                add("type" to JsonString(type))
+                if (colour != null) add("colour" to JsonString(colour))
+                if (durationMs != null) add("durationMs" to JsonNumber(durationMs.toString()))
+                if (data != null) add("data" to anyToJson(data))
+            },
+        )
+}
+
+data class NoteEventJson(
+    val id: String,
+    val text: String,
+    val over: String,
+) : EventJson() {
+    internal override fun toJsonValue(): JsonValue =
+        obj(
+            listOf(
+                "kind" to JsonString("note"),
+                "id" to JsonString(id),
+                "text" to JsonString(text),
+                "over" to JsonString(over),
+            ),
+        )
+}
+
+data class DividerEventJson(
+    val id: String,
+    val label: String,
+) : EventJson() {
+    internal override fun toJsonValue(): JsonValue =
+        obj(
+            listOf(
+                "kind" to JsonString("divider"),
+                "id" to JsonString(id),
+                "label" to JsonString(label),
+            ),
+        )
+}
+
+data class LifelineEventJson(
+    val kind: String,
+    val id: String,
+    val participantId: String,
+) : EventJson() {
+    internal override fun toJsonValue(): JsonValue =
+        obj(
+            listOf(
+                "kind" to JsonString(kind),
+                "id" to JsonString(id),
+                "participantId" to JsonString(participantId),
+            ),
+        )
+}
+
+fun ReportJson.toJson(): String =
+    obj(
+        listOf(
+            "title" to JsonString(title),
+            "generatedAt" to JsonString(generatedAt),
+            "generator" to JsonString(generator),
+            "scenarios" to JsonArray(scenarios.map { it.toJsonValue() }),
+        ),
+    ).render() + "\n"
+
+private fun ScenarioJson.toJsonValue(): JsonValue =
+    obj(
+        listOf(
+            "id" to JsonString(id),
+            "title" to JsonString(title),
+            "status" to JsonString(status),
+            "description" to JsonString(description),
+            "facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }),
+            "metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }),
+            "participants" to JsonArray(participants.map { it.toJsonValue() }),
+            "events" to JsonArray(events.map { it.toJsonValue() }),
+        ),
+    )
+
+private fun ParticipantJson.toJsonValue(): JsonValue =
+    obj(
+        buildList {
+            add("id" to JsonString(id))
+            add("name" to JsonString(name))
+            add("type" to JsonString(type))
+            if (alias != null) add("alias" to JsonString(alias))
+            if (colour != null) add("colour" to JsonString(colour))
+        },
+    )
+
+private fun obj(fields: List<Pair<String, JsonValue>>): JsonObject = JsonObject(fields)
