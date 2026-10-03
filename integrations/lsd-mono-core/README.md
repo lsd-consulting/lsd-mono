@@ -24,8 +24,8 @@ lsd-mono-core/
 │   └── README.md
 ├── src/main/kotlin/…/mono/core/ # Kotlin façade (capture + write reports)
 ├── src/main/resources/lsd-mono-core/report-next/
-│   └── lsd-report-next.single.html   # classpath copy of prebuilt shell
-└── build.gradle.kts
+│   └── lsd-report-payloads.js        # sample payloads copied beside a report
+└── build.gradle.kts                 # reportNextSingle + reportNextTest
 ```
 
 ## What runs today (`./gradlew build`)
@@ -44,7 +44,6 @@ lsd-mono-core/
 
 **Deferred / optional**
 
-- Full Vite production build from Gradle (run manually: `cd report-next && npm ci && npm run build:single`)
 - Rendering the opt-in component graph inside the sequence shell
 - PlantUML / Handlebars compatibility — intentionally out of the Mono product path; use `modules/lsd-core` as reference only
 
@@ -77,6 +76,6 @@ npm run dev          # http://localhost:5173/
 # or open report-next/lsd-report-next.single.html in Chrome (file://)
 ```
 
-`npm test` is the repeatable UI check for diagram virtualisation. It is not wired into `./gradlew build` (that stays the Kotlin build). Needs a current Node (Vite 7 / Vitest 3); the repo does not change your default Node.
+`./gradlew :integrations:lsd-mono-core:build` runs `reportNextSingle` (`npm ci` and `npm run build:single`) and `reportNextTest` (`npm test`). The shell is packaged from `build/generated/resources`, not written back into `src/main/resources`. Needs a current Node (Vite 7 / Vitest 3). The Gradle tasks prepend Node 22 when it is installed and do not change your default Node.
 
 See `report-next/README.md` for the original spike notes.

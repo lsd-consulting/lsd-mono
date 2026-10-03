@@ -29,7 +29,7 @@ cd integrations/lsd-mono-core/report-next
 npm run check:ux
 ```
 
-Not part of `./gradlew build`. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
+Vitest is also on `./gradlew :integrations:lsd-mono-core:build` via `reportNextTest`. `npm run check:ux` stays manual. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
 
 ## Open the demo
 

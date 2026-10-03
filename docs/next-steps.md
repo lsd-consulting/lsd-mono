@@ -12,23 +12,9 @@ This is documentation of the current Mono API, not a request to change the API i
 
 ---
 
-## 2. Gradle-wired Vite `build:single`
+## 2. Gradle-wired Vite `build:single` — done
 
-Today `./gradlew build` does **not** run Vite. `integrations/lsd-mono-core/build.gradle.kts` says the npm build is optional. The jar ships a hand-copied classpath shell:
-
-`integrations/lsd-mono-core/src/main/resources/lsd-mono-core/report-next/lsd-report-next.single.html`
-
-`npm run build:single` (in `report-next`) runs `tsc`, `vite build`, then `scripts/inline-single.mjs`, which writes `report-next/dist/lsd-report-next.html` and copies `report-next/lsd-report-next.single.html`. Nobody copies that into `src/main/resources` automatically. `ReportWriter` loads the classpath file (`SPIKE_RESOURCE`).
-
-Wire it so a fresh shell is packaged without that hand copy:
-
-1. Gradle `Exec` task `reportNextSingle` with working dir `integrations/lsd-mono-core/report-next`. It runs `npm ci` then `npm run build:single`. Node must be on `PATH` (Vite 7 / Vitest 3; same as the report-next README).
-2. Copy `report-next/lsd-report-next.single.html` into the build output resources at `lsd-mono-core/report-next/lsd-report-next.single.html` (for example `build/generated/resources`). Do **not** overwrite the file under `src/main/resources` on every build.
-3. `processResources` depends on that copy, so `jar` and `./gradlew :integrations:lsd-mono-core:build` ship the shell just built.
-4. Sibling task (or the same one) runs `npm test` so vitest is on the Gradle path, not only a manual `npm test`.
-5. After the first green Gradle build, delete the hand-maintained classpath copy if the generated resource replaces it.
-
-Keep the build wiring separate from the already-recorded browser performance results.
+`integrations/lsd-mono-core/build.gradle.kts` runs the shell build. `reportNextSingle` (`npm ci` then `npm run build:single`) writes the single-file HTML, `copyReportNextShell` places it at `build/generated/resources/lsd-mono-core/report-next/lsd-report-next.single.html`, and `processResources` depends on that copy so `jar` / `:integrations:lsd-mono-core:build` ship it. `reportNextTest` (`npm test`, vitest) is on `check`. The hand-maintained classpath HTML under `src/main/resources` is gone; sample payloads stay there. The tasks prepend Node 22 when it is installed and do not change the nvm default alias.
 
 ---
 
@@ -49,6 +35,6 @@ Each new module gets a contract test that the events it captures land in `Report
 
 ## Trailing notes (not new projects)
 
-- **No GitHub remote.** `main` is local. Do not add a remote or push until asked. CI (Java 21 `./gradlew build`, later the Vite task, later publish) waits on that.
+- **No GitHub remote.** `main` is local. Do not add a remote or push until asked. CI (Java 21 `./gradlew build`, which now includes the Vite shell and vitest tasks, later publish) waits on that.
 - **Publish later.** Maven Central for `lsd-mono-core` and `lsd-mono-junit-jupiter` (Central Portal, signing, Mono artifact names so they do not clash with legacy). Not part of steps 1–3.
 - Small leftovers, still not a slice of their own: `CONTROL` / `COLLECTIONS` only if a migration needs a distinct icon; component SVG is not drawn inside the sequence shell; no in-memory `renderReport`; hide-stacktrace has a property but no dedicated test; virtualisation rebuilds the window SVG on scroll instead of recycling nodes. Density mode is still unscoped.
