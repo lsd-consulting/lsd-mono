@@ -388,11 +388,7 @@ function renderMain(): void {
         <span>${items.length} shown</span>
       </div>
     </div>
-    ${items.map((s, i) => scenarioHtml(s, i)).join('')}
-    <p class="footer-note">
-      Custom SVG sequences, no PlantUML runtime.
-      Domain model shaped after <a href="https://github.com/lsd-consulting/lsd-core" target="_blank" rel="noopener">lsd-core</a>.
-    </p>`
+    ${items.map((s, i) => scenarioHtml(s, i)).join('')}`
 
   items.forEach((s) => {
     const card = document.getElementById(`card-${s.id}`)!
