@@ -2,7 +2,7 @@
 
 **Status:** local `main` only. P0–P2 porting slices through `41423cf` are in `docs/porting-gap.md`. This file is the runbook for what comes after that. Nothing here has been run yet.
 
-Do these in order. Do not start 2 until 1 has recorded numbers. Do not start 3 until 1 is done.
+Do these in order. Do not start 2 until 1 has recorded numbers. Do not start 3 until 1 is done. Do not start 4 until 1 has a results file.
 
 ---
 
@@ -83,7 +83,15 @@ When the check is actually run, append a table to `docs/perf-results.md` (create
 
 ---
 
-## 2. Gradle-wired Vite `build:single`
+## 2. README examples and usage instructions
+
+Extend the root `README.md` with the example-led guidance that `modules/lsd-core/README.md` provides, adapted for Mono rather than copied from the legacy API. Show how to depend on `lsd-mono-core`, use `LsdContext` from `io.lsdconsulting.lsd.mono.core`, and capture a small scenario with the Kotlin DSL. Explain how to complete the report and open/view the generated modern report-next HTML, including a short realistic scenario and the key capture/report steps. Keep the examples focused on the modern web report and do not introduce PlantUML markup or legacy names.
+
+Do this after the performance check has recorded its numbers; it is documentation of the current Mono API, not a request to implement the README in this step.
+
+---
+
+## 3. Gradle-wired Vite `build:single`
 
 Today `./gradlew build` does **not** run Vite. `integrations/lsd-mono-core/build.gradle.kts` says the npm build is optional. The jar ships a hand-copied classpath shell:
 
@@ -103,7 +111,7 @@ Do this after the performance check so the check runs against the shell already 
 
 ---
 
-## 3. Interceptor modules (`lsd-mono-*`)
+## 4. Interceptor modules (`lsd-mono-*`)
 
 Only after the performance check has a results file.
 
