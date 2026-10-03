@@ -100,6 +100,30 @@ function escapeXml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
+/** Diagonal hatch so a coloured activation is not colour-only (colour blindness). */
+export const ACTIVATION_HATCH =
+  '<pattern id="act-tint-hatch" patternUnits="userSpaceOnUse" width="6" height="6"><path d="M0 6 L6 0" fill="none" stroke="#111" stroke-width="1.2"/></pattern>'
+
+/**
+ * Activation bar. [colour] overrides the participant fallback and adds a hatch plus
+ * an accessible name. Absent colour keeps the plain bar (no hatch, no "coloured" label).
+ */
+export function activationBarSvg(args: {
+  x: number
+  y: number
+  width: number
+  height: number
+  colour?: string
+  fallback: string
+}): string {
+  const { x, y, width, height } = args
+  if (!args.colour) {
+    return `<rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${args.fallback}"/>`
+  }
+  const colour = escapeXml(args.colour)
+  return `<g class="activation-coloured" role="img" aria-label="coloured activation"><title>coloured activation</title><rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${colour}"/><rect class="activation-hatch" x="${x}" y="${y}" width="${width}" height="${height}" fill="url(#act-tint-hatch)"/></g>`
+}
+
 function participantIcon(type: Participant['type']): string {
   switch (type) {
     case 'ACTOR':
@@ -267,6 +291,9 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
     </div>`
 }
 
+/** When true, paint every row so print is not clipped to the virtual window. */
+let printAllRows = false
+
 /** Paint only the rows inside the scrollport (plus overscan). Row units stay unscaled; zoom is display-only. */
 export function syncDiagramWindow(scrollport: HTMLElement): void {
   const id = scrollport.dataset.scenarioId
@@ -284,13 +311,15 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
     headerHeight: cssHeader,
     zoom,
   })
-  const range = virtualRowRange({
-    rows: diagram.rows,
-    scrollTop: unscaled.scrollTop,
-    viewportHeight: unscaled.viewportHeight,
-    headerHeight: unscaled.headerHeight,
-    overscan: DEFAULT_OVERSCAN,
-  })
+  const range = printAllRows
+    ? { start: 0, end: diagram.rows.length }
+    : virtualRowRange({
+        rows: diagram.rows,
+        scrollTop: unscaled.scrollTop,
+        viewportHeight: unscaled.viewportHeight,
+        headerHeight: unscaled.headerHeight,
+        overscan: DEFAULT_OVERSCAN,
+      })
   const slice = diagram.rows.slice(range.start, range.end)
   const windowEl = scrollport.querySelector<HTMLElement>('.seq-window')
   if (!windowEl) return
@@ -391,7 +420,26 @@ function onToggleParticipant(scrollport: HTMLElement, participantId: string): vo
   syncDiagramWindow(scrollport)
 }
 
+let printHooks = false
+
+function ensurePrintHooks(): void {
+  if (printHooks || typeof window === 'undefined') return
+  printHooks = true
+  const repaint = () => {
+    document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => syncDiagramWindow(el))
+  }
+  window.addEventListener('beforeprint', () => {
+    printAllRows = true
+    repaint()
+  })
+  window.addEventListener('afterprint', () => {
+    printAllRows = false
+    repaint()
+  })
+}
+
 export function bindDiagramScroll(root: ParentNode): void {
+  ensurePrintHooks()
   root.querySelectorAll<HTMLElement>('.seq-diagram').forEach((diagram) => {
     const scroll = diagram.querySelector<HTMLElement>('.seq-scroll')
     if (!scroll?.dataset.scenarioId) return
@@ -470,8 +518,15 @@ function windowSvg(diagram: MountedDiagram, slice: LayoutRow[], view: DiagramVie
       const y1 = Math.min(span.y1, end)
       if (y1 - y0 < 1) return ''
       const x = xFor(i) - ACT_W / 2
-      const c = colourOf.get(span.participantId) ?? '#34d399'
-      return `<rect class="activation" x="${x}" y="${y0}" width="${ACT_W}" height="${y1 - y0}" rx="3" style="--pc:${c}"/>`
+      const fallback = colourOf.get(span.participantId) ?? '#34d399'
+      return activationBarSvg({
+        x,
+        y: y0,
+        width: ACT_W,
+        height: y1 - y0,
+        colour: span.colour,
+        fallback,
+      })
     })
     .join('')
 
@@ -483,6 +538,7 @@ function windowSvg(diagram: MountedDiagram, slice: LayoutRow[], view: DiagramVie
   return `
   <svg class="seq-svg" viewBox="0 ${offset} ${width} ${height}" width="${dispW}" height="${dispH}" aria-hidden="true">
     <defs>
+      ${ACTIVATION_HATCH}
       ${markers.join('\n')}
       <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="2" result="b"/>

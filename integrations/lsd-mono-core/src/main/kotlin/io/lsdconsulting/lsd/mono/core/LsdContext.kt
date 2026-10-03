@@ -16,6 +16,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Scenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
+import io.lsdconsulting.lsd.mono.core.domain.orderByCreatedAt
 import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
@@ -66,7 +67,11 @@ import java.time.ZoneId
  * `components.json` and labelled SVG from [completeComponentsReport].
  * Not PlantUML.
  *
- * **Deferred:** legacy include-files, zoom/fit, activate colour.
+ * **Activate colour:** optional on [activate]; omitted from JSON when absent.
+ * **Timestamps:** optional `createdAt` on events. [completeScenario] sorts by it
+ * before the scenario is stored, so layout and JSON see the same order.
+ *
+ * **Deferred:** legacy include-files.
  */
 open class LsdContext {
 
@@ -223,8 +228,20 @@ open class LsdContext {
         )
     }
 
-    fun activate(participant: String) {
-        capture(Lifeline(id = idGenerator.next(), participantId = participant, action = LifelineAction.ACTIVATE))
+    /**
+     * @param colour optional activation-bar colour (for example `#c026d3`).
+     * Omitted from JSON when null or blank. The shell also draws a hatch, not colour alone.
+     */
+    @JvmOverloads
+    fun activate(participant: String, colour: String? = null) {
+        capture(
+            Lifeline(
+                id = idGenerator.next(),
+                participantId = participant,
+                action = LifelineAction.ACTIVATE,
+                colour = colour?.takeIf { it.isNotBlank() },
+            ),
+        )
     }
 
     fun deactivate(participant: String) {
@@ -242,7 +259,7 @@ open class LsdContext {
         status: Status = Status.SUCCESS,
         error: ScenarioError? = null,
     ) {
-        val events = currentEvents.toList()
+        val events = orderByCreatedAt(currentEvents.toList())
         scenarios.add(
             Scenario(
                 title = title,
@@ -455,6 +472,7 @@ open class LsdContext {
                     colour = colour?.takeIf { it.isNotBlank() },
                     durationMs = durationMs,
                     data = data,
+                    createdAt = createdAt?.toString(),
                 )
             is Note ->
                 NoteEventJson(
@@ -462,16 +480,19 @@ open class LsdContext {
                     text = text,
                     over = over,
                     placement = placement.name.lowercase(),
+                    createdAt = createdAt?.toString(),
                 )
-            is Divider -> DividerEventJson(id = id, label = label)
-            is Section -> SectionEventJson(id = id, title = title)
-            is Delay -> DelayEventJson(id = id, label = label)
-            is Spacer -> SpacerEventJson(id = id, heightPx = heightPx)
+            is Divider -> DividerEventJson(id = id, label = label, createdAt = createdAt?.toString())
+            is Section -> SectionEventJson(id = id, title = title, createdAt = createdAt?.toString())
+            is Delay -> DelayEventJson(id = id, label = label, createdAt = createdAt?.toString())
+            is Spacer -> SpacerEventJson(id = id, heightPx = heightPx, createdAt = createdAt?.toString())
             is Lifeline ->
                 LifelineEventJson(
                     kind = if (action == LifelineAction.ACTIVATE) "activate" else "deactivate",
                     id = id,
                     participantId = participantId,
+                    colour = if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null,
+                    createdAt = createdAt?.toString(),
                 )
         }
 

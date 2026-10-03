@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core.capture
 
 import io.lsdconsulting.lsd.mono.core.IdGenerator
 import io.lsdconsulting.lsd.mono.core.domain.Delay
+import java.time.Instant
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
 import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
@@ -79,13 +80,37 @@ infix fun MessageBuilder.withColour(colour: String): MessageBuilder = colour(col
 
 infix fun MessageBuilder.withDurationMs(durationMs: Long): MessageBuilder = durationMs(durationMs)
 
-/** Legacy-shaped lifeline: `capture(LifelineAction.ACTIVATE lifeline "api")`. */
-infix fun LifelineAction.lifeline(participant: String): SequenceEventBuilder =
-    SequenceEventBuilder { ids ->
-        Lifeline(id = ids.next(), participantId = participant, action = this)
-    }
+/**
+ * Legacy-shaped lifeline: `capture(LifelineAction.ACTIVATE lifeline "api")`.
+ * Optional colour (`withColour`) applies to activate only and is written on the JSON event.
+ */
+class LifelineBuilder(
+    private val action: LifelineAction,
+    private val participant: String,
+) : SequenceEventBuilder {
+    private var colour: String? = null
+    private var createdAt: Instant? = null
 
-infix fun LifelineAction.lifeline(participant: Participant): SequenceEventBuilder = lifeline(participant.id)
+    fun colour(colour: String?) = apply { this.colour = colour }
+
+    fun createdAt(at: Instant?) = apply { this.createdAt = at }
+
+    override fun build(ids: IdGenerator): Lifeline =
+        Lifeline(
+            id = ids.next(),
+            participantId = participant,
+            action = action,
+            colour = colour?.takeIf { action == LifelineAction.ACTIVATE && it.isNotBlank() },
+            createdAt = createdAt,
+        )
+}
+
+infix fun LifelineAction.lifeline(participant: String): LifelineBuilder = LifelineBuilder(this, participant)
+
+infix fun LifelineAction.lifeline(participant: Participant): LifelineBuilder = lifeline(participant.id)
+
+/** Sets the activation-bar colour. No effect on deactivate. */
+infix fun LifelineBuilder.withColour(colour: String): LifelineBuilder = colour(colour)
 
 fun noteOver(participant: String, text: String): SequenceEventBuilder =
     SequenceEventBuilder { ids ->

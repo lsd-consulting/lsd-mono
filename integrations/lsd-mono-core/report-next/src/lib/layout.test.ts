@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramEvent } from '../types'
-import { activationSpans, eventRowHeight, layoutRows, virtualRowRange } from './layout'
+import { activationSpans, eventRowHeight, layoutRows, sortEventsByCreatedAt, virtualRowRange } from './layout'
 
 function uniform(count: number, height = 50): { y: number; height: number }[] {
   return Array.from({ length: count }, (_, i) => ({ y: i * height, height }))
@@ -78,5 +78,40 @@ describe('eventRowHeight', () => {
     expect(eventRowHeight({ kind: 'spacer', id: 's2', heightPx: 80 })).toBe(80)
     expect(eventRowHeight({ kind: 'spacer', id: 's3', heightPx: 4 })).toBe(12)
     expect(eventRowHeight({ kind: 'spacer', id: 's4', heightPx: 999 })).toBe(240)
+  })
+})
+
+describe('sortEventsByCreatedAt', () => {
+  it('sorts out-of-order timestamps and leaves untimed events last', () => {
+    const events: DiagramEvent[] = [
+      { kind: 'message', id: 'late', from: 'a', to: 'b', label: 'late', type: 'SYNCHRONOUS', createdAt: '2026-10-03T11:00:00Z' },
+      { kind: 'message', id: 'early', from: 'a', to: 'b', label: 'early', type: 'SYNCHRONOUS', createdAt: '2026-10-03T09:00:00Z' },
+      { kind: 'divider', id: 'plain', label: 'untimed' },
+      { kind: 'message', id: 'mid', from: 'a', to: 'b', label: 'mid', type: 'SYNCHRONOUS', createdAt: '2026-10-03T10:00:00Z' },
+    ]
+    expect(sortEventsByCreatedAt(events).map((e) => e.id)).toEqual(['early', 'mid', 'late', 'plain'])
+    expect(layoutRows(events).map((r) => r.event.id)).toEqual(['early', 'mid', 'late', 'plain'])
+  })
+
+  it('keeps capture order when no event has createdAt', () => {
+    const events: DiagramEvent[] = [
+      { kind: 'activate', id: 'a', participantId: 'api' },
+      { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' },
+    ]
+    expect(sortEventsByCreatedAt(events)).toBe(events)
+  })
+})
+
+describe('activation colour', () => {
+  it('copies an activate colour onto the span and leaves a plain activate uncoloured', () => {
+    const events: DiagramEvent[] = [
+      { kind: 'activate', id: 'a1', participantId: 'api', colour: '#c026d3' },
+      { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' },
+      { kind: 'deactivate', id: 'd1', participantId: 'api' },
+      { kind: 'activate', id: 'a2', participantId: 'db' },
+      { kind: 'deactivate', id: 'd2', participantId: 'db' },
+    ]
+    const spans = activationSpans(layoutRows(events), 400)
+    expect(spans.map((s) => s.colour)).toEqual(['#c026d3', undefined])
   })
 })

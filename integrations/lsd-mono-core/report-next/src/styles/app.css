@@ -538,3 +538,80 @@ dialog.message-dialog::backdrop {
   color: var(--text-muted);
 }
 .insight-label { color: var(--text); }
+
+/* High contrast: status keeps its word, plus a shape so hue is not the only cue. */
+[data-theme="contrast"] .chip,
+[data-theme="contrast"] .badge {
+  border-width: 2px;
+  border-color: #000;
+  color: #000;
+  background: #fff;
+}
+[data-theme="contrast"] .chip.success,
+[data-theme="contrast"] .badge.success { border-style: solid; }
+[data-theme="contrast"] .chip.warn,
+[data-theme="contrast"] .badge.warn { border-style: dashed; }
+[data-theme="contrast"] .chip.error,
+[data-theme="contrast"] .badge.error { border-style: double; border-width: 3px; }
+[data-theme="contrast"] .dot { box-shadow: none; background: #000; }
+[data-theme="contrast"] .dot.success { border-radius: 50%; }
+[data-theme="contrast"] .dot.warn { border-radius: 0; }
+[data-theme="contrast"] .dot.error { border-radius: 0; outline: 2px solid #000; outline-offset: 1px; }
+[data-theme="contrast"] .hist .s {
+  background: repeating-linear-gradient(90deg, #000 0 2px, #fff 2px 5px);
+}
+[data-theme="contrast"] .hist .w {
+  background: repeating-linear-gradient(45deg, #000 0 2px, #fff 2px 6px);
+}
+[data-theme="contrast"] .hist .e { background: #000; }
+#btn-theme { font-size: 12px; font-weight: 700; letter-spacing: -0.03em; }
+
+@media print {
+  :root,
+  [data-theme="dark"],
+  [data-theme="light"],
+  [data-theme="contrast"] {
+    color-scheme: light;
+    --bg: #fff;
+    --bg-elevated: #fff;
+    --surface: #fff;
+    --surface-2: #fff;
+    --border: #000;
+    --border-strong: #000;
+    --text: #000;
+    --text-muted: #111;
+    --text-faint: #222;
+    --accent: #000;
+    --accent-soft: #f3f3f3;
+    --accent-strong: #000;
+    --success: #064e3b;
+    --warn: #78350f;
+    --error: #7f1d1d;
+    --shadow: none;
+    --shadow-pop: none;
+  }
+  body { background: #fff; color: #000; }
+  .search-wrap,
+  .top-actions,
+  .filters,
+  .help-toast,
+  .seq-toolbar,
+  .section-jump,
+  .hist,
+  .dialog-head button {
+    display: none !important;
+  }
+  .topbar,
+  .sidebar,
+  .seq-sticky-header { position: static; }
+  .shell { display: block; }
+  .sidebar { border-bottom: 1px solid #000; }
+  .seq-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+    background: #fff;
+    border-color: #000;
+  }
+  .scenario-card { break-inside: avoid; box-shadow: none; border: 1px solid #000; }
+  a, button { color: #000; }
+}

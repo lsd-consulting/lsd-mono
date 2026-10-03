@@ -73,6 +73,13 @@
   opacity: 0.9;
 }
 
+.activation-coloured .activation {
+  stroke-dasharray: 2 1.5;
+}
+.activation-hatch {
+  pointer-events: none;
+}
+
 .message { cursor: default; }
 .message.has-data { cursor: pointer; }
 .message .msg-hit {

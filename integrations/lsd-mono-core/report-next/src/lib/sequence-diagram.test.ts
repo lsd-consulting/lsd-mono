@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { LayoutRow } from './layout'
 import { LEFT_PAD, SHORT_STUB, layoutRows } from './layout'
 import {
+  activationBarSvg,
   arrowMarker,
   messageArrowSpec,
   noteLayout,
@@ -284,3 +285,21 @@ describe('diagram view paint', () => {
   })
 })
 
+describe('activationBarSvg', () => {
+  it('uses the colour and a hatch plus a text label when colour is set', () => {
+    const svg = activationBarSvg({ x: 1, y: 2, width: 12, height: 40, colour: '#c026d3', fallback: '#34d399' })
+    expect(svg).toContain('style="--pc:#c026d3"')
+    expect(svg).toContain('activation-hatch')
+    expect(svg).toContain('aria-label="coloured activation"')
+    expect(svg).toContain('url(#act-tint-hatch)')
+    expect(svg).not.toContain('#34d399')
+  })
+
+  it('keeps the default bar when colour is absent', () => {
+    const svg = activationBarSvg({ x: 1, y: 2, width: 12, height: 40, fallback: '#34d399' })
+    expect(svg).toContain('class="activation"')
+    expect(svg).toContain('style="--pc:#34d399"')
+    expect(svg).not.toContain('activation-hatch')
+    expect(svg).not.toContain('coloured activation')
+  })
+})

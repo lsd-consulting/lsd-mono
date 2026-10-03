@@ -56,6 +56,33 @@
   --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
 
+
+/* Third theme. Black/white with thick borders. Status still uses text plus pattern, not hue alone. */
+[data-theme="contrast"] {
+  color-scheme: light;
+  --bg: #fff;
+  --bg-elevated: #fff;
+  --surface: #fff;
+  --surface-2: #fff;
+  --border: #000;
+  --border-strong: #000;
+  --text: #000;
+  --text-muted: #000;
+  --text-faint: #1a1a1a;
+  --accent: #000;
+  --accent-soft: #e6e6e6;
+  --accent-strong: #000;
+  --success: #064e3b;
+  --success-soft: #fff;
+  --warn: #78350f;
+  --warn-soft: #fff;
+  --error: #7f1d1d;
+  --error-soft: #fff;
+  --shadow: none;
+  --shadow-pop: none;
+  --focus: 0 0 0 3px #fff, 0 0 0 6px #000;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

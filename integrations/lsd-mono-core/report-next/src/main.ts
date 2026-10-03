@@ -11,7 +11,7 @@ declare global {
   }
 }
 import { bindDiagramScroll, findMessage, messageOffsetY, renderDiagramHtml, syncDiagramWindow } from './lib/sequence-diagram'
-import { applyTheme, getPreferredTheme, toggleTheme } from './ui/theme'
+import { applyTheme, getPreferredTheme, themeButtonLabel, themeGlyph, toggleTheme, type Theme } from './ui/theme'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, pretty, statusLabel } from './ui/format'
 import { insightsListHtml } from './ui/insights'
 
@@ -55,8 +55,12 @@ function filtered(): Scenario[] {
   })
 }
 
-function iconTheme(theme: string): string {
-  return theme === 'dark' ? '☀' : '☾'
+function paintThemeButton(theme: Theme, btn: Element | null = document.querySelector('#btn-theme')): void {
+  if (!btn) return
+  const label = themeButtonLabel(theme)
+  btn.textContent = themeGlyph(theme)
+  btn.setAttribute('aria-label', label)
+  btn.setAttribute('title', label)
 }
 
 function renderShell(): void {
@@ -89,7 +93,7 @@ function renderShell(): void {
           .join('')}
       </div>
       <div class="top-actions">
-        <button type="button" class="icon-btn" id="btn-theme" title="Toggle theme" aria-label="Toggle dark mode">${iconTheme(theme)}</button>
+        <button type="button" class="icon-btn" id="btn-theme" title="${themeButtonLabel(theme)}" aria-label="${themeButtonLabel(theme)}">${themeGlyph(theme)}</button>
         <button type="button" class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Show keyboard help">?</button>
       </div>
     </header>
@@ -119,7 +123,7 @@ function renderShell(): void {
     <div class="help-toast" id="help" data-open="false" role="note">
       <strong style="color:var(--text)">Keyboard</strong><br/>
       <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> next/prev · <kbd>Enter</kbd> open/close<br/>
-      <kbd>d</kbd> theme · <kbd>?</kbd> help · <kbd>Esc</kbd> close
+      <kbd>d</kbd> theme (dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close
     </div>
   `
 
@@ -155,8 +159,7 @@ function bindChrome(): void {
   })
 
   document.querySelector('#btn-theme')!.addEventListener('click', () => {
-    const t = toggleTheme()
-    ;(document.querySelector('#btn-theme') as HTMLButtonElement).textContent = iconTheme(t)
+    paintThemeButton(toggleTheme())
   })
 
   document.querySelector('#btn-help')!.addEventListener('click', () => {
@@ -460,9 +463,7 @@ function onKey(e: KeyboardEvent): void {
   }
   if (e.key === 'd') {
     e.preventDefault()
-    const t = toggleTheme()
-    const btn = document.querySelector('#btn-theme')
-    if (btn) btn.textContent = iconTheme(t)
+    paintThemeButton(toggleTheme())
     return
   }
   if (e.key === '?') {

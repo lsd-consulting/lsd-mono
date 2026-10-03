@@ -52,6 +52,27 @@ export interface ActivationSpan {
   participantId: string
   y0: number
   y1: number
+  /** From the opening activate event. Absent means the default bar. */
+  colour?: string
+}
+
+/**
+ * When any event has `createdAt`, order by that ISO instant before layout.
+ * Untimed events keep capture order and sort after timed ones. No timestamps → identity.
+ */
+export function sortEventsByCreatedAt(events: DiagramEvent[]): DiagramEvent[] {
+  if (!events.some((event) => event.createdAt)) return events
+  return events
+    .map((event, index) => ({ event, index }))
+    .sort((a, b) => {
+      const ta = a.event.createdAt
+      const tb = b.event.createdAt
+      if (ta && tb && ta !== tb) return ta < tb ? -1 : 1
+      if (ta && !tb) return -1
+      if (!ta && tb) return 1
+      return a.index - b.index
+    })
+    .map((item) => item.event)
 }
 
 export function eventRowHeight(event: DiagramEvent): number {
@@ -80,10 +101,11 @@ export function eventRowHeight(event: DiagramEvent): number {
 
 /** Rows stacked from y = 0. Sections are ordinary rows — they do not reset y or activations. */
 export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
+  const ordered = sortEventsByCreatedAt(events)
   const rows: LayoutRow[] = []
   let y = 0
-  for (let index = 0; index < events.length; index++) {
-    const event = events[index]
+  for (let index = 0; index < ordered.length; index++) {
+    const event = ordered[index]
     const height = eventRowHeight(event)
     rows.push({ index, y, height, event })
     y += height
@@ -157,23 +179,30 @@ export function virtualRowRange(input: {
  */
 export function activationSpans(rows: LayoutRow[], endY: number): ActivationSpan[] {
   const spans: ActivationSpan[] = []
-  const open = new Map<string, number[]>()
+  const open = new Map<string, { y: number; colour?: string }[]>()
   for (const row of rows) {
     const event = row.event
     if (event.kind === 'activate') {
       const stack = open.get(event.participantId) ?? []
-      stack.push(row.y)
+      const colour = event.colour?.trim() ? event.colour : undefined
+      stack.push({ y: row.y, colour })
       open.set(event.participantId, stack)
     } else if (event.kind === 'deactivate') {
       const stack = open.get(event.participantId) ?? []
-      const y0 = stack.pop() ?? row.y
-      spans.push({ participantId: event.participantId, y0, y1: row.y })
+      const opened = stack.pop()
+      spans.push({
+        participantId: event.participantId,
+        y0: opened?.y ?? row.y,
+        y1: row.y,
+        colour: opened?.colour,
+      })
       open.set(event.participantId, stack)
     }
   }
   for (const [participantId, stack] of open) {
     while (stack.length) {
-      spans.push({ participantId, y0: stack.pop()!, y1: endY })
+      const opened = stack.pop()!
+      spans.push({ participantId, y0: opened.y, y1: endY, colour: opened.colour })
     }
   }
   return spans

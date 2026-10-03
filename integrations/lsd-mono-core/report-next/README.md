@@ -69,7 +69,7 @@ Absolute paths (this machine):
 | Tooling | **Vite 7 + TypeScript** | Fast local DX; `base: './'` for `file://` / CI artifact drops |
 | Runtime | **Vanilla TS** (no React/Vue) | Tiny shipped JS; reports stay self-contained; no framework tax in the jar later |
 | Diagrams | **Custom SVG** from domain events | Full CSS/a11y control, clickable message hits, activations, notes, dividers — no PlantUML / Mermaid runtime in the browser |
-| Colour | **OKLCH tokens** + dark/light | 2026-default perceptual colour; system preference + `d` toggle |
+| Colour | **OKLCH tokens** + dark/light/high contrast | `d` or the theme button cycles dark → light → high contrast. Persisted as `lsd-report-next-theme`. Print uses a light page. |
 | Overlays | **`<dialog>`** | Native focus trap / Esc; replaces CSS `:target` hash overlays |
 | Typography | Geist → system-ui fallback | Product feel when online; readable offline via system fonts |
 | State | In-memory filter/selection | Spike-sized; maps cleanly to a future Preact/lit island if needed |
@@ -157,7 +157,7 @@ Replace PlantUML + Handlebars with custom SVG (this spike) as the only engine.
 | `/` | Focus search |
 | `j` / `k` | Next / previous scenario |
 | `Enter` | Open / close selected |
-| `d` | Toggle theme |
+| `d` | Cycle theme: dark, light, high contrast (`HC`) |
 | `?` | Help |
 | `Esc` | Close dialog / help / blur search |
 

@@ -106,15 +106,13 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | **Shipped** | `messageArrowSpec` + markers in `sequence-diagram.ts`: LOST = X tip + `[lost]` cue; BI = dual filled heads + `↔` cue. Colour is never the only cue. |
 | **Test** | `sequence-diagram.test.ts` (marker paths, marker-start/end, type cues). |
 
-#### P2 — Lifeline activate colour
+#### P2 — Lifeline activate colour — **landed 2026-10-03**
 
 | | |
 |--|--|
-| **Legacy** | `Lifeline.colour` colours PlantUML `activate … #colour`. Mono `Lifeline` has no colour field. |
-| **Why** | Occasional emphasis in diagrams. |
-| **Greenfield** | Optional colour on activate events; SVG activation bar uses it. |
-| **Priority** | **P2** |
-| **Test** | Golden JSON + unit bar style. |
+| **Legacy** | `Lifeline.colour` colours PlantUML `activate … #colour`. |
+| **Shipped** | Optional `colour` on activate (`LsdContext.activate(participant, colour)` and `ACTIVATE lifeline "api" withColour "#c026d3"`). Omitted from JSON when absent, so the default bar is unchanged. The SVG bar uses that colour and, when set, a hatch plus the label `coloured activation` (not colour-only). Deactivate ignores colour. |
+| **Test** | `ActivateColourAndTimestampsTest` (JSON). `activationBarSvg` in `sequence-diagram.test.ts`. `activationSpans` colour in `layout.test.ts`. |
 
 #### P2 — Participant types CONTROL / COLLECTIONS
 
@@ -126,15 +124,13 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | **Priority** | **P2** |
 | **Test** | Golden participant `type` if added; otherwise migration guide only. |
 
-#### P2 — Event timestamps / stable sort
+#### P2 — Event timestamps / stable sort — **landed 2026-10-03**
 
 | | |
 |--|--|
 | **Legacy** | Every `SequenceEvent` has `created: Instant`; generator sorts by it. |
-| **Why** | Out-of-order capture from async listeners. |
-| **Greenfield** | Optional `createdAt` on events; sort before layout if present. |
-| **Priority** | **P2** |
-| **Test** | Unit sort order. |
+| **Shipped** | Optional `createdAt` (`Instant` in Kotlin, ISO-8601 string in JSON). `orderByCreatedAt` runs in `completeScenario` before the scenario is stored, and `layoutRows` sorts again before painting. No timestamps → capture order. Timed events sort ascending; untimed events stay in capture order after the timed ones. |
+| **Test** | `ActivateColourAndTimestampsTest` (out-of-order capture ends up sorted in JSON). `sortEventsByCreatedAt` in `layout.test.ts`. |
 
 #### OUT — `includeFiles` / PlantUML sprite includes
 
@@ -239,7 +235,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |------------|---------------------|------------------|----------|
 | Sticky topbar / sidebar | Yes (`position: sticky` in `app.css`) | Sticky **participant header** inside the diagram scrollport — **landed 2026-10-03** | done |
 | Search | Scenarios + facts, plus in-diagram label/note find (`[match]` text, underline, live count) — **landed 2026-10-03** | Scenario search stays separate | done |
-| Themes | Dark/light + persist (**already shipped**, `ui/theme.ts`) | High-contrast / print stylesheet only | P2 |
+| Themes | Dark/light + high contrast, persisted (`ui/theme.ts`, key `lsd-report-next-theme`). Print stylesheet forces a light page and hides search, filters, theme, zoom, and section jumps. **Landed 2026-10-03** | — | done |
 | Keyboard | `/ j k Enter d ? Esc` | Diagram-local nav (next message with data) | P1 |
 | Message detail | `<dialog>` + copy | Structured pretty-print for XML/JSON; size limits | P1 |
 | Virtualisation | **Yes** — `virtualRowRange` + overscan (`layout.ts`) | Recycle DOM nodes (today the window SVG is rebuilt on scroll) | done (rebuild is enough for now) |
@@ -247,9 +243,9 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | Hide / focus participants | **Yes** — in-memory show/hide. Hidden state is the words `shown` / `hidden` plus `aria-pressed`, not colour alone. **Landed 2026-10-03** | Focus-only mode | done |
 | Section / page nav | **Yes** — in-diagram jump list scrolls to the section row | — | done |
 
-**Theme is not a gap.** Dark/light with persistence is **already shipped** in `report-next/src/ui/theme.ts` (`localStorage` key `lsd-report-next-theme`, `prefers-color-scheme` fallback, `data-theme` on the document). Do not rebuild it. **P2** is only a high-contrast / print stylesheet.
+**Themes.** Dark, light, and high contrast persist in `report-next/src/ui/theme.ts` (`localStorage` key `lsd-report-next-theme`, values `dark` | `light` | `contrast`, `prefers-color-scheme` fallback, `data-theme` on the document). Cycle with the theme button or `d`: dark → light → high contrast → dark. The button text is `HC` in high contrast and its accessible name states the theme. Print CSS (`@media print` in `app.css`) forces a light background and hides interactive chrome. **Landed 2026-10-03.**
 
-**Accessibility is a requirement to track (not implemented in the sections slice).** Check accessibility properly, especially colour blindness. Do not rely on colour alone for status (`success` / `warn` / `error`), message types, or light vs dark theme. Pair every colour with a non-colour cue (icon, pattern, or text label) and check contrast in both themes so red/green (and other) deficiencies stay readable. High-contrast / print remains the P2 stylesheet follow-up; this cue rule applies to the product UI as features land.
+**Accessibility.** Do not rely on colour alone for status (`success` / `warn` / `error`), message types, or theme. High contrast pairs status words with border style (solid / dashed / double) and histogram patterns. A coloured activation bar adds a hatch and the words `coloured activation`.
 
 ---
 
@@ -310,9 +306,13 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 7. **P1 — Diagram UX polish** — **landed 2026-10-03.** Zoom (Out / Fit / In and ctrl or meta + wheel), fit-to-width, hide/show participant columns (page memory only; a message or anchored note that needs a hidden column is omitted and the other columns reflow), in-diagram find for message labels and notes (`[match]` text plus underline, live count that names hits on a hidden column). Not colour-only. The sticky participant header and virtual rows stay; scroll offsets are divided by the zoom scale before the row window is chosen. Scenario search is unchanged.
 
-8. **P2 — still open:** lifeline activate colour, event timestamps / stable sort, print CSS, and a high-contrast stylesheet. Dark/light is already shipped. Do not rely on colour alone (colour blindness): status, message types, themes, hidden columns, and search hits keep a text or shape cue. Index branding remains a separate P1 polish item.
+8. **P2 — lifeline colour, timestamps, print, high contrast** — **landed 2026-10-03.** Optional activate `colour` (hatch + `coloured activation` when set; default bar unchanged). Optional `createdAt` sorted before JSON and layout. Print CSS is a light page and hides search, filters, the theme button, zoom, and section jumps; `beforeprint` paints every row so the virtual window is not a clipped page. High contrast is the third persisted theme (`contrast`). Status is a word plus a border style, not hue alone.
 
-Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied artifact (supports regression of the packaged HTML).
+**Still later**
+
+- Browser performance budget (scroll 500+ events).
+- Gradle-wired Vite build (the single-file shell is still copied by hand).
+- Interceptor modules (`lsd-mono-*` integrations beyond the JUnit extension).
 
 ---
 
@@ -327,8 +327,8 @@ Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied
 
 ### Unit (Kotlin + TS)
 
-- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder (`ComponentGraphTest` — nodes, counted edges, response exclusion, combined union, SVG type label); metrics tree (`BottleneckInsightsTest` — isolated duration order and the metrics property gate); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent.
-- **TypeScript:** `layout.test.ts` locks `virtualRowRange` and `eventRowHeight` (delay/spacer). `diagram-view.test.ts` locks fit scale, zoom steps, unscaled scroll, remaining columns, and which rows match a query. `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement / label truncation, plus column reflow, omitted hidden messages, and the `[match]` cue. `insights.test.ts` locks rank text (not colour-only) and ellipsis. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report-next` (vitest).
+- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder (`ComponentGraphTest` — nodes, counted edges, response exclusion, combined union, SVG type label); metrics tree (`BottleneckInsightsTest` — isolated duration order and the metrics property gate); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent. `ActivateColourAndTimestampsTest` locks optional activate colour in JSON and out-of-order `createdAt` sorting.
+- **TypeScript:** `layout.test.ts` locks `virtualRowRange`, `eventRowHeight` (delay/spacer), `sortEventsByCreatedAt`, and activation-span colour. `diagram-view.test.ts` locks fit scale, zoom steps, unscaled scroll, remaining columns, and which rows match a query. `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement / label truncation, column reflow, omitted hidden messages, the `[match]` cue, and `activationBarSvg` (hatch when coloured, plain bar otherwise). `theme.test.ts` locks the dark → light → contrast cycle. `insights.test.ts` locks rank text (not colour-only) and ellipsis. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report-next` (vitest).
 
 ### Browser / UI (later, selective)
 

@@ -139,6 +139,7 @@ data class MessageEventJson(
     val colour: String? = null,
     val durationMs: Long? = null,
     val data: Any? = null,
+    val createdAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -152,6 +153,7 @@ data class MessageEventJson(
                 if (colour != null) add("colour" to JsonString(colour))
                 if (durationMs != null) add("durationMs" to JsonNumber(durationMs.toString()))
                 if (data != null) add("data" to anyToJson(data))
+                if (createdAt != null) add("createdAt" to JsonString(createdAt))
             },
         )
 }
@@ -162,6 +164,7 @@ data class NoteEventJson(
     /** Anchor participant. Required for placement `over`; optional for left/right. */
     val over: String? = null,
     val placement: String = "over",
+    val createdAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -171,6 +174,7 @@ data class NoteEventJson(
                 add("text" to JsonString(text))
                 if (over != null) add("over" to JsonString(over))
                 add("placement" to JsonString(placement))
+                if (createdAt != null) add("createdAt" to JsonString(createdAt))
             },
         )
 }
@@ -178,6 +182,7 @@ data class NoteEventJson(
 data class DelayEventJson(
     val id: String,
     val label: String? = null,
+    val createdAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -185,6 +190,7 @@ data class DelayEventJson(
                 add("kind" to JsonString("delay"))
                 add("id" to JsonString(id))
                 if (label != null) add("label" to JsonString(label))
+                if (createdAt != null) add("createdAt" to JsonString(createdAt))
             },
         )
 }
@@ -192,6 +198,7 @@ data class DelayEventJson(
 data class SpacerEventJson(
     val id: String,
     val heightPx: Int? = null,
+    val createdAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -199,6 +206,7 @@ data class SpacerEventJson(
                 add("kind" to JsonString("spacer"))
                 add("id" to JsonString(id))
                 if (heightPx != null) add("heightPx" to JsonNumber(heightPx.toString()))
+                if (createdAt != null) add("createdAt" to JsonString(createdAt))
             },
         )
 }
@@ -206,28 +214,32 @@ data class SpacerEventJson(
 data class DividerEventJson(
     val id: String,
     val label: String,
+    val createdAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
-            listOf(
-                "kind" to JsonString("divider"),
-                "id" to JsonString(id),
-                "label" to JsonString(label),
-            ),
+            buildList {
+                add("kind" to JsonString("divider"))
+                add("id" to JsonString(id))
+                add("label" to JsonString(label))
+                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+            },
         )
 }
 
 data class SectionEventJson(
     val id: String,
     val title: String,
+    val createdAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
-            listOf(
-                "kind" to JsonString("section"),
-                "id" to JsonString(id),
-                "title" to JsonString(title),
-            ),
+            buildList {
+                add("kind" to JsonString("section"))
+                add("id" to JsonString(id))
+                add("title" to JsonString(title))
+                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+            },
         )
 }
 
@@ -235,14 +247,19 @@ data class LifelineEventJson(
     val kind: String,
     val id: String,
     val participantId: String,
+    /** Present only on activate, and only when the caller set a colour. */
+    val colour: String? = null,
+    val createdAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
-            listOf(
-                "kind" to JsonString(kind),
-                "id" to JsonString(id),
-                "participantId" to JsonString(participantId),
-            ),
+            buildList {
+                add("kind" to JsonString(kind))
+                add("id" to JsonString(id))
+                add("participantId" to JsonString(participantId))
+                if (colour != null) add("colour" to JsonString(colour))
+                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+            },
         )
 }
 

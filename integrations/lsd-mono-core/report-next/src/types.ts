@@ -32,6 +32,8 @@ export interface Participant {
 export interface NoteEvent {
   kind: 'note'
   id: string
+  /** ISO-8601 instant. Sorted before layout when any event in the list has one. */
+  createdAt?: string
   text: string
   /** Anchor participant. Required for placement `over`; optional for left/right. */
   over?: string
@@ -41,6 +43,7 @@ export interface NoteEvent {
 export interface DividerEvent {
   kind: 'divider'
   id: string
+  createdAt?: string
   label: string
 }
 
@@ -48,6 +51,7 @@ export interface DividerEvent {
 export interface SectionEvent {
   kind: 'section'
   id: string
+  createdAt?: string
   title: string
 }
 
@@ -55,6 +59,7 @@ export interface SectionEvent {
 export interface DelayEvent {
   kind: 'delay'
   id: string
+  createdAt?: string
   label?: string
 }
 
@@ -62,6 +67,7 @@ export interface DelayEvent {
 export interface SpacerEvent {
   kind: 'spacer'
   id: string
+  createdAt?: string
   heightPx?: number
 }
 
@@ -69,6 +75,9 @@ export interface ActivateEvent {
   kind: 'activate' | 'deactivate'
   id: string
   participantId: string
+  createdAt?: string
+  /** Optional activation-bar colour. Only meaningful for kind `activate`. */
+  colour?: string
 }
 
 export interface MessageEvent {
@@ -84,6 +93,7 @@ export interface MessageEvent {
   durationMs?: number
   /** Payload shown in overlay — string or structured JSON-ish */
   data?: unknown
+  createdAt?: string
 }
 
 export type DiagramEvent =

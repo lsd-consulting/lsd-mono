@@ -1,5 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.domain
 
+import java.time.Instant
+
 /**
  * In-memory sequence events. JSON `kind` values match report-next `DiagramEvent`.
  *
@@ -11,10 +13,15 @@ package io.lsdconsulting.lsd.mono.core.domain
  * [MessageType.SHORT_INBOUND] / [MessageType.SHORT_OUTBOUND] draw from/to a
  * phantom diagram edge — not a fake participant.
  *
- * Deferred vs legacy: PageTitle as its own event, activate colour, timestamps.
+ * Optional [createdAt] is an ISO instant used to reorder out-of-order capture
+ * before the report is written. Events without it keep capture order and sort
+ * after any timed events.
+ *
+ * Deferred vs legacy: PageTitle as its own event.
  */
 sealed class SequenceEvent {
     abstract val id: String
+    abstract val createdAt: Instant?
 }
 
 enum class MessageType {
@@ -42,6 +49,7 @@ data class Message @JvmOverloads constructor(
     val colour: String? = null,
     val data: Any? = null,
     val durationMs: Long? = null,
+    override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /**
@@ -53,29 +61,34 @@ data class Note @JvmOverloads constructor(
     val text: String,
     val over: String? = null,
     val placement: NotePlacement = NotePlacement.OVER,
+    override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 data class Divider(
     override val id: String,
     val label: String,
+    override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Titled break in a continuous diagram. Does not split the SVG or drop activations. */
 data class Section(
     override val id: String,
     val title: String,
+    override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Time-delay ellipsis row (`...label...` in PlantUML). */
 data class Delay @JvmOverloads constructor(
     override val id: String,
     val label: String? = null,
+    override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Vertical spacer (`|||` / sized `||N||` in PlantUML). [heightPx] defaults in the UI. */
 data class Spacer @JvmOverloads constructor(
     override val id: String,
     val heightPx: Int? = null,
+    override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 enum class LifelineAction { ACTIVATE, DEACTIVATE }
@@ -84,4 +97,7 @@ data class Lifeline @JvmOverloads constructor(
     override val id: String,
     val participantId: String,
     val action: LifelineAction = LifelineAction.ACTIVATE,
+    /** Optional emphasis on an activation bar. Ignored for deactivate. Absent means the default bar. */
+    val colour: String? = null,
+    override val createdAt: Instant? = null,
 ) : SequenceEvent()
