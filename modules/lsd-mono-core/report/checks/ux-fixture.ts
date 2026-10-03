@@ -18,6 +18,7 @@ export const uxFixture = {
         { id: 'client', name: 'Client', type: 'ACTOR' },
         { id: 'api', name: 'Api', type: 'PARTICIPANT' },
         { id: 'db', name: 'Database', type: 'DATABASE' },
+        { id: 'bus', name: 'Queue', type: 'QUEUE' },
       ],
       events: Array.from({ length: 14 }, (_, i) => {
         const hop = i % 3

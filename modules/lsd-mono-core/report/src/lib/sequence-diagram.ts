@@ -6,6 +6,7 @@ import type {
   NoteEvent,
   NotePlacement,
   Participant,
+  ParticipantType,
   Scenario,
 } from '../types'
 import {
@@ -151,18 +152,76 @@ export function activationBarSvg(args: {
   return `<g class="activation-coloured" role="img" aria-label="coloured activation"><title>coloured activation</title><rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${colour}"/><rect class="activation-hatch" x="${x}" y="${y}" width="${width}" height="${height}" fill="url(#act-tint-hatch)"/></g>`
 }
 
-function participantIcon(type: Participant['type']): string {
+/**
+ * Header geometry for one captured participant type.
+ * Unknown values (including legacy CONTROL / COLLECTIONS, which this model does not capture)
+ * stay on the component box. The shape differs; [typeLabel] is the text cue.
+ */
+export interface ParticipantHead {
+  type: ParticipantType
+  typeLabel: string
+  /** SVG for the shape only. The name is a separate text node. */
+  shape: string
+  /** Baseline for the participant name, in header units. */
+  labelY: number
+}
+
+export function participantHead(type: string | undefined): ParticipantHead {
   switch (type) {
     case 'ACTOR':
-      return '●'
+      return {
+        type: 'ACTOR',
+        typeLabel: 'actor',
+        labelY: 50,
+        shape: `<g class="participant-actor">
+          <circle cx="0" cy="11" r="5.5"/>
+          <path d="M0 16.5 V28 M-11 22 H11 M0 28 L-8 38 M0 28 L8 38"/>
+        </g>`,
+      }
     case 'DATABASE':
-      return '▣'
+      return {
+        type: 'DATABASE',
+        typeLabel: 'database',
+        labelY: 30,
+        shape: `<g class="participant-database">
+          <path class="participant-shape" d="M-46 16 v16 a46 6 0 0 0 92 0 v-16"/>
+          <ellipse class="participant-shape" cx="0" cy="16" rx="46" ry="6"/>
+        </g>`,
+      }
     case 'QUEUE':
-      return '☰'
+      return {
+        type: 'QUEUE',
+        typeLabel: 'queue',
+        labelY: 34,
+        shape: `<g class="participant-queue">
+          <polygon class="participant-shape participant-queue-back" points="-44,6 34,6 46,16 -32,16"/>
+          <polygon class="participant-shape" points="-48,18 36,18 50,44 -34,44"/>
+        </g>`,
+      }
+    case 'ENTITY':
+      return {
+        type: 'ENTITY',
+        typeLabel: 'entity',
+        labelY: 50,
+        shape: `<circle class="participant-shape" cx="0" cy="22" r="14"/>`,
+      }
     case 'BOUNDARY':
-      return '◇'
+      return {
+        type: 'BOUNDARY',
+        typeLabel: 'boundary',
+        labelY: 50,
+        shape: `<g class="participant-boundary">
+          <line class="participant-mark" x1="-16" y1="6" x2="-16" y2="38"/>
+          <circle class="participant-shape" cx="0" cy="22" r="14"/>
+        </g>`,
+      }
     default:
-      return '▢'
+      return {
+        type: 'PARTICIPANT',
+        typeLabel: 'component',
+        labelY: 32,
+        shape: `<rect class="participant-shape" x="-48" y="14" width="96" height="28" rx="4"/>`,
+      }
   }
 }
 
@@ -625,21 +684,27 @@ export function bindDiagramScroll(root: ParentNode): void {
 }
 
 function headerSvg(scenario: Scenario, width: number, hiddenIds: ReadonlySet<string>, zoom: number): string {
-  const boxes = visibleParticipants(scenario.participants, hiddenIds)
+  const visible = visibleParticipants(scenario.participants, hiddenIds)
+  const boxes = visible
     .map((p, i) => {
       const x = xFor(i)
-      const c = p.colour ?? '#94a3b8'
+      const name = p.alias ?? p.name
+      const head = participantHead(p.type)
+      const colour = escapeXml(p.colour ?? '#94a3b8')
       return `
-      <g class="participant-box" data-participant="${escapeXml(p.id)}" transform="translate(${x}, ${HEADER_BLOCK_H / 2})">
-        <rect class="participant-card" x="-54" y="-18" width="108" height="36" rx="10" style="--pc:${c}"/>
-        <text class="participant-icon" y="-2" text-anchor="middle">${participantIcon(p.type)}</text>
-        <text class="participant-label" y="12" text-anchor="middle">${escapeXml(p.alias ?? p.name)}</text>
+      <g class="participant-box" data-participant="${escapeXml(p.id)}" data-participant-type="${head.type}" transform="translate(${x}, 0)" style="--pc:${colour}">
+        <title>${escapeXml(name)}, ${head.typeLabel}</title>
+        ${head.shape}
+        <text class="participant-label" y="${head.labelY}" text-anchor="middle">${escapeXml(name)}</text>
       </g>`
     })
     .join('')
+  const summary = visible
+    .map((p) => `${p.alias ?? p.name} ${participantHead(p.type).typeLabel}`)
+    .join(', ')
   const dispW = width * zoom
   const dispH = HEADER_BLOCK_H * zoom
-  return `<svg class="seq-header-svg" viewBox="0 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants">${boxes}</svg>`
+  return `<svg class="seq-header-svg" viewBox="0 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants: ${escapeXml(summary)}">${boxes}</svg>`
 }
 
 function windowSvg(
@@ -817,6 +882,7 @@ function renderRow(
     paint,
   )
 }
+
 
 function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
   const full = escapeXml(msg.label)

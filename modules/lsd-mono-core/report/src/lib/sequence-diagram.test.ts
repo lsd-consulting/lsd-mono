@@ -6,10 +6,12 @@ import {
   arrowMarker,
   messageArrowSpec,
   noteLayout,
+  participantHead,
+  renderDiagramHtml,
   renderRowSvg,
   shortMessageEndpoints,
 } from './sequence-diagram'
-import type { DiagramEvent, Participant } from '../types'
+import type { DiagramEvent, Participant, Scenario } from '../types'
 
 const participants: Participant[] = [
   { id: 'api', name: 'Api', type: 'PARTICIPANT', colour: '#34d399' },
@@ -392,5 +394,114 @@ describe('activationBarSvg', () => {
     expect(svg).toContain('style="--pc:#34d399"')
     expect(svg).not.toContain('activation-hatch')
     expect(svg).not.toContain('coloured activation')
+  })
+})
+
+function headerHtml(participants: Participant[], id: string): string {
+  const scenario: Scenario = {
+    id,
+    title: 'Shapes',
+    status: 'success',
+    description: '',
+    facts: [],
+    metrics: [],
+    participants,
+    events: [
+      {
+        kind: 'message',
+        id: 'm1',
+        from: participants[0]?.id ?? '',
+        to: participants[1]?.id ?? participants[0]?.id ?? '',
+        label: 'ping',
+        type: 'SYNCHRONOUS',
+      },
+    ],
+  }
+  const html = renderDiagramHtml(scenario)
+  const start = html.indexOf('seq-sticky-header')
+  const end = html.indexOf('seq-spacer')
+  return html.slice(start, end)
+}
+
+describe('participantHead', () => {
+  it('draws an actor as a person, not a box', () => {
+    const head = participantHead('ACTOR')
+    expect(head.type).toBe('ACTOR')
+    expect(head.typeLabel).toBe('actor')
+    expect(head.shape).toContain('participant-actor')
+    expect(head.shape).toContain('<circle')
+    expect(head.shape).toContain('L-8 38')
+    expect(head.shape).not.toContain('<rect')
+  })
+
+  it('draws a database as a cylinder', () => {
+    const head = participantHead('DATABASE')
+    expect(head.typeLabel).toBe('database')
+    expect(head.shape).toContain('<ellipse')
+    expect(head.shape).toContain('<path')
+    expect(head.shape).not.toContain('<rect')
+    expect(head.shape).not.toContain('participant-actor')
+  })
+
+  it('draws a queue as a stack of slanted plates', () => {
+    const head = participantHead('QUEUE')
+    expect(head.typeLabel).toBe('queue')
+    expect(head.shape.match(/<polygon/g)).toHaveLength(2)
+    expect(head.shape).not.toContain('<rect')
+    expect(head.shape).not.toContain('<ellipse')
+  })
+
+  it('draws the default component as a box', () => {
+    const head = participantHead('PARTICIPANT')
+    expect(head.type).toBe('PARTICIPANT')
+    expect(head.typeLabel).toBe('component')
+    expect(head.shape).toContain('<rect class="participant-shape"')
+    expect(head.shape).not.toContain('<ellipse')
+    expect(head.shape).not.toContain('<polygon')
+    expect(head.shape).not.toContain('participant-actor')
+  })
+
+  it('keeps an unknown type on the component box', () => {
+    const head = participantHead('CONTROL')
+    expect(head).toEqual(participantHead('PARTICIPANT'))
+    expect(head.shape).not.toContain('CONTROL')
+    expect(participantHead(undefined)).toEqual(head)
+  })
+
+  it('draws entity as a circle and boundary as a circle with a bar', () => {
+    const entity = participantHead('ENTITY')
+    const boundary = participantHead('BOUNDARY')
+    expect(entity.typeLabel).toBe('entity')
+    expect(entity.shape).toContain('<circle')
+    expect(entity.shape).not.toContain('<line')
+    expect(boundary.typeLabel).toBe('boundary')
+    expect(boundary.shape).toContain('<circle')
+    expect(boundary.shape).toContain('participant-mark')
+    expect(entity.shape).not.toBe(boundary.shape)
+  })
+
+  it('puts actor, database, queue, and the box in the sticky header once', () => {
+    const participants: Participant[] = [
+      { id: 'user', name: 'User', type: 'ACTOR', colour: '#38bdf8' },
+      { id: 'api', name: 'Api', type: 'PARTICIPANT' },
+      { id: 'orders', name: 'Orders', type: 'DATABASE' },
+      { id: 'bus', name: 'Bus', type: 'QUEUE' },
+    ]
+    const header = headerHtml(participants, 'shape-header')
+    expect(header).toContain('<title>User, actor</title>')
+    expect(header).toContain('<title>Api, component</title>')
+    expect(header).toContain('<title>Orders, database</title>')
+    expect(header).toContain('<title>Bus, queue</title>')
+    expect(header).toContain('data-participant-type="ACTOR"')
+    expect(header).toContain('data-participant-type="PARTICIPANT"')
+    expect(header).toContain('data-participant-type="DATABASE"')
+    expect(header).toContain('data-participant-type="QUEUE"')
+    expect(header).toContain('participant-actor')
+    expect(header).toContain('<ellipse')
+    expect(header.match(/<polygon/g)).toHaveLength(2)
+    expect(header).toContain('<rect class="participant-shape"')
+    expect(header).toContain('style="--pc:#38bdf8"')
+    expect(header).toContain('aria-label="Participants: User actor, Api component, Orders database, Bus queue"')
+    expect(header.match(/participant-actor/g)).toHaveLength(1)
   })
 })

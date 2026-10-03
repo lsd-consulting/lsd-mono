@@ -115,15 +115,32 @@
   stroke-dasharray: 3 5;
 }
 
-.participant-card {
-  fill: var(--surface);
-  stroke: var(--pc, var(--accent));
-  stroke-width: 1.5;
+.participant-box {
   filter: drop-shadow(0 2px 6px oklch(0 0 0 / 0.2));
 }
-.participant-icon {
-  fill: var(--pc, var(--accent));
-  font-size: 10px;
+.participant-shape {
+  fill: var(--surface);
+  stroke: var(--pc, var(--accent));
+  stroke-width: 1.6;
+}
+.participant-actor {
+  fill: none;
+  stroke: var(--pc, var(--accent));
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.participant-actor circle {
+  fill: var(--surface);
+}
+.participant-mark {
+  fill: none;
+  stroke: var(--pc, var(--accent));
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+.participant-queue-back {
+  fill: color-mix(in oklab, var(--pc, var(--accent)) 22%, var(--surface));
 }
 .participant-label {
   fill: var(--text);
@@ -205,7 +222,7 @@
   text-transform: uppercase;
 }
 
-[data-theme="light"] .participant-card {
+[data-theme="light"] .participant-box {
   filter: drop-shadow(0 1px 3px oklch(0.4 0.02 250 / 0.12));
 }
 
