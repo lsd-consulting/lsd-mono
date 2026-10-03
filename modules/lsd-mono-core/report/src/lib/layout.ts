@@ -25,8 +25,9 @@ export const ROW_H = {
   section: 48,
   delay: 36,
   spacer: 24,
-  activate: 8,
-  deactivate: 8,
+  // Lifeline keywords are not rows. The bar is pinned to the neighbouring arrows.
+  activate: 0,
+  deactivate: 0,
 } as const
 
 /** Short arrow stub length from lifeline toward the diagram edge (not a fake participant). */
@@ -184,24 +185,37 @@ export function virtualRowRange(input: {
 /**
  * Activation bars across the whole event list.
  * A section (or any non-lifeline event) does not push or pop the stack.
+ *
+ * Capture writes `activate` after the incoming message and `deactivate` after
+ * the last message. The bar uses that previous message's y, the arrow line.
+ * With no previous message, the zero-height keyword sits on the following row.
  */
+function arrowY(rows: LayoutRow[], index: number): number {
+  for (let i = index - 1; i >= 0; i--) {
+    if (rows[i].event.kind === 'message') return rows[i].y
+  }
+  return rows[index].y
+}
+
 export function activationSpans(rows: LayoutRow[], endY: number): ActivationSpan[] {
   const spans: ActivationSpan[] = []
   const open = new Map<string, { y: number; colour?: string }[]>()
-  for (const row of rows) {
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index]
     const event = row.event
     if (event.kind === 'activate') {
       const stack = open.get(event.participantId) ?? []
       const colour = event.colour?.trim() ? event.colour : undefined
-      stack.push({ y: row.y, colour })
+      stack.push({ y: arrowY(rows, index), colour })
       open.set(event.participantId, stack)
     } else if (event.kind === 'deactivate') {
       const stack = open.get(event.participantId) ?? []
       const opened = stack.pop()
+      const y = arrowY(rows, index)
       spans.push({
         participantId: event.participantId,
-        y0: opened?.y ?? row.y,
-        y1: row.y,
+        y0: opened?.y ?? y,
+        y1: y,
         colour: opened?.colour,
       })
       open.set(event.participantId, stack)

@@ -53,6 +53,25 @@ describe('virtualRowRange', () => {
 })
 
 describe('activationSpans', () => {
+  it('pins the bar to the message before activate and the message before deactivate', () => {
+    const events: DiagramEvent[] = [
+      { kind: 'message', id: 'open', from: 'client', to: 'api', label: 'POST /orders', type: 'SYNCHRONOUS' },
+      { kind: 'activate', id: 'a', participantId: 'api' },
+      { kind: 'message', id: 'mid', from: 'api', to: 'db', label: 'insert order', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'close', from: 'api', to: 'client', label: '201 Created', type: 'SYNCHRONOUS_RESPONSE' },
+      { kind: 'deactivate', id: 'd', participantId: 'api' },
+    ]
+    const rows = layoutRows(events)
+    const byId = new Map(rows.map((row) => [row.event.id, row]))
+    expect(byId.get('a')!.height).toBe(0)
+    expect(byId.get('d')!.height).toBe(0)
+    expect(byId.get('mid')!.y).toBe(byId.get('open')!.y + byId.get('open')!.height)
+    const spans = activationSpans(rows, 999)
+    expect(spans).toEqual([
+      { participantId: 'api', y0: byId.get('open')!.y, y1: byId.get('close')!.y, colour: undefined },
+    ])
+  })
+
   it('keeps an activation open across a section row', () => {
     const events: DiagramEvent[] = [
       { kind: 'activate', id: 'a', participantId: 'api' },
@@ -67,7 +86,7 @@ describe('activationSpans', () => {
     expect(spans).toHaveLength(1)
     expect(spans[0].participantId).toBe('api')
     expect(spans[0].y0).toBeLessThan(section.y)
-    expect(spans[0].y1).toBeGreaterThan(section.y + section.height)
+    expect(spans[0].y1).toBeGreaterThanOrEqual(section.y + section.height)
   })
 })
 

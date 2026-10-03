@@ -143,29 +143,51 @@ try {
     Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]),
   )
 
-  async function placeDiagram() {
+  async function placeScenario() {
     await page.evaluate(() => {
-      const el = document.querySelector('.seq-diagram')
-      const bar = document.querySelector('.topbar')?.getBoundingClientRect().height ?? 56
-      const y = el.getBoundingClientRect().top + window.scrollY - bar - 16
-      window.scrollTo(0, Math.max(0, y))
+      window.scrollTo(0, 0)
     })
   }
 
-  async function diagramClip() {
-    await placeDiagram()
+  /** Grow the viewport so the description card and the diagram both stay in frame. */
+  async function fitScenarioViewport() {
+    const needed = await page.evaluate(() => {
+      const card = document.querySelector('.scenario-card')
+      const diagram = document.querySelector('.seq-diagram')
+      const inspector = document.querySelector('#inspector-pre')
+      const cardTop = card?.getBoundingClientRect().top ?? 0
+      const diagramBottom = diagram?.getBoundingClientRect().bottom ?? 0
+      const inspectorBottom =
+        inspector && getComputedStyle(inspector).display !== 'none'
+          ? inspector.getBoundingClientRect().bottom
+          : 0
+      return Math.ceil(Math.max(diagramBottom, inspectorBottom, cardTop) + 32)
+    })
+    const viewport = page.viewportSize()
+    const height = Math.min(Math.max(viewport.height, needed), 2400)
+    if (height !== viewport.height) {
+      await page.setViewportSize({ width: viewport.width, height })
+    }
+  }
+
+  async function scenarioClip() {
+    await placeScenario()
+    await fitScenarioViewport()
     const clip = await page.evaluate(() => {
+      const card = document.querySelector('.scenario-card')
       const diagram = document.querySelector('.seq-diagram')
       const scroll = document.querySelector('.seq-scroll')
+      const c = card.getBoundingClientRect()
       const d = diagram.getBoundingClientRect()
       const s = scroll.getBoundingClientRect()
-      const height = Math.ceil(s.top - d.top + scroll.scrollHeight + 28)
-      const y = Math.max(0, Math.round(d.y))
+      const y = Math.max(0, Math.floor(Math.min(c.top, d.top)))
+      const bottom = Math.max(d.bottom, s.top + Math.min(scroll.scrollHeight, s.height) )
+      const height = Math.ceil(bottom - y + 20)
       return {
-        x: Math.max(0, Math.round(d.x)),
+        x: 0,
         y,
-        width: Math.round(d.width),
-        height: Math.min(height, Math.round(d.height), window.innerHeight - y),
+        width: window.innerWidth,
+        height: Math.min(height, window.innerHeight - y),
       }
     })
     if (clip.width < 200 || clip.height < 160) {
@@ -183,7 +205,7 @@ try {
     el.scrollTop = 0
   })
 
-  const clip = await diagramClip()
+  const clip = await scenarioClip()
   const shot = () => page.screenshot({ clip, animations: 'disabled', caret: 'hide', type: 'png' })
   writeFileSync(path.join(outDir, 'diagram.png'), await shot())
 
@@ -230,16 +252,19 @@ try {
   await scroll.evaluate((el) => {
     el.scrollTop = 0
   })
-  await placeDiagram()
+  await placeScenario()
+  await fitScenarioViewport()
   const inspectorClip = await page.evaluate(() => {
+    const card = document.querySelector('.scenario-card')?.getBoundingClientRect()
     const pre = document.querySelector('#inspector-pre')?.getBoundingClientRect()
     const diagram = document.querySelector('.seq-diagram')?.getBoundingClientRect()
+    const top = Math.max(0, Math.floor(Math.min(card?.top ?? 0, diagram?.top ?? 0)))
     const bottom = Math.max(pre?.bottom ?? 0, diagram?.bottom ?? 0)
     return {
       x: 0,
-      y: 0,
+      y: top,
       width: window.innerWidth,
-      height: Math.min(window.innerHeight, Math.max(420, Math.ceil(bottom + 20))),
+      height: Math.min(window.innerHeight - top, Math.max(420, Math.ceil(bottom - top + 20))),
     }
   })
   writeFileSync(
