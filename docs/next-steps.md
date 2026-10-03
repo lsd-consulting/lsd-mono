@@ -2,7 +2,7 @@
 
 **Status:** local `main` only. P0–P2 porting slices through `41423cf` are in `docs/porting-gap.md`. This file is the runbook for what comes after that. Nothing here has been run yet.
 
-Do these in order. Do not start 2 until 1 has recorded numbers. Do not start 3 until 1 is done. Do not start 4 until 1 has a results file.
+Steps 1–4 are in order. Do not start 2 until 1 has recorded numbers. Do not start 3 until 1 is done. Do not start 4 until 1 has a results file. Section 5 is separate.
 
 ---
 
@@ -126,8 +126,24 @@ Each new module gets a contract test that the events it captures land in `Report
 
 ---
 
+## 5. Diagram UX
+
+Open. Do these in order. They do not wait on the README or the Gradle Vite task. None of this is done until it is in `report-next` and covered by a test. Do not start 5.3 or 5.4 until 5.1, 5.2, and 5.5 are in.
+
+1. **Keyboard.** One tab stop into the diagram, then Up and Down move between messages and Enter opens the same inspector as a click. Do not put every arrow in the tab order. When virtualisation recycles a focused row, move focus to the logical next message. On close, return focus to the invoking arrow, scrolling it back if it was unmounted.
+2. **Hit area.** An invisible 24 CSS-pixel target on each arrow. Do not draw a fatter arrow. Find stays an equivalent path that opens the same inspector.
+3. **Inspector.** A side panel or the Popover API, not a modal that covers the diagram. JSON collapsed by default, with copy. Load the payload when the inspector opens. Keep method, path, and status on the arrow. Do not ship multi-megabyte payloads in the first paint.
+4. **Place.** A minimap tied to the zoomed window, and the open message in the URL so a report can be shared at that arrow.
+5. **Position.** `aria-posinset` and `aria-setsize` are the real message index and the full message count, not the painted row count. `scroll-padding` so a focused row clears the sticky participant header (same class of bug as the Fit top-label clip).
+6. **Reduced motion.** Zoom and Fit jump instead of animating when the user prefers reduced motion. Diagram zoom is not a substitute for browser text resize. Do not reflow the sequence into one column.
+7. **Tooling, later.** `@axe-core/playwright` on the existing headless Chromium harness, after a scroll and after the inspector opens. Playwright screenshot checks for the three themes and for Fit.
+
+**Out, not tasks:** canvas, OffscreenCanvas, WebGL, TanStack Virtual, `content-visibility`, Lighthouse, CrUX, Monaco, PlantUML, splitting at 50 events.
+
+---
+
 ## Trailing notes (not new projects)
 
 - **No GitHub remote.** `main` is local. Do not add a remote or push until asked. CI (Java 21 `./gradlew build`, later the Vite task, later publish) waits on that.
 - **Publish later.** Maven Central for `lsd-mono-core` and `lsd-mono-junit-jupiter` (Central Portal, signing, Mono artifact names so they do not clash with legacy). Not part of steps 1–3.
-- Small leftovers, still not a slice of their own: `CONTROL` / `COLLECTIONS` only if a migration needs a distinct icon; component SVG is not drawn inside the sequence shell; no in-memory `renderReport`; hide-stacktrace has a property but no dedicated test; virtualisation rebuilds the window SVG on scroll instead of recycling nodes; no minimap or density mode.
+- Small leftovers, still not a slice of their own: `CONTROL` / `COLLECTIONS` only if a migration needs a distinct icon; component SVG is not drawn inside the sequence shell; no in-memory `renderReport`; hide-stacktrace has a property but no dedicated test; virtualisation rebuilds the window SVG on scroll instead of recycling nodes. The minimap is UX item 4, not a leftover. Density mode is still unscoped.
