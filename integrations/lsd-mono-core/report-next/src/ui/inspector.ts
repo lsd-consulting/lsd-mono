@@ -35,7 +35,10 @@ export function inspectorMarkup(): string {
       <div class="inspector-body">
         <div class="meta-row" id="inspector-meta"></div>
         <p id="inspector-lead" hidden></p>
-        <button type="button" id="inspector-json" aria-expanded="false" aria-controls="inspector-pre">Show JSON</button>
+        <div class="json-row">
+          <button type="button" id="inspector-json" aria-expanded="false" aria-controls="inspector-pre">Show JSON</button>
+          <button type="button" id="inspector-json-expand" hidden aria-pressed="false" aria-controls="inspector-pre">Expand</button>
+        </div>
         <pre id="inspector-pre" hidden></pre>
       </div>
     </aside>`
@@ -50,6 +53,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   const meta = doc.querySelector<HTMLElement>('#inspector-meta')!
   const lead = doc.querySelector<HTMLElement>('#inspector-lead')!
   const toggle = doc.querySelector<HTMLButtonElement>('#inspector-json')!
+  const expandBtn = doc.querySelector<HTMLButtonElement>('#inspector-json-expand')!
   const pre = doc.querySelector<HTMLElement>('#inspector-pre')!
   const copy = doc.querySelector<HTMLButtonElement>('#inspector-copy')!
   const closeBtn = doc.querySelector<HTMLButtonElement>('#inspector-close')!
@@ -72,11 +76,21 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     panel!.focus()
   }
 
+  function setJsonWide(wide: boolean): void {
+    shell()?.classList.toggle('inspector-json-wide', wide)
+    panel!.classList.toggle('inspector-json-wide', wide)
+    expandBtn.setAttribute('aria-pressed', wide ? 'true' : 'false')
+    expandBtn.textContent = wide ? 'Shrink' : 'Expand'
+    expandBtn.setAttribute('aria-label', wide ? 'Shrink JSON' : 'Expand JSON')
+  }
+
   function collapse(): void {
     pre.hidden = true
     pre.textContent = ''
     toggle.setAttribute('aria-expanded', 'false')
     toggle.textContent = `Show ${jsonLabel}`
+    expandBtn.hidden = true
+    setJsonWide(false)
   }
 
   async function payloadText(): Promise<string> {
@@ -90,6 +104,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     generation += 1
     const back = invoker
     invoker = null
+    setJsonWide(false)
     setOpen(false)
     options.onClose(back)
   }
@@ -179,6 +194,10 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     pre.hidden = false
     toggle.setAttribute('aria-expanded', 'true')
     toggle.textContent = `Hide ${jsonLabel}`
+    expandBtn.hidden = false
+  })
+  expandBtn.addEventListener('click', () => {
+    setJsonWide(expandBtn.getAttribute('aria-pressed') !== 'true')
   })
   copy.addEventListener('click', async () => {
     try {

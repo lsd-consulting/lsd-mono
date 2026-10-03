@@ -140,6 +140,46 @@ describe('inspector', () => {
     expect(pre.textContent).toContain('ord_1')
   })
 
+  it('widens the json column without becoming a modal, and copy still takes the full payload', async () => {
+    mount()
+    const arrow = document.querySelector<HTMLButtonElement>('button.msg-open')!
+    arrow.focus()
+    arrow.click()
+    const widen = document.querySelector<HTMLButtonElement>('#inspector-json-expand')!
+    const shell = document.querySelector<HTMLElement>('#shell')!
+    expect(widen.hidden).toBe(true)
+    expect(widen.getAttribute('aria-pressed')).toBe('false')
+    expect(shell.classList.contains('inspector-json-wide')).toBe(false)
+    await expand()
+    expect(widen.hidden).toBe(false)
+    expect(panel().getAttribute('aria-modal')).toBeNull()
+    widen.click()
+    expect(widen.getAttribute('aria-pressed')).toBe('true')
+    expect(widen.textContent).toBe('Shrink')
+    expect(widen.getAttribute('aria-label')).toBe('Shrink JSON')
+    expect(shell.classList.contains('inspector-json-wide')).toBe(true)
+    expect(panel().classList.contains('inspector-json-wide')).toBe(true)
+    const pre = document.querySelector<HTMLElement>('#inspector-pre')!
+    expect(pre.hidden).toBe(false)
+    expect(pre.textContent).toContain(bodyMarker)
+    let copied = ''
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async (value: string) => { copied = value } },
+    })
+    document.querySelector<HTMLButtonElement>('#inspector-copy')!.click()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(copied).toContain(bodyMarker)
+    expect(copied).toContain('ord_1')
+    document.querySelector<HTMLButtonElement>('#inspector-json')!.click()
+    expect(widen.hidden).toBe(true)
+    expect(shell.classList.contains('inspector-json-wide')).toBe(false)
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    expect(panel().hidden).toBe(true)
+    expect(document.activeElement).toBe(arrow)
+  })
+
   it('opens from Enter and Escape returns focus to that arrow', async () => {
     mount()
     const arrow = document.querySelector<HTMLButtonElement>('button.msg-open')!

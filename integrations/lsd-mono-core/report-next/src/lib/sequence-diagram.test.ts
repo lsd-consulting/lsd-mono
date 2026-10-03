@@ -185,6 +185,30 @@ describe('renderRowSvg fragments', () => {
     expect(svg).toContain('M2 2 L10 10')
   })
 
+  it('draws a filled destination head on a synchronous message when the colour is a CSS variable', () => {
+    const svg = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-sync',
+        from: 'api',
+        to: 'db',
+        label: 'place order',
+        type: 'SYNCHRONOUS',
+      }),
+      400,
+      [
+        { id: 'api', name: 'Api', type: 'PARTICIPANT', colour: 'var(--accent)' },
+        { id: 'db', name: 'Db', type: 'DATABASE', colour: 'var(--accent)' },
+      ],
+    )
+    expect(svg).toContain('data-msg-type="SYNCHRONOUS"')
+    expect(svg).toContain('marker-end="url(#mk_filled_var--accent)"')
+    expect(svg).toContain('id="mk_filled_var--accent"')
+    expect(svg).toContain('L10 5 L0 10 z')
+    expect(svg).not.toContain('mk_filled_var(--accent)')
+    expect(svg).toContain('stroke-width="2"')
+  })
+
   it('includes marker-start and marker-end for BI_DIRECTIONAL', () => {
     const svg = renderRowSvg(
       rowFor({

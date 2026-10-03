@@ -205,6 +205,36 @@ export function arrowMarker(id: string, colour: string, end: ArrowEnd): string {
 }
 
 /**
+ * XML ids cannot contain parentheses or a hash. A theme colour such as
+ * `var(--accent)` was producing `url(#mk_filled_var(--accent))`, which the
+ * browser drops, so only hex tips (sync responses) painted.
+ */
+export function arrowMarkerId(end: ArrowEnd, colour: string): string {
+  const safe = colour.replace(/[^A-Za-z0-9_-]/g, '')
+  return `mk_${end}_${safe || 'colour'}`
+}
+
+function markerSet(): {
+  ensure: (colour: string, end: ArrowEnd) => string
+  markup: () => string
+} {
+  const markers: string[] = []
+  const seen = new Set<string>()
+  return {
+    ensure(colour, end) {
+      if (end === 'none') return ''
+      const id = arrowMarkerId(end, colour)
+      if (!seen.has(id)) {
+        seen.add(id)
+        markers.push(arrowMarker(id, colour, end))
+      }
+      return id
+    },
+    markup: () => markers.join('\n'),
+  }
+}
+
+/**
  * Geometry for short arrows: stub toward the diagram edge from the real lifeline.
  * Does not invent a phantom participant column.
  */
@@ -628,17 +658,8 @@ function windowSvg(
   const colourOf = new Map(scenario.participants.map((p) => [p.id, p.colour ?? 'var(--accent)']))
   const spans = activationSpans(rows, Math.max(diagram.height - BOTTOM_PAD, 0))
 
-  const markers: string[] = []
-  const markerIds = new Set<string>()
-  const ensureMarker = (colour: string, end: ArrowEnd) => {
-    if (end === 'none') return ''
-    const key = `${end}_${colour.replace('#', '')}`
-    if (!markerIds.has(key)) {
-      markerIds.add(key)
-      markers.push(arrowMarker(`mk_${key}`, colour, end))
-    }
-    return `mk_${key}`
-  }
+  const markers = markerSet()
+  const ensureMarker = markers.ensure
 
   const lifelines = visible
     .map((p, i) => {
@@ -685,7 +706,7 @@ function windowSvg(
   <svg class="seq-svg" viewBox="0 ${viewTop} ${width} ${height}" width="${dispW}" height="${dispH}" aria-hidden="true">
     <defs>
       ${ACTIVATION_HATCH}
-      ${markers.join('\n')}
+      ${markers.markup()}
       <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="2" result="b"/>
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
@@ -710,20 +731,11 @@ export function renderRowSvg(
   const visible = visibleParticipants(participants, paint.hiddenIds)
   const index = new Map(visible.map((p, i) => [p.id, i]))
   const colourOf = new Map(participants.map((p) => [p.id, p.colour ?? '#34d399']))
-  const markers: string[] = []
-  const markerIds = new Set<string>()
-  const ensureMarker = (colour: string, end: ArrowEnd) => {
-    if (end === 'none') return ''
-    const key = `${end}_${colour.replace('#', '')}`
-    if (!markerIds.has(key)) {
-      markerIds.add(key)
-      markers.push(arrowMarker(`mk_${key}`, colour, end))
-    }
-    return `mk_${key}`
-  }
+  const markers = markerSet()
+  const ensureMarker = markers.ensure
   const buttons: string[] = []
   const body = renderRow(row, width, index, colourOf, ensureMarker, labelMaxWidth, paint, buttons, row.y, 1)
-  return `<svg><defs>${markers.join('')}</defs>${body}</svg>${buttons.join('')}`
+  return `<svg><defs>${markers.markup()}</defs>${body}</svg>${buttons.join('')}`
 }
 
 function renderRow(
