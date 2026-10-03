@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramEvent, Participant } from '../types'
+import { COL_GAP, LEFT_PAD, MESSAGE_LABEL_RISE, bodyHeight, diagramWidth, layoutRows } from './layout'
+import { sliceViewTop } from './sequence-diagram'
 import {
   classifySearchHits,
   eventHiddenByColumns,
   fitToWidthScale,
+  fittedView,
   matchingEventIds,
+  messageLabelRect,
+  rectContains,
   rowMatchesQuery,
   searchCountLabel,
   stepZoom,
@@ -41,6 +46,60 @@ describe('fitToWidthScale', () => {
   it('stays at 1 when the scrollport has not been measured', () => {
     expect(fitToWidthScale(800, 0)).toBe(1)
     expect(fitToWidthScale(0, 400)).toBe(1)
+  })
+})
+
+describe('fitted view includes the top message label', () => {
+  const message: DiagramEvent = {
+    kind: 'message',
+    id: 'm',
+    from: 'a',
+    to: 'b',
+    label: 'place order',
+    type: 'SYNCHRONOUS',
+  }
+
+  it('keeps the label box inside the viewBox and the fitted rect when the diagram is scaled down', () => {
+    const rows = layoutRows([message])
+    const arrowY = rows[0].y
+    const label = messageLabelRect({ arrowY, x1: LEFT_PAD, x2: LEFT_PAD + COL_GAP })
+    expect(label.y).toBe(arrowY - MESSAGE_LABEL_RISE)
+    expect(label.y).toBeGreaterThanOrEqual(0)
+    expect(sliceViewTop(arrowY)).toBeLessThanOrEqual(label.y)
+
+    const view = fittedView({
+      contentWidth: 1400,
+      viewportWidth: 640,
+      viewportHeight: 480,
+      mustInclude: label,
+    })
+    expect(view.scale).toBeLessThan(1)
+    expect(view.originX).toBeGreaterThanOrEqual(0)
+    expect(view.originY).toBeGreaterThanOrEqual(0)
+    expect(rectContains(view.visible, label)).toBe(true)
+    expect(view.visible.y).toBeLessThanOrEqual(label.y)
+    expect(view.visible.y + view.visible.height).toBeGreaterThanOrEqual(label.y + label.height)
+  })
+
+  it('still includes the label on a diagram that already fits the viewport', () => {
+    const rows = layoutRows([message])
+    const label = messageLabelRect({ arrowY: rows[0].y, x1: LEFT_PAD, x2: LEFT_PAD + COL_GAP })
+    const width = diagramWidth(2)
+    const view = fittedView({
+      contentWidth: width,
+      viewportWidth: width + 80,
+      viewportHeight: 360,
+      mustInclude: label,
+    })
+    expect(view.scale).toBeGreaterThanOrEqual(1)
+    expect(rectContains(view.visible, label)).toBe(true)
+    expect(bodyHeight(rows)).toBeGreaterThan(label.y + label.height)
+  })
+
+  it('does not treat a label above the content origin as visible when the view is pinned at 0', () => {
+    const clipped = messageLabelRect({ arrowY: 0, x1: 72, x2: 212 })
+    expect(clipped.y).toBeLessThan(0)
+    expect(rectContains({ x: 0, y: 0, width: 500, height: 400 }, clipped)).toBe(false)
   })
 })
 

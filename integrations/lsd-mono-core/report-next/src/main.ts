@@ -180,6 +180,16 @@ function bindChrome(): void {
       if (scroll) scroll.scrollTop = Number(jump.dataset.jumpY)
       return
     }
+    const openBtn = target.closest<HTMLButtonElement>('button.msg-open')
+    if (openBtn) {
+      const scenario = scenarioFrom(openBtn)
+      const messageId = openBtn.dataset.messageId
+      if (scenario && messageId) {
+        const msg = findMessage(scenario, messageId)
+        if (msg) openMessage(scenario, msg)
+      }
+      return
+    }
     const showMsg = target.closest<HTMLButtonElement>('[data-show-message]')
     if (showMsg) {
       const scenario = scenarioFrom(showMsg)
@@ -386,6 +396,16 @@ function openError(scenario: Scenario): void {
   if (!dialog.open) dialog.showModal()
 }
 
+function payloadPills(data: unknown): string {
+  if (!data || typeof data !== 'object') return ''
+  const record = data as Record<string, unknown>
+  const pills: string[] = []
+  if (typeof record.method === 'string' && record.method) pills.push(`<span class="pill">${escapeHtml(record.method)}</span>`)
+  if (typeof record.path === 'string' && record.path) pills.push(`<span class="pill">${escapeHtml(record.path)}</span>`)
+  if (record.status != null && record.status !== '') pills.push(`<span class="pill">${escapeHtml(String(record.status))}</span>`)
+  return pills.join('')
+}
+
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
   const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
   document.querySelector('#dialog-title')!.textContent = msg.label
@@ -393,6 +413,7 @@ function openMessage(scenario: Scenario, msg: MessageEvent): void {
     <span class="pill">${msg.type}</span>
     <span class="pill">${escapeHtml(msg.from)} → ${escapeHtml(msg.to)}</span>
     ${msg.durationMs != null ? `<span class="pill">${msg.durationMs} ms</span>` : ''}
+    ${payloadPills(msg.data)}
     <span class="pill">${escapeHtml(scenario.id)}</span>`
   document.querySelector('#dialog-pre')!.textContent =
     msg.data !== undefined ? pretty(msg.data) : '(no payload)'
@@ -440,6 +461,7 @@ function onKey(e: KeyboardEvent): void {
   }
 
   if (typing) return
+  if (target.closest('button.msg-open')) return
 
   if (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
     e.preventDefault()

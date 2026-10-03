@@ -4,6 +4,14 @@ import type { DiagramEvent } from '../types'
 export const COL_GAP = 140
 export const LEFT_PAD = 72
 export const HEADER_BLOCK_H = 56
+/**
+ * Message labels are drawn above the arrow (baseline 8px, plus glyph ascent).
+ * The first row used to start at y=0, so that label sat outside the SVG viewBox
+ * and Fit — which pins the view to the content origin — clipped it.
+ */
+export const MESSAGE_LABEL_RISE = 20
+/** First-row offset so the label box is inside the body, not on the clip edge. */
+export const TOP_LABEL_PAD = MESSAGE_LABEL_RISE + 4
 export const BOTTOM_PAD = 28
 export const ACT_W = 12
 export const DEFAULT_OVERSCAN = 6
@@ -103,7 +111,7 @@ export function eventRowHeight(event: DiagramEvent): number {
 export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
   const ordered = sortEventsByCreatedAt(events)
   const rows: LayoutRow[] = []
-  let y = 0
+  let y = TOP_LABEL_PAD
   for (let index = 0; index < ordered.length; index++) {
     const event = ordered[index]
     const height = eventRowHeight(event)

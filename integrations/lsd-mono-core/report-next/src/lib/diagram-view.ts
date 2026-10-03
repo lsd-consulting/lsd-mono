@@ -1,4 +1,5 @@
 import type { DiagramEvent, MessageEvent, NoteEvent, Participant } from '../types'
+import { HEADER_BLOCK_H, MESSAGE_LABEL_RISE } from './layout'
 
 export const MIN_ZOOM = 0.25
 export const MAX_ZOOM = 2.5
@@ -37,6 +38,79 @@ export function stepZoom(current: number, direction: 1 | -1): number {
 export function fitToWidthScale(contentWidth: number, viewportWidth: number): number {
   if (!(contentWidth > 0) || !(viewportWidth > 0)) return DEFAULT_ZOOM
   return clampZoom(viewportWidth / contentWidth)
+}
+
+export interface Rect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/**
+ * Box of the label drawn above an arrow. `arrowY` is the row's arrow line.
+ * The box spans the arrow so Fit can require that whole label to stay on screen.
+ */
+export function messageLabelRect(input: { arrowY: number; x1: number; x2: number }): Rect {
+  const left = Math.min(input.x1, input.x2)
+  const right = Math.max(input.x1, input.x2)
+  const width = Math.max(right - left, 24)
+  return {
+    x: left,
+    y: input.arrowY - MESSAGE_LABEL_RISE,
+    width,
+    height: MESSAGE_LABEL_RISE,
+  }
+}
+
+export function rectContains(outer: Rect, inner: Rect, epsilon = 0.01): boolean {
+  return (
+    inner.x >= outer.x - epsilon &&
+    inner.y >= outer.y - epsilon &&
+    inner.x + inner.width <= outer.x + outer.width + epsilon &&
+    inner.y + inner.height <= outer.y + outer.height + epsilon
+  )
+}
+
+export interface FittedView {
+  scale: number
+  /** Unscaled content origin of the visible body (under the sticky header). */
+  originX: number
+  originY: number
+  visible: Rect
+}
+
+/**
+ * Width fit (same scale as the Fit button) plus a scroll origin that keeps
+ * `mustInclude` — the top message label — inside the visible body.
+ * The sticky header height is the unscaled header block times that scale,
+ * because the header SVG scales with the diagram.
+ */
+export function fittedView(input: {
+  contentWidth: number
+  viewportWidth: number
+  viewportHeight: number
+  mustInclude: Rect
+  headerBlock?: number
+}): FittedView {
+  const scale = fitToWidthScale(input.contentWidth, input.viewportWidth)
+  const headerCss = (input.headerBlock ?? HEADER_BLOCK_H) * scale
+  const visibleW = input.viewportWidth > 0 ? input.viewportWidth / scale : input.contentWidth
+  const bodyCss = Math.max(0, input.viewportHeight - headerCss)
+  const visibleH = scale > 0 ? bodyCss / scale : 0
+  const box = input.mustInclude
+  let originX = 0
+  let originY = 0
+  if (box.y < originY) originY = box.y
+  else if (box.y + box.height > originY + visibleH) originY = box.y
+  if (box.x < originX) originX = box.x
+  else if (box.x + box.width > originX + visibleW) originX = box.x + box.width - visibleW
+  return {
+    scale,
+    originX,
+    originY,
+    visible: { x: originX, y: originY, width: visibleW, height: visibleH },
+  }
 }
 
 export function zoomLabel(zoom: number): string {

@@ -96,6 +96,11 @@ for (const spec of pages) {
     zoomMs: null,
     matchVisible: null,
     headerVisible: null,
+    popupFirstMs: null,
+    popupMidMs: null,
+    popupMidLabel: null,
+    heapAfterPopup: null,
+    nodesAfterPopup: null,
     error: null,
   }
   try {
@@ -194,6 +199,57 @@ for (const spec of pages) {
       } catch {
         row.matchVisible = false
       }
+
+      async function scrollUntil(messageId) {
+        await page.evaluate(({ id, size }) => {
+          const scroller = document.querySelector('.seq-scroll')
+          if (!scroller) return
+          const target = Number(id)
+          const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+          const frac = target <= 1 ? 0 : Math.min(0.92, Math.max(0, (target - 8) / size))
+          scroller.scrollTop = max * frac
+        }, { id: messageId, size: spec.size })
+        await page.waitForFunction((id) => {
+          return [...document.querySelectorAll('button.msg-open')].some((b) => b.getAttribute('data-message-id') === id)
+        }, messageId, { timeout: 5000 })
+      }
+
+      async function openArrow(messageId) {
+        await page.evaluate(() => {
+          const dialog = document.querySelector('#msg-dialog')
+          if (dialog && dialog.open) dialog.close()
+        })
+        await scrollUntil(messageId)
+        const button = page.locator(`button.msg-open[data-message-id="${messageId}"]`)
+        const count = await page.locator('button.msg-open').count()
+        const label = await button.getAttribute('aria-label')
+        const t0 = Date.now()
+        await button.click()
+        await page.waitForFunction((id) => {
+          const dialog = document.querySelector('#msg-dialog')
+          const pre = document.querySelector('#dialog-pre')
+          const text = pre ? pre.textContent || '' : ''
+          return Boolean(dialog && dialog.open && text.includes('arrow-payload') && text.includes('"orderId": "ord_' + id + '"'))
+        }, messageId, { timeout: 5000 })
+        return { ms: Date.now() - t0, label, messageId, count }
+      }
+
+      const first = await openArrow('1')
+      row.popupFirstMs = first.ms
+      row.popupFirstLabel = first.label
+      row.popupFirstMessageId = first.messageId
+
+      const midId = String(Math.round(spec.size / 2))
+      const mid = await openArrow(midId)
+      row.popupMidMs = mid.ms
+      row.popupMidLabel = mid.label
+      row.popupMidMessageId = mid.messageId
+      row.popupButtonsInView = mid.count
+      row.heapAfterPopup = await heap(page)
+      row.nodesAfterPopup = await page.evaluate(() => document.getElementsByTagName('*').length)
+      const tasks = await page.evaluate(() => window.__longTasks)
+      row.longTaskCountAfterPopup = tasks == null ? null : tasks.filter((d) => d >= 50).length
+      row.longTaskMaxAfterPopupMs = tasks && tasks.length ? Math.round(Math.max(...tasks) * 10) / 10 : tasks == null ? null : 0
     }
   } catch (err) {
     row.error = String(err && err.message ? err.message : err)

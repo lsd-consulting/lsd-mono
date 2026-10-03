@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramEvent } from '../types'
-import { activationSpans, eventRowHeight, layoutRows, sortEventsByCreatedAt, virtualRowRange } from './layout'
+import { MESSAGE_LABEL_RISE, TOP_LABEL_PAD, activationSpans, eventRowHeight, layoutRows, sortEventsByCreatedAt, virtualRowRange } from './layout'
 
 function uniform(count: number, height = 50): { y: number; height: number }[] {
   return Array.from({ length: count }, (_, i) => ({ y: i * height, height }))
@@ -68,6 +68,17 @@ describe('activationSpans', () => {
     expect(spans[0].participantId).toBe('api')
     expect(spans[0].y0).toBeLessThan(section.y)
     expect(spans[0].y1).toBeGreaterThan(section.y + section.height)
+  })
+})
+
+describe('layoutRows', () => {
+  it('starts the first row below the message-label rise so the label is inside the body', () => {
+    const rows = layoutRows([
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS' },
+    ])
+    expect(TOP_LABEL_PAD).toBeGreaterThan(MESSAGE_LABEL_RISE)
+    expect(rows[0].y).toBe(TOP_LABEL_PAD)
+    expect(rows[0].y - MESSAGE_LABEL_RISE).toBeGreaterThanOrEqual(0)
   })
 })
 

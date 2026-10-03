@@ -43,9 +43,19 @@ export const sampleReport: Report = {
           label: 'POST /checkout',
           type: 'SYNCHRONOUS',
           data: {
-            cartId: 'cart_88',
-            items: [{ sku: 'SOCK-01', qty: 2 }],
-            paymentMethodId: 'pm_visa',
+            method: 'POST',
+            path: '/checkout',
+            status: 202,
+            headers: {
+              'content-type': 'application/json',
+              accept: 'application/json',
+              'x-request-id': 'req_checkout_88',
+            },
+            body: {
+              cartId: 'cart_88',
+              items: [{ sku: 'SOCK-01', qty: 2 }],
+              paymentMethodId: 'pm_visa',
+            },
           },
         },
         { kind: 'activate', id: 'a2', participantId: 'orders' },
@@ -76,6 +86,13 @@ export const sampleReport: Report = {
           to: 'orders',
           label: 'ok',
           type: 'SYNCHRONOUS_RESPONSE',
+          data: {
+            method: 'POST',
+            path: '/orders',
+            status: 200,
+            headers: { 'content-type': 'application/json', 'x-request-id': 'req_insert_9f2a1c' },
+            body: { orderId: 'ord_9f2a1c', rows: 1 },
+          },
         },
         {
           kind: 'message',
@@ -230,6 +247,13 @@ export const sampleReport: Report = {
           to: 'bus',
           label: 'OrderConfirmed',
           type: 'ASYNCHRONOUS',
+          data: {
+            method: 'POST',
+            path: '/events/order.confirmed',
+            status: 202,
+            headers: { 'content-type': 'application/json', 'x-request-id': 'req_bus_slow' },
+            body: { orderId: 'ord_slow1', event: 'order.confirmed' },
+          },
         },
         {
           kind: 'message',
@@ -238,6 +262,13 @@ export const sampleReport: Report = {
           to: 'customer',
           label: '201 Created',
           type: 'SYNCHRONOUS_RESPONSE',
+          data: {
+            method: 'POST',
+            path: '/checkout',
+            status: 201,
+            headers: { 'content-type': 'application/json', 'x-request-id': 'req_checkout_slow' },
+            body: { orderId: 'ord_slow1', status: 'CONFIRMED' },
+          },
         },
         { kind: 'deactivate', id: 'wd1', participantId: 'api' },
       ],
@@ -285,6 +316,13 @@ export const sampleReport: Report = {
           to: 'orders',
           label: 'reserveOrder',
           type: 'SYNCHRONOUS',
+          data: {
+            method: 'POST',
+            path: '/orders/reserve',
+            status: 409,
+            headers: { 'content-type': 'application/json', 'x-request-id': 'req_reserve_empty' },
+            body: { cartId: 'cart_empty_stock', items: [{ sku: 'SOCK-01', qty: 1 }] },
+          },
         },
         {
           kind: 'message',

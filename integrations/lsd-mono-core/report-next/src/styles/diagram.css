@@ -38,6 +38,22 @@
 }
 .seq-spacer { position: relative; }
 .seq-window { position: absolute; top: 0; left: 0; }
+.msg-open {
+  position: absolute;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.msg-open:hover,
+.msg-open:focus-visible {
+  background: var(--accent-soft);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 .seq-header-svg,
 .seq-svg {
   display: block;
@@ -84,6 +100,7 @@
 .message.has-data { cursor: pointer; }
 .message .msg-hit {
   fill: transparent;
+  pointer-events: none;
 }
 .message.has-data:hover .msg-path,
 .message.has-data:focus-visible .msg-path {

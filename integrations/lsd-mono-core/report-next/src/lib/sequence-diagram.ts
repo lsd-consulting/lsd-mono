@@ -17,6 +17,7 @@ import {
   EDGE_INSET,
   HEADER_BLOCK_H,
   LEFT_PAD,
+  MESSAGE_LABEL_RISE,
   SHORT_STUB,
   activationSpans,
   bodyHeight,
@@ -30,7 +31,8 @@ import {
   DEFAULT_ZOOM,
   classifySearchHits,
   eventHiddenByColumns,
-  fitToWidthScale,
+  fittedView,
+  messageLabelRect,
   rowMatchesQuery,
   searchCountLabel,
   stepZoom,
@@ -38,6 +40,7 @@ import {
   visibleParticipants,
   zoomFromWheel,
   zoomLabel,
+  type Rect,
 } from './diagram-view'
 
 export interface MountedDiagram {
@@ -250,7 +253,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
     <div class="seq-toolbar" role="toolbar" aria-label="Diagram view">
       <div class="zoom-controls" role="group" aria-label="Zoom">
         <button type="button" data-zoom="out" aria-label="Zoom out">Out</button>
-        <button type="button" data-zoom="fit" aria-label="Fit to width">Fit</button>
+        <button type="button" data-zoom="fit" aria-label="Fit to screen">Fit</button>
         <span class="zoom-readout" aria-live="polite">${zoomLabel(view.zoom)}</span>
         <button type="button" data-zoom="in" aria-label="Zoom in">In</button>
       </div>
@@ -324,9 +327,15 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   const windowEl = scrollport.querySelector<HTMLElement>('.seq-window')
   if (!windowEl) return
   const offset = slice[0]?.y ?? 0
-  windowEl.style.transform = `translateY(${offset * zoom}px)`
+  const viewTop = slice.length ? sliceViewTop(offset) : 0
+  windowEl.style.transform = `translateY(${viewTop * zoom}px)`
   const width = logicalWidth(diagram.scenario, view.hidden)
-  windowEl.innerHTML = slice.length ? windowSvg(diagram, slice, view, width) : ''
+  windowEl.innerHTML = slice.length ? windowSvg(diagram, slice, view, width, viewTop) : ''
+}
+
+/** SVG viewBox top. Includes the label drawn above the first painted row. */
+export function sliceViewTop(firstRowY: number): number {
+  return Math.max(0, firstRowY - MESSAGE_LABEL_RISE)
 }
 
 /** Resize the sticky header and body to the current zoom and visible columns. */
@@ -372,7 +381,7 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   }
 }
 
-function commitZoom(scrollport: HTMLElement, next: number): void {
+function commitZoom(scrollport: HTMLElement, next: number, pin?: { top: number; left: number }): void {
   const id = scrollport.dataset.scenarioId
   if (!id) return
   const view = diagramView(id)
@@ -380,8 +389,13 @@ function commitZoom(scrollport: HTMLElement, next: number): void {
   const ratio = next / prev
   view.zoom = next
   applyDiagramFrame(scrollport)
-  scrollport.scrollTop *= ratio
-  scrollport.scrollLeft *= ratio
+  if (pin) {
+    scrollport.scrollTop = pin.top
+    scrollport.scrollLeft = pin.left
+  } else {
+    scrollport.scrollTop *= ratio
+    scrollport.scrollLeft *= ratio
+  }
   syncDiagramWindow(scrollport)
 }
 
@@ -405,9 +419,49 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
   let next = view.zoom
   if (action === 'in') next = stepZoom(view.zoom, 1)
   else if (action === 'out') next = stepZoom(view.zoom, -1)
-  else if (action === 'fit') next = fitToWidthScale(logicalWidth(diagram.scenario, view.hidden), scrollport.clientWidth)
-  else return
+  else if (action === 'fit') {
+    const fitted = fittedView({
+      contentWidth: logicalWidth(diagram.scenario, view.hidden),
+      viewportWidth: scrollport.clientWidth,
+      viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
+      mustInclude: topMessageLabelRect(diagram, view.hidden),
+    })
+    commitZoom(scrollport, fitted.scale, {
+      top: Math.max(0, fitted.originY) * fitted.scale,
+      left: Math.max(0, fitted.originX) * fitted.scale,
+    })
+    return
+  } else return
   commitZoom(scrollport, next)
+}
+
+/** Label box of the uppermost message still drawn. Fit scrolls this into view. */
+function topMessageLabelRect(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): Rect {
+  const width = logicalWidth(diagram.scenario, hiddenIds)
+  const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
+  const index = new Map(visible.map((p, i) => [p.id, i]))
+  for (const row of diagram.rows) {
+    const event = row.event
+    if (event.kind !== 'message' || eventHiddenByColumns(event, hiddenIds)) continue
+    const ends = messageEndpoints(event, index, width)
+    return messageLabelRect({ arrowY: row.y, x1: ends.x1, x2: ends.x2 })
+  }
+  return { x: 0, y: 0, width: 1, height: 1 }
+}
+
+function messageEndpoints(
+  msg: MessageEvent,
+  index: Map<string, number>,
+  width: number,
+): { x1: number; x2: number } {
+  if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
+    const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
+    const px = xFor(index.get(participantId) ?? 0)
+    return shortMessageEndpoints(msg.type, px, width)
+  }
+  const fi = index.get(msg.from) ?? 0
+  const ti = index.get(msg.to) ?? 0
+  return { x1: xFor(fi), x2: xFor(ti) }
 }
 
 function onToggleParticipant(scrollport: HTMLElement, participantId: string): void {
@@ -481,11 +535,17 @@ function headerSvg(scenario: Scenario, width: number, hiddenIds: ReadonlySet<str
   return `<svg class="seq-header-svg" viewBox="0 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants">${boxes}</svg>`
 }
 
-function windowSvg(diagram: MountedDiagram, slice: LayoutRow[], view: DiagramView, width: number): string {
+function windowSvg(
+  diagram: MountedDiagram,
+  slice: LayoutRow[],
+  view: DiagramView,
+  width: number,
+  viewTop: number,
+): string {
   const { scenario, rows } = diagram
   const offset = slice[0].y
   const end = slice[slice.length - 1].y + slice[slice.length - 1].height
-  const height = Math.max(end - offset, 1)
+  const height = Math.max(end - viewTop, 1)
   const visible = visibleParticipants(scenario.participants, view.hidden)
   const index = new Map(visible.map((p, i) => [p.id, i]))
   const colourOf = new Map(scenario.participants.map((p) => [p.id, p.colour ?? 'var(--accent)']))
@@ -506,7 +566,7 @@ function windowSvg(diagram: MountedDiagram, slice: LayoutRow[], view: DiagramVie
   const lifelines = visible
     .map((p, i) => {
       const x = xFor(i)
-      return `<line class="lifeline-line" data-participant="${escapeXml(p.id)}" x1="${x}" y1="${offset}" x2="${x}" y2="${end}" />`
+      return `<line class="lifeline-line" data-participant="${escapeXml(p.id)}" x1="${x}" y1="${viewTop}" x2="${x}" y2="${end}" />`
     })
     .join('')
 
@@ -531,12 +591,15 @@ function windowSvg(diagram: MountedDiagram, slice: LayoutRow[], view: DiagramVie
     .join('')
 
   const paint: RowPaint = { query: view.query, hiddenIds: view.hidden }
-  const body = slice.map((row) => renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth, paint)).join('')
+  const buttons: string[] = []
+  const body = slice
+    .map((row) => renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth, paint, buttons, viewTop, view.zoom))
+    .join('')
   const dispW = width * view.zoom
   const dispH = height * view.zoom
 
   return `
-  <svg class="seq-svg" viewBox="0 ${offset} ${width} ${height}" width="${dispW}" height="${dispH}" aria-hidden="true">
+  <svg class="seq-svg" viewBox="0 ${viewTop} ${width} ${height}" width="${dispW}" height="${dispH}" aria-hidden="true">
     <defs>
       ${ACTIVATION_HATCH}
       ${markers.join('\n')}
@@ -548,7 +611,9 @@ function windowSvg(diagram: MountedDiagram, slice: LayoutRow[], view: DiagramVie
     ${lifelines}
     ${actBars}
     ${body}
-  </svg>`
+  </svg>
+  ${buttons.join('')}
+`
 }
 
 /** Pure SVG fragment for one layout row — used by unit tests and the virtualised window. */
@@ -573,8 +638,9 @@ export function renderRowSvg(
     }
     return `mk_${key}`
   }
-  const body = renderRow(row, width, index, colourOf, ensureMarker, labelMaxWidth, paint)
-  return `<svg><defs>${markers.join('')}</defs>${body}</svg>`
+  const buttons: string[] = []
+  const body = renderRow(row, width, index, colourOf, ensureMarker, labelMaxWidth, paint, buttons, row.y, 1)
+  return `<svg><defs>${markers.join('')}</defs>${body}</svg>${buttons.join('')}`
 }
 
 function renderRow(
@@ -585,6 +651,9 @@ function renderRow(
   ensureMarker: (colour: string, end: ArrowEnd) => string,
   labelMaxWidth: number,
   paint: RowPaint = EMPTY_PAINT,
+  buttons: string[] = [],
+  viewTop = 0,
+  zoom = 1,
 ): string {
   const event = row.event
   if (eventHiddenByColumns(event, paint.hiddenIds)) return ''
@@ -638,7 +707,19 @@ function renderRow(
     </g>`
   }
 
-  return renderMessageRow(event as MessageEvent, row.y, width, index, colourOf, ensureMarker, labelMaxWidth, paint.query)
+  return renderMessageRow(
+    event as MessageEvent,
+    row.y,
+    width,
+    index,
+    colourOf,
+    ensureMarker,
+    labelMaxWidth,
+    paint.query,
+    buttons,
+    viewTop,
+    zoom,
+  )
 }
 
 function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
@@ -656,6 +737,9 @@ function renderMessageRow(
   ensureMarker: (colour: string, end: ArrowEnd) => string,
   labelMaxWidth: number,
   query: string,
+  buttons: string[],
+  viewTop: number,
+  zoom: number,
 ): string {
   const spec = messageArrowSpec(msg.type)
   const match = rowMatchesQuery(msg, query)
@@ -677,10 +761,8 @@ function renderMessageRow(
   const matchCue = match ? `<tspan class="msg-match-cue"> [match]</tspan>` : ''
   const hitClass = match ? ' search-hit' : ''
   const hitAttr = match ? ' data-search-hit="match"' : ''
-  const clickable = hasData
-    ? `data-message-id="${escapeXml(msg.id)}" tabindex="0" role="button" aria-label="Open ${escapeXml(msg.label)}"`
-    : ''
   const typeAttr = `data-msg-type="${escapeXml(msg.type)}"`
+  if (hasData) buttons.push(messageOpenButton(msg, y, width, index, viewTop, zoom))
 
   if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
     const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
@@ -689,7 +771,7 @@ function renderMessageRow(
     const { x1, x2 } = shortMessageEndpoints(msg.type, px, width)
     const labelX = (x1 + x2) / 2
     return `
-    <g class="message message-short${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} ${clickable} transform="translate(0, ${y})">
+    <g class="message message-short${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
       <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
       ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
@@ -704,7 +786,7 @@ function renderMessageRow(
 
   if (self) {
     return `
-    <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} ${clickable} transform="translate(0, ${y})">
+    <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <path class="msg-path" d="M${x1 + ACT_W} 0 C${x1 + 48} 0, ${x1 + 48} 22, ${x1 + ACT_W} 22" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
       <text class="msg-label" x="${x1 + 56}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
       ${hasData ? `<circle class="msg-hit" cx="${x1 + 40}" cy="11" r="14"/>` : ''}
@@ -715,11 +797,33 @@ function renderMessageRow(
   const lineX1 = x1 + (x2 > x1 ? ACT_W / 2 : -ACT_W / 2)
   const lineX2 = x2 + (x2 > x1 ? -ACT_W / 2 : ACT_W / 2)
   return `
-  <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} ${clickable} transform="translate(0, ${y})">
+  <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
     <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
     <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
     ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
   </g>`
+}
+
+/**
+ * Real button over the arrow and its label. The SVG itself is aria-hidden,
+ * so a role on the line would be skipped by screen readers.
+ */
+function messageOpenButton(
+  msg: MessageEvent,
+  y: number,
+  width: number,
+  index: Map<string, number>,
+  viewTop: number,
+  zoom: number,
+): string {
+  const ends = messageEndpoints(msg, index, width)
+  const label = messageLabelRect({ arrowY: y, x1: ends.x1, x2: ends.x2 })
+  const scale = zoom > 0 && Number.isFinite(zoom) ? zoom : 1
+  const left = label.x * scale
+  const top = (label.y - viewTop) * scale
+  const w = Math.max(label.width * scale, 28)
+  const h = (label.height + 12) * scale
+  return `<button type="button" class="msg-open" data-message-id="${escapeXml(msg.id)}" aria-label="Open ${escapeXml(msg.label)}" aria-haspopup="dialog" style="left:${left}px;top:${top}px;width:${w}px;height:${h}px"></button>`
 }
 
 /** Y of a message row in the mounted diagram, for insight "show" scrolling. */

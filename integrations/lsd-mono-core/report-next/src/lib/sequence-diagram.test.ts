@@ -100,6 +100,49 @@ describe('noteLayout', () => {
 })
 
 describe('renderRowSvg fragments', () => {
+  it('draws a real button with an accessible name when the arrow has backing data', () => {
+    const html = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-data',
+        from: 'api',
+        to: 'db',
+        label: 'place order',
+        type: 'SYNCHRONOUS',
+        data: {
+          method: 'POST',
+          path: '/orders',
+          status: 201,
+          headers: { 'content-type': 'application/json' },
+          body: { orderId: 'ord_1' },
+        },
+      }),
+      400,
+      participants,
+    )
+    expect(html).toContain('<button type="button" class="msg-open"')
+    expect(html).toContain('aria-label="Open place order"')
+    expect(html).toContain('data-message-id="m-data"')
+    expect(html).toContain('aria-haspopup="dialog"')
+    expect(html).not.toContain('role="button"')
+  })
+
+  it('does not add an arrow button when there is no payload', () => {
+    const html = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-empty',
+        from: 'api',
+        to: 'db',
+        label: 'ping',
+        type: 'SYNCHRONOUS',
+      }),
+      400,
+      participants,
+    )
+    expect(html).not.toContain('msg-open')
+  })
+
   it('includes lost X marker and type cue for LOST messages', () => {
     const svg = renderRowSvg(
       rowFor({
