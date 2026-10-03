@@ -2,7 +2,7 @@
 
 Next steps: docs/next-steps.md
 
-**Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
+**Scope:** features still to port from legacy [lsd-core](https://github.com/lsd-consulting/lsd-core) (`com.lsd.core`) into greenfield `modules/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
 **Inspected (local tree, through the UX checks, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
 
@@ -26,7 +26,7 @@ These are **implemented**, not stubs, unless noted.
 
 | Area | Evidence |
 |------|----------|
-| Participants (name/id/alias/colour + types ACTOR, PARTICIPANT, DATABASE, QUEUE, ENTITY, BOUNDARY) | `integrations/lsd-mono-core/.../domain/Participant.kt`; auto-register on capture in `LsdContext.bind` / `resolve` |
+| Participants (name/id/alias/colour + types ACTOR, PARTICIPANT, DATABASE, QUEUE, ENTITY, BOUNDARY) | `modules/lsd-mono-core/.../domain/Participant.kt`; auto-register on capture in `LsdContext.bind` / `resolve` |
 | Facts | `addFact` → `FactJson` in report |
 | Messages: SYNCHRONOUS, SYNCHRONOUS_RESPONSE, ASYNCHRONOUS, LOST, BI_DIRECTIONAL, SHORT_INBOUND, SHORT_OUTBOUND (+ colour, data, durationMs) | `domain/SequenceEvent.kt` `MessageType`; JSON `MessageEventJson` — short types + distinct LOST/BI SVG **landed 2026-10-03** |
 | Note over / left / right | `Note` + `NotePlacement` + DSL `noteOver` / `noteLeft` / `noteRight` — **landed 2026-10-03** |
@@ -299,7 +299,7 @@ Open implementation work is tracked in `docs/next-steps.md` and the **Still open
 - Deterministic ids (`lsd.mono.ids.deterministic=true`) + TempDir output (pattern already in `CaptureToJsonTest`).
 - Approve / assert **structural** `ReportJson` (or scrubbed pretty JSON files under `src/test/resources/golden/`), not HTML shells.
 - Cases: happy path, multi-scenario status mix, each event kind as it lands, large N (count only / hash), failure attachment shape.
-- Prefer ApprovalTests on JSON (legacy used ApprovalTests on HTML in `modules/lsd-core/src/test/java/.../approval/`) — same tool, better artifact.
+- Prefer ApprovalTests on JSON (legacy used ApprovalTests on HTML under `src/test/java/.../approval/` in [lsd-core](https://github.com/lsd-consulting/lsd-core)) — same tool, better artifact.
 
 ### Unit (Kotlin + TS)
 
@@ -324,19 +324,19 @@ Open implementation work is tracked in `docs/next-steps.md` and the **Still open
 
 | Role | Path |
 |------|------|
-| Legacy context | `modules/lsd-core/src/main/kotlin/com/lsd/core/LsdContext.kt` |
-| Legacy events | `modules/lsd-core/src/main/kotlin/com/lsd/core/domain/SequenceEvent.kt` |
-| Legacy participants | `modules/lsd-core/src/main/kotlin/com/lsd/core/domain/Participant.kt` |
-| Legacy sequence gen / pages | `modules/lsd-core/src/main/kotlin/com/lsd/core/diagram/SequenceDiagramGenerator.kt` |
-| Legacy component gen | `modules/lsd-core/src/main/kotlin/com/lsd/core/diagram/ComponentDiagramGenerator.kt` |
-| Legacy PlantUML markup | `modules/lsd-core/src/main/kotlin/com/lsd/core/adapter/puml/SequenceDiagramMarkup.kt` |
-| Legacy metrics | `modules/lsd-core/src/main/kotlin/com/lsd/core/report/model/Metrics.kt` |
-| Legacy HTML report | `modules/lsd-core/src/main/resources/templates/html-report.hbs` |
-| Mono context | `integrations/lsd-mono-core/src/main/kotlin/.../LsdContext.kt` |
-| Mono events | `integrations/lsd-mono-core/src/main/kotlin/.../domain/SequenceEvent.kt` |
-| Mono writer | `integrations/lsd-mono-core/src/main/kotlin/.../report/ReportWriter.kt` |
-| Report-next types / UI / SVG | `integrations/lsd-mono-core/report-next/src/{types.ts,main.ts,lib/sequence-diagram.ts}` |
-| JUnit extension | `integrations/lsd-mono-junit-jupiter/src/main/kotlin/.../LsdExtension.kt` |
+| Legacy context | [lsd-core `LsdContext.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/LsdContext.kt) |
+| Legacy events | [lsd-core `SequenceEvent.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/domain/SequenceEvent.kt) |
+| Legacy participants | [lsd-core `Participant.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/domain/Participant.kt) |
+| Legacy sequence gen / pages | [lsd-core `SequenceDiagramGenerator.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/diagram/SequenceDiagramGenerator.kt) |
+| Legacy component gen | [lsd-core `ComponentDiagramGenerator.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/diagram/ComponentDiagramGenerator.kt) |
+| Legacy PlantUML markup | [lsd-core `SequenceDiagramMarkup.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/adapter/puml/SequenceDiagramMarkup.kt) |
+| Legacy metrics | [lsd-core `Metrics.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/report/model/Metrics.kt) |
+| Legacy HTML report | [lsd-core `html-report.hbs`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/resources/templates/html-report.hbs) |
+| Mono context | `modules/lsd-mono-core/src/main/kotlin/.../LsdContext.kt` |
+| Mono events | `modules/lsd-mono-core/src/main/kotlin/.../domain/SequenceEvent.kt` |
+| Mono writer | `modules/lsd-mono-core/src/main/kotlin/.../report/ReportWriter.kt` |
+| Report-next types / UI / SVG | `modules/lsd-mono-core/report-next/src/{types.ts,main.ts,lib/sequence-diagram.ts}` |
+| JUnit extension | `modules/lsd-mono-junit-jupiter/src/main/kotlin/.../LsdExtension.kt` |
 
 ---
 

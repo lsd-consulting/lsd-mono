@@ -20,14 +20,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "lsd-mono"
 
-// First-party mono projects (not git submodules). See integrations/README.md.
+// First-party mono projects. See modules/README.md.
 // Names include "mono" so they do not clash with published lsd-consulting libs.
-include("integrations:lsd-mono-core")
-project(":integrations:lsd-mono-core").projectDir = file("integrations/lsd-mono-core")
+include("modules:lsd-mono-core")
+project(":modules:lsd-mono-core").projectDir = file("modules/lsd-mono-core")
 
-include("integrations:lsd-mono-junit-jupiter")
-project(":integrations:lsd-mono-junit-jupiter").projectDir = file("integrations/lsd-mono-junit-jupiter")
-
-// Submodules under modules/ (e.g. lsd-core) are reference/inspiration only —
-// NOT included as Gradle projects and NOT the mono core artifact.
-// Optional later: includeBuild("modules/lsd-core") for composite experiments.
+include("modules:lsd-mono-junit-jupiter")
+project(":modules:lsd-mono-junit-jupiter").projectDir = file("modules/lsd-mono-junit-jupiter")

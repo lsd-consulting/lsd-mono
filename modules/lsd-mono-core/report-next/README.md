@@ -1,5 +1,5 @@
 > **Mono home:** this spike is now seeded under
-> `integrations/lsd-mono-core/report-next/` in **lsd-mono**. The JVM façade and
+> `modules/lsd-mono-core/report-next/` in **lsd-mono**. The JVM façade and
 > packaged single-file shell live in the parent `lsd-mono-core` module. Paths
 > below that say `/workspace/lsd-report-next` refer to the original spike location.
 
@@ -17,7 +17,7 @@ Related context: Option A shell refresh lives on `lsd-core` branch `feature/html
 Virtualisation math (row window from `scrollTop` + viewport, overscan, sticky header) lives in `src/lib/layout.ts` and is locked by `src/lib/layout.test.ts`.
 
 ```bash
-cd integrations/lsd-mono-core/report-next
+cd modules/lsd-mono-core/report-next
 npm ci
 npm test
 ```
@@ -25,11 +25,11 @@ npm test
 Axe and screenshot checks are separate from vitest (Playwright downloads nothing extra when the 1.55 Chromium cache is already present):
 
 ```bash
-cd integrations/lsd-mono-core/report-next
+cd modules/lsd-mono-core/report-next
 npm run check:ux
 ```
 
-Vitest is also on `./gradlew :integrations:lsd-mono-core:build` via `reportNextTest`. `npm run check:ux` stays manual. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
+Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportNextTest`. `npm run check:ux` stays manual. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
 
 ## Open the demo
 
