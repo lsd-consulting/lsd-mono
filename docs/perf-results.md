@@ -1,6 +1,6 @@
 # Large-diagram browser check
 
-Measured **3 Oct 2026, 16:33 BST** on an Apple M3 Max, macOS 26.6.2, headless Chromium **140.0.7339.16** (Playwright 1.55.0). Viewport 1440×900. One cold-ish context per page. Script: [`docs/perf/measure.mjs`](perf/measure.mjs). HTML opened with `file://` from `docs/perf-samples/` (gitignored; paths below).
+Measured **3 Oct 2026, 16:33 BST** on an Apple M3 Max, macOS 26.6.2, headless Chromium **140.0.7339.16** (Playwright 1.55.0). Viewport 1440×900. One cold-ish context per page. Script: [`docs/perf/measure.mjs`](perf/measure.mjs). HTML opened with `file://` from gitignored `docs/perf-samples/`.
 
 This is the run after `load`, with the legacy CDN scripts (`d3`, highlight.js) already cached. An earlier pass is only a caveat, not this table.
 
@@ -51,6 +51,10 @@ First interactive is wall time from `goto` (`waitUntil: commit`) until the diagr
 
 ## Verdict
 
+![4 participants and 2000 messages on the local harness page](perf-screenshots/events-2000.png)
+
+*4 participants, 2000 messages, from the local harness page.*
+
 Mono stays usable at 2000 events: the participant header is on screen in about 112 ms, scroll frames stay on a 16.8 ms vsync, zoom is 33 ms, find is 6 ms, and `needle-2000` shows `[match]`. The DOM stays at 276 nodes at 100, 500, and 2000 because only the visible rows are painted. The single legacy SVG does **not** fall over on this machine: PlantUML finished in 998 ms, the first sequence SVG was visible in 450 ms, and the scripted scroll did not freeze. It is a much heavier page (22,242 nodes, about 44 MB of JS heap after load, a 58,778 px SVG, and long tasks up to 254 ms). Headless `scrollTop` on an M3 Max is a weak test of raster jank, so this run does not show the failure mode the pass bar expected; it does show mono doing the same scenario with a flat DOM and no long tasks.
 
 ## Caveats
@@ -60,19 +64,21 @@ Mono stays usable at 2000 events: the participant header is on screen in about 1
 - `JSHeapUsedSize` drops after the scroll on the legacy pages (GC). It is not GPU or DOM memory. Node count is the better size signal.
 - Split-at-50 can paint quickly because each SVG is small. At 2000 events that is 40 sequence diagrams plus the component SVG, with activations removed. That is a different product, not a win over mono.
 
-## Samples (local, gitignored)
+## Samples
 
-Open these in a browser:
+The HTML is generated and not committed. `docs/perf-samples/` is in `.gitignore` because the 2000-event legacy pages and the payload scripts are a few megabytes each. Rebuild the mono pages with [`docs/perf/generate-mono.mjs`](perf/generate-mono.mjs). The timings above come from [`docs/perf/measure.mjs`](perf/measure.mjs). Those scripts write:
 
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-100-diagram.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-500-diagram.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-2000-diagram.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/legacy-split-50-100.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/legacy-split-50-500.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/legacy-split-50-2000.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/legacy-one-svg-100.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/legacy-one-svg-500.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/legacy-one-svg-2000.html`
+- `mono-100-diagram.html`
+- `mono-500-diagram.html`
+- `mono-2000-diagram.html`
+- `legacy-split-50-100.html`
+- `legacy-split-50-500.html`
+- `legacy-split-50-2000.html`
+- `legacy-one-svg-100.html`
+- `legacy-one-svg-500.html`
+- `legacy-one-svg-2000.html`
+
+The legacy files are the earlier lsd-core fixture. Nothing in this repo regenerates them.
 
 ## Rerun — arrow payloads and click (3 Oct 2026, 17:17 BST)
 
@@ -124,6 +130,10 @@ Mono at 2000 events is still usable with the backing data in memory. First inter
 ## Wide participants (3 Oct 2026, 20:11 BST)
 
 This is a **separate run** from the 4-participant tables above. It does not replace them.
+
+![100 participants and 400 messages on the local harness page](perf-screenshots/wide-100-participants.png)
+
+*100 participants, 400 messages, from the local harness page.*
 
 Same machine (Apple M3 Max, macOS, headless Chromium **140.0.7339.16**, Playwright 1.55.0), viewport 1440×900. The diagram's own scrollport is 963×611 inside that viewport (sidebar and the stage cap). Scripts: [`docs/perf/generate-wide.mjs`](perf/generate-wide.mjs) and [`docs/perf/measure-wide.mjs`](perf/measure-wide.mjs). HTML opened with `file://` from `docs/perf-samples/` (gitignored).
 
@@ -177,11 +187,13 @@ The first pass, before the CSS change, still scrolled horizontally, and the head
 
 The change is only the stage row: `grid-template-rows: minmax(0, min(68vh, 640px))` and `overflow: hidden`, with the print rule turning that clip off. Remeasured numbers are the table above. Scrollport client height is **611** px on every case. 100 participants is **1,101** nodes at both 400 and 2,000 messages, frame p95 is **16.8 ms**, and there were no long tasks.
 
-### Samples (local, gitignored)
+### Samples
 
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-p20-m400-diagram.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-p50-m400-diagram.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-p100-m400-diagram.html`
-- `/Users/nicholasmcdowall/Developer/lsd-mono/docs/perf-samples/mono-p100-m2000-diagram.html`
+Regenerate these with [`docs/perf/generate-wide.mjs`](perf/generate-wide.mjs). The timings above come from [`docs/perf/measure-wide.mjs`](perf/measure-wide.mjs). Output goes to gitignored `docs/perf-samples/`:
 
-Each has a sibling `*-payloads.js` in the same directory.
+- `mono-p20-m400-diagram.html`
+- `mono-p50-m400-diagram.html`
+- `mono-p100-m400-diagram.html`
+- `mono-p100-m2000-diagram.html`
+
+Each has a sibling `*-payloads.js` next to it.
