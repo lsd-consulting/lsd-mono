@@ -363,7 +363,7 @@ function scenarioHtml(s: Scenario, index: number): string {
       <section class="diagram-panel">
         <h3>
           Sequence diagram
-          <span class="diagram-hint">Click a message with payload · jump sections · scroll keeps names pinned</span>
+          <span class="diagram-hint">Zoom and fit · hide participants · find labels · scroll keeps names pinned</span>
         </h3>
         ${diagram}
       </section>

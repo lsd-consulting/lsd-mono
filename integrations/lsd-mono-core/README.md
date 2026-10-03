@@ -74,7 +74,7 @@ and `lsd.junit.*` names where useful for migration).
 ```bash
 cd integrations/lsd-mono-core/report-next
 npm ci
-npm test             # vitest — virtual row window (src/lib/layout.test.ts)
+npm test             # vitest — layout, diagram view (zoom/fit/columns/search), SVG cues
 npm run dev          # http://localhost:5173/
 # or open report-next/lsd-report-next.single.html in Chrome (file://)
 ```

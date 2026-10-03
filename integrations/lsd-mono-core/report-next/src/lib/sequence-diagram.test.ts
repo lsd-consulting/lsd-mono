@@ -205,3 +205,82 @@ describe('renderRowSvg fragments', () => {
     expect(right).toContain('note-right')
   })
 })
+
+describe('diagram view paint', () => {
+  const three: Participant[] = [
+    ...participants,
+    { id: 'queue', name: 'Queue', type: 'QUEUE' },
+  ]
+
+  it('shifts the next column left when a participant is hidden', () => {
+    const svg = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-q',
+        from: 'api',
+        to: 'queue',
+        label: 'enqueue',
+        type: 'SYNCHRONOUS',
+      }),
+      800,
+      three,
+      200,
+      { query: '', hiddenIds: new Set(['db']) },
+    )
+    // api stays at column 0; queue moves from column 2 to column 1.
+    expect(svg).toContain('x2="206"')
+    expect(svg).not.toContain('x2="346"')
+  })
+
+  it('omits a message that needs a hidden participant', () => {
+    const svg = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-h',
+        from: 'api',
+        to: 'db',
+        label: 'read',
+        type: 'SYNCHRONOUS',
+      }),
+      400,
+      participants,
+      200,
+      { query: 'read', hiddenIds: new Set(['db']) },
+    )
+    expect(svg).not.toContain('msg-path')
+    expect(svg).not.toContain('data-search-hit')
+  })
+
+  it('marks a matching label with a text cue, not colour alone', () => {
+    const svg = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-s',
+        from: 'api',
+        to: 'db',
+        label: 'Read rows',
+        type: 'SYNCHRONOUS',
+      }),
+      400,
+      participants,
+      200,
+      { query: 'read', hiddenIds: new Set() },
+    )
+    expect(svg).toContain('data-search-hit="match"')
+    expect(svg).toContain('[match]')
+    expect(svg).toContain('search-hit')
+  })
+
+  it('marks a matching note the same way', () => {
+    const svg = renderRowSvg(
+      rowFor({ kind: 'note', id: 'n-s', text: 'cache miss', over: 'api', placement: 'over' }),
+      400,
+      participants,
+      200,
+      { query: 'CACHE', hiddenIds: new Set() },
+    )
+    expect(svg).toContain('data-search-hit="match"')
+    expect(svg).toContain('[match]')
+  })
+})
+

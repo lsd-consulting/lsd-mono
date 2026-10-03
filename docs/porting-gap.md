@@ -2,7 +2,7 @@
 
 **Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
-**Inspected (local tree, slices through P1 component graph, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
+**Inspected (local tree, slices through P1 diagram UX, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
 
 Legacy is **inspiration and migration API only** — not the product path. Generating PlantUML as the product renderer is explicitly **out**.
 
@@ -42,6 +42,7 @@ These are **implemented**, not stubs, unless noted.
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdProperties.kt`, `ReportOptions.kt` |
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
 | Component graph from captured messages | `report/ComponentGraph.kt`. Opt-in `lsd.mono.components.enabled` (default **false**). Per-scenario `components` on report JSON, combined `components.json` + labelled SVG. **Landed 2026-10-03.** Not PlantUML. |
+| Diagram zoom, fit, hide columns, in-diagram find | report-next toolbar on the sequence diagram. Out / Fit / In, ctrl or meta + wheel, fit-to-width (clamped). Hide/show is in-memory per diagram: the column goes, messages and anchored notes that need it are omitted, other columns reflow. Find highlights message labels and notes with a `[match]` cue and a live count. **Landed 2026-10-03.** Not colour-only. Virtualisation and the sticky header stay. |
 
 **Stubs / thin surfaces (do not treat as done):**
 
@@ -64,13 +65,13 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | **Still open** | Optional soft warn on huge event counts. Legacy `PageTitle` as a separate event is not ported (the section title covers it). |
 | **Test** | `SectionCaptureTest` — two sections, activate before and deactivate after. |
 
-#### P0 — Large-diagram UX (virtualisation / windowing) — **landed 2026-10-03** (zoom/pan still P1)
+#### P0 — Large-diagram UX (virtualisation / windowing) — **landed 2026-10-03** (zoom/fit landed in slice 7)
 
 | | |
 |--|--|
 | **Legacy** | Caps events per diagram (`ReportOptions.maxEventsPerDiagram`) and splits — a workaround for PlantUML SVG size / browser pain. |
 | **Shipped** | `report-next/src/lib/layout.ts` lays out rows in CSS pixels. `virtualRowRange` paints only the scroll window plus overscan. Sticky participant header sits inside the diagram scrollport so names stay visible. Full event list stays in JSON. |
-| **Still open** | Zoom / pan / fit-width (P1). Density modes. Browser FPS check with N≥500. |
+| **Still open** | Density modes. Browser FPS check with N≥500. Zoom and fit landed in the diagram UX slice; horizontal scroll is the pan. |
 | **Test** | `layout.test.ts` (`npm test` in `report-next`) — scrollTop + viewport → row range, including sticky-header inset and overscan. |
 
 #### P1 — Note left / note right — **landed 2026-10-03**
@@ -237,13 +238,13 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | Capability | report-next **has** | Still **needed** | Priority |
 |------------|---------------------|------------------|----------|
 | Sticky topbar / sidebar | Yes (`position: sticky` in `app.css`) | Sticky **participant header** inside the diagram scrollport — **landed 2026-10-03** | done |
-| Search | Scenarios + facts | Optional in-diagram message/label search + highlight | P1 |
+| Search | Scenarios + facts, plus in-diagram label/note find (`[match]` text, underline, live count) — **landed 2026-10-03** | Scenario search stays separate | done |
 | Themes | Dark/light + persist (**already shipped**, `ui/theme.ts`) | High-contrast / print stylesheet only | P2 |
 | Keyboard | `/ j k Enter d ? Esc` | Diagram-local nav (next message with data) | P1 |
 | Message detail | `<dialog>` + copy | Structured pretty-print for XML/JSON; size limits | P1 |
 | Virtualisation | **Yes** — `virtualRowRange` + overscan (`layout.ts`) | Recycle DOM nodes (today the window SVG is rebuilt on scroll) | done (rebuild is enough for now) |
-| Zoom / pan | Horizontal overflow scroll only | Pinch/trackpad zoom, fit-to-width, minimap optional — **still P1**, not part of the sections slice | P1 |
-| Hide / focus participants | **No** | Toggle columns for wide diagrams (legacy #79-class need) | P1 |
+| Zoom / fit | Out / Fit / In, ctrl or meta + wheel, fit-to-width. Horizontal scroll is the pan. **Landed 2026-10-03** | Minimap, density modes | done (minimap still out) |
+| Hide / focus participants | **Yes** — in-memory show/hide. Hidden state is the words `shown` / `hidden` plus `aria-pressed`, not colour alone. **Landed 2026-10-03** | Focus-only mode | done |
 | Section / page nav | **Yes** — in-diagram jump list scrolls to the section row | — | done |
 
 **Theme is not a gap.** Dark/light with persistence is **already shipped** in `report-next/src/ui/theme.ts` (`localStorage` key `lsd-report-next-theme`, `prefers-color-scheme` fallback, `data-theme` on the document). Do not rebuild it. **P2** is only a high-contrast / print stylesheet.
@@ -307,9 +308,9 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 6. **P1 — Component graph** from messages (combined + per-scenario) in SVG. **Landed 2026-10-03.** `lsd.mono.components.enabled` (default false). Edge rule matches legacy types; responses and short arrows are excluded; duplicates collapse to one edge with `count`. `components.json` + labelled SVG. Not inside the sequence shell. No zoom/pan.
 
 
-7. **P1 — Diagram UX polish** (zoom/fit, hide participants, in-diagram search).
+7. **P1 — Diagram UX polish** — **landed 2026-10-03.** Zoom (Out / Fit / In and ctrl or meta + wheel), fit-to-width, hide/show participant columns (page memory only; a message or anchored note that needs a hidden column is omitted and the other columns reflow), in-diagram find for message labels and notes (`[match]` text plus underline, live count that names hits on a hidden column). Not colour-only. The sticky participant header and virtual rows stay; scroll offsets are divided by the zoom scale before the row window is chosen. Scenario search is unchanged.
 
-8. **P2 — Nice-to-haves** (activate colour, timestamps, index brand, print CSS).
+8. **P2 — still open:** lifeline activate colour, event timestamps / stable sort, print CSS, and a high-contrast stylesheet. Dark/light is already shipped. Do not rely on colour alone (colour blindness): status, message types, themes, hidden columns, and search hits keep a text or shape cue. Index branding remains a separate P1 polish item.
 
 Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied artifact (supports regression of the packaged HTML).
 
@@ -327,7 +328,7 @@ Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied
 ### Unit (Kotlin + TS)
 
 - **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder (`ComponentGraphTest` — nodes, counted edges, response exclusion, combined union, SVG type label); metrics tree (`BottleneckInsightsTest` — isolated duration order and the metrics property gate); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent.
-- **TypeScript:** `layout.test.ts` locks `virtualRowRange` and `eventRowHeight` (delay/spacer). `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement / label truncation. `insights.test.ts` locks rank text (not colour-only) and ellipsis. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report-next` (vitest).
+- **TypeScript:** `layout.test.ts` locks `virtualRowRange` and `eventRowHeight` (delay/spacer). `diagram-view.test.ts` locks fit scale, zoom steps, unscaled scroll, remaining columns, and which rows match a query. `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement / label truncation, plus column reflow, omitted hidden messages, and the `[match]` cue. `insights.test.ts` locks rank text (not colour-only) and ellipsis. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report-next` (vitest).
 
 ### Browser / UI (later, selective)
 

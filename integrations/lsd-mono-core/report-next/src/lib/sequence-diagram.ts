@@ -26,6 +26,19 @@ import {
   type LayoutRow,
 } from './layout'
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
+import {
+  DEFAULT_ZOOM,
+  classifySearchHits,
+  eventHiddenByColumns,
+  fitToWidthScale,
+  rowMatchesQuery,
+  searchCountLabel,
+  stepZoom,
+  unscaledViewport,
+  visibleParticipants,
+  zoomFromWheel,
+  zoomLabel,
+} from './diagram-view'
 
 export interface MountedDiagram {
   scenario: Scenario
@@ -47,6 +60,33 @@ export interface MessageArrowSpec {
 }
 
 const mounted = new Map<string, MountedDiagram>()
+
+export interface DiagramView {
+  zoom: number
+  hidden: Set<string>
+  query: string
+}
+
+export interface RowPaint {
+  query: string
+  hiddenIds: ReadonlySet<string>
+}
+
+const views = new Map<string, DiagramView>()
+const EMPTY_PAINT: RowPaint = { query: '', hiddenIds: new Set() }
+
+export function diagramView(scenarioId: string): DiagramView {
+  let view = views.get(scenarioId)
+  if (!view) {
+    view = { zoom: DEFAULT_ZOOM, hidden: new Set(), query: '' }
+    views.set(scenarioId, view)
+  }
+  return view
+}
+
+function logicalWidth(scenario: Scenario, hiddenIds: ReadonlySet<string>): number {
+  return diagramWidth(visibleParticipants(scenario.participants, hiddenIds).length)
+}
 
 function xFor(index: number): number {
   return LEFT_PAD + index * COL_GAP
@@ -172,9 +212,39 @@ export function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_M
   return diagram
 }
 
+function toolbarHtml(scenario: Scenario, view: DiagramView): string {
+  const hits = classifySearchHits(scenario.events, view.query, view.hidden)
+  const toggles = scenario.participants
+    .map((p) => {
+      const shown = !view.hidden.has(p.id)
+      const name = p.alias ?? p.name
+      const cue = shown ? 'shown' : 'hidden'
+      return `<button type="button" data-participant-toggle="${escapeXml(p.id)}" aria-pressed="${shown}" aria-label="${shown ? 'Hide' : 'Show'} ${escapeXml(name)}"><span class="vis-cue">${cue}</span> ${escapeXml(name)}</button>`
+    })
+    .join('')
+  return `
+    <div class="seq-toolbar" role="toolbar" aria-label="Diagram view">
+      <div class="zoom-controls" role="group" aria-label="Zoom">
+        <button type="button" data-zoom="out" aria-label="Zoom out">Out</button>
+        <button type="button" data-zoom="fit" aria-label="Fit to width">Fit</button>
+        <span class="zoom-readout" aria-live="polite">${zoomLabel(view.zoom)}</span>
+        <button type="button" data-zoom="in" aria-label="Zoom in">In</button>
+      </div>
+      <div class="participant-toggles" role="group" aria-label="Show or hide participants">${toggles}</div>
+      <label class="diagram-find">
+        <span class="diagram-find-label">Find</span>
+        <input type="search" data-diagram-find value="${escapeXml(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
+        <span class="diagram-find-count" aria-live="polite">${escapeXml(searchCountLabel(hits.total, hits.hidden, view.query))}</span>
+      </label>
+    </div>`
+}
+
 /** Continuous diagram: sticky participant header, section jump list, virtualised rows. */
 export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): string {
   const diagram = mountDiagram(scenario, labelMaxWidth)
+  const view = diagramView(scenario.id)
+  const width = logicalWidth(scenario, view.hidden)
+  const zoom = view.zoom
   const sections = diagram.rows.filter((row) => row.event.kind === 'section')
   const jump = sections.length
     ? `<nav class="section-jump" aria-label="Diagram sections">${sections
@@ -187,48 +257,166 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
   return `
     <div class="seq-diagram">
       ${jump}
+      ${toolbarHtml(scenario, view)}
       <div class="seq-scroll" data-scenario-id="${escapeXml(scenario.id)}" tabindex="0" aria-label="Sequence diagram for ${escapeXml(scenario.title)}">
-        <div class="seq-sticky-header" style="width:${diagram.width}px">${headerSvg(scenario, diagram.width)}</div>
-        <div class="seq-spacer" style="height:${diagram.height}px;width:${diagram.width}px">
+        <div class="seq-sticky-header" style="width:${width * zoom}px">${headerSvg(scenario, width, view.hidden, zoom)}</div>
+        <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
           <div class="seq-window"></div>
         </div>
       </div>
     </div>`
 }
 
-/** Paint only the rows inside the scrollport (plus overscan). 1 SVG unit = 1 CSS pixel. */
+/** Paint only the rows inside the scrollport (plus overscan). Row units stay unscaled; zoom is display-only. */
 export function syncDiagramWindow(scrollport: HTMLElement): void {
   const id = scrollport.dataset.scenarioId
   if (!id) return
   const diagram = mounted.get(id)
   if (!diagram) return
+  const view = diagramView(id)
+  const zoom = view.zoom
   const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
-  const headerHeight = header?.offsetHeight || HEADER_BLOCK_H
-  const viewportHeight = scrollport.clientHeight || DEFAULT_VIEWPORT
+  const cssHeader = header?.offsetHeight || HEADER_BLOCK_H * zoom
+  const cssViewport = scrollport.clientHeight || DEFAULT_VIEWPORT
+  const unscaled = unscaledViewport({
+    scrollTop: scrollport.scrollTop,
+    viewportHeight: cssViewport,
+    headerHeight: cssHeader,
+    zoom,
+  })
   const range = virtualRowRange({
     rows: diagram.rows,
-    scrollTop: scrollport.scrollTop,
-    viewportHeight,
-    headerHeight,
+    scrollTop: unscaled.scrollTop,
+    viewportHeight: unscaled.viewportHeight,
+    headerHeight: unscaled.headerHeight,
     overscan: DEFAULT_OVERSCAN,
   })
   const slice = diagram.rows.slice(range.start, range.end)
   const windowEl = scrollport.querySelector<HTMLElement>('.seq-window')
   if (!windowEl) return
   const offset = slice[0]?.y ?? 0
-  windowEl.style.transform = `translateY(${offset}px)`
-  windowEl.innerHTML = slice.length ? windowSvg(diagram, slice) : ''
+  windowEl.style.transform = `translateY(${offset * zoom}px)`
+  const width = logicalWidth(diagram.scenario, view.hidden)
+  windowEl.innerHTML = slice.length ? windowSvg(diagram, slice, view, width) : ''
+}
+
+/** Resize the sticky header and body to the current zoom and visible columns. */
+export function applyDiagramFrame(scrollport: HTMLElement): void {
+  const id = scrollport.dataset.scenarioId
+  if (!id) return
+  const diagram = mounted.get(id)
+  if (!diagram) return
+  const view = diagramView(id)
+  const width = logicalWidth(diagram.scenario, view.hidden)
+  const zoom = view.zoom
+  const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
+  if (header) {
+    header.style.width = `${width * zoom}px`
+    header.innerHTML = headerSvg(diagram.scenario, width, view.hidden, zoom)
+  }
+  const spacer = scrollport.querySelector<HTMLElement>('.seq-spacer')
+  if (spacer) {
+    spacer.style.height = `${diagram.height * zoom}px`
+    spacer.style.width = `${width * zoom}px`
+  }
+  const root = scrollport.closest('.seq-diagram')
+  if (!root) return
+  const readout = root.querySelector('.zoom-readout')
+  if (readout) readout.textContent = zoomLabel(zoom)
+  root.querySelectorAll<HTMLButtonElement>('[data-participant-toggle]').forEach((btn) => {
+    const participantId = btn.dataset.participantToggle ?? ''
+    const shown = !view.hidden.has(participantId)
+    btn.setAttribute('aria-pressed', String(shown))
+    const cue = btn.querySelector('.vis-cue')
+    if (cue) cue.textContent = shown ? 'shown' : 'hidden'
+    const labelName = Array.from(btn.childNodes)
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent ?? '')
+      .join('')
+      .trim()
+    btn.setAttribute('aria-label', `${shown ? 'Hide' : 'Show'} ${labelName}`)
+  })
+  const count = root.querySelector('.diagram-find-count')
+  if (count) {
+    const hits = classifySearchHits(diagram.scenario.events, view.query, view.hidden)
+    count.textContent = searchCountLabel(hits.total, hits.hidden, view.query)
+  }
+}
+
+function commitZoom(scrollport: HTMLElement, next: number): void {
+  const id = scrollport.dataset.scenarioId
+  if (!id) return
+  const view = diagramView(id)
+  const prev = view.zoom || 1
+  const ratio = next / prev
+  view.zoom = next
+  applyDiagramFrame(scrollport)
+  scrollport.scrollTop *= ratio
+  scrollport.scrollLeft *= ratio
+  syncDiagramWindow(scrollport)
+}
+
+function onDiagramWheel(scrollport: HTMLElement, ev: WheelEvent): void {
+  if (!ev.ctrlKey && !ev.metaKey) return
+  ev.preventDefault()
+  const id = scrollport.dataset.scenarioId
+  if (!id) return
+  const view = diagramView(id)
+  const next = zoomFromWheel(view.zoom, ev.deltaY)
+  if (next === view.zoom) return
+  commitZoom(scrollport, next)
+}
+
+function onZoomClick(scrollport: HTMLElement, action: string | undefined): void {
+  const id = scrollport.dataset.scenarioId
+  if (!id || !action) return
+  const diagram = mounted.get(id)
+  if (!diagram) return
+  const view = diagramView(id)
+  let next = view.zoom
+  if (action === 'in') next = stepZoom(view.zoom, 1)
+  else if (action === 'out') next = stepZoom(view.zoom, -1)
+  else if (action === 'fit') next = fitToWidthScale(logicalWidth(diagram.scenario, view.hidden), scrollport.clientWidth)
+  else return
+  commitZoom(scrollport, next)
+}
+
+function onToggleParticipant(scrollport: HTMLElement, participantId: string): void {
+  const id = scrollport.dataset.scenarioId
+  if (!id || !participantId) return
+  const view = diagramView(id)
+  if (view.hidden.has(participantId)) view.hidden.delete(participantId)
+  else view.hidden.add(participantId)
+  applyDiagramFrame(scrollport)
+  syncDiagramWindow(scrollport)
 }
 
 export function bindDiagramScroll(root: ParentNode): void {
-  root.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => {
-    syncDiagramWindow(el)
-    el.addEventListener('scroll', () => syncDiagramWindow(el), { passive: true })
+  root.querySelectorAll<HTMLElement>('.seq-diagram').forEach((diagram) => {
+    const scroll = diagram.querySelector<HTMLElement>('.seq-scroll')
+    if (!scroll?.dataset.scenarioId) return
+    const id = scroll.dataset.scenarioId
+    applyDiagramFrame(scroll)
+    syncDiagramWindow(scroll)
+    scroll.addEventListener('scroll', () => syncDiagramWindow(scroll), { passive: true })
+    scroll.addEventListener('wheel', (ev) => onDiagramWheel(scroll, ev), { passive: false })
+    diagram.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((btn) => {
+      btn.addEventListener('click', () => onZoomClick(scroll, btn.dataset.zoom))
+    })
+    diagram.querySelectorAll<HTMLButtonElement>('[data-participant-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => onToggleParticipant(scroll, btn.dataset.participantToggle ?? ''))
+    })
+    const find = diagram.querySelector<HTMLInputElement>('[data-diagram-find]')
+    find?.addEventListener('input', () => {
+      diagramView(id).query = find.value
+      applyDiagramFrame(scroll)
+      syncDiagramWindow(scroll)
+    })
   })
 }
 
-function headerSvg(scenario: Scenario, width: number): string {
-  const boxes = scenario.participants
+function headerSvg(scenario: Scenario, width: number, hiddenIds: ReadonlySet<string>, zoom: number): string {
+  const boxes = visibleParticipants(scenario.participants, hiddenIds)
     .map((p, i) => {
       const x = xFor(i)
       const c = p.colour ?? '#94a3b8'
@@ -240,15 +428,18 @@ function headerSvg(scenario: Scenario, width: number): string {
       </g>`
     })
     .join('')
-  return `<svg class="seq-header-svg" viewBox="0 0 ${width} ${HEADER_BLOCK_H}" width="${width}" height="${HEADER_BLOCK_H}" role="img" aria-label="Participants">${boxes}</svg>`
+  const dispW = width * zoom
+  const dispH = HEADER_BLOCK_H * zoom
+  return `<svg class="seq-header-svg" viewBox="0 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants">${boxes}</svg>`
 }
 
-function windowSvg(diagram: MountedDiagram, slice: LayoutRow[]): string {
-  const { scenario, rows, width } = diagram
+function windowSvg(diagram: MountedDiagram, slice: LayoutRow[], view: DiagramView, width: number): string {
+  const { scenario, rows } = diagram
   const offset = slice[0].y
   const end = slice[slice.length - 1].y + slice[slice.length - 1].height
   const height = Math.max(end - offset, 1)
-  const index = new Map(scenario.participants.map((p, i) => [p.id, i]))
+  const visible = visibleParticipants(scenario.participants, view.hidden)
+  const index = new Map(visible.map((p, i) => [p.id, i]))
   const colourOf = new Map(scenario.participants.map((p) => [p.id, p.colour ?? 'var(--accent)']))
   const spans = activationSpans(rows, Math.max(diagram.height - BOTTOM_PAD, 0))
 
@@ -264,7 +455,7 @@ function windowSvg(diagram: MountedDiagram, slice: LayoutRow[]): string {
     return `mk_${key}`
   }
 
-  const lifelines = scenario.participants
+  const lifelines = visible
     .map((p, i) => {
       const x = xFor(i)
       return `<line class="lifeline-line" data-participant="${escapeXml(p.id)}" x1="${x}" y1="${offset}" x2="${x}" y2="${end}" />`
@@ -284,10 +475,13 @@ function windowSvg(diagram: MountedDiagram, slice: LayoutRow[]): string {
     })
     .join('')
 
-  const body = slice.map((row) => renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth)).join('')
+  const paint: RowPaint = { query: view.query, hiddenIds: view.hidden }
+  const body = slice.map((row) => renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth, paint)).join('')
+  const dispW = width * view.zoom
+  const dispH = height * view.zoom
 
   return `
-  <svg class="seq-svg" viewBox="0 ${offset} ${width} ${height}" width="${width}" height="${height}" aria-hidden="true">
+  <svg class="seq-svg" viewBox="0 ${offset} ${width} ${height}" width="${dispW}" height="${dispH}" aria-hidden="true">
     <defs>
       ${markers.join('\n')}
       <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
@@ -307,8 +501,10 @@ export function renderRowSvg(
   width: number,
   participants: Participant[],
   labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH,
+  paint: RowPaint = EMPTY_PAINT,
 ): string {
-  const index = new Map(participants.map((p, i) => [p.id, i]))
+  const visible = visibleParticipants(participants, paint.hiddenIds)
+  const index = new Map(visible.map((p, i) => [p.id, i]))
   const colourOf = new Map(participants.map((p) => [p.id, p.colour ?? '#34d399']))
   const markers: string[] = []
   const markerIds = new Set<string>()
@@ -321,7 +517,7 @@ export function renderRowSvg(
     }
     return `mk_${key}`
   }
-  const body = renderRow(row, width, index, colourOf, ensureMarker, labelMaxWidth)
+  const body = renderRow(row, width, index, colourOf, ensureMarker, labelMaxWidth, paint)
   return `<svg><defs>${markers.join('')}</defs>${body}</svg>`
 }
 
@@ -332,8 +528,10 @@ function renderRow(
   colourOf: Map<string, string>,
   ensureMarker: (colour: string, end: ArrowEnd) => string,
   labelMaxWidth: number,
+  paint: RowPaint = EMPTY_PAINT,
 ): string {
   const event = row.event
+  if (eventHiddenByColumns(event, paint.hiddenIds)) return ''
   if (event.kind === 'activate' || event.kind === 'deactivate') return ''
 
   if (event.kind === 'section') {
@@ -372,15 +570,19 @@ function renderRow(
   if (event.kind === 'note') {
     const layout = noteLayout(event.placement, event.over, index, width)
     const place = layout.placement
+    const match = rowMatchesQuery(event, paint.query)
+    const hit = match ? ' search-hit' : ''
+    const hitAttr = match ? ' data-search-hit="match"' : ''
+    const matchCue = match ? `<tspan class="note-match-cue"> [match]</tspan>` : ''
     return `
-    <g class="note note-${place}" data-placement="${place}" transform="translate(${layout.x}, ${row.y})">
+    <g class="note note-${place}${hit}" data-placement="${place}"${hitAttr} transform="translate(${layout.x}, ${row.y})">
       <rect class="note-card" x="-70" y="-14" width="140" height="28" rx="6"/>
-      <text class="note-text" y="4" text-anchor="${layout.textAnchor}">${escapeXml(event.text)}</text>
+      <text class="note-text" y="4" text-anchor="${layout.textAnchor}">${escapeXml(event.text)}${matchCue}</text>
       <text class="note-place-cue" x="0" y="18" text-anchor="middle">${place}</text>
     </g>`
   }
 
-  return renderMessageRow(event as MessageEvent, row.y, width, index, colourOf, ensureMarker, labelMaxWidth)
+  return renderMessageRow(event as MessageEvent, row.y, width, index, colourOf, ensureMarker, labelMaxWidth, paint.query)
 }
 
 function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
@@ -397,8 +599,10 @@ function renderMessageRow(
   colourOf: Map<string, string>,
   ensureMarker: (colour: string, end: ArrowEnd) => string,
   labelMaxWidth: number,
+  query: string,
 ): string {
   const spec = messageArrowSpec(msg.type)
+  const match = rowMatchesQuery(msg, query)
   const colour =
     msg.colour ||
     (msg.type === 'SYNCHRONOUS_RESPONSE'
@@ -414,6 +618,9 @@ function renderMessageRow(
   const cue = spec.typeCue
     ? `<tspan class="msg-type-cue"> [${escapeXml(spec.typeCue)}]</tspan>`
     : ''
+  const matchCue = match ? `<tspan class="msg-match-cue"> [match]</tspan>` : ''
+  const hitClass = match ? ' search-hit' : ''
+  const hitAttr = match ? ' data-search-hit="match"' : ''
   const clickable = hasData
     ? `data-message-id="${escapeXml(msg.id)}" tabindex="0" role="button" aria-label="Open ${escapeXml(msg.label)}"`
     : ''
@@ -426,9 +633,9 @@ function renderMessageRow(
     const { x1, x2 } = shortMessageEndpoints(msg.type, px, width)
     const labelX = (x1 + x2) / 2
     return `
-    <g class="message message-short${hasData ? ' has-data' : ''}" ${typeAttr} ${clickable} transform="translate(0, ${y})">
+    <g class="message message-short${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} ${clickable} transform="translate(0, ${y})">
       <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
-      <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
+      <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
       ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
     </g>`
   }
@@ -441,9 +648,9 @@ function renderMessageRow(
 
   if (self) {
     return `
-    <g class="message${hasData ? ' has-data' : ''}" ${typeAttr} ${clickable} transform="translate(0, ${y})">
+    <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} ${clickable} transform="translate(0, ${y})">
       <path class="msg-path" d="M${x1 + ACT_W} 0 C${x1 + 48} 0, ${x1 + 48} 22, ${x1 + ACT_W} 22" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-      <text class="msg-label" x="${x1 + 56}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
+      <text class="msg-label" x="${x1 + 56}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
       ${hasData ? `<circle class="msg-hit" cx="${x1 + 40}" cy="11" r="14"/>` : ''}
     </g>`
   }
@@ -452,9 +659,9 @@ function renderMessageRow(
   const lineX1 = x1 + (x2 > x1 ? ACT_W / 2 : -ACT_W / 2)
   const lineX2 = x2 + (x2 > x1 ? -ACT_W / 2 : ACT_W / 2)
   return `
-  <g class="message${hasData ? ' has-data' : ''}" ${typeAttr} ${clickable} transform="translate(0, ${y})">
+  <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} ${clickable} transform="translate(0, ${y})">
     <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
+    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
     ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
   </g>`
 }

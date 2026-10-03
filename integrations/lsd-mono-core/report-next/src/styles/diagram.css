@@ -198,3 +198,63 @@
 .message-short .msg-path {
   stroke-dasharray: none;
 }
+
+.seq-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  padding: 0 12px;
+}
+.zoom-controls,
+.participant-toggles,
+.diagram-find {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.seq-toolbar button,
+.diagram-find input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.diagram-find input {
+  cursor: text;
+  min-width: 10rem;
+}
+.zoom-readout,
+.diagram-find-count,
+.diagram-find-label,
+.vis-cue {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.participant-toggles button[aria-pressed="false"] {
+  text-decoration: line-through;
+}
+.participant-toggles button[aria-pressed="false"] .vis-cue {
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.search-hit .msg-label,
+.search-hit .note-text {
+  font-weight: 800;
+  text-decoration: underline;
+}
+.msg-match-cue,
+.note-match-cue {
+  font-weight: 800;
+  font-family: var(--mono);
+  font-size: 10px;
+}
