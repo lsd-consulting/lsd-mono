@@ -109,7 +109,7 @@ class CaptureToJsonTest {
         assertTrue(payloads.contains("window.__LSD_PAYLOADS__="))
         assertTrue(payloads.contains("\"cartId\": \"cart-1\""))
 
-        val shared = tempDir.resolve("lsd-report-next.single.html").readText()
+        val shared = tempDir.resolve("lsd-report.single.html").readText()
         assertTrue(shared.contains("Orders flow"))
         assertTrue(html.toFile().readText().contains("POST /checkout"))
         assertTrue(tempDir.resolve("report.json").readText().contains("\"kind\": \"message\""))

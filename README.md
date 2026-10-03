@@ -54,7 +54,7 @@ cd lsd-mono
 
 `LsdContext` records participants, facts, sections, notes, delays, spacers, sequence events (sync/async, responses, short, lost, and bi-directional messages), lifeline actions, and timestamps, and writes report JSON
 (`report.json` plus `<title>-report.json`). The packaged SVG shell
-`lsd-report-next.single.html` reads the captured `window.__LSD_REPORT__` that
+`lsd-report.single.html` reads the captured `window.__LSD_REPORT__` that
 `ReportWriter` injects. When opened directly it falls back to sample data. Dev
 (`report` Vite) uses the same global in `src/main.ts`. Gradle runs the Vite
 `build:single` and vitest tasks as part of `:modules:lsd-mono-core:build`.

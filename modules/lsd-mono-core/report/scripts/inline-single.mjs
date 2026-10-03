@@ -20,7 +20,7 @@ const single = `<!DOCTYPE html>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <title>LSD Report Next — Living Sequence Diagrams</title>
+    <title>LSD Report — Living Sequence Diagrams</title>
     <link rel="icon" href="${faviconData}" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -37,9 +37,9 @@ ${js}
   </body>
 </html>
 `
-const out = join(dist, 'lsd-report-next.html')
+const out = join(dist, 'lsd-report.html')
 writeFileSync(out, single)
-copyFileSync(out, join(root, 'lsd-report-next.single.html'))
+copyFileSync(out, join(root, 'lsd-report.single.html'))
 if (js.includes('import.meta') || js.includes('pm_visa')) {
   throw new Error('single-file shell still contains a module import or a demo payload body')
 }
@@ -51,5 +51,5 @@ const payloadJs =
 const payloadOut = join(root, 'lsd-report-payloads.js')
 writeFileSync(payloadOut, payloadJs)
 writeFileSync(join(dist, 'lsd-report-payloads.js'), payloadJs)
-console.log('Wrote', out, `and lsd-report-next.single.html (${(single.length / 1024).toFixed(1)} KB)`)
+console.log('Wrote', out, `and lsd-report.single.html (${(single.length / 1024).toFixed(1)} KB)`)
 console.log('Wrote', payloadOut, `(${(payloadJs.length / 1024).toFixed(1)} KB)`)

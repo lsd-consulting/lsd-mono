@@ -26,8 +26,8 @@ import java.nio.file.Path
  * Embedded sample data is only the fallback when that global is absent.
  */
 object ReportWriter {
-    private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report-next.single.html"
-    private const val SHELL_FILENAME = "lsd-report-next.single.html"
+    private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report.single.html"
+    private const val SHELL_FILENAME = "lsd-report.single.html"
     private const val SAMPLE_PAYLOAD_RESOURCE = "/lsd-mono-core/report/lsd-report-payloads.js"
     private const val SAMPLE_PAYLOAD_FILENAME = "lsd-report-payloads.js"
 

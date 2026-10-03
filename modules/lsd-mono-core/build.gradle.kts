@@ -57,7 +57,7 @@ fun Exec.withNodeOnPath() {
 
 val reportDir = layout.projectDirectory.dir("report")
 val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
-val reportShell = reportDir.file("lsd-report-next.single.html")
+val reportShell = reportDir.file("lsd-report.single.html")
 
 val reportSingle = tasks.register<Exec>("reportSingle") {
     group = "build"
@@ -85,12 +85,13 @@ val reportSingle = tasks.register<Exec>("reportSingle") {
 val copyReportShell = tasks.register<Copy>("copyReportShell") {
     group = "build"
     description =
-        "Copy report/lsd-report-next.single.html into build/generated/resources. Does not touch src/main/resources."
+        "Copy report/lsd-report.single.html into build/generated/resources. Does not touch src/main/resources."
     dependsOn(reportSingle)
-    // Drop output left by the old report-next copy task so a dirty build dir
-    // cannot package both classpath roots.
+    // Drop output left by earlier shell names so a dirty build dir cannot
+    // package both the old classpath root and the previous filename.
     doFirst {
         delete(layout.buildDirectory.dir("generated/resources/lsd-mono-core/report-next"))
+        delete(layout.buildDirectory.file("generated/resources/lsd-mono-core/report/lsd-report-next.single.html"))
     }
     from(reportShell)
     into(generatedResourcesDir.map { it.dir("lsd-mono-core/report") })

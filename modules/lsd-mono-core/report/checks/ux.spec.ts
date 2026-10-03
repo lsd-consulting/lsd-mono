@@ -17,7 +17,7 @@ async function openFixture(page: Page, theme: (typeof THEMES)[number]): Promise<
     ({ report, themeName }) => {
       const w = window as Window & { __LSD_REPORT__?: unknown }
       w.__LSD_REPORT__ = report
-      localStorage.setItem('lsd-report-next-theme', themeName)
+      localStorage.setItem('lsd-report-theme', themeName)
     },
     { report: uxFixture, themeName: theme },
   )

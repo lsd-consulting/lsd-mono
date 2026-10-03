@@ -1,6 +1,6 @@
 export type Theme = 'dark' | 'light' | 'contrast'
 
-const KEY = 'lsd-report-next-theme'
+const KEY = 'lsd-report-theme'
 const ORDER: Theme[] = ['dark', 'light', 'contrast']
 
 export function isTheme(value: string | null): value is Theme {

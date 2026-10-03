@@ -30,7 +30,7 @@ class LsdContextTest {
         assertTrue(File(tempDir.toFile(), "Suite-report.json").exists() ||
             tempDir.toFile().listFiles()?.any { it.name.endsWith("-report.json") } == true)
         assertTrue(File(tempDir.toFile(), "index.html").exists())
-        assertTrue(File(tempDir.toFile(), "lsd-report-next.single.html").exists())
+        assertTrue(File(tempDir.toFile(), "lsd-report.single.html").exists())
     }
 
     @Test

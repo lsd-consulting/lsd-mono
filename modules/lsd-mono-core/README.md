@@ -20,7 +20,7 @@ thin Kotlin/JVM capture and report façade so integrations (e.g.
 lsd-mono-core/
 ├── report/                 # Vite+TS report UI (dev with npm)
 │   ├── src/                     # UI, custom SVG diagram, sample data
-│   ├── lsd-report-next.single.html
+│   ├── lsd-report.single.html
 │   └── README.md
 ├── src/main/kotlin/…/mono/core/ # Kotlin façade (capture + write reports)
 ├── src/main/resources/lsd-mono-core/report/
@@ -38,7 +38,7 @@ lsd-mono-core/
 - Report writer emits:
   - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
-  - copies classpath `lsd-report-next.single.html` beside the report as the
+  - copies classpath `lsd-report.single.html` beside the report as the
     interactive shell with captured `ReportJson` injected (the demo falls back to sample data when opened directly)
   - `index.html` aggregating report files
 
@@ -73,7 +73,7 @@ cd modules/lsd-mono-core/report
 npm ci
 npm test             # vitest — layout, diagram view (zoom/fit/columns/search), SVG cues
 npm run dev          # http://localhost:5173/
-# or open report/lsd-report-next.single.html in Chrome (file://)
+# or open report/lsd-report.single.html in Chrome (file://)
 ```
 
 `./gradlew :modules:lsd-mono-core:build` runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). The shell is packaged from `build/generated/resources`, not written back into `src/main/resources`. Needs a current Node (Vite 7 / Vitest 3). The Gradle tasks prepend Node 22 when it is installed and do not change your default Node.

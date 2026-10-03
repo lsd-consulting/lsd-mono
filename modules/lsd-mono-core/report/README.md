@@ -1,6 +1,6 @@
-# LSD Report Next
+# LSD Report
 
-Report UI for **lsd-mono-core**. Sources live in `modules/lsd-mono-core/report`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `lsd-report-next.single.html` into the jar. The JVM façade injects captured `ReportJson` as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
+Report UI for **lsd-mono-core**. Sources live in `modules/lsd-mono-core/report`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `lsd-report.single.html` into the jar. The JVM façade injects captured `ReportJson` as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
 
 This is the live UI, not a separate experiment, and it is not published on its own.
 
@@ -40,8 +40,8 @@ npm run build && npm run preview   # http://localhost:4173/
 ```bash
 npm run build:single
 # then open:
-#   modules/lsd-mono-core/report/lsd-report-next.single.html
-#   modules/lsd-mono-core/report/dist/lsd-report-next.html
+#   modules/lsd-mono-core/report/lsd-report.single.html
+#   modules/lsd-mono-core/report/dist/lsd-report.html
 ```
 
 **Multi-file `dist/` after build** (Vite `base: './'`; prefer preview if modules are blocked on `file://`):
@@ -56,7 +56,7 @@ npm run build
 | Dev | `http://localhost:5173/` |
 | Preview | `http://localhost:4173/` |
 | Built static (multi-file) | `modules/lsd-mono-core/report/dist/index.html` |
-| Chrome `file://` | `modules/lsd-mono-core/report/lsd-report-next.single.html` |
+| Chrome `file://` | `modules/lsd-mono-core/report/lsd-report.single.html` |
 | Source entry | `modules/lsd-mono-core/report/index.html` |
 
 Gradle produces the same shell without a manual npm build:
@@ -72,7 +72,7 @@ Gradle produces the same shell without a manual npm build:
 | Tooling | **Vite 7 + TypeScript** | Fast local DX; `base: './'` for `file://` / CI artifact drops |
 | Runtime | **Vanilla TS** (no React/Vue) | Tiny shipped JS; reports stay self-contained |
 | Diagrams | **Custom SVG** from domain events | CSS and accessibility control, clickable messages, activations, notes, dividers — no PlantUML or Mermaid runtime in the browser |
-| Colour | **OKLCH tokens** + dark/light/high contrast | `d` or the theme button cycles dark → light → high contrast. Persisted as `lsd-report-next-theme`. Print uses a light page. |
+| Colour | **OKLCH tokens** + dark/light/high contrast | `d` or the theme button cycles dark → light → high contrast. Persisted as `lsd-report-theme`. Print uses a light page. |
 | Inspector | **Side panel** | Keeps the diagram active; lazy payloads, copy, focus return, and `#msg=` deep links |
 | Typography | Geist → system-ui fallback | Product feel when online; readable offline via system fonts |
 | State | In-memory filter/selection | Enough for the report shell; no UI framework |

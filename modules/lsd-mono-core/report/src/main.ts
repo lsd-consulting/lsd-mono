@@ -126,7 +126,7 @@ function renderShell(): void {
       <div class="brand" title="Living Sequence Diagrams">
         <div class="brand-mark">LSD</div>
         <div>
-          <div>Report Next</div>
+          <div>Report</div>
           <div class="brand-sub">Living Sequence Diagrams</div>
         </div>
       </div>
