@@ -153,8 +153,20 @@ mark {
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   min-height: calc(100dvh - var(--topbar-h));
 }
+@property --inspector-w {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 380px;
+}
 .shell.with-inspector {
-  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) minmax(260px, 380px);
+  --inspector-w: 380px;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--inspector-w);
+  transition: --inspector-w 160ms ease;
+}
+/* Drag updates the width on every pointer move. A glide would lag the cursor.
+   prefers-reduced-motion already sets transition: none on every element. */
+.shell.with-inspector.inspector-resizing {
+  transition: none;
 }
 
 .sidebar {
@@ -423,6 +435,29 @@ mark {
   overflow: auto;
   min-width: 0;
 }
+/* Inner edge of the side column. Drag left to widen. */
+.inspector-resize {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  margin-left: -6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 3;
+}
+.inspector-resize:hover,
+.inspector-resize:focus-visible {
+  background: color-mix(in oklab, var(--accent) 45%, transparent);
+}
+.inspector-resize:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
 .inspector:focus {
   outline: none;
 }
@@ -472,10 +507,7 @@ mark {
 }
 #inspector-json:focus-visible,
 #inspector-json-expand:focus-visible { outline: none; box-shadow: var(--focus); }
-/* Wider column for the pretty-printed payload. The diagram stays in the grid; this is not a modal. */
-.shell.with-inspector.inspector-json-wide {
-  grid-template-columns: var(--sidebar-w) minmax(160px, 1fr) minmax(520px, 70vw);
-}
+/* Wider than the narrow column: stop wrapping so the payload can be read. Not a modal. */
 .inspector.inspector-json-wide pre {
   white-space: pre;
   word-break: normal;
@@ -542,6 +574,7 @@ mark {
   .inspector.inspector-json-wide {
     max-height: 85vh;
   }
+  .inspector-resize { display: none; }
   .sidebar {
     position: static;
     height: auto;
@@ -653,7 +686,8 @@ mark {
   .seq-toolbar,
   .section-jump,
   .hist,
-  .inspector-head button {
+  .inspector-head button,
+  .inspector-resize {
     display: none !important;
   }
   .topbar,

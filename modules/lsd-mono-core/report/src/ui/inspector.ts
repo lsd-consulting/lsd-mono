@@ -20,13 +20,32 @@ export interface InspectorController {
   isOpen: () => boolean
 }
 
+/** Session-only. A refresh starts from the narrow column again. */
+export const INSPECTOR_WIDTH_KEY = 'lsd-report-inspector-width'
+/** Current narrow column, in px. Drag does not go below this floor's sibling minimum. */
+export const INSPECTOR_NARROW_PX = 380
+export const INSPECTOR_MIN_PX = 260
+
+export function inspectorWidthLimits(viewport: number): { min: number; max: number; expand: number } {
+  const max = Math.max(INSPECTOR_MIN_PX, Math.floor(viewport * 0.9))
+  const expand = Math.min(max, Math.max(520, Math.round(viewport * 0.7)))
+  return { min: INSPECTOR_MIN_PX, max, expand }
+}
+
+export function clampInspectorWidth(px: number, viewport: number): number {
+  const { min, max } = inspectorWidthLimits(viewport)
+  return Math.round(Math.min(max, Math.max(min, px)))
+}
+
 /**
  * Side panel. Not a dialog: the rest of the page stays active, and nothing sets aria-modal.
  * Focus moves into the panel. Escape and Close give it back to the arrow that opened it.
+ * JSON is shown once its payload has loaded. Hide collapses it again.
  */
 export function inspectorMarkup(): string {
   return `
     <aside id="inspector" class="inspector" hidden tabindex="-1" aria-labelledby="inspector-title">
+      <div id="inspector-resize" class="inspector-resize" role="separator" aria-orientation="vertical" aria-label="Resize message panel" aria-valuemin="${INSPECTOR_MIN_PX}" aria-valuemax="900" aria-valuenow="${INSPECTOR_NARROW_PX}" tabindex="0"></div>
       <div class="inspector-head">
         <h2 id="inspector-title">Message</h2>
         <button type="button" class="icon-btn" id="inspector-copy" title="Copy payload">Copy</button>
@@ -54,6 +73,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   const lead = doc.querySelector<HTMLElement>('#inspector-lead')!
   const toggle = doc.querySelector<HTMLButtonElement>('#inspector-json')!
   const expandBtn = doc.querySelector<HTMLButtonElement>('#inspector-json-expand')!
+  const resize = doc.querySelector<HTMLElement>('#inspector-resize')!
   const pre = doc.querySelector<HTMLElement>('#inspector-pre')!
   const copy = doc.querySelector<HTMLButtonElement>('#inspector-copy')!
   const closeBtn = doc.querySelector<HTMLButtonElement>('#inspector-close')!
@@ -64,33 +84,54 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   let cached: unknown = undefined
   let ready = false
   let jsonLabel = 'JSON'
+  let showJson = false
+  let width = readWidth(doc)
 
   function shell(): HTMLElement | null {
     return panel!.closest('.shell')
   }
 
+  function viewport(): number {
+    return doc.defaultView?.innerWidth ?? 1200
+  }
+
   function setOpen(open: boolean): void {
+    if (open) applyWidth(width)
     panel!.hidden = !open
     shell()?.classList.toggle('with-inspector', open)
     if (!open) return
     panel!.focus()
   }
 
-  function setJsonWide(wide: boolean): void {
+  function applyWidth(px: number): void {
+    width = clampInspectorWidth(px, viewport())
+    shell()?.style.setProperty('--inspector-w', `${width}px`)
+    const wide = width > INSPECTOR_NARROW_PX + 16
     shell()?.classList.toggle('inspector-json-wide', wide)
     panel!.classList.toggle('inspector-json-wide', wide)
     expandBtn.setAttribute('aria-pressed', wide ? 'true' : 'false')
     expandBtn.textContent = wide ? 'Shrink' : 'Expand'
     expandBtn.setAttribute('aria-label', wide ? 'Shrink JSON' : 'Expand JSON')
+    const limits = inspectorWidthLimits(viewport())
+    resize.setAttribute('aria-valuemin', String(limits.min))
+    resize.setAttribute('aria-valuemax', String(limits.max))
+    resize.setAttribute('aria-valuenow', String(width))
   }
 
-  function collapse(): void {
+  function persistWidth(): void {
+    try {
+      doc.defaultView?.sessionStorage.setItem(INSPECTOR_WIDTH_KEY, String(width))
+    } catch {
+      /* private mode or a test document without storage */
+    }
+  }
+
+  function collapseJson(): void {
+    showJson = false
     pre.hidden = true
     pre.textContent = ''
     toggle.setAttribute('aria-expanded', 'false')
     toggle.textContent = `Show ${jsonLabel}`
-    expandBtn.hidden = true
-    setJsonWide(false)
   }
 
   async function payloadText(): Promise<string> {
@@ -99,12 +140,26 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     return typeof value === 'string' ? value : pretty(value)
   }
 
+  async function showJsonBody(token: number): Promise<void> {
+    let text: string
+    try {
+      text = await payloadText()
+    } catch {
+      text = '(no payload)'
+    }
+    if (token !== generation || !showJson) return
+    pre.textContent = text
+    pre.hidden = false
+    toggle.setAttribute('aria-expanded', 'true')
+    toggle.textContent = `Hide ${jsonLabel}`
+  }
+
   function close(): void {
     if (panel!.hidden) return
     generation += 1
+    showJson = false
     const back = invoker
     invoker = null
-    setJsonWide(false)
     setOpen(false)
     options.onClose(back)
   }
@@ -114,10 +169,16 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     invoker = next
     ready = false
     cached = undefined
-    collapse()
+    showJson = true
+    pre.hidden = true
+    pre.textContent = ''
+    toggle.hidden = false
+    toggle.setAttribute('aria-expanded', 'false')
+    toggle.textContent = `Show ${jsonLabel}`
+    expandBtn.hidden = false
     lead.hidden = true
     lead.textContent = ''
-    toggle.hidden = false
+    width = readWidth(doc)
     setOpen(true)
     return generation
   }
@@ -128,6 +189,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     openMessage(scenarioId, message) {
       const token = begin({ scenarioId, messageId: message.id })
       jsonLabel = 'JSON'
+      toggle.textContent = `Show ${jsonLabel}`
       title.textContent = message.label
       meta.innerHTML = `
         <span class="pill">${escapeHtml(message.type)}</span>
@@ -143,6 +205,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
           if (token !== generation) return
           cached = value
           ready = true
+          void showJsonBody(token)
         },
         () => {
           if (token !== generation) return
@@ -150,11 +213,12 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
           ready = true
           lead.hidden = false
           lead.textContent = 'Could not load the payload.'
+          void showJsonBody(token)
         },
       )
     },
     openError(error) {
-      begin(null)
+      const token = begin(null)
       jsonLabel = 'stack'
       title.textContent = error.headline
       meta.innerHTML = `
@@ -166,8 +230,10 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
         pending = Promise.resolve(error.stack)
         cached = error.stack
         ready = true
-        collapse()
+        toggle.textContent = `Show ${jsonLabel}`
+        void showJsonBody(token)
       } else {
+        showJson = false
         toggle.hidden = true
         pending = Promise.resolve(undefined)
         ready = true
@@ -176,28 +242,20 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   }
 
   closeBtn.addEventListener('click', () => close())
-  toggle.addEventListener('click', async () => {
+  toggle.addEventListener('click', () => {
     const expanded = toggle.getAttribute('aria-expanded') === 'true'
     if (expanded) {
-      collapse()
+      collapseJson()
       return
     }
-    const token = generation
-    let text: string
-    try {
-      text = await payloadText()
-    } catch {
-      text = '(no payload)'
-    }
-    if (token !== generation) return
-    pre.textContent = text
-    pre.hidden = false
-    toggle.setAttribute('aria-expanded', 'true')
-    toggle.textContent = `Hide ${jsonLabel}`
-    expandBtn.hidden = false
+    showJson = true
+    void showJsonBody(generation)
   })
   expandBtn.addEventListener('click', () => {
-    setJsonWide(expandBtn.getAttribute('aria-pressed') !== 'true')
+    const wide = expandBtn.getAttribute('aria-pressed') === 'true'
+    const limits = inspectorWidthLimits(viewport())
+    applyWidth(wide ? INSPECTOR_NARROW_PX : limits.expand)
+    persistWidth()
   })
   copy.addEventListener('click', async () => {
     try {
@@ -211,6 +269,13 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     }
   })
 
+  bindResize(doc, resize, {
+    shell,
+    width: () => width,
+    apply: applyWidth,
+    persist: persistWidth,
+  })
+
   if (onEscape) doc.removeEventListener('keydown', onEscape)
   onEscape = (event: KeyboardEvent) => {
     if (event.key !== 'Escape' || panel.hidden) return
@@ -219,6 +284,70 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   }
   doc.addEventListener('keydown', onEscape)
   return controller
+}
+
+function readWidth(doc: Document): number {
+  try {
+    const raw = doc.defaultView?.sessionStorage.getItem(INSPECTOR_WIDTH_KEY)
+    const parsed = raw == null ? NaN : Number(raw)
+    if (!Number.isFinite(parsed)) return INSPECTOR_NARROW_PX
+    return clampInspectorWidth(parsed, doc.defaultView?.innerWidth ?? 1200)
+  } catch {
+    return INSPECTOR_NARROW_PX
+  }
+}
+
+function bindResize(
+  doc: Document,
+  handle: HTMLElement,
+  controls: {
+    shell: () => HTMLElement | null
+    width: () => number
+    apply: (px: number) => void
+    persist: () => void
+  },
+): void {
+  let dragging = false
+  let originX = 0
+  let originW = 0
+
+  function onMove(event: PointerEvent): void {
+    if (!dragging) return
+    controls.apply(originW + (originX - event.clientX))
+  }
+
+  function onUp(): void {
+    if (!dragging) return
+    dragging = false
+    controls.shell()?.classList.remove('inspector-resizing')
+    controls.persist()
+    doc.removeEventListener('pointermove', onMove)
+    doc.removeEventListener('pointerup', onUp)
+  }
+
+  handle.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    dragging = true
+    originX = event.clientX
+    originW = controls.width()
+    controls.shell()?.classList.add('inspector-resizing')
+    doc.addEventListener('pointermove', onMove)
+    doc.addEventListener('pointerup', onUp)
+  })
+
+  handle.addEventListener('keydown', (event) => {
+    const step = event.shiftKey ? 80 : 24
+    let next: number | null = null
+    if (event.key === 'ArrowLeft') next = controls.width() + step
+    else if (event.key === 'ArrowRight') next = controls.width() - step
+    else if (event.key === 'Home') next = INSPECTOR_MIN_PX
+    else if (event.key === 'End') next = inspectorWidthLimits(doc.defaultView?.innerWidth ?? 1200).max
+    if (next == null) return
+    event.preventDefault()
+    controls.apply(next)
+    controls.persist()
+  })
 }
 
 /**

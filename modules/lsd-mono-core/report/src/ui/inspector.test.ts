@@ -3,7 +3,16 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { MessageEvent, Report } from '../types'
 import { sampleReport } from '../data/sample-report'
 import { shellParts } from '../lib/payloads'
-import { bindInspector, delegateMessageOpen, inspectorMarkup } from './inspector'
+import {
+  INSPECTOR_MIN_PX,
+  INSPECTOR_NARROW_PX,
+  INSPECTOR_WIDTH_KEY,
+  bindInspector,
+  clampInspectorWidth,
+  delegateMessageOpen,
+  inspectorMarkup,
+  inspectorWidthLimits,
+} from './inspector'
 
 const bodyMarker = 'arrow-payload-SOCK'
 
@@ -76,6 +85,8 @@ describe('inspector', () => {
 
   beforeEach(() => {
     opened = message()
+    sessionStorage.clear()
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1400 })
     document.body.innerHTML = `
       <div class="shell" id="shell">
         <button type="button" id="other">Still here</button>
@@ -105,13 +116,14 @@ describe('inspector', () => {
     return document.querySelector<HTMLElement>('#inspector')!
   }
 
-  async function expand() {
-    document.querySelector<HTMLButtonElement>('#inspector-json')!.click()
+  async function settle() {
+    await Promise.resolve()
+    await Promise.resolve()
     await Promise.resolve()
     await Promise.resolve()
   }
 
-  it('opens from a click into a non-modal panel with the json collapsed', async () => {
+  it('opens from a click into a non-modal panel and shows json after the payload loads', async () => {
     mount()
     const other = document.querySelector<HTMLButtonElement>('#other')!
     document.querySelector<HTMLButtonElement>('button.msg-open')!.click()
@@ -133,11 +145,16 @@ describe('inspector', () => {
     expect(pre.hidden).toBe(true)
     expect(pre.textContent).not.toContain(bodyMarker)
     expect(document.querySelector('#inspector-copy')!.textContent).toContain('Copy')
-    await expand()
+    await settle()
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(toggle.textContent).toContain('Hide JSON')
     expect(pre.hidden).toBe(false)
     expect(pre.textContent).toContain(bodyMarker)
     expect(pre.textContent).toContain('ord_1')
+    toggle.click()
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(toggle.textContent).toContain('Show JSON')
+    expect(pre.hidden).toBe(true)
   })
 
   it('widens the json column without becoming a modal, and copy still takes the full payload', async () => {
@@ -147,18 +164,21 @@ describe('inspector', () => {
     arrow.click()
     const widen = document.querySelector<HTMLButtonElement>('#inspector-json-expand')!
     const shell = document.querySelector<HTMLElement>('#shell')!
-    expect(widen.hidden).toBe(true)
+    expect(widen.hidden).toBe(false)
     expect(widen.getAttribute('aria-pressed')).toBe('false')
     expect(shell.classList.contains('inspector-json-wide')).toBe(false)
-    await expand()
-    expect(widen.hidden).toBe(false)
+    expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${INSPECTOR_NARROW_PX}px`)
+    await settle()
     expect(panel().getAttribute('aria-modal')).toBeNull()
     widen.click()
+    const expanded = inspectorWidthLimits(window.innerWidth).expand
     expect(widen.getAttribute('aria-pressed')).toBe('true')
     expect(widen.textContent).toBe('Shrink')
     expect(widen.getAttribute('aria-label')).toBe('Shrink JSON')
     expect(shell.classList.contains('inspector-json-wide')).toBe(true)
     expect(panel().classList.contains('inspector-json-wide')).toBe(true)
+    expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${expanded}px`)
+    expect(sessionStorage.getItem(INSPECTOR_WIDTH_KEY)).toBe(String(expanded))
     const pre = document.querySelector<HTMLElement>('#inspector-pre')!
     expect(pre.hidden).toBe(false)
     expect(pre.textContent).toContain(bodyMarker)
@@ -173,8 +193,12 @@ describe('inspector', () => {
     expect(copied).toContain(bodyMarker)
     expect(copied).toContain('ord_1')
     document.querySelector<HTMLButtonElement>('#inspector-json')!.click()
-    expect(widen.hidden).toBe(true)
-    expect(shell.classList.contains('inspector-json-wide')).toBe(false)
+    expect(document.querySelector<HTMLElement>('#inspector-pre')!.hidden).toBe(true)
+    expect(widen.hidden).toBe(false)
+    expect(shell.classList.contains('inspector-json-wide')).toBe(true)
+    widen.click()
+    expect(widen.textContent).toBe('Expand')
+    expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${INSPECTOR_NARROW_PX}px`)
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     expect(panel().hidden).toBe(true)
     expect(document.activeElement).toBe(arrow)
@@ -191,5 +215,35 @@ describe('inspector', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     expect(panel().hidden).toBe(true)
     expect(document.activeElement).toBe(arrow)
+  })
+
+  it('drags the inner edge and keeps that width for the session', () => {
+    mount()
+    document.querySelector<HTMLButtonElement>('button.msg-open')!.click()
+    const handle = document.querySelector<HTMLElement>('#inspector-resize')!
+    const shell = document.querySelector<HTMLElement>('#shell')!
+    expect(handle.getAttribute('aria-orientation')).toBe('vertical')
+    handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 800, bubbles: true, button: 0 }))
+    expect(shell.classList.contains('inspector-resizing')).toBe(true)
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 500, bubbles: true }))
+    const dragged = clampInspectorWidth(INSPECTOR_NARROW_PX + 300, window.innerWidth)
+    expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${dragged}px`)
+    expect(handle.getAttribute('aria-valuenow')).toBe(String(dragged))
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 500, bubbles: true }))
+    expect(shell.classList.contains('inspector-resizing')).toBe(false)
+    expect(sessionStorage.getItem(INSPECTOR_WIDTH_KEY)).toBe(String(dragged))
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true, button: 0 }))
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 4000, bubbles: true }))
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+    expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${INSPECTOR_MIN_PX}px`)
+
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }))
+    expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${inspectorWidthLimits(window.innerWidth).max}px`)
+    expect(Number(shell.style.getPropertyValue('--inspector-w').replace('px', ''))).toBeLessThanOrEqual(window.innerWidth * 0.9)
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    document.querySelector<HTMLButtonElement>('button.msg-open')!.click()
+    expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${inspectorWidthLimits(window.innerWidth).max}px`)
   })
 })
