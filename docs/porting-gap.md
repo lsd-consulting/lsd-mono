@@ -2,7 +2,7 @@
 
 **Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
-**Inspected (local tree, slices through sections + virtualisation, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
+**Inspected (local tree, slices through JUnit structured failures, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
 
 Legacy is **inspiration and migration API only** — not the product path. Generating PlantUML as the product renderer is explicitly **out**.
 
@@ -36,13 +36,13 @@ These are **implemented**, not stubs, unless noted.
 | Minimal listing HTML + `report.json` / `*-report.json` | `ReportWriter.writeReport` |
 | report-next chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light theme, keyboard (`/ j k Enter d ? Esc`), message `<dialog>` + copy | `report-next/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
 | Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report-next/src/lib/sequence-diagram.ts` |
-| JUnit Jupiter 6 extension + `@LsdPostTestProcessing` | `integrations/lsd-mono-junit-jupiter/.../LsdExtension.kt` (smoke test only) |
-| Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — used by JUnit failure descriptions |
+| JUnit Jupiter 6 extension + `@LsdPostTestProcessing` | `LsdExtension.kt` — success / fail / disabled / aborted / nested / post-processing; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
+| Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — **no longer used by the JUnit extension**. Left as a migration shim only. |
 | Properties: output dir, deterministic ids, hide stacktrace (+ legacy key fallbacks) | `properties/LsdProperties.kt` |
 
 **Stubs / thin surfaces (do not treat as done):**
 
-- `completeComponentsReport` → placeholder HTML only (`ReportWriter.writeComponentsStub`).
+- `completeComponentsReport` → placeholder HTML only (`ReportWriter.writeComponentsStub`). The JUnit extension calls it only when `lsd.mono.components.enabled=true` (default **false**). Still not a component graph.
 - Captured metrics are a **simple** message count + summed `durationMs`, not legacy bottleneck-tree metrics (`com.lsd.core.report.model.Metrics`).
 - LOST / BI_DIRECTIONAL are in the **domain + JSON**, but the SVG renderer does **not** yet give them distinct arrow semantics (no lost-X / bi-arrow styling in `sequence-diagram.ts`).
 - Module README still says injection is deferred; code + `CaptureToJsonTest` show injection **works** — README is stale.
@@ -172,10 +172,10 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | Message labels are PlantUML links to `#id` overlays; `DataHolder` list feeds popup content; `PopupContent.popupHyperlink` for arbitrary HTML (e.g. stacktraces). `javascript` partial loads `custom.js` for scroll/open helpers. |
-| **Mono today** | Message `data` opens report-next `<dialog>` (good). JUnit still embeds **legacy overlay HTML** in scenario `description` via `PopupContent` — report-next renders description as HTML but **does not** ship overlay CSS/JS equivalent to legacy `custom.js`. Stacktrace “popups” may degrade to raw links. |
-| **Greenfield** | Prefer structured failure info in JSON (e.g. `descriptionHtml` + `attachments[]` or `error: { message, stack }`) and render with report-next dialogs. Keep `PopupContent` only as a migration shim or drop once JUnit emits structured fields. |
-| **Priority** | **P0** |
-| **Test** | Golden JSON with message `data` + failure attachment; UI browser: dialog opens and copy works; extension unit: failed test produces structured error fields. |
+| **Mono today** | Message `data` opens report-next `<dialog>` (good). **JUnit failures landed 2026-10-03** as scenario `error: { headline, message, stack }` — plain-text `description`, no `:target` overlay. report-next shows the message as escaped text and opens the stack in the existing dialog (`Show stack trace`). `PopupContent` remains unused by the extension. |
+| **Still open** | Pretty-print / size limits for message payloads (P1). Browser check that the dialog copy button works. |
+| **Priority** | **P1** for payload polish. The JUnit structured-failure slice is **done**. |
+| **Test** | `LsdExtensionOutcomesTest` (TempDir, deterministic ids) asserts failed/aborted JSON has `headline` / `message` / `stack` and no `overlay`. `scenario-summary.test.ts` locks escaped message HTML and that the stack is not inlined. |
 
 #### P1 — Facts panel parity
 
@@ -265,15 +265,14 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### 3.5 Integrations beyond JUnit smoke
 
-#### P0 — JUnit extension depth + structured failures
+#### P0 — JUnit extension depth + structured failures — **landed 2026-10-03**
 
 | | |
 |--|--|
-| **Legacy** | Companion junit module (outside this submodule tree) drives capture; core provides context + popups. Mono extension already completes scenarios, writes report/index, calls components stub, supports `@LsdPostTestProcessing`. |
-| **Gap** | Only smoke test (`LsdExtensionTest` one “ping”). Nested class handling exists but lightly tested. Failure descriptions use overlay HTML poorly suited to report-next. Components report always stubbed after every class. |
-| **Greenfield** | Expand tests (success / fail / disabled / aborted / nested / post-processing capture). Emit structured error into scenario JSON. Make combined component report opt-in until real renderer exists. |
-| **Priority** | **P0** |
-| **Test** | Extension unit/integration tests with TempDir asserting JSON status + error fields. |
+| **Legacy** | Companion junit module drives capture; core provides context + popups. |
+| **Shipped** | `ScenarioError` / scenario JSON `error` (`headline`, `message`, `stack`). Descriptions are plain text (`Test passed` / `Test failed` / `Test aborted` / `Test disabled: …`). Disabled maps to `warn` with no `error` object. Aborted maps to `warn` **with** `error`. report-next renders the message as text and the stack via the message dialog. Combined components stub is opt-in (`lsd.mono.components.enabled`, default false) — no component graph. |
+| **Still open** | Hide-stacktrace covered by the property but not a dedicated test. No browser click-through of “Show stack trace”. |
+| **Test** | `LsdExtensionOutcomesTest`: success, failed, disabled, aborted, nested class, `@LsdPostTestProcessing` captures `post-processing`, components file absent unless enabled. |
 
 #### P1 — Listener / interceptor migration path
 
@@ -310,7 +309,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
    Slice 2 landed 2026-10-03: `kind: "section"` (`LsdContext.section` / DSL `section`), jump list, one diagram, activations kept across sections, `virtualRowRange` + sticky participant header. Zoom/pan stays P1. Colour-blind cues are tracked next to the theme note and were not part of this slice.
 
 3. **P0 — JUnit structured failures + richer extension tests**  
-   Make the first integration trustworthy; stop relying on legacy overlay HTML in descriptions.
+   Slice 3 landed 2026-10-03: scenario `error` (`headline`, `message`, `stack`), plain-text descriptions, extension outcomes test (success / fail / disabled / aborted / nested / post-processing), components stub opt-in via `lsd.mono.components.enabled` (default off). No component graph.
 
 4. **P1 — Remaining sequence event kinds** (note left/right, delay, spacer, short arrows) + LOST/BI SVG semantics.
 
@@ -337,8 +336,8 @@ Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied
 
 ### Unit (Kotlin + TS)
 
-- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder; metrics tree (port ideas from `MetricsTest`); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`).
-- **TypeScript:** `report-next/src/lib/layout.test.ts` locks `virtualRowRange` (scrollTop + viewport, overscan, sticky header inset) and activation spans across a section. Run `npm test` in `report-next` (vitest). Marker choice for message types is still open.
+- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder; metrics tree (port ideas from `MetricsTest`); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent.
+- **TypeScript:** `report-next/src/lib/layout.test.ts` locks `virtualRowRange` (scrollTop + viewport, overscan, sticky header inset) and activation spans across a section. `scenario-summary.test.ts` locks escaped failure text (no overlay, stack not inlined). Run `npm test` in `report-next` (vitest). Marker choice for message types is still open.
 
 ### Browser / UI (later, selective)
 

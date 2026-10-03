@@ -29,6 +29,12 @@ data class ReportJson(
     val scenarios: List<ScenarioJson>,
 )
 
+data class ScenarioErrorJson(
+    val headline: String,
+    val message: String,
+    val stack: String? = null,
+)
+
 data class ScenarioJson(
     val id: String,
     val title: String,
@@ -38,6 +44,8 @@ data class ScenarioJson(
     val metrics: List<MetricJson> = emptyList(),
     val participants: List<ParticipantJson> = emptyList(),
     val events: List<EventJson> = emptyList(),
+    /** Present for failed/aborted scenarios. Omitted from JSON when null. */
+    val error: ScenarioErrorJson? = null,
 )
 
 data class FactJson(
@@ -160,16 +168,26 @@ fun ReportJson.toJson(): String =
 
 private fun ScenarioJson.toJsonValue(): JsonValue =
     obj(
-        listOf(
-            "id" to JsonString(id),
-            "title" to JsonString(title),
-            "status" to JsonString(status),
-            "description" to JsonString(description),
-            "facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }),
-            "metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }),
-            "participants" to JsonArray(participants.map { it.toJsonValue() }),
-            "events" to JsonArray(events.map { it.toJsonValue() }),
-        ),
+        buildList {
+            add("id" to JsonString(id))
+            add("title" to JsonString(title))
+            add("status" to JsonString(status))
+            add("description" to JsonString(description))
+            if (error != null) add("error" to error.toJsonValue())
+            add("facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
+            add("metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
+            add("participants" to JsonArray(participants.map { it.toJsonValue() }))
+            add("events" to JsonArray(events.map { it.toJsonValue() }))
+        },
+    )
+
+private fun ScenarioErrorJson.toJsonValue(): JsonValue =
+    obj(
+        buildList {
+            add("headline" to JsonString(headline))
+            add("message" to JsonString(message))
+            if (stack != null) add("stack" to JsonString(stack))
+        },
     )
 
 private fun ParticipantJson.toJsonValue(): JsonValue =

@@ -1,10 +1,9 @@
 package io.lsdconsulting.lsd.mono.junitjupiter
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.escapeHtml
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
-import io.lsdconsulting.lsd.mono.core.report.PopupContent.popupHyperlink
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -22,40 +21,56 @@ import java.util.regex.Pattern
  *
  * Uses first-party [LsdContext] from `lsd-mono-core` (greenfield), not Maven lsd-core.
  *
+ * Failures and aborts are stored as [ScenarioError] (headline, message, stack) on the
+ * scenario JSON. Descriptions stay plain text — no legacy `:target` overlay markup.
+ *
  * This extension does not capture interaction events by itself. Call
  * [LsdContext.capture] (or [LsdContext.message]) inside the test, and optionally
  * [LsdPostTestProcessing] for late capture before the scenario is completed.
+ *
+ * The combined components stub is written only when `lsd.mono.components.enabled=true`.
  */
 class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
 
     private val lsdContext: LsdContext = LsdContext.instance
-    private val idGenerator = lsdContext.idGenerator
-    private val hideStacktrace = LsdProperties.hideStacktrace()
 
     override fun testSuccessful(context: ExtensionContext) {
         lsdContext.completeScenario(
             prefixParentDisplayName(context),
-            """<p><h4 class="success">&#10003; Test Passed</h4></p>""",
+            "Test passed",
             Status.SUCCESS,
         )
     }
 
     override fun testDisabled(context: ExtensionContext, reason: Optional<String>) {
+        val description =
+            reason
+                .filter { it.isNotBlank() }
+                .map { "Test disabled: $it" }
+                .orElse("Test disabled")
         lsdContext.completeScenario(
             prefixParentDisplayName(context),
-            """<p><h4 class="warn">Test Disabled</h4></p>""",
+            description,
             Status.FAILURE,
         )
     }
 
     override fun testAborted(context: ExtensionContext, cause: Throwable?) {
-        val description = createErrorDescription(cause, "Test Aborted!")
-        lsdContext.completeScenario(prefixParentDisplayName(context), description, Status.FAILURE)
+        lsdContext.completeScenario(
+            prefixParentDisplayName(context),
+            "Test aborted",
+            Status.FAILURE,
+            structuredError(cause, "Test aborted"),
+        )
     }
 
     override fun testFailed(context: ExtensionContext, cause: Throwable?) {
-        val description = createErrorDescription(cause, "&#10060; Failed!")
-        lsdContext.completeScenario(prefixParentDisplayName(context), description, Status.ERROR)
+        lsdContext.completeScenario(
+            prefixParentDisplayName(context),
+            "Test failed",
+            Status.ERROR,
+            structuredError(cause, "Failed"),
+        )
     }
 
     override fun afterTestExecution(context: ExtensionContext) {
@@ -68,7 +83,9 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
         }
         lsdContext.completeReport(context.displayName)
         lsdContext.createIndex()
-        lsdContext.completeComponentsReport("Combined Component Diagram")
+        if (LsdProperties.componentsReportEnabled()) {
+            lsdContext.completeComponentsReport("Combined Component Diagram")
+        }
     }
 
     private fun isNested(context: ExtensionContext): Boolean =
@@ -87,18 +104,12 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
         return ""
     }
 
-    private fun createErrorDescription(cause: Throwable?, header: String): String {
-        val contentId = idGenerator.next()
-        val exceptionMessage = cause?.message.orEmpty()
-        return "<p>" +
-            """<h4 class="error">$header</h4>""" +
-            popupHyperlink(
-                contentId,
-                "Stacktrace",
-                "<pre>${exceptionMessage.escapeHtml()}</pre>",
-                "<pre><code>${readStackTrace(cause)}</code></pre>",
-            ) + "</p>"
-    }
+    private fun structuredError(cause: Throwable?, headline: String): ScenarioError =
+        ScenarioError(
+            headline = headline,
+            message = cause?.message.orEmpty(),
+            stack = readStackTrace(cause),
+        )
 
     private fun additionalProcessing(instance: Any, annotation: Class<out Annotation?>) {
         var klass: Class<*> = instance.javaClass
@@ -111,7 +122,7 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
     }
 
     private fun readStackTrace(cause: Throwable?): String {
-        if (cause == null || hideStacktrace) {
+        if (cause == null || LsdProperties.hideStacktrace()) {
             return "[Displaying the stacktrace was disabled or no cause was provided]"
         }
         return ExceptionUtils.readStackTrace(cause)

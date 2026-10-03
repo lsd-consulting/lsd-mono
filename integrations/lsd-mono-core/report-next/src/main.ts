@@ -2,6 +2,7 @@ import './styles/app.css'
 import './styles/diagram.css'
 import { sampleReport } from './data/sample-report'
 import type { MessageEvent, Report, Scenario, Status } from './types'
+import { scenarioDescriptionHtml, scenarioHaystack } from './ui/scenario-summary'
 
 declare global {
   interface Window {
@@ -48,7 +49,7 @@ function filtered(): Scenario[] {
   return report.scenarios.filter((s) => {
     if (!state.status[s.status]) return false
     if (!q) return true
-    const hay = `${s.title} ${s.description} ${s.facts.map((f) => `${f.key} ${f.value}`).join(' ')}`.toLowerCase()
+    const hay = scenarioHaystack(s).toLowerCase()
     return hay.includes(q)
   })
 }
@@ -173,6 +174,12 @@ function bindChrome(): void {
     if (jump) {
       const scroll = jump.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
       if (scroll) scroll.scrollTop = Number(jump.dataset.jumpY)
+      return
+    }
+    const errBtn = target.closest<HTMLButtonElement>('[data-show-error]')
+    if (errBtn) {
+      const scenario = report.scenarios.find((s) => s.id === errBtn.dataset.showError)
+      if (scenario) openError(scenario)
       return
     }
     const hit = target.closest<SVGGElement>('.message.has-data')
@@ -316,7 +323,7 @@ function scenarioHtml(s: Scenario, index: number): string {
       <div class="cards">
         <section class="card">
           <h3>Description</h3>
-          <div>${s.description}</div>
+          ${scenarioDescriptionHtml(s)}
         </section>
         <section class="card">
           <h3>Key facts</h3>
@@ -340,6 +347,18 @@ function scenarioHtml(s: Scenario, index: number): string {
       </section>
     </div>
   </article>`
+}
+
+function openError(scenario: Scenario): void {
+  const err = scenario.error
+  if (!err) return
+  const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
+  document.querySelector('#dialog-title')!.textContent = err.headline
+  document.querySelector('#dialog-meta')!.innerHTML = `
+    <span class="pill">${escapeHtml(scenario.status)}</span>
+    <span class="pill">${escapeHtml(err.headline)}</span>`
+  document.querySelector('#dialog-pre')!.textContent = [err.message, err.stack].filter(Boolean).join('\n\n')
+  if (!dialog.open) dialog.showModal()
 }
 
 function openMessage(scenario: Scenario, msg: MessageEvent): void {

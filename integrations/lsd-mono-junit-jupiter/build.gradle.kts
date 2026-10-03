@@ -16,10 +16,14 @@ dependencies {
     api(libs.junit.jupiter.api)
 
     testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation(libs.junit.platform.launcher)
 }
 
 tasks.test {
+    useJUnitPlatform {
+        // Engine fixtures are launched explicitly from LsdExtensionOutcomesTest.
+        excludeTags("lsd-fixture")
+    }
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
     // Legacy key still honoured by mono LsdProperties fallbacks
     systemProperty("lsd.core.report.outputDir", "build/reports/lsd-test")

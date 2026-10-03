@@ -172,7 +172,8 @@ object ReportWriter {
                   <h2>${s.title.escapeHtml()}
                     <span class="badge">${s.status.escapeHtml()}</span>
                   </h2>
-                  <div class="description">${s.description}</div>
+                  <div class="description">${s.description.escapeHtml()}</div>
+                  ${errorBlock(s)}
                   <h3>Facts</h3>
                   $facts
                   <h3>Sequence (${s.events.size})</h3>
@@ -221,6 +222,17 @@ object ReportWriter {
             </body>
             </html>
             """.trimIndent()
+    }
+
+    private fun errorBlock(scenario: ScenarioJson): String {
+        val error = scenario.error ?: return ""
+        val stack =
+            error.stack?.let { "<pre>${it.escapeHtml()}</pre>" }.orEmpty()
+        return """
+            <h3>${error.headline.escapeHtml()}</h3>
+            <p>${error.message.escapeHtml()}</p>
+            $stack
+        """.trimIndent()
     }
 
     private fun eventList(scenario: ScenarioJson): String {

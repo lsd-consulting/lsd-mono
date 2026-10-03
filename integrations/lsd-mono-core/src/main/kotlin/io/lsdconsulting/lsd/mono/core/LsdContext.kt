@@ -11,6 +11,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Note
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantIds
 import io.lsdconsulting.lsd.mono.core.domain.Scenario
+import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
@@ -24,6 +25,7 @@ import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
 import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
+import io.lsdconsulting.lsd.mono.core.model.ScenarioErrorJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
@@ -49,8 +51,12 @@ import java.time.ZoneId
  */
 open class LsdContext {
 
-    val idGenerator = IdGenerator(LsdProperties.deterministicIds())
-    val outputDirectory: File = File(LsdProperties.outputDirectory())
+    var idGenerator = IdGenerator(LsdProperties.deterministicIds())
+        private set
+
+    /** Re-read on each access so tests can point a long-lived instance at a TempDir. */
+    val outputDirectory: File
+        get() = File(LsdProperties.outputDirectory())
 
     private val scenarios: MutableList<Scenario> = ArrayList()
     private val reportFiles: MutableList<ReportFile> = ArrayList()
@@ -155,11 +161,16 @@ open class LsdContext {
         capture(Lifeline(id = idGenerator.next(), participantId = participant, action = LifelineAction.DEACTIVATE))
     }
 
+    /**
+     * @param error structured failure (message + stack). Prefer this over HTML overlay
+     * markup in [description].
+     */
     @JvmOverloads
     fun completeScenario(
         title: String,
         description: String? = "",
         status: Status = Status.SUCCESS,
+        error: ScenarioError? = null,
     ) {
         val events = currentEvents.toList()
         scenarios.add(
@@ -170,6 +181,7 @@ open class LsdContext {
                 facts = currentFacts.toList(),
                 participants = participantsFor(events),
                 events = events,
+                error = error,
             ),
         )
         currentFacts.clear()
@@ -203,7 +215,7 @@ open class LsdContext {
     fun createIndex(): Path = ReportWriter.writeIndex(reportFiles.toList(), outputDirectory)
 
     fun clear() {
-        idGenerator.reset()
+        idGenerator = IdGenerator(LsdProperties.deterministicIds())
         scenarios.clear()
         reportFiles.clear()
         participants.clear()
@@ -294,6 +306,7 @@ open class LsdContext {
             status = status.toReportStatus(),
             description = description,
             facts = facts.map { FactJson(it.key, it.value) },
+            error = error?.let { ScenarioErrorJson(it.headline, it.message, it.stack) },
             metrics = metrics,
             participants =
                 participants.map {

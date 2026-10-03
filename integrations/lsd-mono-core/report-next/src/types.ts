@@ -76,11 +76,20 @@ export interface Metric {
   value: string
 }
 
+export interface ScenarioError {
+  headline: string
+  message: string
+  /** Omitted when the producer hid the stacktrace. Shown in the message dialog, not inline HTML. */
+  stack?: string
+}
+
 export interface Scenario {
   id: string
   title: string
   status: Status
   description: string
+  /** Structured failure. Prefer this over legacy overlay HTML in description. */
+  error?: ScenarioError
   facts: Fact[]
   metrics: Metric[]
   participants: Participant[]
