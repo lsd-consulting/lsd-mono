@@ -42,6 +42,17 @@ import {
   zoomLabel,
   type Rect,
 } from './diagram-view'
+import {
+  focusScrollTop,
+  focusableNeighbors,
+  focusablePlaces,
+  messageHitBox,
+  messagePlaces,
+  replacementFocus,
+  tabindexFor,
+  zoomScrollBehavior,
+  type MessagePlace,
+} from './diagram-a11y'
 
 export interface MountedDiagram {
   scenario: Scenario
@@ -68,11 +79,16 @@ export interface DiagramView {
   zoom: number
   hidden: Set<string>
   query: string
+  /** Roving tabindex target. Null means the first focusable message. */
+  activeMessageId: string | null
 }
 
 export interface RowPaint {
   query: string
   hiddenIds: ReadonlySet<string>
+  places?: MessagePlace[]
+  activeMessageId?: string | null
+  neighbors?: Map<string, { prevArrowY?: number; nextArrowY?: number }>
 }
 
 const views = new Map<string, DiagramView>()
@@ -81,7 +97,7 @@ const EMPTY_PAINT: RowPaint = { query: '', hiddenIds: new Set() }
 export function diagramView(scenarioId: string): DiagramView {
   let view = views.get(scenarioId)
   if (!view) {
-    view = { zoom: DEFAULT_ZOOM, hidden: new Set(), query: '' }
+    view = { zoom: DEFAULT_ZOOM, hidden: new Set(), query: '', activeMessageId: null }
     views.set(scenarioId, view)
   }
   return view
@@ -272,6 +288,8 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
   const view = diagramView(scenario.id)
   const width = logicalWidth(scenario, view.hidden)
   const zoom = view.zoom
+  const places = messagePlaces(scenario.events, view.hidden)
+  const diagramTab = focusablePlaces(places).length ? -1 : 0
   const sections = diagram.rows.filter((row) => row.event.kind === 'section')
   const jump = sections.length
     ? `<nav class="section-jump" aria-label="Diagram sections">${sections
@@ -285,7 +303,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
     <div class="seq-diagram">
       ${jump}
       ${toolbarHtml(scenario, view)}
-      <div class="seq-scroll" data-scenario-id="${escapeXml(scenario.id)}" tabindex="0" aria-label="Sequence diagram for ${escapeXml(scenario.title)}">
+      <div class="seq-scroll" data-scenario-id="${escapeXml(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeXml(scenario.title)}">
         <div class="seq-sticky-header" style="width:${width * zoom}px">${headerSvg(scenario, width, view.hidden, zoom)}</div>
         <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
           <div class="seq-window"></div>
@@ -330,7 +348,37 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   const viewTop = slice.length ? sliceViewTop(offset) : 0
   windowEl.style.transform = `translateY(${viewTop * zoom}px)`
   const width = logicalWidth(diagram.scenario, view.hidden)
+  scrollport.style.setProperty('--seq-header-h', `${cssHeader}px`)
+  const prior = document.activeElement
+  const priorBtn = prior instanceof Element ? prior.closest('button.msg-open') : null
+  const hadFocus = Boolean(priorBtn && scrollport.contains(priorBtn) && !movingFocus)
+  const priorId = priorBtn?.getAttribute('data-message-id') ?? null
+  const places = messagePlaces(diagram.scenario.events, view.hidden)
+  const painted = paintedMessageIds(slice, view.hidden)
+  if (hadFocus && priorId) {
+    const current = view.activeMessageId ?? priorId
+    if (!painted.has(current)) {
+      const next = replacementFocus(current, places, painted)
+      if (next && painted.has(next)) view.activeMessageId = next
+    }
+  }
+  const stops = focusablePlaces(places)
+  const tabTarget =
+    view.activeMessageId && stops.some((place) => place.id === view.activeMessageId)
+      ? view.activeMessageId
+      : (stops[0]?.id ?? null)
+  // One tab stop: the active arrow when it is painted, otherwise the scrollport.
+  scrollport.tabIndex = tabTarget && painted.has(tabTarget) ? -1 : 0
   windowEl.innerHTML = slice.length ? windowSvg(diagram, slice, view, width, viewTop) : ''
+  if (hadFocus) {
+    const target = view.activeMessageId ?? priorId
+    if (target) {
+      const btn = windowEl.querySelector<HTMLButtonElement>(
+        `button.msg-open[data-message-id="${cssEscape(target)}"]`,
+      )
+      btn?.focus({ preventScroll: true })
+    }
+  }
 }
 
 /** SVG viewBox top. Includes the label drawn above the first painted row. */
@@ -381,7 +429,12 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   }
 }
 
-function commitZoom(scrollport: HTMLElement, next: number, pin?: { top: number; left: number }): void {
+function commitZoom(
+  scrollport: HTMLElement,
+  next: number,
+  pin?: { top: number; left: number },
+  motion: ScrollBehavior = 'auto',
+): void {
   const id = scrollport.dataset.scenarioId
   if (!id) return
   const view = diagramView(id)
@@ -389,13 +442,9 @@ function commitZoom(scrollport: HTMLElement, next: number, pin?: { top: number; 
   const ratio = next / prev
   view.zoom = next
   applyDiagramFrame(scrollport)
-  if (pin) {
-    scrollport.scrollTop = pin.top
-    scrollport.scrollLeft = pin.left
-  } else {
-    scrollport.scrollTop *= ratio
-    scrollport.scrollLeft *= ratio
-  }
+  const top = pin ? pin.top : scrollport.scrollTop * ratio
+  const left = pin ? pin.left : scrollport.scrollLeft * ratio
+  scrollport.scrollTo({ top, left, behavior: motion })
   syncDiagramWindow(scrollport)
 }
 
@@ -426,13 +475,18 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
       viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
       mustInclude: topMessageLabelRect(diagram, view.hidden),
     })
-    commitZoom(scrollport, fitted.scale, {
-      top: Math.max(0, fitted.originY) * fitted.scale,
-      left: Math.max(0, fitted.originX) * fitted.scale,
-    })
+    commitZoom(
+      scrollport,
+      fitted.scale,
+      {
+        top: Math.max(0, fitted.originY) * fitted.scale,
+        left: Math.max(0, fitted.originX) * fitted.scale,
+      },
+      zoomScrollBehavior(prefersReducedMotion()),
+    )
     return
   } else return
-  commitZoom(scrollport, next)
+  commitZoom(scrollport, next, undefined, zoomScrollBehavior(prefersReducedMotion()))
 }
 
 /** Label box of the uppermost message still drawn. Fit scrolls this into view. */
@@ -470,6 +524,10 @@ function onToggleParticipant(scrollport: HTMLElement, participantId: string): vo
   const view = diagramView(id)
   if (view.hidden.has(participantId)) view.hidden.delete(participantId)
   else view.hidden.add(participantId)
+  const places = messagePlaces(mounted.get(id)?.scenario.events ?? [], view.hidden)
+  if (view.activeMessageId && !focusablePlaces(places).some((place) => place.id === view.activeMessageId)) {
+    view.activeMessageId = null
+  }
   applyDiagramFrame(scrollport)
   syncDiagramWindow(scrollport)
 }
@@ -590,7 +648,13 @@ function windowSvg(
     })
     .join('')
 
-  const paint: RowPaint = { query: view.query, hiddenIds: view.hidden }
+  const paint: RowPaint = {
+    query: view.query,
+    hiddenIds: view.hidden,
+    places: messagePlaces(scenario.events, view.hidden),
+    activeMessageId: view.activeMessageId,
+    neighbors: focusableNeighbors(rows, view.hidden),
+  }
   const buttons: string[] = []
   const body = slice
     .map((row) => renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth, paint, buttons, viewTop, view.zoom))
@@ -719,6 +783,7 @@ function renderRow(
     buttons,
     viewTop,
     zoom,
+    paint,
   )
 }
 
@@ -740,6 +805,7 @@ function renderMessageRow(
   buttons: string[],
   viewTop: number,
   zoom: number,
+  paint: RowPaint,
 ): string {
   const spec = messageArrowSpec(msg.type)
   const match = rowMatchesQuery(msg, query)
@@ -762,7 +828,7 @@ function renderMessageRow(
   const hitClass = match ? ' search-hit' : ''
   const hitAttr = match ? ' data-search-hit="match"' : ''
   const typeAttr = `data-msg-type="${escapeXml(msg.type)}"`
-  if (hasData) buttons.push(messageOpenButton(msg, y, width, index, viewTop, zoom))
+  if (hasData) buttons.push(messageOpenButton(msg, y, width, index, viewTop, zoom, paint))
 
   if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
     const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
@@ -815,15 +881,77 @@ function messageOpenButton(
   index: Map<string, number>,
   viewTop: number,
   zoom: number,
+  paint: RowPaint,
 ): string {
   const ends = messageEndpoints(msg, index, width)
   const label = messageLabelRect({ arrowY: y, x1: ends.x1, x2: ends.x2 })
-  const scale = zoom > 0 && Number.isFinite(zoom) ? zoom : 1
-  const left = label.x * scale
-  const top = (label.y - viewTop) * scale
-  const w = Math.max(label.width * scale, 28)
-  const h = (label.height + 12) * scale
-  return `<button type="button" class="msg-open" data-message-id="${escapeXml(msg.id)}" aria-label="Open ${escapeXml(msg.label)}" aria-haspopup="dialog" style="left:${left}px;top:${top}px;width:${w}px;height:${h}px"></button>`
+  const neighbor = paint.neighbors?.get(msg.id)
+  const box = messageHitBox({
+    label,
+    zoom,
+    viewTop,
+    prevArrowY: neighbor?.prevArrowY,
+    nextArrowY: neighbor?.nextArrowY,
+  })
+  const places = paint.places ?? [{ id: msg.id, posinset: 1, setsize: 1, focusable: true }]
+  const place = places.find((item) => item.id === msg.id) ?? places[0]
+  const tab = tabindexFor(msg.id, paint.activeMessageId ?? null, places)
+  return `<button type="button" class="msg-open" data-message-id="${escapeXml(msg.id)}" aria-label="Open ${escapeXml(msg.label)}" aria-haspopup="dialog" aria-setsize="${place.setsize}" aria-posinset="${place.posinset}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button>`
+}
+
+let movingFocus = false
+
+function prefersReducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+function cssEscape(value: string): string {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(value)
+  return value.replace(/([^a-zA-Z0-9_-])/g, '\\$1')
+}
+
+function paintedMessageIds(slice: LayoutRow[], hiddenIds: ReadonlySet<string>): Set<string> {
+  const ids = new Set<string>()
+  for (const row of slice) {
+    const event = row.event
+    if (event.kind === 'message' && event.data != null && !eventHiddenByColumns(event, hiddenIds)) ids.add(event.id)
+  }
+  return ids
+}
+
+/** Scroll the arrow into view if needed, then focus its button. One tab stop. */
+export function focusDiagramMessage(scrollport: HTMLElement, messageId: string): void {
+  const scenarioId = scrollport.dataset.scenarioId
+  if (!scenarioId) return
+  const view = diagramView(scenarioId)
+  view.activeMessageId = messageId
+  const diagram = mounted.get(scenarioId)
+  const row = diagram?.rows.find((item) => item.event.kind === 'message' && item.event.id === messageId)
+  movingFocus = true
+  try {
+    if (row) {
+      const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
+      const cssHeader = header?.offsetHeight || HEADER_BLOCK_H * view.zoom
+      const unscaled = unscaledViewport({
+        scrollTop: scrollport.scrollTop,
+        viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
+        headerHeight: cssHeader,
+        zoom: view.zoom,
+      })
+      const labelY = row.y - MESSAGE_LABEL_RISE
+      const viewBottom = unscaled.scrollTop + Math.max(0, unscaled.viewportHeight - unscaled.headerHeight)
+      if (labelY < unscaled.scrollTop || row.y > viewBottom) {
+        scrollport.scrollTop = focusScrollTop(row.y, view.zoom)
+      }
+    }
+    syncDiagramWindow(scrollport)
+  } finally {
+    movingFocus = false
+  }
+  const btn = scrollport.querySelector<HTMLButtonElement>(
+    `button.msg-open[data-message-id="${cssEscape(messageId)}"]`,
+  )
+  btn?.focus({ preventScroll: true })
 }
 
 /** Y of a message row in the mounted diagram, for insight "show" scrolling. */

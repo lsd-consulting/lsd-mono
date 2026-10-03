@@ -124,6 +124,11 @@ describe('renderRowSvg fragments', () => {
     expect(html).toContain('aria-label="Open place order"')
     expect(html).toContain('data-message-id="m-data"')
     expect(html).toContain('aria-haspopup="dialog"')
+    expect(html).toContain('aria-setsize="1"')
+    expect(html).toContain('aria-posinset="1"')
+    expect(html).toContain('tabindex="0"')
+    expect(html).toContain('stroke-width="2"')
+    expect(html).not.toContain('stroke-width="4"')
     expect(html).not.toContain('role="button"')
   })
 

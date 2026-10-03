@@ -128,15 +128,15 @@ Each new module gets a contract test that the events it captures land in `Report
 
 ## 5. Diagram UX
 
-Open. Do these in order. They do not wait on the README or the Gradle Vite task. None of this is done until it is in `report-next` and covered by a test. Do not start 5.3 or 5.4 until 5.1, 5.2, and 5.5 are in.
+Items 1, 2, 5, and 6 are in `report-next`. Still open, in order: 3, then 4. Item 7 waits until the inspector is non-modal. They do not wait on the README or the Gradle Vite task.
 
-1. **Keyboard.** One tab stop into the diagram, then Up and Down move between messages and Enter opens the same inspector as a click. Do not put every arrow in the tab order. When virtualisation recycles a focused row, move focus to the logical next message. On close, return focus to the invoking arrow, scrolling it back if it was unmounted.
-2. **Hit area.** An invisible 24 CSS-pixel target on each arrow. Do not draw a fatter arrow. Find stays an equivalent path that opens the same inspector.
-3. **Inspector.** A side panel or the Popover API, not a modal that covers the diagram. JSON collapsed by default, with copy. Load the payload when the inspector opens. Keep method, path, and status on the arrow. Do not ship multi-megabyte payloads in the first paint.
-4. **Place.** A minimap tied to the zoomed window, and the open message in the URL so a report can be shared at that arrow.
-5. **Position.** `aria-posinset` and `aria-setsize` are the real message index and the full message count, not the painted row count. `scroll-padding` so a focused row clears the sticky participant header (same class of bug as the Fit top-label clip).
-6. **Reduced motion.** Zoom and Fit jump instead of animating when the user prefers reduced motion. Diagram zoom is not a substitute for browser text resize. Do not reflow the sequence into one column.
-7. **Tooling, later.** `@axe-core/playwright` on the existing headless Chromium harness, after a scroll and after the inspector opens. Playwright screenshot checks for the three themes and for Fit.
+1. **Keyboard.** Landed. One tab stop into the diagram, then Up and Down move between messages and Enter opens the same inspector as a click. Not every arrow is in the tab order. When virtualisation recycles a focused row, focus moves to the logical next message. On close, focus returns to the invoking arrow, scrolling it back if it was unmounted.
+2. **Hit area.** Landed. An invisible 24 CSS-pixel target on each arrow. The stroke is not fatter. Find (Enter on a match) opens the same inspector.
+3. **Inspector.** Still open. A side panel or the Popover API, not a modal that covers the diagram. JSON collapsed by default, with copy. Load the payload when the inspector opens. Keep method, path, and status on the arrow. Do not ship multi-megabyte payloads in the first paint.
+4. **Place.** Still open. A minimap tied to the zoomed window, and the open message in the URL so a report can be shared at that arrow.
+5. **Position.** Landed. `aria-posinset` and `aria-setsize` are the real message index and the full message count, not the painted row count. `scroll-padding` so a focused row clears the sticky participant header (same class of bug as the Fit top-label clip).
+6. **Reduced motion.** Landed. Zoom and Fit jump instead of animating when the user prefers reduced motion. Diagram zoom is not a substitute for browser text resize. The sequence is not reflowed into one column.
+7. **Tooling, later.** Still open. `@axe-core/playwright` on the existing headless Chromium harness, after a scroll and after the inspector opens. Playwright screenshot checks for the three themes and for Fit.
 
 **Out, not tasks:** canvas, OffscreenCanvas, WebGL, TanStack Virtual, `content-visibility`, Lighthouse, CrUX, Monaco, PlantUML, splitting at 50 events.
 

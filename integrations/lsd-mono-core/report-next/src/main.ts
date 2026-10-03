@@ -10,7 +10,16 @@ declare global {
     __LSD_REPORT__?: Report
   }
 }
-import { bindDiagramScroll, findMessage, messageOffsetY, renderDiagramHtml, syncDiagramWindow } from './lib/sequence-diagram'
+import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from './lib/diagram-a11y'
+import {
+  bindDiagramScroll,
+  diagramView,
+  findMessage,
+  focusDiagramMessage,
+  messageOffsetY,
+  renderDiagramHtml,
+  syncDiagramWindow,
+} from './lib/sequence-diagram'
 import { applyTheme, getPreferredTheme, themeButtonLabel, themeGlyph, toggleTheme, type Theme } from './ui/theme'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, pretty, statusLabel } from './ui/format'
 import { insightsListHtml } from './ui/insights'
@@ -34,6 +43,9 @@ const state: State = {
 }
 
 const app = document.querySelector('#app')!
+
+/** Arrow that opened the inspector. Close returns focus here. */
+let invoker: { scenarioId: string; messageId: string } | null = null
 
 function counts() {
   return report.scenarios.reduce(
@@ -122,7 +134,8 @@ function renderShell(): void {
     </dialog>
     <div class="help-toast" id="help" data-open="false" role="note">
       <strong style="color:var(--text)">Keyboard</strong><br/>
-      <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> next/prev · <kbd>Enter</kbd> open/close<br/>
+      <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> next/prev scenario · <kbd>Enter</kbd> open/close<br/>
+      In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages · <kbd>Enter</kbd> opens that arrow<br/>
       <kbd>d</kbd> theme (dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close
     </div>
   `
@@ -169,6 +182,14 @@ function bindChrome(): void {
 
   const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
   document.querySelector('#dialog-close')!.addEventListener('click', () => dialog.close())
+  dialog.addEventListener('close', () => {
+    const messageId = focusTargetAfterClose(invoker?.messageId ?? null)
+    const scenarioId = invoker?.scenarioId
+    invoker = null
+    if (!messageId || !scenarioId) return
+    const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenarioId)} .seq-scroll`)
+    if (scroll) focusDiagramMessage(scroll, messageId)
+  })
 
   const main = document.querySelector<HTMLElement>('#main')!
   main.addEventListener('click', (ev) => {
@@ -219,7 +240,50 @@ function bindChrome(): void {
     if (msg) openMessage(scenario, msg)
   })
   main.addEventListener('keydown', (ev) => {
-    const target = ev.target as Element | null
+    const target = ev.target as HTMLElement | null
+    if (target?.matches('[data-diagram-find]') && ev.key === 'Enter') {
+      const scenario = scenarioFrom(target)
+      const scroll = target.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
+      if (scenario && scroll) {
+        const messageId = findOpensMessage(scenario.events, (target as HTMLInputElement).value, diagramView(scenario.id).hidden)
+        const msg = messageId ? findMessage(scenario, messageId) : undefined
+        if (msg) {
+          ev.preventDefault()
+          focusDiagramMessage(scroll, msg.id)
+          openMessage(scenario, msg)
+        }
+      }
+      return
+    }
+    const scrollKey = target?.closest?.<HTMLElement>('.seq-scroll')
+    const openBtn = target?.closest?.<HTMLButtonElement>('button.msg-open')
+    if (scrollKey && (openBtn || target === scrollKey)) {
+      const scenario = scenarioFrom(scrollKey)
+      if (scenario) {
+        const view = diagramView(scenario.id)
+        const action = diagramKeyAction({
+          key: ev.key,
+          places: messagePlaces(scenario.events, view.hidden),
+          activeId: openBtn?.dataset.messageId ?? view.activeMessageId,
+          inDiagram: true,
+        })
+        if (action.type === 'move' && action.messageId) {
+          ev.preventDefault()
+          ev.stopPropagation()
+          focusDiagramMessage(scrollKey, action.messageId)
+          return
+        }
+        if (action.type === 'open' && action.messageId) {
+          ev.preventDefault()
+          ev.stopPropagation()
+          const msg = findMessage(scenario, action.messageId)
+          if (msg) openMessage(scenario, msg)
+          return
+        }
+        if (openBtn) ev.stopPropagation()
+      }
+      return
+    }
     const hit = target?.closest?.<SVGGElement>('.message.has-data')
     if (!hit) return
     if (ev.key !== 'Enter' && ev.key !== ' ') return
@@ -376,7 +440,7 @@ function scenarioHtml(s: Scenario, index: number): string {
       <section class="diagram-panel">
         <h3>
           Sequence diagram
-          <span class="diagram-hint">Zoom and fit · hide participants · find labels · scroll keeps names pinned</span>
+          <span class="diagram-hint">Zoom and fit · hide participants · find labels · ↑↓ between messages</span>
         </h3>
         ${diagram}
       </section>
@@ -387,6 +451,7 @@ function scenarioHtml(s: Scenario, index: number): string {
 function openError(scenario: Scenario): void {
   const err = scenario.error
   if (!err) return
+  invoker = null
   const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
   document.querySelector('#dialog-title')!.textContent = err.headline
   document.querySelector('#dialog-meta')!.innerHTML = `
@@ -407,6 +472,7 @@ function payloadPills(data: unknown): string {
 }
 
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
+  invoker = { scenarioId: scenario.id, messageId: msg.id }
   const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
   document.querySelector('#dialog-title')!.textContent = msg.label
   document.querySelector('#dialog-meta')!.innerHTML = `
