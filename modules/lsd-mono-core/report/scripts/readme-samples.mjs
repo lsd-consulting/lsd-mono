@@ -241,14 +241,10 @@ try {
   console.log(`captured ${frames.length} frames, clip ${clip.width}x${clip.height}`)
 
   if (coreMotion) {
-    // Start zoomed and panned, then step toward Fit so the GIF shows the motion.
-    const pan = await scroll.evaluate((el) => {
-      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth)
-      const maxTop = Math.max(0, el.scrollHeight - el.clientHeight)
-      el.scrollLeft = Math.round(maxLeft * 0.65)
-      el.scrollTop = Math.round(maxTop * 0.85)
-      return { left: el.scrollLeft, top: el.scrollTop }
-    })
+    // Overshoot, settle, then zoom back out. One new picture per zoom step.
+    const readout = page.locator('.zoom-readout')
+    const fitButton = page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' })
+    const fitFrames = []
     const fitPct = await page.evaluate(() => {
       const port = document.querySelector('.seq-scroll')
       const label = document.querySelector('.zoom-readout')?.textContent ?? '100%'
@@ -260,32 +256,100 @@ try {
       const scale = Math.min(2.5, Math.max(0.25, viewportWidth / contentWidth))
       return Math.round(scale * 100)
     })
-    const readout = page.locator('.zoom-readout')
-    const fitFrames = []
-    async function holdFit(n) {
-      const buffer = await shot()
-      const decoded = decodePng(buffer)
-      for (let i = 0; i < n; i++) fitFrames.push(decoded)
+
+    async function zoomSnapshot() {
+      const label = (await readout.innerText()).trim()
+      const size = await scroll.evaluate((el) => ({
+        scrollWidth: el.scrollWidth,
+        scrollHeight: el.scrollHeight,
+        clientWidth: el.clientWidth,
+        clientHeight: el.clientHeight,
+      }))
+      return { label, ...size }
     }
-    await holdFit(2)
-    const steps = 8
-    for (let i = 1; i <= steps; i++) {
-      const pct = Number.parseInt(await readout.innerText(), 10)
-      if (Number.isFinite(pct) && Math.abs(pct - fitPct) >= 8) {
-        if (pct > fitPct) await zoomOut.click()
-        else await zoomIn.click()
+
+    async function waitForChange(before) {
+      await page.waitForFunction((prev) => {
+        const port = document.querySelector('.seq-scroll')
+        const label = (document.querySelector('.zoom-readout')?.textContent ?? '').trim()
+        return (
+          label !== prev.label ||
+          port.scrollWidth !== prev.scrollWidth ||
+          port.scrollHeight !== prev.scrollHeight
+        )
+      }, before, { timeout: 3000 })
+    }
+
+    function sameImage(a, b) {
+      if (!a || a.width !== b.width || a.height !== b.height || a.data.length !== b.data.length) return false
+      const step = Math.max(4, Math.floor(a.data.length / 4000) * 4)
+      for (let i = 0; i < a.data.length; i += step) {
+        if (a.data[i] !== b.data[i] || a.data[i + 1] !== b.data[i + 1] || a.data[i + 2] !== b.data[i + 2]) {
+          return false
+        }
       }
-      const t = i / steps
-      await scroll.evaluate((el, value) => {
-        el.scrollLeft = value.left
-        el.scrollTop = value.top
-      }, { left: Math.round(pan.left * (1 - t)), top: Math.round(pan.top * (1 - t)) })
-      await holdFit(1)
+      return true
     }
-    await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
-    await holdFit(3)
+
+    async function shoot(previous) {
+      const decoded = decodePng(await shot())
+      if (previous && sameImage(previous, decoded)) {
+        throw new Error('fit.gif captured a frame that matches the previous one')
+      }
+      fitFrames.push(decoded)
+      return decoded
+    }
+
+    await scroll.evaluate((el) => {
+      el.scrollTop = 0
+      el.scrollLeft = 0
+    })
+
+    let last = null
+    for (let i = 0; i < 8 && fitFrames.length < 4; i++) {
+      const before = await zoomSnapshot()
+      const pct = Number.parseInt(before.label, 10)
+      const overflows =
+        before.scrollHeight > before.clientHeight + 24 || before.scrollWidth > before.clientWidth + 24
+      const deep = Number.isFinite(pct) && pct >= fitPct + 20 && overflows
+      if (deep && fitFrames.length >= 3) break
+      await zoomIn.click()
+      try {
+        await waitForChange(before)
+      } catch {
+        if (fitFrames.length === 0 && overflows) last = await shoot(null)
+        break
+      }
+      last = await shoot(last)
+    }
+    if (fitFrames.length < 1) {
+      throw new Error(`fit.gif never showed an overshoot (fit target ${fitPct}%)`)
+    }
+
+    const beforeFit = await zoomSnapshot()
+    await fitButton.click()
+    await waitForChange(beforeFit)
+    last = await shoot(last)
+
+    let zoomedOut = 0
+    for (let i = 0; i < 8 && fitFrames.length < 12; i++) {
+      const pct = Number.parseInt((await readout.innerText()).trim(), 10)
+      if (zoomedOut >= 4 && Number.isFinite(pct) && pct <= fitPct - 20) break
+      const before = await zoomSnapshot()
+      await zoomOut.click()
+      try {
+        await waitForChange(before)
+      } catch {
+        break
+      }
+      last = await shoot(last)
+      zoomedOut++
+    }
+    if (fitFrames.length < 8 || fitFrames.length > 12) {
+      throw new Error(`fit.gif has ${fitFrames.length} frames, expected 8-12 (fit target ${fitPct}%)`)
+    }
     writeGif(fitFrames, path.join(outDir, 'fit.gif'))
-    console.log(`fit.gif ${fitFrames.length} frames, target ${fitPct}%`)
+    console.log(`fit.gif ${fitFrames.length} frames, fitted ${fitPct}%`)
   }
 
   for (let i = 0; i < 6; i++) await zoomOut.click()
