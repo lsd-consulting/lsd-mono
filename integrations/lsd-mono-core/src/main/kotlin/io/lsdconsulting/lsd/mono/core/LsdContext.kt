@@ -24,7 +24,7 @@ import io.lsdconsulting.lsd.mono.core.model.EventJson
 import io.lsdconsulting.lsd.mono.core.model.FactJson
 import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
-import io.lsdconsulting.lsd.mono.core.model.MetricJson
+import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
 import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
@@ -35,6 +35,7 @@ import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.report.capturedMetrics
 import java.io.File
 import java.nio.file.Path
 import java.time.OffsetDateTime
@@ -52,8 +53,12 @@ import java.time.ZoneId
  * **Sections** (`section`) replace PlantUML `newpage`: they stay in the same
  * event stream and do not drop lifeline activations.
  *
+ * **Metrics:** message count, summed `durationMs`, and ranked bottleneck or
+ * slowest-message insights. Gated by [ReportOptions.metricsEnabled] (default on).
+ * Labels in the shell truncate to [ReportOptions.labelMaxWidth].
+ *
  * **Deferred:** PlantUML / component diagrams, legacy include-files,
- * zoom/fit, bottleneck metrics, activate colour.
+ * zoom/fit, activate colour.
  */
 open class LsdContext {
 
@@ -357,17 +362,17 @@ open class LsdContext {
             generatedAt = OffsetDateTime.now(ZoneId.of("Europe/London")).toString(),
             generator = "lsd-mono-core 0.0.1-SNAPSHOT",
             status = determineOverallStatus(scenarios),
-            scenarios = scenarios.map { scenario -> scenario.toJsonModel() },
+            options = reportOptions().toJson(),
+            scenarios = scenarios.map { scenario -> scenario.toJsonModel(reportOptions()) },
         )
 
-    private fun Scenario.toJsonModel(): ScenarioJson {
-        val messages = events.filterIsInstance<Message>()
-        val duration = messages.mapNotNull { it.durationMs }.sum()
-        val metrics =
-            buildList {
-                add(MetricJson("Messages", messages.size.toString()))
-                if (duration > 0) add(MetricJson("Captured duration", "$duration ms"))
-            }
+    private fun reportOptions(): ReportOptions = ReportOptions.fromProperties()
+
+    private fun ReportOptions.toJson(): ReportOptionsJson =
+        ReportOptionsJson(metricsEnabled = metricsEnabled, labelMaxWidth = labelMaxWidth)
+
+    private fun Scenario.toJsonModel(options: ReportOptions): ScenarioJson {
+        val captured = capturedMetrics(events, options)
         return ScenarioJson(
             id = idGenerator.next(),
             title = title,
@@ -375,7 +380,8 @@ open class LsdContext {
             description = description,
             facts = facts.map { FactJson(it.key, it.value) },
             error = error?.let { ScenarioErrorJson(it.headline, it.message, it.stack) },
-            metrics = metrics,
+            metrics = captured.metrics,
+            insights = captured.insights,
             participants =
                 participants.map {
                     ParticipantJson(

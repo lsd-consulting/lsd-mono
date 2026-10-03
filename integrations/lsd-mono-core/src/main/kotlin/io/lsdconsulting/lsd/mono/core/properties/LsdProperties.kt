@@ -12,6 +12,13 @@ object LsdProperties {
     const val HIDE_STACKTRACE = "lsd.mono.junit.hideStacktrace"
     /** When true, [io.lsdconsulting.lsd.mono.core.LsdContext.completeComponentsReport] is invoked by the JUnit extension. Default false — the stub is not a component graph. */
     const val COMPONENTS_REPORT = "lsd.mono.components.enabled"
+    /**
+     * Duration insights and the simple message-count metrics. Default **true**,
+     * matching the previous always-on simple metrics. Legacy key: `lsd.core.metrics.enabled`.
+     */
+    const val METRICS_ENABLED = "lsd.mono.metrics.enabled"
+    /** SVG / summary truncation width. Default 200. Legacy key: `lsd.core.label.maxWidth`. */
+    const val LABEL_MAX_WIDTH = "lsd.mono.label.maxWidth"
 
     private val defaults =
         Properties().apply {
@@ -66,4 +73,19 @@ object LsdProperties {
     @JvmStatic
     fun componentsReportEnabled(): Boolean =
         getBoolean(COMPONENTS_REPORT, false)
+
+    /**
+     * Default **true** so reports keep the message-count metrics that shipped before
+     * the gate existed. Set `lsd.mono.metrics.enabled=false` (or the legacy key) to omit them.
+     */
+    @JvmStatic
+    fun metricsEnabled(): Boolean =
+        getBoolean(METRICS_ENABLED, getBoolean("lsd.core.metrics.enabled", true))
+
+    /** Positive character width. Falls back to legacy `lsd.core.label.maxWidth`, then 200. */
+    @JvmStatic
+    fun labelMaxWidth(): Int {
+        val raw = resolve(LABEL_MAX_WIDTH) ?: resolve("lsd.core.label.maxWidth") ?: "200"
+        return raw.toIntOrNull()?.takeIf { it > 0 } ?: 200
+    }
 }

@@ -3,6 +3,10 @@
   "generatedAt": "SCRUBBED",
   "generator": "lsd-mono-core 0.0.1-SNAPSHOT",
   "status": "error",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200
+  },
   "scenarios": [
     {
       "id": "1",

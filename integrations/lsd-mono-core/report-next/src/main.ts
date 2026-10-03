@@ -10,9 +10,10 @@ declare global {
     __LSD_REPORT__?: Report
   }
 }
-import { bindDiagramScroll, findMessage, renderDiagramHtml, syncDiagramWindow } from './lib/sequence-diagram'
+import { bindDiagramScroll, findMessage, messageOffsetY, renderDiagramHtml, syncDiagramWindow } from './lib/sequence-diagram'
 import { applyTheme, getPreferredTheme, toggleTheme } from './ui/theme'
-import { formatGeneratedAt, pretty, statusLabel } from './ui/format'
+import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, pretty, statusLabel } from './ui/format'
+import { insightsListHtml } from './ui/insights'
 
 interface State {
   query: string
@@ -176,6 +177,20 @@ function bindChrome(): void {
       if (scroll) scroll.scrollTop = Number(jump.dataset.jumpY)
       return
     }
+    const showMsg = target.closest<HTMLButtonElement>('[data-show-message]')
+    if (showMsg) {
+      const scenario = scenarioFrom(showMsg)
+      const messageId = showMsg.dataset.showMessage
+      if (scenario && messageId) {
+        const y = messageOffsetY(scenario.id, messageId)
+        const scroll = document.querySelector<HTMLElement>(`#card-${scenario.id} .seq-scroll`)
+        if (scroll && y != null) {
+          scroll.scrollTop = Math.max(0, y - 24)
+          syncDiagramWindow(scroll)
+        }
+      }
+      return
+    }
     const errBtn = target.closest<HTMLButtonElement>('[data-show-error]')
     if (errBtn) {
       const scenario = report.scenarios.find((s) => s.id === errBtn.dataset.showError)
@@ -311,7 +326,19 @@ function toggleOpen(id: string): void {
 
 function scenarioHtml(s: Scenario, index: number): string {
   const open = state.openIds.has(s.id)
-  const diagram = renderDiagramHtml(s)
+  const labelMaxWidth = report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
+  const diagram = renderDiagramHtml(s, labelMaxWidth)
+  const insights = insightsListHtml(s.insights, labelMaxWidth)
+  const metrics =
+    s.metrics.length || insights
+      ? `<section class="card">
+          <h3>Metrics</h3>
+          <dl class="kv">
+            ${s.metrics.map((m) => `<dt>${escapeHtml(m.key)}</dt><dd>${escapeHtml(m.value)}</dd>`).join('')}
+          </dl>
+          ${insights}
+        </section>`
+      : ''
   return `
   <article class="scenario-card ${s.status}" id="card-${s.id}" data-open="${open}" data-status="${s.status}" style="animation-delay:${index * 40}ms">
     <div class="scenario-head" role="button" tabindex="0" aria-expanded="${open}">
@@ -331,12 +358,7 @@ function scenarioHtml(s: Scenario, index: number): string {
             ${s.facts.map((f) => `<dt>${escapeHtml(f.key)}</dt><dd>${escapeHtml(f.value)}</dd>`).join('')}
           </dl>
         </section>
-        <section class="card">
-          <h3>Metrics</h3>
-          <dl class="kv">
-            ${s.metrics.map((m) => `<dt>${escapeHtml(m.key)}</dt><dd>${escapeHtml(m.value)}</dd>`).join('')}
-          </dl>
-        </section>
+        ${metrics}
       </div>
       <section class="diagram-panel">
         <h3>

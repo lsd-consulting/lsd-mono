@@ -25,12 +25,14 @@ import {
   virtualRowRange,
   type LayoutRow,
 } from './layout'
+import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
 
 export interface MountedDiagram {
   scenario: Scenario
   rows: LayoutRow[]
   width: number
   height: number
+  labelMaxWidth: number
 }
 
 export type ArrowEnd = 'filled' | 'open' | 'lost' | 'none'
@@ -157,21 +159,22 @@ export function noteLayout(
   return { x: px, textAnchor: 'middle', placement: 'over' }
 }
 
-export function mountDiagram(scenario: Scenario): MountedDiagram {
+export function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): MountedDiagram {
   const rows = layoutRows(scenario.events)
   const diagram: MountedDiagram = {
     scenario,
     rows,
     width: diagramWidth(scenario.participants.length),
     height: bodyHeight(rows),
+    labelMaxWidth,
   }
   mounted.set(scenario.id, diagram)
   return diagram
 }
 
 /** Continuous diagram: sticky participant header, section jump list, virtualised rows. */
-export function renderDiagramHtml(scenario: Scenario): string {
-  const diagram = mountDiagram(scenario)
+export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): string {
+  const diagram = mountDiagram(scenario, labelMaxWidth)
   const sections = diagram.rows.filter((row) => row.event.kind === 'section')
   const jump = sections.length
     ? `<nav class="section-jump" aria-label="Diagram sections">${sections
@@ -281,7 +284,7 @@ function windowSvg(diagram: MountedDiagram, slice: LayoutRow[]): string {
     })
     .join('')
 
-  const body = slice.map((row) => renderRow(row, width, index, colourOf, ensureMarker)).join('')
+  const body = slice.map((row) => renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth)).join('')
 
   return `
   <svg class="seq-svg" viewBox="0 ${offset} ${width} ${height}" width="${width}" height="${height}" aria-hidden="true">
@@ -303,6 +306,7 @@ export function renderRowSvg(
   row: LayoutRow,
   width: number,
   participants: Participant[],
+  labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH,
 ): string {
   const index = new Map(participants.map((p, i) => [p.id, i]))
   const colourOf = new Map(participants.map((p) => [p.id, p.colour ?? '#34d399']))
@@ -317,7 +321,7 @@ export function renderRowSvg(
     }
     return `mk_${key}`
   }
-  const body = renderRow(row, width, index, colourOf, ensureMarker)
+  const body = renderRow(row, width, index, colourOf, ensureMarker, labelMaxWidth)
   return `<svg><defs>${markers.join('')}</defs>${body}</svg>`
 }
 
@@ -327,6 +331,7 @@ function renderRow(
   index: Map<string, number>,
   colourOf: Map<string, string>,
   ensureMarker: (colour: string, end: ArrowEnd) => string,
+  labelMaxWidth: number,
 ): string {
   const event = row.event
   if (event.kind === 'activate' || event.kind === 'deactivate') return ''
@@ -375,7 +380,13 @@ function renderRow(
     </g>`
   }
 
-  return renderMessageRow(event as MessageEvent, row.y, width, index, colourOf, ensureMarker)
+  return renderMessageRow(event as MessageEvent, row.y, width, index, colourOf, ensureMarker, labelMaxWidth)
+}
+
+function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
+  const full = escapeXml(msg.label)
+  const shown = escapeXml(truncateLabel(msg.label, labelMaxWidth))
+  return `<title>${full}</title>${shown}`
 }
 
 function renderMessageRow(
@@ -385,6 +396,7 @@ function renderMessageRow(
   index: Map<string, number>,
   colourOf: Map<string, string>,
   ensureMarker: (colour: string, end: ArrowEnd) => string,
+  labelMaxWidth: number,
 ): string {
   const spec = messageArrowSpec(msg.type)
   const colour =
@@ -416,7 +428,7 @@ function renderMessageRow(
     return `
     <g class="message message-short${hasData ? ' has-data' : ''}" ${typeAttr} ${clickable} transform="translate(0, ${y})">
       <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
-      <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${escapeXml(msg.label)}${cue}${dur}</text>
+      <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
       ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
     </g>`
   }
@@ -431,7 +443,7 @@ function renderMessageRow(
     return `
     <g class="message${hasData ? ' has-data' : ''}" ${typeAttr} ${clickable} transform="translate(0, ${y})">
       <path class="msg-path" d="M${x1 + ACT_W} 0 C${x1 + 48} 0, ${x1 + 48} 22, ${x1 + ACT_W} 22" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-      <text class="msg-label" x="${x1 + 56}" y="4">${escapeXml(msg.label)}${cue}${dur}</text>
+      <text class="msg-label" x="${x1 + 56}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
       ${hasData ? `<circle class="msg-hit" cx="${x1 + 40}" cy="11" r="14"/>` : ''}
     </g>`
   }
@@ -442,9 +454,17 @@ function renderMessageRow(
   return `
   <g class="message${hasData ? ' has-data' : ''}" ${typeAttr} ${clickable} transform="translate(0, ${y})">
     <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${escapeXml(msg.label)}${cue}${dur}</text>
+    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
     ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
   </g>`
+}
+
+/** Y of a message row in the mounted diagram, for insight "show" scrolling. */
+export function messageOffsetY(scenarioId: string, messageId: string): number | null {
+  const diagram = mounted.get(scenarioId)
+  if (!diagram) return null
+  const row = diagram.rows.find((r) => r.event.kind === 'message' && r.event.id === messageId)
+  return row ? row.y : null
 }
 
 export function findMessage(scenario: Scenario, messageId: string): MessageEvent | undefined {

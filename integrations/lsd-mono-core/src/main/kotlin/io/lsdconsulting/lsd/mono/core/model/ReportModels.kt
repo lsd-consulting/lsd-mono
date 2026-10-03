@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.model
 
 import io.lsdconsulting.lsd.mono.core.json.JsonArray
+import io.lsdconsulting.lsd.mono.core.json.JsonBool
 import io.lsdconsulting.lsd.mono.core.json.JsonNumber
 import io.lsdconsulting.lsd.mono.core.json.JsonObject
 import io.lsdconsulting.lsd.mono.core.json.JsonString
@@ -17,6 +18,13 @@ data class ReportFile(
     val status: String,
 )
 
+data class ReportOptionsJson(
+    /** When false, scenario `metrics` and `insights` are empty. Default true. */
+    val metricsEnabled: Boolean = true,
+    /** Character width used to truncate labels in the shell and in metric summaries. */
+    val labelMaxWidth: Int = 200,
+)
+
 data class ReportJson(
     val title: String,
     val generatedAt: String,
@@ -26,6 +34,7 @@ data class ReportJson(
      * (legacy ERROR > FAILURE > SUCCESS). `success` when there are no scenarios.
      */
     val status: String,
+    val options: ReportOptionsJson = ReportOptionsJson(),
     val scenarios: List<ScenarioJson>,
 )
 
@@ -42,6 +51,8 @@ data class ScenarioJson(
     val description: String,
     val facts: List<FactJson>,
     val metrics: List<MetricJson> = emptyList(),
+    /** Omitted from JSON when empty (metrics disabled, or no timed messages). */
+    val insights: List<InsightJson> = emptyList(),
     val participants: List<ParticipantJson> = emptyList(),
     val events: List<EventJson> = emptyList(),
     /** Present for failed/aborted scenarios. Omitted from JSON when null. */
@@ -56,6 +67,22 @@ data class FactJson(
 data class MetricJson(
     val key: String,
     val value: String,
+)
+
+/**
+ * One ranked duration insight. [kind] is `bottleneck` (paired call, isolated time)
+ * or `slowest` (no response pairing). [rank] is 1-based and is the non-colour cue.
+ */
+data class InsightJson(
+    val rank: Int,
+    val kind: String,
+    val participant: String,
+    val label: String,
+    val from: String,
+    val to: String,
+    val messageId: String,
+    val totalMs: Long,
+    val isolatedMs: Long,
 )
 
 data class ParticipantJson(
@@ -193,6 +220,7 @@ fun ReportJson.toJson(): String =
             "generatedAt" to JsonString(generatedAt),
             "generator" to JsonString(generator),
             "status" to JsonString(status),
+            "options" to options.toJsonValue(),
             "scenarios" to JsonArray(scenarios.map { it.toJsonValue() }),
         ),
     ).render() + "\n"
@@ -207,6 +235,7 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
             if (error != null) add("error" to error.toJsonValue())
             add("facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
             add("metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
+            if (insights.isNotEmpty()) add("insights" to JsonArray(insights.map { it.toJsonValue() }))
             add("participants" to JsonArray(participants.map { it.toJsonValue() }))
             add("events" to JsonArray(events.map { it.toJsonValue() }))
         },
@@ -219,6 +248,29 @@ private fun ScenarioErrorJson.toJsonValue(): JsonValue =
             add("message" to JsonString(message))
             if (stack != null) add("stack" to JsonString(stack))
         },
+    )
+
+private fun ReportOptionsJson.toJsonValue(): JsonValue =
+    obj(
+        listOf(
+            "metricsEnabled" to JsonBool(metricsEnabled),
+            "labelMaxWidth" to JsonNumber(labelMaxWidth.toString()),
+        ),
+    )
+
+private fun InsightJson.toJsonValue(): JsonValue =
+    obj(
+        listOf(
+            "rank" to JsonNumber(rank.toString()),
+            "kind" to JsonString(kind),
+            "participant" to JsonString(participant),
+            "label" to JsonString(label),
+            "from" to JsonString(from),
+            "to" to JsonString(to),
+            "messageId" to JsonString(messageId),
+            "totalMs" to JsonNumber(totalMs.toString()),
+            "isolatedMs" to JsonNumber(isolatedMs.toString()),
+        ),
     )
 
 private fun ParticipantJson.toJsonValue(): JsonValue =

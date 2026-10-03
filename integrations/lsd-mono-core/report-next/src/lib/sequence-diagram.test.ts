@@ -169,6 +169,24 @@ describe('renderRowSvg fragments', () => {
     expect(outbound).toContain('[out]')
   })
 
+  it('truncates long labels to the configured width and keeps the full text in the title', () => {
+    const svg = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-long',
+        from: 'api',
+        to: 'db',
+        label: 'abcdefghijklmnopqrstuvwxyz',
+        type: 'SYNCHRONOUS',
+      }),
+      400,
+      participants,
+      12,
+    )
+    expect(svg).toContain('<title>abcdefghijklmnopqrstuvwxyz</title>abcdefghi...')
+    expect(svg).not.toContain('>abcdefghijklmnopqrstuvwxyz</text>')
+  })
+
   it('marks left and right note placement in the SVG', () => {
     const left = renderRowSvg(
       rowFor({ kind: 'note', id: 'n1', text: 'L', over: 'api', placement: 'left' }),

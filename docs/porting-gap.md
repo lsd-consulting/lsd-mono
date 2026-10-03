@@ -2,7 +2,7 @@
 
 **Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
-**Inspected (local tree, slices through P1 remaining sequence event kinds, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
+**Inspected (local tree, slices through P1 metrics insights, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
 
 Legacy is **inspiration and migration API only** — not the product path. Generating PlantUML as the product renderer is explicitly **out**.
 
@@ -39,12 +39,12 @@ These are **implemented**, not stubs, unless noted.
 | Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report-next/src/lib/sequence-diagram.ts` |
 | JUnit Jupiter 6 extension + `@LsdPostTestProcessing` | `LsdExtension.kt` — success / fail / disabled / aborted / nested / post-processing; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
 | Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — **no longer used by the JUnit extension**. Left as a migration shim only. |
-| Properties: output dir, deterministic ids, hide stacktrace (+ legacy key fallbacks) | `properties/LsdProperties.kt` |
+| Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdProperties.kt`, `ReportOptions.kt` |
+| Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
 
 **Stubs / thin surfaces (do not treat as done):**
 
 - `completeComponentsReport` → placeholder HTML only (`ReportWriter.writeComponentsStub`). The JUnit extension calls it only when `lsd.mono.components.enabled=true` (default **false**). Still not a component graph.
-- Captured metrics are a **simple** message count + summed `durationMs`, not legacy bottleneck-tree metrics (`com.lsd.core.report.model.Metrics`).
 - Module README still says injection is deferred; code + `CaptureToJsonTest` show injection **works** — README is stale.
 
 ---
@@ -179,15 +179,14 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | **Priority** | **P1** |
 | **Test** | Golden facts; unit escape; UI: hide empty facts card. |
 
-#### P1 — Metrics parity (bottleneck tree)
+#### P1 — Metrics parity (bottleneck tree) — **landed 2026-10-03**
 
 | | |
 |--|--|
 | **Legacy** | Optional `Metrics` (`report/model/Metrics.kt`): diagram generation timings + message count + **top bottlenecks** tree from request/response durations (`createTree`). Gated by `lsd.core.metrics.enabled` / `ReportOptions.metricsEnabled`. |
-| **Mono** | Always emits simple metrics (message count, summed duration). No `ReportOptions`, no generation timings, no bottleneck tree. |
-| **Greenfield** | Compute bottleneck insights in Kotlin from captured durations; emit as `metrics[]` and/or structured `insights` JSON. UI: details list with “show message” that focuses/scrolls to message id (no PlantUML). Gate with `lsd.mono.metrics.enabled`. |
-| **Priority** | **P1** |
-| **Test** | Unit tree / isolated duration (port logic from legacy tests); golden metrics keys. |
+| **Shipped** | Message count + summed `durationMs`, plus ranked `insights[]`. If any `SYNCHRONOUS_RESPONSE` exists, rank call-tree nodes by isolated duration (`kind: "bottleneck"`); otherwise the slowest messages (`kind: "slowest"`, max 5). No PlantUML generation timings. Gate `lsd.mono.metrics.enabled` defaults **on** (legacy `lsd.core.metrics.enabled` fallback) so the previous always-on counts stay. Off → `metrics: []` and no `insights`. UI list shows rank + kind text (not colour alone) and a `show` button that scrolls to the message. |
+| **Still open** | Deeper “focus” highlight when the row is outside the virtual window beyond a scroll. |
+| **Test** | `BottleneckInsightsTest` (ordering, property gate, structural JSON). `insights.test.ts` (rank text, truncation). |
 
 #### P1 — Index / multi-report polish
 
@@ -199,15 +198,14 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | **Priority** | **P1** |
 | **Test** | Unit: index lists all `ReportFile`s after two `completeReport`s. |
 
-#### P1 — `renderReport` / `ReportOptions` / properties
+#### P1 — `ReportOptions` / label truncation — **landed 2026-10-03** (in-memory `renderReport` still open)
 
 | | |
 |--|--|
-| **Legacy** | `renderReport(title, options)` returns HTML string; `ReportOptions(devMode, metricsEnabled, maxEventsPerDiagram)`; properties also include `DIAGRAM_THEME`, `LABEL_MAX_WIDTH`, `DEV_MODE`, etc. (`properties/LsdProperties.kt`, `DefaultProperties.kt`). |
-| **Mono** | File writers only; no options object; fewer properties. |
-| **Greenfield** | `ReportOptions` for metrics toggle, label max width (SVG truncate), deterministic output for tests. `renderReport` optional for in-memory consumers. **Skip** `DIAGRAM_THEME` (PlantUML). `maxEventsPerDiagram` becomes virtualisation / section guidance, not a hard split. |
-| **Priority** | **P1** |
-| **Test** | Unit property resolution; golden truncated labels. |
+| **Legacy** | `renderReport(title, options)` returns HTML string; `ReportOptions(devMode, metricsEnabled, maxEventsPerDiagram)`; properties also include `DIAGRAM_THEME`, `LABEL_MAX_WIDTH`, `DEV_MODE`, etc. |
+| **Shipped** | `ReportOptions(metricsEnabled, labelMaxWidth)` from `lsd.mono.metrics.enabled` (default true) and `lsd.mono.label.maxWidth` (default 200; legacy keys fall back). Written on the report as `options`. Full event labels stay in JSON; metric summaries abbreviate, and the SVG truncates with a `<title>` of the full label. **No** `DIAGRAM_THEME`. **No** `maxEventsPerDiagram` split. |
+| **Still open** | In-memory `renderReport` returning HTML without writing files. `devMode` stays out (single-file shell). |
+| **Test** | `BottleneckInsightsTest` locks `labelMaxWidth` and abbreviated metric text with a full event label. `sequence-diagram.test.ts` locks SVG truncation. `multi-scenario-status.json` includes default `options`. |
 
 #### P2 — Dev mode asset inlining
 
@@ -305,7 +303,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 4. **P1 — Remaining sequence event kinds** — **landed 2026-10-03**: note left/right, delay, spacer, short arrows, LOST X / BI dual heads (shape + label cues). Zoom, metrics, component graph stay later.
 
-5. **P1 — Metrics insights + ReportOptions/properties**; label truncation.
+5. **P1 — Metrics insights + ReportOptions/properties**; label truncation. **Landed 2026-10-03.** `lsd.mono.metrics.enabled` defaults on. `options.labelMaxWidth` (default 200). Insights are `bottleneck` or `slowest` (max 5). No diagram theme, no max-events split, no component graph, no zoom.
 
 6. **P1 — Component graph** from messages (combined + per-scenario) in SVG.
 
@@ -328,8 +326,8 @@ Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied
 
 ### Unit (Kotlin + TS)
 
-- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder; metrics tree (port ideas from `MetricsTest`); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent.
-- **TypeScript:** `layout.test.ts` locks `virtualRowRange` and `eventRowHeight` (delay/spacer). `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report-next` (vitest).
+- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder; metrics tree (`BottleneckInsightsTest` — isolated duration order and the metrics property gate); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent.
+- **TypeScript:** `layout.test.ts` locks `virtualRowRange` and `eventRowHeight` (delay/spacer). `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement / label truncation. `insights.test.ts` locks rank text (not colour-only) and ellipsis. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report-next` (vitest).
 
 ### Browser / UI (later, selective)
 

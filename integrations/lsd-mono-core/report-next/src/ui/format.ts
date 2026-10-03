@@ -29,3 +29,15 @@ export function formatGeneratedAt(iso: string): string {
 export function statusLabel(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
+
+/** Matches Kotlin `String.abbreviate` / `lsd.mono.label.maxWidth` (default 200). */
+export const DEFAULT_LABEL_MAX_WIDTH = 200
+const ELLIPSIS = '...'
+
+export function truncateLabel(label: string, maxWidth = DEFAULT_LABEL_MAX_WIDTH): string {
+  const trimmed = label.trim()
+  if (trimmed.length <= maxWidth) return trimmed
+  if (maxWidth <= 0) return ''
+  if (ELLIPSIS.length >= maxWidth) return trimmed.slice(0, maxWidth)
+  return trimmed.slice(0, maxWidth - ELLIPSIS.length) + ELLIPSIS
+}
