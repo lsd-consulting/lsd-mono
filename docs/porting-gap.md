@@ -1,5 +1,7 @@
 # LSD Mono — porting gap report
 
+Next steps: docs/next-steps.md
+
 **Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
 **Inspected (local tree, slices through P1 diagram UX, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
@@ -71,7 +73,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |--|--|
 | **Legacy** | Caps events per diagram (`ReportOptions.maxEventsPerDiagram`) and splits — a workaround for PlantUML SVG size / browser pain. |
 | **Shipped** | `report-next/src/lib/layout.ts` lays out rows in CSS pixels. `virtualRowRange` paints only the scroll window plus overscan. Sticky participant header sits inside the diagram scrollport so names stay visible. Full event list stays in JSON. |
-| **Still open** | Density modes. Browser FPS check with N≥500. Zoom and fit landed in the diagram UX slice; horizontal scroll is the pan. |
+| **Still open** | Density modes. Browser check vs legacy is docs/next-steps.md (not the N≥500 note here). Zoom and fit landed in the diagram UX slice; horizontal scroll is the pan. |
 | **Test** | `layout.test.ts` (`npm test` in `report-next`) — scrollTop + viewport → row range, including sticky-header inset and overscan. |
 
 #### P1 — Note left / note right — **landed 2026-10-03**
@@ -308,11 +310,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 8. **P2 — lifeline colour, timestamps, print, high contrast** — **landed 2026-10-03.** Optional activate `colour` (hatch + `coloured activation` when set; default bar unchanged). Optional `createdAt` sorted before JSON and layout. Print CSS is a light page and hides search, filters, the theme button, zoom, and section jumps; `beforeprint` paints every row so the virtual window is not a clipped page. High contrast is the third persisted theme (`contrast`). Status is a word plus a border style, not hue alone.
 
-**Still later**
-
-- Browser performance budget (scroll 500+ events).
-- Gradle-wired Vite build (the single-file shell is still copied by hand).
-- Interceptor modules (`lsd-mono-*` integrations beyond the JUnit extension).
+**Still later:** docs/next-steps.md (browser performance check vs legacy, Gradle-wired Vite `build:single`, interceptor modules).
 
 ---
 
@@ -333,7 +331,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 ### Browser / UI (later, selective)
 
 - Playwright/Puppeteer smoke on injected shell: open dialog, theme toggle, search filter, keyboard j/k.
-- Performance budget: scroll 500+ events with virtualisation enabled.
+- Performance budget: see docs/next-steps.md (compare with legacy on 100 / 500 / 2000 events). Not run yet.
 - Not every PR — nightly or labeled jobs.
 
 ### What not to golden
