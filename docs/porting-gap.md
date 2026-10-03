@@ -32,7 +32,7 @@ These are **implemented**, not stubs, unless noted.
 | Note over / left / right | `Note` + `NotePlacement` + DSL `noteOver` / `noteLeft` / `noteRight` — **landed 2026-10-03** |
 | Delay + spacer | `Delay` / `Spacer` + DSL `delay` / `spacer` — **landed 2026-10-03** |
 | Logical dividers | `Divider` / `logicalDivider` |
-| Lifeline activate / deactivate | `Lifeline` + DSL `LifelineAction.lifeline` |
+| Lifeline activate / deactivate | `Lifeline` + DSL `LifelineAction.lifeline`. Activation bars are pinned to the opening and closing message rows (those keyword events have no row height). **Landed 2026-10-03.** |
 | Kotlin capture DSL (`"A" messages "B" withLabel …`) | `capture/CaptureDsl.kt` |
 | Scenario / report / index / clear / clearScenarioEvents | `LsdContext.kt` |
 | `ReportJson` + `window.__LSD_REPORT__` injection into shell | `report/ReportWriter.renderShell`; locked by `CaptureToJsonTest` |
@@ -40,6 +40,7 @@ These are **implemented**, not stubs, unless noted.
 | report chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, minimap, message deep links, and reduced-motion support | `report/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
 | Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report/src/lib/sequence-diagram.ts` |
 | JUnit Jupiter 6 extension + `@LsdPostTestProcessing` | `LsdExtension.kt` — success / fail / disabled / aborted / nested / post-processing; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
+| Cucumber 8 plugin | `modules/lsd-mono-cucumber-8`, `LsdCucumberPlugin`. Completes a scenario per Cucumber scenario. The description is the Given/When/Then lines. The report highlights Given, When, Then, and And in the Description card. Logging and HTTP interceptors are still not in the tree. |
 | Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — **no longer used by the JUnit extension**. Left as a migration shim only. |
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdProperties.kt`, `ReportOptions.kt` |
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
@@ -256,7 +257,7 @@ The large-diagram UX baseline is shipped: sticky participant header, scenario an
 | | |
 |--|--|
 | **Legacy** | Ecosystem (interceptors, cucumber, etc.) calls `LsdContext.capture` / builders. |
-| **Mono** | Same entry points under new packages; no Mono-named interceptor modules yet. |
+| **Mono** | `lsd-mono-cucumber-8` is shipped. Logging and HTTP interceptor modules are still open. |
 | **Greenfield** | Document capture contract; later `lsd-mono-*` integrations depend on `lsd-mono-core` only. |
 | **Priority** | **P1** (docs + contract); modules themselves later |
 | **Test** | Contract suite: DSL + `capture(vararg SequenceEvent)` golden. |
@@ -337,7 +338,8 @@ Open implementation work is tracked in `docs/next-steps.md` and the **Still open
 | Mono writer | `modules/lsd-mono-core/src/main/kotlin/.../report/ReportWriter.kt` |
 | Report types / UI / SVG | `modules/lsd-mono-core/report/src/{types.ts,main.ts,lib/sequence-diagram.ts}` |
 | JUnit extension | `modules/lsd-mono-junit-jupiter/src/main/kotlin/.../LsdExtension.kt` |
+| Cucumber plugin | `modules/lsd-mono-cucumber-8/src/main/kotlin/.../LsdCucumberPlugin.kt` |
 
 ---
 
-*Generated from the local mono tree for greenfield planning. Update this doc as slices land.*
+*This tracks the tree as of 3 Oct 2026, including cucumber-8.*

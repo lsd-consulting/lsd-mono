@@ -2,7 +2,7 @@
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. `lsd-mono-core` is the capture API and the report UI. `lsd-mono-junit-jupiter` completes a scenario for each JUnit Jupiter 6 test.
 
-Origin is https://github.com/lsd-consulting/lsd-mono.git. Do not push unless that is decided.
+Origin is https://github.com/lsd-consulting/lsd-mono.git. `main` has been pushed there.
 
 ## Depend on it
 
