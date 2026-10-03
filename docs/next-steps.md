@@ -128,15 +128,15 @@ Each new module gets a contract test that the events it captures land in `Report
 
 ## 5. Diagram UX
 
-Items 1–6 are in `report-next`. Still open: 7. They do not wait on the README or the Gradle Vite task.
+Items 1–7 are in `report-next`. They do not wait on the README or the Gradle Vite task.
 
 1. **Keyboard.** Landed. One tab stop into the diagram, then Up and Down move between messages and Enter opens the same inspector as a click. Not every arrow is in the tab order. When virtualisation recycles a focused row, focus moves to the logical next message. On close, focus returns to the invoking arrow, scrolling it back if it was unmounted.
 2. **Hit area.** Landed. An invisible 24 CSS-pixel target on each arrow. The stroke is not fatter. Find (Enter on a match) opens the same inspector.
 3. **Inspector.** Landed. A side panel beside the diagram, not a modal, and the rest of the page stays active. Method, path, and status show immediately. JSON stays collapsed until expanded, with copy. The body loads when the inspector opens (`payloadId` plus a sibling `<title>-payloads.js` for captured reports; the demo shell loads `lsd-report-payloads.js` the same way). The first paint does not include those bodies. Focus moves into the panel; Escape and Close return it to the invoking arrow.
 4. **Place.** Landed. A thin density minimap tied to the zoomed/scrolled window (drag or arrow keys on the strip move the detail view). The open message is in the URL hash (`#msg=<scenario>/<message>`) so a static `file://` report can be shared at that arrow; closing clears the token; payloads still load on open.
-5. **Position.** Landed. `aria-posinset` and `aria-setsize` are the real message index and the full message count, not the painted row count. `scroll-padding` so a focused row clears the sticky participant header (same class of bug as the Fit top-label clip).
-6. **Reduced motion.** Landed. Zoom and Fit jump instead of animating when the user prefers reduced motion. Diagram zoom is not a substitute for browser text resize. The sequence is not reflowed into one column.
-7. **Tooling, later.** Still open. `@axe-core/playwright` on the existing headless Chromium harness, after a scroll and after the inspector opens. Playwright screenshot checks for the three themes and for Fit.
+5. **Position.** Landed. `aria-posinset` and `aria-setsize` sit on a listitem around each arrow button (a button cannot carry them) and are the real message index and the full message count, not the painted row count. `scroll-padding` so a focused row clears the sticky participant header (same class of bug as the Fit top-label clip).
+6. **Reduced motion.** Landed. Zoom and Fit jump instead of animating when the user prefers reduced motion. CSS animations and transitions are off in that case too (a near-zero duration left the card entrance stuck at opacity 0). Diagram zoom is not a substitute for browser text resize. The sequence is not reflowed into one column.
+7. **Tooling.** Landed. From `integrations/lsd-mono-core/report-next`, `npm run check:ux` (not part of `npm test`). `@axe-core/playwright` on the same headless Chromium family as `docs/perf/measure.mjs`, after the diagram has scrolled and again after the inspector opens, on dark, light, and high contrast. Tags are the A/AA set axe-core 4.13 ships: `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa`. There is no `wcag22a` tag in that build, and `wcag22aa` is only the 2.2 rules axe implements, so a green run is not a WCAG 2.2 conformance claim. Serious and critical violations fail the check. Playwright screenshots of the three themes and of Fit (the top message label stays in the scrollport) live in `report-next/checks/snapshots/`.
 
 **Out, not tasks:** canvas, OffscreenCanvas, WebGL, TanStack Virtual, `content-visibility`, Lighthouse, CrUX, Monaco, PlantUML, splitting at 50 events.
 

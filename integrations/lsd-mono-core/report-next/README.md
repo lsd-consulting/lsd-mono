@@ -22,6 +22,13 @@ npm ci
 npm test
 ```
 
+Axe and screenshot checks are separate from vitest (Playwright downloads nothing extra when the 1.55 Chromium cache is already present):
+
+```bash
+cd integrations/lsd-mono-core/report-next
+npm run check:ux
+```
+
 Not part of `./gradlew build`. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
 
 ## Open the demo

@@ -10,9 +10,12 @@
     "preview": "vite preview",
     "build:static": "vite build",
     "build:single": "npm run build && node --experimental-strip-types scripts/inline-single.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:ux": "playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.55.0",
     "happy-dom": "^20.14.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",

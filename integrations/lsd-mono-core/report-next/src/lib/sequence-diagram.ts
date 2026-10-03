@@ -695,7 +695,7 @@ function windowSvg(
     ${actBars}
     ${body}
   </svg>
-  ${buttons.join('')}
+  ${buttons.length ? `<div role="list" class="msg-places" aria-label="Sequence messages">${buttons.join('')}</div>` : ''}
 `
 }
 
@@ -915,7 +915,8 @@ function messageOpenButton(
   const places = paint.places ?? [{ id: msg.id, posinset: 1, setsize: 1, focusable: true }]
   const place = places.find((item) => item.id === msg.id) ?? places[0]
   const tab = tabindexFor(msg.id, paint.activeMessageId ?? null, places)
-  return `<button type="button" class="msg-open" data-message-id="${escapeXml(msg.id)}" aria-label="Open ${escapeXml(msg.label)}" aria-setsize="${place.setsize}" aria-posinset="${place.posinset}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button>`
+  // posinset/setsize are not valid on button. The listitem carries the real index.
+  return `<div role="listitem" class="msg-place" aria-setsize="${place.setsize}" aria-posinset="${place.posinset}"><button type="button" class="msg-open" data-message-id="${escapeXml(msg.id)}" aria-label="Open ${escapeXml(msg.label)}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button></div>`
 }
 
 let movingFocus = false
