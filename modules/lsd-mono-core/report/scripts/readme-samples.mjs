@@ -16,6 +16,11 @@ const { PNG } = pngjs
 
 const reportDir = path.resolve(process.argv[2] ?? '')
 const outDir = path.resolve(process.argv[3] ?? '')
+/** Extra motion GIFs are for the root README only. Module samples keep zoom.gif. */
+const coreMotion =
+  path.basename(outDir) === 'readme' &&
+  path.basename(path.dirname(outDir)) === 'docs' &&
+  !outDir.includes(`${path.sep}modules${path.sep}`)
 if (!process.argv[2] || !process.argv[3]) {
   console.error('usage: node scripts/readme-samples.mjs <report-dir> <docs-readme-dir>')
   process.exit(1)
@@ -235,6 +240,54 @@ try {
   await hold(4)
   console.log(`captured ${frames.length} frames, clip ${clip.width}x${clip.height}`)
 
+  if (coreMotion) {
+    // Start zoomed and panned, then step toward Fit so the GIF shows the motion.
+    const pan = await scroll.evaluate((el) => {
+      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth)
+      const maxTop = Math.max(0, el.scrollHeight - el.clientHeight)
+      el.scrollLeft = Math.round(maxLeft * 0.65)
+      el.scrollTop = Math.round(maxTop * 0.85)
+      return { left: el.scrollLeft, top: el.scrollTop }
+    })
+    const fitPct = await page.evaluate(() => {
+      const port = document.querySelector('.seq-scroll')
+      const label = document.querySelector('.zoom-readout')?.textContent ?? '100%'
+      const current = Number.parseInt(label, 10) / 100 || 1
+      const spacer = port.querySelector('.seq-spacer')
+      const contentWidth = Number.parseFloat(spacer?.style.width || '0') / current
+      const viewportWidth = port.clientWidth
+      if (!(contentWidth > 0) || !(viewportWidth > 0)) return Math.round(current * 100)
+      const scale = Math.min(2.5, Math.max(0.25, viewportWidth / contentWidth))
+      return Math.round(scale * 100)
+    })
+    const readout = page.locator('.zoom-readout')
+    const fitFrames = []
+    async function holdFit(n) {
+      const buffer = await shot()
+      const decoded = decodePng(buffer)
+      for (let i = 0; i < n; i++) fitFrames.push(decoded)
+    }
+    await holdFit(2)
+    const steps = 8
+    for (let i = 1; i <= steps; i++) {
+      const pct = Number.parseInt(await readout.innerText(), 10)
+      if (Number.isFinite(pct) && Math.abs(pct - fitPct) >= 8) {
+        if (pct > fitPct) await zoomOut.click()
+        else await zoomIn.click()
+      }
+      const t = i / steps
+      await scroll.evaluate((el, value) => {
+        el.scrollLeft = value.left
+        el.scrollTop = value.top
+      }, { left: Math.round(pan.left * (1 - t)), top: Math.round(pan.top * (1 - t)) })
+      await holdFit(1)
+    }
+    await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
+    await holdFit(3)
+    writeGif(fitFrames, path.join(outDir, 'fit.gif'))
+    console.log(`fit.gif ${fitFrames.length} frames, target ${fitPct}%`)
+  }
+
   for (let i = 0; i < 6; i++) await zoomOut.click()
   await scroll.evaluate((el) => {
     el.scrollTop = 0
@@ -272,6 +325,39 @@ try {
     await page.screenshot({ clip: inspectorClip, animations: 'disabled', caret: 'hide', type: 'png' }),
   )
 
+  if (coreMotion) {
+    const handle = page.locator('#inspector-resize')
+    await handle.waitFor()
+    const box = await handle.boundingBox()
+    if (!box) throw new Error('inspector resize handle has no box')
+    const startX = box.x + box.width / 2
+    const startY = box.y + Math.min(120, box.height / 2)
+    const dragFrames = []
+    async function holdDrag(n) {
+      const buffer = await page.screenshot({
+        clip: inspectorClip,
+        animations: 'disabled',
+        caret: 'hide',
+        type: 'png',
+      })
+      const decoded = decodePng(buffer)
+      for (let i = 0; i < n; i++) dragFrames.push(decoded)
+    }
+    await page.mouse.move(startX, startY)
+    await holdDrag(2)
+    await page.mouse.down()
+    const distance = 320
+    const steps = 8
+    for (let i = 1; i <= steps; i++) {
+      await page.mouse.move(startX - (distance * i) / steps, startY)
+      await holdDrag(1)
+    }
+    await page.mouse.up()
+    await holdDrag(2)
+    writeGif(dragFrames, path.join(outDir, 'inspector-drag.gif'))
+    console.log(`inspector-drag.gif ${dragFrames.length} frames`)
+  }
+
   writeGif(frames, path.join(outDir, 'zoom.gif'))
 } finally {
   await browser.close()
@@ -281,3 +367,7 @@ try {
 console.log(path.join(outDir, 'diagram.png'))
 console.log(path.join(outDir, 'inspector.png'))
 console.log(path.join(outDir, 'zoom.gif'))
+if (coreMotion) {
+  console.log(path.join(outDir, 'fit.gif'))
+  console.log(path.join(outDir, 'inspector-drag.gif'))
+}
