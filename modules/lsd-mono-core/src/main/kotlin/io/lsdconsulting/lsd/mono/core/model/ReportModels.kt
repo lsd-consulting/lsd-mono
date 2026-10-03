@@ -11,7 +11,7 @@ import io.lsdconsulting.lsd.mono.core.json.render
 import io.lsdconsulting.lsd.mono.core.report.toJsonValue
 
 /**
- * Report JSON aligned with report-next `src/types.ts` (`Report` / `Scenario` / `DiagramEvent`).
+ * Report JSON aligned with report `src/types.ts` (`Report` / `Scenario` / `DiagramEvent`).
  */
 data class ReportFile(
     val filename: String,

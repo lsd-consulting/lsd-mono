@@ -19,16 +19,16 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Writes ReportJson, a minimal HTML listing, and the report-next single-file shell
+ * Writes ReportJson, a minimal HTML listing, and the report single-file shell
  * with `window.__LSD_REPORT__` injected so the SVG UI renders the captured scenario.
  * Message bodies are not in that script. They are written beside the diagram as
  * `<title>-payloads.js` and loaded when the inspector opens.
  * Embedded sample data is only the fallback when that global is absent.
  */
 object ReportWriter {
-    private const val SHELL_RESOURCE = "/lsd-mono-core/report-next/lsd-report-next.single.html"
+    private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report-next.single.html"
     private const val SHELL_FILENAME = "lsd-report-next.single.html"
-    private const val SAMPLE_PAYLOAD_RESOURCE = "/lsd-mono-core/report-next/lsd-report-payloads.js"
+    private const val SAMPLE_PAYLOAD_RESOURCE = "/lsd-mono-core/report/lsd-report-payloads.js"
     private const val SAMPLE_PAYLOAD_FILENAME = "lsd-report-payloads.js"
 
     fun writeReport(

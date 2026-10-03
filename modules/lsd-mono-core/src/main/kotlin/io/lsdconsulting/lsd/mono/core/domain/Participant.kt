@@ -5,9 +5,9 @@ package io.lsdconsulting.lsd.mono.core.domain
  *
  * [id] is what events reference (`from` / `to` / `over` / `participantId`).
  * It defaults to a slug of [name] so `"Checkout API"` becomes `checkout-api`.
- * Pass an explicit id when you want a short alias (`api`) the way report-next samples do.
+ * Pass an explicit id when you want a short alias (`api`) the way report samples do.
  *
- * Types match the report-next union. Legacy PlantUML-only types (`CONTROL`, `COLLECTIONS`)
+ * Types match the report union. Legacy PlantUML-only types (`CONTROL`, `COLLECTIONS`)
  * are not carried — use [ParticipantType.PARTICIPANT].
  */
 data class Participant @JvmOverloads constructor(

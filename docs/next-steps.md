@@ -6,7 +6,7 @@
 
 ## 1. README examples and usage instructions
 
-Extend the root `README.md` with example-led guidance adapted from the upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) README style, for Mono rather than copied from the legacy API. Show how to depend on `lsd-mono-core`, use `LsdContext` from `io.lsdconsulting.lsd.mono.core`, and capture a small scenario with the Kotlin DSL. Explain how to complete the report and open/view the generated modern report-next HTML, including a short realistic scenario and the key capture/report steps. Keep the examples focused on the modern web report and do not introduce PlantUML markup or legacy names.
+Extend the root `README.md` with example-led guidance adapted from the upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) README style, for Mono rather than copied from the legacy API. Show how to depend on `lsd-mono-core`, use `LsdContext` from `io.lsdconsulting.lsd.mono.core`, and capture a small scenario with the Kotlin DSL. Explain how to complete the report and open/view the generated modern report HTML, including a short realistic scenario and the key capture/report steps. Keep the examples focused on the modern web report and do not introduce PlantUML markup or legacy names.
 
 This is documentation of the current Mono API, not a request to change the API in this step.
 
@@ -14,7 +14,7 @@ This is documentation of the current Mono API, not a request to change the API i
 
 ## 2. Gradle-wired Vite `build:single` — done
 
-`modules/lsd-mono-core/build.gradle.kts` runs the shell build. `reportNextSingle` (`npm ci` then `npm run build:single`) writes the single-file HTML, `copyReportNextShell` places it at `build/generated/resources/lsd-mono-core/report-next/lsd-report-next.single.html`, and `processResources` depends on that copy so `jar` / `:modules:lsd-mono-core:build` ship it. `reportNextTest` (`npm test`, vitest) is on `check`. The hand-maintained classpath HTML under `src/main/resources` is gone; sample payloads stay there. The tasks prepend Node 22 when it is installed and do not change the nvm default alias.
+`modules/lsd-mono-core/build.gradle.kts` runs the shell build. `reportSingle` (`npm ci` then `npm run build:single`) writes the single-file HTML, `copyReportShell` places it at `build/generated/resources/lsd-mono-core/report/lsd-report-next.single.html`, and `processResources` depends on that copy so `jar` / `:modules:lsd-mono-core:build` ship it. `reportTest` (`npm test`, vitest) is on `check`. The hand-maintained classpath HTML under `src/main/resources` is gone; sample payloads stay there. The tasks prepend Node 22 when it is installed and do not change the nvm default alias.
 
 ---
 

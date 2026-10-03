@@ -1,7 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.domain
 
 /**
- * Scenario outcome. CSS/report-next mapping:
+ * Scenario outcome. CSS/report mapping:
  * SUCCESS → success, FAILURE → warn, ERROR → error.
  */
 enum class Status {

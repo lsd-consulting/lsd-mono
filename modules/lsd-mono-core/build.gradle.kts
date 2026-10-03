@@ -8,7 +8,7 @@ version = "0.0.1-SNAPSHOT"
 base.archivesName.set("lsd-mono-core")
 
 description =
-    "LSD Mono core — greenfield report-next UI + thin Kotlin capture/report façade (not legacy lsd-core)"
+    "LSD Mono core — greenfield report UI + thin Kotlin capture/report façade (not legacy lsd-core)"
 
 dependencies {
     testImplementation(libs.junit.jupiter)
@@ -55,14 +55,14 @@ fun Exec.withNodeOnPath() {
     }
 }
 
-val reportNextDir = layout.projectDirectory.dir("report-next")
+val reportDir = layout.projectDirectory.dir("report")
 val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
-val reportNextShell = reportNextDir.file("lsd-report-next.single.html")
+val reportShell = reportDir.file("lsd-report-next.single.html")
 
-val reportNextSingle = tasks.register<Exec>("reportNextSingle") {
+val reportSingle = tasks.register<Exec>("reportSingle") {
     group = "build"
-    description = "npm ci, then npm run build:single, for the report-next shell."
-    workingDir = reportNextDir.asFile
+    description = "npm ci, then npm run build:single, for the report shell."
+    workingDir = reportDir.asFile
     withNodeOnPath()
     val npm = if (System.getProperty("os.name").lowercase().contains("windows")) {
         listOf("cmd", "/c", "node -v && npm ci && npm run build:single")
@@ -70,32 +70,37 @@ val reportNextSingle = tasks.register<Exec>("reportNextSingle") {
         listOf("sh", "-c", "node -v && npm ci && npm run build:single")
     }
     commandLine(npm)
-    inputs.file(reportNextDir.file("package.json")).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file(reportNextDir.file("package-lock.json")).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file(reportNextDir.file("index.html")).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file(reportNextDir.file("tsconfig.json")).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file(reportNextDir.file("vite.config.ts")).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir(reportNextDir.dir("src")).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir(reportNextDir.dir("scripts")).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir(reportNextDir.dir("public")).withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.file(reportNextShell)
-    outputs.dir(reportNextDir.dir("dist"))
+    inputs.file(reportDir.file("package.json")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(reportDir.file("package-lock.json")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(reportDir.file("index.html")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(reportDir.file("tsconfig.json")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(reportDir.file("vite.config.ts")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(reportDir.dir("src")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(reportDir.dir("scripts")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(reportDir.dir("public")).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.file(reportShell)
+    outputs.dir(reportDir.dir("dist"))
 }
 
-val copyReportNextShell = tasks.register<Copy>("copyReportNextShell") {
+val copyReportShell = tasks.register<Copy>("copyReportShell") {
     group = "build"
     description =
-        "Copy report-next/lsd-report-next.single.html into build/generated/resources. Does not touch src/main/resources."
-    dependsOn(reportNextSingle)
-    from(reportNextShell)
-    into(generatedResourcesDir.map { it.dir("lsd-mono-core/report-next") })
+        "Copy report/lsd-report-next.single.html into build/generated/resources. Does not touch src/main/resources."
+    dependsOn(reportSingle)
+    // Drop output left by the old report-next copy task so a dirty build dir
+    // cannot package both classpath roots.
+    doFirst {
+        delete(layout.buildDirectory.dir("generated/resources/lsd-mono-core/report-next"))
+    }
+    from(reportShell)
+    into(generatedResourcesDir.map { it.dir("lsd-mono-core/report") })
 }
 
-tasks.register<Exec>("reportNextTest") {
+tasks.register<Exec>("reportTest") {
     group = "verification"
-    description = "Run report-next vitest (npm test) on the Gradle check path."
-    dependsOn(reportNextSingle)
-    workingDir = reportNextDir.asFile
+    description = "Run report vitest (npm test) on the Gradle check path."
+    dependsOn(reportSingle)
+    workingDir = reportDir.asFile
     withNodeOnPath()
     commandLine("npm", "test")
 }
@@ -104,11 +109,11 @@ tasks.register<Exec>("reportNextTest") {
 // processResources copies it into the packaged resources. The generated file is
 // listed last and overwrites a leftover hand copy at the same classpath path.
 tasks.named<ProcessResources>("processResources") {
-    dependsOn(copyReportNextShell)
+    dependsOn(copyReportShell)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from(generatedResourcesDir)
 }
 
 tasks.named("check") {
-    dependsOn("reportNextTest")
+    dependsOn("reportTest")
 }

@@ -1,6 +1,6 @@
 # LSD Report Next
 
-Report UI for **lsd-mono-core**. Sources live in `modules/lsd-mono-core/report-next`. The parent module's Gradle build runs this package (`reportNextSingle`, `reportNextTest`) and packages `lsd-report-next.single.html` into the jar. The JVM façade injects captured `ReportJson` as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
+Report UI for **lsd-mono-core**. Sources live in `modules/lsd-mono-core/report`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `lsd-report-next.single.html` into the jar. The JVM façade injects captured `ReportJson` as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
 
 This is the live UI, not a separate experiment, and it is not published on its own.
 
@@ -9,7 +9,7 @@ This is the live UI, not a separate experiment, and it is not published on its o
 Virtualisation math (row window from `scrollTop` + viewport, overscan, sticky header) lives in `src/lib/layout.ts` and is locked by `src/lib/layout.test.ts`.
 
 ```bash
-cd modules/lsd-mono-core/report-next
+cd modules/lsd-mono-core/report
 npm ci
 npm test
 ```
@@ -17,18 +17,18 @@ npm test
 Axe and screenshot checks are separate from vitest (Playwright downloads nothing extra when the 1.55 Chromium cache is already present):
 
 ```bash
-cd modules/lsd-mono-core/report-next
+cd modules/lsd-mono-core/report
 npm run check:ux
 ```
 
-Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportNextTest`. `npm run check:ux` stays manual. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
+Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`. `npm run check:ux` stays manual. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
 
 ## Open the demo
 
 From the repo root:
 
 ```bash
-cd modules/lsd-mono-core/report-next
+cd modules/lsd-mono-core/report
 npm ci
 npm run dev          # http://localhost:5173/
 # or
@@ -40,29 +40,29 @@ npm run build && npm run preview   # http://localhost:4173/
 ```bash
 npm run build:single
 # then open:
-#   modules/lsd-mono-core/report-next/lsd-report-next.single.html
-#   modules/lsd-mono-core/report-next/dist/lsd-report-next.html
+#   modules/lsd-mono-core/report/lsd-report-next.single.html
+#   modules/lsd-mono-core/report/dist/lsd-report-next.html
 ```
 
 **Multi-file `dist/` after build** (Vite `base: './'`; prefer preview if modules are blocked on `file://`):
 
 ```bash
 npm run build
-# then open modules/lsd-mono-core/report-next/dist/index.html
+# then open modules/lsd-mono-core/report/dist/index.html
 ```
 
 | Mode | Path / URL |
 |------|------------|
 | Dev | `http://localhost:5173/` |
 | Preview | `http://localhost:4173/` |
-| Built static (multi-file) | `modules/lsd-mono-core/report-next/dist/index.html` |
-| Chrome `file://` | `modules/lsd-mono-core/report-next/lsd-report-next.single.html` |
-| Source entry | `modules/lsd-mono-core/report-next/index.html` |
+| Built static (multi-file) | `modules/lsd-mono-core/report/dist/index.html` |
+| Chrome `file://` | `modules/lsd-mono-core/report/lsd-report-next.single.html` |
+| Source entry | `modules/lsd-mono-core/report/index.html` |
 
 Gradle produces the same shell without a manual npm build:
 
 ```bash
-./gradlew :modules:lsd-mono-core:reportNextSingle
+./gradlew :modules:lsd-mono-core:reportSingle
 ```
 
 ## Stack
@@ -81,7 +81,7 @@ The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG o
 
 ## Compared with legacy lsd-core
 
-| Capability | lsd-core today | report-next |
+| Capability | lsd-core today | report |
 |------------|----------------|-------------|
 | Sequence look | PlantUML mono SVG | Custom SVG with participant cards, activation bars, duration chips, glow-on-hover |
 | Message detail | CSS `:target` hash overlays | Side inspector + lazy payload + copy + type/from→to pills |

@@ -52,7 +52,7 @@ import java.time.ZoneId
  * **Mirrored:** participants, facts, `capture` of messages / responses / notes
  * (over / left / right) / delays / spacers / short arrows / logical dividers /
  * lifelines, scenario completion, report + index writers.
- * Completing a report serialises [ReportJson] (the report-next shape) and injects
+ * Completing a report serialises [ReportJson] (the report shape) and injects
  * it into the interactive SVG shell.
  *
  * **Sections** (`section`) replace PlantUML `newpage`: they stay in the same

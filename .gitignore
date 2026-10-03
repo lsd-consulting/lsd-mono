@@ -24,9 +24,9 @@ Thumbs.db
 local.properties
 *.log
 
-# report-next / Node (optional local Vite builds)
+# report UI / Node (optional local Vite builds)
 **/node_modules/
-**/report-next/dist/
+modules/lsd-mono-core/report/dist/
 
 # Local large-diagram HTML from the perf check (viewable, not committed)
 docs/perf-samples/

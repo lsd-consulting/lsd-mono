@@ -7,7 +7,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
-import { shellParts } from '../../integrations/lsd-mono-core/report-next/src/lib/payloads.ts'
+import { shellParts } from '../../modules/lsd-mono-core/report/src/lib/payloads.ts'
 
 const shellPath = process.argv[2]
 const outDir = process.argv[3]

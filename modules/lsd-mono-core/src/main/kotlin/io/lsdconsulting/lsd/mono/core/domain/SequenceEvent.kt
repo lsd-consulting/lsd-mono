@@ -3,7 +3,7 @@ package io.lsdconsulting.lsd.mono.core.domain
 import java.time.Instant
 
 /**
- * In-memory sequence events. JSON `kind` values match report-next `DiagramEvent`.
+ * In-memory sequence events. JSON `kind` values match report `DiagramEvent`.
  *
  * A [Section] is the greenfield replacement for PlantUML `newpage`: a titled row
  * in one continuous diagram. Activations are not closed at section boundaries.

@@ -33,7 +33,7 @@ class CaptureToJsonTest {
     }
 
     @Test
-    fun `multi-message scenario serialises to report-next json and is injected into the shell`() {
+    fun `multi-message scenario serialises to report json and is injected into the shell`() {
         val lsd = LsdContext()
         lsd.addParticipants(
             ACTOR.called("Customer", colour = "#38bdf8"),

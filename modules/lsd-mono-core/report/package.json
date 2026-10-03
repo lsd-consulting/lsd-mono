@@ -1,5 +1,5 @@
 {
-  "name": "lsd-report-next",
+  "name": "lsd-report",
   "version": "0.1.0",
   "private": true,
   "description": "Living Sequence Diagrams HTML report UI for lsd-mono-core",

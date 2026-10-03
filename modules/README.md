@@ -7,10 +7,10 @@ published `lsd-consulting` libraries (e.g. Maven Central `lsd-core`,
 
 | Path | Artifact | Purpose |
 |------|----------|---------|
-| `lsd-mono-core/` | `lsd-mono-core` | Greenfield core: sequence capture → report-next JSON + SVG shell |
+| `lsd-mono-core/` | `lsd-mono-core` | Greenfield core: sequence capture → report JSON + SVG shell |
 | `lsd-mono-junit-jupiter/` | `lsd-mono-junit-jupiter` | JUnit Jupiter **6** extension → depends on `:modules:lsd-mono-core` |
 
 **Product path:** `lsd-mono-core` is the mono core artifact. Its report UI is
-`modules/lsd-mono-core/report-next`. For legacy behaviour, see the published upstream
+`modules/lsd-mono-core/report`. For legacy behaviour, see the published upstream
 [lsd-core](https://github.com/lsd-consulting/lsd-core) repository — it is not
 vendored in this tree.
