@@ -2,7 +2,7 @@
 
 **Scope:** features still to port from legacy `modules/lsd-core` (`com.lsd.core`) into greenfield `integrations/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report-next/` UI.
 
-**Inspected (local tree tip `46025cb`, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
+**Inspected (local tree, slices through sections + virtualisation, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report-next types, SVG renderer, chrome.
 
 Legacy is **inspiration and migration API only** — not the product path. Generating PlantUML as the product renderer is explicitly **out**.
 
@@ -55,25 +55,23 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### 3.1 Capture / events not yet mirrored
 
-#### P0 — Scenario sections / “pages” without PlantUML `newpage`
+#### P0 — Scenario sections / “pages” without PlantUML `newpage` — **landed 2026-10-03**
 
 | | |
 |--|--|
 | **Legacy** | `Newpage` + nested `PageTitle` in `domain/SequenceEvent.kt`; `List.groupedByPages()` in `diagram/SequenceDiagramGenerator.kt` splits the event stream; also chunks by `maxEventsPerDiagram` (default 50 via `lsd.core.diagram.sequence.maxEventsPerDiagram`). Activations are **dropped** when a split would occur. |
-| **Why** | Large / multi-phase scenarios are how consumers keep reports readable today. Mono must not rely on PlantUML page breaks. |
-| **Greenfield** | Model a first-class **section** event (e.g. `kind: "section"`, title) in domain + `types.ts`. UI: collapsible / jumpable sections inside one continuous diagram (or virtualised window), **not** separate PlantUML SVGs. Optional soft warn when event count is huge — no hard drop of activations. |
-| **Priority** | **P0** |
-| **Test** | Golden JSON with 2+ sections; unit test that activations survive across section boundaries; later UI: section anchors visible. |
+| **Shipped** | `Section` (`kind: "section"`, `title`) via `LsdContext.section(title)` and capture DSL `section(title)`. report-next draws a title row and a jump list. One continuous diagram — no extra SVGs. Activations are **not** closed at the boundary. |
+| **Still open** | Optional soft warn on huge event counts. Legacy `PageTitle` as a separate event is not ported (the section title covers it). |
+| **Test** | `SectionCaptureTest` — two sections, activate before and deactivate after. |
 
-#### P0 — Large-diagram UX (virtualisation / windowing)
+#### P0 — Large-diagram UX (virtualisation / windowing) — **landed 2026-10-03** (zoom/pan still P1)
 
 | | |
 |--|--|
 | **Legacy** | Caps events per diagram (`ReportOptions.maxEventsPerDiagram`) and splits — a workaround for PlantUML SVG size / browser pain. |
-| **Why** | Core product bet: mono must **feel** better on hundreds–thousands of events. Sticky chrome already helps navigation; the SVG still paints **every** row (`renderSequenceSvg` loops all events). |
-| **Greenfield** | Virtualise rows (window + overscan), sticky participant header row while scrolling, optional density modes; keep full event list in JSON. Zoom/pan or “fit width” controls for wide participant sets. |
-| **Priority** | **P0** |
-| **Test** | Unit: layout window selects correct row range for scrollTop; golden JSON unchanged under virtualisation; browser check later with N≥500 synthetic events (FPS / interaction). |
+| **Shipped** | `report-next/src/lib/layout.ts` lays out rows in CSS pixels. `virtualRowRange` paints only the scroll window plus overscan. Sticky participant header sits inside the diagram scrollport so names stay visible. Full event list stays in JSON. |
+| **Still open** | Zoom / pan / fit-width (P1). Density modes. Browser FPS check with N≥500. |
+| **Test** | `layout.test.ts` (`npm test` in `report-next`) — scrollTop + viewport → row range, including sticky-header inset and overscan. |
 
 #### P1 — Note left / note right
 
@@ -249,17 +247,19 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 | Capability | report-next **has** | Still **needed** | Priority |
 |------------|---------------------|------------------|----------|
-| Sticky topbar / sidebar | Yes (`position: sticky` in `app.css`) | Sticky **participant header** inside diagram scrollport | P0 |
+| Sticky topbar / sidebar | Yes (`position: sticky` in `app.css`) | Sticky **participant header** inside the diagram scrollport — **landed 2026-10-03** | done |
 | Search | Scenarios + facts | Optional in-diagram message/label search + highlight | P1 |
 | Themes | Dark/light + persist (**already shipped**, `ui/theme.ts`) | High-contrast / print stylesheet only | P2 |
 | Keyboard | `/ j k Enter d ? Esc` | Diagram-local nav (next message with data) | P1 |
 | Message detail | `<dialog>` + copy | Structured pretty-print for XML/JSON; size limits | P1 |
-| Virtualisation | **No** — full SVG | Row windowing + recycle | **P0** |
-| Zoom / pan | Horizontal overflow scroll only | Pinch/trackpad zoom, fit-to-width, minimap optional | P1 |
+| Virtualisation | **Yes** — `virtualRowRange` + overscan (`layout.ts`) | Recycle DOM nodes (today the window SVG is rebuilt on scroll) | done (rebuild is enough for now) |
+| Zoom / pan | Horizontal overflow scroll only | Pinch/trackpad zoom, fit-to-width, minimap optional — **still P1**, not part of the sections slice | P1 |
 | Hide / focus participants | **No** | Toggle columns for wide diagrams (legacy #79-class need) | P1 |
-| Section / page nav | **No** | Jump list for sections (see Newpage replacement) | **P0** |
+| Section / page nav | **Yes** — in-diagram jump list scrolls to the section row | — | done |
 
 **Theme is not a gap.** Dark/light with persistence is **already shipped** in `report-next/src/ui/theme.ts` (`localStorage` key `lsd-report-next-theme`, `prefers-color-scheme` fallback, `data-theme` on the document). Do not rebuild it. **P2** is only a high-contrast / print stylesheet.
+
+**Accessibility is a requirement to track (not implemented in the sections slice).** Check accessibility properly, especially colour blindness. Do not rely on colour alone for status (`success` / `warn` / `error`), message types, or light vs dark theme. Pair every colour with a non-colour cue (icon, pattern, or text label) and check contrast in both themes so red/green (and other) deficiencies stay readable. High-contrast / print remains the P2 stylesheet follow-up; this cue rule applies to the product UI as features land.
 
 ---
 
@@ -306,7 +306,8 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
    Slice 1 landed 2026-10-03: golden `multi-scenario-status.json` locks per-scenario `success` / `warn` / `error` and report-level rollup `error`.
 
 2. **P0 — Sections + large-diagram virtualisation + sticky participant header**  
-   Replace `newpage` / `maxEventsPerDiagram` splits with continuous, scrollable UX.
+   Replace `newpage` / `maxEventsPerDiagram` splits with continuous, scrollable UX.  
+   Slice 2 landed 2026-10-03: `kind: "section"` (`LsdContext.section` / DSL `section`), jump list, one diagram, activations kept across sections, `virtualRowRange` + sticky participant header. Zoom/pan stays P1. Colour-blind cues are tracked next to the theme note and were not part of this slice.
 
 3. **P0 — JUnit structured failures + richer extension tests**  
    Make the first integration trustworthy; stop relying on legacy overlay HTML in descriptions.
@@ -337,7 +338,7 @@ Wire **Gradle → Vite `build:single`** when the shell stops being a hand-copied
 ### Unit (Kotlin + TS)
 
 - **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder; metrics tree (port ideas from `MetricsTest`); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`).
-- **TypeScript:** pure layout functions extracted from `sequence-diagram.ts` (row y, activation intervals, marker choice for types); virtualisation window math.
+- **TypeScript:** `report-next/src/lib/layout.test.ts` locks `virtualRowRange` (scrollTop + viewport, overscan, sticky header inset) and activation spans across a section. Run `npm test` in `report-next` (vitest). Marker choice for message types is still open.
 
 ### Browser / UI (later, selective)
 

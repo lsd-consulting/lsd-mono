@@ -12,6 +12,18 @@ Related context: Option A shell refresh lives on `lsd-core` branch `feature/html
 
 ---
 
+## Tests
+
+Virtualisation math (row window from `scrollTop` + viewport, overscan, sticky header) lives in `src/lib/layout.ts` and is locked by `src/lib/layout.test.ts`.
+
+```bash
+cd integrations/lsd-mono-core/report-next
+npm ci
+npm test
+```
+
+Not part of `./gradlew build`. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
+
 ## Open the demo
 
 ```bash

@@ -355,7 +355,7 @@ mark {
       transparent 23px,
       color-mix(in oklab, var(--border) 40%, transparent) 24px
     );
-  overflow: auto;
+  overflow: visible;
   padding: 8px 4px 16px;
 }
 .diagram-panel h3 {

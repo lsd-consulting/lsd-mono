@@ -33,6 +33,7 @@ export const sampleReport: Report = {
         { id: 'bus', name: 'EventBus', type: 'QUEUE', colour: '#fb7185' },
       ],
       events: [
+        { kind: 'section', id: 'sec-reserve', title: 'Reserve order' },
         { kind: 'activate', id: 'a1', participantId: 'api' },
         {
           kind: 'message',
@@ -86,6 +87,7 @@ export const sampleReport: Report = {
           data: { orderId: 'ord_9f2a1c', status: 'RESERVED' },
         },
         { kind: 'deactivate', id: 'd2', participantId: 'orders' },
+        { kind: 'section', id: 'sec-pay', title: 'Capture payment' },
         { kind: 'divider', id: 'div1', label: 'Payment' },
         { kind: 'activate', id: 'a3', participantId: 'payments' },
         {

@@ -118,6 +118,20 @@ data class DividerEventJson(
         )
 }
 
+data class SectionEventJson(
+    val id: String,
+    val title: String,
+) : EventJson() {
+    internal override fun toJsonValue(): JsonValue =
+        obj(
+            listOf(
+                "kind" to JsonString("section"),
+                "id" to JsonString(id),
+                "title" to JsonString(title),
+            ),
+        )
+}
+
 data class LifelineEventJson(
     val kind: String,
     val id: String,

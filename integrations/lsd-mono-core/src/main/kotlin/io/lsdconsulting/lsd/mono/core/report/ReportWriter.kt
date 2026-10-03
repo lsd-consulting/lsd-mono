@@ -8,6 +8,7 @@ import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
+import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.model.toJson
 import java.io.File
 import java.nio.file.Files
@@ -231,6 +232,7 @@ object ReportWriter {
                         is MessageEventJson -> "${event.from} → ${event.to}: ${event.label} (${event.type})"
                         is NoteEventJson -> "note over ${event.over}: ${event.text}"
                         is DividerEventJson -> "—— ${event.label}"
+                        is SectionEventJson -> "section: ${event.title}"
                         is LifelineEventJson -> "${event.kind} ${event.participantId}"
                     }
                 "<li>${label.escapeHtml()}</li>"

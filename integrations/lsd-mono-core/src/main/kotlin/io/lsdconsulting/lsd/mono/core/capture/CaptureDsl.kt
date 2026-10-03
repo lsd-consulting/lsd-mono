@@ -8,6 +8,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Note
 import io.lsdconsulting.lsd.mono.core.domain.Participant
+import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 
 /**
@@ -91,3 +92,10 @@ fun noteOver(participant: Participant, text: String): SequenceEventBuilder = not
 /** Legacy name for a diagram section break (`== label ==` in PlantUML). */
 fun logicalDivider(label: String): SequenceEventBuilder =
     SequenceEventBuilder { ids -> Divider(id = ids.next(), label = label) }
+
+/**
+ * Continuous-diagram section (replaces legacy `newpage`).
+ * `capture(section("Phase 2"))` — activations stay open across the boundary.
+ */
+fun section(title: String): SequenceEventBuilder =
+    SequenceEventBuilder { ids -> Section(id = ids.next(), title = title) }

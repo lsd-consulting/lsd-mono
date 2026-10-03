@@ -102,7 +102,7 @@ class CaptureToJsonTest {
         assertTrue(injectedAt >= 0, "shell missing injection")
         assertTrue(sampleAt > injectedAt, "sample fallback should follow the injected report")
         assertTrue(diagram.contains("POST /checkout"))
-        assertTrue(diagram.contains("const re=window.__LSD_REPORT__??"))
+        assertTrue(diagram.contains("window.__LSD_REPORT__??"), "shell should fall back to sample data when the global is absent")
 
         val shared = tempDir.resolve("lsd-report-next.single.html").readText()
         assertTrue(shared.contains("Orders flow"))

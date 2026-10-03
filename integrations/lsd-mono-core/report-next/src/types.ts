@@ -38,6 +38,13 @@ export interface DividerEvent {
   label: string
 }
 
+/** Titled row in one continuous diagram. Does not split the SVG or end activations. */
+export interface SectionEvent {
+  kind: 'section'
+  id: string
+  title: string
+}
+
 export interface ActivateEvent {
   kind: 'activate' | 'deactivate'
   id: string
@@ -57,7 +64,7 @@ export interface MessageEvent {
   data?: unknown
 }
 
-export type DiagramEvent = MessageEvent | NoteEvent | DividerEvent | ActivateEvent
+export type DiagramEvent = MessageEvent | NoteEvent | DividerEvent | SectionEvent | ActivateEvent
 
 export interface Fact {
   key: string

@@ -74,8 +74,11 @@ and `lsd.junit.*` names where useful for migration).
 ```bash
 cd integrations/lsd-mono-core/report-next
 npm ci
+npm test             # vitest — virtual row window (src/lib/layout.test.ts)
 npm run dev          # http://localhost:5173/
 # or open report-next/lsd-report-next.single.html in Chrome (file://)
 ```
+
+`npm test` is the repeatable UI check for diagram virtualisation. It is not wired into `./gradlew build` (that stays the Kotlin build). Needs a current Node (Vite 7 / Vitest 3); the repo does not change your default Node.
 
 See `report-next/README.md` for the original spike notes.

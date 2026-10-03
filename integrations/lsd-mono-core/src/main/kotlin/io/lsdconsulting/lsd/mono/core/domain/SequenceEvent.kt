@@ -3,8 +3,11 @@ package io.lsdconsulting.lsd.mono.core.domain
 /**
  * In-memory sequence events. JSON `kind` values match report-next `DiagramEvent`.
  *
+ * A [Section] is the greenfield replacement for PlantUML `newpage`: a titled row
+ * in one continuous diagram. Activations are not closed at section boundaries.
+ *
  * Deferred vs legacy `com.lsd.core.domain.SequenceEvent` (no report-next equivalent,
- * or PlantUML-only): NoteLeft / NoteRight, Newpage, PageTitle, TimeDelay, VerticalSpace,
+ * or PlantUML-only): NoteLeft / NoteRight, PageTitle, TimeDelay, VerticalSpace,
  * MessageType.SHORT_INBOUND / SHORT_OUTBOUND.
  */
 sealed class SequenceEvent {
@@ -39,6 +42,12 @@ data class Note(
 data class Divider(
     override val id: String,
     val label: String,
+) : SequenceEvent()
+
+/** Titled break in a continuous diagram. Does not split the SVG or drop activations. */
+data class Section(
+    override val id: String,
+    val title: String,
 ) : SequenceEvent()
 
 enum class LifelineAction { ACTIVATE, DEACTIVATE }

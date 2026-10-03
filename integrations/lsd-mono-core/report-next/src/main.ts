@@ -9,7 +9,7 @@ declare global {
     __LSD_REPORT__?: Report
   }
 }
-import { findMessage, renderSequenceSvg } from './lib/sequence-diagram'
+import { bindDiagramScroll, findMessage, renderDiagramHtml, syncDiagramWindow } from './lib/sequence-diagram'
 import { applyTheme, getPreferredTheme, toggleTheme } from './ui/theme'
 import { formatGeneratedAt, pretty, statusLabel } from './ui/format'
 
@@ -164,6 +164,37 @@ function bindChrome(): void {
 
   const dialog = document.querySelector<HTMLDialogElement>('#msg-dialog')!
   document.querySelector('#dialog-close')!.addEventListener('click', () => dialog.close())
+
+  const main = document.querySelector<HTMLElement>('#main')!
+  main.addEventListener('click', (ev) => {
+    const target = ev.target as Element | null
+    if (!target || !target.closest) return
+    const jump = target.closest<HTMLButtonElement>('[data-jump-y]')
+    if (jump) {
+      const scroll = jump.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
+      if (scroll) scroll.scrollTop = Number(jump.dataset.jumpY)
+      return
+    }
+    const hit = target.closest<SVGGElement>('.message.has-data')
+    if (!hit) return
+    const scenario = scenarioFrom(hit)
+    const mid = hit.getAttribute('data-message-id')
+    if (!scenario || !mid) return
+    const msg = findMessage(scenario, mid)
+    if (msg) openMessage(scenario, msg)
+  })
+  main.addEventListener('keydown', (ev) => {
+    const target = ev.target as Element | null
+    const hit = target?.closest?.<SVGGElement>('.message.has-data')
+    if (!hit) return
+    if (ev.key !== 'Enter' && ev.key !== ' ') return
+    ev.preventDefault()
+    const scenario = scenarioFrom(hit)
+    const mid = hit.getAttribute('data-message-id')
+    if (!scenario || !mid) return
+    const msg = findMessage(scenario, mid)
+    if (msg) openMessage(scenario, msg)
+  })
   document.querySelector('#dialog-copy')!.addEventListener('click', async () => {
     const text = document.querySelector('#dialog-pre')!.textContent ?? ''
     try {
@@ -253,22 +284,14 @@ function renderMain(): void {
       }
     })
 
-    card.querySelectorAll<SVGGElement>('.message.has-data').forEach((g) => {
-      const open = () => {
-        const mid = g.getAttribute('data-message-id')
-        if (!mid) return
-        const msg = findMessage(s, mid)
-        if (msg) openMessage(s, msg)
-      }
-      g.addEventListener('click', open)
-      g.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-          ev.preventDefault()
-          open()
-        }
-      })
-    })
   })
+  bindDiagramScroll(main)
+}
+
+function scenarioFrom(node: Element): Scenario | undefined {
+  const card = node.closest<HTMLElement>('[id^="card-"]')
+  if (!card) return
+  return report.scenarios.find((s) => s.id === card.id.slice('card-'.length))
 }
 
 function toggleOpen(id: string): void {
@@ -281,7 +304,7 @@ function toggleOpen(id: string): void {
 
 function scenarioHtml(s: Scenario, index: number): string {
   const open = state.openIds.has(s.id)
-  const svg = renderSequenceSvg(s)
+  const diagram = renderDiagramHtml(s)
   return `
   <article class="scenario-card ${s.status}" id="card-${s.id}" data-open="${open}" data-status="${s.status}" style="animation-delay:${index * 40}ms">
     <div class="scenario-head" role="button" tabindex="0" aria-expanded="${open}">
@@ -311,9 +334,9 @@ function scenarioHtml(s: Scenario, index: number): string {
       <section class="diagram-panel">
         <h3>
           Sequence diagram
-          <span class="diagram-hint">Click a message with payload · Tab to focus</span>
+          <span class="diagram-hint">Click a message with payload · jump sections · scroll keeps names pinned</span>
         </h3>
-        ${svg}
+        ${diagram}
       </section>
     </div>
   </article>`
@@ -411,3 +434,6 @@ function onKey(e: KeyboardEvent): void {
 applyTheme(getPreferredTheme())
 renderShell()
 window.addEventListener('keydown', onKey)
+window.addEventListener('resize', () => {
+  document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => syncDiagramWindow(el))
+})

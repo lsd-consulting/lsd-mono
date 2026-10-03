@@ -1,6 +1,46 @@
+.seq-diagram { display: flex; flex-direction: column; gap: 8px; }
+.section-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px;
+}
+.section-jump button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.section-jump button:hover,
+.section-jump button:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  background: var(--accent-soft);
+}
+.seq-scroll {
+  max-height: min(68vh, 640px);
+  min-height: 220px;
+  overflow: auto;
+  position: relative;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.seq-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.seq-spacer { position: relative; }
+.seq-window { position: absolute; top: 0; left: 0; }
+.seq-header-svg,
 .seq-svg {
   display: block;
-  min-width: 520px;
   font-family: var(--font);
 }
 
@@ -94,4 +134,16 @@
 
 [data-theme="light"] .participant-card {
   filter: drop-shadow(0 1px 3px oklch(0.4 0.02 250 / 0.12));
+}
+
+.section-band {
+  fill: color-mix(in oklab, var(--accent) 14%, var(--surface-2));
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+.section-title {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
 }

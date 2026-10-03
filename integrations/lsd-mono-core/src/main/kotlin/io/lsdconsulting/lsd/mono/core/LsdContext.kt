@@ -11,6 +11,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Note
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantIds
 import io.lsdconsulting.lsd.mono.core.domain.Scenario
+import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
@@ -24,6 +25,7 @@ import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
+import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import java.io.File
@@ -39,7 +41,10 @@ import java.time.ZoneId
  * Completing a report serialises [ReportJson] (the report-next shape) and injects
  * it into the interactive SVG shell.
  *
- * **Deferred:** PlantUML / component diagrams, legacy include-files, Newpage,
+ * **Sections** (`section`) replace PlantUML `newpage`: they stay in the same
+ * event stream and do not drop lifeline activations.
+ *
+ * **Deferred:** PlantUML / component diagrams, legacy include-files,
  * TimeDelay, VerticalSpace, NoteLeft/NoteRight, short inbound/outbound arrows.
  */
 open class LsdContext {
@@ -134,6 +139,14 @@ open class LsdContext {
         capture(Divider(id = idGenerator.next(), label = label))
     }
 
+    /**
+     * Insert a titled section in the current scenario.
+     * Unlike legacy `newpage`, this does not split the diagram or deactivate lifelines.
+     */
+    fun section(title: String) {
+        capture(Section(id = idGenerator.next(), title = title))
+    }
+
     fun activate(participant: String) {
         capture(Lifeline(id = idGenerator.next(), participantId = participant, action = LifelineAction.ACTIVATE))
     }
@@ -217,6 +230,7 @@ open class LsdContext {
                     over = resolve(event.over).id,
                 )
             is Divider -> event.copy(id = event.id.ifBlank { idGenerator.next() })
+            is Section -> event.copy(id = event.id.ifBlank { idGenerator.next() })
             is Lifeline ->
                 event.copy(
                     id = event.id.ifBlank { idGenerator.next() },
@@ -251,6 +265,7 @@ open class LsdContext {
                 is Note -> ids.add(event.over)
                 is Lifeline -> ids.add(event.participantId)
                 is Divider -> Unit
+                is Section -> Unit
             }
         }
         return participants.values.filter { it.id in ids }
@@ -309,6 +324,7 @@ open class LsdContext {
                 )
             is Note -> NoteEventJson(id = id, text = text, over = over)
             is Divider -> DividerEventJson(id = id, label = label)
+            is Section -> SectionEventJson(id = id, title = title)
             is Lifeline ->
                 LifelineEventJson(
                     kind = if (action == LifelineAction.ACTIVATE) "activate" else "deactivate",

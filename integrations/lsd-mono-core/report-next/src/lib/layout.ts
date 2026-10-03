@@ -1,0 +1,164 @@
+import type { DiagramEvent } from '../types'
+
+/** Diagram geometry in CSS pixels. 1 unit = 1 px so scroll math matches the SVG. */
+export const COL_GAP = 140
+export const LEFT_PAD = 72
+export const HEADER_BLOCK_H = 56
+export const BOTTOM_PAD = 28
+export const ACT_W = 12
+export const DEFAULT_OVERSCAN = 6
+/** Used when the scrollport has not been laid out yet (clientHeight 0). */
+export const DEFAULT_VIEWPORT = 560
+
+export const ROW_H = {
+  message: 52,
+  note: 40,
+  divider: 36,
+  section: 48,
+  activate: 8,
+  deactivate: 8,
+} as const
+
+export interface LayoutRow {
+  index: number
+  /** Top of the row in body coordinates (0 = first event, below the sticky header). */
+  y: number
+  height: number
+  event: DiagramEvent
+}
+
+export interface RowSpan {
+  y: number
+  height: number
+}
+
+export interface VirtualRange {
+  /** Inclusive. */
+  start: number
+  /** Exclusive. */
+  end: number
+}
+
+export interface ActivationSpan {
+  participantId: string
+  y0: number
+  y1: number
+}
+
+export function eventRowHeight(event: DiagramEvent): number {
+  switch (event.kind) {
+    case 'note':
+      return ROW_H.note
+    case 'divider':
+      return ROW_H.divider
+    case 'section':
+      return ROW_H.section
+    case 'activate':
+      return ROW_H.activate
+    case 'deactivate':
+      return ROW_H.deactivate
+    default:
+      return ROW_H.message
+  }
+}
+
+/** Rows stacked from y = 0. Sections are ordinary rows — they do not reset y or activations. */
+export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
+  const rows: LayoutRow[] = []
+  let y = 0
+  for (let index = 0; index < events.length; index++) {
+    const event = events[index]
+    const height = eventRowHeight(event)
+    rows.push({ index, y, height, event })
+    y += height
+  }
+  return rows
+}
+
+export function diagramWidth(participantCount: number): number {
+  return LEFT_PAD * 2 + Math.max(participantCount - 1, 1) * COL_GAP
+}
+
+export function bodyHeight(rows: LayoutRow[]): number {
+  if (!rows.length) return BOTTOM_PAD
+  const last = rows[rows.length - 1]
+  return last.y + last.height + BOTTOM_PAD
+}
+
+/**
+ * Window of rows to paint.
+ *
+ * `rows` must be sorted by ascending `y` (as from [layoutRows]).
+ * `scrollTop` is the diagram scrollport's scrollTop. The sticky header occupies
+ * `headerHeight` pixels of the viewport, so the visible body slice is
+ * `[scrollTop, scrollTop + viewportHeight - headerHeight)`.
+ * `overscan` is a row count added on each side.
+ */
+export function virtualRowRange(input: {
+  rows: RowSpan[]
+  scrollTop: number
+  viewportHeight: number
+  overscan?: number
+  headerHeight?: number
+}): VirtualRange {
+  const { rows } = input
+  const n = rows.length
+  if (n === 0) return { start: 0, end: 0 }
+
+  const overscan = Math.max(0, input.overscan ?? 0)
+  const headerHeight = Math.max(0, input.headerHeight ?? 0)
+  const scrollTop = Math.max(0, input.scrollTop)
+  const visibleHeight = Math.max(0, input.viewportHeight - headerHeight)
+  const viewTop = scrollTop
+  const viewBottom = scrollTop + visibleHeight
+
+  let first = n
+  for (let i = 0; i < n; i++) {
+    if (rows[i].y + rows[i].height > viewTop) {
+      first = i
+      break
+    }
+  }
+  if (first === n) {
+    return { start: Math.max(0, n - overscan), end: n }
+  }
+
+  let last = first
+  for (let i = first; i < n; i++) {
+    if (rows[i].y >= viewBottom) break
+    last = i
+  }
+
+  return {
+    start: Math.max(0, first - overscan),
+    end: Math.min(n, last + 1 + overscan),
+  }
+}
+
+/**
+ * Activation bars across the whole event list.
+ * A section (or any non-lifeline event) does not push or pop the stack.
+ */
+export function activationSpans(rows: LayoutRow[], endY: number): ActivationSpan[] {
+  const spans: ActivationSpan[] = []
+  const open = new Map<string, number[]>()
+  for (const row of rows) {
+    const event = row.event
+    if (event.kind === 'activate') {
+      const stack = open.get(event.participantId) ?? []
+      stack.push(row.y)
+      open.set(event.participantId, stack)
+    } else if (event.kind === 'deactivate') {
+      const stack = open.get(event.participantId) ?? []
+      const y0 = stack.pop() ?? row.y
+      spans.push({ participantId: event.participantId, y0, y1: row.y })
+      open.set(event.participantId, stack)
+    }
+  }
+  for (const [participantId, stack] of open) {
+    while (stack.length) {
+      spans.push({ participantId, y0: stack.pop()!, y1: endY })
+    }
+  }
+  return spans
+}
