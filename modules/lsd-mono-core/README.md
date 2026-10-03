@@ -1,7 +1,7 @@
 # lsd-mono-core
 
 First-party **LSD Mono** core library. This is the greenfield product path:
-report UI from the **report-next** spike (Vite + TypeScript + custom SVG), plus a
+report UI in `report-next/` (Vite + TypeScript + custom SVG), plus a
 thin Kotlin/JVM capture and report façade so integrations (e.g.
 `lsd-mono-junit-jupiter`) can migrate off published Maven `lsd-core`.
 
@@ -10,7 +10,7 @@ thin Kotlin/JVM capture and report façade so integrations (e.g.
 | | |
 |--|--|
 | **Is** | Mono-owned artifact `lsd-mono-core`, package `io.lsdconsulting.lsd.mono.core` |
-| **Is** | Seeded from the greenfield `lsd-report-next` spike |
+| **Is** | Report UI in `report-next/` (`modules/lsd-mono-core/report-next`) |
 | **Is not** | A vendor of legacy Maven `io.github.lsd-consulting:lsd-core` sources |
 | **Legacy reference** | Upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) for API / behaviour comparison |
 
@@ -18,7 +18,7 @@ thin Kotlin/JVM capture and report façade so integrations (e.g.
 
 ```
 lsd-mono-core/
-├── report-next/                 # Vite+TS spike sources (dev with npm)
+├── report-next/                 # Vite+TS report UI (dev with npm)
 │   ├── src/                     # UI, custom SVG diagram, sample data
 │   ├── lsd-report-next.single.html
 │   └── README.md
@@ -36,7 +36,7 @@ lsd-mono-core/
 - `LsdContext` façade: facts, `completeScenario`, `completeReport`, `createIndex`,
   `completeComponentsReport` (opt-in component graph), `clear`, id generation, HTML escape, popup helper
 - Report writer emits:
-  - `*-report.json` — ReportJson-shaped payload (aligned with spike `types.ts`)
+  - `*-report.json` — ReportJson-shaped payload (aligned with `report-next/src/types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
   - copies classpath `lsd-report-next.single.html` beside the report as the
     interactive shell with captured `ReportJson` injected (the demo falls back to sample data when opened directly)
@@ -66,7 +66,7 @@ lsd.createIndex()
 Property keys use the `lsd.mono.*` prefix (with fallbacks to legacy `lsd.core.*`
 and `lsd.junit.*` names where useful for migration).
 
-## Spike UI (manual)
+## Report UI (manual)
 
 ```bash
 cd modules/lsd-mono-core/report-next
@@ -78,4 +78,4 @@ npm run dev          # http://localhost:5173/
 
 `./gradlew :modules:lsd-mono-core:build` runs `reportNextSingle` (`npm ci` and `npm run build:single`) and `reportNextTest` (`npm test`). The shell is packaged from `build/generated/resources`, not written back into `src/main/resources`. Needs a current Node (Vite 7 / Vitest 3). The Gradle tasks prepend Node 22 when it is installed and do not change your default Node.
 
-See `report-next/README.md` for the original spike notes.
+See `report-next/README.md` for how to run the report UI.

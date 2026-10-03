@@ -19,7 +19,7 @@ class LsdContextTest {
     }
 
     @Test
-    fun `completeReport writes html json and copies spike shell`() {
+    fun `completeReport writes html json and copies report shell`() {
         val lsd = LsdContext()
         lsd.addFact("framework", "junit")
         lsd.completeScenario("hello world", "<p>ok</p>", Status.SUCCESS)

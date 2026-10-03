@@ -170,7 +170,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |--|--|
 | **Legacy** | Facts card in Handlebars `html-report.hbs` when non-empty. |
 | **Mono** | Facts in JSON + report-next “Key facts” card + searchable. Listing HTML also lists facts. |
-| **Gap** | Empty facts still render an empty card in the spike; minor polish. Ensure HTML-in-fact values are escaped consistently (listing escapes; shell uses `escapeHtml` on facts). |
+| **Gap** | Empty facts still render an empty card in the report shell; minor polish. Ensure HTML-in-fact values are escaped consistently (listing escapes; shell uses `escapeHtml` on facts). |
 | **Priority** | **P1** |
 | **Test** | Golden facts; unit escape; UI: hide empty facts card. |
 

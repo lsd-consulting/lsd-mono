@@ -1,8 +1,8 @@
 {
   "name": "lsd-report-next",
-  "version": "0.1.0-spike",
+  "version": "0.1.0",
   "private": true,
-  "description": "Greenfield Living Sequence Diagrams HTML report UI spike (2026 competitor-style)",
+  "description": "Living Sequence Diagrams HTML report UI for lsd-mono-core",
   "type": "module",
   "scripts": {
     "dev": "vite",

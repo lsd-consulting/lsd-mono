@@ -9,7 +9,7 @@ conventions and first-party greenfield libraries (including **lsd-mono-core**).
 Do not push or create a GitHub repository unless that is decided explicitly later.
 
 **Greenfield product path:** first-party modules under `modules/` (notably
-`lsd-mono-core`, seeded from the report-next UI spike). Legacy behaviour for
+`lsd-mono-core`, whose report UI lives in `modules/lsd-mono-core/report-next`). Legacy behaviour for
 comparison lives upstream at
 [lsd-consulting/lsd-core](https://github.com/lsd-consulting/lsd-core) — it is not
 vendored into this tree.
@@ -20,7 +20,7 @@ vendored into this tree.
 lsd-mono/
 ├── build-logic/                         # Included Gradle build (convention plugins)
 ├── modules/                             # First-party mono Gradle projects
-│   ├── lsd-mono-core/                   # Greenfield core + report-next spike
+│   ├── lsd-mono-core/                   # Greenfield core + report-next UI
 │   └── lsd-mono-junit-jupiter/          # JUnit Jupiter 6 extension → mono-core
 ├── gradle/
 │   ├── libs.versions.toml
@@ -38,8 +38,8 @@ lsd-mono/
 ## Prerequisites
 
 - JDK 21+ (toolchain configured for 21 in convention plugins)
-- Optional: Node.js 20+ only if you want to run/build the Vite report-next spike
-  outside Gradle (Gradle tasks use Node 22 via nvm when present)
+- Optional: Node.js 20+ only if you want to run/build the Vite report UI in
+  `modules/lsd-mono-core/report-next` outside Gradle (Gradle tasks use Node 22 via nvm when present)
 
 ## Quick start
 

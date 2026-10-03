@@ -390,7 +390,7 @@ function renderMain(): void {
     </div>
     ${items.map((s, i) => scenarioHtml(s, i)).join('')}
     <p class="footer-note">
-      Spike UI — custom SVG sequences, no PlantUML runtime.
+      Custom SVG sequences, no PlantUML runtime.
       Domain model shaped after <a href="https://github.com/lsd-consulting/lsd-core" target="_blank" rel="noopener">lsd-core</a>.
     </p>`
 

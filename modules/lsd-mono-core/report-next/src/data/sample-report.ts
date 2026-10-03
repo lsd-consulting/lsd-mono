@@ -4,7 +4,7 @@ import type { Report } from '../types'
 export const sampleReport = {
   "title": "Checkout Service — Living Sequence Diagrams",
   "generatedAt": "2026-09-30T07:42:11+01:00",
-  "generator": "lsd-report-next spike 0.1.0",
+  "generator": "lsd-report-next 0.1.0",
   "scenarios": [
     {
       "id": "sc-happy",
