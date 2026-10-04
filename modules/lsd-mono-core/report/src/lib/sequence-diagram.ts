@@ -19,11 +19,16 @@ import {
   HEADER_BLOCK_H,
   LEFT_PAD,
   MESSAGE_LABEL_RISE,
+  NOTE_LINE_H,
+  NOTE_PAD_Y,
+  NOTE_PLACE_CUE_GAP,
+  NOTE_PLACE_CUE_H,
   SHORT_STUB,
   activationSpans,
   bodyHeight,
   diagramWidth,
   layoutRows,
+  noteCardMetrics,
   virtualRowRange,
   type LayoutRow,
 } from './layout'
@@ -858,12 +863,26 @@ function renderRow(
     const match = rowMatchesQuery(event, paint.query)
     const hit = match ? ' search-hit' : ''
     const hitAttr = match ? ' data-search-hit="match"' : ''
-    const matchCue = match ? `<tspan class="note-match-cue"> [match]</tspan>` : ''
+    const card = noteCardMetrics(event.text)
+    const halfW = card.width / 2
+    const halfH = card.height / 2
+    const firstY = -halfH + NOTE_PAD_Y + NOTE_LINE_H * 0.8
+    const cueY =
+      -halfH + NOTE_PAD_Y + card.lines.length * NOTE_LINE_H + NOTE_PLACE_CUE_GAP + NOTE_PLACE_CUE_H * 0.75
+    const tspans = card.lines
+      .map((line, i) =>
+        i === 0
+          ? `<tspan x="0" y="${firstY}">${escapeXml(line)}</tspan>`
+          : `<tspan x="0" dy="${NOTE_LINE_H}">${escapeXml(line)}</tspan>`,
+      )
+      .join('')
+    // Match cue rides on the place-cue line so wrapped note copy stays inside the card.
+    const matchCue = match ? `<tspan class="note-match-cue">[match] </tspan>` : ''
     return `
     <g class="note note-${place}${hit}" data-placement="${place}"${hitAttr} transform="translate(${layout.x}, ${row.y})">
-      <rect class="note-card" x="-70" y="-14" width="140" height="28" rx="6"/>
-      <text class="note-text" y="4" text-anchor="${layout.textAnchor}">${escapeXml(event.text)}${matchCue}</text>
-      <text class="note-place-cue" x="0" y="18" text-anchor="middle">${place}</text>
+      <rect class="note-card" x="${-halfW}" y="${-halfH}" width="${card.width}" height="${card.height}" rx="6"/>
+      <text class="note-text" text-anchor="${layout.textAnchor}">${tspans}</text>
+      <text class="note-place-cue" x="0" y="${cueY}" text-anchor="middle">${matchCue}${place}</text>
     </g>`
   }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LayoutRow } from './layout'
-import { LEFT_PAD, SHORT_STUB, layoutRows } from './layout'
+import { LEFT_PAD, NOTE_CARD_W, NOTE_LINE_H, SHORT_STUB, layoutRows, noteCardMetrics } from './layout'
 import {
   activationBarSvg,
   arrowMarker,
@@ -297,6 +297,47 @@ describe('renderRowSvg fragments', () => {
     )
     expect(right).toContain('data-placement="right"')
     expect(right).toContain('note-right')
+  })
+
+  it('wraps a long note into tspans and sizes the card to cover every line', () => {
+    const text =
+      'This note deliberately overflows a single 140px line so the card must wrap and grow'
+    const card = noteCardMetrics(text)
+    expect(card.lines.length).toBeGreaterThan(1)
+    const row = rowFor({ kind: 'note', id: 'n-long', text, over: 'api', placement: 'over' })
+    expect(row.height).toBeGreaterThan(40)
+    const svg = renderRowSvg(row, 400, participants)
+    expect(svg).toContain(`width="${NOTE_CARD_W}"`)
+    expect(svg).toContain(`height="${card.height}"`)
+    // One tspan per wrapped line (match cue lives on the place-cue line).
+    expect((svg.match(/<tspan x="0"/g) ?? []).length).toBe(card.lines.length)
+    for (const line of card.lines) {
+      expect(svg).toContain(line)
+    }
+    expect(svg).toContain('note-place-cue')
+    expect(svg).toContain('>over</text>')
+    // Place cue y must sit inside the card (card spans -halfH .. +halfH).
+    const cueY = Number(/note-place-cue" x="0" y="([^"]+)"/.exec(svg)?.[1])
+    expect(cueY).toBeLessThan(card.height / 2)
+    expect(cueY).toBeGreaterThan(-card.height / 2)
+    // Card height tracks line count.
+    expect(card.height).toBeGreaterThanOrEqual(card.lines.length * NOTE_LINE_H)
+  })
+
+  it('keeps left/right long notes wrapped the same way', () => {
+    const text = 'Left placement still wraps a long note inside the same card width'
+    const card = noteCardMetrics(text)
+    expect(card.lines.length).toBeGreaterThan(1)
+    for (const placement of ['left', 'right'] as const) {
+      const svg = renderRowSvg(
+        rowFor({ kind: 'note', id: `n-${placement}`, text, over: 'api', placement }),
+        400,
+        participants,
+      )
+      expect(svg).toContain(`data-placement="${placement}"`)
+      expect(svg).toContain(`height="${card.height}"`)
+      expect((svg.match(/<tspan x="0"/g) ?? []).length).toBe(card.lines.length)
+    }
   })
 })
 

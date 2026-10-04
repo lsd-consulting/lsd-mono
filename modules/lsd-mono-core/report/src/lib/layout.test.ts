@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramEvent } from '../types'
-import { MESSAGE_LABEL_RISE, TOP_LABEL_PAD, activationSpans, eventRowHeight, layoutRows, sortEventsByCreatedAt, virtualRowRange } from './layout'
+import { MESSAGE_LABEL_RISE, NOTE_CARD_MIN_H, NOTE_CARD_W, NOTE_ROW_GAP, ROW_H, TOP_LABEL_PAD, activationSpans, eventRowHeight, layoutRows, noteCardMetrics, sortEventsByCreatedAt, virtualRowRange, wrapNoteLines } from './layout'
 
 function uniform(count: number, height = 50): { y: number; height: number }[] {
   return Array.from({ length: count }, (_, i) => ({ y: i * height, height }))
@@ -108,6 +108,53 @@ describe('eventRowHeight', () => {
     expect(eventRowHeight({ kind: 'spacer', id: 's2', heightPx: 80 })).toBe(80)
     expect(eventRowHeight({ kind: 'spacer', id: 's3', heightPx: 4 })).toBe(12)
     expect(eventRowHeight({ kind: 'spacer', id: 's4', heightPx: 999 })).toBe(240)
+  })
+
+  it('keeps a short note on the default row height', () => {
+    expect(eventRowHeight({ kind: 'note', id: 'n', text: 'ok', placement: 'over' })).toBe(ROW_H.note)
+  })
+
+  it('grows the row when a wrapped note card is taller than the default', () => {
+    const text =
+      'This note is long enough that it must wrap across several lines inside the fixed-width card'
+    const card = noteCardMetrics(text)
+    expect(card.lines.length).toBeGreaterThan(1)
+    expect(card.height).toBeGreaterThan(NOTE_CARD_MIN_H)
+    expect(eventRowHeight({ kind: 'note', id: 'n', text, placement: 'over' })).toBe(
+      card.height + NOTE_ROW_GAP,
+    )
+  })
+})
+
+describe('wrapNoteLines', () => {
+  it('keeps short copy on one line', () => {
+    expect(wrapNoteLines('cache miss')).toEqual(['cache miss'])
+  })
+
+  it('wraps long copy and hard-splits an overlong token', () => {
+    const lines = wrapNoteLines('alpha bravo charlie delta echosupercalifragilistic')
+    expect(lines.length).toBeGreaterThan(1)
+    expect(lines.join('')).toContain('echosupercalifragilistic')
+    expect(lines.some((line) => line.length > Math.floor((NOTE_CARD_W - 20) / 6))).toBe(false)
+  })
+})
+
+describe('noteCardMetrics', () => {
+  it('keeps the 140×28 card for a single short line', () => {
+    const card = noteCardMetrics('hi')
+    expect(card.width).toBe(NOTE_CARD_W)
+    expect(card.height).toBe(NOTE_CARD_MIN_H)
+    expect(card.lines).toEqual(['hi'])
+  })
+
+  it('grows height with each wrapped line while width stays fixed', () => {
+    const short = noteCardMetrics('short')
+    const long = noteCardMetrics(
+      'one two three four five six seven eight nine ten eleven twelve',
+    )
+    expect(long.lines.length).toBeGreaterThan(short.lines.length)
+    expect(long.width).toBe(NOTE_CARD_W)
+    expect(long.height).toBeGreaterThan(short.height)
   })
 })
 

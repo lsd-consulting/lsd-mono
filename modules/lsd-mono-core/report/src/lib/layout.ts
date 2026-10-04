@@ -30,6 +30,71 @@ export const ROW_H = {
   deactivate: 0,
 } as const
 
+/** Fixed note card width — short notes still look like notes. */
+export const NOTE_CARD_W = 140
+export const NOTE_PAD_X = 10
+export const NOTE_PAD_Y = 3
+export const NOTE_LINE_H = 12
+export const NOTE_PLACE_CUE_H = 9
+export const NOTE_PLACE_CUE_GAP = 1
+/**
+ * Vertical gap between successive note card edges when each card is centred on its
+ * row.y. With a 28px card this keeps ROW_H.note at 40 (28 + 12).
+ */
+export const NOTE_ROW_GAP = 12
+/** Approx advance width for `.note-text` (10.5px, weight 600). */
+export const NOTE_CHAR_W = 6
+export const NOTE_CARD_MIN_H = 28
+
+/**
+ * Wrap note copy so it fits inside the card. Prefer word breaks; hard-split
+ * overlong tokens so a single line never spills past the content width.
+ */
+export function wrapNoteLines(text: string): string[] {
+  const raw = text.replace(/\s+/g, ' ').trim()
+  if (!raw) return ['']
+  const maxChars = Math.max(1, Math.floor((NOTE_CARD_W - 2 * NOTE_PAD_X) / NOTE_CHAR_W))
+  const words = raw.split(' ')
+  const lines: string[] = []
+  let current = ''
+  for (const word of words) {
+    if (word.length > maxChars) {
+      if (current) {
+        lines.push(current)
+        current = ''
+      }
+      for (let i = 0; i < word.length; i += maxChars) {
+        lines.push(word.slice(i, i + maxChars))
+      }
+      continue
+    }
+    const next = current ? `${current} ${word}` : word
+    if (next.length <= maxChars) {
+      current = next
+    } else {
+      if (current) lines.push(current)
+      current = word
+    }
+  }
+  if (current) lines.push(current)
+  return lines.length ? lines : ['']
+}
+
+export interface NoteCardMetrics {
+  width: number
+  height: number
+  lines: string[]
+}
+
+/** Card size for a note: width stays ~140; height grows with wrapped lines + place cue. */
+export function noteCardMetrics(text: string): NoteCardMetrics {
+  const lines = wrapNoteLines(text)
+  const textH = Math.max(1, lines.length) * NOTE_LINE_H
+  const contentH = textH + NOTE_PLACE_CUE_GAP + NOTE_PLACE_CUE_H
+  const height = Math.max(NOTE_CARD_MIN_H, contentH + 2 * NOTE_PAD_Y)
+  return { width: NOTE_CARD_W, height, lines }
+}
+
 /** Short arrow stub length from lifeline toward the diagram edge (not a fake participant). */
 export const SHORT_STUB = 48
 export const EDGE_INSET = 16
@@ -87,7 +152,7 @@ export function sortEventsByCreatedAt(events: DiagramEvent[]): DiagramEvent[] {
 export function eventRowHeight(event: DiagramEvent): number {
   switch (event.kind) {
     case 'note':
-      return ROW_H.note
+      return Math.max(ROW_H.note, noteCardMetrics(event.text).height + NOTE_ROW_GAP)
     case 'divider':
       return ROW_H.divider
     case 'section':
