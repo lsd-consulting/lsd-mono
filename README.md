@@ -76,42 +76,11 @@ The participant type is the header shape. `ACTOR` is a person, `DATABASE` a cyli
 
 ## From a JUnit test
 
-`LsdExtension` completes the scenario after each test and writes the report after the class. Capture inside the test. Do not call `completeScenario` or `completeReport` yourself.
-
-```kotlin
-import io.lsdconsulting.lsd.mono.core.LsdContext
-import io.lsdconsulting.lsd.mono.core.capture.messages
-import io.lsdconsulting.lsd.mono.core.capture.withLabel
-import io.lsdconsulting.lsd.mono.junitjupiter.LsdExtension
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-
-@ExtendWith(LsdExtension::class)
-class PlaceOrderTest {
-    private val lsd = LsdContext.instance
-
-    @Test
-    fun `places an order`() {
-        lsd.addFact("orderId", "ord-1001")
-        lsd.capture("Customer" messages "Checkout" withLabel "POST /orders")
-    }
-}
-```
-
-Open `build/reports/lsd/PlaceOrderTest-diagram.html`. Use the same `addParticipants` and `capture` calls as the scenario above when you want the shapes.
+See the [JUnit Jupiter module README](modules/lsd-mono-junit-jupiter/README.md) for the extension setup and capture example. It completes each test scenario and writes the report after the class.
 
 ## From a Cucumber scenario
 
-`LsdCucumberPlugin` (`io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`) completes the scenario after each Cucumber scenario and writes the report after the feature. Capture inside the step definitions. Do not call `completeScenario` or `completeReport` yourself.
-
-Register it in `src/test/resources/junit-platform.properties`:
-
-```properties
-cucumber.plugin=io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin
-cucumber.glue=com.example.steps
-```
-
-Use Cucumber 8 (`cucumber-java8` and `cucumber-junit-platform-engine`). A feature file named `place_order.feature` is written to `build/reports/lsd/place_order-diagram.html`. The module README has the step definitions for the diagram below.
+See the [Cucumber 8 module README](modules/lsd-mono-cucumber-8/README.md) for plugin registration, step definitions, and the capture example. It completes each scenario and writes the report after the feature.
 
 ## What the report looks like
 
