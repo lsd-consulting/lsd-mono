@@ -23,6 +23,8 @@ import {
   NOTE_PAD_Y,
   NOTE_PLACE_CUE_GAP,
   NOTE_PLACE_CUE_H,
+  SECTION_BAND_H,
+  SECTION_BAND_Y,
   SHORT_STUB,
   activationSpans,
   bodyHeight,
@@ -827,7 +829,7 @@ function renderRow(
   if (event.kind === 'section') {
     return `
     <g class="section-row" id="section-${escapeXml(event.id)}" transform="translate(0, ${row.y})">
-      <rect class="section-band" x="12" y="8" width="${Math.max(width - 24, 24)}" height="${row.height - 16}" rx="8"/>
+      <rect class="section-band" x="12" y="${SECTION_BAND_Y}" width="${Math.max(width - 24, 24)}" height="${SECTION_BAND_H}" rx="8"/>
       <text class="section-title" x="24" y="28">${escapeXml(event.title)}</text>
     </g>`
   }

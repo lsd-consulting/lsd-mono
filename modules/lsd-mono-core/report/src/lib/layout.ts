@@ -12,6 +12,16 @@ export const HEADER_BLOCK_H = 56
 export const MESSAGE_LABEL_RISE = 20
 /** First-row offset so the label box is inside the body, not on the clip edge. */
 export const TOP_LABEL_PAD = MESSAGE_LABEL_RISE + 4
+/**
+ * Section band geometry inside the section row. The band stays this size;
+ * extra row height is padding under the band, not a taller painted separator.
+ * Message labels rise MESSAGE_LABEL_RISE above the next row, so the default
+ * pad keeps that label clear of the band (same 4px gap as TOP_LABEL_PAD).
+ */
+export const SECTION_BAND_Y = 8
+export const SECTION_BAND_H = 32
+export const SECTION_LABEL_GAP = 4
+export const SECTION_AFTER_PAD = MESSAGE_LABEL_RISE + SECTION_LABEL_GAP
 export const BOTTOM_PAD = 28
 export const ACT_W = 12
 export const DEFAULT_OVERSCAN = 6
@@ -22,7 +32,7 @@ export const ROW_H = {
   message: 52,
   note: 40,
   divider: 36,
-  section: 48,
+  section: SECTION_BAND_Y + SECTION_BAND_H + SECTION_AFTER_PAD,
   delay: 36,
   spacer: 24,
   // Lifeline keywords are not rows. The bar is pinned to the neighbouring arrows.
@@ -149,6 +159,36 @@ export function sortEventsByCreatedAt(events: DiagramEvent[]): DiagramEvent[] {
     .map((item) => item.event)
 }
 
+/**
+ * How far this event paints above its row origin.
+ * Message labels use MESSAGE_LABEL_RISE (baseline plus glyph). Notes are
+ * centred on row.y, so half the card sticks up. Dividers and delays do not
+ * rise past SECTION_AFTER_PAD.
+ */
+export function contentRise(event: DiagramEvent): number {
+  switch (event.kind) {
+    case 'message':
+      return MESSAGE_LABEL_RISE
+    case 'note':
+      return noteCardMetrics(event.text).height / 2
+    default:
+      return 0
+  }
+}
+
+/**
+ * Section row height. The band is fixed; the rest is padding so the next
+ * drawn event's raised content sits SECTION_LABEL_GAP below the band.
+ * Activate/deactivate rows have no height, so the caller passes the next
+ * event that actually paints.
+ */
+export function sectionRowHeight(next: DiagramEvent | undefined): number {
+  const bandBottom = SECTION_BAND_Y + SECTION_BAND_H
+  let pad = SECTION_AFTER_PAD
+  if (next) pad = Math.max(pad, contentRise(next) + SECTION_LABEL_GAP)
+  return bandBottom + pad
+}
+
 export function eventRowHeight(event: DiagramEvent): number {
   switch (event.kind) {
     case 'note':
@@ -173,6 +213,16 @@ export function eventRowHeight(event: DiagramEvent): number {
   }
 }
 
+/** Next event that paints a row. Activate/deactivate are zero-height markers. */
+function nextDrawnEvent(events: DiagramEvent[], after: number): DiagramEvent | undefined {
+  for (let i = after + 1; i < events.length; i++) {
+    const event = events[i]
+    if (event.kind === 'activate' || event.kind === 'deactivate') continue
+    return event
+  }
+  return undefined
+}
+
 /** Rows stacked from y = 0. Sections are ordinary rows — they do not reset y or activations. */
 export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
   const ordered = sortEventsByCreatedAt(events)
@@ -180,7 +230,9 @@ export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
   let y = TOP_LABEL_PAD
   for (let index = 0; index < ordered.length; index++) {
     const event = ordered[index]
-    const height = eventRowHeight(event)
+    const height = event.kind === 'section'
+      ? sectionRowHeight(nextDrawnEvent(ordered, index))
+      : eventRowHeight(event)
     rows.push({ index, y, height, event })
     y += height
   }

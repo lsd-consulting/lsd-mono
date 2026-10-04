@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LayoutRow } from './layout'
-import { LEFT_PAD, NOTE_CARD_W, NOTE_LINE_H, SHORT_STUB, layoutRows, noteCardMetrics } from './layout'
+import { LEFT_PAD, MESSAGE_LABEL_RISE, NOTE_CARD_W, NOTE_LINE_H, SECTION_BAND_H, SECTION_BAND_Y, SHORT_STUB, layoutRows, noteCardMetrics } from './layout'
 import {
   activationBarSvg,
   arrowMarker,
@@ -338,6 +338,25 @@ describe('renderRowSvg fragments', () => {
       expect(svg).toContain(`height="${card.height}"`)
       expect((svg.match(/<tspan x="0"/g) ?? []).length).toBe(card.lines.length)
     }
+  })
+})
+
+describe('section separator', () => {
+  it('paints a fixed band and leaves the next message label clear of it', () => {
+    const events: DiagramEvent[] = [
+      { kind: 'section', id: 's', title: 'Phase 2' },
+      { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'place order', type: 'SYNCHRONOUS' },
+    ]
+    const rows = layoutRows(events)
+    const sectionSvg = renderRowSvg(rows[0], 400, participants)
+    const messageSvg = renderRowSvg(rows[1], 400, participants)
+    expect(sectionSvg).toContain(`y="${SECTION_BAND_Y}"`)
+    expect(sectionSvg).toContain(`height="${SECTION_BAND_H}"`)
+    expect(sectionSvg).not.toContain(`height="${rows[0].height - 16}"`)
+    expect(messageSvg).toContain(`translate(0, ${rows[1].y})`)
+    expect(messageSvg).toContain('class="msg-label"')
+    const bandBottom = rows[0].y + SECTION_BAND_Y + SECTION_BAND_H
+    expect(rows[1].y - MESSAGE_LABEL_RISE).toBeGreaterThan(bandBottom)
   })
 })
 

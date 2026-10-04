@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramEvent } from '../types'
-import { MESSAGE_LABEL_RISE, NOTE_CARD_MIN_H, NOTE_CARD_W, NOTE_ROW_GAP, ROW_H, TOP_LABEL_PAD, activationSpans, eventRowHeight, layoutRows, noteCardMetrics, sortEventsByCreatedAt, virtualRowRange, wrapNoteLines } from './layout'
+import { MESSAGE_LABEL_RISE, NOTE_CARD_MIN_H, NOTE_CARD_W, NOTE_ROW_GAP, ROW_H, SECTION_AFTER_PAD, SECTION_BAND_H, SECTION_BAND_Y, SECTION_LABEL_GAP, TOP_LABEL_PAD, activationSpans, eventRowHeight, layoutRows, noteCardMetrics, sortEventsByCreatedAt, virtualRowRange, wrapNoteLines } from './layout'
 
 function uniform(count: number, height = 50): { y: number; height: number }[] {
   return Array.from({ length: count }, (_, i) => ({ y: i * height, height }))
@@ -190,5 +190,48 @@ describe('activation colour', () => {
     ]
     const spans = activationSpans(layoutRows(events), 400)
     expect(spans.map((s) => s.colour)).toEqual(['#c026d3', undefined])
+  })
+})
+
+describe('section spacing', () => {
+  it('keeps the following message label clear of the section band', () => {
+    const rows = layoutRows([
+      { kind: 'section', id: 's', title: 'Phase 2' },
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS' },
+    ])
+    const section = rows[0]
+    const message = rows[1]
+    expect(section.height).toBe(ROW_H.section)
+    expect(ROW_H.section).toBe(SECTION_BAND_Y + SECTION_BAND_H + SECTION_AFTER_PAD)
+    const bandBottom = section.y + SECTION_BAND_Y + SECTION_BAND_H
+    const labelTop = message.y - MESSAGE_LABEL_RISE
+    expect(labelTop - bandBottom).toBe(SECTION_LABEL_GAP)
+    expect(labelTop).toBeGreaterThan(bandBottom)
+  })
+
+  it('still clears the label when an activation marker sits between the section and the message', () => {
+    const rows = layoutRows([
+      { kind: 'section', id: 's', title: 'Phase 2' },
+      { kind: 'activate', id: 'a', participantId: 'b' },
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS' },
+    ])
+    const section = rows[0]
+    const message = rows[2]
+    const bandBottom = section.y + SECTION_BAND_Y + SECTION_BAND_H
+    expect(message.y - MESSAGE_LABEL_RISE).toBeGreaterThan(bandBottom)
+  })
+
+  it('grows the section row when the next note rises higher than a message label', () => {
+    const text = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen'
+    const card = noteCardMetrics(text)
+    expect(card.height / 2).toBeGreaterThan(SECTION_AFTER_PAD)
+    const rows = layoutRows([
+      { kind: 'section', id: 's', title: 'Phase 2' },
+      { kind: 'note', id: 'n', text, placement: 'over' },
+    ])
+    const bandBottom = rows[0].y + SECTION_BAND_Y + SECTION_BAND_H
+    const cardTop = rows[1].y - card.height / 2
+    expect(rows[0].height).toBeGreaterThan(ROW_H.section)
+    expect(cardTop - bandBottom).toBe(SECTION_LABEL_GAP)
   })
 })
