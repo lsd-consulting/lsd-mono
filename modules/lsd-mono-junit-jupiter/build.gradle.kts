@@ -3,7 +3,6 @@ plugins {
     `java-library`
 }
 
-version = "0.0.1-SNAPSHOT"
 base.archivesName.set("lsd-mono-junit-jupiter")
 
 description = "LSD Mono JUnit Jupiter 6 integration — extension for living sequence diagram reports"

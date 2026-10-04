@@ -3,8 +3,6 @@ plugins {
     `java-library`
 }
 
-
-version = "0.0.1-SNAPSHOT"
 base.archivesName.set("lsd-mono-core")
 
 description =

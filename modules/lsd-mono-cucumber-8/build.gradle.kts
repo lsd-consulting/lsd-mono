@@ -3,7 +3,6 @@ plugins {
     `java-library`
 }
 
-version = "0.0.1-SNAPSHOT"
 base.archivesName.set("lsd-mono-cucumber-8")
 
 description = "LSD Mono Cucumber 8 integration — plugin for living sequence diagram reports"
