@@ -34,7 +34,7 @@ lsd-mono-core/
 
 - Kotlin library compiles and tests
 - `LsdContext` façade: facts, `completeScenario`, `completeReport`, `createIndex`,
-  `completeComponentsReport` (opt-in component graph), `clear`, id generation, HTML escape, popup helper
+  `clear`, id generation, HTML escape, popup helper
 - Report writer emits:
   - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
@@ -44,7 +44,7 @@ lsd-mono-core/
 
 **Deferred / optional**
 
-- Rendering the opt-in component graph inside the sequence shell
+- An in-page component diagram next to the message inspector (issue #4)
 - PlantUML / Handlebars compatibility — intentionally out of the Mono product path; see upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) for legacy reference
 
 ## Kotlin API (migration-oriented)

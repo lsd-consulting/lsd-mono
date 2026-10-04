@@ -10,8 +10,6 @@ object LsdProperties {
     const val OUTPUT_DIR = "lsd.mono.report.outputDir"
     const val DETERMINISTIC_IDS = "lsd.mono.ids.deterministic"
     const val HIDE_STACKTRACE = "lsd.mono.junit.hideStacktrace"
-    /** When true, reports include a component graph and the JUnit extension writes the combined graph. Default false. */
-    const val COMPONENTS_REPORT = "lsd.mono.components.enabled"
     /**
      * Duration insights and the simple message-count metrics. Default **true**,
      * matching the previous always-on simple metrics. Legacy key: `lsd.core.metrics.enabled`.
@@ -25,7 +23,6 @@ object LsdProperties {
             setProperty(OUTPUT_DIR, "build/reports/lsd")
             setProperty(DETERMINISTIC_IDS, "false")
             setProperty(HIDE_STACKTRACE, "false")
-            setProperty(COMPONENTS_REPORT, "false")
             // Legacy aliases as defaults lookup keys (read via get with fallbacks)
             setProperty("lsd.core.report.outputDir", "build/reports/lsd")
             setProperty("lsd.core.ids.deterministic", "false")
@@ -68,11 +65,6 @@ object LsdProperties {
     @JvmStatic
     fun hideStacktrace(): Boolean =
         getBoolean(HIDE_STACKTRACE, getBoolean("lsd.junit.hideStacktrace", false))
-
-    /** Combined component graph is opt-in. Default false. */
-    @JvmStatic
-    fun componentsReportEnabled(): Boolean =
-        getBoolean(COMPONENTS_REPORT, false)
 
     /**
      * Default **true** so reports keep the message-count metrics that shipped before

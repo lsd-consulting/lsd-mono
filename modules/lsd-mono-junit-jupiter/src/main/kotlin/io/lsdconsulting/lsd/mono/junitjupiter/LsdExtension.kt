@@ -27,8 +27,6 @@ import java.util.regex.Pattern
  * This extension does not capture interaction events by itself. Call
  * [LsdContext.capture] (or [LsdContext.message]) inside the test, and optionally
  * [LsdPostTestProcessing] for late capture before the scenario is completed.
- *
- * The combined component graph (`components.json` + SVG) is written only when `lsd.mono.components.enabled=true`.
  */
 class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
 
@@ -83,9 +81,6 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
         }
         lsdContext.completeReport(context.displayName)
         lsdContext.createIndex()
-        if (LsdProperties.componentsReportEnabled()) {
-            lsdContext.completeComponentsReport("Combined Component Diagram")
-        }
     }
 
     private fun isNested(context: ExtensionContext): Boolean =

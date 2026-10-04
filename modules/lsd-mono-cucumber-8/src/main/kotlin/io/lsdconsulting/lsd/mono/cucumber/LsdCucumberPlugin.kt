@@ -22,8 +22,6 @@ import java.util.concurrent.ConcurrentHashMap
  * Uses first-party [LsdContext] from `lsd-mono-core`, not Maven lsd-core.
  * [LsdContext.section] is used when `lsd.mono.cucumber.splitBySteps=true` instead of
  * a PlantUML new page. This plugin does not generate PlantUML.
- *
- * The combined component graph is written only when `lsd.mono.components.enabled=true`.
  */
 class LsdCucumberPlugin : ConcurrentEventListener {
     private val lsd: LsdContext = LsdContext.instance
@@ -71,9 +69,6 @@ class LsdCucumberPlugin : ConcurrentEventListener {
         finishScenario()
         lsd.completeReport(feature)
         lsd.createIndex()
-        if (LsdProperties.componentsReportEnabled()) {
-            lsd.completeComponentsReport("Combined Component Diagram")
-        }
     }
 
     private fun finishFeature() {

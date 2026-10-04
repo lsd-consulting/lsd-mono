@@ -108,21 +108,6 @@ object ReportWriter {
         return index
     }
 
-    /**
-     * Real component graph: `components.json` plus an SVG page.
-     * Edge types are labelled in the SVG (not colour-only). Not the old placeholder.
-     */
-    fun writeComponentsReport(
-        document: ComponentsDocument,
-        outputDir: File,
-    ): Path {
-        outputDir.mkdirs()
-        Files.writeString(outputDir.resolve("components.json").toPath(), document.toJson())
-        val path = outputDir.resolve("components-report.html").toPath()
-        Files.writeString(path, renderComponentsHtml(document))
-        return path
-    }
-
     private fun copyShellIfAbsent(outputDir: File) {
         val dest = outputDir.resolve(SHELL_FILENAME)
         if (!dest.exists()) dest.writeText(readShellTemplate())

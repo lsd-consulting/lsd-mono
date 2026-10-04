@@ -93,8 +93,6 @@ Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.re
 
 Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Other fields load from the companion payloads file when the panel opens. Participant types set the header shape: `ACTOR`, `DATABASE`, `QUEUE`, and so on.
 
-The combined component graph is written only when `lsd.mono.components.enabled=true`.
-
 ## What the report looks like
 
 The diagram for the scenario above after a successful test.

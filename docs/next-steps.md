@@ -32,7 +32,7 @@ Still open, in an order driven by what people actually migrate:
 
 - One logging or HTTP interceptor that records messages through `LsdContext.capture` / the Kotlin DSL. Those modules are not in the tree.
 
-Each new module gets a contract test that the events it captures land in `ReportJson`. The component graph stays opt-in (`lsd.mono.components.enabled`).
+Each new module gets a contract test that the events it captures land in `ReportJson`.
 
 ---
 
@@ -40,7 +40,7 @@ Each new module gets a contract test that the events it captures land in `Report
 
 - **CI.** Origin is `https://github.com/lsd-consulting/lsd-mono.git` and `main` has been pushed. `.github/workflows/gradle.yml` runs on push to `main` and on pull requests: Java 21, Node 22, `./gradlew build --no-daemon` (Vite shell and vitest included). `readmeSamples` is not on that workflow. Publishing is still open; see `docs/versioning-notes.md`.
 - **Publish later.** Maven Central for `lsd-mono-core`, `lsd-mono-junit-jupiter`, and `lsd-mono-cucumber-8` (Central Portal, signing, Mono artifact names so they do not clash with legacy). Not part of steps 1–3. The checklist stays in `docs/versioning-notes.md`.
-- Small leftovers, still not a slice of their own: `CONTROL` / `COLLECTIONS` only if a migration needs a distinct icon; component SVG is not drawn inside the sequence shell; no in-memory `renderReport`; hide-stacktrace has a property but no dedicated test; virtualisation rebuilds the window SVG on scroll instead of recycling nodes. Density mode is still unscoped.
+- Small leftovers, still not a slice of their own: `CONTROL` / `COLLECTIONS` only if a migration needs a distinct icon; no in-memory `renderReport`; hide-stacktrace has a property but no dedicated test; virtualisation rebuilds the window SVG on scroll instead of recycling nodes. Density mode is still unscoped. An in-page component diagram is issue #4.
 - `docs/readme/fit.gif` is the fit-to-screen motion: the diagram zooms and pans, rather than a static zoomed frame. `docs/readme/zoom.gif` is still the zoom-until-the-diagram-scrolls clip.
 - `docs/readme/inspector-drag.gif` is a mouse drag widening the JSON inspector. It is not a click on an expand button.
 - Cucumber scenario screenshots leave a lot of empty space to the left of the description card and the diagram, and a smaller margin on the right that may not matter by itself. Worth exploring later whether the capture can use the available space better overall, not only by closing the left gap. Nice-to-have, not urgent.

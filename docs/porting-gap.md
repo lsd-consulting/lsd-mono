@@ -44,7 +44,7 @@ These are **implemented**, not stubs, unless noted.
 | Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — **no longer used by the JUnit extension**. Left as a migration shim only. |
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdProperties.kt`, `ReportOptions.kt` |
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
-| Component graph from captured messages | `report/ComponentGraph.kt`. Opt-in `lsd.mono.components.enabled` (default **false**). Per-scenario `components` on report JSON, combined `components.json` + labelled SVG. **Landed 2026-10-03.** Not PlantUML. |
+| Component graph from captured messages | Removed. The JVM flag, `components.json`, and `components-report.html` are gone. An in-page diagram drawn in the browser from messages already in the sequence report is open (issue #4). Not PlantUML. |
 | Diagram zoom, fit, hide columns, in-diagram find | report toolbar on the sequence diagram. Out / Fit / In, ctrl or meta + wheel, fit-to-width (clamped). Hide/show is in-memory per diagram: the column goes, messages and anchored notes that need it are omitted, other columns reflow. Find highlights message labels and notes with a `[match]` cue and a live count. **Landed 2026-10-03.** Not colour-only. Virtualisation and the sticky header stay. |
 
 ---
@@ -217,14 +217,14 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### 3.3 Component diagrams
 
-#### P1 — Component / architecture view (non-PlantUML) — **landed 2026-10-03**
+#### P1 — Component / architecture view (non-PlantUML) — **file writer removed; in-page view open**
 
 | | |
 |--|--|
 | **Legacy** | Per-scenario component SVG via PlantUML (`ComponentDiagramGenerator`) + combined `completeComponentsReport` over `combinedEvents`. Filters message types to SYNCHRONOUS / ASYNCHRONOUS / BI_DIRECTIONAL / LOST; distinct edges by from→to. |
-| **Shipped** | `report/ComponentGraph.kt`. Nodes are participants on an included edge. Same from→to collapses to one edge with a `count` and the distinct types in first-seen order. **Excluded:** `SYNCHRONOUS_RESPONSE` (return arrow, not a dependency) and `SHORT_INBOUND` / `SHORT_OUTBOUND` (phantom diagram edge). Opt-in `lsd.mono.components.enabled` (default false): each scenario JSON gets `components`, and `completeComponentsReport` writes `components.json` plus `components-report.html`. The SVG labels every edge (`sync`, `async`, `lost`, `bi`, plus count) and uses a marker shape (filled, open, cross, both-ways, or diamond when mixed). Stroke colour is shared. Not PlantUML. Zoom/pan is not part of this slice. |
-| **Still open** | Rendering the graph inside the report shell (the sequence shell ignores the extra JSON field). UI smoke later. |
-| **Test** | `ComponentGraphTest` (collapse + count, lost kept, response and short arrows dropped, combined union, property gate, SVG label/marker). `LsdExtensionOutcomesTest` writes the real graph when enabled. |
+| **Shipped** | Nothing. The Kotlin graph, the per-scenario `components` JSON field, and the separate HTML file were removed. The sequence page does not link to a component file. |
+| **Still open** | Draw the diagram in the browser, on demand, from the messages already in the sequence report, next to the message inspector. Issue #4. |
+| **Test** | None until that view exists. |
 
 ---
 
@@ -237,7 +237,7 @@ The large-diagram UX baseline is shipped: sticky participant header, scenario an
 | Large diagrams | Density modes; the virtual window SVG is rebuilt on scroll rather than recycling nodes. | P2 |
 | Message payloads | Pretty-print / size limits for payloads; browser check that the inspector copy button works. | P1 |
 | Metrics navigation | Focus highlight when an insight target is outside the virtual window beyond a scroll. | P1 |
-| Component graph | Render the graph inside the report shell; add UI smoke coverage. | P1 |
+| Component graph | Draw it in the browser from messages already in the report, next to the message inspector (issue #4). | P1 |
 
 **Themes and accessibility.** Dark, light, and high contrast persist in `report/src/ui/theme.ts`. Status, message types, and coloured activation use text, border, hatch, or shape cues in addition to colour. Print CSS forces a light page and paints every row so virtualisation does not clip printed output.
 
@@ -248,9 +248,9 @@ The large-diagram UX baseline is shipped: sticky participant header, scenario an
 | | |
 |--|--|
 | **Legacy** | Companion junit module drives capture; core provides context + popups. |
-| **Shipped** | `ScenarioError` / scenario JSON `error` (`headline`, `message`, `stack`). Descriptions are plain text (`Test passed` / `Test failed` / `Test aborted` / `Test disabled: …`). Disabled maps to `warn` with no `error` object. Aborted maps to `warn` **with** `error`. report renders the message as text and the stack via the side inspector. Combined component graph is opt-in (`lsd.mono.components.enabled`, default false) and is a real graph when enabled (**landed 2026-10-03**). |
+| **Shipped** | `ScenarioError` / scenario JSON `error` (`headline`, `message`, `stack`). Descriptions are plain text (`Test passed` / `Test failed` / `Test aborted` / `Test disabled: …`). Disabled maps to `warn` with no `error` object. Aborted maps to `warn` **with** `error`. report renders the message as text and the stack via the side inspector. |
 | **Still open** | Hide-stacktrace covered by the property but not a dedicated test. No browser click-through of “Show stack trace”. |
-| **Test** | `LsdExtensionOutcomesTest`: success, failed, disabled, aborted, nested class, `@LsdPostTestProcessing` captures `post-processing`, components file absent unless enabled. When enabled, the file is an SVG graph (`sync, lost x3`), not the old placeholder. |
+| **Test** | `LsdExtensionOutcomesTest`: success, failed, disabled, aborted, nested class, `@LsdPostTestProcessing` captures `post-processing`. |
 
 #### P1 — Listener / interceptor migration path
 
@@ -285,7 +285,7 @@ The following slices are complete and remain here as migration history rather th
 3. JUnit structured failures and extension outcome coverage.
 4. Remaining sequence event kinds: notes, delay, spacer, short arrows, LOST, and BI_DIRECTIONAL.
 5. Metrics insights, properties, and label truncation.
-6. Component graph generation (combined and per-scenario SVG).
+6. Component graph file generation was built, then removed. The in-page view is issue #4.
 7. Diagram UX: zoom, fit, participant toggles, in-diagram find, keyboard navigation, inspector, minimap, deep links, reduced motion, and accessibility checks.
 8. Lifeline colour, timestamps, print, high contrast, clickable arrows, and browser performance results.
 
@@ -304,12 +304,12 @@ Open implementation work is tracked in `docs/next-steps.md` and the **Still open
 
 ### Unit (Kotlin + TS)
 
-- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; component graph builder (`ComponentGraphTest` — nodes, counted edges, response exclusion, combined union, SVG type label); metrics tree (`BottleneckInsightsTest` — isolated duration order and the metrics property gate); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent. `ActivateColourAndTimestampsTest` locks optional activate colour in JSON and out-of-order `createdAt` sorting.
+- **Kotlin:** participant id slug/collision (`resolve` / `uniqueId`); status rollup; section splitting; metrics tree (`BottleneckInsightsTest` — isolated duration order and the metrics property gate); property resolution; JSON escaping so payloads cannot break `</script>` (already asserted in `CaptureToJsonTest`). JUnit outcomes (`LsdExtensionOutcomesTest`) lock structured `error` fields and that overlay markup is absent. `ActivateColourAndTimestampsTest` locks optional activate colour in JSON and out-of-order `createdAt` sorting.
 - **TypeScript:** `layout.test.ts` locks `virtualRowRange`, `eventRowHeight` (delay/spacer), `sortEventsByCreatedAt`, and activation-span colour. `diagram-view.test.ts` locks fit scale, zoom steps, unscaled scroll, remaining columns, and which rows match a query. `sequence-diagram.test.ts` locks LOST X / BI dual heads / short geometry / note placement / label truncation, column reflow, omitted hidden messages, the `[match]` cue, and `activationBarSvg` (hatch when coloured, plain bar otherwise). `theme.test.ts` locks the dark → light → contrast cycle. `insights.test.ts` locks rank text (not colour-only) and ellipsis. `scenario-summary.test.ts` locks escaped failure text. Run `npm test` in `report` (vitest).
 
 ### Browser / UI (later, selective)
 
-- Browser checks still needed: inspector copy button, JUnit “Show stack trace”, and component-graph rendering once it is in the report shell.
+- Browser checks still needed: inspector copy button, JUnit “Show stack trace”.
 - The large-diagram performance comparison is complete; results are in `docs/perf-results.md`.
 - Not every PR — nightly or labeled jobs.
 

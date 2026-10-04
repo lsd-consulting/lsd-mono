@@ -28,7 +28,6 @@ class LsdCucumberPluginTest {
     fun pointReportsAtTempDir() {
         System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
         System.setProperty("lsd.mono.ids.deterministic", "true")
-        System.setProperty("lsd.mono.components.enabled", "false")
         System.setProperty("cucumber.publish.enabled", "false")
         LsdContext.instance.clear()
     }
@@ -37,7 +36,6 @@ class LsdCucumberPluginTest {
     fun restoreOutputDir() {
         System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
         System.clearProperty("lsd.mono.ids.deterministic")
-        System.clearProperty("lsd.mono.components.enabled")
         LsdContext.instance.clear()
     }
 
@@ -61,6 +59,5 @@ class LsdCucumberPluginTest {
         assertTrue(json.contains(""""label": "POST /orders""""), json)
         assertTrue(json.contains(""""status": "success""""), json)
         assertFalse(json.contains("PlantUML"), json)
-        assertFalse(tempDir.resolve("components-report.html").toFile().exists())
     }
 }
