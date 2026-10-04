@@ -12,6 +12,8 @@ Nothing is published. There is no tag. `.github/workflows/gradle.yml` only runs 
 
 `gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`). It is not the version of these libraries. There is no release plugin.
 
+Renovate is the root `renovate.json`. It reads that shared catalog. JUnit and Cucumber updates are separate pull requests, each capped at the current major. A future Cucumber 9 module would be another catalog line plus another rule.
+
 junit-integration and cucumber-integration depend on core as a project. A consumer takes core plus one integration. Cucumber 8 is `strictly [8,9)`.
 
 ## The train

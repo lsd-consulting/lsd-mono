@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "One pull request for the shared JUnit catalog line. Stay on major 6; a major is a human decision.",
+      "matchManagers": ["gradle"],
+      "matchPackageNames": [
+        "org.junit:junit-bom",
+        "org.junit.jupiter:junit-jupiter",
+        "org.junit.jupiter:junit-jupiter-api",
+        "org.junit.jupiter:junit-jupiter-engine",
+        "org.junit.platform:junit-platform-launcher"
+      ],
+      "matchCurrentVersion": "/^6\\./",
+      "allowedVersions": "/^6\\./",
+      "groupName": "JUnit 6",
+      "groupSlug": "junit-6"
+    },
+    {
+      "description": "One pull request for the shared Cucumber 8 catalog line. Stay on major 8. A Cucumber 9 line needs its own rule.",
+      "matchManagers": ["gradle"],
+      "matchPackageNames": [
+        "io.cucumber:cucumber-bom",
+        "io.cucumber:cucumber-plugin",
+        "io.cucumber:cucumber-java8",
+        "io.cucumber:cucumber-junit-platform-engine"
+      ],
+      "matchCurrentVersion": "/^8\\./",
+      "allowedVersions": "/^8\\./",
+      "groupName": "Cucumber 8",
+      "groupSlug": "cucumber-8"
+    },
+    {
+      "description": "Published lsd-core is reference-only. Do not bump it into a mono module.",
+      "matchManagers": ["gradle"],
+      "matchPackageNames": ["io.github.lsd-consulting:lsd-core"],
+      "enabled": false
+    }
+  ]
+}
