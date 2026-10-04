@@ -1,8 +1,8 @@
 # lsd-mono-junit-jupiter
 
-JUnit Jupiter 6 extension for [lsd-mono-core](../lsd-mono-core). Each test becomes a scenario. When the class finishes, the extension writes the living sequence diagram report. Capture still goes through `LsdContext` — the extension does not invent interactions for you.
+`lsd-mono-junit-jupiter` is the JUnit Jupiter 6 extension for [lsd-mono-core](../lsd-mono-core) that turns each test into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside the test. When the test ends, the extension stores a passed test as a successful scenario, and a failure or abort with a structured error. It writes the report when the class finishes. It depends on first-party `lsd-mono-core`, not the old published `lsd-core`, and there is no PlantUML on this path.
 
-This module replaces the older published `lsd-junit5` / `lsd-junit-jupiter` stack for greenfield Mono work. It depends on first-party `lsd-mono-core`, not Maven `lsd-core`. There is no PlantUML in this path.
+This module replaces the older published `lsd-junit5` / `lsd-junit-jupiter` stack for greenfield Mono work.
 
 ## Depend on it
 

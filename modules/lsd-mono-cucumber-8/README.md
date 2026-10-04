@@ -1,8 +1,6 @@
 # lsd-mono-cucumber-8
 
-Cucumber 8 plugin for [lsd-mono-core](../lsd-mono-core). Each scenario becomes a living sequence diagram scenario. When the feature finishes, the plugin writes the report. Capture still goes through `LsdContext` — the plugin does not invent interactions for you.
-
-This module is the Cucumber 8 path for greenfield Mono work. It depends on first-party `lsd-mono-core`, not Maven `lsd-core`. There is no PlantUML in this path. Cucumber is pinned to major 8 (`strictly [8,9)`). The catalog requests `8.0.4`.
+`lsd-mono-cucumber-8` is the Cucumber 8 plugin for [lsd-mono-core](../lsd-mono-core) that turns each scenario into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside your steps. The plugin records pass, fail, or warning when the scenario ends, and writes the report when the feature finishes. It depends on first-party `lsd-mono-core`, not the old published `lsd-core`, and there is no PlantUML on this path. It is pinned to Cucumber 8 (`strictly [8,9)`). The catalog requests `8.0.4`.
 
 ## Depend on it
 

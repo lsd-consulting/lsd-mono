@@ -2,9 +2,9 @@
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
 
-[`lsd-mono-cucumber-8`](modules/lsd-mono-cucumber-8) is the Cucumber 8 plugin that turns each scenario into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside your steps. The plugin records pass, fail, or warning when the scenario ends, and writes the report when the feature finishes. It depends on `lsd-mono-core`, not the old published `lsd-core`, and there is no PlantUML on this path. It is pinned to Cucumber 8.
+[`lsd-mono-cucumber-8` README](modules/lsd-mono-cucumber-8/README.md) covers the Cucumber 8 plugin.
 
-[`lsd-mono-junit-jupiter`](modules/lsd-mono-junit-jupiter) is the JUnit Jupiter 6 extension that turns each test into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside the test. When the test ends, the extension stores a passed test as a successful scenario, and a failure or abort with a structured error. It writes the report when the class finishes. It depends on `lsd-mono-core`, not the old published `lsd-core`, and there is no PlantUML on this path.
+[`lsd-mono-junit-jupiter` README](modules/lsd-mono-junit-jupiter/README.md) covers the JUnit Jupiter 6 extension that completes a scenario for each test.
 
 Origin is https://github.com/lsd-consulting/lsd-mono.git. `main` has been pushed there.
 
