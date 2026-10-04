@@ -4,9 +4,6 @@ jvm = "21"
 junit = "6.1.3"
 # Latest Cucumber 8 on Maven Central. Modules constrain this line to strictly [8,9).
 cucumber = "8.0.4"
-# Legacy published lsd-core — reference only; mono builds use :modules:lsd-mono-core
-lsd-core = "9.0.1"
-
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 
@@ -23,9 +20,6 @@ cucumber-plugin = { module = "io.cucumber:cucumber-plugin", version.ref = "cucum
 cucumber-java8 = { module = "io.cucumber:cucumber-java8", version.ref = "cucumber" }
 cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
 
-# Legacy Maven Central lsd-core — do not use for first-party mono modules.
-# Prefer project(":modules:lsd-mono-core").
-lsd-core = { module = "io.github.lsd-consulting:lsd-core", version.ref = "lsd-core" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

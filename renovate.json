@@ -30,12 +30,6 @@
       "allowedVersions": "/^8\\./",
       "groupName": "Cucumber 8",
       "groupSlug": "cucumber-8"
-    },
-    {
-      "description": "Published lsd-core is reference-only. Do not bump it into a mono module.",
-      "matchManagers": ["gradle"],
-      "matchPackageNames": ["io.github.lsd-consulting:lsd-core"],
-      "enabled": false
     }
   ]
 }
