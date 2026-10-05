@@ -1,6 +1,15 @@
+import io.lsdconsulting.lsd.mono.gradle.MajorLines
+
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("lsd.common")
+    id("lsd.major-line")
+}
+
+extensions.configure<MajorLines>("majorLines") {
+    pin("JUnit 6", 6, listOf("org.junit", "org.junit.jupiter", "org.junit.platform"))
+    ban("junit", "JUnit 4 is not used", module = "junit")
+    ban("org.junit.vintage", "JUnit 4 is not used")
 }
 
 java {

@@ -10,71 +10,16 @@ description = "LSD Mono JUnit Jupiter 6 integration — extension for living seq
 val readmeSourceSet = sourceSets.create("readme")
 
 dependencies {
-    // First-party greenfield core (not Maven lsd-core).
     api(project(":modules:lsd-mono-core"))
-
-    // Compile against Jupiter 6 API so LsdExtension can implement Extension callbacks.
     api(libs.junit.jupiter.api)
 
+    testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.platform.launcher)
 
     // readme source set does not inherit main deps; need core for LsdContext.
     "readmeImplementation"(sourceSets.named("main").get().output)
     "readmeImplementation"(project(":modules:lsd-mono-core"))
-}
-
-
-// Jupiter 6 major line. Catalog still requests 6.1.3. The range is the floor and ceiling
-// so Dependabot can bump patch and minor inside 6, but not 4.x, 5.x, or 7+.
-// junit-bom 6.x manages org.junit.platform on that same major (6.1.3 today), not 1.x.
-dependencies {
-    testImplementation(platform(libs.junit.bom))
-    constraints {
-        testImplementation(libs.junit.bom) {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.jupiter:junit-jupiter") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.jupiter:junit-jupiter-api") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.jupiter:junit-jupiter-engine") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.jupiter:junit-jupiter-params") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.platform:junit-platform-commons") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.platform:junit-platform-engine") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.platform:junit-platform-launcher") {
-            version { strictly("[6,7)") }
-        }
-    }
-}
-
-configurations.configureEach {
-    resolutionStrategy.componentSelection {
-        all {
-            if (candidate.group == "junit" && candidate.module == "junit") {
-                reject("blocked junit:junit:${candidate.version}; JUnit 4 is not used")
-            }
-            if (candidate.group == "org.junit.vintage") {
-                reject("blocked ${candidate.group}:${candidate.module}:${candidate.version}")
-            }
-            if (candidate.group == "org.junit.jupiter" || candidate.group == "org.junit.platform" || candidate.group == "org.junit") {
-                val major = candidate.version.substringBefore('.').toIntOrNull()
-                if (major != 6) {
-                    reject("strictly [6,7) rejected ${candidate.group}:${candidate.module}:${candidate.version}")
-                }
-            }
-        }
-    }
 }
 
 tasks.test {

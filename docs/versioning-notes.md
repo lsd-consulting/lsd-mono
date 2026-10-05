@@ -14,7 +14,7 @@ Nothing is published. There is no tag. `.github/workflows/gradle.yml` only runs 
 
 Renovate is the root `renovate.json`. It reads that shared catalog. JUnit and Cucumber updates are separate pull requests, each capped at the current major. A future Cucumber 9 module would be another catalog line plus another rule.
 
-junit-integration and cucumber-integration depend on core as a project. A consumer takes core plus one integration. Cucumber 8 is `strictly [8,9)`.
+junit-integration and cucumber-integration depend on core as a project. A consumer takes core plus one integration. Cucumber 8 is pinned to major 8: the catalog holds the exact version and the build fails if anything resolves to another major.
 
 ## The train
 
@@ -44,7 +44,7 @@ At the next core major, the train number wins. The solo majors are changelog his
 
 The override names the train major it may diverge from (`train-major:1` while the train is still `1.x`). When the train major moves, that line no longer matches, and the build fails until the line is removed. The module then inherits the new train version.
 
-A future Cucumber 7 artifact follows the same rules: a solo major if Cucumber's major breaks it, then the next core major number. `lsd-mono-cucumber-8` stays on `[8,9)`.
+A future Cucumber 7 artifact follows the same rules: a solo major if Cucumber's major breaks it, then the next core major number. `lsd-mono-cucumber-8` stays on major 8.
 
 ### Tested-against dependencies
 

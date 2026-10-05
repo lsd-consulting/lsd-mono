@@ -9,36 +9,9 @@ description = "LSD Mono Cucumber 8 integration — plugin for living sequence di
 
 val readmeSourceSet = sourceSets.create("readme")
 
-dependencies {
-    // First-party greenfield core (not Maven lsd-core).
-    api(project(":modules:lsd-mono-core"))
-
-    // Concrete Cucumber 8 from the catalog (8.0.4). The constraints below are the major range.
-    api(libs.cucumber.plugin)
-    testImplementation(libs.cucumber.java8)
-    testImplementation(libs.cucumber.junit.platform.engine)
-    testImplementation(libs.junit.jupiter)
-    testImplementation(libs.junit.platform.launcher)
-
-    // readme source set does not inherit main deps.
-    "readmeImplementation"(sourceSets.named("main").get().output)
-    "readmeImplementation"(project(":modules:lsd-mono-core"))
-    "readmeImplementation"(libs.cucumber.java8)
-    "readmeImplementation"(libs.cucumber.junit.platform.engine)
-}
-
-// Cucumber 8 major line for every io.cucumber artifact this module resolves.
-// Catalog still requests 8.0.4. strictly [8,9) blocks 7.x and 9+ and still lets
-// Dependabot bump patch and minor inside 8. Not a single-patch lock.
-// cucumber-groovy has no 8.x on Maven Central (latest is 6.10.4) and is not a dependency.
-dependencies {
-    implementation(platform(libs.cucumber.bom))
-    testImplementation(platform(libs.junit.bom))
-    "readmeImplementation"(platform(libs.cucumber.bom))
-    constraints {
-        // Cucumber-JVM modules that share the 8.x line. Other io.cucumber coordinates
-        // (messages, gherkin, formatters, cucumber-expressions) use their own versions
-        // and are aligned by cucumber-bom, not forced into [8,9).
+majorLines {
+    pin("Cucumber 8", 8,
+        listOf("io.cucumber"),
         listOf(
             "cucumber-bom",
             "cucumber-plugin",
@@ -47,81 +20,38 @@ dependencies {
             "cucumber-core",
             "cucumber-junit-platform-engine",
             "cucumber-junit",
+            "cucumber-testng",
+            "cucumber-spring",
+            "cucumber-picocontainer",
+            "cucumber-guice",
+            "cucumber-cdi",
             "cucumber-gherkin",
             "cucumber-gherkin-messages",
             "datatable",
             "docstring",
-        ).forEach { artifact ->
-            implementation("io.cucumber:$artifact") {
-                version { strictly("[8,9)") }
-            }
-        }
-        testImplementation(libs.junit.bom) {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.jupiter:junit-jupiter") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.jupiter:junit-jupiter-api") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.jupiter:junit-jupiter-engine") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.platform:junit-platform-commons") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.platform:junit-platform-engine") {
-            version { strictly("[6,7)") }
-        }
-        testImplementation("org.junit.platform:junit-platform-launcher") {
-            version { strictly("[6,7)") }
-        }
-    }
+            "cucumber-groovy",
+        ),
+    )
 }
 
-configurations.configureEach {
-    resolutionStrategy.componentSelection {
-        all {
-            val cucumber8Line = setOf(
-                "cucumber-bom",
-                "cucumber-plugin",
-                "cucumber-java8",
-                "cucumber-java",
-                "cucumber-core",
-                "cucumber-junit-platform-engine",
-                "cucumber-junit",
-                "cucumber-testng",
-                "cucumber-spring",
-                "cucumber-picocontainer",
-                "cucumber-guice",
-                "cucumber-cdi",
-                "cucumber-gherkin",
-                "cucumber-gherkin-messages",
-                "datatable",
-                "docstring",
-                "cucumber-groovy",
-            )
-            if (candidate.group == "io.cucumber" && candidate.module in cucumber8Line) {
-                val major = candidate.version.substringBefore('.').toIntOrNull()
-                if (major != 8) {
-                    reject("strictly [8,9) rejected ${candidate.group}:${candidate.module}:${candidate.version}")
-                }
-            }
-            if (candidate.group == "junit" && candidate.module == "junit") {
-                reject("blocked junit:junit:${candidate.version}; JUnit 4 is not used")
-            }
-            if (candidate.group == "org.junit.vintage") {
-                reject("blocked ${candidate.group}:${candidate.module}:${candidate.version}")
-            }
-            if (candidate.group == "org.junit.jupiter" || candidate.group == "org.junit.platform" || candidate.group == "org.junit") {
-                val major = candidate.version.substringBefore('.').toIntOrNull()
-                if (major != 6) {
-                    reject("strictly [6,7) rejected ${candidate.group}:${candidate.module}:${candidate.version}")
-                }
-            }
-        }
-    }
+dependencies {
+    api(project(":modules:lsd-mono-core"))
+    api(libs.cucumber.plugin)
+
+    implementation(platform(libs.cucumber.bom))
+
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.cucumber.java8)
+    testImplementation(libs.cucumber.junit.platform.engine)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.platform.launcher)
+
+    // readme source set does not inherit main deps.
+    "readmeImplementation"(sourceSets.named("main").get().output)
+    "readmeImplementation"(project(":modules:lsd-mono-core"))
+    "readmeImplementation"(platform(libs.cucumber.bom))
+    "readmeImplementation"(libs.cucumber.java8)
+    "readmeImplementation"(libs.cucumber.junit.platform.engine)
 }
 
 tasks.test {

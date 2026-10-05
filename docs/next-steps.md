@@ -26,7 +26,7 @@ This remains open.
 
 Legacy logging and HTTP interceptors call `LsdContext` capture. Mono does not have those interceptor modules yet. `lsd-mono-junit-jupiter` is the pattern: a project under `modules/`, depending on `:modules:lsd-mono-core` only, package `io.lsdconsulting.lsd.mono.*`. No dependency on Maven `lsd-core`.
 
-`modules/lsd-mono-cucumber-8` is in the build. It is a Cucumber 8 plugin (`io.cucumber:cucumber-plugin`, catalog `8.0.4`, constrained to strictly `[8,9)`) that completes a scenario per Cucumber scenario through `LsdContext` and writes `ReportJson`. `:modules:lsd-mono-cucumber-8:readmeSamples` regenerates `modules/lsd-mono-cucumber-8/docs/readme/`. It is not on `build` or `check`.
+`modules/lsd-mono-cucumber-8` is in the build. It is a Cucumber 8 plugin (`io.cucumber:cucumber-plugin`, catalog `8.0.4`, the build fails if anything resolves to another major) that completes a scenario per Cucumber scenario through `LsdContext` and writes `ReportJson`. `:modules:lsd-mono-cucumber-8:readmeSamples` regenerates `modules/lsd-mono-cucumber-8/docs/readme/`. It is not on `build` or `check`.
 
 Still open, in an order driven by what people actually migrate:
 

@@ -2,19 +2,18 @@
 kotlin = "2.4.20"
 jvm = "21"
 junit = "6.1.3"
-# Latest Cucumber 8 on Maven Central. Modules constrain this line to strictly [8,9).
 cucumber = "8.0.4"
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 
-# JUnit 6 / Jupiter 6 (verified on Maven Central; not the 5.x line)
+# JUnit 6 / Jupiter 6. junit-bom 6.x manages org.junit.platform on the same major.
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
 
-# Cucumber 8. Concrete version is requested here; lsd-mono-cucumber-8 constrains the group to [8,9).
+# Cucumber 8. Only lsd-mono-cucumber-8 uses these.
 cucumber-bom = { module = "io.cucumber:cucumber-bom", version.ref = "cucumber" }
 cucumber-plugin = { module = "io.cucumber:cucumber-plugin", version.ref = "cucumber" }
 cucumber-java8 = { module = "io.cucumber:cucumber-java8", version.ref = "cucumber" }
