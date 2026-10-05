@@ -16,6 +16,6 @@ jobs:
           java-version: "21"
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
       - name: Build
         run: ./gradlew build --no-daemon
