@@ -323,6 +323,23 @@ export function shortMessageEndpoints(
   return { x1, x2 }
 }
 
+/** Gap between a short arrow's bar end and its label. */
+const SHORT_LABEL_GAP = 4
+
+/**
+ * Short-arrow label position. Outbound labels start just past the bar edge and
+ * run toward the diagram edge; inbound labels end just before it.
+ */
+export function shortLabelAnchor(
+  type: 'SHORT_INBOUND' | 'SHORT_OUTBOUND',
+  x1: number,
+  x2: number,
+): { x: number; anchor: 'start' | 'end' } {
+  return type === 'SHORT_OUTBOUND'
+    ? { x: x1 + SHORT_LABEL_GAP, anchor: 'start' }
+    : { x: x2 - SHORT_LABEL_GAP, anchor: 'end' }
+}
+
 export interface NoteLayout {
   /** Translate X for the note group (card is centred on 0). */
   x: number
@@ -963,17 +980,23 @@ function renderMessageRow(
   const typeAttr = `data-msg-type="${escapeXml(msg.type)}"`
   if (hasData) buttons.push(messageOpenButton(msg, y, width, index, viewTop, zoom, paint))
 
+  // Nested bars sit ACT_NEST_DX right of their parent, so arrows shift with them.
+  const nest = (participantId: string, at: number) =>
+    Math.max(activationDepthAt(paint.activations ?? [], participantId, at), 0) * ACT_NEST_DX
+
   if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
     const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
     const pi = index.get(participantId) ?? 0
-    const px = xFor(pi)
+    const px = xFor(pi) + nest(participantId, y)
     const { x1, x2 } = shortMessageEndpoints(msg.type, px, width)
-    const labelX = (x1 + x2) / 2
+    // The label runs away from the lifeline, so it never sits on the bar.
+    const label = shortLabelAnchor(msg.type, x1, x2)
+    const hitX = (x1 + x2) / 2
     return `
     <g class="message message-short${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
-      <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
-      ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
+      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
+      ${hasData ? `<circle class="msg-hit" cx="${hitX}" cy="0" r="16"/>` : ''}
     </g>`
   }
 
@@ -982,10 +1005,6 @@ function renderMessageRow(
   const x1 = xFor(fi)
   const x2 = xFor(ti)
   const self = fi === ti && msg.from === msg.to
-
-  // Nested bars sit ACT_NEST_DX right of their parent, so arrows shift with them.
-  const nest = (participantId: string, at: number) =>
-    Math.max(activationDepthAt(paint.activations ?? [], participantId, at), 0) * ACT_NEST_DX
 
   if (self) {
     // Leaves the bar in use at the row and comes back to the innermost bar at the return.
