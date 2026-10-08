@@ -21,7 +21,7 @@ cd modules/lsd-mono-core/report
 npm run check:ux
 ```
 
-Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`. `npm run check:ux` stays manual. Use a current Node (the Vite 7 / Vitest 3 toolchain). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
+Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`. `npm run check:ux` stays manual. Use Node 22.6 or later (`engines` in `package.json`). Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
 
 ## Open the demo
 

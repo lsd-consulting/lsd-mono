@@ -1,3 +1,7 @@
+import io.lsdconsulting.lsd.mono.gradle.node22BinDir
+import io.lsdconsulting.lsd.mono.gradle.nodeExecutable
+import io.lsdconsulting.lsd.mono.gradle.withNodeOnPath
+
 plugins {
     id("lsd.kotlin-jvm")
     `java-library`
@@ -31,32 +35,8 @@ tasks.jar {
     }
 }
 
-// Vite 7 / Vitest 3 need a current Node. These tasks prepend an installed
-// Node 22 (nvm) when the default alias is still the older 17.x toolchain.
-// They do not change the user's nvm default.
-fun node22BinDir(): File? {
-    val versions = File(System.getProperty("user.home"), ".nvm/versions/node")
-    val version = Regex("""v22\.(\d+)\.(\d+)""")
-    return versions.listFiles()
-        ?.filter { dir ->
-            version.matches(dir.name) && File(dir, "bin/npm").canExecute() && File(dir, "bin/node").canExecute()
-        }
-        ?.maxWithOrNull(
-            compareBy(
-                { version.matchEntire(it.name)!!.groupValues[1].toInt() },
-                { version.matchEntire(it.name)!!.groupValues[2].toInt() },
-            ),
-        )
-        ?.resolve("bin")
-}
-
-fun Exec.withNodeOnPath() {
-    val nodeBin = node22BinDir()
-    if (nodeBin != null) {
-        val base = System.getenv("PATH").orEmpty()
-        environment("PATH", nodeBin.absolutePath + File.pathSeparator + base)
-    }
-}
+// Node 22 helpers (node22BinDir, withNodeOnPath, nodeExecutable) live in build-logic NodeToolchain.kt.
+// They prepend nvm Node 22 for these tasks and do not change the nvm default alias.
 
 val reportDir = layout.projectDirectory.dir("report")
 val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
@@ -177,6 +157,6 @@ tasks.register<Exec>("readmeSamples") {
     outputs.file(readmeDocsDir.file("components.gif"))
     val reportOut = readmeReportDir.get().asFile.absolutePath
     val docsOut = readmeDocsDir.asFile.absolutePath
-    val node = node22BinDir()?.resolve("node")?.takeIf { it.canExecute() }?.absolutePath ?: "node"
+    val node = nodeExecutable()
     commandLine(node, "scripts/readme-samples.mjs", reportOut, docsOut)
 }

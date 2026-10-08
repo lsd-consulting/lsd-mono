@@ -88,6 +88,6 @@ npm run dev          # http://localhost:5173/
 # or open report/lsd-report.single.html in Chrome (file://)
 ```
 
-`./gradlew :modules:lsd-mono-core:build` runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). The shell is packaged from `build/generated/resources`, not written back into `src/main/resources`. Needs a current Node (Vite 7 / Vitest 3). The Gradle tasks prepend Node 22 when it is installed and do not change your default Node.
+`./gradlew :modules:lsd-mono-core:build` runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). The shell is packaged from `build/generated/resources`, not written back into `src/main/resources`. Needs Node 22.6 or later (`engines` in `report/package.json`). The Gradle tasks prepend nvm Node 22 when it is installed (`build-logic` `NodeToolchain.kt`) and do not change your default Node.
 
 See `report/README.md` for how to run the report UI.

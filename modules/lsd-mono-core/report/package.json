@@ -4,6 +4,9 @@
   "private": true,
   "description": "Living Sequence Diagrams HTML report UI for lsd-mono-core",
   "type": "module",
+  "engines": {
+    "node": ">=22.6"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
