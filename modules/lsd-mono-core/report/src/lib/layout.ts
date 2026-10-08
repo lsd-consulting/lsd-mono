@@ -233,17 +233,50 @@ function nextDrawnEvent(events: DiagramEvent[], after: number): DiagramEvent | u
   return undefined
 }
 
-/** Rows stacked from y = 0. Sections are ordinary rows — they do not reset y or activations. */
+/** Gap between a note card's top edge and the lowest point of the arrow or note above it. */
+export const NOTE_CLEARANCE = 6
+
+/**
+ * Lowest point a drawn row paints below its y. A self-call loop comes back
+ * SELF_RETURN_DY below the row, plus its arrowhead. A note is centred on y.
+ * Null for rows a note cannot collide with in practice.
+ */
+function paintedBottom(row: LayoutRow): number | null {
+  const event = row.event
+  if (event.kind === 'message') {
+    const selfCall = event.from !== '' && event.from === event.to
+    return row.y + (selfCall ? SELF_RETURN_DY : 0) + 4
+  }
+  if (event.kind === 'note') return row.y + noteCardMetrics(event.text).height / 2
+  return null
+}
+
+/**
+ * Rows stacked from y = 0. Sections are ordinary rows — they do not reset y or activations.
+ * A note is centred on its row's y, so half the card rises into the row above.
+ * When that would cover the arrow or note above (a tall note after a self-call),
+ * the note moves down until its top edge clears it.
+ */
 export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
   const ordered = sortEventsByCreatedAt(events)
   const rows: LayoutRow[] = []
   let y = TOP_LABEL_PAD
+  let lastDrawn: LayoutRow | undefined
   for (let index = 0; index < ordered.length; index++) {
     const event = ordered[index]
     const height = event.kind === 'section'
       ? sectionRowHeight(nextDrawnEvent(ordered, index))
       : eventRowHeight(event)
-    rows.push({ index, y, height, event })
+    if (event.kind === 'note' && lastDrawn) {
+      const above = paintedBottom(lastDrawn)
+      if (above != null) {
+        const top = y - noteCardMetrics(event.text).height / 2
+        y += Math.max(0, above + NOTE_CLEARANCE - top)
+      }
+    }
+    const row = { index, y, height, event }
+    rows.push(row)
+    if (height > 0) lastDrawn = row
     y += height
   }
   return rows
