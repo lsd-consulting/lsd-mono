@@ -17,9 +17,12 @@ import {
   DEFAULT_OVERSCAN,
   DEFAULT_VIEWPORT,
   EDGE_INSET,
+  EDGE_MARGIN,
   HEADER_BLOCK_H,
   LEFT_PAD,
   MESSAGE_LABEL_RISE,
+  MSG_CHAR_W,
+  NOTE_CARD_W,
   NOTE_LINE_H,
   SECTION_BAND_H,
   SECTION_BAND_Y,
@@ -109,6 +112,8 @@ export interface RowPaint {
   neighbors?: Map<string, { prevArrowY?: number; nextArrowY?: number }>
   /** Bars for the whole scenario. Arrows attach to the innermost bar at their row. */
   activations?: ActivationSpan[]
+  /** Padding around the lifeline area. HTML overlays and full-width bands use it. */
+  frame?: DiagramFrame
 }
 
 const views = new Map<string, DiagramView>()
@@ -123,8 +128,92 @@ export function diagramView(scenarioId: string): DiagramView {
   return view
 }
 
-function logicalWidth(scenario: Scenario, hiddenIds: ReadonlySet<string>): number {
-  return diagramWidth(visibleParticipants(scenario.participants, hiddenIds).length)
+/**
+ * Horizontal frame of a diagram. Lifelines are laid out across [base], from
+ * x = 0. Notes, self-call labels and short-arrow labels on the outer lifelines
+ * can reach past that, so the drawing adds [left] and [right] and the SVG
+ * viewBox starts at -left.
+ */
+export interface DiagramFrame {
+  base: number
+  left: number
+  right: number
+  total: number
+}
+
+function frameOf(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): DiagramFrame {
+  const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
+  const base = diagramWidth(visible.length)
+  const pads = diagramPads(diagram.scenario.events, visible, diagram.labelMaxWidth)
+  return { base, ...pads, total: base + pads.left + pads.right }
+}
+
+/** Approximate drawn width of a message label with its type cue and duration. */
+function messageLabelWidth(msg: MessageEvent, labelMaxWidth: number): number {
+  const cue = messageArrowSpec(msg.type).typeCue
+  let text = truncateLabel(msg.label, labelMaxWidth)
+  if (cue) text += ` [${cue}]`
+  if (msg.durationMs != null) text += ` · ${msg.durationMs}ms`
+  return text.length * MSG_CHAR_W
+}
+
+/** Where a self-call label starts, relative to its lifeline (see renderMessageRow). */
+const SELF_LABEL_DX = ACT_W + 36 + 8
+
+/**
+ * Extra room needed left and right of the lifeline area so nothing on the
+ * outer lifelines is clipped: notes left or right of a lifeline, self-call
+ * labels, short-arrow labels, and long labels between the first or last pair.
+ * Only content on the given (visible) participants counts.
+ */
+export function diagramPads(
+  events: DiagramEvent[],
+  visible: Participant[],
+  labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH,
+): { left: number; right: number } {
+  const index = new Map(visible.map((p, i) => [p.id, i]))
+  const width = diagramWidth(visible.length)
+  let minX = EDGE_MARGIN
+  let maxX = width - EDGE_MARGIN
+  const reach = (from: number, to: number) => {
+    minX = Math.min(minX, from)
+    maxX = Math.max(maxX, to)
+  }
+  for (const event of events) {
+    if (event.kind === 'note') {
+      if (event.over && !index.has(event.over)) continue
+      const { x } = noteLayout(event.placement, event.over, index, width)
+      reach(x - NOTE_CARD_W / 2, x + NOTE_CARD_W / 2)
+      continue
+    }
+    if (event.kind !== 'message') continue
+    const w = messageLabelWidth(event, labelMaxWidth)
+    if (event.type === 'SHORT_INBOUND' || event.type === 'SHORT_OUTBOUND') {
+      const id = event.type === 'SHORT_INBOUND' ? event.to : event.from
+      const i = index.get(id)
+      if (i === undefined) continue
+      // Nested bars can push the stub right by a few px; allow two levels.
+      const { x1, x2 } = shortMessageEndpoints(event.type, xFor(i), width)
+      const label = shortLabelAnchor(event.type, x1, x2)
+      if (label.anchor === 'start') reach(x1, label.x + w + 2 * ACT_NEST_DX)
+      else reach(label.x - w, x2 + 2 * ACT_NEST_DX)
+      continue
+    }
+    const fi = index.get(event.from)
+    const ti = index.get(event.to)
+    if (fi === undefined || ti === undefined) continue
+    if (event.from === event.to) {
+      const x = xFor(fi)
+      reach(x, x + SELF_LABEL_DX + 2 * ACT_NEST_DX + w)
+      continue
+    }
+    const mid = (xFor(fi) + xFor(ti)) / 2
+    reach(mid - w / 2, mid + w / 2)
+  }
+  return {
+    left: Math.ceil(Math.max(0, EDGE_MARGIN - minX)),
+    right: Math.ceil(Math.max(0, maxX - (width - EDGE_MARGIN))),
+  }
 }
 
 function xFor(index: number): number {
@@ -419,7 +508,8 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
 export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): string {
   const diagram = mountDiagram(scenario, labelMaxWidth)
   const view = diagramView(scenario.id)
-  const width = logicalWidth(scenario, view.hidden)
+  const frame = frameOf(diagram, view.hidden)
+  const width = frame.total
   const zoom = view.zoom
   const places = messagePlaces(scenario.events, view.hidden)
   const diagramTab = focusablePlaces(places).length ? -1 : 0
@@ -438,7 +528,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
       ${toolbarHtml(scenario, view)}
       <div class="seq-stage">
         <div class="seq-scroll" data-scenario-id="${escapeXml(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeXml(scenario.title)}">
-          <div class="seq-sticky-header" style="width:${width * zoom}px">${headerSvg(scenario, width, view.hidden, zoom)}</div>
+          <div class="seq-sticky-header" style="width:${width * zoom}px">${headerSvg(scenario, frame, view.hidden, zoom)}</div>
           <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
             <div class="seq-window"></div>
           </div>
@@ -488,7 +578,7 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   const offset = slice[0]?.y ?? 0
   const viewTop = slice.length ? sliceViewTop(offset) : 0
   windowEl.style.transform = `translateY(${viewTop * zoom}px)`
-  const width = logicalWidth(diagram.scenario, view.hidden)
+  const frame = frameOf(diagram, view.hidden)
   scrollport.style.setProperty('--seq-header-h', `${cssHeader}px`)
   const prior = document.activeElement
   const priorBtn = prior instanceof Element ? prior.closest('button.msg-open') : null
@@ -510,7 +600,7 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
       : (stops[0]?.id ?? null)
   // One tab stop: the active arrow when it is painted, otherwise the scrollport.
   scrollport.tabIndex = tabTarget && painted.has(tabTarget) ? -1 : 0
-  windowEl.innerHTML = slice.length ? windowSvg(diagram, slice, view, width, viewTop) : ''
+  windowEl.innerHTML = slice.length ? windowSvg(diagram, slice, view, frame, viewTop) : ''
   if (hadFocus) {
     const target = view.activeMessageId ?? priorId
     if (target) {
@@ -535,12 +625,13 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   const diagram = mounted.get(id)
   if (!diagram) return
   const view = diagramView(id)
-  const width = logicalWidth(diagram.scenario, view.hidden)
+  const frame = frameOf(diagram, view.hidden)
+  const width = frame.total
   const zoom = view.zoom
   const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
   if (header) {
     header.style.width = `${width * zoom}px`
-    header.innerHTML = headerSvg(diagram.scenario, width, view.hidden, zoom)
+    header.innerHTML = headerSvg(diagram.scenario, frame, view.hidden, zoom)
   }
   const spacer = scrollport.querySelector<HTMLElement>('.seq-spacer')
   if (spacer) {
@@ -613,7 +704,7 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
   else if (action === 'out') next = stepZoom(view.zoom, -1)
   else if (action === 'fit') {
     const fitted = fittedView({
-      contentWidth: logicalWidth(diagram.scenario, view.hidden),
+      contentWidth: frameOf(diagram, view.hidden).total,
       viewportWidth: scrollport.clientWidth,
       viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
       mustInclude: topMessageLabelRect(diagram, view.hidden),
@@ -634,14 +725,17 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
 
 /** Label box of the uppermost message still drawn. Fit scrolls this into view. */
 function topMessageLabelRect(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): Rect {
-  const width = logicalWidth(diagram.scenario, hiddenIds)
+  const frame = frameOf(diagram, hiddenIds)
+  const width = frame.base
   const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
   const index = new Map(visible.map((p, i) => [p.id, i]))
   for (const row of diagram.rows) {
     const event = row.event
     if (event.kind !== 'message' || eventHiddenByColumns(event, hiddenIds)) continue
     const ends = messageEndpoints(event, index, width)
-    return messageLabelRect({ arrowY: row.y, x1: ends.x1, x2: ends.x2 })
+    const rect = messageLabelRect({ arrowY: row.y, x1: ends.x1, x2: ends.x2 })
+    // Fit works in drawn coordinates, which start frame.left left of x = 0.
+    return { ...rect, x: rect.x + frame.left }
   }
   return { x: 0, y: 0, width: 1, height: 1 }
 }
@@ -719,7 +813,8 @@ export function bindDiagramScroll(root: ParentNode): void {
   })
 }
 
-function headerSvg(scenario: Scenario, width: number, hiddenIds: ReadonlySet<string>, zoom: number): string {
+function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlySet<string>, zoom: number): string {
+  const width = frame.total
   const visible = visibleParticipants(scenario.participants, hiddenIds)
   const boxes = visible
     .map((p, i) => {
@@ -740,16 +835,17 @@ function headerSvg(scenario: Scenario, width: number, hiddenIds: ReadonlySet<str
     .join(', ')
   const dispW = width * zoom
   const dispH = HEADER_BLOCK_H * zoom
-  return `<svg class="seq-header-svg" viewBox="0 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants: ${escapeXml(summary)}">${boxes}</svg>`
+  return `<svg class="seq-header-svg" viewBox="${-frame.left} 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants: ${escapeXml(summary)}">${boxes}</svg>`
 }
 
 function windowSvg(
   diagram: MountedDiagram,
   slice: LayoutRow[],
   view: DiagramView,
-  width: number,
+  frame: DiagramFrame,
   viewTop: number,
 ): string {
+  const width = frame.base
   const { scenario, rows } = diagram
   const offset = slice[0].y
   const end = slice[slice.length - 1].y + slice[slice.length - 1].height
@@ -796,16 +892,17 @@ function windowSvg(
     activeMessageId: view.activeMessageId,
     neighbors: focusableNeighbors(rows, view.hidden),
     activations: spans,
+    frame,
   }
   const buttons: string[] = []
   const body = slice
     .map((row) => renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth, paint, buttons, viewTop, view.zoom))
     .join('')
-  const dispW = width * view.zoom
+  const dispW = frame.total * view.zoom
   const dispH = height * view.zoom
 
   return `
-  <svg class="seq-svg" viewBox="0 ${viewTop} ${width} ${height}" width="${dispW}" height="${dispH}" aria-hidden="true">
+  <svg class="seq-svg" viewBox="${-frame.left} ${viewTop} ${frame.total} ${height}" width="${dispW}" height="${dispH}" aria-hidden="true">
     <defs>
       ${ACTIVATION_HATCH}
       ${markers.markup()}
@@ -859,8 +956,8 @@ function renderRow(
   if (event.kind === 'section') {
     return `
     <g class="section-row" id="section-${escapeXml(event.id)}" transform="translate(0, ${row.y})">
-      <rect class="section-band" x="12" y="${SECTION_BAND_Y}" width="${Math.max(width - 24, 24)}" height="${SECTION_BAND_H}" rx="8"/>
-      <text class="section-title" x="24" y="28">${escapeXml(event.title)}</text>
+      <rect class="section-band" x="${12 - (paint.frame?.left ?? 0)}" y="${SECTION_BAND_Y}" width="${Math.max(width + (paint.frame?.left ?? 0) + (paint.frame?.right ?? 0) - 24, 24)}" height="${SECTION_BAND_H}" rx="8"/>
+      <text class="section-title" x="${24 - (paint.frame?.left ?? 0)}" y="28">${escapeXml(event.title)}</text>
     </g>`
   }
 
@@ -1046,7 +1143,9 @@ function messageOpenButton(
   paint: RowPaint,
 ): string {
   const ends = messageEndpoints(msg, index, width)
-  const label = messageLabelRect({ arrowY: y, x1: ends.x1, x2: ends.x2 })
+  const rect = messageLabelRect({ arrowY: y, x1: ends.x1, x2: ends.x2 })
+  // The overlay starts at the drawn left edge, frame.left left of x = 0.
+  const label = { ...rect, x: rect.x + (paint.frame?.left ?? 0) }
   const neighbor = paint.neighbors?.get(msg.id)
   const box = messageHitBox({
     label,

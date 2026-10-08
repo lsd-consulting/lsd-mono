@@ -112,6 +112,10 @@ export function noteCardMetrics(text: string): NoteCardMetrics {
 /** Short arrow stub length from lifeline toward the diagram edge (not a fake participant). */
 export const SHORT_STUB = 48
 export const EDGE_INSET = 16
+/** Smallest gap kept between drawn content and the diagram's left or right edge. */
+export const EDGE_MARGIN = 8
+/** Approx advance width for `.msg-label` (11.5px, weight 550), used to size the frame. */
+export const MSG_CHAR_W = 6.6
 export const DEFAULT_SPACER_H = ROW_H.spacer
 export const MIN_SPACER_H = 12
 export const MAX_SPACER_H = 240
