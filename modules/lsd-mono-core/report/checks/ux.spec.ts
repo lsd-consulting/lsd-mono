@@ -241,6 +241,74 @@ test('main content fills the width the sidebar leaves, and the side panel takes 
   expect((await widths()).main).toBeCloseTo(closed.main, 0)
 })
 
+test('the scenario list collapses to an icon rail, stays collapsed after reload, and passes axe', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await openFixture(page, 'dark')
+  const sizes = () =>
+    page.evaluate(() => ({
+      sidebar: document.querySelector('.sidebar')!.getBoundingClientRect().width,
+      main: document.querySelector('#main')!.getBoundingClientRect().width,
+    }))
+  const expanded = await sizes()
+  const toggle = page.locator('#btn-sidebar')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+
+  // Keyboard: the toggle is a real button.
+  await toggle.focus()
+  await page.keyboard.press('Enter')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(toggle).toHaveAccessibleName('Expand scenario list')
+  await expect(toggle).toBeFocused()
+  const collapsed = await sizes()
+  expect(collapsed.sidebar).toBeLessThan(80)
+  expect(collapsed.main).toBeCloseTo(expanded.main + expanded.sidebar - collapsed.sidebar, 0)
+
+  // Rail items keep their names and a tooltip; the scenario text is not painted.
+  const nav = page.locator('#scenario-nav [data-nav]').first()
+  await expect(nav).toHaveAccessibleName(new RegExp(uxFixture.scenarios[0].title))
+  await expect(nav).toHaveAttribute('title', new RegExp(uxFixture.scenarios[0].title))
+  await expect(nav.locator('.nav-icon')).toBeVisible()
+  const textBox = await nav.locator('.nav-title').boundingBox()
+  expect(textBox === null || textBox.width <= 1).toBe(true)
+  await expect(page.locator('.sidebar-title')).toBeHidden()
+
+  const violations = await seriousViolations(page)
+  expect(violations, formatViolations(violations)).toEqual([])
+
+  await page.reload()
+  await expect(page.locator('.seq-svg')).toBeVisible()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  expect((await sizes()).sidebar).toBeLessThan(80)
+
+  // Print is unaffected: full scenario names, no toggle.
+  await page.emulateMedia({ media: 'print', reducedMotion: 'reduce' })
+  await expect(toggle).toBeHidden()
+  await expect(page.locator('#scenario-nav .nav-title').first()).toBeVisible()
+  expect((await page.locator('#scenario-nav .nav-title').first().boundingBox())!.width).toBeGreaterThan(40)
+  await page.emulateMedia({ media: 'screen', reducedMotion: 'reduce' })
+
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  expect((await sizes()).sidebar).toBeCloseTo(expanded.sidebar, 0)
+})
+
+test('axe on the collapsed scenario list in every theme', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.addInitScript(() => localStorage.setItem('lsd-report-sidebar', 'collapsed'))
+  for (const theme of THEMES) {
+    await openFixture(page, theme)
+    await expect(page.locator('#btn-sidebar')).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.locator('#scenario-nav .nav-icon').first()).toBeVisible()
+    const violations = await seriousViolations(page)
+    expect(violations, `${theme}\n${formatViolations(violations)}`).toEqual([])
+  }
+})
+
+test('the narrow layout has no sidebar toggle', async ({ page }) => {
+  await openFixture(page, 'dark')
+  await expect(page.locator('#btn-sidebar')).toBeHidden()
+})
+
 /** sRGB bytes for any CSS colour the page resolves (oklch, color-mix, hex), via a 1px canvas. */
 async function noteColours(page: Page): Promise<{ card: number[]; text: number[] }> {
   return page.evaluate(() => {

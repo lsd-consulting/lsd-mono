@@ -35,6 +35,14 @@ import {
   syncDiagramWindow,
 } from './lib/sequence-diagram'
 import { applyTheme, getPreferredTheme, themeButtonLabel, themeGlyph, toggleTheme, type Theme } from './ui/theme'
+import {
+  applySidebarCollapsed,
+  getSidebarCollapsed,
+  navItemTooltip,
+  sidebarToggleGlyph,
+  sidebarToggleLabel,
+  storeSidebarCollapsed,
+} from './ui/sidebar'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
 import { componentGraph } from './lib/component-graph'
 
@@ -44,6 +52,7 @@ interface State {
   openIds: Set<string>
   selectedId: string | null
   helpOpen: boolean
+  sidebarCollapsed: boolean
 }
 
 const report: Report = window.__LSD_REPORT__ ?? sampleReport
@@ -54,6 +63,7 @@ const state: State = {
   openIds: new Set([report.scenarios[0]?.id].filter(Boolean) as string[]),
   selectedId: report.scenarios[0]?.id ?? null,
   helpOpen: false,
+  sidebarCollapsed: getSidebarCollapsed(),
 }
 
 const app = document.querySelector('#app')!
@@ -157,9 +167,14 @@ function renderShell(): void {
         <button type="button" class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Show keyboard help">?</button>
       </div>
     </header>
-    <div class="shell">
-      <aside class="sidebar" aria-label="Scenarios">
-        <p class="sidebar-title">Scenarios · ${total}</p>
+    <div class="shell${state.sidebarCollapsed ? ' sidebar-collapsed' : ''}">
+      <aside class="sidebar" id="sidebar" aria-label="Scenarios">
+        <div class="sidebar-head">
+          <p class="sidebar-title">Scenarios · ${total}</p>
+          <button type="button" class="icon-btn sidebar-toggle" id="btn-sidebar" aria-controls="sidebar"
+            aria-expanded="${!state.sidebarCollapsed}" aria-label="${sidebarToggleLabel(state.sidebarCollapsed)}"
+            title="${sidebarToggleLabel(state.sidebarCollapsed)}">${sidebarToggleGlyph(state.sidebarCollapsed)}</button>
+        </div>
         <div class="hist" aria-hidden="true" title="Status mix">
           <span class="s" style="width:${(c.success / total) * 100 || 0}%"></span>
           <span class="w" style="width:${(c.warn / total) * 100 || 0}%"></span>
@@ -211,6 +226,15 @@ function bindChrome(): void {
 
   document.querySelector('#btn-theme')!.addEventListener('click', () => {
     paintThemeButton(toggleTheme())
+  })
+
+  document.querySelector('#btn-sidebar')!.addEventListener('click', () => {
+    state.sidebarCollapsed = !state.sidebarCollapsed
+    storeSidebarCollapsed(state.sidebarCollapsed)
+    applySidebarCollapsed(document.querySelector('.shell'), document.querySelector('#btn-sidebar'), state.sidebarCollapsed)
+    renderNav()
+    // Diagrams draw only the rows in view; the width just changed.
+    document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((scrollport) => syncDiagramWindow(scrollport))
   })
 
   document.querySelector('#btn-help')!.addEventListener('click', () => {
@@ -357,11 +381,16 @@ function renderNav(): void {
   list.innerHTML = items
     .map((s) => {
       const msgs = s.events.filter((e) => e.kind === 'message').length
+      const number = report.scenarios.indexOf(s) + 1
+      const tooltip = state.sidebarCollapsed
+        ? ` title="${escapeAttr(navItemTooltip(s.title, statusLabel(s.status), msgs))}"`
+        : ''
       return `
       <li>
-        <button type="button" data-nav="${s.id}" aria-current="${state.selectedId === s.id}">
+        <button type="button" data-nav="${s.id}" aria-current="${state.selectedId === s.id}"${tooltip}>
           <span class="dot ${s.status}"></span>
-          <span>
+          <span class="nav-icon" aria-hidden="true">${number}</span>
+          <span class="nav-text">
             <div class="nav-title">${escapeHtml(s.title)}</div>
             <div class="nav-meta">${statusLabel(s.status)} · ${msgs} messages</div>
           </span>
@@ -648,6 +677,9 @@ function onKey(e: KeyboardEvent): void {
     moveSelection(-1)
     return
   }
+  // Enter on a focused button presses that button (sidebar toggle, filters, theme…),
+  // not the selected scenario.
+  if (e.key === 'Enter' && target.closest('button')) return
   if (e.key === 'Enter' && state.selectedId) {
     e.preventDefault()
     toggleOpen(state.selectedId)
