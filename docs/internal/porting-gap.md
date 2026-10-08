@@ -1,6 +1,6 @@
 # LSD Mono — porting gap report
 
-Next steps: docs/next-steps.md
+Next steps: [next-steps.md](next-steps.md)
 
 **Scope:** features still to port from legacy [lsd-core](https://github.com/lsd-consulting/lsd-core) (`com.lsd.core`) into greenfield `modules/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report/` UI.
 
@@ -287,7 +287,7 @@ The following slices are complete and remain here as migration history rather th
 7. Diagram UX: zoom, fit, participant toggles, in-diagram find, keyboard navigation, inspector, minimap, deep links, reduced motion, and accessibility checks.
 8. Lifeline colour, timestamps, print, high contrast, clickable arrows, and browser performance results.
 
-Open implementation work is tracked in `docs/next-steps.md` and the **Still open** rows above.
+Open implementation work is tracked in `docs/internal/next-steps.md` and the **Still open** rows above.
 
 ---
 

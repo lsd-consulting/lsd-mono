@@ -1,6 +1,6 @@
 # LSD Mono — next steps
 
-**Status:** `main` is on origin (https://github.com/lsd-consulting/lsd-mono.git). Completed porting and UX slices are recorded in `docs/porting-gap.md` and `docs/perf-results.md`. This file is the runbook for open work.
+**Status:** `main` is on origin (https://github.com/lsd-consulting/lsd-mono.git). Completed porting and UX slices are recorded in `docs/internal/porting-gap.md` and `docs/perf-results.md`. This file is the runbook for open work.
 
 ---
 
