@@ -158,6 +158,7 @@ tasks.register<Exec>("readmeSamples") {
     outputs.file(readmeDocsDir.file("zoom.gif"))
     outputs.file(readmeDocsDir.file("fit.gif"))
     outputs.file(readmeDocsDir.file("inspector-drag.gif"))
+    outputs.file(readmeDocsDir.file("components.gif"))
     val reportOut = readmeReportDir.get().asFile.absolutePath
     val docsOut = readmeDocsDir.asFile.absolutePath
     val node = node22BinDir()?.resolve("node")?.takeIf { it.canExecute() }?.absolutePath ?: "node"

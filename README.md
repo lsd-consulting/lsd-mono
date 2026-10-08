@@ -96,6 +96,8 @@ Zoom until the diagram scrolls.
 
 ![Zooming into the diagram and scrolling it](docs/readme/zoom.gif)
 
+Each scenario also has a **Component diagram** button. The [lsd-mono-core README](modules/lsd-mono-core/README.md#component-diagram) shows it opening.
+
 Regenerate those three files from the current UI:
 
 ```bash

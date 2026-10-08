@@ -47,6 +47,18 @@ lsd-mono-core/
 
 - PlantUML / Handlebars compatibility — intentionally out of the Mono product path; see upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) for legacy reference
 
+## Component diagram
+
+Each scenario's diagram toolbar has a **Component diagram** button. Clicking it draws that scenario's components and the calls between them in the side panel. The report builds the diagram in the browser from the messages it already has, so there is nothing to switch on in the build and no extra file.
+
+![Clicking Component diagram and the diagram opening in the side panel](../../docs/readme/components.gif)
+
+- Every participant on a sync, async, bi-directional, or lost message is a component, drawn with its participant type (actor, database, queue, and so on). Responses and short arrows add no edges.
+- Repeated calls between the same two components share one edge. Its caption has the first label, the type, and a count, for example `INSERT order · sync ×2`. Async edges are dashed.
+- Callers sit above the components they call. Escape or Close puts focus back on the button.
+
+`./gradlew :modules:lsd-mono-core:readmeSamples` regenerates the GIF with the other README samples.
+
 ## Kotlin API (migration-oriented)
 
 Inspired by legacy entry points (`LsdContext`, `Status`, properties, popup links)

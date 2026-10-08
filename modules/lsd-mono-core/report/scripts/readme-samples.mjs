@@ -87,6 +87,42 @@ function scaleRgba(rgba, width, height, targetWidth) {
   return { data: out, width: targetWidth, height: targetHeight }
 }
 
+/** Area-average downscale. Keeps thin diagonal edges solid where nearest-pixel sampling breaks them up. */
+function scaleRgbaSmooth(rgba, width, height, targetWidth) {
+  if (width <= targetWidth) return { data: rgba, width, height }
+  const targetHeight = Math.max(1, Math.round((height * targetWidth) / width))
+  const out = new Uint8Array(targetWidth * targetHeight * 4)
+  const fx = width / targetWidth
+  const fy = height / targetHeight
+  for (let y = 0; y < targetHeight; y++) {
+    const y0 = Math.floor(y * fy)
+    const y1 = Math.max(y0 + 1, Math.min(height, Math.floor((y + 1) * fy)))
+    for (let x = 0; x < targetWidth; x++) {
+      const x0 = Math.floor(x * fx)
+      const x1 = Math.max(x0 + 1, Math.min(width, Math.floor((x + 1) * fx)))
+      let r = 0
+      let g = 0
+      let b = 0
+      let n = 0
+      for (let sy = y0; sy < y1; sy++) {
+        for (let sx = x0; sx < x1; sx++) {
+          const si = (sy * width + sx) * 4
+          r += rgba[si]
+          g += rgba[si + 1]
+          b += rgba[si + 2]
+          n++
+        }
+      }
+      const di = (y * targetWidth + x) * 4
+      out[di] = Math.round(r / n)
+      out[di + 1] = Math.round(g / n)
+      out[di + 2] = Math.round(b / n)
+      out[di + 3] = 255
+    }
+  }
+  return { data: out, width: targetWidth, height: targetHeight }
+}
+
 function sampleForPalette(frames) {
   const picks = [0, Math.floor(frames.length / 2), frames.length - 1]
   const chunks = []
@@ -97,9 +133,10 @@ function sampleForPalette(frames) {
   return new Uint8Array(chunks)
 }
 
-function writeGif(frames, file) {
-  const scaled = frames.map((frame) => scaleRgba(frame.data, frame.width, frame.height, 760))
-  const palette = quantize(sampleForPalette(scaled), 80)
+function writeGif(frames, file, { smooth = false, colours = 80 } = {}) {
+  const scale = smooth ? scaleRgbaSmooth : scaleRgba
+  const scaled = frames.map((frame) => scale(frame.data, frame.width, frame.height, 760))
+  const palette = quantize(sampleForPalette(scaled), colours)
   const gif = GIFEncoder()
   let index = 0
   while (index < scaled.length) {
@@ -422,6 +459,116 @@ try {
     console.log(`inspector-drag.gif ${dragFrames.length} frames`)
   }
 
+  if (coreMotion) {
+    // components.gif: a pointer moves to the Component diagram button, presses it, and the
+    // diagram appears in the inspector. Fresh page at a narrower width so the text survives
+    // the 760px GIF scale. Headless Chromium paints no cursor, so the pointer is an overlay.
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.reload({ waitUntil: 'load' })
+    await page.locator('.seq-svg').waitFor()
+    await page.locator('.msg-label').first().waitFor()
+    await page.evaluate(() =>
+      Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]),
+    )
+    await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
+    await scroll.evaluate((el) => {
+      el.scrollTop = 0
+    })
+    await placeScenario()
+    const button = page.locator('.seq-diagram').getByRole('button', { name: 'Component diagram' })
+    await button.waitFor()
+
+    // Open once to size the clip for both states, then close again.
+    await button.click()
+    await page.locator('#inspector-graph svg.component-diagram').waitFor()
+    await page.waitForTimeout(250)
+    // Lowest point worth keeping once open: the drawing, and the button after the column reflows.
+    const openBottom = await page.evaluate(() => {
+      const graph = document.querySelector('#inspector-graph')?.getBoundingClientRect()
+      const again = document.querySelector('[data-show-components]')?.getBoundingClientRect()
+      return Math.max(graph?.bottom ?? 0, again?.bottom ?? 0)
+    })
+    await page.keyboard.press('Escape')
+    await page.locator('#inspector').waitFor({ state: 'hidden' })
+    await page.waitForTimeout(250)
+    await fitScenarioViewport()
+    const componentsClip = await page.evaluate((openBottomY) => {
+      const main = document.querySelector('#main')?.getBoundingClientRect()
+      const top = document.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0
+      const button = document.querySelector('[data-show-components]')?.getBoundingClientRect()
+      const bottom = Math.max(openBottomY, button?.bottom ?? 0) + 140
+      const x = Math.max(0, Math.floor(main?.left ?? 0))
+      return {
+        x,
+        y: Math.floor(top),
+        width: window.innerWidth - x,
+        height: Math.min(window.innerHeight - Math.floor(top), Math.ceil(bottom - top)),
+      }
+    }, openBottom)
+
+    await page.evaluate(() => {
+      const pointer = document.createElement('div')
+      pointer.id = 'readme-pointer'
+      pointer.style.cssText =
+        'position:fixed;left:0;top:0;width:22px;height:22px;z-index:9999;pointer-events:none;transform:translate(-2px,-2px)'
+      pointer.innerHTML =
+        '<svg viewBox="0 0 22 22" width="22" height="22"><path d="M2 2 L2 18 L7 13.5 L10.5 20.5 L13.5 19 L10 12 L16.5 12 Z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/></svg>'
+      document.body.append(pointer)
+    })
+    const movePointer = (x, y) =>
+      page.evaluate(
+        ([px, py]) => {
+          const pointer = document.querySelector('#readme-pointer')
+          pointer.style.left = `${px}px`
+          pointer.style.top = `${py}px`
+        },
+        [x, y],
+      )
+
+    const componentFrames = []
+    async function holdComponents(n) {
+      const decoded = decodePng(
+        await page.screenshot({ clip: componentsClip, animations: 'disabled', caret: 'hide', type: 'png' }),
+      )
+      for (let i = 0; i < n; i++) componentFrames.push(decoded)
+    }
+
+    const target = await button.boundingBox()
+    if (!target) throw new Error('Component diagram button has no box')
+    const endX = target.x + target.width / 2
+    const endY = target.y + target.height / 2
+    const startX = componentsClip.x + componentsClip.width * 0.42
+    const startY = componentsClip.y + componentsClip.height * 0.72
+    await movePointer(startX, startY)
+    await holdComponents(4)
+    const steps = 7
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps
+      const ease = 1 - (1 - t) * (1 - t)
+      await movePointer(startX + (endX - startX) * ease, startY + (endY - startY) * ease)
+      await holdComponents(1)
+    }
+    await button.hover()
+    await holdComponents(2)
+    // Pressed look for one frame, then the real click.
+    await button.evaluate((el) => {
+      el.style.transform = 'scale(0.95)'
+      el.style.background = 'var(--surface-2)'
+    })
+    await holdComponents(1)
+    await button.evaluate((el) => {
+      el.style.transform = ''
+      el.style.background = ''
+    })
+    await button.click()
+    await page.locator('#inspector-graph svg.component-diagram').waitFor()
+    await page.evaluate(() => document.querySelector('#readme-pointer')?.remove())
+    await page.waitForTimeout(250)
+    await holdComponents(20)
+    writeGif(componentFrames, path.join(outDir, 'components.gif'), { smooth: true, colours: 128 })
+    console.log(`components.gif ${componentFrames.length} frames`)
+  }
+
   writeGif(frames, path.join(outDir, 'zoom.gif'))
 } finally {
   await browser.close()
@@ -434,4 +581,5 @@ console.log(path.join(outDir, 'zoom.gif'))
 if (coreMotion) {
   console.log(path.join(outDir, 'fit.gif'))
   console.log(path.join(outDir, 'inspector-drag.gif'))
+  console.log(path.join(outDir, 'components.gif'))
 }
