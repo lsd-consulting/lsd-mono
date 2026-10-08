@@ -106,6 +106,14 @@ Regenerate those three files from the current UI:
 
 The task captures the scenario with `LsdContext`, then screenshots the packaged shell with headless Chromium. It uses Node 22 from nvm when that is installed, and it does not change the default Node alias. It is not part of `build` or `check`.
 
+### Kitchen-sink sample
+
+[`docs/samples/kitchen-sink.html`](docs/samples/kitchen-sink.html) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in four scenarios: happy path, payment declined, out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, payloads, timestamps, and failed and errored scenarios. Open it in a browser next to `kitchen-sink-payloads.js`. Regenerate both from [`KitchenSinkSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/KitchenSinkSample.kt):
+
+```bash
+./gradlew :modules:lsd-mono-core:kitchenSinkSample
+```
+
 ## Build
 
 ```bash

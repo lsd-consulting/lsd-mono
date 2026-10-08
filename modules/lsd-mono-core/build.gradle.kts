@@ -160,3 +160,33 @@ tasks.register<Exec>("readmeSamples") {
     val node = nodeExecutable()
     commandLine(node, "scripts/readme-samples.mjs", reportOut, docsOut)
 }
+
+// Kitchen-sink sample: every diagram feature in one report, for eyeballing layout.
+val kitchenSinkReportDir = layout.buildDirectory.dir("kitchen-sink-report")
+val samplesDocsDir = rootProject.layout.projectDirectory.dir("docs/samples")
+
+val captureKitchenSinkReport by tasks.registering(JavaExec::class) {
+    group = "documentation"
+    description = "Capture the kitchen-sink scenarios and write their report HTML."
+    classpath = readmeSourceSet.runtimeClasspath
+    mainClass.set("io.lsdconsulting.lsd.mono.core.readme.KitchenSinkSampleKt")
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+    systemProperty("lsd.mono.report.outputDir", kitchenSinkReportDir.get().asFile.absolutePath)
+    systemProperty("lsd.mono.ids.deterministic", "true")
+    outputs.dir(kitchenSinkReportDir)
+}
+
+tasks.register<Copy>("kitchenSinkSample") {
+    group = "documentation"
+    description = "Regenerate docs/samples/kitchen-sink.html. Not part of build or check."
+    dependsOn(captureKitchenSinkReport)
+    from(kitchenSinkReportDir) {
+        include("kitchen-sink-diagram.html", "kitchen-sink-payloads.js")
+        rename("kitchen-sink-diagram.html", "kitchen-sink.html")
+    }
+    into(samplesDocsDir)
+}
