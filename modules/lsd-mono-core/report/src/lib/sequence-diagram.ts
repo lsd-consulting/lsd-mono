@@ -21,9 +21,6 @@ import {
   LEFT_PAD,
   MESSAGE_LABEL_RISE,
   NOTE_LINE_H,
-  NOTE_PAD_Y,
-  NOTE_PLACE_CUE_GAP,
-  NOTE_PLACE_CUE_H,
   SECTION_BAND_H,
   SECTION_BAND_Y,
   SELF_RETURN_DY,
@@ -884,9 +881,9 @@ function renderRow(
     const card = noteCardMetrics(event.text)
     const halfW = card.width / 2
     const halfH = card.height / 2
-    const firstY = -halfH + NOTE_PAD_Y + NOTE_LINE_H * 0.8
-    const cueY =
-      -halfH + NOTE_PAD_Y + card.lines.length * NOTE_LINE_H + NOTE_PLACE_CUE_GAP + NOTE_PLACE_CUE_H * 0.75
+    // Centre the wrapped lines in the card. Placement is layout only, so the card
+    // holds nothing but the note text.
+    const firstY = -(card.lines.length * NOTE_LINE_H) / 2 + NOTE_LINE_H * 0.8
     const tspans = card.lines
       .map((line, i) =>
         i === 0
@@ -894,13 +891,15 @@ function renderRow(
           : `<tspan x="0" dy="${NOTE_LINE_H}">${escapeXml(line)}</tspan>`,
       )
       .join('')
-    // Match cue rides on the place-cue line so wrapped note copy stays inside the card.
-    const matchCue = match ? `<tspan class="note-match-cue">[match] </tspan>` : ''
+    // Search cue sits just above the card's top-right corner, so it never crowds the note copy.
+    const matchCue = match
+      ? `<text class="note-match-cue" x="${halfW}" y="${-halfH - 3}" text-anchor="end">[match]</text>`
+      : ''
     return `
     <g class="note note-${place}${hit}" data-placement="${place}"${hitAttr} transform="translate(${layout.x}, ${row.y})">
       <rect class="note-card" x="${-halfW}" y="${-halfH}" width="${card.width}" height="${card.height}" rx="6"/>
       <text class="note-text" text-anchor="${layout.textAnchor}">${tspans}</text>
-      <text class="note-place-cue" x="0" y="${cueY}" text-anchor="middle">${matchCue}${place}</text>
+      ${matchCue}
     </g>`
   }
 

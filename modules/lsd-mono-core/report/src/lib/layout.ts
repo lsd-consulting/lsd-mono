@@ -49,8 +49,6 @@ export const NOTE_CARD_W = 140
 export const NOTE_PAD_X = 10
 export const NOTE_PAD_Y = 3
 export const NOTE_LINE_H = 12
-export const NOTE_PLACE_CUE_H = 9
-export const NOTE_PLACE_CUE_GAP = 1
 /**
  * Vertical gap between successive note card edges when each card is centred on its
  * row.y. With a 28px card this keeps ROW_H.note at 40 (28 + 12).
@@ -100,12 +98,14 @@ export interface NoteCardMetrics {
   lines: string[]
 }
 
-/** Card size for a note: width stays ~140; height grows with wrapped lines + place cue. */
+/**
+ * Card size for a note: width stays ~140; height grows with wrapped lines.
+ * Placement (over, left, right) is layout only. It is not printed in the card.
+ */
 export function noteCardMetrics(text: string): NoteCardMetrics {
   const lines = wrapNoteLines(text)
   const textH = Math.max(1, lines.length) * NOTE_LINE_H
-  const contentH = textH + NOTE_PLACE_CUE_GAP + NOTE_PLACE_CUE_H
-  const height = Math.max(NOTE_CARD_MIN_H, contentH + 2 * NOTE_PAD_Y)
+  const height = Math.max(NOTE_CARD_MIN_H, textH + 2 * NOTE_PAD_Y)
   return { width: NOTE_CARD_W, height, lines }
 }
 

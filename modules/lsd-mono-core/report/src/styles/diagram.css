@@ -242,13 +242,6 @@
   letter-spacing: 0.01em;
 }
 
-.note-place-cue {
-  fill: var(--text-faint);
-  font-size: 8px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
 .note-left .note-card {
   stroke-dasharray: 3 2;
 }
@@ -351,6 +344,9 @@
   font-weight: 800;
   font-family: var(--mono);
   font-size: 10px;
+}
+.note-match-cue {
+  fill: var(--text);
 }
 
 /* Zoom scales the drawing. It does not reflow the sequence into one column. */

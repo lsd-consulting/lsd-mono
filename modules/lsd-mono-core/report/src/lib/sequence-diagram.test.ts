@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LayoutRow } from './layout'
-import { LEFT_PAD, MESSAGE_LABEL_RISE, NOTE_CARD_W, NOTE_LINE_H, SECTION_BAND_H, SECTION_BAND_Y, SHORT_STUB, layoutRows, noteCardMetrics } from './layout'
+import { LEFT_PAD, MESSAGE_LABEL_RISE, NOTE_CARD_MIN_H, NOTE_CARD_W, NOTE_LINE_H, NOTE_PAD_Y, SECTION_BAND_H, SECTION_BAND_Y, SHORT_STUB, layoutRows, noteCardMetrics } from './layout'
 import {
   activationBarSvg,
   arrowMarker,
@@ -309,19 +309,52 @@ describe('renderRowSvg fragments', () => {
     const svg = renderRowSvg(row, 400, participants)
     expect(svg).toContain(`width="${NOTE_CARD_W}"`)
     expect(svg).toContain(`height="${card.height}"`)
-    // One tspan per wrapped line (match cue lives on the place-cue line).
+    // One tspan per wrapped line.
     expect((svg.match(/<tspan x="0"/g) ?? []).length).toBe(card.lines.length)
     for (const line of card.lines) {
       expect(svg).toContain(line)
     }
-    expect(svg).toContain('note-place-cue')
-    expect(svg).toContain('>over</text>')
-    // Place cue y must sit inside the card (card spans -halfH .. +halfH).
-    const cueY = Number(/note-place-cue" x="0" y="([^"]+)"/.exec(svg)?.[1])
-    expect(cueY).toBeLessThan(card.height / 2)
-    expect(cueY).toBeGreaterThan(-card.height / 2)
+    // Every line's baseline sits inside the card (card spans -halfH .. +halfH).
+    const firstY = Number(/<tspan x="0" y="([^"]+)"/.exec(svg)?.[1])
+    expect(firstY).toBeGreaterThan(-card.height / 2)
+    expect(firstY + (card.lines.length - 1) * NOTE_LINE_H).toBeLessThan(card.height / 2)
     // Card height tracks line count.
     expect(card.height).toBeGreaterThanOrEqual(card.lines.length * NOTE_LINE_H)
+  })
+
+  it('shows only the note text, not its placement (over, left or right)', () => {
+    for (const placement of ['over', 'left', 'right'] as const) {
+      const svg = renderRowSvg(
+        rowFor({ kind: 'note', id: `n-${placement}`, text: 'Payment retried', over: 'api', placement }),
+        400,
+        participants,
+      )
+      // Placement stays layout data on the group.
+      expect(svg).toContain(`data-placement="${placement}"`)
+      expect(svg).not.toContain('note-place-cue')
+      const text = svg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      expect(text).toBe('Payment retried')
+      expect(svg.toLowerCase()).not.toContain(`>${placement}<`)
+    }
+  })
+
+  it('sizes a one-line note card to the minimum height without a placement line', () => {
+    expect(noteCardMetrics('short').height).toBe(NOTE_CARD_MIN_H)
+    const text = 'This note deliberately overflows a single 140px line so the card must wrap and grow'
+    const card = noteCardMetrics(text)
+    expect(card.height).toBe(Math.max(NOTE_CARD_MIN_H, card.lines.length * NOTE_LINE_H + 2 * NOTE_PAD_Y))
+  })
+
+  it('still marks a note that matches the search with a text cue', () => {
+    const svg = renderRowSvg(
+      rowFor({ kind: 'note', id: 'n-hit', text: 'Payment retried', over: 'api', placement: 'over' }),
+      400,
+      participants,
+      undefined,
+      { query: 'retried', hiddenIds: new Set() },
+    )
+    expect(svg).toContain('search-hit')
+    expect(svg).toContain('[match]')
   })
 
   it('keeps left/right long notes wrapped the same way', () => {
