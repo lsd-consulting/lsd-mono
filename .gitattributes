@@ -1,0 +1,11 @@
+# Normalise text to LF in the repository; Git picks the checkout line ending.
+* text=auto
+
+# Wrapper scripts keep the line endings their shells expect on every platform.
+/gradlew text eol=lf
+*.bat text eol=crlf
+
+# Never diff or convert these.
+*.png binary
+*.gif binary
+*.jar binary
