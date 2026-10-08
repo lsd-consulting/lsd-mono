@@ -218,6 +218,8 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   function begin(next: InspectorInvoker | null): number {
     generation += 1
     invoker = next
+    // Which view is showing. Print CSS leaves the panel out while it shows metrics.
+    panel!.dataset.view = next ? (next.kind ?? 'message') : 'error'
     ready = false
     cached = undefined
     showJson = true

@@ -12,6 +12,7 @@ import {
 } from './ui/inspector'
 import { loadExternalPayloads, payloadKey } from './lib/payloads'
 import { clearMessageHash, parseMessageHash, writeMessageHash } from './lib/message-url'
+import { placePrintMetrics, printMetricsSection } from './ui/metrics'
 
 declare global {
   interface Window {
@@ -221,6 +222,7 @@ function bindChrome(): void {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onClose: (opened) => {
       clearOpenMessageHash()
+      syncPrintMetrics()
       if (opened?.kind === 'components' || opened?.kind === 'metrics') {
         invoker = null
         const button = opened.kind === 'components' ? '[data-show-components]' : '[data-show-metrics]'
@@ -407,6 +409,7 @@ function renderMain(): void {
       </div>
     </div>
     ${items.map((s, i) => scenarioHtml(s, i)).join('')}`
+  syncPrintMetrics()
 
   items.forEach((s) => {
     const card = document.getElementById(`card-${s.id}`)!
@@ -501,6 +504,23 @@ function openError(scenario: Scenario): void {
     message: err.message,
     stack: err.stack,
   })
+  syncPrintMetrics()
+}
+
+/**
+ * Printed metrics follow the side panel: present only while it shows the Metrics
+ * view, inside that scenario. Any other view, or a closed panel, prints none.
+ */
+function syncPrintMetrics(): void {
+  const id = inspector?.isOpen() && invoker?.kind === 'metrics' ? invoker.scenarioId : null
+  const scenario = id ? report.scenarios.find((item) => item.id === id) : undefined
+  const labelMaxWidth = report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
+  placePrintMetrics(
+    document,
+    scenario
+      ? { scenarioId: scenario.id, html: printMetricsSection(scenario.id, scenario.metrics, scenario.insights, labelMaxWidth) }
+      : null,
+  )
 }
 
 function openComponents(scenario: Scenario): void {
@@ -508,6 +528,7 @@ function openComponents(scenario: Scenario): void {
   invoker = { scenarioId: scenario.id, kind: 'components' }
   clearOpenMessageHash()
   inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
+  syncPrintMetrics()
 }
 
 function openMetrics(scenario: Scenario): void {
@@ -520,6 +541,7 @@ function openMetrics(scenario: Scenario): void {
     insights: scenario.insights,
     labelMaxWidth: report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH,
   })
+  syncPrintMetrics()
 }
 
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
@@ -527,6 +549,7 @@ function openMessage(scenario: Scenario, msg: MessageEvent): void {
   invoker = { scenarioId: scenario.id, messageId: msg.id }
   setOpenMessageHash(scenario.id, msg.id)
   inspector.openMessage(scenario.id, msg)
+  syncPrintMetrics()
 }
 
 /** Open the message named in the URL hash (file:// safe). Payload still loads on open. */

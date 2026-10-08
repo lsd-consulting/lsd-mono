@@ -494,6 +494,11 @@ mark {
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
+/* Print-only copy of the open Metrics view, placed in its scenario (see main.ts). */
+.print-metrics {
+  display: none;
+  margin: 0 0 16px;
+}
 .inspector-empty {
   margin: 0;
   color: var(--text-muted);
@@ -761,5 +766,12 @@ mark {
     border-color: #000;
   }
   .scenario-card { break-inside: avoid; box-shadow: none; border: 1px solid #000; }
+  /* Metrics print only while the Metrics view is open, in the scenario, at full
+     card width. The panel copy (narrow, scrolled) stays off the page. JSON and
+     component diagram views are not affected. */
+  .print-metrics { display: block; break-inside: avoid; }
+  .print-metrics .text-btn { display: none; }
+  .print-metrics .kv dd { white-space: normal; overflow-wrap: anywhere; }
+  #inspector[data-view="metrics"] { display: none !important; }
   a, button { color: #000; }
 }

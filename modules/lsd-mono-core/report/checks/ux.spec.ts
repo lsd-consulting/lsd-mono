@@ -120,6 +120,55 @@ test('axe with metrics in the side panel, and Escape or Close returns focus to t
   await expect(open).toBeFocused()
 })
 
+test('print shows metrics only while the Metrics view is open, in its scenario', async ({ page }) => {
+  await openFixture(page, 'light')
+  const printed = page.locator('#card-ux .print-metrics')
+  const metricsBtn = page.getByRole('button', { name: 'Metrics', exact: true })
+
+  await metricsBtn.click()
+  await expect(page.locator('#inspector-title')).toHaveText('Metrics')
+  // On screen the print copy is there but not shown.
+  await expect(printed).toBeHidden()
+
+  await page.emulateMedia({ media: 'print', reducedMotion: 'reduce' })
+  await expect(printed).toBeVisible()
+  await expect(printed.locator('dl.kv dt')).toHaveText(['Messages'])
+  await expect(printed.locator('ol.insights li')).toHaveCount(1)
+  await expect(printed.locator('button')).toBeHidden()
+  await expect(page.locator('#inspector')).toBeHidden()
+  // Full card width, not the panel's column, and nothing scrolled out of view.
+  const fit = await printed.evaluate((el) => {
+    const box = el.getBoundingClientRect()
+    const body = el.closest('.scenario-body')!.getBoundingClientRect()
+    return { left: box.left, right: box.right, bodyLeft: body.left, bodyRight: body.right, clipped: el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1 }
+  })
+  expect(fit.left).toBeGreaterThanOrEqual(fit.bodyLeft)
+  expect(fit.right).toBeLessThanOrEqual(fit.bodyRight)
+  expect(fit.right - fit.left).toBeGreaterThan((fit.bodyRight - fit.bodyLeft) * 0.8)
+  expect(fit.clipped).toBe(false)
+
+  await page.emulateMedia({ media: 'screen', reducedMotion: 'reduce' })
+  await page.keyboard.press('Escape')
+  await expect(page.locator('#inspector')).toBeHidden()
+  await page.emulateMedia({ media: 'print', reducedMotion: 'reduce' })
+  await expect(page.locator('.print-metrics')).toHaveCount(0)
+
+  // Other side-panel views print as they did before, with no metrics.
+  await page.emulateMedia({ media: 'screen', reducedMotion: 'reduce' })
+  await page.getByRole('button', { name: 'Component diagram' }).click()
+  await page.emulateMedia({ media: 'print', reducedMotion: 'reduce' })
+  await expect(page.locator('.print-metrics')).toHaveCount(0)
+  await expect(page.locator('#inspector')).toBeVisible()
+
+  await page.emulateMedia({ media: 'screen', reducedMotion: 'reduce' })
+  await metricsBtn.click()
+  await page.locator('button.msg-open').first().click()
+  await expect(page.locator('#inspector-title')).not.toHaveText('Metrics')
+  await page.emulateMedia({ media: 'print', reducedMotion: 'reduce' })
+  await expect(page.locator('.print-metrics')).toHaveCount(0)
+  await expect(page.locator('#inspector')).toBeVisible()
+})
+
 /** sRGB bytes for any CSS colour the page resolves (oklch, color-mix, hex), via a 1px canvas. */
 async function noteColours(page: Page): Promise<{ card: number[]; text: number[] }> {
   return page.evaluate(() => {
