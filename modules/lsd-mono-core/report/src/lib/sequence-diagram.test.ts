@@ -565,3 +565,35 @@ describe('participantHead', () => {
     expect(header.match(/participant-actor/g)).toHaveLength(1)
   })
 })
+
+describe('component diagram button', () => {
+  function scenarioWith(events: DiagramEvent[]): Scenario {
+    return {
+      id: 'comp',
+      title: 'Components',
+      status: 'success',
+      description: '',
+      facts: [],
+      metrics: [],
+      participants,
+      events,
+    }
+  }
+
+  it('sits in the diagram toolbar and names the scenario it opens', () => {
+    const html = renderDiagramHtml(
+      scenarioWith([{ kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' }]),
+    )
+    const toolbar = html.slice(html.indexOf('class="seq-toolbar"'), html.indexOf('class="seq-stage"'))
+    expect(toolbar).toContain('data-show-components="comp"')
+    expect(toolbar).toContain('>Component diagram</button>')
+    expect(toolbar).not.toMatch(/data-show-components="comp"[^>]*disabled/)
+  })
+
+  it('is disabled when no message links two components', () => {
+    const html = renderDiagramHtml(
+      scenarioWith([{ kind: 'message', id: 'm', from: 'api', to: '', label: 'emit', type: 'SHORT_OUTBOUND' }]),
+    )
+    expect(html).toMatch(/data-show-components="comp"[^>]*disabled/)
+  })
+})

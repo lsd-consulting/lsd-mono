@@ -44,7 +44,7 @@ These are **implemented**, not stubs, unless noted.
 | Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — **no longer used by the JUnit extension**. Left as a migration shim only. |
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdProperties.kt`, `ReportOptions.kt` |
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
-| Component graph from captured messages | Removed. The JVM flag, `components.json`, and `components-report.html` are gone. An in-page diagram drawn in the browser from messages already in the sequence report is open (issue #4). Not PlantUML. |
+| Component graph from captured messages | In the report page. The **Component diagram** button in each scenario's diagram toolbar draws it in the inspector, in the browser, from messages already in the sequence report (issue #4). The JVM flag, `components.json`, and `components-report.html` stay removed. Not PlantUML. |
 | Diagram zoom, fit, hide columns, in-diagram find | report toolbar on the sequence diagram. Out / Fit / In, ctrl or meta + wheel, fit-to-width (clamped). Hide/show is in-memory per diagram: the column goes, messages and anchored notes that need it are omitted, other columns reflow. Find highlights message labels and notes with a `[match]` cue and a live count. **Landed 2026-10-03.** Not colour-only. Virtualisation and the sticky header stay. |
 
 ---
@@ -217,14 +217,13 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### 3.3 Component diagrams
 
-#### P1 — Component / architecture view (non-PlantUML) — **file writer removed; in-page view open**
+#### P1 — Component / architecture view (non-PlantUML) — **in-page view shipped**
 
 | | |
 |--|--|
 | **Legacy** | Per-scenario component SVG via PlantUML (`ComponentDiagramGenerator`) + combined `completeComponentsReport` over `combinedEvents`. Filters message types to SYNCHRONOUS / ASYNCHRONOUS / BI_DIRECTIONAL / LOST; distinct edges by from→to. |
-| **Shipped** | Nothing. The Kotlin graph, the per-scenario `components` JSON field, and the separate HTML file were removed. The sequence page does not link to a component file. |
-| **Still open** | Draw the diagram in the browser, on demand, from the messages already in the sequence report, next to the message inspector. Issue #4. |
-| **Test** | None until that view exists. |
+| **Shipped** | A **Component diagram** button in each scenario's diagram toolbar. On click, `report/src/lib/component-graph.ts` builds the graph from that scenario's messages (same type filter as legacy, duplicate from→to pairs folded with a count and the first label), and `component-diagram.ts` draws it in the inspector with the participant header shapes, callers above callees. Nothing is computed on the JVM, and there is no separate file. Issue #4. |
+| **Test** | `component-graph.test.ts`, `component-diagram.test.ts`, the inspector and toolbar vitest cases, and an axe pass with the diagram open in `checks/ux.spec.ts`. |
 
 ---
 
@@ -237,7 +236,6 @@ The large-diagram UX baseline is shipped: sticky participant header, scenario an
 | Large diagrams | Density modes; the virtual window SVG is rebuilt on scroll rather than recycling nodes. | P2 |
 | Message payloads | Pretty-print / size limits for payloads; browser check that the inspector copy button works. | P1 |
 | Metrics navigation | Focus highlight when an insight target is outside the virtual window beyond a scroll. | P1 |
-| Component graph | Draw it in the browser from messages already in the report, next to the message inspector (issue #4). | P1 |
 
 **Themes and accessibility.** Dark, light, and high contrast persist in `report/src/ui/theme.ts`. Status, message types, and coloured activation use text, border, hatch, or shape cues in addition to colour. Print CSS forces a light page and paints every row so virtualisation does not clip printed output.
 
@@ -285,7 +283,7 @@ The following slices are complete and remain here as migration history rather th
 3. JUnit structured failures and extension outcome coverage.
 4. Remaining sequence event kinds: notes, delay, spacer, short arrows, LOST, and BI_DIRECTIONAL.
 5. Metrics insights, properties, and label truncation.
-6. Component graph file generation was built, then removed. The in-page view is issue #4.
+6. Component graph file generation was built, then removed. The in-page view replaced it (issue #4).
 7. Diagram UX: zoom, fit, participant toggles, in-diagram find, keyboard navigation, inspector, minimap, deep links, reduced motion, and accessibility checks.
 8. Lifeline colour, timestamps, print, high contrast, clickable arrows, and browser performance results.
 

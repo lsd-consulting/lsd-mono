@@ -62,6 +62,7 @@ import {
   zoomScrollBehavior,
   type MessagePlace,
 } from './diagram-a11y'
+import { hasComponentDiagram } from './component-graph'
 import {
   densityBins,
   fractionFromPointer,
@@ -359,6 +360,13 @@ export function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_M
   return diagram
 }
 
+/** Opens the component diagram for this scenario in the inspector. Disabled when no message links two components. */
+function componentsControl(scenario: Scenario): string {
+  const drawable = hasComponentDiagram(scenario)
+  const off = drawable ? '' : ' disabled title="No messages between components"'
+  return `<button type="button" class="components-open" data-show-components="${escapeXml(scenario.id)}"${off}>Component diagram</button>`
+}
+
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   const hits = classifySearchHits(scenario.events, view.query, view.hidden)
   const toggles = scenario.participants
@@ -383,6 +391,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
         <input type="search" data-diagram-find value="${escapeXml(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
         <span class="diagram-find-count" aria-live="polite">${escapeXml(searchCountLabel(hits.total, hits.hidden, view.query))}</span>
       </label>
+      ${componentsControl(scenario)}
     </div>`
 }
 

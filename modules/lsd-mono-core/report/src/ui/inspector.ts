@@ -1,9 +1,13 @@
 import type { MessageEvent } from '../types'
+import { renderComponentDiagram } from '../lib/component-diagram'
+import type { ComponentGraph } from '../lib/component-graph'
 import { pretty } from './format'
 
 export interface InspectorInvoker {
   scenarioId: string
-  messageId: string
+  /** Set for a message. Absent when the panel is showing the component diagram. */
+  messageId?: string
+  kind?: 'message' | 'components'
 }
 
 export interface InspectorOptions {
@@ -15,6 +19,8 @@ export interface InspectorOptions {
 
 export interface InspectorController {
   openMessage: (scenarioId: string, message: MessageEvent) => void
+  /** Component diagram for one scenario, in this same panel. Drawn from messages already loaded. */
+  openComponents: (scenarioId: string, graph: ComponentGraph, title: string) => void
   openError: (error: { status: string; headline: string; message: string; stack?: string }) => void
   close: () => void
   isOpen: () => boolean
@@ -54,6 +60,7 @@ export function inspectorMarkup(): string {
       <div class="inspector-body">
         <div class="meta-row" id="inspector-meta"></div>
         <p id="inspector-lead" hidden></p>
+        <div id="inspector-graph" hidden></div>
         <div class="json-row">
           <button type="button" id="inspector-json" aria-expanded="false" aria-controls="inspector-pre">Show JSON</button>
           <button type="button" id="inspector-json-expand" hidden aria-pressed="false" aria-controls="inspector-pre">Expand</button>
@@ -75,6 +82,8 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   const expandBtn = doc.querySelector<HTMLButtonElement>('#inspector-json-expand')!
   const resize = doc.querySelector<HTMLElement>('#inspector-resize')!
   const pre = doc.querySelector<HTMLElement>('#inspector-pre')!
+  const graphHost = doc.querySelector<HTMLElement>('#inspector-graph')!
+  const jsonRow = doc.querySelector<HTMLElement>('.json-row')!
   const copy = doc.querySelector<HTMLButtonElement>('#inspector-copy')!
   const closeBtn = doc.querySelector<HTMLButtonElement>('#inspector-close')!
 
@@ -124,6 +133,24 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     } catch {
       /* private mode or a test document without storage */
     }
+  }
+
+  function showMessageChrome(): void {
+    graphHost.hidden = true
+    graphHost.replaceChildren()
+    copy.hidden = false
+    jsonRow.hidden = false
+  }
+
+  function showGraphChrome(): void {
+    copy.hidden = true
+    jsonRow.hidden = true
+    toggle.hidden = true
+    expandBtn.hidden = true
+    pre.hidden = true
+    pre.textContent = ''
+    lead.hidden = true
+    graphHost.hidden = false
   }
 
   function collapseJson(): void {
@@ -178,6 +205,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     expandBtn.hidden = false
     lead.hidden = true
     lead.textContent = ''
+    showMessageChrome()
     width = readWidth(doc)
     setOpen(true)
     return generation
@@ -187,7 +215,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     isOpen: () => !panel.hidden,
     close,
     openMessage(scenarioId, message) {
-      const token = begin({ scenarioId, messageId: message.id })
+      const token = begin({ scenarioId, messageId: message.id, kind: 'message' })
       jsonLabel = 'JSON'
       toggle.textContent = `Show ${jsonLabel}`
       title.textContent = message.label
@@ -216,6 +244,26 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
           void showJsonBody(token)
         },
       )
+    },
+    openComponents(scenarioId, graph, heading) {
+      begin({ scenarioId, kind: 'components' })
+      showJson = false
+      title.textContent = 'Component diagram'
+      const nodes = graph.nodes.length
+      const links = graph.edges.length
+      meta.innerHTML = nodes
+        ? `<span class="pill">${nodes} ${nodes === 1 ? 'component' : 'components'}</span>
+        <span class="pill">${links} ${links === 1 ? 'link' : 'links'}</span>
+        <span class="pill">${escapeHtml(heading)}</span>`
+        : `<span class="pill">Nothing to draw</span>
+        <span class="pill">${escapeHtml(heading)}</span>`
+      showGraphChrome()
+      const drawn = renderComponentDiagram(graph, heading)
+      graphHost.innerHTML = drawn.svg
+      // Widen for this view only when the drawing needs it. The saved width is untouched,
+      // so the next message opens at the column the user chose.
+      const fit = drawn.width + 40
+      if (fit > width) applyWidth(Math.min(fit, inspectorWidthLimits(viewport()).expand))
     },
     openError(error) {
       const token = begin(null)

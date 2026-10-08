@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { MessageEvent, Report } from '../types'
 import { sampleReport } from '../data/sample-report'
 import { shellParts } from '../lib/payloads'
+import { componentGraph } from '../lib/component-graph'
 import {
   INSPECTOR_MIN_PX,
   INSPECTOR_NARROW_PX,
@@ -122,6 +123,58 @@ describe('inspector', () => {
     await Promise.resolve()
     await Promise.resolve()
   }
+
+  it('shows a component diagram in the same panel, then a message restores the json chrome', async () => {
+    const closed: Array<string | undefined> = []
+    const controller = bindInspector(document, {
+      loadPayload: async () => ({ ok: true }),
+      onClose: (invoker) => closed.push(invoker?.kind),
+    })
+    const graph = componentGraph({
+      participants: [
+        { id: 'a', name: 'Alpha', type: 'ACTOR' },
+        { id: 'b', name: 'Beta', type: 'PARTICIPANT' },
+        { id: 'c', name: 'Gamma', type: 'DATABASE' },
+        { id: 'd', name: 'Delta', type: 'QUEUE' },
+        { id: 'e', name: 'Epsilon', type: 'PARTICIPANT' },
+      ],
+      events: ['b', 'c', 'd', 'e'].map((to, i) => ({
+        kind: 'message' as const,
+        id: String(i),
+        from: i === 0 ? 'a' : 'b',
+        to: i === 0 ? 'b' : to,
+        label: `call ${to}`,
+        type: 'SYNCHRONOUS' as const,
+      })),
+    })
+    controller.openComponents('s', graph, 'Wide scenario')
+    const host = document.querySelector<HTMLElement>('#inspector-graph')!
+    expect(panel().hidden).toBe(false)
+    expect(document.querySelector('#inspector-title')!.textContent).toBe('Component diagram')
+    expect(document.querySelector('#inspector-meta')!.textContent).toContain('5 components')
+    expect(document.querySelector('#inspector-meta')!.textContent).toContain('4 links')
+    expect(host.hidden).toBe(false)
+    expect(host.querySelector('svg.component-diagram')).not.toBeNull()
+    expect(host.querySelectorAll('.component-node')).toHaveLength(5)
+    expect(document.querySelector<HTMLElement>('.json-row')!.hidden).toBe(true)
+    expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(true)
+    expect(document.querySelector<HTMLElement>('#inspector-pre')!.hidden).toBe(true)
+    // Three callees side by side need more than the narrow column; the saved width stays put.
+    const widened = Number.parseInt(document.querySelector<HTMLElement>('#shell')!.style.getPropertyValue('--inspector-w'))
+    expect(widened).toBeGreaterThan(INSPECTOR_NARROW_PX)
+    expect(sessionStorage.getItem(INSPECTOR_WIDTH_KEY)).toBeNull()
+
+    controller.openMessage('s', message())
+    expect(host.hidden).toBe(true)
+    expect(host.childElementCount).toBe(0)
+    expect(document.querySelector<HTMLElement>('.json-row')!.hidden).toBe(false)
+    expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(false)
+    expect(document.querySelector('#shell')!.getAttribute('style')).toContain(`${INSPECTOR_NARROW_PX}px`)
+
+    controller.openComponents('s', graph, 'Wide scenario')
+    controller.close()
+    expect(closed).toEqual(['components'])
+  })
 
   it('opens from a click into a non-modal panel and shows json after the payload loads', async () => {
     mount()

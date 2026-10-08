@@ -41,10 +41,10 @@ lsd-mono-core/
   - copies classpath `lsd-report.single.html` beside the report as the
     interactive shell with captured `ReportJson` injected (the demo falls back to sample data when opened directly)
   - `index.html` aggregating report files
+- Report page: a **Component diagram** button per scenario draws the components and their calls in the inspector, in the browser, from that scenario's messages
 
 **Deferred / optional**
 
-- An in-page component diagram next to the message inspector (issue #4)
 - PlantUML / Handlebars compatibility — intentionally out of the Mono product path; see upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) for legacy reference
 
 ## Kotlin API (migration-oriented)

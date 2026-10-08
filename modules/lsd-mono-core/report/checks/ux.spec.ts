@@ -78,6 +78,23 @@ test('axe after the diagram scrolls and after the inspector opens', async ({ pag
   }
 })
 
+test('axe with the component diagram open, and Escape returns focus to its button', async ({ page }) => {
+  for (const theme of THEMES) {
+    await openFixture(page, theme)
+    const open = page.getByRole('button', { name: 'Component diagram' })
+    await open.click()
+    await expect(page.locator('#inspector-title')).toHaveText('Component diagram')
+    await expect(page.locator('#inspector-graph svg.component-diagram')).toBeVisible()
+    // Client, Api, and Database. Queue is in the header but on no message.
+    await expect(page.locator('#inspector-graph .component-node')).toHaveCount(3)
+    const violations = await seriousViolations(page)
+    expect(violations, `${theme}\n${formatViolations(violations)}`).toEqual([])
+    await page.keyboard.press('Escape')
+    await expect(page.locator('#inspector')).toBeHidden()
+    await expect(open).toBeFocused()
+  }
+})
+
 test('themes and fit keep the top message label on screen', async ({ page }) => {
   for (const theme of THEMES) {
     await openFixture(page, theme)

@@ -92,7 +92,7 @@ The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG o
 | Offline chrome | CDN d3 / hljs / mark.js unless assets are embedded | No diagram CDN; fonts optional |
 | Accessibility | Partial | Focus rings, `aria-pressed` / `aria-current`, one tab stop with message navigation, real position metadata, reduced-motion, and axe checks |
 
-Remaining gaps: sprite includes and full PlantUML colour/skinparam fidelity are intentionally out; an in-page component diagram is issue #4; payload pretty-print/size limits and density modes remain open. Sections, short arrows, notes, delays, spacers, clickable arrows, and the major accessibility checks are shipped.
+Remaining gaps: sprite includes and full PlantUML colour/skinparam fidelity are intentionally out; payload pretty-print/size limits and density modes remain open. Sections, short arrows, notes, delays, spacers, clickable arrows, the in-page component diagram, and the major accessibility checks are shipped.
 
 ## Sample data
 

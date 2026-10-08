@@ -3,7 +3,13 @@ import './styles/diagram.css'
 import { sampleReport } from './data/sample-report'
 import type { MessageEvent, Report, Scenario, Status } from './types'
 import { scenarioDescriptionHtml, scenarioHaystack } from './ui/scenario-summary'
-import { bindInspector, delegateMessageOpen, inspectorMarkup, type InspectorController } from './ui/inspector'
+import {
+  bindInspector,
+  delegateMessageOpen,
+  inspectorMarkup,
+  type InspectorController,
+  type InspectorInvoker,
+} from './ui/inspector'
 import { loadExternalPayloads, payloadKey } from './lib/payloads'
 import { clearMessageHash, parseMessageHash, writeMessageHash } from './lib/message-url'
 
@@ -30,6 +36,7 @@ import {
 import { applyTheme, getPreferredTheme, themeButtonLabel, themeGlyph, toggleTheme, type Theme } from './ui/theme'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
 import { insightsListHtml } from './ui/insights'
+import { componentGraph } from './lib/component-graph'
 
 interface State {
   query: string
@@ -51,8 +58,8 @@ const state: State = {
 
 const app = document.querySelector('#app')!
 
-/** Arrow that opened the inspector. Close returns focus here. */
-let invoker: { scenarioId: string; messageId: string } | null = null
+/** Arrow or Components button that opened the inspector. Close returns focus here. */
+let invoker: InspectorInvoker | null = null
 let inspector: InspectorController | null = null
 /** Suppress hashchange while we write the open-message token ourselves. */
 let writingHash = false
@@ -215,6 +222,13 @@ function bindChrome(): void {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onClose: (opened) => {
       clearOpenMessageHash()
+      if (opened?.kind === 'components') {
+        invoker = null
+        document
+          .querySelector<HTMLButtonElement>(`#card-${CSS.escape(opened.scenarioId)} [data-show-components]`)
+          ?.focus()
+        return
+      }
       const messageId = focusTargetAfterClose(opened?.messageId ?? null)
       const scenarioId = opened?.scenarioId
       invoker = null
@@ -240,6 +254,12 @@ function bindChrome(): void {
         if (scenario) openMessage(scenario, message)
       })
     ) {
+      return
+    }
+    const componentsBtn = target.closest<HTMLButtonElement>('[data-show-components]')
+    if (componentsBtn) {
+      const scenario = report.scenarios.find((item) => item.id === componentsBtn.dataset.showComponents)
+      if (scenario) openComponents(scenario)
       return
     }
     const showMsg = target.closest<HTMLButtonElement>('[data-show-message]')
@@ -480,6 +500,13 @@ function openError(scenario: Scenario): void {
   })
 }
 
+function openComponents(scenario: Scenario): void {
+  if (!inspector) return
+  invoker = { scenarioId: scenario.id, kind: 'components' }
+  clearOpenMessageHash()
+  inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
+}
+
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
   if (!inspector) return
   invoker = { scenarioId: scenario.id, messageId: msg.id }
@@ -562,6 +589,7 @@ function onKey(e: KeyboardEvent): void {
 
   if (typing) return
   if (target.closest('button.msg-open')) return
+  if (target.closest('[data-show-components]')) return
   if (target.closest('#inspector')) return
   if (target.closest('.seq-minimap')) return
   if (target.closest('.seq-scroll')) return
