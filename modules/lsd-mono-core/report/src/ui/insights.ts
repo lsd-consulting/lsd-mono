@@ -10,8 +10,9 @@ function escapeAttr(s: string): string {
  * Ranked duration list. Rank number and kind word are the cues — no colour-only status.
  * Returns empty when there is nothing to show (metrics disabled or no durations).
  */
-export function insightsListHtml(insights: Insight[] | undefined, labelMaxWidth: number): string {
+export function insightsListHtml(insights: Insight[] | undefined, labelMaxWidth: number, scenarioId?: string): string {
   if (!insights?.length) return ''
+  const scenarioAttr = scenarioId ? ` data-scenario-id="${escapeAttr(scenarioId)}"` : ''
   const items = insights
     .map((insight) => {
       const kind = insight.kind === 'bottleneck' ? 'bottleneck' : 'slowest'
@@ -26,7 +27,7 @@ export function insightsListHtml(insights: Insight[] | undefined, labelMaxWidth:
         <span class="insight-who">${escapeHtml(insight.participant)}</span>
         <span class="insight-dur">${escapeHtml(duration)}</span>
         <span class="insight-label" title="${escapeAttr(insight.label)}">${escapeHtml(shown)}</span>
-        <button type="button" class="text-btn" data-show-message="${escapeAttr(insight.messageId)}">show</button>
+        <button type="button" class="text-btn" data-show-message="${escapeAttr(insight.messageId)}"${scenarioAttr}>show</button>
       </li>`
     })
     .join('')

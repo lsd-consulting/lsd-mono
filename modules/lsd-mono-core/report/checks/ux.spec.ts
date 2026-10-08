@@ -95,6 +95,31 @@ test('axe with the component diagram open, and Escape returns focus to its butto
   }
 })
 
+test('axe with metrics in the side panel, and Escape or Close returns focus to the Metrics button', async ({ page }) => {
+  for (const theme of THEMES) {
+    await openFixture(page, theme)
+    // Metrics live in the side panel only, not in the scenario cards.
+    await expect(page.locator('.scenario-body .cards h3', { hasText: 'Metrics' })).toHaveCount(0)
+    const open = page.getByRole('button', { name: 'Metrics', exact: true })
+    await open.click()
+    await expect(page.locator('#inspector-title')).toHaveText('Metrics')
+    await expect(page.locator('#inspector-metrics dl.kv dt')).toHaveText(['Messages'])
+    await expect(page.locator('#inspector-metrics ol.insights li')).toHaveCount(1)
+    await expect(page.locator('#inspector-copy')).toBeHidden()
+    await expect(page.locator('.json-row')).toBeHidden()
+    const violations = await seriousViolations(page)
+    expect(violations, `${theme}\n${formatViolations(violations)}`).toEqual([])
+    await page.keyboard.press('Escape')
+    await expect(page.locator('#inspector')).toBeHidden()
+    await expect(open).toBeFocused()
+  }
+  const open = page.getByRole('button', { name: 'Metrics', exact: true })
+  await open.click()
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect(page.locator('#inspector')).toBeHidden()
+  await expect(open).toBeFocused()
+})
+
 /** sRGB bytes for any CSS colour the page resolves (oklch, color-mix, hex), via a 1px canvas. */
 async function noteColours(page: Page): Promise<{ card: number[]; text: number[] }> {
   return page.evaluate(() => {

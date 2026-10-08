@@ -37,6 +37,11 @@ describe('insightsListHtml', () => {
     expect(html).not.toMatch(/style="[^"]*color/)
   })
 
+  it('names the scenario on show when given one, for lists outside the scenario card', () => {
+    expect(insightsListHtml([slow], 200, 'pay')).toContain('data-show-message="m2" data-scenario-id="pay"')
+    expect(insightsListHtml([slow], 200)).not.toContain('data-scenario-id')
+  })
+
   it('is empty when insights are missing', () => {
     expect(insightsListHtml(undefined, 200)).toBe('')
     expect(insightsListHtml([], 200)).toBe('')

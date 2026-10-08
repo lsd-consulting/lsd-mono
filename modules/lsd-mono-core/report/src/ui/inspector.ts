@@ -1,13 +1,22 @@
-import type { MessageEvent } from '../types'
+import type { Insight, MessageEvent, Metric } from '../types'
 import { renderComponentDiagram } from '../lib/component-diagram'
 import type { ComponentGraph } from '../lib/component-graph'
 import { pretty } from './format'
+import { metricsPanelHtml } from './metrics'
 
 export interface InspectorInvoker {
   scenarioId: string
-  /** Set for a message. Absent when the panel is showing the component diagram. */
+  /** Set for a message. Absent when the panel is showing the component diagram or metrics. */
   messageId?: string
-  kind?: 'message' | 'components'
+  kind?: 'message' | 'components' | 'metrics'
+}
+
+export interface MetricsView {
+  /** Scenario title, shown as a pill. */
+  heading: string
+  metrics: Metric[]
+  insights?: Insight[]
+  labelMaxWidth: number
 }
 
 export interface InspectorOptions {
@@ -21,6 +30,8 @@ export interface InspectorController {
   openMessage: (scenarioId: string, message: MessageEvent) => void
   /** Component diagram for one scenario, in this same panel. Drawn from messages already loaded. */
   openComponents: (scenarioId: string, graph: ComponentGraph, title: string) => void
+  /** Scenario metrics and duration insights, in this same panel. No JSON or Copy. */
+  openMetrics: (scenarioId: string, view: MetricsView) => void
   openError: (error: { status: string; headline: string; message: string; stack?: string }) => void
   close: () => void
   isOpen: () => boolean
@@ -61,6 +72,7 @@ export function inspectorMarkup(): string {
         <div class="meta-row" id="inspector-meta"></div>
         <p id="inspector-lead" hidden></p>
         <div id="inspector-graph" hidden></div>
+        <div id="inspector-metrics" hidden></div>
         <div class="json-row">
           <button type="button" id="inspector-json" aria-expanded="false" aria-controls="inspector-pre">Show JSON</button>
           <button type="button" id="inspector-json-expand" hidden aria-pressed="false" aria-controls="inspector-pre">Expand</button>
@@ -83,6 +95,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   const resize = doc.querySelector<HTMLElement>('#inspector-resize')!
   const pre = doc.querySelector<HTMLElement>('#inspector-pre')!
   const graphHost = doc.querySelector<HTMLElement>('#inspector-graph')!
+  const metricsHost = doc.querySelector<HTMLElement>('#inspector-metrics')!
   const jsonRow = doc.querySelector<HTMLElement>('.json-row')!
   const copy = doc.querySelector<HTMLButtonElement>('#inspector-copy')!
   const closeBtn = doc.querySelector<HTMLButtonElement>('#inspector-close')!
@@ -135,14 +148,24 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     }
   }
 
+  /** Component diagram and metrics views. Only one is in the panel at a time. */
+  const viewHosts = [graphHost, metricsHost]
+
+  function clearViews(): void {
+    for (const host of viewHosts) {
+      host.hidden = true
+      host.replaceChildren()
+    }
+  }
+
   function showMessageChrome(): void {
-    graphHost.hidden = true
-    graphHost.replaceChildren()
+    clearViews()
     copy.hidden = false
     jsonRow.hidden = false
   }
 
-  function showGraphChrome(): void {
+  /** A view with no payload: no JSON row, no Copy. */
+  function showViewChrome(host: HTMLElement): void {
     copy.hidden = true
     jsonRow.hidden = true
     toggle.hidden = true
@@ -150,7 +173,8 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     pre.hidden = true
     pre.textContent = ''
     lead.hidden = true
-    graphHost.hidden = false
+    clearViews()
+    host.hidden = false
   }
 
   function collapseJson(): void {
@@ -257,13 +281,26 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
         <span class="pill">${escapeHtml(heading)}</span>`
         : `<span class="pill">Nothing to draw</span>
         <span class="pill">${escapeHtml(heading)}</span>`
-      showGraphChrome()
+      showViewChrome(graphHost)
       const drawn = renderComponentDiagram(graph, heading)
       graphHost.innerHTML = drawn.svg
       // Widen for this view only when the drawing needs it. The saved width is untouched,
       // so the next message opens at the column the user chose.
       const fit = drawn.width + 40
       if (fit > width) applyWidth(Math.min(fit, inspectorWidthLimits(viewport()).expand))
+    },
+    openMetrics(scenarioId, view) {
+      begin({ scenarioId, kind: 'metrics' })
+      showJson = false
+      title.textContent = 'Metrics'
+      const count = view.metrics.length
+      const ranked = view.insights?.length ?? 0
+      meta.innerHTML = `
+        <span class="pill">${count} ${count === 1 ? 'metric' : 'metrics'}</span>
+        ${ranked ? `<span class="pill">${ranked} ${ranked === 1 ? 'insight' : 'insights'}</span>` : ''}
+        <span class="pill">${escapeHtml(view.heading)}</span>`
+      showViewChrome(metricsHost)
+      metricsHost.innerHTML = metricsPanelHtml(scenarioId, view.metrics, view.insights, view.labelMaxWidth)
     },
     openError(error) {
       const token = begin(null)

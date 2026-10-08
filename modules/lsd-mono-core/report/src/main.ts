@@ -35,7 +35,6 @@ import {
 } from './lib/sequence-diagram'
 import { applyTheme, getPreferredTheme, themeButtonLabel, themeGlyph, toggleTheme, type Theme } from './ui/theme'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
-import { insightsListHtml } from './ui/insights'
 import { componentGraph } from './lib/component-graph'
 
 interface State {
@@ -58,7 +57,7 @@ const state: State = {
 
 const app = document.querySelector('#app')!
 
-/** Arrow or Components button that opened the inspector. Close returns focus here. */
+/** Arrow, Metrics or Component diagram button that opened the inspector. Close returns focus here. */
 let invoker: InspectorInvoker | null = null
 let inspector: InspectorController | null = null
 /** Suppress hashchange while we write the open-message token ourselves. */
@@ -222,11 +221,10 @@ function bindChrome(): void {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onClose: (opened) => {
       clearOpenMessageHash()
-      if (opened?.kind === 'components') {
+      if (opened?.kind === 'components' || opened?.kind === 'metrics') {
         invoker = null
-        document
-          .querySelector<HTMLButtonElement>(`#card-${CSS.escape(opened.scenarioId)} [data-show-components]`)
-          ?.focus()
+        const button = opened.kind === 'components' ? '[data-show-components]' : '[data-show-metrics]'
+        document.querySelector<HTMLButtonElement>(`#card-${CSS.escape(opened.scenarioId)} ${button}`)?.focus()
         return
       }
       const messageId = focusTargetAfterClose(opened?.messageId ?? null)
@@ -236,6 +234,14 @@ function bindChrome(): void {
       const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenarioId)} .seq-scroll`)
       if (scroll) focusDiagramMessage(scroll, messageId)
     },
+  })
+
+  // Insight "show" buttons live in the Metrics view, outside the scenario card.
+  document.querySelector<HTMLElement>('#inspector')!.addEventListener('click', (ev) => {
+    const showMsg = (ev.target as Element | null)?.closest?.<HTMLButtonElement>('[data-show-message]')
+    const scenarioId = showMsg?.dataset.scenarioId
+    const messageId = showMsg?.dataset.showMessage
+    if (scenarioId && messageId) revealMessage(scenarioId, messageId)
   })
 
   const main = document.querySelector<HTMLElement>('#main')!
@@ -262,18 +268,10 @@ function bindChrome(): void {
       if (scenario) openComponents(scenario)
       return
     }
-    const showMsg = target.closest<HTMLButtonElement>('[data-show-message]')
-    if (showMsg) {
-      const scenario = scenarioFrom(showMsg)
-      const messageId = showMsg.dataset.showMessage
-      if (scenario && messageId) {
-        const y = messageOffsetY(scenario.id, messageId)
-        const scroll = document.querySelector<HTMLElement>(`#card-${scenario.id} .seq-scroll`)
-        if (scroll && y != null) {
-          scroll.scrollTop = Math.max(0, y - 24)
-          syncDiagramWindow(scroll)
-        }
-      }
+    const metricsBtn = target.closest<HTMLButtonElement>('[data-show-metrics]')
+    if (metricsBtn) {
+      const scenario = report.scenarios.find((item) => item.id === metricsBtn.dataset.showMetrics)
+      if (scenario) openMetrics(scenario)
       return
     }
     const errBtn = target.closest<HTMLButtonElement>('[data-show-error]')
@@ -426,6 +424,23 @@ function renderMain(): void {
   bindDiagramScroll(main)
 }
 
+/** Scroll a scenario's diagram to a message. Opens the scenario first when it is collapsed. */
+function revealMessage(scenarioId: string, messageId: string): void {
+  if (!report.scenarios.some((item) => item.id === scenarioId)) return
+  if (!state.openIds.has(scenarioId)) {
+    state.openIds.add(scenarioId)
+    state.selectedId = scenarioId
+    renderNav()
+    renderMain()
+  }
+  const y = messageOffsetY(scenarioId, messageId)
+  const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenarioId)} .seq-scroll`)
+  if (!scroll || y == null) return
+  scroll.closest('.seq-diagram')?.scrollIntoView({ block: 'nearest' })
+  scroll.scrollTop = Math.max(0, y - 24)
+  syncDiagramWindow(scroll)
+}
+
 function scenarioFrom(node: Element): Scenario | undefined {
   const card = node.closest<HTMLElement>('[id^="card-"]')
   if (!card) return
@@ -444,17 +459,6 @@ function scenarioHtml(s: Scenario, index: number): string {
   const open = state.openIds.has(s.id)
   const labelMaxWidth = report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
   const diagram = renderDiagramHtml(s, labelMaxWidth)
-  const insights = insightsListHtml(s.insights, labelMaxWidth)
-  const metrics =
-    s.metrics.length || insights
-      ? `<section class="card">
-          <h3>Metrics</h3>
-          <dl class="kv">
-            ${s.metrics.map((m) => `<dt>${escapeHtml(m.key)}</dt><dd>${escapeHtml(m.value)}</dd>`).join('')}
-          </dl>
-          ${insights}
-        </section>`
-      : ''
   return `
   <article class="scenario-card ${s.status}" id="card-${s.id}" data-open="${open}" data-status="${s.status}" style="animation-delay:${index * 40}ms">
     <div class="scenario-head" role="button" tabindex="0" aria-expanded="${open}">
@@ -474,7 +478,6 @@ function scenarioHtml(s: Scenario, index: number): string {
             ${s.facts.map((f) => `<dt>${escapeHtml(f.key)}</dt><dd>${escapeHtml(f.value)}</dd>`).join('')}
           </dl>
         </section>
-        ${metrics}
       </div>
       <section class="diagram-panel">
         <h3>
@@ -505,6 +508,18 @@ function openComponents(scenario: Scenario): void {
   invoker = { scenarioId: scenario.id, kind: 'components' }
   clearOpenMessageHash()
   inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
+}
+
+function openMetrics(scenario: Scenario): void {
+  if (!inspector) return
+  invoker = { scenarioId: scenario.id, kind: 'metrics' }
+  clearOpenMessageHash()
+  inspector.openMetrics(scenario.id, {
+    heading: scenario.title,
+    metrics: scenario.metrics,
+    insights: scenario.insights,
+    labelMaxWidth: report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH,
+  })
 }
 
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
@@ -590,6 +605,7 @@ function onKey(e: KeyboardEvent): void {
   if (typing) return
   if (target.closest('button.msg-open')) return
   if (target.closest('[data-show-components]')) return
+  if (target.closest('[data-show-metrics]')) return
   if (target.closest('#inspector')) return
   if (target.closest('.seq-minimap')) return
   if (target.closest('.seq-scroll')) return

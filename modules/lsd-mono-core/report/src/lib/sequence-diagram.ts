@@ -476,6 +476,13 @@ function componentsControl(scenario: Scenario): string {
   return `<button type="button" class="components-open" data-show-components="${escapeXml(scenario.id)}"${off}>Component diagram</button>`
 }
 
+/** Opens this scenario's metrics in the inspector. Disabled when there are none (metrics off or nothing timed). */
+function metricsControl(scenario: Scenario): string {
+  const any = scenario.metrics.length > 0 || (scenario.insights?.length ?? 0) > 0
+  const off = any ? '' : ' disabled title="No metrics for this scenario"'
+  return `<button type="button" class="metrics-open" data-show-metrics="${escapeXml(scenario.id)}"${off}>Metrics</button>`
+}
+
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   const hits = classifySearchHits(scenario.events, view.query, view.hidden)
   const toggles = scenario.participants
@@ -500,7 +507,10 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
         <input type="search" data-diagram-find value="${escapeXml(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
         <span class="diagram-find-count" aria-live="polite">${escapeXml(searchCountLabel(hits.total, hits.hidden, view.query))}</span>
       </label>
-      ${componentsControl(scenario)}
+      <div class="panel-controls" role="group" aria-label="Open in the side panel">
+        ${metricsControl(scenario)}
+        ${componentsControl(scenario)}
+      </div>
     </div>`
 }
 

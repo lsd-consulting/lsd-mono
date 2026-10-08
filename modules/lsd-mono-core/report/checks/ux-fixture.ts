@@ -14,6 +14,19 @@ export const uxFixture = {
       description: 'A short checkout used by the accessibility checks.',
       facts: [{ key: 'orderId', value: 'ord_ux' }],
       metrics: [{ key: 'Messages', value: '14' }],
+      insights: [
+        {
+          rank: 1,
+          kind: 'bottleneck',
+          participant: 'db',
+          label: 'insert 1',
+          from: 'api',
+          to: 'db',
+          messageId: 'm1',
+          totalMs: 40,
+          isolatedMs: 40,
+        },
+      ],
       participants: [
         { id: 'client', name: 'Client', type: 'ACTOR' },
         { id: 'api', name: 'Api', type: 'PARTICIPANT' },

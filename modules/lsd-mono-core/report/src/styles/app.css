@@ -476,12 +476,28 @@ mark {
 .inspector-body {
   padding: 16px;
 }
-.components-open {
+.panel-controls {
+  display: flex;
+  gap: 6px;
   margin-left: auto;
 }
-.components-open:disabled {
+.components-open:disabled,
+.metrics-open:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+#inspector-metrics {
+  margin-top: 4px;
+}
+#inspector-metrics .insights {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.inspector-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 #inspector-graph {
   overflow-x: auto;
