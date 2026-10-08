@@ -19,6 +19,7 @@ dependencies {
 
 tasks.test {
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
+    systemProperty("lsd.mono.test.projectVersion", project.version.toString())
 }
 
 tasks.jar {
@@ -112,11 +113,26 @@ tasks.register<Exec>("reportTest") {
     commandLine("sh", "-c", script)
 }
 
+// The report's `generator` field reads this, so it follows the project version in tests and the jar.
+val versionResource = tasks.register("writeVersionResource") {
+    group = "build"
+    description = "Write lsd-mono-core/version.properties into build/generated/resources."
+    val version = project.version.toString()
+    val out = generatedResourcesDir.map { it.file("lsd-mono-core/version.properties") }
+    inputs.property("version", version)
+    outputs.file(out)
+    doLast {
+        val file = out.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText("version=$version\n")
+    }
+}
+
 // Not a source dir: sourcesJar must not treat the generated shell as project source.
 // processResources copies it into the packaged resources. The generated file is
 // listed last and overwrites a leftover hand copy at the same classpath path.
 tasks.named<ProcessResources>("processResources") {
-    dependsOn(copyReportShell)
+    dependsOn(copyReportShell, versionResource)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from(generatedResourcesDir)
 }

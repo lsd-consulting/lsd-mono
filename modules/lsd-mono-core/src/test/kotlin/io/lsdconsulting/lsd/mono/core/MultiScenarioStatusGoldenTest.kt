@@ -7,12 +7,15 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
+import java.time.Duration
+import java.time.Instant
 import kotlin.io.path.readText
 
 /**
  * Locks the multi-scenario status contract: per-scenario `success` / `warn` / `error`
  * and the report-level rollup (worst of ERROR > FAILURE > SUCCESS).
- * `generatedAt` is scrubbed; everything else must match the golden byte-for-byte.
+ * `generatedAt` and `generator` are checked, then scrubbed; everything else must match the
+ * golden byte-for-byte, so the golden does not change with the clock or the project version.
  */
 class MultiScenarioStatusGoldenTest {
 
@@ -35,7 +38,18 @@ class MultiScenarioStatusGoldenTest {
         lsd.createIndex()
 
         val json = tempDir.resolve("Status-mix-report.json").readText()
-        val scrubbed = GENERATED_AT.replace(json, """"generatedAt": "SCRUBBED"""")
+        val generatedAt = GENERATED_AT.find(json)?.groupValues?.get(1) ?: error("no generatedAt in $json")
+        val written = Instant.parse(generatedAt)
+        assertTrue(generatedAt.endsWith("Z"), "generatedAt should be a UTC instant: $generatedAt")
+        assertTrue(Duration.between(written, Instant.now()).abs() < Duration.ofMinutes(5), generatedAt)
+        val projectVersion = System.getProperty("lsd.mono.test.projectVersion") ?: error("Gradle sets the project version")
+        assertTrue(json.contains(""""generator": "lsd-mono-core $projectVersion""""), json)
+
+        val scrubbed =
+            GENERATOR.replace(
+                GENERATED_AT.replace(json, """"generatedAt": "SCRUBBED""""),
+                """"generator": "SCRUBBED"""",
+            )
         val golden =
             javaClass.getResource("/golden/multi-scenario-status.json")
                 ?.readText()
@@ -55,6 +69,7 @@ class MultiScenarioStatusGoldenTest {
     private fun count(text: String, needle: String): Int = Regex(Regex.escape(needle)).findAll(text).count()
 
     companion object {
-        private val GENERATED_AT = Regex(""""generatedAt": "[^"]*"""")
+        private val GENERATED_AT = Regex(""""generatedAt": "([^"]*)"""")
+        private val GENERATOR = Regex(""""generator": "[^"]*"""")
     }
 }

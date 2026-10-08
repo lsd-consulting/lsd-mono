@@ -39,8 +39,8 @@ import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.capturedMetrics
 import java.io.File
 import java.nio.file.Path
-import java.time.OffsetDateTime
-import java.time.ZoneId
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /**
  * Capture + report façade inspired by legacy `com.lsd.core.LsdContext`.
@@ -372,8 +372,9 @@ open class LsdContext {
     private fun buildReportJson(title: String): ReportJson =
         ReportJson(
             title = title,
-            generatedAt = OffsetDateTime.now(ZoneId.of("Europe/London")).toString(),
-            generator = "lsd-mono-core 0.0.1-SNAPSHOT",
+            // UTC instant. The report page shows it in the reader's own time zone.
+            generatedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS).toString(),
+            generator = LsdVersion.generator,
             status = determineOverallStatus(scenarios),
             options = reportOptions().toJson(),
             scenarios = scenarios.map { scenario -> scenario.toJsonModel(reportOptions()) },
