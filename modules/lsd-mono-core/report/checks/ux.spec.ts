@@ -95,6 +95,47 @@ test('axe with the component diagram open, and Escape returns focus to its butto
   }
 })
 
+/** sRGB bytes for any CSS colour the page resolves (oklch, color-mix, hex), via a 1px canvas. */
+async function noteColours(page: Page): Promise<{ card: number[]; text: number[] }> {
+  return page.evaluate(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 1
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+    const rgba = (colour: string) => {
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillStyle = colour
+      ctx.fillRect(0, 0, 1, 1)
+      return [...ctx.getImageData(0, 0, 1, 1).data]
+    }
+    const card = getComputedStyle(document.querySelector('.note-card')!)
+    const text = getComputedStyle(document.querySelector('.note-text')!)
+    return { card: rgba(card.fill), text: rgba(text.fill) }
+  })
+}
+
+function contrastRatio(a: number[], b: number[]): number {
+  const lum = ([r, g, bl]: number[]) => {
+    const c = [r, g, bl].map((v) => {
+      const s = v / 255
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+  }
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+// axe does not score SVG text, so check note cards directly.
+test('note cards are opaque and their text keeps AA contrast in every theme', async ({ page }) => {
+  for (const theme of THEMES) {
+    await openFixture(page, theme)
+    await expect(page.locator('.note-card')).toBeVisible()
+    const { card, text } = await noteColours(page)
+    expect(card[3], `${theme} note card alpha`).toBe(255)
+    expect(contrastRatio(card, text), `${theme} note text contrast`).toBeGreaterThanOrEqual(4.5)
+  }
+})
+
 test('themes and fit keep the top message label on screen', async ({ page }) => {
   for (const theme of THEMES) {
     await openFixture(page, theme)

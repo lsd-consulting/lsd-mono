@@ -200,7 +200,7 @@
 }
 
 .note-card {
-  fill: var(--warn-soft);
+  fill: var(--note-bg);
   stroke: var(--warn);
   stroke-width: 1;
 }

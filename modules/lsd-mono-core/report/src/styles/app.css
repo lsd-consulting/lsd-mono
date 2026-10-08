@@ -716,6 +716,7 @@ mark {
     --accent-strong: #000;
     --success: #064e3b;
     --warn: #78350f;
+    --note-bg: #fff;
     --error: #7f1d1d;
     --shadow: none;
     --shadow-pop: none;

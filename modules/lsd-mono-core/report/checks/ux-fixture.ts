@@ -20,7 +20,7 @@ export const uxFixture = {
         { id: 'db', name: 'Database', type: 'DATABASE' },
         { id: 'bus', name: 'Queue', type: 'QUEUE' },
       ],
-      events: Array.from({ length: 14 }, (_, i) => {
+      events: Array.from({ length: 14 }, (_, i): Record<string, unknown> => {
         const hop = i % 3
         const from = hop === 0 ? 'client' : hop === 1 ? 'api' : 'db'
         const to = hop === 0 ? 'api' : hop === 1 ? 'db' : 'api'
@@ -39,7 +39,13 @@ export const uxFixture = {
             body: { n: i },
           },
         }
-      }),
+      }).flatMap((event, i) =>
+        // An opaque note over a lifeline, between arrows, for the theme screenshots
+        // and the note contrast check.
+        i === 2
+          ? [event, { kind: 'note', id: 'n-ux', text: 'Card is charged before the order row is written', over: 'api', placement: 'over' }]
+          : [event],
+      ),
     },
   ],
 }
