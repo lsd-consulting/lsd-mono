@@ -24,6 +24,10 @@ export const SECTION_LABEL_GAP = 4
 export const SECTION_AFTER_PAD = MESSAGE_LABEL_RISE + SECTION_LABEL_GAP
 export const BOTTOM_PAD = 28
 export const ACT_W = 12
+/** Each nested activation sits this far right of its parent, as in PlantUML. */
+export const ACT_NEST_DX = ACT_W / 2
+/** A self-call loop leaves its lifeline at the row's y and comes back this far below. */
+export const SELF_RETURN_DY = 22
 export const DEFAULT_OVERSCAN = 6
 /** Used when the scrollport has not been laid out yet (clientHeight 0). */
 export const DEFAULT_VIEWPORT = 560
@@ -138,6 +142,8 @@ export interface ActivationSpan {
   y1: number
   /** From the opening activate event. Absent means the default bar. */
   colour?: string
+  /** 0 for an outermost bar, 1 for a bar opened inside it, and so on. */
+  depth: number
 }
 
 /**
@@ -305,35 +311,44 @@ export function virtualRowRange(input: {
  *
  * Capture writes `activate` after the incoming message and `deactivate` after
  * the last message. The bar uses that previous message's y, the arrow line.
+ * When that message is a self-call on the same lifeline, the bar uses the
+ * point where the loop comes back, so a nested bar starts under the arrowhead.
  * With no previous message, the zero-height keyword sits on the following row.
+ *
+ * Bars come back parents first, so painting them in order draws a nested bar
+ * on top of the one it sits in.
  */
-function arrowY(rows: LayoutRow[], index: number): number {
+function arrowY(rows: LayoutRow[], index: number, participantId: string): number {
   for (let i = index - 1; i >= 0; i--) {
-    if (rows[i].event.kind === 'message') return rows[i].y
+    const event = rows[i].event
+    if (event.kind !== 'message') continue
+    const selfCall = event.from === participantId && event.to === participantId
+    return rows[i].y + (selfCall ? SELF_RETURN_DY : 0)
   }
   return rows[index].y
 }
 
 export function activationSpans(rows: LayoutRow[], endY: number): ActivationSpan[] {
   const spans: ActivationSpan[] = []
-  const open = new Map<string, { y: number; colour?: string }[]>()
+  const open = new Map<string, { y: number; colour?: string; depth: number }[]>()
   for (let index = 0; index < rows.length; index++) {
     const row = rows[index]
     const event = row.event
     if (event.kind === 'activate') {
       const stack = open.get(event.participantId) ?? []
       const colour = event.colour?.trim() ? event.colour : undefined
-      stack.push({ y: arrowY(rows, index), colour })
+      stack.push({ y: arrowY(rows, index, event.participantId), colour, depth: stack.length })
       open.set(event.participantId, stack)
     } else if (event.kind === 'deactivate') {
       const stack = open.get(event.participantId) ?? []
       const opened = stack.pop()
-      const y = arrowY(rows, index)
+      const y = arrowY(rows, index, event.participantId)
       spans.push({
         participantId: event.participantId,
         y0: opened?.y ?? y,
         y1: y,
         colour: opened?.colour,
+        depth: opened?.depth ?? 0,
       })
       open.set(event.participantId, stack)
     }
@@ -341,8 +356,22 @@ export function activationSpans(rows: LayoutRow[], endY: number): ActivationSpan
   for (const [participantId, stack] of open) {
     while (stack.length) {
       const opened = stack.pop()!
-      spans.push({ participantId, y0: opened.y, y1: endY, colour: opened.colour })
+      spans.push({ participantId, y0: opened.y, y1: endY, colour: opened.colour, depth: opened.depth })
     }
   }
-  return spans
+  // Stable sort: same-depth bars keep their order.
+  return spans.sort((a, b) => a.depth - b.depth)
+}
+
+/** Depth of the innermost bar on this lifeline that covers y (ends inclusive), or -1 for none. */
+export function activationDepthAt(
+  spans: readonly Pick<ActivationSpan, 'participantId' | 'y0' | 'y1' | 'depth'>[],
+  participantId: string,
+  y: number,
+): number {
+  let depth = -1
+  for (const span of spans) {
+    if (span.participantId === participantId && span.y0 <= y && y <= span.y1 && span.depth > depth) depth = span.depth
+  }
+  return depth
 }

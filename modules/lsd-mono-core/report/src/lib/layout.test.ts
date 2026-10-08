@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramEvent } from '../types'
-import { MESSAGE_LABEL_RISE, NOTE_CARD_MIN_H, NOTE_CARD_W, NOTE_ROW_GAP, ROW_H, SECTION_AFTER_PAD, SECTION_BAND_H, SECTION_BAND_Y, SECTION_LABEL_GAP, TOP_LABEL_PAD, activationSpans, eventRowHeight, layoutRows, noteCardMetrics, sortEventsByCreatedAt, virtualRowRange, wrapNoteLines } from './layout'
+import { MESSAGE_LABEL_RISE, NOTE_CARD_MIN_H, NOTE_CARD_W, NOTE_ROW_GAP, ROW_H, SECTION_AFTER_PAD, SECTION_BAND_H, SECTION_BAND_Y, SECTION_LABEL_GAP, SELF_RETURN_DY, TOP_LABEL_PAD, activationDepthAt, activationSpans, eventRowHeight, layoutRows, noteCardMetrics, sortEventsByCreatedAt, virtualRowRange, wrapNoteLines } from './layout'
 
 function uniform(count: number, height = 50): { y: number; height: number }[] {
   return Array.from({ length: count }, (_, i) => ({ y: i * height, height }))
@@ -68,8 +68,56 @@ describe('activationSpans', () => {
     expect(byId.get('mid')!.y).toBe(byId.get('open')!.y + byId.get('open')!.height)
     const spans = activationSpans(rows, 999)
     expect(spans).toEqual([
-      { participantId: 'api', y0: byId.get('open')!.y, y1: byId.get('close')!.y, colour: undefined },
+      { participantId: 'api', y0: byId.get('open')!.y, y1: byId.get('close')!.y, colour: undefined, depth: 0 },
     ])
+  })
+
+  it('gives nested bars a depth and lists parents before children (refs #2)', () => {
+    const events: DiagramEvent[] = [
+      { kind: 'message', id: 'in', from: 'web', to: 'pay', label: 'authorise', type: 'SYNCHRONOUS' },
+      { kind: 'activate', id: 'a1', participantId: 'pay' },
+      { kind: 'message', id: 'call', from: 'pay', to: 'psp', label: 'charge', type: 'SYNCHRONOUS' },
+      { kind: 'activate', id: 'a2', participantId: 'psp' },
+      { kind: 'message', id: 'self', from: 'psp', to: 'psp', label: 'capture', type: 'SYNCHRONOUS' },
+      { kind: 'activate', id: 'a3', participantId: 'psp' },
+      { kind: 'message', id: 'self2', from: 'psp', to: 'psp', label: 'settle', type: 'SYNCHRONOUS' },
+      { kind: 'deactivate', id: 'd3', participantId: 'psp' },
+      { kind: 'message', id: 'back', from: 'psp', to: 'pay', label: 'ok', type: 'SYNCHRONOUS_RESPONSE' },
+      { kind: 'deactivate', id: 'd2', participantId: 'psp' },
+      { kind: 'deactivate', id: 'd1', participantId: 'pay' },
+    ]
+    const rows = layoutRows(events)
+    const spans = activationSpans(rows, 999)
+    const psp = spans.filter((s) => s.participantId === 'psp')
+    expect(psp.map((s) => s.depth)).toEqual([0, 1])
+    expect(spans.find((s) => s.participantId === 'pay')!.depth).toBe(0)
+  })
+
+  it('starts a bar opened by a self-call where the loop returns (refs #2)', () => {
+    const events: DiagramEvent[] = [
+      { kind: 'message', id: 'self', from: 'psp', to: 'psp', label: 'capture', type: 'SYNCHRONOUS' },
+      { kind: 'activate', id: 'a', participantId: 'psp' },
+      { kind: 'message', id: 'out', from: 'psp', to: 'bank', label: 'settle', type: 'SYNCHRONOUS' },
+      { kind: 'deactivate', id: 'd', participantId: 'psp' },
+    ]
+    const rows = layoutRows(events)
+    const self = rows.find((r) => r.event.id === 'self')!
+    const [span] = activationSpans(rows, 999)
+    expect(span.y0).toBe(self.y + SELF_RETURN_DY)
+  })
+
+  it('reports the innermost depth covering a row', () => {
+    const spans = [
+      { participantId: 'p', y0: 10, y1: 100, depth: 0 },
+      { participantId: 'p', y0: 40, y1: 60, depth: 1 },
+      { participantId: 'q', y0: 0, y1: 200, depth: 0 },
+    ]
+    expect(activationDepthAt(spans, 'p', 5)).toBe(-1)
+    expect(activationDepthAt(spans, 'p', 10)).toBe(0)
+    expect(activationDepthAt(spans, 'p', 50)).toBe(1)
+    expect(activationDepthAt(spans, 'p', 60)).toBe(1)
+    expect(activationDepthAt(spans, 'p', 61)).toBe(0)
+    expect(activationDepthAt(spans, 'r', 50)).toBe(-1)
   })
 
   it('keeps an activation open across a section row', () => {

@@ -10,6 +10,7 @@ import type {
   Scenario,
 } from '../types'
 import {
+  ACT_NEST_DX,
   ACT_W,
   BOTTOM_PAD,
   COL_GAP,
@@ -25,13 +26,16 @@ import {
   NOTE_PLACE_CUE_H,
   SECTION_BAND_H,
   SECTION_BAND_Y,
+  SELF_RETURN_DY,
   SHORT_STUB,
+  activationDepthAt,
   activationSpans,
   bodyHeight,
   diagramWidth,
   layoutRows,
   noteCardMetrics,
   virtualRowRange,
+  type ActivationSpan,
   type LayoutRow,
 } from './layout'
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
@@ -106,6 +110,8 @@ export interface RowPaint {
   places?: MessagePlace[]
   activeMessageId?: string | null
   neighbors?: Map<string, { prevArrowY?: number; nextArrowY?: number }>
+  /** Bars for the whole scenario. Arrows attach to the innermost bar at their row. */
+  activations?: ActivationSpan[]
 }
 
 const views = new Map<string, DiagramView>()
@@ -756,7 +762,7 @@ function windowSvg(
       const y0 = Math.max(span.y0, offset)
       const y1 = Math.min(span.y1, end)
       if (y1 - y0 < 1) return ''
-      const x = xFor(i) - ACT_W / 2
+      const x = xFor(i) - ACT_W / 2 + span.depth * ACT_NEST_DX
       const fallback = colourOf.get(span.participantId) ?? '#34d399'
       return activationBarSvg({
         x,
@@ -775,6 +781,7 @@ function windowSvg(
     places: messagePlaces(scenario.events, view.hidden),
     activeMessageId: view.activeMessageId,
     neighbors: focusableNeighbors(rows, view.hidden),
+    activations: spans,
   }
   const buttons: string[] = []
   const body = slice
@@ -977,18 +984,28 @@ function renderMessageRow(
   const x2 = xFor(ti)
   const self = fi === ti && msg.from === msg.to
 
+  // Nested bars sit ACT_NEST_DX right of their parent, so arrows shift with them.
+  const nest = (participantId: string, at: number) =>
+    Math.max(activationDepthAt(paint.activations ?? [], participantId, at), 0) * ACT_NEST_DX
+
   if (self) {
+    // Leaves the bar in use at the row and comes back to the innermost bar at the return.
+    // A bar opened by this call starts at the return, one level deeper, so the
+    // arrowhead lands on its edge.
+    const out = x1 + ACT_W + nest(msg.from, y)
+    const back = x1 + ACT_W + Math.max(activationDepthAt(paint.activations ?? [], msg.from, y + SELF_RETURN_DY) - 1, activationDepthAt(paint.activations ?? [], msg.from, y), 0) * ACT_NEST_DX
+    const bend = Math.max(out, back) + 48 - ACT_W
     return `
     <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
-      <path class="msg-path" d="M${x1 + ACT_W} 0 C${x1 + 48} 0, ${x1 + 48} 22, ${x1 + ACT_W} 22" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-      <text class="msg-label" x="${x1 + 56}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
-      ${hasData ? `<circle class="msg-hit" cx="${x1 + 40}" cy="11" r="14"/>` : ''}
+      <path class="msg-path" d="M${out} 0 C${bend} 0, ${bend} ${SELF_RETURN_DY}, ${back} ${SELF_RETURN_DY}" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
+      <text class="msg-label" x="${bend + 8}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
+      ${hasData ? `<circle class="msg-hit" cx="${bend - 8}" cy="11" r="14"/>` : ''}
     </g>`
   }
 
   const labelX = (x1 + x2) / 2
-  const lineX1 = x1 + (x2 > x1 ? ACT_W / 2 : -ACT_W / 2)
-  const lineX2 = x2 + (x2 > x1 ? -ACT_W / 2 : ACT_W / 2)
+  const lineX1 = x1 + (x2 > x1 ? ACT_W / 2 : -ACT_W / 2) + nest(msg.from, y)
+  const lineX2 = x2 + (x2 > x1 ? -ACT_W / 2 : ACT_W / 2) + nest(msg.to, y)
   return `
   <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
     <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
