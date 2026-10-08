@@ -8,8 +8,6 @@ import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.TestWatcher
-import org.junit.platform.commons.util.ExceptionUtils
-import org.junit.platform.commons.util.StringUtils
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.Optional
@@ -93,7 +91,7 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
         val parent = context.parent
         if (parent.isPresent) {
             val parentDisplayName = prefixParentDisplayName(parent.get())
-            val separator = if (StringUtils.isBlank(parentDisplayName)) "" else ": "
+            val separator = if (parentDisplayName.isBlank()) "" else ": "
             return parentDisplayName + separator + context.displayName.deCamelCase()
         }
         return ""
@@ -120,7 +118,7 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
         if (cause == null || LsdProperties.hideStacktrace()) {
             return "[Displaying the stacktrace was disabled or no cause was provided]"
         }
-        return ExceptionUtils.readStackTrace(cause)
+        return cause.stackTraceToString()
     }
 
     private fun invokeMethodOn(instance: Any, method: Method) {
