@@ -238,11 +238,11 @@ mark {
 }
 .nav-meta { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 
+/* No width cap: main fills what the sidebar and the side panel (when open) leave. */
 .main {
   padding: 24px clamp(16px, 3vw, 36px) 64px;
-  max-width: 1100px;
   width: 100%;
-  margin: 0 auto;
+  min-width: 0;
 }
 
 .report-hero {

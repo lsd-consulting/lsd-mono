@@ -216,6 +216,31 @@ test('Fit leaves no horizontal overflow when zooming in adds the vertical scroll
   }
 })
 
+test('main content fills the width the sidebar leaves, and the side panel takes its column when open', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await openFixture(page, 'dark')
+  const widths = () =>
+    page.evaluate(() => {
+      const w = (sel: string) => document.querySelector(sel)?.getBoundingClientRect() ?? null
+      const main = w('#main')!
+      const sidebar = w('.sidebar')!
+      const inspector = document.querySelector<HTMLElement>('#inspector')!.hidden ? null : w('#inspector')
+      return { viewport: document.documentElement.clientWidth, main: main.width, mainLeft: main.left, mainRight: main.right, sidebar: sidebar.width, inspectorLeft: inspector?.left ?? null, inspector: inspector?.width ?? 0 }
+    })
+  const closed = await widths()
+  expect(closed.mainLeft).toBeCloseTo(closed.sidebar, 0)
+  expect(closed.main).toBeCloseTo(closed.viewport - closed.sidebar, 0)
+
+  await page.getByRole('button', { name: 'Metrics', exact: true }).click()
+  const open = await widths()
+  expect(open.inspector).toBeGreaterThan(0)
+  expect(open.mainRight).toBeLessThanOrEqual(open.inspectorLeft! + 1)
+  expect(open.main).toBeCloseTo(open.viewport - open.sidebar - open.inspector, 0)
+
+  await page.keyboard.press('Escape')
+  expect((await widths()).main).toBeCloseTo(closed.main, 0)
+})
+
 /** sRGB bytes for any CSS colour the page resolves (oklch, color-mix, hex), via a 1px canvas. */
 async function noteColours(page: Page): Promise<{ card: number[]; text: number[] }> {
   return page.evaluate(() => {
