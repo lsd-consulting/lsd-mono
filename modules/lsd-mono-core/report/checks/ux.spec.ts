@@ -169,6 +169,53 @@ test('print shows metrics only while the Metrics view is open, in its scenario',
   await expect(page.locator('#inspector')).toBeVisible()
 })
 
+/** A narrow, short scenario: Fit zooms it in until it is taller than the stage. */
+const shortReport = {
+  ...uxFixture,
+  scenarios: [
+    {
+      ...uxFixture.scenarios[0],
+      id: 'short',
+      title: 'Short',
+      insights: undefined,
+      participants: uxFixture.scenarios[0].participants.slice(0, 3),
+      events: uxFixture.scenarios[0].events.slice(0, 4),
+    },
+  ],
+}
+
+// Headless Chromium hides scrollbars by default, which hides this bug, so this
+// test launches its own browser with them shown.
+test('Fit leaves no horizontal overflow when zooming in adds the vertical scrollbar', async ({ playwright, baseURL }) => {
+  const browser = await playwright.chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] })
+  try {
+    const page = await browser.newPage({ viewport: { width: 860, height: 700 }, baseURL })
+    await page.addInitScript((report) => {
+      ;(window as Window & { __LSD_REPORT__?: unknown }).__LSD_REPORT__ = report
+    }, shortReport)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    // Styled scrollbars are classic (they take layout space) on every platform,
+    // like a desktop browser with a mouse attached.
+    await page.addStyleTag({ content: '::-webkit-scrollbar { width: 15px; height: 15px; } ::-webkit-scrollbar-thumb { background: #888; }' })
+    await expect(page.locator('.seq-svg')).toBeVisible()
+    const scroll = page.locator('.seq-scroll')
+    const before = await scroll.evaluate((el) => ({ tall: el.scrollHeight > el.clientHeight, bar: el.offsetWidth - el.clientWidth }))
+    expect(before.tall, 'the short scenario starts without a vertical scrollbar').toBe(false)
+    await page.getByRole('button', { name: 'Fit to screen' }).click()
+    const after = await scroll.evaluate((el) => ({
+      tall: el.scrollHeight > el.clientHeight,
+      bar: el.offsetWidth - el.clientWidth,
+      overflowX: el.scrollWidth - el.clientWidth,
+    }))
+    expect(after.tall, 'Fit zoomed the drawing past the stage height').toBe(true)
+    expect(after.bar, 'scrollbars take space in this browser').toBeGreaterThan(0)
+    expect(after.overflowX).toBeLessThanOrEqual(0)
+  } finally {
+    await browser.close()
+  }
+})
+
 /** sRGB bytes for any CSS colour the page resolves (oklch, color-mix, hex), via a 1px canvas. */
 async function noteColours(page: Page): Promise<{ card: number[]; text: number[] }> {
   return page.evaluate(() => {
@@ -247,5 +294,8 @@ test('themes and fit keep the top message label on screen', async ({ page }) => 
   expect(placed!.text.startsWith('place order')).toBe(true)
   expect(placed!.top).toBeGreaterThanOrEqual(placed!.visibleTop - 1)
   expect(placed!.bottom).toBeLessThanOrEqual(placed!.visibleBottom + 1)
+  // The whole width fits, including the frame padding: nothing to scroll sideways.
+  const overflowX = await page.locator('.seq-scroll').evaluate((el) => el.scrollWidth - el.clientWidth)
+  expect(overflowX).toBeLessThanOrEqual(0)
   await expect(page.locator('.seq-diagram')).toHaveScreenshot('fit-top-label.png')
 })

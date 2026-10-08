@@ -208,3 +208,31 @@ export function searchCountLabel(total: number, hidden: number, query: string): 
   if (hidden > 0) return `${base}, ${hidden} on a hidden column`
   return base
 }
+
+/**
+ * Settle the width Fit should fill. Zooming can add or remove the scrollport's
+ * vertical scrollbar, which changes the width the drawing has, so a fit measured
+ * before zooming can overflow by the scrollbar's width. `applyAt(width)` fits the
+ * drawing to `width` and returns the scrollport's inner width afterwards. Prefers
+ * the widest width that still fits once applied; the chosen fit is left applied.
+ */
+export function settleFitWidth(start: number, applyAt: (width: number) => number, maxPasses = 4): number {
+  let width = start
+  let best: number | null = null
+  let last = Number.NaN
+  for (let pass = 0; pass < maxPasses; pass++) {
+    const room = applyAt(width)
+    last = width
+    if (room >= width) {
+      best = width
+      if (room === width) break
+      width = room
+      continue
+    }
+    if (best !== null) break
+    width = room
+  }
+  const chosen = best ?? width
+  if (last !== chosen) applyAt(chosen)
+  return chosen
+}

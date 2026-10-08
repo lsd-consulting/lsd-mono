@@ -16,6 +16,7 @@ import {
   unscaledViewport,
   visibleColumnIds,
   zoomFromWheel,
+  settleFitWidth,
 } from './diagram-view'
 
 const participants: Participant[] = [
@@ -167,5 +168,44 @@ describe('rowMatchesQuery', () => {
     expect(searchCountLabel(2, 1, 'c')).toBe('2 matches, 1 on a hidden column')
     expect(searchCountLabel(1, 0, 'read')).toBe('1 match')
     expect(searchCountLabel(0, 0, '   ')).toBe('')
+  })
+})
+
+describe('settleFitWidth', () => {
+  // Scrollport 948px wide; a 15px vertical scrollbar shows once the fitted drawing
+  // is taller than the stage, which happens when fitting to more than `tall` px.
+  function scrollport(tall: number) {
+    const calls: number[] = []
+    const applyAt = (width: number) => {
+      calls.push(width)
+      return width > tall ? 933 : 948
+    }
+    return { calls, applyAt }
+  }
+
+  it('keeps the width when zooming does not change the scrollbar', () => {
+    const port = scrollport(10_000)
+    expect(settleFitWidth(948, port.applyAt)).toBe(948)
+    expect(port.calls).toEqual([948])
+  })
+
+  it('refits to the narrower width when zooming in adds a vertical scrollbar', () => {
+    const port = scrollport(0)
+    expect(settleFitWidth(948, port.applyAt)).toBe(933)
+    expect(port.calls.at(-1)).toBe(933)
+  })
+
+  it('uses the room a scrollbar leaves when zooming out removes it', () => {
+    const port = scrollport(10_000)
+    // Started with a scrollbar (933); after the fit it is gone (948 free).
+    expect(settleFitWidth(933, port.applyAt)).toBe(948)
+    expect(port.calls.at(-1)).toBe(948)
+  })
+
+  it('settles on the narrower width when the wider fit would bring the scrollbar back', () => {
+    const port = scrollport(940)
+    expect(settleFitWidth(948, port.applyAt)).toBe(933)
+    expect(port.calls.at(-1)).toBe(933)
+    expect(port.calls.length).toBeLessThanOrEqual(4)
   })
 })

@@ -44,6 +44,7 @@ import {
   classifySearchHits,
   eventHiddenByColumns,
   fittedView,
+  settleFitWidth,
   messageLabelRect,
   rowMatchesQuery,
   searchCountLabel,
@@ -713,12 +714,23 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
   if (action === 'in') next = stepZoom(view.zoom, 1)
   else if (action === 'out') next = stepZoom(view.zoom, -1)
   else if (action === 'fit') {
-    const fitted = fittedView({
-      contentWidth: frameOf(diagram, view.hidden).total,
-      viewportWidth: scrollport.clientWidth,
-      viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
-      mustInclude: topMessageLabelRect(diagram, view.hidden),
+    const contentWidth = frameOf(diagram, view.hidden).total
+    const mustInclude = topMessageLabelRect(diagram, view.hidden)
+    const fitAt = (viewportWidth: number) =>
+      fittedView({
+        contentWidth,
+        viewportWidth,
+        viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
+        mustInclude,
+      })
+    // Zooming can add or drop the vertical scrollbar, which changes the width
+    // there is to fit; settle on a width that still fits once zoomed.
+    const width = settleFitWidth(scrollport.clientWidth, (w) => {
+      view.zoom = fitAt(w).scale
+      applyDiagramFrame(scrollport)
+      return scrollport.clientWidth
     })
+    const fitted = fitAt(width)
     commitZoom(
       scrollport,
       fitted.scale,
