@@ -122,13 +122,12 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
     }
 
     private fun invokeMethodOn(instance: Any, method: Method) {
+        method.isAccessible = true
         try {
-            method.isAccessible = true
             method.invoke(instance)
-        } catch (e: IllegalAccessException) {
-            throw RuntimeException(e)
         } catch (e: InvocationTargetException) {
-            throw RuntimeException(e)
+            // Fail the test with what the @LsdPostTestProcessing method threw, not the reflection wrapper.
+            throw e.targetException ?: e
         }
     }
 }

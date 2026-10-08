@@ -103,6 +103,20 @@ class LsdExtensionOutcomesTest {
         assertFalse(Regex(""""id": "[0-9a-f]{20,}"""").containsMatchIn(json), "expected deterministic decimal ids")
     }
 
+    @Test
+    fun `a throwing post-processing method fails the test with its own exception`() {
+        val summary = execute(LsdPostProcessingThrowsFixture::class.java)
+
+        assertEquals(1, summary.summary.testsFailedCount.toInt())
+        val thrown = summary.summary.failures.single().exception
+        assertEquals(IllegalStateException::class.java, thrown.javaClass, thrown.stackTraceToString())
+        assertEquals("post-processing broke", thrown.message)
+
+        val json = tempDir.resolve("LsdPostProcessingThrowsFixture-report.json").readText()
+        assertTrue(json.contains(""""message": "post-processing broke""""), json)
+        assertFalse(json.contains("InvocationTargetException"), json)
+    }
+
     private fun execute(klass: Class<*>): SummaryGeneratingListener {
         val summary = SummaryGeneratingListener()
         val request =
@@ -165,5 +179,19 @@ class LsdOutcomeFixtures {
         fun `adds a nested scenario`() {
             lsd.note("from nested", "Test")
         }
+    }
+}
+
+@Tag("lsd-fixture")
+@ExtendWith(LsdExtension::class)
+class LsdPostProcessingThrowsFixture {
+    @Test
+    fun `passes until post-processing`() {
+        LsdContext.instance.capture("Test" messages "LsdMono" withLabel "ping")
+    }
+
+    @LsdPostTestProcessing
+    private fun breakAfterBody() {
+        throw IllegalStateException("post-processing broke")
     }
 }
