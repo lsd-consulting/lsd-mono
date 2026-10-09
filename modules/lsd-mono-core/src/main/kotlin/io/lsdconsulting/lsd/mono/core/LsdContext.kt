@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
+import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot
 import io.lsdconsulting.lsd.mono.core.capture.SequenceEventBuilder
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
@@ -82,6 +83,12 @@ open class LsdContext {
     @Volatile
     var idGenerator = IdGenerator(LsdProperties.deterministicIds())
         private set
+
+    /**
+     * Copies message data when it is captured (see [PayloadSnapshot]). Register
+     * converters here; limits come from `lsd.mono.payload.*` and are re-read by [clear].
+     */
+    val payloads = PayloadSnapshot()
 
     /** Re-read on each access so tests can point a long-lived instance at a TempDir. */
     val outputDirectory: File
@@ -349,6 +356,7 @@ open class LsdContext {
     fun clear() {
         synchronized(lock) {
             idGenerator = IdGenerator(LsdProperties.deterministicIds())
+            payloads.limits = PayloadSnapshot.Limits.fromProperties()
             completed.clear()
             reportFiles.clear()
             participants.clear()
@@ -474,7 +482,9 @@ open class LsdContext {
                 )
         }
 
-    private fun bindMessage(event: Message): Message {
+    private fun bindMessage(captured: Message): Message {
+        // Copy the data now, so later changes by the caller do not reach the report (#27).
+        val event = if (captured.data == null) captured else captured.copy(data = payloads.snapshot(captured.data))
         val id = event.id.ifBlank { idGenerator.next() }
         return when (event.type) {
             MessageType.SHORT_INBOUND -> {

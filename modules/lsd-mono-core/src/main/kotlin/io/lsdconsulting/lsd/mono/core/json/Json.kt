@@ -1,5 +1,9 @@
 package io.lsdconsulting.lsd.mono.core.json
 
+import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot
+import java.math.BigDecimal
+import java.math.BigInteger
+
 internal sealed interface JsonValue {
     fun write(out: StringBuilder, indent: Int)
 }
@@ -65,7 +69,8 @@ internal data object JsonNull : JsonValue {
 internal fun jsonString(value: String): String =
     buildString {
         append('"')
-        for (c in value) {
+        for (i in value.indices) {
+            val c = value[i]
             when (c) {
                 '\\' -> append("\\\\")
                 '"' -> append("\\\"")
@@ -78,7 +83,10 @@ internal fun jsonString(value: String): String =
                 '\u2028' -> append("\\u2028")
                 '\u2029' -> append("\\u2029")
                 else ->
-                    if (c.code < 0x20) {
+                    if (c.isSurrogate() && !isPairedSurrogate(value, i)) {
+                        // A lone surrogate is not valid UTF-8. Keep the JSON valid.
+                        append("\\ufffd")
+                    } else if (c.code < 0x20) {
                         append("\\u")
                         append(c.code.toString(16).padStart(4, '0'))
                     } else {
@@ -89,26 +97,36 @@ internal fun jsonString(value: String): String =
         append('"')
     }
 
+private fun isPairedSurrogate(value: String, i: Int): Boolean {
+    val c = value[i]
+    return if (c.isHighSurrogate()) i + 1 < value.length && value[i + 1].isLowSurrogate()
+    else i > 0 && value[i - 1].isHighSurrogate()
+}
+
+/**
+ * Any value as JSON. Captured data is already a [PayloadSnapshot] (or an immutable
+ * scalar) and is used as is, so its truncation markers are kept; anything else is
+ * snapshotted with the default limits first, so this never throws and never recurses forever.
+ */
 internal fun anyToJson(value: Any?): JsonValue =
+    when (value) {
+        null, is String, is Boolean, is Long, is BigInteger, is BigDecimal -> snapshotToJson(value)
+        else -> snapshotToJson(PayloadSnapshot.default.snapshot(value))
+    }
+
+/** Converts the JSON-shaped values a [PayloadSnapshot] produces. */
+private fun snapshotToJson(value: Any?): JsonValue =
     when (value) {
         null -> JsonNull
         is String -> JsonString(value)
         is Boolean -> JsonBool(value)
-        is Byte -> JsonNumber(value.toString())
-        is Short -> JsonNumber(value.toString())
-        is Int -> JsonNumber(value.toString())
-        is Long -> JsonNumber(value.toString())
-        is Float -> numberOrString(value.toDouble(), value.toString())
-        is Double -> numberOrString(value, value.toString())
-        is Map<*, *> ->
-            JsonObject(value.entries.map { (key, item) -> key.toString() to anyToJson(item) })
-        is Iterable<*> -> JsonArray(value.map { anyToJson(it) })
-        is Array<*> -> JsonArray(value.map { anyToJson(it) })
+        is Long, is Int, is BigInteger -> JsonNumber(value.toString())
+        is BigDecimal -> JsonNumber(value.toString())
+        is Double -> if (value.isFinite()) JsonNumber(value.toString()) else JsonString(value.toString())
+        is Map<*, *> -> JsonObject(value.entries.map { (key, item) -> key.toString() to snapshotToJson(item) })
+        is List<*> -> JsonArray(value.map { snapshotToJson(it) })
         else -> JsonString(value.toString())
     }
-
-private fun numberOrString(value: Double, raw: String): JsonValue =
-    if (value.isFinite()) JsonNumber(raw) else JsonString(raw)
 
 private fun pad(indent: Int): String = "  ".repeat(indent)
 

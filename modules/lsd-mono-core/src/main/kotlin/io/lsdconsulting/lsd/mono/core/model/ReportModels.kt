@@ -369,5 +369,6 @@ private fun isSummaryField(name: String, value: Any?): Boolean =
         else -> false
     }
 
+/** One entry per deferred payload. The outer map is not subject to the payload item limit. */
 fun shellPayloadScript(payloads: Map<String, Any?>): String =
-    "window.__LSD_PAYLOADS__=${anyToJson(payloads).render()};\n"
+    "window.__LSD_PAYLOADS__=${JsonObject(payloads.map { (id, data) -> id to anyToJson(data) }).render()};\n"

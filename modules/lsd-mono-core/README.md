@@ -108,6 +108,40 @@ lsd.completeReport("OrderTest", reportKey = "com.example.OrderTest")
 `wrapCallable`. A capture into a scenario that has already completed is dropped
 with a warning rather than being given to the next one.
 
+### Message data
+
+Message data is copied when it is captured, so changing a body, builder or buffer
+after the call does not change the report. The copy is plain JSON:
+
+- maps become objects (keys that are not strings use their text, and a repeated
+  key gets ` #2`); iterables and arrays become lists;
+- Kotlin data classes, Java records and other classes become objects of their fields;
+- `Optional` becomes its value or `null`, enums their name, and `java.time` values,
+  `Date`, `UUID` and similar types their ISO or plain text;
+- `ByteArray` and `ByteBuffer` become text when they are UTF-8 text, otherwise
+  `[lsd: binary, N bytes] base64:...`;
+- a `Throwable` becomes `{"exception": ..., "message": ...}`.
+
+Capturing never throws. Anything that cannot be copied becomes a `[lsd: ...]`
+marker in its place: a cycle, a `toString()` or accessor that throws, or a value
+past one of these limits:
+
+| Property | Default | Marker |
+| --- | --- | --- |
+| `lsd.mono.payload.maxDepth` | 32 | `[lsd: max depth 32 reached]` |
+| `lsd.mono.payload.maxStringLength` | 100000 | `… [lsd: truncated N characters]` |
+| `lsd.mono.payload.maxItems` | 1000 | `[lsd: N more items]`, or a `"[lsd: truncated]"` key |
+| `lsd.mono.payload.maxTotalSize` | 1000000 | `[lsd: payload larger than N characters, rest dropped]` |
+
+To copy a type differently (a JSON tree, say), register a converter. Its result
+is copied in turn:
+
+```kotlin
+lsd.payloads.register(JsonNode::class.java) { mapper.convertValue(it, Map::class.java) }
+```
+
+`lsd.clear()` re-reads the limits and keeps the converters.
+
 ## Report UI (manual)
 
 ```bash
