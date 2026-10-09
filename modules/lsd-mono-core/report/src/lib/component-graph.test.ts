@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { DiagramEvent, Participant, Scenario } from '../types'
+import type { DiagramEvent, MessageType, Participant, Scenario } from '../types'
 import {
   COMPONENT_EDGE_TYPES,
   componentEdgeTitle,
@@ -213,7 +213,7 @@ describe('componentGraph', () => {
 })
 
 describe('link interactions', () => {
-  const message = (id: string, label: string, type = 'SYNCHRONOUS'): DiagramEvent => ({
+  const message = (id: string, label: string, type: MessageType = 'SYNCHRONOUS'): DiagramEvent => ({
     kind: 'message',
     id,
     from: 'api',

@@ -27,7 +27,7 @@ const graph = componentGraph({
     { id: 'db', name: 'Database', type: 'DATABASE' },
   ],
   events: [{ kind: 'message', id: 'm1', from: 'api', to: 'db', label: 'insert', type: 'SYNCHRONOUS' }],
-} as Parameters<typeof componentGraph>[0])
+})
 
 describe('printMessageSection', () => {
   it('prints the title, pills and the whole JSON, escaped', () => {

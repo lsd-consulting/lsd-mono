@@ -201,7 +201,7 @@ function nodeSvg(
   const colour = node.colour ? ` style="--pc:${escapeAttr(node.colour)}"` : ''
   return `<g class="component-node participant-box" data-component="${escapeAttr(node.id)}" data-participant-type="${head.type}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${colour}>
       <title>${escapeHtml(node.name)}, ${head.typeLabel}</title>
-      ${head.shape}
+      ${head.shapeSvg}
       ${participantLabelSvg(head, head.name)}
     </g>`
 }
@@ -247,12 +247,12 @@ function edgeSvg(
   const toName = names.get(edge.to) ?? edge.to
   const title = componentEdgeTitle(edge, fromName, toName)
   const label = `${fromName} to ${toName}, ${edge.count} ${edge.count === 1 ? 'interaction' : 'interactions'}`
-  const group = (shape: string, hit: string, badge: string): string =>
+  const group = (shapeSvg: string, hitSvg: string, countSvg: string): string =>
     `<g class="edge-group" data-edge-index="${index}" data-edge-from="${escapeAttr(edge.from)}" data-edge-to="${escapeAttr(edge.to)}" tabindex="0" role="button" aria-label="${escapeAttr(label)}">
       <title>${escapeHtml(title)}</title>
-      ${hit}
-      ${shape}
-      ${badge}
+      ${hitSvg}
+      ${shapeSvg}
+      ${countSvg}
     </g>`
 
   if (edge.from === edge.to) {
@@ -269,7 +269,7 @@ function edgeSvg(
     }
     return {
       svg: group(
-        `<path d="${d}" class="${style.cls}"${style.start} marker-end="url(#${style.end})"/>`,
+        `<path d="${d}" class="${style.cls}"${edgeMarkers(style)}/>`,
         `<path d="${d}" class="edge-hit"/>`,
         badge,
       ),
@@ -306,7 +306,7 @@ function edgeSvg(
   const coords = `x1="${fmt(start[0])}" y1="${fmt(start[1])}" x2="${fmt(end[0])}" y2="${fmt(end[1])}"`
   return {
     svg: group(
-      `<line class="${style.cls}" ${coords}${style.start} marker-end="url(#${style.end})"/>`,
+      `<line class="${style.cls}" ${coords}${edgeMarkers(style)}/>`,
       `<line class="edge-hit" ${coords}/>`,
       badge,
     ),
@@ -315,18 +315,31 @@ function edgeSvg(
 }
 
 /** Same cues as the sequence arrows: async is dashed with an open head, lost ends in a cross. */
-function edgeStyle(edge: ComponentEdge): { cls: string; start: string; end: string } {
-  if (edge.types.length !== 1) return { cls: 'edge edge-mixed', start: '', end: 'lsd-comp-mixed' }
+type EdgeMarker = 'lsd-comp-mixed' | 'lsd-comp-open' | 'lsd-comp-filled' | 'lsd-comp-lost'
+
+interface EdgeStyle {
+  cls: 'edge' | 'edge edge-async' | 'edge edge-mixed'
+  start?: EdgeMarker
+  end: EdgeMarker
+}
+
+function edgeStyle(edge: ComponentEdge): EdgeStyle {
+  if (edge.types.length !== 1) return { cls: 'edge edge-mixed', end: 'lsd-comp-mixed' }
   switch (edge.types[0]) {
     case 'ASYNCHRONOUS':
-      return { cls: 'edge edge-async', start: '', end: 'lsd-comp-open' }
+      return { cls: 'edge edge-async', end: 'lsd-comp-open' }
     case 'BI_DIRECTIONAL':
-      return { cls: 'edge', start: ' marker-start="url(#lsd-comp-filled)"', end: 'lsd-comp-filled' }
+      return { cls: 'edge', start: 'lsd-comp-filled', end: 'lsd-comp-filled' }
     case 'LOST':
-      return { cls: 'edge', start: '', end: 'lsd-comp-lost' }
+      return { cls: 'edge', end: 'lsd-comp-lost' }
     default:
-      return { cls: 'edge', start: '', end: 'lsd-comp-filled' }
+      return { cls: 'edge', end: 'lsd-comp-filled' }
   }
+}
+
+/** The path's marker attributes for [style]. */
+function edgeMarkers(style: EdgeStyle): string {
+  return `${style.start ? ` marker-start="url(#${style.start})"` : ''} marker-end="url(#${style.end})"`
 }
 
 /** Point where the segment from (cx, cy) towards (tx, ty), shifted sideways, leaves the node's clip box. */

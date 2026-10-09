@@ -67,7 +67,7 @@ describe('fitName', () => {
 
 describe('participantHead with a fitted name', () => {
   it('draws short names exactly as before', () => {
-    for (const type of TYPES) expect(participantHead(type, fitName('Api')).shape).toBe(participantHead(type).shape)
+    for (const type of TYPES) expect(participantHead(type, fitName('Api')).shapeSvg).toBe(participantHead(type).shapeSvg)
   })
 
   it.each(['PARTICIPANT', 'DATABASE', 'QUEUE'] as const)('grows the %s shape to hold the name inside it', (type) => {
@@ -93,13 +93,13 @@ describe('participantHead with a fitted name', () => {
 
   it('puts two-line names inside a taller box, cylinder and queue', () => {
     const box = participantHeadFor({ type: 'PARTICIPANT', name: LONG })
-    expect(box.shape).toContain('height="40"')
+    expect(box.shapeSvg).toContain('height="40"')
     const [top, bottom] = [8, 48]
     expect(box.labelYs[0] - 9).toBeGreaterThanOrEqual(top)
     expect(box.labelYs[1] + 3).toBeLessThanOrEqual(bottom)
-    expect(participantHeadFor({ type: 'DATABASE', name: LONG }).shape).toContain('v34')
-    expect(participantHeadFor({ type: 'QUEUE', name: LONG }).shape).toMatch(/,50 /)
-    expect(participantHeadFor({ type: 'ACTOR', name: LONG }).shape).toContain('scale(0.8)')
+    expect(participantHeadFor({ type: 'DATABASE', name: LONG }).shapeSvg).toContain('v34')
+    expect(participantHeadFor({ type: 'QUEUE', name: LONG }).shapeSvg).toMatch(/,50 /)
+    expect(participantHeadFor({ type: 'ACTOR', name: LONG }).shapeSvg).toContain('scale(0.8)')
   })
 })
 

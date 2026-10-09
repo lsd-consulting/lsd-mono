@@ -64,7 +64,7 @@ const report: Report = window.__LSD_REPORT__ ?? sampleReport
 const state: State = {
   query: '',
   status: { success: true, warn: true, error: true },
-  openIds: new Set([report.scenarios[0]?.id].filter(Boolean) as string[]),
+  openIds: new Set<string>(report.scenarios[0] ? [report.scenarios[0].id] : []),
   selectedId: report.scenarios[0]?.id ?? null,
   helpOpen: false,
   sidebarCollapsed: getSidebarCollapsed(),
@@ -164,13 +164,13 @@ function renderShell(): void {
           .map(
             (s) => `
           <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}">
-            ${statusLabel(s)} <span class="count">${c[s]}</span>
+            ${escapeHtml(statusLabel(s))} <span class="count">${c[s]}</span>
           </button>`,
           )
           .join('')}
       </div>
       <div class="top-actions">
-        <button type="button" class="icon-btn" id="btn-theme" title="${themeButtonLabel(theme)}" aria-label="${themeButtonLabel(theme)}">${themeGlyph(theme)}</button>
+        <button type="button" class="icon-btn" id="btn-theme" title="${escapeAttr(themeButtonLabel(theme))}" aria-label="${escapeAttr(themeButtonLabel(theme))}">${escapeHtml(themeGlyph(theme))}</button>
         <button type="button" class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Show keyboard help">?</button>
       </div>
     </header>
@@ -179,8 +179,8 @@ function renderShell(): void {
         <div class="sidebar-head">
           <p class="sidebar-title">Scenarios · ${total}</p>
           <button type="button" class="icon-btn sidebar-toggle" id="btn-sidebar" aria-controls="sidebar"
-            aria-expanded="${!state.sidebarCollapsed}" aria-label="${sidebarToggleLabel(state.sidebarCollapsed)}"
-            title="${sidebarToggleLabel(state.sidebarCollapsed)}">${sidebarToggleGlyph(state.sidebarCollapsed)}</button>
+            aria-expanded="${!state.sidebarCollapsed}" aria-label="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}"
+            title="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}">${escapeHtml(sidebarToggleGlyph(state.sidebarCollapsed))}</button>
         </div>
         <div class="hist" aria-hidden="true" title="Status mix">
           <span class="s" style="width:${(c.success / total) * 100 || 0}%"></span>

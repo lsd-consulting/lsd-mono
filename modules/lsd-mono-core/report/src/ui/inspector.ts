@@ -410,7 +410,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     applyWidth(wide ? INSPECTOR_NARROW_PX : limits.expand)
     persistWidth()
   })
-  copy.addEventListener('click', async () => {
+  const copyPayload = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(await payloadText())
       copy.textContent = 'Copied'
@@ -420,7 +420,8 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     } catch {
       /* clipboard may be unavailable; the payload is still in the panel */
     }
-  })
+  }
+  copy.addEventListener('click', () => void copyPayload())
 
   bindResize(doc, resize, {
     shell,
@@ -534,7 +535,7 @@ export function summaryPills(data: unknown): string {
   const pills: string[] = []
   if (typeof data.method === 'string' && data.method) pills.push(`<span class="pill">${escapeHtml(data.method)}</span>`)
   if (typeof data.path === 'string' && data.path) pills.push(`<span class="pill">${escapeHtml(data.path)}</span>`)
-  if (data.status != null && data.status !== '') pills.push(`<span class="pill">${escapeHtml(String(data.status))}</span>`)
+  if ((typeof data.status === 'string' && data.status) || typeof data.status === 'number') pills.push(`<span class="pill">${escapeHtml(data.status)}</span>`)
   return pills.join('')
 }
 

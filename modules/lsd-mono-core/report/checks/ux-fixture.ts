@@ -1,8 +1,10 @@
+import type { MessageEvent, Report } from '../src/types'
+
 /**
  * Small static report for axe and screenshots. Not the perf payload pages.
  * generatedAt is fixed. Screenshots crop the diagram and do not include the hero.
  */
-export const uxFixture = {
+export const uxFixture: Report = {
   title: 'UX fixture',
   generatedAt: '2026-01-15T12:00:00+00:00',
   generator: 'ux-fixture',
@@ -33,7 +35,7 @@ export const uxFixture = {
         { id: 'db', name: 'Database', type: 'DATABASE' },
         { id: 'bus', name: 'Queue', type: 'QUEUE' },
       ],
-      events: Array.from({ length: 14 }, (_, i): Record<string, unknown> => {
+      events: Array.from({ length: 14 }, (_, i): MessageEvent => {
         const hop = i % 3
         const from = hop === 0 ? 'client' : hop === 1 ? 'api' : 'db'
         const to = hop === 0 ? 'api' : hop === 1 ? 'db' : 'api'

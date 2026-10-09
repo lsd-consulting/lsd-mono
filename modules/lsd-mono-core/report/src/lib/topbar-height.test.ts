@@ -10,7 +10,7 @@ function fakeObserver() {
     disconnected = false
     constructor(cb: () => void) {
       this.cb = cb
-      live.push(this as unknown as { fire: () => void; disconnected: boolean })
+      live.push(this)
     }
     observe() {}
     unobserve() {}

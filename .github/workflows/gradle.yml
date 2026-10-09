@@ -62,6 +62,8 @@ jobs:
           path: |
             **/build/reports/tests/
             **/build/test-results/
+            **/build/reports/kover/
+            **/build/reports/coverage/
             build/reports/problems/
           if-no-files-found: ignore
           retention-days: 14

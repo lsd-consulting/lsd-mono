@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import type { Result } from 'axe-core'
+import type { MessageEvent, Participant, Report, Scenario } from '../src/types'
 import { uxFixture } from './ux-fixture'
 
 /**
@@ -15,8 +16,7 @@ const THEMES = ['dark', 'light', 'contrast'] as const
 async function openFixture(page: Page, theme: (typeof THEMES)[number]): Promise<void> {
   await page.addInitScript(
     ({ report, themeName }) => {
-      const w = window as Window & { __LSD_REPORT__?: unknown }
-      w.__LSD_REPORT__ = report
+      window.__LSD_REPORT__ = report
       localStorage.setItem('lsd-report-theme', themeName)
     },
     { report: uxFixture, themeName: theme },
@@ -197,12 +197,12 @@ test('print shows metrics only while the Metrics view is open, in its scenario',
 })
 
 /** The fixture with one long payload: a very long line and many lines. */
-const longPayloadReport = {
+const longPayloadReport: Report = {
   ...uxFixture,
   scenarios: uxFixture.scenarios.map((scenario) => ({
     ...scenario,
     events: scenario.events.map((event) =>
-      event.id === 'm1'
+      event.id === 'm1' && event.kind === 'message'
         ? {
             ...event,
             data: {
@@ -216,9 +216,9 @@ const longPayloadReport = {
   })),
 }
 
-async function openReport(page: Page, report: unknown): Promise<void> {
+async function openReport(page: Page, report: Report): Promise<void> {
   await page.addInitScript((value) => {
-    ;(window as Window & { __LSD_REPORT__?: unknown }).__LSD_REPORT__ = value
+    window.__LSD_REPORT__ = value
     localStorage.setItem('lsd-report-theme', 'light')
   }, report)
   await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
@@ -350,7 +350,7 @@ test('print shows the open component diagram whole, at page width, after the seq
 })
 
 /** A narrow, short scenario: Fit zooms it in until it is taller than the stage. */
-const shortReport = {
+const shortReport: Report = {
   ...uxFixture,
   scenarios: [
     {
@@ -371,7 +371,7 @@ test('Fit leaves no horizontal overflow when zooming in adds the vertical scroll
   try {
     const page = await browser.newPage({ viewport: { width: 860, height: 700 }, baseURL })
     await page.addInitScript((report) => {
-      ;(window as Window & { __LSD_REPORT__?: unknown }).__LSD_REPORT__ = report
+      window.__LSD_REPORT__ = report
     }, shortReport)
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/')
@@ -380,10 +380,10 @@ test('Fit leaves no horizontal overflow when zooming in adds the vertical scroll
     await page.addStyleTag({ content: '::-webkit-scrollbar { width: 15px; height: 15px; } ::-webkit-scrollbar-thumb { background: #888; }' })
     await expect(page.locator('.seq-svg')).toBeVisible()
     const scroll = page.locator('.seq-scroll')
-    const before = await scroll.evaluate((el) => ({ tall: el.scrollHeight > el.clientHeight, bar: el.offsetWidth - el.clientWidth }))
+    const before = await scroll.evaluate((el: HTMLElement) => ({ tall: el.scrollHeight > el.clientHeight, bar: el.offsetWidth - el.clientWidth }))
     expect(before.tall, 'the short scenario starts without a vertical scrollbar').toBe(false)
     await page.getByRole('button', { name: 'Fit to screen' }).click()
-    const after = await scroll.evaluate((el) => ({
+    const after = await scroll.evaluate((el: HTMLElement) => ({
       tall: el.scrollHeight > el.clientHeight,
       bar: el.offsetWidth - el.clientWidth,
       overflowX: el.scrollWidth - el.clientWidth,
@@ -629,7 +629,7 @@ test('themes and fit keep the top message label on screen', async ({ page }) => 
 })
 
 /** One long display name per participant shape, next to each other. */
-const longNamesReport = {
+const longNamesReport: Report = {
   ...uxFixture,
   scenarios: [
     {
@@ -653,7 +653,7 @@ const longNamesReport = {
 test('long participant names stay inside their shapes and clear of their neighbours', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 })
   await page.addInitScript((report) => {
-    ;(window as Window & { __LSD_REPORT__?: unknown }).__LSD_REPORT__ = report
+    window.__LSD_REPORT__ = report
   }, longNamesReport)
   await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
   await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
@@ -671,7 +671,7 @@ test('long participant names stay inside their shapes and clear of their neighbo
       return {
         id: g.dataset.participant!,
         type: g.dataset.participantType!,
-        title: g.querySelector('title')!.textContent!,
+        title: g.querySelector('title')!.textContent,
         lines: g.querySelectorAll('tspan').length || 1,
         label: { left: x + label.x, right: x + label.x + label.width, top: label.y, bottom: label.y + label.height },
         shape: { left: x + shape.x, right: x + shape.x + shape.width, top: shape.y, bottom: shape.y + shape.height },
@@ -705,9 +705,9 @@ test('long participant names stay inside their shapes and clear of their neighbo
 })
 
 /** Two scenarios too wide for the panel at 100%: twelve lifelines, a chain of 30 calls. */
-function wideScenario(id: string, title: string) {
-  const participants = Array.from({ length: 12 }, (_, i) => ({ id: `p${i}`, name: `Service ${i}`, type: 'PARTICIPANT' }))
-  const events = Array.from({ length: 30 }, (_, i) => ({
+function wideScenario(id: string, title: string): Scenario {
+  const participants = Array.from({ length: 12 }, (_, i): Participant => ({ id: `p${i}`, name: `Service ${i}`, type: 'PARTICIPANT' }))
+  const events = Array.from({ length: 30 }, (_, i): MessageEvent => ({
     kind: 'message',
     id: `m${i}`,
     from: `p${i % 12}`,
@@ -718,11 +718,11 @@ function wideScenario(id: string, title: string) {
   }))
   return { ...uxFixture.scenarios[0], id, title, insights: undefined, participants, events }
 }
-const wideReport = { ...uxFixture, scenarios: [wideScenario('wide-a', 'Wide A'), wideScenario('wide-b', 'Wide B')] }
+const wideReport: Report = { ...uxFixture, scenarios: [wideScenario('wide-a', 'Wide A'), wideScenario('wide-b', 'Wide B')] }
 
 async function openWide(page: Page, hash = ''): Promise<void> {
   await page.addInitScript((report) => {
-    ;(window as Window & { __LSD_REPORT__?: unknown }).__LSD_REPORT__ = report
+    window.__LSD_REPORT__ = report
   }, wideReport)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(`/${hash}`)

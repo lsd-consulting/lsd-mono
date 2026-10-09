@@ -26,7 +26,7 @@ export function printMessageSection(view: PanelPrintView): string {
  * copy. Print CSS scales it to the page width and keeps it on one page.
  */
 export function printComponentsSection(view: PanelPrintView, svg: string, width: number): string {
-  const drawing = svg
+  const drawingSvg = svg
     .replace(/lsd-comp-/g, 'lsd-comp-print-')
     .replace(/(<svg class="component-diagram"[^>]*?) style="[^"]*"/, '$1')
     // Paper is not interactive: the links are plain drawings in the copy.
@@ -34,7 +34,7 @@ export function printComponentsSection(view: PanelPrintView, svg: string, width:
   return `<section class="card print-panel print-components" data-print-panel="components" style="--print-components-max:${Math.round(width * 1.5)}px">
     <h3>${escapeHtml(view.title)}</h3>
     ${view.metaHtml ? `<div class="meta-row">${view.metaHtml}</div>` : ''}
-    ${drawing}
+    ${drawingSvg}
   </section>`
 }
 

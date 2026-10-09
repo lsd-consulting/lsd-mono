@@ -1,0 +1,10 @@
+{
+  // Type-checks what tsconfig.json leaves out: the Vitest tests, the Playwright checks and
+  // the tool configs. Vitest strips types without checking them, so this is the only check.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src", "checks", "*.config.ts"],
+  "exclude": []
+}

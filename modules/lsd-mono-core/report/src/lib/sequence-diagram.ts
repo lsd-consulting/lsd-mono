@@ -320,11 +320,14 @@ export function activationBarSvg(args: {
  * two-line name gets a taller shape (or, for the actor, entity and boundary
  * marks, a smaller mark) so both lines fit the same header height.
  */
+/** How a participant's title names its type, after the name ("Orders, database"). */
+export type ParticipantTypeLabel = 'actor' | 'database' | 'queue' | 'entity' | 'boundary' | 'component'
+
 export interface ParticipantHead {
   type: ParticipantType
-  typeLabel: string
+  typeLabel: ParticipantTypeLabel
   /** SVG for the shape only. The name is a separate text node. */
-  shape: string
+  shapeSvg: string
   /** Baseline for the participant name (first line), in header units. */
   labelY: number
   /** Baseline of each name line. */
@@ -350,7 +353,7 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
   const two = (name?.lines.length ?? 1) > 1
   const under = (head: Omit<ParticipantHead, 'labelY' | 'labelYs' | 'half'>): ParticipantHead => ({
     ...head,
-    shape: two ? smallMark(head.shape) : head.shape,
+    shapeSvg: two ? smallMark(head.shapeSvg) : head.shapeSvg,
     labelY: two ? 41 : 50,
     labelYs: two ? [41, 52] : [50],
     half: Math.max(head.shapeHalf, w / 2),
@@ -361,7 +364,7 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
         type: 'ACTOR',
         typeLabel: 'actor',
         shapeHalf: 11,
-        shape: `<g class="participant-actor">
+        shapeSvg: `<g class="participant-actor">
           <circle cx="0" cy="11" r="5.5"/>
           <path d="M0 16.5 V28 M-11 22 H11 M0 28 L-8 38 M0 28 L8 38"/>
         </g>`,
@@ -377,7 +380,7 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
         labelYs: two ? [28, 40] : [30],
         shapeHalf: rx,
         half: rx,
-        shape: `<g class="participant-database">
+        shapeSvg: `<g class="participant-database">
           <path class="participant-shape" d="M-${rx} ${top} v${body} a${rx} 6 0 0 0 ${rx * 2} 0 v-${body}"/>
           <ellipse class="participant-shape" cx="0" cy="${top}" rx="${rx}" ry="6"/>
         </g>`,
@@ -393,7 +396,7 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
         labelYs: two ? [31, 43] : [34],
         shapeHalf: hw + 2,
         half: hw + 2,
-        shape: `<g class="participant-queue">
+        shapeSvg: `<g class="participant-queue">
           <polygon class="participant-shape participant-queue-back" points="${-hw + 4},6 ${hw - 14},6 ${hw - 2},16 ${-hw + 16},16"/>
           <polygon class="participant-shape" points="${-hw},18 ${hw - 12},18 ${hw + 2},${bottom} ${-hw + 14},${bottom}"/>
         </g>`,
@@ -404,14 +407,14 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
         type: 'ENTITY',
         typeLabel: 'entity',
         shapeHalf: 14,
-        shape: `<circle class="participant-shape" cx="0" cy="22" r="14"/>`,
+        shapeSvg: `<circle class="participant-shape" cx="0" cy="22" r="14"/>`,
       })
     case 'BOUNDARY':
       return under({
         type: 'BOUNDARY',
         typeLabel: 'boundary',
         shapeHalf: 16,
-        shape: `<g class="participant-boundary">
+        shapeSvg: `<g class="participant-boundary">
           <line class="participant-mark" x1="-16" y1="6" x2="-16" y2="38"/>
           <circle class="participant-shape" cx="0" cy="22" r="14"/>
         </g>`,
@@ -425,7 +428,7 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
         labelYs: two ? [25, 37] : [32],
         shapeHalf: rw / 2,
         half: rw / 2,
-        shape: `<rect class="participant-shape" x="${-rw / 2}" y="${two ? 8 : 14}" width="${rw}" height="${two ? 40 : 28}" rx="4"/>`,
+        shapeSvg: `<rect class="participant-shape" x="${-rw / 2}" y="${two ? 8 : 14}" width="${rw}" height="${two ? 40 : 28}" rx="4"/>`,
       }
     }
   }
@@ -473,20 +476,21 @@ export function messageArrowSpec(type: MessageType): MessageArrowSpec {
 
 export function arrowMarker(id: string, colour: string, end: ArrowEnd): string {
   if (end === 'none') return ''
-  colour = escapeAttr(colour)
+  const markerId = escapeAttr(id)
+  const stroke = escapeAttr(colour)
   if (end === 'open') {
-    return `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M1 1 L9 5 L1 9" fill="none" stroke="${colour}" stroke-width="1.6"/>
+    return `<marker id="${markerId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9" fill="none" stroke="${stroke}" stroke-width="1.6"/>
     </marker>`
   }
   if (end === 'lost') {
     // X tip — shape cue distinct from a filled sync arrow (not colour-only).
-    return `<marker id="${id}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
-      <path d="M2 2 L10 10 M10 2 L2 10" fill="none" stroke="${colour}" stroke-width="2" stroke-linecap="round"/>
+    return `<marker id="${markerId}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M2 2 L10 10 M10 2 L2 10" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round"/>
     </marker>`
   }
-  return `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-    <path d="M0 0 L10 5 L0 10 z" fill="${colour}"/>
+  return `<marker id="${markerId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="${stroke}"/>
   </marker>`
 }
 
@@ -625,7 +629,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
       <div class="zoom-controls" role="group" aria-label="Zoom">
         <button type="button" data-zoom="out" aria-label="Zoom out">Out</button>
         <button type="button" data-zoom="fit" aria-label="Fit to screen">Fit</button>
-        <span class="zoom-readout" aria-live="polite">${zoomLabel(view.zoom)}</span>
+        <span class="zoom-readout" aria-live="polite">${escapeHtml(zoomLabel(view.zoom))}</span>
         <button type="button" data-zoom="in" aria-label="Zoom in">In</button>
       </div>
       <div class="participant-toggles" role="group" aria-label="Show or hide participants">${toggles}</div>
@@ -850,10 +854,7 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
   const diagram = mounted.get(id)
   if (!diagram) return
   const view = diagramView(id)
-  let next = view.zoom
-  if (action === 'in') next = stepZoom(view.zoom, 1)
-  else if (action === 'out') next = stepZoom(view.zoom, -1)
-  else if (action === 'fit') {
+  if (action === 'fit') {
     const prev = view.zoom
     const fitted = settleFit(scrollport, diagram, view)
     view.zoom = prev
@@ -871,7 +872,9 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
     )
     view.fittedWidth = scrollport.clientWidth
     return
-  } else return
+  }
+  if (action !== 'in' && action !== 'out') return
+  const next = stepZoom(view.zoom, action === 'in' ? 1 : -1)
   view.autoFit = false
   commitZoom(scrollport, next, undefined, zoomScrollBehavior(prefersReducedMotion()))
 }
@@ -1076,7 +1079,7 @@ function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlyS
       return `
       <g class="participant-box" data-participant="${escapeAttr(p.id)}" data-participant-type="${head.type}" transform="translate(${x}, 0)" style="--pc:${colour}">
         <title>${escapeHtml(name)}, ${head.typeLabel}</title>
-        ${head.shape}
+        ${head.shapeSvg}
         ${participantLabelSvg(head, head.name)}
       </g>`
     })
@@ -1316,8 +1319,8 @@ function renderMessageRow(
   const startId = ensureMarker(rawColour, spec.start)
   const colour = escapeAttr(rawColour)
   const dashed = spec.dashed ? 'stroke-dasharray="5 4"' : ''
-  const markerEnd = endId ? `marker-end="url(#${endId})"` : ''
-  const markerStart = startId ? `marker-start="url(#${startId})"` : ''
+  const markerEnd = endId ? `marker-end="url(#${escapeAttr(endId)})"` : ''
+  const markerStart = startId ? `marker-start="url(#${escapeAttr(startId)})"` : ''
   const hasData = messageHasPayload(msg)
   const dur = msg.durationMs != null ? `<tspan class="msg-dur"> · ${escapeHtml(msg.durationMs)}ms</tspan>` : ''
   const cue = spec.typeCue

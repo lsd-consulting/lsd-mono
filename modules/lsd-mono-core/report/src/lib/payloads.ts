@@ -54,7 +54,7 @@ function splitMessageData(data: unknown): { summary?: Record<string, unknown>; d
     if (isSummaryField(key, value)) summary[key] = value
     else defer = true
   }
-  if (!defer) return { summary: data as Record<string, unknown>, defer: false }
+  if (!defer) return { summary: data, defer: false }
   return { summary: Object.keys(summary).length ? summary : undefined, defer: true }
 }
 

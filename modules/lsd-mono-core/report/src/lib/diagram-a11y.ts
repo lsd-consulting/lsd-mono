@@ -175,7 +175,7 @@ export function messageHitBox(input: {
   const labelRight = labelLeft + input.label.width * zoom
   const labelBottom = labelTop + input.label.height * zoom
 
-  let left = Math.min(labelLeft, cx - MIN_HIT_CSS / 2)
+  const left = Math.min(labelLeft, cx - MIN_HIT_CSS / 2)
   let right = Math.max(labelRight, cx + MIN_HIT_CSS / 2)
   let top = Math.min(labelTop, cy - MIN_HIT_CSS / 2)
   let bottom = Math.max(labelBottom, cy + MIN_HIT_CSS / 2)

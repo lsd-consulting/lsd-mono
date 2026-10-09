@@ -92,11 +92,20 @@ val copyReportShell = tasks.register<Copy>("copyReportShell") {
 
 tasks.register<Exec>("reportTest") {
     group = "verification"
-    description = "Run report vitest (npm test) on the Gradle check path."
+    description = "Run the report's vitest suite with coverage thresholds (npm test) on the Gradle check path."
     dependsOn(reportSingle)
     workingDir = reportDir.asFile
     // Through sh, so npm is looked up on the task's PATH (Node 22 first), not the Gradle client's.
     commandLine("sh", "-c", "npm test")
+    withNodeOnPath()
+}
+
+tasks.register<Exec>("reportLint") {
+    group = "verification"
+    description = "Type-check the report UI with its tests (npm run typecheck), then lint it (npm run lint)."
+    dependsOn(reportSingle)
+    workingDir = reportDir.asFile
+    commandLine("sh", "-c", "npm run typecheck && npm run lint")
     withNodeOnPath()
 }
 
@@ -125,7 +134,7 @@ tasks.named<ProcessResources>("processResources") {
 }
 
 tasks.named("check") {
-    dependsOn("reportTest")
+    dependsOn("reportTest", "reportLint")
 }
 
 // README samples are slow and write docs/. They are not on build or check.

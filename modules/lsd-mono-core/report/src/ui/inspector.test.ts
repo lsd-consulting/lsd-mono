@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { MessageEvent, Report } from '../types'
+import type { MessageEvent, MessageType, Report } from '../types'
 import { sampleReport } from '../data/sample-report'
 import { shellParts } from '../lib/payloads'
 import { componentGraph } from '../lib/component-graph'
@@ -126,7 +126,7 @@ describe('inspector', () => {
 
   it('lists a link\'s interactions in the panel when the link is clicked or pressed', () => {
     const controller = bindInspector(document, { loadPayload: async () => ({}), onClose: () => {} })
-    const call = (id: string, to: string, label: string, type = 'SYNCHRONOUS') => ({
+    const call = (id: string, to: string, label: string, type: MessageType = 'SYNCHRONOUS') => ({
       kind: 'message' as const,
       id,
       from: 'a',

@@ -42,6 +42,7 @@ describe('escapeHtml (element text)', () => {
     div.innerHTML = `<p>${escapeHtml(HOSTILE)}</p>`
     expect(div.querySelectorAll('*').length).toBe(1)
     // Parsers may replace NUL and normalise carriage returns, so compare without them.
+    // eslint-disable-next-line no-control-regex -- NUL is the point of this check
     const plain = (t: string) => t.replace(/[\u0000\uFFFD\r]/g, '')
     expect(plain(div.textContent ?? '')).toBe(plain(HOSTILE))
   })
@@ -76,6 +77,7 @@ describe('jsonForScript (JSON inside <script>)', () => {
     const value = { html: HOSTILE, [`key</script>`]: ['\uD800', '\\uD800 literal'] }
     const json = jsonForScript(value)
     expect(json).not.toMatch(/[<>&\u2028\u2029]/)
+    // eslint-disable-next-line no-control-regex -- JSON must not carry raw control characters
     expect(json).not.toMatch(/[\u0000-\u001f]/)
     expect(json).toContain('\\u003c/script\\u003e\\u003c!--')
     expect(json).toContain('\\u2028\\u2029')
@@ -83,7 +85,7 @@ describe('jsonForScript (JSON inside <script>)', () => {
     // An escaped backslash followed by "uD800" is text, not a surrogate escape.
     expect(json).toContain('"\\\\uD800 literal"')
     expect(json).toContain('ok\uD83D\uDE00')
-    const back = JSON.parse(json)
+    const back = JSON.parse(json) as { html: string; 'key</script>': string[] }
     expect(back.html).toBe(HOSTILE.replace(/\uD800 /, '\uFFFD ').replace(/ \uDC00/, ' \uFFFD'))
     expect(back['key</script>']).toEqual(['\uFFFD', '\\uD800 literal'])
   })
