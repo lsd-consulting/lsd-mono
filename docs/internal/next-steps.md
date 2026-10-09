@@ -6,9 +6,9 @@
 
 ## 1. README examples and usage instructions — done
 
-The root `README.md` is example-led for the current Mono API: depend on `lsd-mono-core`, `lsd-mono-junit-jupiter`, and `lsd-mono-cucumber-8`, capture with `LsdContext` and the Kotlin DSL (`"A" messages "B"`), set participant types, `completeReport`, and open `*-diagram.html`. `LsdExtension` is the JUnit Jupiter 6 path. `LsdCucumberPlugin` is the Cucumber 8 path. Sample images live in `docs/readme/` (`diagram.png`, `inspector.png`, `zoom.gif`).
+The root `README.md` is example-led for the current Mono API: depend on `lsd-mono-core`, `lsd-mono-junit-jupiter`, and `lsd-mono-cucumber-8`, capture with `LsdContext` and the Kotlin DSL (`"A" messages "B"`), set participant types, `completeReport`, and open `*-diagram.html`. `LsdExtension` is the JUnit Jupiter 6 path. `LsdCucumberPlugin` is the Cucumber 8 path. The root README opens with `docs/readme/feature-tour.gif`, and the core README uses `docs/readme/components.gif`.
 
-`:modules:lsd-mono-core:readmeSamples` regenerates them. It runs `captureReadmeReport` (the README scenario through `LsdContext`) and then headless Chromium against that shell, using Node 22 via nvm the same way as the other npm tasks. It is not on `build` or `check`.
+`:modules:lsd-mono-core:readmeSamples` regenerates them. It runs `captureReadmeReport` (the README scenario through `LsdContext`) and `captureFeatureTourReport` (the trimmed shop in `FeatureTourSample.kt`), then headless Chromium against those shells, using Node 22 via nvm the same way as the other npm tasks. It is not on `build` or `check`. The module READMEs keep their own `diagram.png`, `inspector.png`, and `zoom.gif` from their own `readmeSamples` tasks.
 
 `./gradlew readmeSamples` depends on the core, JUnit, and Cucumber `readmeSamples` tasks.
 
@@ -41,7 +41,6 @@ Each new module gets a contract test that the events it captures land in `Report
 - **CI.** Origin is `https://github.com/lsd-consulting/lsd-mono.git` and `main` has been pushed. `.github/workflows/gradle.yml` runs on push to `main` and on pull requests: Java 21, Node 22, `./gradlew build --no-daemon` (Vite shell and vitest included). `readmeSamples` is not on that workflow. Publishing is still open; see `docs/versioning-notes.md`.
 - **Publish later.** Maven Central for `lsd-mono-core`, `lsd-mono-junit-jupiter`, and `lsd-mono-cucumber-8` (Central Portal, signing, Mono artifact names so they do not clash with legacy). Not part of steps 1–3. The checklist stays in `docs/versioning-notes.md`.
 - Small leftovers, still not a slice of their own: `CONTROL` / `COLLECTIONS` only if a migration needs a distinct icon; no in-memory `renderReport`; hide-stacktrace has a property but no dedicated test; virtualisation rebuilds the window SVG on scroll instead of recycling nodes. Density mode is still unscoped.
-- `docs/readme/fit.gif` is the fit-to-screen motion: the diagram zooms and pans, rather than a static zoomed frame. `docs/readme/zoom.gif` is still the zoom-until-the-diagram-scrolls clip.
-- `docs/readme/inspector-drag.gif` is a mouse drag widening the JSON inspector. It is not a click on an expand button.
+- `docs/readme/feature-tour.gif` replaced the root README's `diagram.png`, `inspector.png`, `zoom.gif`, `fit.gif`, and `inspector-drag.gif`. It shows zoom and Fit, and a mouse drag widening the JSON panel, in one pass.
 - Cucumber scenario screenshots leave a lot of empty space to the left of the description card and the diagram, and a smaller margin on the right that may not matter by itself. Worth exploring later whether the capture can use the available space better overall, not only by closing the left gap. Nice-to-have, not urgent.
 - Cucumber scenario report, later. Not taking the stats section down. "the metrics, I wonder if we could kind of have a think about the design of that section as well, um, at a later point." Nice-to-have, not urgent.

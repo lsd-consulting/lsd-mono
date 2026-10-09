@@ -140,25 +140,41 @@ tasks.register<JavaExec>("captureReadmeReport") {
     outputs.dir(readmeReportDir)
 }
 
+// Feature tour: a trimmed shop report the root README's tour GIF clicks around.
+val featureTourReportDir = layout.buildDirectory.dir("feature-tour-report")
+
+tasks.register<JavaExec>("captureFeatureTourReport") {
+    group = "documentation"
+    description = "Capture the feature-tour scenarios and write their report HTML."
+    classpath = readmeSourceSet.runtimeClasspath
+    mainClass.set("io.lsdconsulting.lsd.mono.core.readme.FeatureTourSampleKt")
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+    systemProperty("lsd.mono.report.outputDir", featureTourReportDir.get().asFile.absolutePath)
+    systemProperty("lsd.mono.ids.deterministic", "true")
+    outputs.dir(featureTourReportDir)
+}
+
 tasks.register<Exec>("readmeSamples") {
     group = "documentation"
     description =
-        "Regenerate docs/readme PNG and GIF samples from the current report UI. Not part of build or check."
-    dependsOn("captureReadmeReport")
+        "Regenerate the docs/readme feature tour and component GIFs from the current report UI. Not part of build or check."
+    dependsOn("captureReadmeReport", "captureFeatureTourReport")
     workingDir = reportDir.asFile
     withNodeOnPath()
     inputs.dir(readmeReportDir)
+    inputs.dir(featureTourReportDir)
     inputs.file(reportDir.file("scripts/readme-samples.mjs"))
-    outputs.file(readmeDocsDir.file("diagram.png"))
-    outputs.file(readmeDocsDir.file("inspector.png"))
-    outputs.file(readmeDocsDir.file("zoom.gif"))
-    outputs.file(readmeDocsDir.file("fit.gif"))
-    outputs.file(readmeDocsDir.file("inspector-drag.gif"))
+    outputs.file(readmeDocsDir.file("feature-tour.gif"))
     outputs.file(readmeDocsDir.file("components.gif"))
     val reportOut = readmeReportDir.get().asFile.absolutePath
     val docsOut = readmeDocsDir.asFile.absolutePath
+    val tourOut = featureTourReportDir.get().asFile.absolutePath
     val node = nodeExecutable()
-    commandLine(node, "scripts/readme-samples.mjs", reportOut, docsOut)
+    commandLine(node, "scripts/readme-samples.mjs", reportOut, docsOut, tourOut)
 }
 
 // Kitchen-sink sample: every diagram feature in one report, for eyeballing layout.

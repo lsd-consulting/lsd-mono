@@ -2,6 +2,8 @@
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
 
+![A tour of the report: scenarios and statuses, zoom and Fit, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the minimap, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
+
 [`lsd-mono-cucumber-8` README](modules/lsd-mono-cucumber-8/README.md) covers the Cucumber 8 plugin.
 
 [`lsd-mono-junit-jupiter` README](modules/lsd-mono-junit-jupiter/README.md) covers the JUnit Jupiter 6 extension that completes a scenario for each test.
@@ -84,27 +86,15 @@ See the [Cucumber 8 module README](modules/lsd-mono-cucumber-8/README.md) for pl
 
 ## What the report looks like
 
-The diagram for the scenario above. Customer, Orders, and Order events use their types. The response and the async publish show the direction.
+The tour at the top clicks around a small shop report: four scenarios with every status, six participants, payloads, and durations. [`FeatureTourSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/FeatureTourSample.kt) captures it. The [lsd-mono-core README](modules/lsd-mono-core/README.md#component-diagram) covers the **Component diagram** button.
 
-![Place an order, with participant shapes and arrow heads](docs/readme/diagram.png)
-
-Clicking `POST /orders` opens the payload.
-
-![Inspector open on the order JSON](docs/readme/inspector.png)
-
-Zoom until the diagram scrolls.
-
-![Zooming into the diagram and scrolling it](docs/readme/zoom.gif)
-
-Each scenario also has a **Component diagram** button. The [lsd-mono-core README](modules/lsd-mono-core/README.md#component-diagram) shows it opening.
-
-Regenerate those three files from the current UI:
+Regenerate the tour, and the component diagram clip, from the current UI:
 
 ```bash
 ./gradlew :modules:lsd-mono-core:readmeSamples
 ```
 
-The task captures the scenario with `LsdContext`, then screenshots the packaged shell with headless Chromium. It uses Node 22 from nvm when that is installed, and it does not change the default Node alias. It is not part of `build` or `check`.
+The task captures the tour report with `LsdContext`, then drives the packaged shell with headless Chromium and encodes `docs/readme/feature-tour.gif`. It uses Node 22 from nvm when that is installed, and it does not change the default Node alias. It is not part of `build` or `check`.
 
 ### Kitchen-sink sample
 
