@@ -1,5 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.node22BinDir
-import io.lsdconsulting.lsd.mono.gradle.nodeExecutable
+import io.lsdconsulting.lsd.mono.gradle.nodeCommandLine
 import io.lsdconsulting.lsd.mono.gradle.withNodeOnPath
 
 plugins {
@@ -35,8 +34,8 @@ tasks.jar {
     }
 }
 
-// Node 22 helpers (node22BinDir, withNodeOnPath, nodeExecutable) live in build-logic NodeToolchain.kt.
-// They prepend nvm Node 22 for these tasks and do not change the nvm default alias.
+// Node 22 helpers (withNodeOnPath, nodeCommandLine) live in build-logic NodeToolchain.kt.
+// When a task runs, they put nvm Node 22 first for it and do not change the nvm default alias.
 
 val reportDir = layout.projectDirectory.dir("report")
 val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
@@ -73,12 +72,6 @@ val copyReportShell = tasks.register<Copy>("copyReportShell") {
     description =
         "Copy report/dist/lsd-report.html into build/generated/resources as the classpath shell."
     dependsOn(reportSingle)
-    // Drop output left by earlier shell names so a dirty build dir cannot
-    // package both the old classpath root and the previous filename.
-    doFirst {
-        delete(layout.buildDirectory.dir("generated/resources/lsd-mono-core/report-next"))
-        delete(layout.buildDirectory.file("generated/resources/lsd-mono-core/report/lsd-report-next.single.html"))
-    }
     from(reportShell) { rename { "lsd-report.single.html" } }
     into(generatedResourcesDir.map { it.dir("lsd-mono-core/report") })
 }
@@ -88,12 +81,9 @@ tasks.register<Exec>("reportTest") {
     description = "Run report vitest (npm test) on the Gradle check path."
     dependsOn(reportSingle)
     workingDir = reportDir.asFile
+    // Through sh, so npm is looked up on the task's PATH (Node 22 first), not the Gradle client's.
+    commandLine("sh", "-c", "npm test")
     withNodeOnPath()
-    // Gradle resolves a bare "npm" against the client PATH, which is still Node 17's
-    // absence when nvm is not sourced. Put Node 22 on PATH inside the shell instead.
-    val nodeBin = node22BinDir()?.absolutePath
-    val script = if (nodeBin != null) "export PATH=\"$nodeBin:\$PATH\"; npm test" else "npm test"
-    commandLine("sh", "-c", script)
 }
 
 // The report's `generator` field reads this, so it follows the project version in tests and the jar.
@@ -175,7 +165,6 @@ tasks.register<Exec>("readmeSamples") {
         "Regenerate the docs/readme feature tour and component GIFs from the current report UI. Not part of build or check."
     dependsOn("captureReadmeReport", "captureFeatureTourReport")
     workingDir = reportDir.asFile
-    withNodeOnPath()
     inputs.dir(readmeReportDir)
     inputs.dir(featureTourReportDir)
     inputs.file(reportDir.file("scripts/readme-samples.mjs"))
@@ -184,8 +173,7 @@ tasks.register<Exec>("readmeSamples") {
     val reportOut = readmeReportDir.get().asFile.absolutePath
     val docsOut = readmeDocsDir.asFile.absolutePath
     val tourOut = featureTourReportDir.get().asFile.absolutePath
-    val node = nodeExecutable()
-    commandLine(node, "scripts/readme-samples.mjs", reportOut, docsOut, tourOut)
+    nodeCommandLine("scripts/readme-samples.mjs", reportOut, docsOut, tourOut)
 }
 
 // Kitchen-sink sample: every diagram feature in one report, for eyeballing layout.
@@ -194,7 +182,7 @@ val kitchenSinkReportDir = layout.buildDirectory.dir("kitchen-sink-report")
 val pagesDir = layout.buildDirectory.dir("pages")
 val samplesDocsDir = rootProject.layout.projectDirectory.dir("docs/samples")
 
-val captureKitchenSinkReport by tasks.registering(JavaExec::class) {
+val captureKitchenSinkReport = tasks.register<JavaExec>("captureKitchenSinkReport") {
     group = "documentation"
     description = "Capture the kitchen-sink scenarios and write their report HTML."
     classpath = readmeSourceSet.runtimeClasspath

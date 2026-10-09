@@ -1,21 +1,67 @@
 name: Gradle
 
+# Builds and tests everything, then checks the build left no changed or new files
+# (verifyGenerated, see docs/generated-files.md).
+# Changes that only touch what the build never reads (Markdown, docs/, which the Pages workflow
+# handles, and the README images under each module) skip this workflow. Keep both lists in step.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "modules/*/docs/**"
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "modules/*/docs/**"
+  workflow_dispatch:
+
+# Read the code and nothing else. No step needs to write to the repository.
+permissions:
+  contents: read
+
+# A newer push to the same pull request cancels the run in progress; runs on main all finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest, so the image changes in a reviewed pull request (Renovate
+    # proposes new runner versions) rather than mid-rollout. See docs/ci.md.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: "25"
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
+          cache: npm
+          cache-dependency-path: modules/lsd-mono-core/report/package-lock.json
+      # Validates the Gradle wrapper jar and caches the Gradle user home (dependencies, wrapper,
+      # build cache). "basic" is the MIT-licensed provider on actions/cache; the default provider
+      # is a proprietary component under Gradle's terms of use. Pull requests only read the cache.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
       - name: Build, then check the build left no changed or new files
-        run: ./gradlew build verifyGenerated --no-daemon
+        run: ./gradlew build verifyGenerated
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+            build/reports/problems/
+          if-no-files-found: ignore
+          retention-days: 14

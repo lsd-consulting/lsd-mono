@@ -33,9 +33,26 @@ fun node22BinDir(home: File = File(System.getProperty("user.home"))): File? =
 fun nodeExecutable(): String =
     node22BinDir()?.resolve("node")?.takeIf { it.canExecute() }?.absolutePath ?: "node"
 
-/** Prepend the Node 22 bin dir to this task's PATH, when there is one. */
+/**
+ * Prepend the Node 22 bin dir to this task's PATH, when there is one. The lookup runs when the
+ * task runs, not while Gradle configures the build, so the configuration cache does not depend
+ * on what is installed under ~/.nvm or on the client's PATH.
+ */
 fun Exec.withNodeOnPath() {
-    val nodeBin = node22BinDir() ?: return
-    val base = System.getenv("PATH").orEmpty()
-    environment("PATH", nodeBin.absolutePath + File.pathSeparator + base)
+    doFirst("put Node 22 on PATH") {
+        val nodeBin = node22BinDir() ?: return@doFirst
+        val exec = this as Exec
+        val base = exec.environment["PATH"]?.toString() ?: System.getenv("PATH").orEmpty()
+        exec.environment("PATH", nodeBin.absolutePath + File.pathSeparator + base)
+    }
+}
+
+/**
+ * Run `node` with these arguments, using the Node 22 [nodeExecutable] picks when the task runs.
+ * Also puts that Node first on PATH, for anything the script starts.
+ */
+fun Exec.nodeCommandLine(vararg args: Any) {
+    commandLine("node", *args)
+    withNodeOnPath()
+    doFirst("use Node 22") { (this as Exec).executable = nodeExecutable() }
 }

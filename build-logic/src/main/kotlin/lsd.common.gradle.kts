@@ -34,13 +34,10 @@ val mine = recorded[project.path]
 VersionAlignment.recordedProblem(project.path, train, mine)?.let { throw GradleException(it) }
 version = mine?.version ?: train
 
-val projectPath = path
-var alignedVersion = version.toString()
 afterEvaluate {
-    alignedVersion = version.toString()
     val failure = VersionAlignment.alignmentFailure(
-        projectPath,
-        alignedVersion,
+        path,
+        version.toString(),
         rootProject.version.toString(),
         mine,
     )
@@ -53,8 +50,11 @@ val checkVersionAlignment = tasks.register("checkVersionAlignment") {
     description =
         "Fail unless this module matches the root train version, or a recorded patch or solo-major override."
     inputs.file(overridesFile)
+    // Plain values, resolved after the project is configured, so the action captures no script state
+    // (the configuration cache cannot store a script object).
+    val summary = provider { "${project.path} ${project.version} (train $train)" }
     doLast {
-        logger.lifecycle("$projectPath $alignedVersion (train $train)")
+        logger.lifecycle(summary.get())
     }
 }
 tasks.named("check").configure {

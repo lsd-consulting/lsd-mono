@@ -1,5 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.nodeExecutable
-import io.lsdconsulting.lsd.mono.gradle.withNodeOnPath
+import io.lsdconsulting.lsd.mono.gradle.nodeCommandLine
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -82,7 +81,6 @@ tasks.register<Exec>("readmeSamples") {
     dependsOn("captureReadmeReport")
     // Reuse the core report's Playwright screenshot script and node_modules.
     workingDir = coreReportDir.asFile
-    withNodeOnPath()
     inputs.dir(readmeReportDir)
     inputs.file(coreReportDir.file("scripts/readme-samples.mjs"))
     outputs.file(readmeDocsDir.file("diagram.png"))
@@ -90,6 +88,5 @@ tasks.register<Exec>("readmeSamples") {
     outputs.file(readmeDocsDir.file("zoom.gif"))
     val reportOut = readmeReportDir.get().asFile.absolutePath
     val docsOut = readmeDocsDir.asFile.absolutePath
-    val node = nodeExecutable()
-    commandLine(node, "scripts/readme-samples.mjs", reportOut, docsOut)
+    nodeCommandLine("scripts/readme-samples.mjs", reportOut, docsOut)
 }

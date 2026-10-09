@@ -110,7 +110,7 @@ The [kitchen-sink report](https://lsd-consulting.github.io/lsd-mono/kitchen-sink
 ./gradlew :modules:lsd-mono-core:kitchenSinkSample
 ```
 
-[Generated files](docs/generated-files.md) lists every generated file, which ones are committed, and how CI keeps them fresh.
+[Generated files](docs/generated-files.md) lists every generated file, which ones are committed, and how CI keeps them fresh. [CI](docs/ci.md) describes the workflows.
 
 ## Build
 

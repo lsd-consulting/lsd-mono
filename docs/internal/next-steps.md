@@ -38,7 +38,7 @@ Each new module gets a contract test that the events it captures land in `Report
 
 ## Trailing notes (not new projects)
 
-- **CI.** Origin is `https://github.com/lsd-consulting/lsd-mono.git` and `main` has been pushed. `.github/workflows/gradle.yml` runs on push to `main` and on pull requests: Java 21, Node 22, `./gradlew build --no-daemon` (Vite shell and vitest included). `readmeSamples` is not on that workflow. Publishing is still open; see `docs/versioning-notes.md`.
+- **CI.** Origin is `https://github.com/lsd-consulting/lsd-mono.git` and `main` has been pushed. `.github/workflows/gradle.yml` runs on push to `main` and on pull requests: Java 25 (toolchain 21), Node 24, `./gradlew build verifyGenerated` (Vite shell, vitest and build-logic tests included). See `docs/ci.md`. `readmeSamples` is not on that workflow. Publishing is still open; see `docs/versioning-notes.md`.
 - **Publish later.** Maven Central for `lsd-mono-core`, `lsd-mono-junit-jupiter`, and `lsd-mono-cucumber-8` (Central Portal, signing, Mono artifact names so they do not clash with legacy). Not part of steps 1–3. The checklist stays in `docs/versioning-notes.md`.
 - Small leftovers, still not a slice of their own: `CONTROL` / `COLLECTIONS` only if a migration needs a distinct icon; no in-memory `renderReport`; hide-stacktrace has a property but no dedicated test; virtualisation rebuilds the window SVG on scroll instead of recycling nodes. Density mode is still unscoped.
 - `docs/readme/feature-tour.gif` replaced the root README's `diagram.png`, `inspector.png`, `zoom.gif`, `fit.gif`, and `inspector-drag.gif`. It shows zoom and Fit, and a mouse drag widening the JSON panel, in one pass.

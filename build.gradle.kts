@@ -13,6 +13,11 @@ tasks.register("readmeSamples") {
         "Regenerate README sample images for every module that defines a readmeSamples task."
 }
 
+// build-logic is an included build, so its tests are not part of the root build by default.
+tasks.named("check") {
+    dependsOn(gradle.includedBuild("build-logic").task(":check"))
+}
+
 gradle.projectsEvaluated {
     val moduleSamples = subprojects.mapNotNull { it.tasks.findByName("readmeSamples") }
     tasks.named("readmeSamples").configure {
