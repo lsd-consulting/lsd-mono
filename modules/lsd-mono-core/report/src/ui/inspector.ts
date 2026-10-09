@@ -313,9 +313,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
         ${message.durationMs != null ? `<span class="pill">${escapeHtml(message.durationMs)} ms</span>` : ''}
         ${summaryPills(message.data)}
         <span class="pill">${escapeHtml(scenarioId)}</span>`
-      pending = message.payloadId
-        ? options.loadPayload(scenarioId, message.id)
-        : Promise.resolve(message.data)
+      pending = message.payloadId ? options.loadPayload(scenarioId, message.id) : Promise.resolve(message.data)
       void pending.then(
         (value) => {
           if (token !== generation) return
@@ -535,11 +533,11 @@ export function summaryPills(data: unknown): string {
   const pills: string[] = []
   if (typeof data.method === 'string' && data.method) pills.push(`<span class="pill">${escapeHtml(data.method)}</span>`)
   if (typeof data.path === 'string' && data.path) pills.push(`<span class="pill">${escapeHtml(data.path)}</span>`)
-  if ((typeof data.status === 'string' && data.status) || typeof data.status === 'number') pills.push(`<span class="pill">${escapeHtml(data.status)}</span>`)
+  if ((typeof data.status === 'string' && data.status) || typeof data.status === 'number')
+    pills.push(`<span class="pill">${escapeHtml(data.status)}</span>`)
   return pills.join('')
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
-

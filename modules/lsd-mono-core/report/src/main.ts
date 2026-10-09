@@ -232,7 +232,11 @@ function bindChrome(): void {
   document.querySelector('#btn-sidebar')!.addEventListener('click', () => {
     state.sidebarCollapsed = !state.sidebarCollapsed
     storeSidebarCollapsed(state.sidebarCollapsed)
-    applySidebarCollapsed(document.querySelector('.shell'), document.querySelector('#btn-sidebar'), state.sidebarCollapsed)
+    applySidebarCollapsed(
+      document.querySelector('.shell'),
+      document.querySelector('#btn-sidebar'),
+      state.sidebarCollapsed,
+    )
     renderNav()
     // Diagrams draw only the rows in view; the width just changed.
     document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((scrollport) => syncDiagramWindow(scrollport))
@@ -284,10 +288,14 @@ function bindChrome(): void {
       return
     }
     if (
-      delegateMessageOpen(ev, (node) => messageFromNode(node), (scenarioId, message) => {
-        const scenario = report.scenarios.find((item) => item.id === scenarioId)
-        if (scenario) openMessage(scenario, message)
-      })
+      delegateMessageOpen(
+        ev,
+        (node) => messageFromNode(node),
+        (scenarioId, message) => {
+          const scenario = report.scenarios.find((item) => item.id === scenarioId)
+          if (scenario) openMessage(scenario, message)
+        },
+      )
     ) {
       return
     }
@@ -323,7 +331,11 @@ function bindChrome(): void {
       const scenario = scenarioFrom(target)
       const scroll = target.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
       if (scenario && scroll) {
-        const messageId = findOpensMessage(scenario.events, (target as HTMLInputElement).value, diagramView(scenario.id).hidden)
+        const messageId = findOpensMessage(
+          scenario.events,
+          (target as HTMLInputElement).value,
+          diagramView(scenario.id).hidden,
+        )
         const msg = messageId ? findMessage(scenario, messageId) : undefined
         if (msg) {
           ev.preventDefault()
@@ -456,7 +468,6 @@ function renderMain(): void {
         toggleOpen(s.id)
       }
     })
-
   })
   bindDiagramScroll(main)
 }
@@ -578,7 +589,10 @@ function syncPrintMetrics(): void {
   placePrintMetrics(
     document,
     scenario
-      ? { scenarioId: scenario.id, html: printMetricsSection(scenario.id, scenario.metrics, scenario.insights, labelMaxWidth) }
+      ? {
+          scenarioId: scenario.id,
+          html: printMetricsSection(scenario.id, scenario.metrics, scenario.insights, labelMaxWidth),
+        }
       : null,
   )
 }
@@ -624,8 +638,7 @@ function applyOpenMessageFromHash(): void {
   if (!scenario) return
   const msg = findMessage(scenario, ref.messageId)
   if (!msg) return
-  const already =
-    inspector?.isOpen() && invoker?.scenarioId === ref.scenarioId && invoker?.messageId === ref.messageId
+  const already = inspector?.isOpen() && invoker?.scenarioId === ref.scenarioId && invoker?.messageId === ref.messageId
   state.selectedId = scenario.id
   state.openIds.add(scenario.id)
   renderNav()

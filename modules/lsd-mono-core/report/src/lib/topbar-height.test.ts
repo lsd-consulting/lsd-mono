@@ -14,8 +14,12 @@ function fakeObserver() {
     }
     observe() {}
     unobserve() {}
-    disconnect() { this.disconnected = true }
-    fire() { this.cb() }
+    disconnect() {
+      this.disconnected = true
+    }
+    fire() {
+      this.cb()
+    }
   }
   return { Observer: Fake as unknown as typeof ResizeObserver, live }
 }
@@ -23,8 +27,13 @@ function fakeObserver() {
 function barOfHeight(initial: number) {
   const bar = document.createElement('header')
   let height = initial
-  bar.getBoundingClientRect = () => ({ height } as DOMRect)
-  return { bar, setHeight: (h: number) => { height = h } }
+  bar.getBoundingClientRect = () => ({ height }) as DOMRect
+  return {
+    bar,
+    setHeight: (h: number) => {
+      height = h
+    },
+  }
 }
 
 describe('trackTopbarHeight', () => {

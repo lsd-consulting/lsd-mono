@@ -72,7 +72,8 @@ function injected(root: ParentNode): string[] {
     if (tag === 'img' || tag === 'script' || tag === 'iframe') found.push(`<${tag}>`)
     if (tag === 'svg' && el.hasAttribute('onload')) found.push('<svg onload>')
     for (const attr of Array.from(el.attributes)) {
-      if (attr.name.startsWith('on') || attr.name === 'data-pwned' || attr.name === 'src') found.push(`${tag}[${attr.name}]`)
+      if (attr.name.startsWith('on') || attr.name === 'data-pwned' || attr.name === 'src')
+        found.push(`${tag}[${attr.name}]`)
     }
   })
   return found

@@ -19,8 +19,14 @@ const ESCAPING = 'Hand-rolled HTML escaping. Use escapeHtml or escapeAttr from s
 const handRolledEscaping = [
   { selector: `Literal[value=${ENTITY}]`, message: ESCAPING },
   { selector: `TemplateElement[value.raw=${ENTITY}]`, message: ESCAPING },
-  { selector: `CallExpression[callee.property.name=/^replace(All)?$/][arguments.0.regex.pattern=${MARKUP_CHARS}]`, message: ESCAPING },
-  { selector: `CallExpression[callee.property.name=/^replace(All)?$/][arguments.0.value=${MARKUP_CHARS}]`, message: ESCAPING },
+  {
+    selector: `CallExpression[callee.property.name=/^replace(All)?$/][arguments.0.regex.pattern=${MARKUP_CHARS}]`,
+    message: ESCAPING,
+  },
+  {
+    selector: `CallExpression[callee.property.name=/^replace(All)?$/][arguments.0.value=${MARKUP_CHARS}]`,
+    message: ESCAPING,
+  },
 ]
 
 export default defineConfig(

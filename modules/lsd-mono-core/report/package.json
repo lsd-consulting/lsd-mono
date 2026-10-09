@@ -15,7 +15,8 @@
     "build:single": "npm run build && node --experimental-strip-types scripts/inline-single.mjs",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
-    "lint": "eslint .",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
     "check:ux": "playwright test"
   },
   "devDependencies": {

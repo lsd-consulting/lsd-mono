@@ -30,7 +30,9 @@ describe('print css', () => {
   })
 
   it('prints JSON wrapped and unclipped, and the component diagram whole at page width', () => {
-    expect(print).toMatch(/\.print-message pre\s*\{[^}]*white-space:\s*pre-wrap[^}]*overflow:\s*visible[^}]*max-height:\s*none/)
+    expect(print).toMatch(
+      /\.print-message pre\s*\{[^}]*white-space:\s*pre-wrap[^}]*overflow:\s*visible[^}]*max-height:\s*none/,
+    )
     expect(print).toMatch(/\.print-components\s*\{[^}]*break-inside:\s*avoid/)
     expect(print).toMatch(/\.print-components \.component-diagram\s*\{[^}]*width:\s*100%[^}]*height:\s*auto/)
   })

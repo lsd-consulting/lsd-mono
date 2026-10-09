@@ -124,7 +124,7 @@ describe('inspector', () => {
     await Promise.resolve()
   }
 
-  it('lists a link\'s interactions in the panel when the link is clicked or pressed', () => {
+  it("lists a link's interactions in the panel when the link is clicked or pressed", () => {
     const controller = bindInspector(document, { loadPayload: async () => ({}), onClose: () => {} })
     const call = (id: string, to: string, label: string, type: MessageType = 'SYNCHRONOUS') => ({
       kind: 'message' as const,
@@ -205,7 +205,9 @@ describe('inspector', () => {
     expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('#inspector-pre')!.hidden).toBe(true)
     // Three callees side by side need more than the narrow column; the saved width stays put.
-    const widened = Number.parseInt(document.querySelector<HTMLElement>('#shell')!.style.getPropertyValue('--inspector-w'))
+    const widened = Number.parseInt(
+      document.querySelector<HTMLElement>('#shell')!.style.getPropertyValue('--inspector-w'),
+    )
     expect(widened).toBeGreaterThan(INSPECTOR_NARROW_PX)
     expect(sessionStorage.getItem(INSPECTOR_WIDTH_KEY)).toBeNull()
 
@@ -283,7 +285,11 @@ describe('inspector', () => {
     let copied = ''
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: async (value: string) => { copied = value } },
+      value: {
+        writeText: async (value: string) => {
+          copied = value
+        },
+      },
     })
     document.querySelector<HTMLButtonElement>('#inspector-copy')!.click()
     await Promise.resolve()
@@ -338,7 +344,9 @@ describe('inspector', () => {
 
     handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }))
     expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${inspectorWidthLimits(window.innerWidth).max}px`)
-    expect(Number(shell.style.getPropertyValue('--inspector-w').replace('px', ''))).toBeLessThanOrEqual(window.innerWidth * 0.9)
+    expect(Number(shell.style.getPropertyValue('--inspector-w').replace('px', ''))).toBeLessThanOrEqual(
+      window.innerWidth * 0.9,
+    )
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     document.querySelector<HTMLButtonElement>('button.msg-open')!.click()

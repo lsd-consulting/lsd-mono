@@ -22,32 +22,57 @@
  */
 import ts from 'typescript'
 
-const ESCAPERS = new Set(['escapeHtml', 'escapeAttr', 'jsonForScript', 'cssEscape', 'encodeURIComponent', 'toFixed', 'toPrecision'])
+const ESCAPERS = new Set([
+  'escapeHtml',
+  'escapeAttr',
+  'jsonForScript',
+  'cssEscape',
+  'encodeURIComponent',
+  'toFixed',
+  'toPrecision',
+])
 const MARKUP_NAME = /(?:^|[a-z0-9_])(?:Html|Svg|Markup)$|^(?:html|svg|markup)$/
 const TAG = /<[A-Za-z/!?]/
 const ATTRIBUTE_OPEN = /[\w:-]+=["']$/
 const UNSAFE_CHARS = /[<>&"']/
 const SAFE_FLAGS =
-  ts.TypeFlags.NumberLike | ts.TypeFlags.BooleanLike | ts.TypeFlags.BigIntLike | ts.TypeFlags.Null | ts.TypeFlags.Undefined | ts.TypeFlags.Void | ts.TypeFlags.Never
+  ts.TypeFlags.NumberLike |
+  ts.TypeFlags.BooleanLike |
+  ts.TypeFlags.BigIntLike |
+  ts.TypeFlags.Null |
+  ts.TypeFlags.Undefined |
+  ts.TypeFlags.Void |
+  ts.TypeFlags.Never
 
 function nameOf(node) {
   if (node.type === 'Identifier') return node.name
-  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') return node.property.name
-  if (node.type === 'MemberExpression' && node.computed && node.property.type === 'Literal') return String(node.property.value)
+  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier')
+    return node.property.name
+  if (node.type === 'MemberExpression' && node.computed && node.property.type === 'Literal')
+    return String(node.property.value)
   return undefined
 }
 
 function isMarkupTemplate(node) {
-  return node.quasis.some((quasi) => TAG.test(quasi.value.cooked ?? quasi.value.raw) || ATTRIBUTE_OPEN.test(quasi.value.cooked ?? quasi.value.raw))
+  return node.quasis.some(
+    (quasi) =>
+      TAG.test(quasi.value.cooked ?? quasi.value.raw) || ATTRIBUTE_OPEN.test(quasi.value.cooked ?? quasi.value.raw),
+  )
 }
 
 /** Flattens `a + b + c` into its operands. */
 function operands(node) {
-  return node.type === 'BinaryExpression' && node.operator === '+' ? [...operands(node.left), ...operands(node.right)] : [node]
+  return node.type === 'BinaryExpression' && node.operator === '+'
+    ? [...operands(node.left), ...operands(node.right)]
+    : [node]
 }
 
 function isMarkupString(node) {
-  return node.type === 'Literal' && typeof node.value === 'string' && (TAG.test(node.value) || ATTRIBUTE_OPEN.test(node.value))
+  return (
+    node.type === 'Literal' &&
+    typeof node.value === 'string' &&
+    (TAG.test(node.value) || ATTRIBUTE_OPEN.test(node.value))
+  )
 }
 
 /** Return values of a function, not looking into nested functions. */
@@ -116,7 +141,11 @@ export const escapedMarkup = {
         const def = variable.defs[0]
         if (def.type === 'FunctionName') return false
         const writes = variable.references.filter((ref) => ref.isWrite() && ref.writeExpr)
-        return writes.length > 0 && variable.defs.every((d) => d.type === 'Variable') && writes.every((ref) => isSafe(ref.writeExpr))
+        return (
+          writes.length > 0 &&
+          variable.defs.every((d) => d.type === 'Variable') &&
+          writes.every((ref) => isSafe(ref.writeExpr))
+        )
       } finally {
         visiting.delete(variable)
       }
@@ -144,7 +173,9 @@ export const escapedMarkup = {
     function isSafe(node) {
       switch (node.type) {
         case 'ArrayExpression':
-          return node.elements.every((element) => element === null || isSafe(element.type === 'SpreadElement' ? element.argument : element))
+          return node.elements.every(
+            (element) => element === null || isSafe(element.type === 'SpreadElement' ? element.argument : element),
+          )
         case 'Literal':
           return true
         case 'TemplateLiteral':
@@ -170,7 +201,8 @@ export const escapedMarkup = {
             const target = node.callee.object
             if (target.type === 'CallExpression' && nameOf(target.callee) === 'map') {
               const fn = target.arguments[0]
-              if (fn && (fn.type === 'ArrowFunctionExpression' || fn.type === 'FunctionExpression')) return returnValues(fn).every(isSafe)
+              if (fn && (fn.type === 'ArrowFunctionExpression' || fn.type === 'FunctionExpression'))
+                return returnValues(fn).every(isSafe)
             }
             if (nameOf(target) && MARKUP_NAME.test(nameOf(target))) return true
             if (target.type === 'Identifier' && safeVariable(target)) return true
@@ -189,7 +221,8 @@ export const escapedMarkup = {
     }
 
     function check(node) {
-      if (!isSafe(node)) context.report({ node, messageId: 'unescaped', data: { text: context.sourceCode.getText(node).slice(0, 60) } })
+      if (!isSafe(node))
+        context.report({ node, messageId: 'unescaped', data: { text: context.sourceCode.getText(node).slice(0, 60) } })
     }
 
     return {
@@ -209,7 +242,8 @@ export const escapedMarkup = {
       CallExpression(node) {
         const name = nameOf(node.callee)
         if (name === 'insertAdjacentHTML' && node.arguments[1]) check(node.arguments[1])
-        if ((name === 'write' || name === 'writeln') && nameOf(node.callee.object ?? {}) === 'document') node.arguments.forEach(check)
+        if ((name === 'write' || name === 'writeln') && nameOf(node.callee.object ?? {}) === 'document')
+          node.arguments.forEach(check)
       },
     }
   },

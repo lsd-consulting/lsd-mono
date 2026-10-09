@@ -54,7 +54,11 @@ describe('printComponentsSection', () => {
   it('draws the diagram with its own marker ids and no fixed screen width', () => {
     const drawn = renderComponentDiagram(graph, 'Checkout')
     const host = document.createElement('div')
-    host.innerHTML = printComponentsSection({ ...messageView, view: 'components', title: 'Component diagram' }, drawn.svg, drawn.width)
+    host.innerHTML = printComponentsSection(
+      { ...messageView, view: 'components', title: 'Component diagram' },
+      drawn.svg,
+      drawn.width,
+    )
     const section = host.querySelector<HTMLElement>('section.print-components')!
     expect(section.dataset.printPanel).toBe('components')
     expect(section.style.getPropertyValue('--print-components-max')).toBe(`${Math.round(drawn.width * 1.5)}px`)

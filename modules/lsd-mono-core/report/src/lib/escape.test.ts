@@ -15,7 +15,10 @@ function parseAttr(html: string, quote: '"' | "'"): { count: number; value: stri
   const div = document.createElement('div')
   div.innerHTML = `<span data-v=${quote}${html}${quote}></span>`
   const span = div.querySelector('span')
-  return { count: div.children.length + (span ? span.attributes.length - 1 : 0), value: span?.getAttribute('data-v') ?? null }
+  return {
+    count: div.children.length + (span ? span.attributes.length - 1 : 0),
+    value: span?.getAttribute('data-v') ?? null,
+  }
 }
 
 describe('escapeHtml (element text)', () => {

@@ -16,11 +16,13 @@ export function pretty(data: unknown): string {
 export function formatGeneratedAt(iso: string): string {
   try {
     const d = new Date(iso)
-    return d.toLocaleString('en-GB', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'Europe/London',
-    }) + ' BST'
+    return (
+      d.toLocaleString('en-GB', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Europe/London',
+      }) + ' BST'
+    )
   } catch {
     return iso
   }

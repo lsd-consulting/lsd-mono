@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { LayoutRow } from './layout'
-import { LEFT_PAD, MESSAGE_LABEL_RISE, NOTE_CARD_MIN_H, NOTE_CARD_W, NOTE_LINE_H, NOTE_PAD_Y, SECTION_BAND_H, SECTION_BAND_Y, SHORT_STUB, layoutRows, noteCardMetrics } from './layout'
+import {
+  LEFT_PAD,
+  MESSAGE_LABEL_RISE,
+  NOTE_CARD_MIN_H,
+  NOTE_CARD_W,
+  NOTE_LINE_H,
+  NOTE_PAD_Y,
+  SECTION_BAND_H,
+  SECTION_BAND_Y,
+  SHORT_STUB,
+  layoutRows,
+  noteCardMetrics,
+} from './layout'
 import {
   activationBarSvg,
   arrowMarker,
@@ -300,8 +312,7 @@ describe('renderRowSvg fragments', () => {
   })
 
   it('wraps a long note into tspans and sizes the card to cover every line', () => {
-    const text =
-      'This note deliberately overflows a single 140px line so the card must wrap and grow'
+    const text = 'This note deliberately overflows a single 140px line so the card must wrap and grow'
     const card = noteCardMetrics(text)
     expect(card.lines.length).toBeGreaterThan(1)
     const row = rowFor({ kind: 'note', id: 'n-long', text, over: 'api', placement: 'over' })
@@ -332,7 +343,10 @@ describe('renderRowSvg fragments', () => {
       // Placement stays layout data on the group.
       expect(svg).toContain(`data-placement="${placement}"`)
       expect(svg).not.toContain('note-place-cue')
-      const text = svg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      const text = svg
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
       expect(text).toBe('Payment retried')
       expect(svg.toLowerCase()).not.toContain(`>${placement}<`)
     }
@@ -394,10 +408,7 @@ describe('section separator', () => {
 })
 
 describe('diagram view paint', () => {
-  const three: Participant[] = [
-    ...participants,
-    { id: 'queue', name: 'Queue', type: 'QUEUE' },
-  ]
+  const three: Participant[] = [...participants, { id: 'queue', name: 'Queue', type: 'QUEUE' }]
 
   it('shifts the next column left when a participant is hidden', () => {
     const svg = renderRowSvg(

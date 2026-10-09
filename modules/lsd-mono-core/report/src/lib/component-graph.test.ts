@@ -246,14 +246,21 @@ describe('link interactions', () => {
     expect(typeCue('ASYNCHRONOUS')).toBe('async')
     expect(COMPONENT_EDGE_TYPES.has('SYNCHRONOUS_RESPONSE')).toBe(false)
     const graph = componentGraph(
-      scenario([message('1', 'INSERT order'), message('2', 'INSERT order'), message('3', ''), message('4', 'publish', 'ASYNCHRONOUS')]),
+      scenario([
+        message('1', 'INSERT order'),
+        message('2', 'INSERT order'),
+        message('3', ''),
+        message('4', 'publish', 'ASYNCHRONOUS'),
+      ]),
     )
     expect(componentEdgeTitle(graph.edges[0], 'Checkout', 'Orders DB')).toBe(
-      ['Checkout to Orders DB, 4 interactions:', 'INSERT order · sync ×2', '(no label) · sync', 'publish · async'].join('\n'),
+      ['Checkout to Orders DB, 4 interactions:', 'INSERT order · sync ×2', '(no label) · sync', 'publish · async'].join(
+        '\n',
+      ),
     )
-    expect(
-      componentEdgeTitle({ from: 'a', to: 'b', types: ['LOST'], count: 1, label: 'ping' }, 'A', 'B'),
-    ).toBe('A to B, 1 interaction:\nping · lost')
+    expect(componentEdgeTitle({ from: 'a', to: 'b', types: ['LOST'], count: 1, label: 'ping' }, 'A', 'B')).toBe(
+      'A to B, 1 interaction:\nping · lost',
+    )
   })
 
   it('lists at most a dozen interactions in the title, then says how many more', () => {

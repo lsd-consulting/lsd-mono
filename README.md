@@ -120,6 +120,8 @@ The [kitchen-sink report](https://lsd-consulting.github.io/lsd-mono/kitchen-sink
 
 JDK 21. `:modules:lsd-mono-core:build` runs the Vite shell build (`npm ci`, then `npm run build:single`) and vitest is on `check`. Those tasks also prepend Node 22 and leave the default alias alone.
 
+`check` also lints and measures coverage: ktlint for the Kotlin (`./gradlew spotlessApply` fixes formatting), Kover line-coverage floors per module, and for the report UI a type-check of the code and its tests, ESLint, Prettier and Vitest coverage thresholds. See [lint, format and coverage](docs/ci.md#lint-format-and-coverage).
+
 ```
 modules/lsd-mono-core/            lsd-mono-core, report UI in report/
 modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension

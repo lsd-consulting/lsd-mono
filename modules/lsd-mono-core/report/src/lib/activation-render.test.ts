@@ -45,7 +45,9 @@ function bars(): { x: number; y: number; h: number }[] {
 }
 
 function arrowX(label: string): { x1: number; x2: number } {
-  const g = [...document.querySelectorAll('g.message')].find((node) => node.querySelector('.msg-label')?.textContent?.startsWith(label))!
+  const g = [...document.querySelectorAll('g.message')].find((node) =>
+    node.querySelector('.msg-label')?.textContent?.startsWith(label),
+  )!
   const line = g.querySelector('line.msg-path')!
   return { x1: Number(line.getAttribute('x1')), x2: Number(line.getAttribute('x2')) }
 }

@@ -34,7 +34,9 @@ function scenario(overrides: Partial<Scenario> = {}): Scenario {
       { id: 'api', name: 'API', type: 'PARTICIPANT' },
       { id: 'payment-service', name: 'Payments', type: 'PARTICIPANT' },
     ],
-    events: [{ kind: 'message', id: 'm7', from: 'api', to: 'payment-service', label: 'authorise', type: 'SYNCHRONOUS' }],
+    events: [
+      { kind: 'message', id: 'm7', from: 'api', to: 'payment-service', label: 'authorise', type: 'SYNCHRONOUS' },
+    ],
     ...overrides,
   }
 }
@@ -116,7 +118,15 @@ describe('metrics in the side panel', () => {
     expect(closed).toEqual(['metrics'])
 
     controller.openMetrics('pay', { heading: 'Happy path', metrics, insights: [], labelMaxWidth: 200 })
-    const message: MessageEvent = { kind: 'message', id: 'm7', from: 'api', to: 'payment-service', label: 'authorise', type: 'SYNCHRONOUS', data: { ok: true } }
+    const message: MessageEvent = {
+      kind: 'message',
+      id: 'm7',
+      from: 'api',
+      to: 'payment-service',
+      label: 'authorise',
+      type: 'SYNCHRONOUS',
+      data: { ok: true },
+    }
     controller.openMessage('pay', message)
     expect(host.hidden).toBe(true)
     expect(host.childElementCount).toBe(0)

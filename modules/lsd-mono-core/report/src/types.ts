@@ -2,13 +2,7 @@
 
 export type Status = 'success' | 'warn' | 'error'
 
-export type ParticipantType =
-  | 'ACTOR'
-  | 'PARTICIPANT'
-  | 'DATABASE'
-  | 'QUEUE'
-  | 'ENTITY'
-  | 'BOUNDARY'
+export type ParticipantType = 'ACTOR' | 'PARTICIPANT' | 'DATABASE' | 'QUEUE' | 'ENTITY' | 'BOUNDARY'
 
 export type MessageType =
   | 'SYNCHRONOUS'
@@ -102,13 +96,7 @@ export interface MessageEvent {
 }
 
 export type DiagramEvent =
-  | MessageEvent
-  | NoteEvent
-  | DividerEvent
-  | SectionEvent
-  | DelayEvent
-  | SpacerEvent
-  | ActivateEvent
+  MessageEvent | NoteEvent | DividerEvent | SectionEvent | DelayEvent | SpacerEvent | ActivateEvent
 
 export interface Fact {
   key: string

@@ -2,7 +2,7 @@
 [data-theme="dark"] {
   color-scheme: dark;
   --bg: oklch(0.16 0.02 250);
-  --bg-elevated: oklch(0.20 0.025 250);
+  --bg-elevated: oklch(0.2 0.025 250);
   --surface: oklch(0.23 0.028 250);
   --surface-2: oklch(0.27 0.03 250);
   --border: oklch(0.35 0.03 250 / 0.7);
@@ -62,7 +62,6 @@
   --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
 
-
 /* Third theme. Black/white with thick borders. Status still uses text plus pattern, not hue alone. */
 [data-theme="contrast"] {
   color-scheme: light;
@@ -91,7 +90,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     /* A near-zero duration with fill-mode `both` stays on the first keyframe (opacity 0). */
     animation: none !important;
     transition: none !important;

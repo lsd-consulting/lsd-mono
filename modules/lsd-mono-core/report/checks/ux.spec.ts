@@ -106,7 +106,14 @@ test('component links have no captions, count their messages, and list them on h
   await expect(graph.locator('.edge-badge text')).toHaveText(['5', '5'])
   const link = graph.getByRole('button', { name: 'Api to Database, 5 interactions' })
   await expect(link.locator('> title')).toHaveText(
-    ['Api to Database, 5 interactions:', 'insert 1 · sync', 'insert 4 · sync', 'insert 7 · sync', 'insert 10 · sync', 'insert 13 · sync'].join('\n'),
+    [
+      'Api to Database, 5 interactions:',
+      'insert 1 · sync',
+      'insert 4 · sync',
+      'insert 7 · sync',
+      'insert 10 · sync',
+      'insert 13 · sync',
+    ].join('\n'),
   )
   await link.locator('.edge-hit').click({ force: true })
   const list = graph.locator('.component-links')
@@ -122,7 +129,9 @@ test('component links have no captions, count their messages, and list them on h
   expect(violations, formatViolations(violations)).toEqual([])
 })
 
-test('axe with metrics in the side panel, and Escape or Close returns focus to the Metrics button', async ({ page }) => {
+test('axe with metrics in the side panel, and Escape or Close returns focus to the Metrics button', async ({
+  page,
+}) => {
   for (const theme of THEMES) {
     await openFixture(page, theme)
     // Metrics live in the side panel only, not in the scenario cards.
@@ -167,7 +176,13 @@ test('print shows metrics only while the Metrics view is open, in its scenario',
   const fit = await printed.evaluate((el) => {
     const box = el.getBoundingClientRect()
     const body = el.closest('.scenario-body')!.getBoundingClientRect()
-    return { left: box.left, right: box.right, bodyLeft: body.left, bodyRight: body.right, clipped: el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1 }
+    return {
+      left: box.left,
+      right: box.right,
+      bodyLeft: body.left,
+      bodyRight: body.right,
+      clipped: el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1,
+    }
   })
   expect(fit.left).toBeGreaterThanOrEqual(fit.bodyLeft)
   expect(fit.right).toBeLessThanOrEqual(fit.bodyRight)
@@ -239,7 +254,9 @@ async function endPrint(page: Page): Promise<void> {
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
 }
 
-test('print leaves out the scenario list and toolbars, prints nothing from a closed panel, and draws diagrams at page width', async ({ page }) => {
+test('print leaves out the scenario list and toolbars, prints nothing from a closed panel, and draws diagrams at page width', async ({
+  page,
+}) => {
   await openReport(page, uxFixture)
   await startPrint(page)
   for (const chrome of ['.topbar', '.sidebar', '.seq-toolbar', '.seq-minimap', '#inspector']) {
@@ -251,7 +268,9 @@ test('print leaves out the scenario list and toolbars, prints nothing from a clo
   await expect(page.locator('.seq-window .msg-label')).toHaveCount(14)
   const fit = await page.evaluate(() => {
     const scroll = document.querySelector<HTMLElement>('.seq-scroll')!
-    const max = parseFloat(getComputedStyle(document.querySelector('.seq-diagram')!).getPropertyValue('--seq-print-max'))
+    const max = parseFloat(
+      getComputedStyle(document.querySelector('.seq-diagram')!).getPropertyValue('--seq-print-max'),
+    )
     const body = document.querySelector('.seq-window .seq-svg')!.getBoundingClientRect()
     const head = document.querySelector('.seq-header-svg')!.getBoundingClientRect()
     return { room: scroll.clientWidth, max, body: body.width, head: head.width }
@@ -324,7 +343,12 @@ test('print shows the open component diagram whole, at page width, after the seq
     const box = el.getBoundingClientRect()
     const drawing = svg.getBoundingClientRect()
     const style = getComputedStyle(el)
-    const room = box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth)
+    const room =
+      box.width -
+      parseFloat(style.paddingLeft) -
+      parseFloat(style.paddingRight) -
+      parseFloat(style.borderLeftWidth) -
+      parseFloat(style.borderRightWidth)
     const max = parseFloat(style.getPropertyValue('--print-components-max'))
     return {
       afterDiagram: el.previousElementSibling?.classList.contains('diagram-panel') ?? false,
@@ -366,7 +390,10 @@ const shortReport: Report = {
 
 // Headless Chromium hides scrollbars by default, which hides this bug, so this
 // test launches its own browser with them shown.
-test('Fit leaves no horizontal overflow when zooming in adds the vertical scrollbar', async ({ playwright, baseURL }) => {
+test('Fit leaves no horizontal overflow when zooming in adds the vertical scrollbar', async ({
+  playwright,
+  baseURL,
+}) => {
   const browser = await playwright.chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] })
   try {
     const page = await browser.newPage({ viewport: { width: 860, height: 700 }, baseURL })
@@ -377,10 +404,15 @@ test('Fit leaves no horizontal overflow when zooming in adds the vertical scroll
     await page.goto('/')
     // Styled scrollbars are classic (they take layout space) on every platform,
     // like a desktop browser with a mouse attached.
-    await page.addStyleTag({ content: '::-webkit-scrollbar { width: 15px; height: 15px; } ::-webkit-scrollbar-thumb { background: #888; }' })
+    await page.addStyleTag({
+      content: '::-webkit-scrollbar { width: 15px; height: 15px; } ::-webkit-scrollbar-thumb { background: #888; }',
+    })
     await expect(page.locator('.seq-svg')).toBeVisible()
     const scroll = page.locator('.seq-scroll')
-    const before = await scroll.evaluate((el: HTMLElement) => ({ tall: el.scrollHeight > el.clientHeight, bar: el.offsetWidth - el.clientWidth }))
+    const before = await scroll.evaluate((el: HTMLElement) => ({
+      tall: el.scrollHeight > el.clientHeight,
+      bar: el.offsetWidth - el.clientWidth,
+    }))
     expect(before.tall, 'the short scenario starts without a vertical scrollbar').toBe(false)
     await page.getByRole('button', { name: 'Fit to screen' }).click()
     const after = await scroll.evaluate((el: HTMLElement) => ({
@@ -396,7 +428,9 @@ test('Fit leaves no horizontal overflow when zooming in adds the vertical scroll
   }
 })
 
-test('main content fills the width the sidebar leaves, and the side panel takes its column when open', async ({ page }) => {
+test('main content fills the width the sidebar leaves, and the side panel takes its column when open', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1600, height: 900 })
   await openFixture(page, 'dark')
   const widths = () =>
@@ -405,7 +439,15 @@ test('main content fills the width the sidebar leaves, and the side panel takes 
       const main = w('#main')!
       const sidebar = w('.sidebar')!
       const inspector = document.querySelector<HTMLElement>('#inspector')!.hidden ? null : w('#inspector')
-      return { viewport: document.documentElement.clientWidth, main: main.width, mainLeft: main.left, mainRight: main.right, sidebar: sidebar.width, inspectorLeft: inspector?.left ?? null, inspector: inspector?.width ?? 0 }
+      return {
+        viewport: document.documentElement.clientWidth,
+        main: main.width,
+        mainLeft: main.left,
+        mainRight: main.right,
+        sidebar: sidebar.width,
+        inspectorLeft: inspector?.left ?? null,
+        inspector: inspector?.width ?? 0,
+      }
     })
   const closed = await widths()
   expect(closed.mainLeft).toBeCloseTo(closed.sidebar, 0)
@@ -488,7 +530,10 @@ test('the narrow layout has no sidebar toggle', async ({ page }) => {
   await expect(page.locator('#btn-sidebar')).toBeHidden()
 })
 
-test('on a phone the sticky top bar holds its search and status filters while the page scrolls', async ({ browser, baseURL }) => {
+test('on a phone the sticky top bar holds its search and status filters while the page scrolls', async ({
+  browser,
+  baseURL,
+}) => {
   // iPhone 13 size, as a touch device. The bar wraps onto three rows there. A fixed grid row
   // used to clamp it to one, and the search box and chips floated over the page on scroll.
   const context = await browser.newContext({
@@ -537,7 +582,9 @@ test('on a phone the sticky top bar holds its search and status filters while th
     // A jump to a scenario stops below the taller bar, not under it.
     await page.locator('#scenario-nav button').first().click()
     await expect
-      .poll(() => page.evaluate(() => Math.round(document.querySelector('.scenario-card')!.getBoundingClientRect().top)))
+      .poll(() =>
+        page.evaluate(() => Math.round(document.querySelector('.scenario-card')!.getBoundingClientRect().top)),
+      )
       .toBeGreaterThanOrEqual(Math.floor(scrolled.barBottom))
   } finally {
     await context.close()
@@ -643,7 +690,12 @@ const longNamesReport: Report = {
         { id: 'db', name: 'Database', alias: 'Orders DB (PostgreSQL primary)', type: 'DATABASE' },
         { id: 'bus', name: 'Queue', alias: 'Kafka topic order-events.v2', type: 'QUEUE' },
         { id: 'basket', name: 'Basket', alias: 'Shopping Basket Aggregate', type: 'ENTITY' },
-        { id: 'svc', name: 'Svc', alias: 'Customer Notification Preferences and Delivery Orchestration Service', type: 'PARTICIPANT' },
+        {
+          id: 'svc',
+          name: 'Svc',
+          alias: 'Customer Notification Preferences and Delivery Orchestration Service',
+          type: 'PARTICIPANT',
+        },
         { id: 'stock', name: 'Inventory Service', type: 'PARTICIPANT' },
       ],
     },
@@ -666,7 +718,7 @@ test('long participant names stay inside their shapes and clear of their neighbo
     [...document.querySelectorAll<SVGGElement>('.seq-header-svg .participant-box')].map((g) => {
       const label = g.querySelector<SVGTextElement>('.participant-label')!.getBBox()
       const shape = g.querySelector<SVGGraphicsElement>('.participant-shape, .participant-actor')!.getBBox()
-      const header = (g.ownerSVGElement!.viewBox.baseVal)
+      const header = g.ownerSVGElement!.viewBox.baseVal
       const x = Number(/translate\(([-\d.]+)/.exec(g.getAttribute('transform')!)![1])
       return {
         id: g.dataset.participant!,
@@ -700,13 +752,20 @@ test('long participant names stay inside their shapes and clear of their neighbo
   const svc = boxes.find((box) => box.id === 'svc')!
   expect(svc.lines).toBe(2)
   expect(svc.title).toBe('Customer Notification Preferences and Delivery Orchestration Service, component')
-  await expect(page.locator('.seq-header-svg')).toHaveAttribute('aria-label', /Customer Notification Preferences and Delivery Orchestration Service/)
+  await expect(page.locator('.seq-header-svg')).toHaveAttribute(
+    'aria-label',
+    /Customer Notification Preferences and Delivery Orchestration Service/,
+  )
   expect(boxes.find((box) => box.id === 'stock')!.lines).toBe(1)
 })
 
 /** Two scenarios too wide for the panel at 100%: twelve lifelines, a chain of 30 calls. */
 function wideScenario(id: string, title: string): Scenario {
-  const participants = Array.from({ length: 12 }, (_, i): Participant => ({ id: `p${i}`, name: `Service ${i}`, type: 'PARTICIPANT' }))
+  const participants = Array.from({ length: 12 }, (_, i): Participant => ({
+    id: `p${i}`,
+    name: `Service ${i}`,
+    type: 'PARTICIPANT',
+  }))
   const events = Array.from({ length: 30 }, (_, i): MessageEvent => ({
     kind: 'message',
     id: `m${i}`,
@@ -718,7 +777,10 @@ function wideScenario(id: string, title: string): Scenario {
   }))
   return { ...uxFixture.scenarios[0], id, title, insights: undefined, participants, events }
 }
-const wideReport: Report = { ...uxFixture, scenarios: [wideScenario('wide-a', 'Wide A'), wideScenario('wide-b', 'Wide B')] }
+const wideReport: Report = {
+  ...uxFixture,
+  scenarios: [wideScenario('wide-a', 'Wide A'), wideScenario('wide-b', 'Wide B')],
+}
 
 async function openWide(page: Page, hash = ''): Promise<void> {
   await page.addInitScript((report) => {
@@ -791,7 +853,12 @@ test('a deep link to a message in a collapsed, fitted diagram scrolls to it and 
     const header = scroll.querySelector<HTMLElement>('.seq-sticky-header')!
     const btn = scroll.querySelector<HTMLElement>('button.msg-open[data-message-id="m25"]')!
     const b = btn.getBoundingClientRect()
-    return { top: b.top, bottom: b.bottom, visibleTop: header.getBoundingClientRect().bottom, visibleBottom: scroll.getBoundingClientRect().bottom }
+    return {
+      top: b.top,
+      bottom: b.bottom,
+      visibleTop: header.getBoundingClientRect().bottom,
+      visibleBottom: scroll.getBoundingClientRect().bottom,
+    }
   })
   expect(placed.top).toBeGreaterThanOrEqual(placed.visibleTop - 1)
   expect(placed.bottom).toBeLessThanOrEqual(placed.visibleBottom + 1)

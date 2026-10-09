@@ -286,7 +286,6 @@ function xFor(i: number, index?: Map<string, number>): number {
   return (index ? laneXs.get(index)?.[i] : undefined) ?? LEFT_PAD + i * COL_GAP
 }
 
-
 /** Diagonal hatch so a coloured activation is not colour-only (colour blindness). */
 export const ACTIVATION_HATCH =
   '<pattern id="act-tint-hatch" patternUnits="userSpaceOnUse" width="6" height="6"><path d="M0 6 L6 0" fill="none" stroke="#111" stroke-width="1.2"/></pattern>'
@@ -435,7 +434,11 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
 }
 
 /** Header geometry for a participant with its displayed name fitted. */
-export function participantHeadFor(p: { type?: string; name: string; alias?: string }): ParticipantHead & { name: FittedName } {
+export function participantHeadFor(p: {
+  type?: string
+  name: string
+  alias?: string
+}): ParticipantHead & { name: FittedName } {
   const name = fitName(p.alias ?? p.name)
   return { ...participantHead(p.type, name), name }
 }
@@ -448,9 +451,7 @@ export function participantLabelSvg(head: ParticipantHead, name: FittedName): st
   if (name.lines.length === 1) {
     return `<text class="participant-label" y="${head.labelY}" text-anchor="middle">${escapeHtml(name.lines[0])}</text>`
   }
-  const lines = name.lines
-    .map((line, i) => `<tspan x="0" y="${head.labelYs[i]}">${escapeHtml(line)}</tspan>`)
-    .join('')
+  const lines = name.lines.map((line, i) => `<tspan x="0" y="${head.labelYs[i]}">${escapeHtml(line)}</tspan>`).join('')
   return `<text class="participant-label" text-anchor="middle">${lines}</text>`
 }
 
@@ -757,9 +758,7 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   if (hadFocus) {
     const target = view.activeMessageId ?? priorId
     if (target) {
-      const btn = windowEl.querySelector<HTMLButtonElement>(
-        `button.msg-open[data-message-id="${cssEscape(target)}"]`,
-      )
+      const btn = windowEl.querySelector<HTMLButtonElement>(`button.msg-open[data-message-id="${cssEscape(target)}"]`)
       btn?.focus({ preventScroll: true })
     }
   }
@@ -884,12 +883,7 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
  * scrollbar, which changes the width there is to fit, so this settles on a width that
  * still fits once zoomed. Leaves view.zoom at the fitted scale and the frame applied.
  */
-function settleFit(
-  scrollport: HTMLElement,
-  diagram: MountedDiagram,
-  view: DiagramView,
-  maxScale?: number,
-): FittedView {
+function settleFit(scrollport: HTMLElement, diagram: MountedDiagram, view: DiagramView, maxScale?: number): FittedView {
   const contentWidth = frameOf(diagram, view.hidden).total
   const mustInclude = topMessageLabelRect(diagram, view.hidden)
   const fitAt = (viewportWidth: number) =>
@@ -982,11 +976,7 @@ function topMessageLabelRect(diagram: MountedDiagram, hiddenIds: ReadonlySet<str
   return { x: 0, y: 0, width: 1, height: 1 }
 }
 
-function messageEndpoints(
-  msg: MessageEvent,
-  index: Map<string, number>,
-  width: number,
-): { x1: number; x2: number } {
+function messageEndpoints(msg: MessageEvent, index: Map<string, number>, width: number): { x1: number; x2: number } {
   if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
     const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
     const px = xFor(index.get(participantId) ?? 0, index)
@@ -1084,9 +1074,7 @@ function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlyS
       </g>`
     })
     .join('')
-  const summary = visible
-    .map((p) => `${p.alias ?? p.name} ${participantHead(p.type).typeLabel}`)
-    .join(', ')
+  const summary = visible.map((p) => `${p.alias ?? p.name} ${participantHead(p.type).typeLabel}`).join(', ')
   const dispW = width * zoom
   const dispH = HEADER_BLOCK_H * zoom
   return `<svg class="seq-header-svg" viewBox="${-frame.left} 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants: ${escapeAttr(summary)}">${boxes}</svg>`
@@ -1150,7 +1138,9 @@ function windowSvg(
   }
   const buttons: string[] = []
   const body = slice
-    .map((row) => renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth, paint, buttons, viewTop, view.zoom))
+    .map((row) =>
+      renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth, paint, buttons, viewTop, view.zoom),
+    )
     .join('')
   const dispW = frame.total * view.zoom
   const dispH = height * view.zoom
@@ -1287,7 +1277,6 @@ function renderRow(
   )
 }
 
-
 function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
   const full = escapeHtml(msg.label)
   const shown = escapeHtml(truncateLabel(msg.label, labelMaxWidth))
@@ -1311,10 +1300,7 @@ function renderMessageRow(
   const spec = messageArrowSpec(msg.type)
   const match = rowMatchesQuery(msg, query)
   const rawColour =
-    msg.colour ||
-    (msg.type === 'SYNCHRONOUS_RESPONSE'
-      ? '#94a3b8'
-      : colourOf.get(msg.from || msg.to) || '#34d399')
+    msg.colour || (msg.type === 'SYNCHRONOUS_RESPONSE' ? '#94a3b8' : colourOf.get(msg.from || msg.to) || '#34d399')
   const endId = ensureMarker(rawColour, spec.end)
   const startId = ensureMarker(rawColour, spec.start)
   const colour = escapeAttr(rawColour)
@@ -1323,9 +1309,7 @@ function renderMessageRow(
   const markerStart = startId ? `marker-start="url(#${escapeAttr(startId)})"` : ''
   const hasData = messageHasPayload(msg)
   const dur = msg.durationMs != null ? `<tspan class="msg-dur"> · ${escapeHtml(msg.durationMs)}ms</tspan>` : ''
-  const cue = spec.typeCue
-    ? `<tspan class="msg-type-cue"> [${escapeHtml(spec.typeCue)}]</tspan>`
-    : ''
+  const cue = spec.typeCue ? `<tspan class="msg-type-cue"> [${escapeHtml(spec.typeCue)}]</tspan>` : ''
   const matchCue = match ? `<tspan class="msg-match-cue"> [match]</tspan>` : ''
   const hitClass = match ? ' search-hit' : ''
   const hitAttr = match ? ' data-search-hit="match"' : ''
@@ -1363,7 +1347,15 @@ function renderMessageRow(
     // A bar opened by this call starts at the return, one level deeper, so the
     // arrowhead lands on its edge.
     const out = x1 + ACT_W + nest(msg.from, y)
-    const back = x1 + ACT_W + Math.max(activationDepthAt(paint.activations ?? [], msg.from, y + SELF_RETURN_DY) - 1, activationDepthAt(paint.activations ?? [], msg.from, y), 0) * ACT_NEST_DX
+    const back =
+      x1 +
+      ACT_W +
+      Math.max(
+        activationDepthAt(paint.activations ?? [], msg.from, y + SELF_RETURN_DY) - 1,
+        activationDepthAt(paint.activations ?? [], msg.from, y),
+        0,
+      ) *
+        ACT_NEST_DX
     const bend = Math.max(out, back) + 48 - ACT_W
     return `
     <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
@@ -1550,12 +1542,12 @@ function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-
 function paintedMessageIds(slice: LayoutRow[], hiddenIds: ReadonlySet<string>): Set<string> {
   const ids = new Set<string>()
   for (const row of slice) {
     const event = row.event
-    if (event.kind === 'message' && messageHasPayload(event) && !eventHiddenByColumns(event, hiddenIds)) ids.add(event.id)
+    if (event.kind === 'message' && messageHasPayload(event) && !eventHiddenByColumns(event, hiddenIds))
+      ids.add(event.id)
   }
   return ids
 }
@@ -1589,9 +1581,7 @@ export function focusDiagramMessage(scrollport: HTMLElement, messageId: string):
   } finally {
     movingFocus = false
   }
-  const btn = scrollport.querySelector<HTMLButtonElement>(
-    `button.msg-open[data-message-id="${cssEscape(messageId)}"]`,
-  )
+  const btn = scrollport.querySelector<HTMLButtonElement>(`button.msg-open[data-message-id="${cssEscape(messageId)}"]`)
   btn?.focus({ preventScroll: true })
 }
 

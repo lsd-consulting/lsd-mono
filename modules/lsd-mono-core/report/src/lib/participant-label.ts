@@ -42,8 +42,14 @@ export interface FittedName {
 function glyphWidth(code: number): number {
   if (code >= 32 && code <= 126) return ASCII_W[code - 32]
   if (code === 0x2026) return 9
-  if ((code >= 0x1100 && code <= 0x115f) || (code >= 0x2e80 && code <= 0xa4cf) || (code >= 0xac00 && code <= 0xd7a3)
-    || (code >= 0xf900 && code <= 0xfaff) || (code >= 0xff00 && code <= 0xff60) || code >= 0x1f000) {
+  if (
+    (code >= 0x1100 && code <= 0x115f) ||
+    (code >= 0x2e80 && code <= 0xa4cf) ||
+    (code >= 0xac00 && code <= 0xd7a3) ||
+    (code >= 0xf900 && code <= 0xfaff) ||
+    (code >= 0xff00 && code <= 0xff60) ||
+    code >= 0x1f000
+  ) {
     return WIDE_W
   }
   return OTHER_W

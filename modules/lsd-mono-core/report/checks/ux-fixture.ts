@@ -58,7 +58,16 @@ export const uxFixture: Report = {
         // An opaque note over a lifeline, between arrows, for the theme screenshots
         // and the note contrast check.
         i === 2
-          ? [event, { kind: 'note', id: 'n-ux', text: 'Card is charged before the order row is written', over: 'api', placement: 'over' }]
+          ? [
+              event,
+              {
+                kind: 'note',
+                id: 'n-ux',
+                text: 'Card is charged before the order row is written',
+                over: 'api',
+                placement: 'over',
+              },
+            ]
           : [event],
       ),
     },

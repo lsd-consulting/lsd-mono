@@ -140,7 +140,14 @@ export function focusableNeighbors(
   rows: { y: number; event: DiagramEvent }[],
   hiddenIds: ReadonlySet<string>,
 ): Map<string, { prevArrowY?: number; nextArrowY?: number }> {
-  const focusable = new Set(focusablePlaces(messagePlaces(rows.map((row) => row.event), hiddenIds)).map((place) => place.id))
+  const focusable = new Set(
+    focusablePlaces(
+      messagePlaces(
+        rows.map((row) => row.event),
+        hiddenIds,
+      ),
+    ).map((place) => place.id),
+  )
   const arrows = rows.filter((row) => row.event.kind === 'message' && focusable.has(row.event.id))
   const neighbors = new Map<string, { prevArrowY?: number; nextArrowY?: number }>()
   arrows.forEach((row, index) => {
@@ -237,11 +244,7 @@ export function zoomScrollBehavior(prefersReducedMotion: boolean): 'auto' | 'smo
  * Find is the equivalent path for an undersized arrow: Enter on a query opens
  * the first drawn match that has a payload, the same inspector as a click.
  */
-export function findOpensMessage(
-  events: DiagramEvent[],
-  query: string,
-  hiddenIds: ReadonlySet<string>,
-): string | null {
+export function findOpensMessage(events: DiagramEvent[], query: string, hiddenIds: ReadonlySet<string>): string | null {
   const q = query.trim().toLowerCase()
   if (!q) return null
   for (const event of events) {

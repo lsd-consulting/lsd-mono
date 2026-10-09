@@ -66,9 +66,7 @@ describe('scenarioDescriptionHtml', () => {
   })
 
   it('omits the stack button when there is no stack', () => {
-    const html = scenarioDescriptionHtml(
-      scenario({ error: { headline: 'Failed', message: 'nope' } }),
-    )
+    const html = scenarioDescriptionHtml(scenario({ error: { headline: 'Failed', message: 'nope' } }))
     expect(html).toContain('nope')
     expect(html).not.toContain('data-show-error')
   })
@@ -76,9 +74,7 @@ describe('scenarioDescriptionHtml', () => {
 
 describe('scenarioHaystack', () => {
   it('includes the failure message so search can find it', () => {
-    const hay = scenarioHaystack(
-      scenario({ error: { headline: 'Failed', message: 'inventory timeout' } }),
-    )
+    const hay = scenarioHaystack(scenario({ error: { headline: 'Failed', message: 'inventory timeout' } }))
     expect(hay).toContain('inventory timeout')
     expect(hay).toContain('Failed')
   })

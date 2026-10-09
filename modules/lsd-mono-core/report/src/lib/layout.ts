@@ -264,9 +264,7 @@ export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
   let lastDrawn: LayoutRow | undefined
   for (let index = 0; index < ordered.length; index++) {
     const event = ordered[index]
-    const height = event.kind === 'section'
-      ? sectionRowHeight(nextDrawnEvent(ordered, index))
-      : eventRowHeight(event)
+    const height = event.kind === 'section' ? sectionRowHeight(nextDrawnEvent(ordered, index)) : eventRowHeight(event)
     if (event.kind === 'note' && lastDrawn) {
       const above = paintedBottom(lastDrawn)
       if (above != null) {

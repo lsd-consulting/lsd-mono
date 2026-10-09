@@ -1,0 +1,12 @@
+# Build output and tool reports
+dist/
+coverage/
+test-results/
+playwright-report/
+# Generated or binary-adjacent
+package-lock.json
+checks/snapshots/
+public/
+# Whitespace in markup can be significant; prose is edited by hand
+*.html
+*.md

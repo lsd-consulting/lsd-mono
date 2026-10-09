@@ -138,19 +138,13 @@ export function unscaledViewport(input: ZoomViewport & { zoom: number }): ZoomVi
   }
 }
 
-export function visibleParticipants(
-  participants: Participant[],
-  hiddenIds: ReadonlySet<string>,
-): Participant[] {
+export function visibleParticipants(participants: Participant[], hiddenIds: ReadonlySet<string>): Participant[] {
   if (hiddenIds.size === 0) return participants.slice()
   return participants.filter((p) => !hiddenIds.has(p.id))
 }
 
 /** Column order after hiding. Preserves the original participant order. */
-export function visibleColumnIds(
-  participants: Participant[],
-  hiddenIds: ReadonlySet<string>,
-): string[] {
+export function visibleColumnIds(participants: Participant[], hiddenIds: ReadonlySet<string>): string[] {
   return visibleParticipants(participants, hiddenIds).map((p) => p.id)
 }
 

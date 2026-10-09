@@ -14,6 +14,16 @@ npm ci
 npm test
 ```
 
+`npm test` runs Vitest with v8 coverage and fails below the thresholds in `vitest.config.ts`; the HTML report is in `../build/reports/coverage/report-ui/`. Before you push:
+
+```bash
+npm run typecheck   # tsc on the app (tsconfig.json), then on the tests, checks and configs (tsconfig.test.json)
+npm run lint        # ESLint, then prettier --check
+npm run format      # prettier --write
+```
+
+Markup is built from strings, so ESLint's `lsd/escaped-markup` rule (`lint/eslint-plugin-lsd.js`) requires every value interpolated into markup, `innerHTML` or `insertAdjacentHTML` to go through `src/lib/escape.ts`, be markup by name (`*Html`, `*Svg`), or be proven safe by its type (a number, or a string literal union such as `Status`). Escaping entities and markup-character replacements are rejected outside `escape.ts`.
+
 Axe and screenshot checks are separate from vitest (Playwright downloads nothing extra when the 1.55 Chromium cache is already present):
 
 ```bash
@@ -21,7 +31,7 @@ cd modules/lsd-mono-core/report
 npm run check:ux
 ```
 
-Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`. `npm run check:ux` stays manual, because its baselines are macOS screenshots and Linux CI renders fonts differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%. It refits when the panel width changes until you zoom in or out; Fit fills the width and turns refitting back on. Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
+Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` stays manual, because its baselines are macOS screenshots and Linux CI renders fonts differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%. It refits when the panel width changes until you zoom in or out; Fit fills the width and turns refitting back on. Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
 
 ## Open the demo
 

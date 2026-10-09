@@ -34,7 +34,10 @@ tester.run('lsd/escaped-markup', escapedMarkup, {
     { code: 'const a = (t: string) => `x ${t} class="${t}"`', errors: [unescaped, unescaped] },
     { code: 'const a = (t: string) => "<p>" + t + "</p>"', errors: [unescaped] },
     { code: 'const a = (el: HTMLElement, t: string) => { el.innerHTML = t }', errors: [unescaped] },
-    { code: 'const a = (el: HTMLElement, t: string) => { el.insertAdjacentHTML("beforeend", t) }', errors: [unescaped] },
+    {
+      code: 'const a = (el: HTMLElement, t: string) => { el.insertAdjacentHTML("beforeend", t) }',
+      errors: [unescaped],
+    },
     { code: 'const a = (xs: string[]) => `<ul>${xs.map((x) => x).join("")}</ul>`', errors: [unescaped] },
     { code: 'const a = (t: string) => { let s = escapeHtml(t); s = t; return `<p>${s}</p>` }', errors: [unescaped] },
     { code: 'const a = (on: boolean, t: string) => `<b>${on ? escapeHtml(t) : t}</b>`', errors: [unescaped] },

@@ -78,7 +78,9 @@ describe('renderComponentDiagram', () => {
 
   it('makes each link a focusable button with a wide hit area', () => {
     const { svg } = renderComponentDiagram(checkout, 'Checkout')
-    expect(svg).toContain('data-edge-index="1" data-edge-from="api" data-edge-to="db" tabindex="0" role="button" aria-label="CheckoutAPI to OrdersDB, 2 interactions"')
+    expect(svg).toContain(
+      'data-edge-index="1" data-edge-from="api" data-edge-to="db" tabindex="0" role="button" aria-label="CheckoutAPI to OrdersDB, 2 interactions"',
+    )
     expect(svg.match(/class="edge-hit"/g)).toHaveLength(3)
   })
 
@@ -102,7 +104,10 @@ describe('renderComponentDiagram', () => {
     ])
     expect(at).toHaveLength(2)
     expect(Math.hypot(at[0][0] - at[1][0], at[0][1] - at[1][1])).toBeGreaterThan(20)
-    const [vx, vy, vw, vh] = svg.match(/viewBox="([^"]+)"/)![1].split(' ').map(Number)
+    const [vx, vy, vw, vh] = svg
+      .match(/viewBox="([^"]+)"/)![1]
+      .split(' ')
+      .map(Number)
     for (const [x, y] of at) {
       expect(x).toBeGreaterThan(vx)
       expect(x).toBeLessThan(vx + vw)

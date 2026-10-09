@@ -119,9 +119,11 @@ describe('zoom steps', () => {
 
 describe('unscaledViewport', () => {
   it('divides scroll, viewport, and sticky header by zoom', () => {
-    expect(
-      unscaledViewport({ scrollTop: 100, viewportHeight: 200, headerHeight: 40, zoom: 2 }),
-    ).toEqual({ scrollTop: 50, viewportHeight: 100, headerHeight: 20 })
+    expect(unscaledViewport({ scrollTop: 100, viewportHeight: 200, headerHeight: 40, zoom: 2 })).toEqual({
+      scrollTop: 50,
+      viewportHeight: 100,
+      headerHeight: 20,
+    })
   })
 })
 

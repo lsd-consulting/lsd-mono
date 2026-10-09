@@ -19,7 +19,15 @@ import {
 } from './diagram-a11y'
 
 const events: DiagramEvent[] = [
-  { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS', data: { method: 'POST' } },
+  {
+    kind: 'message',
+    id: 'm1',
+    from: 'a',
+    to: 'b',
+    label: 'place order',
+    type: 'SYNCHRONOUS',
+    data: { method: 'POST' },
+  },
   { kind: 'note', id: 'n1', text: 'wait', placement: 'over' },
   { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'ack', type: 'SYNCHRONOUS_RESPONSE' },
   { kind: 'message', id: 'm3', from: 'a', to: 'b', label: 'charge', type: 'SYNCHRONOUS', data: { path: '/pay' } },

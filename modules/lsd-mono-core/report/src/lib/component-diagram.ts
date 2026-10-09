@@ -366,4 +366,3 @@ function fmt(n: number): string {
   const rounded = Math.round(n * 10) / 10
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
 }
-

@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  clearMessageHash,
-  isMessageHash,
-  messageHash,
-  parseMessageHash,
-  writeMessageHash,
-} from './message-url'
+import { clearMessageHash, isMessageHash, messageHash, parseMessageHash, writeMessageHash } from './message-url'
 
 describe('messageHash / parseMessageHash', () => {
   it('round-trips a scenario and message id', () => {
@@ -52,7 +46,12 @@ describe('writeMessageHash / clearMessageHash', () => {
   })
 
   it('leaves a non-message hash alone when clearing', () => {
-    const loc = { hash: '#section=pay', replace(url: string) { this.hash = url } }
+    const loc = {
+      hash: '#section=pay',
+      replace(url: string) {
+        this.hash = url
+      },
+    }
     clearMessageHash(loc)
     expect(loc.hash).toBe('#section=pay')
   })

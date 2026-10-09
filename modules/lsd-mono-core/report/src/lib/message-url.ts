@@ -20,7 +20,9 @@ export function messageHash(scenarioId: string, messageId: string): string {
 
 /** encodeURIComponent throws on a lone surrogate; such an id gets U+FFFD in its place. */
 function encodeId(id: string): string {
-  return encodeURIComponent(id.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD'))
+  return encodeURIComponent(
+    id.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD'),
+  )
 }
 
 /**

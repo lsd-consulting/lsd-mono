@@ -1,4 +1,8 @@
-.seq-diagram { display: flex; flex-direction: column; gap: 8px; }
+.seq-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .seq-stage {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 14px;
@@ -87,8 +91,14 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.seq-spacer { position: relative; }
-.seq-window { position: absolute; top: 0; left: 0; }
+.seq-spacer {
+  position: relative;
+}
+.seq-window {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 .msg-open {
   position: absolute;
   z-index: 1;
@@ -166,8 +176,12 @@
   pointer-events: none;
 }
 
-.message { cursor: default; }
-.message.has-data { cursor: pointer; }
+.message {
+  cursor: default;
+}
+.message.has-data {
+  cursor: pointer;
+}
 .message .msg-hit {
   fill: transparent;
   pointer-events: none;
@@ -181,7 +195,9 @@
 .message.has-data:focus-visible .msg-label {
   fill: var(--accent-strong);
 }
-.message:focus-visible { outline: none; }
+.message:focus-visible {
+  outline: none;
+}
 .message:focus-visible .msg-hit {
   stroke: var(--accent);
   stroke-width: 1.5;
@@ -351,12 +367,21 @@
 
 /* Zoom scales the drawing. It does not reflow the sequence into one column. */
 @media (prefers-reduced-motion: reduce) {
-  .seq-scroll { scroll-behavior: auto; }
+  .seq-scroll {
+    scroll-behavior: auto;
+  }
 }
 
 @media print {
-  .seq-minimap { display: none; }
-  .seq-stage { display: block; overflow: visible; max-height: none; height: auto; }
+  .seq-minimap {
+    display: none;
+  }
+  .seq-stage {
+    display: block;
+    overflow: visible;
+    max-height: none;
+    height: auto;
+  }
   /* Full page width: the header and the whole drawing (every row is painted for
      print) scale with their viewBox. Small diagrams grow at most 1.5x
      (--seq-print-max, set from the drawing width). Arrow hit targets are screen only. */
@@ -366,8 +391,16 @@
     max-width: var(--seq-print-max, 100%);
     height: auto !important;
   }
-  .seq-window { position: static; transform: none !important; }
+  .seq-window {
+    position: static;
+    transform: none !important;
+  }
   .seq-header-svg,
-  .seq-svg { width: 100%; height: auto; }
-  .msg-places { display: none; }
+  .seq-svg {
+    width: 100%;
+    height: auto;
+  }
+  .msg-places {
+    display: none;
+  }
 }

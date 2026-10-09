@@ -34,7 +34,11 @@ describe('nameWidth', () => {
 
 describe('fitName', () => {
   it('keeps a name that fits on one line, as written', () => {
-    expect(fitName('Order  Service ')).toEqual({ lines: ['Order Service'], width: nameWidth('Order Service'), truncated: false })
+    expect(fitName('Order  Service ')).toEqual({
+      lines: ['Order Service'],
+      width: nameWidth('Order Service'),
+      truncated: false,
+    })
   })
 
   it('wraps a longer name at a space onto two lines, each within the limit', () => {
@@ -67,7 +71,8 @@ describe('fitName', () => {
 
 describe('participantHead with a fitted name', () => {
   it('draws short names exactly as before', () => {
-    for (const type of TYPES) expect(participantHead(type, fitName('Api')).shapeSvg).toBe(participantHead(type).shapeSvg)
+    for (const type of TYPES)
+      expect(participantHead(type, fitName('Api')).shapeSvg).toBe(participantHead(type).shapeSvg)
   })
 
   it.each(['PARTICIPANT', 'DATABASE', 'QUEUE'] as const)('grows the %s shape to hold the name inside it', (type) => {

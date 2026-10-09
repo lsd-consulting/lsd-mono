@@ -2,561 +2,564 @@ import type { Report } from '../types'
 
 /** Demo report. Method, path, and status stay here. JSON bodies load from sample-payloads.ts when the inspector opens. */
 export const sampleReport = {
-  "title": "Checkout Service — Living Sequence Diagrams",
-  "generatedAt": "2026-09-30T07:42:11+01:00",
-  "generator": "lsd-mono-core 0.0.1-SNAPSHOT",
-  "scenarios": [
+  title: 'Checkout Service — Living Sequence Diagrams',
+  generatedAt: '2026-09-30T07:42:11+01:00',
+  generator: 'lsd-mono-core 0.0.1-SNAPSHOT',
+  scenarios: [
     {
-      "id": "sc-happy",
-      "title": "Given a valid cart When checkout completes Then order is confirmed",
-      "status": "success",
-      "description": "<p><mark>Given</mark> a customer with a valid cart and payment method<br/><mark>When</mark> they submit checkout<br/><mark>Then</mark> the order is reserved, payment captured, and confirmation published.</p>",
-      "facts": [
+      id: 'sc-happy',
+      title: 'Given a valid cart When checkout completes Then order is confirmed',
+      status: 'success',
+      description:
+        '<p><mark>Given</mark> a customer with a valid cart and payment method<br/><mark>When</mark> they submit checkout<br/><mark>Then</mark> the order is reserved, payment captured, and confirmation published.</p>',
+      facts: [
         {
-          "key": "orderId",
-          "value": "ord_9f2a1c"
+          key: 'orderId',
+          value: 'ord_9f2a1c',
         },
         {
-          "key": "customerId",
-          "value": "cus_42"
+          key: 'customerId',
+          value: 'cus_42',
         },
         {
-          "key": "amount",
-          "value": "GBP 48.50"
-        }
+          key: 'amount',
+          value: 'GBP 48.50',
+        },
       ],
-      "metrics": [
+      metrics: [
         {
-          "key": "Total duration",
-          "value": "184 ms"
+          key: 'Total duration',
+          value: '184 ms',
         },
         {
-          "key": "Messages",
-          "value": "7"
+          key: 'Messages',
+          value: '7',
         },
         {
-          "key": "Slowest hop",
-          "value": "PaymentCapture 62 ms [show]"
-        }
+          key: 'Slowest hop',
+          value: 'PaymentCapture 62 ms [show]',
+        },
       ],
-      "participants": [
+      participants: [
         {
-          "id": "customer",
-          "name": "Customer",
-          "type": "ACTOR",
-          "colour": "#38bdf8"
+          id: 'customer',
+          name: 'Customer',
+          type: 'ACTOR',
+          colour: '#38bdf8',
         },
         {
-          "id": "api",
-          "name": "CheckoutAPI",
-          "type": "PARTICIPANT",
-          "colour": "#34d399"
+          id: 'api',
+          name: 'CheckoutAPI',
+          type: 'PARTICIPANT',
+          colour: '#34d399',
         },
         {
-          "id": "orders",
-          "name": "OrderService",
-          "type": "PARTICIPANT",
-          "colour": "#a78bfa"
+          id: 'orders',
+          name: 'OrderService',
+          type: 'PARTICIPANT',
+          colour: '#a78bfa',
         },
         {
-          "id": "payments",
-          "name": "PaymentGateway",
-          "type": "BOUNDARY",
-          "colour": "#fbbf24"
+          id: 'payments',
+          name: 'PaymentGateway',
+          type: 'BOUNDARY',
+          colour: '#fbbf24',
         },
         {
-          "id": "db",
-          "name": "OrdersDB",
-          "type": "DATABASE",
-          "colour": "#94a3b8"
+          id: 'db',
+          name: 'OrdersDB',
+          type: 'DATABASE',
+          colour: '#94a3b8',
         },
         {
-          "id": "bus",
-          "name": "EventBus",
-          "type": "QUEUE",
-          "colour": "#fb7185"
-        }
+          id: 'bus',
+          name: 'EventBus',
+          type: 'QUEUE',
+          colour: '#fb7185',
+        },
       ],
-      "events": [
+      events: [
         {
-          "kind": "section",
-          "id": "sec-reserve",
-          "title": "Reserve order"
+          kind: 'section',
+          id: 'sec-reserve',
+          title: 'Reserve order',
         },
         {
-          "kind": "activate",
-          "id": "a1",
-          "participantId": "api"
+          kind: 'activate',
+          id: 'a1',
+          participantId: 'api',
         },
         {
-          "kind": "message",
-          "id": "m1",
-          "from": "customer",
-          "to": "api",
-          "label": "POST /checkout",
-          "type": "SYNCHRONOUS",
-          "data": {
-            "method": "POST",
-            "path": "/checkout",
-            "status": 202
+          kind: 'message',
+          id: 'm1',
+          from: 'customer',
+          to: 'api',
+          label: 'POST /checkout',
+          type: 'SYNCHRONOUS',
+          data: {
+            method: 'POST',
+            path: '/checkout',
+            status: 202,
           },
-          "payloadId": "sc-happy/m1"
+          payloadId: 'sc-happy/m1',
         },
         {
-          "kind": "activate",
-          "id": "a2",
-          "participantId": "orders"
+          kind: 'activate',
+          id: 'a2',
+          participantId: 'orders',
         },
         {
-          "kind": "message",
-          "id": "m2",
-          "from": "api",
-          "to": "orders",
-          "label": "reserveOrder(cart_88)",
-          "type": "SYNCHRONOUS",
-          "durationMs": 28,
-          "payloadId": "sc-happy/m2"
+          kind: 'message',
+          id: 'm2',
+          from: 'api',
+          to: 'orders',
+          label: 'reserveOrder(cart_88)',
+          type: 'SYNCHRONOUS',
+          durationMs: 28,
+          payloadId: 'sc-happy/m2',
         },
         {
-          "kind": "message",
-          "id": "m3",
-          "from": "orders",
-          "to": "db",
-          "label": "INSERT orders",
-          "type": "SYNCHRONOUS",
-          "durationMs": 12,
-          "payloadId": "sc-happy/m3"
+          kind: 'message',
+          id: 'm3',
+          from: 'orders',
+          to: 'db',
+          label: 'INSERT orders',
+          type: 'SYNCHRONOUS',
+          durationMs: 12,
+          payloadId: 'sc-happy/m3',
         },
         {
-          "kind": "message",
-          "id": "m4",
-          "from": "db",
-          "to": "orders",
-          "label": "ok",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "data": {
-            "method": "POST",
-            "path": "/orders",
-            "status": 200
+          kind: 'message',
+          id: 'm4',
+          from: 'db',
+          to: 'orders',
+          label: 'ok',
+          type: 'SYNCHRONOUS_RESPONSE',
+          data: {
+            method: 'POST',
+            path: '/orders',
+            status: 200,
           },
-          "payloadId": "sc-happy/m4"
+          payloadId: 'sc-happy/m4',
         },
         {
-          "kind": "message",
-          "id": "m5",
-          "from": "orders",
-          "to": "api",
-          "label": "OrderReserved",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "data": {
-            "status": "RESERVED"
+          kind: 'message',
+          id: 'm5',
+          from: 'orders',
+          to: 'api',
+          label: 'OrderReserved',
+          type: 'SYNCHRONOUS_RESPONSE',
+          data: {
+            status: 'RESERVED',
           },
-          "payloadId": "sc-happy/m5"
+          payloadId: 'sc-happy/m5',
         },
         {
-          "kind": "deactivate",
-          "id": "d2",
-          "participantId": "orders"
+          kind: 'deactivate',
+          id: 'd2',
+          participantId: 'orders',
         },
         {
-          "kind": "section",
-          "id": "sec-pay",
-          "title": "Capture payment"
+          kind: 'section',
+          id: 'sec-pay',
+          title: 'Capture payment',
         },
         {
-          "kind": "divider",
-          "id": "div1",
-          "label": "Payment"
+          kind: 'divider',
+          id: 'div1',
+          label: 'Payment',
         },
         {
-          "kind": "activate",
-          "id": "a3",
-          "participantId": "payments"
+          kind: 'activate',
+          id: 'a3',
+          participantId: 'payments',
         },
         {
-          "kind": "message",
-          "id": "m6",
-          "from": "api",
-          "to": "payments",
-          "label": "capture(ord_9f2a1c, 4850)",
-          "type": "SYNCHRONOUS",
-          "durationMs": 62,
-          "colour": "#34d399",
-          "payloadId": "sc-happy/m6"
+          kind: 'message',
+          id: 'm6',
+          from: 'api',
+          to: 'payments',
+          label: 'capture(ord_9f2a1c, 4850)',
+          type: 'SYNCHRONOUS',
+          durationMs: 62,
+          colour: '#34d399',
+          payloadId: 'sc-happy/m6',
         },
         {
-          "kind": "message",
-          "id": "m7",
-          "from": "payments",
-          "to": "api",
-          "label": "Captured",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#34d399",
-          "data": {
-            "status": "succeeded"
+          kind: 'message',
+          id: 'm7',
+          from: 'payments',
+          to: 'api',
+          label: 'Captured',
+          type: 'SYNCHRONOUS_RESPONSE',
+          colour: '#34d399',
+          data: {
+            status: 'succeeded',
           },
-          "payloadId": "sc-happy/m7"
+          payloadId: 'sc-happy/m7',
         },
         {
-          "kind": "deactivate",
-          "id": "d3",
-          "participantId": "payments"
+          kind: 'deactivate',
+          id: 'd3',
+          participantId: 'payments',
         },
         {
-          "kind": "message",
-          "id": "m8",
-          "from": "api",
-          "to": "bus",
-          "label": "OrderConfirmed",
-          "type": "ASYNCHRONOUS",
-          "payloadId": "sc-happy/m8"
+          kind: 'message',
+          id: 'm8',
+          from: 'api',
+          to: 'bus',
+          label: 'OrderConfirmed',
+          type: 'ASYNCHRONOUS',
+          payloadId: 'sc-happy/m8',
         },
         {
-          "kind": "message",
-          "id": "m9",
-          "from": "api",
-          "to": "customer",
-          "label": "201 Created",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "data": {
-            "status": "CONFIRMED"
+          kind: 'message',
+          id: 'm9',
+          from: 'api',
+          to: 'customer',
+          label: '201 Created',
+          type: 'SYNCHRONOUS_RESPONSE',
+          data: {
+            status: 'CONFIRMED',
           },
-          "payloadId": "sc-happy/m9"
+          payloadId: 'sc-happy/m9',
         },
         {
-          "kind": "note",
-          "id": "n1",
-          "text": "Confirmation email queued by fulfilment consumer",
-          "over": "bus"
+          kind: 'note',
+          id: 'n1',
+          text: 'Confirmation email queued by fulfilment consumer',
+          over: 'bus',
         },
         {
-          "kind": "deactivate",
-          "id": "d1",
-          "participantId": "api"
-        }
-      ]
+          kind: 'deactivate',
+          id: 'd1',
+          participantId: 'api',
+        },
+      ],
     },
     {
-      "id": "sc-warn",
-      "title": "Given payment latency When gateway times out Then checkout retries once",
-      "status": "warn",
-      "description": "<p><mark>Given</mark> the payment gateway is slow<br/><mark>When</mark> the first capture attempt times out<br/><mark>Then</mark> CheckoutAPI retries once and still confirms the order.</p>",
-      "facts": [
+      id: 'sc-warn',
+      title: 'Given payment latency When gateway times out Then checkout retries once',
+      status: 'warn',
+      description:
+        '<p><mark>Given</mark> the payment gateway is slow<br/><mark>When</mark> the first capture attempt times out<br/><mark>Then</mark> CheckoutAPI retries once and still confirms the order.</p>',
+      facts: [
         {
-          "key": "orderId",
-          "value": "ord_slow1"
+          key: 'orderId',
+          value: 'ord_slow1',
         },
         {
-          "key": "retries",
-          "value": "1"
+          key: 'retries',
+          value: '1',
         },
         {
-          "key": "gatewayLatency",
-          "value": "2100 ms"
-        }
+          key: 'gatewayLatency',
+          value: '2100 ms',
+        },
       ],
-      "metrics": [
+      metrics: [
         {
-          "key": "Total duration",
-          "value": "2.3 s"
+          key: 'Total duration',
+          value: '2.3 s',
         },
         {
-          "key": "Messages",
-          "value": "6"
+          key: 'Messages',
+          value: '6',
         },
         {
-          "key": "Bottleneck",
-          "value": "PaymentGateway timeout [open]"
-        }
+          key: 'Bottleneck',
+          value: 'PaymentGateway timeout [open]',
+        },
       ],
-      "participants": [
+      participants: [
         {
-          "id": "customer",
-          "name": "Customer",
-          "type": "ACTOR",
-          "colour": "#38bdf8"
+          id: 'customer',
+          name: 'Customer',
+          type: 'ACTOR',
+          colour: '#38bdf8',
         },
         {
-          "id": "api",
-          "name": "CheckoutAPI",
-          "type": "PARTICIPANT",
-          "colour": "#34d399"
+          id: 'api',
+          name: 'CheckoutAPI',
+          type: 'PARTICIPANT',
+          colour: '#34d399',
         },
         {
-          "id": "payments",
-          "name": "PaymentGateway",
-          "type": "BOUNDARY",
-          "colour": "#fbbf24"
+          id: 'payments',
+          name: 'PaymentGateway',
+          type: 'BOUNDARY',
+          colour: '#fbbf24',
         },
         {
-          "id": "bus",
-          "name": "EventBus",
-          "type": "QUEUE",
-          "colour": "#fb7185"
-        }
+          id: 'bus',
+          name: 'EventBus',
+          type: 'QUEUE',
+          colour: '#fb7185',
+        },
       ],
-      "events": [
+      events: [
         {
-          "kind": "activate",
-          "id": "wa1",
-          "participantId": "api"
+          kind: 'activate',
+          id: 'wa1',
+          participantId: 'api',
         },
         {
-          "kind": "message",
-          "id": "wm1",
-          "from": "customer",
-          "to": "api",
-          "label": "POST /checkout",
-          "type": "SYNCHRONOUS",
-          "payloadId": "sc-warn/wm1"
+          kind: 'message',
+          id: 'wm1',
+          from: 'customer',
+          to: 'api',
+          label: 'POST /checkout',
+          type: 'SYNCHRONOUS',
+          payloadId: 'sc-warn/wm1',
         },
         {
-          "kind": "activate",
-          "id": "wa2",
-          "participantId": "payments"
+          kind: 'activate',
+          id: 'wa2',
+          participantId: 'payments',
         },
         {
-          "kind": "message",
-          "id": "wm2",
-          "from": "api",
-          "to": "payments",
-          "label": "capture (attempt 1)",
-          "type": "SYNCHRONOUS",
-          "colour": "#fbbf24",
-          "durationMs": 2000,
-          "payloadId": "sc-warn/wm2"
+          kind: 'message',
+          id: 'wm2',
+          from: 'api',
+          to: 'payments',
+          label: 'capture (attempt 1)',
+          type: 'SYNCHRONOUS',
+          colour: '#fbbf24',
+          durationMs: 2000,
+          payloadId: 'sc-warn/wm2',
         },
         {
-          "kind": "message",
-          "id": "wm3",
-          "from": "payments",
-          "to": "api",
-          "label": "TimeoutException",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#fbbf24",
-          "payloadId": "sc-warn/wm3"
+          kind: 'message',
+          id: 'wm3',
+          from: 'payments',
+          to: 'api',
+          label: 'TimeoutException',
+          type: 'SYNCHRONOUS_RESPONSE',
+          colour: '#fbbf24',
+          payloadId: 'sc-warn/wm3',
         },
         {
-          "kind": "note",
-          "id": "wn1",
-          "text": "Retry policy: max 1 retry with jitter",
-          "over": "api"
+          kind: 'note',
+          id: 'wn1',
+          text: 'Retry policy: max 1 retry with jitter',
+          over: 'api',
         },
         {
-          "kind": "message",
-          "id": "wm4",
-          "from": "api",
-          "to": "payments",
-          "label": "capture (attempt 2)",
-          "type": "SYNCHRONOUS",
-          "durationMs": 180,
-          "payloadId": "sc-warn/wm4"
+          kind: 'message',
+          id: 'wm4',
+          from: 'api',
+          to: 'payments',
+          label: 'capture (attempt 2)',
+          type: 'SYNCHRONOUS',
+          durationMs: 180,
+          payloadId: 'sc-warn/wm4',
         },
         {
-          "kind": "message",
-          "id": "wm5",
-          "from": "payments",
-          "to": "api",
-          "label": "Captured",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#34d399",
-          "data": {
-            "status": "succeeded"
+          kind: 'message',
+          id: 'wm5',
+          from: 'payments',
+          to: 'api',
+          label: 'Captured',
+          type: 'SYNCHRONOUS_RESPONSE',
+          colour: '#34d399',
+          data: {
+            status: 'succeeded',
           },
-          "payloadId": "sc-warn/wm5"
+          payloadId: 'sc-warn/wm5',
         },
         {
-          "kind": "deactivate",
-          "id": "wd2",
-          "participantId": "payments"
+          kind: 'deactivate',
+          id: 'wd2',
+          participantId: 'payments',
         },
         {
-          "kind": "message",
-          "id": "wm6",
-          "from": "api",
-          "to": "bus",
-          "label": "OrderConfirmed",
-          "type": "ASYNCHRONOUS",
-          "data": {
-            "method": "POST",
-            "path": "/events/order.confirmed",
-            "status": 202
+          kind: 'message',
+          id: 'wm6',
+          from: 'api',
+          to: 'bus',
+          label: 'OrderConfirmed',
+          type: 'ASYNCHRONOUS',
+          data: {
+            method: 'POST',
+            path: '/events/order.confirmed',
+            status: 202,
           },
-          "payloadId": "sc-warn/wm6"
+          payloadId: 'sc-warn/wm6',
         },
         {
-          "kind": "message",
-          "id": "wm7",
-          "from": "api",
-          "to": "customer",
-          "label": "201 Created",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "data": {
-            "method": "POST",
-            "path": "/checkout",
-            "status": 201
+          kind: 'message',
+          id: 'wm7',
+          from: 'api',
+          to: 'customer',
+          label: '201 Created',
+          type: 'SYNCHRONOUS_RESPONSE',
+          data: {
+            method: 'POST',
+            path: '/checkout',
+            status: 201,
           },
-          "payloadId": "sc-warn/wm7"
+          payloadId: 'sc-warn/wm7',
         },
         {
-          "kind": "deactivate",
-          "id": "wd1",
-          "participantId": "api"
-        }
-      ]
+          kind: 'deactivate',
+          id: 'wd1',
+          participantId: 'api',
+        },
+      ],
     },
     {
-      "id": "sc-error",
-      "title": "Given low stock When reserve fails Then checkout returns 409",
-      "status": "error",
-      "description": "<p><mark>Given</mark> inventory for SKU SOCK-01 is exhausted<br/><mark>When</mark> OrderService attempts to reserve<br/><mark>Then</mark> checkout fails with <strong>409 Conflict</strong> and no payment is attempted.</p>",
-      "facts": [
+      id: 'sc-error',
+      title: 'Given low stock When reserve fails Then checkout returns 409',
+      status: 'error',
+      description:
+        '<p><mark>Given</mark> inventory for SKU SOCK-01 is exhausted<br/><mark>When</mark> OrderService attempts to reserve<br/><mark>Then</mark> checkout fails with <strong>409 Conflict</strong> and no payment is attempted.</p>',
+      facts: [
         {
-          "key": "sku",
-          "value": "SOCK-01"
+          key: 'sku',
+          value: 'SOCK-01',
         },
         {
-          "key": "available",
-          "value": "0"
+          key: 'available',
+          value: '0',
         },
         {
-          "key": "httpStatus",
-          "value": "409"
-        }
+          key: 'httpStatus',
+          value: '409',
+        },
       ],
-      "metrics": [
+      metrics: [
         {
-          "key": "Total duration",
-          "value": "41 ms"
+          key: 'Total duration',
+          value: '41 ms',
         },
         {
-          "key": "Messages",
-          "value": "4"
+          key: 'Messages',
+          value: '4',
         },
         {
-          "key": "Failure",
-          "value": "InsufficientStock [open]"
-        }
+          key: 'Failure',
+          value: 'InsufficientStock [open]',
+        },
       ],
-      "participants": [
+      participants: [
         {
-          "id": "customer",
-          "name": "Customer",
-          "type": "ACTOR",
-          "colour": "#38bdf8"
+          id: 'customer',
+          name: 'Customer',
+          type: 'ACTOR',
+          colour: '#38bdf8',
         },
         {
-          "id": "api",
-          "name": "CheckoutAPI",
-          "type": "PARTICIPANT",
-          "colour": "#34d399"
+          id: 'api',
+          name: 'CheckoutAPI',
+          type: 'PARTICIPANT',
+          colour: '#34d399',
         },
         {
-          "id": "orders",
-          "name": "OrderService",
-          "type": "PARTICIPANT",
-          "colour": "#a78bfa"
+          id: 'orders',
+          name: 'OrderService',
+          type: 'PARTICIPANT',
+          colour: '#a78bfa',
         },
         {
-          "id": "inv",
-          "name": "Inventory",
-          "type": "DATABASE",
-          "colour": "#94a3b8"
-        }
+          id: 'inv',
+          name: 'Inventory',
+          type: 'DATABASE',
+          colour: '#94a3b8',
+        },
       ],
-      "events": [
+      events: [
         {
-          "kind": "activate",
-          "id": "ea1",
-          "participantId": "api"
+          kind: 'activate',
+          id: 'ea1',
+          participantId: 'api',
         },
         {
-          "kind": "message",
-          "id": "em1",
-          "from": "customer",
-          "to": "api",
-          "label": "POST /checkout",
-          "type": "SYNCHRONOUS",
-          "payloadId": "sc-error/em1"
+          kind: 'message',
+          id: 'em1',
+          from: 'customer',
+          to: 'api',
+          label: 'POST /checkout',
+          type: 'SYNCHRONOUS',
+          payloadId: 'sc-error/em1',
         },
         {
-          "kind": "activate",
-          "id": "ea2",
-          "participantId": "orders"
+          kind: 'activate',
+          id: 'ea2',
+          participantId: 'orders',
         },
         {
-          "kind": "message",
-          "id": "em2",
-          "from": "api",
-          "to": "orders",
-          "label": "reserveOrder",
-          "type": "SYNCHRONOUS",
-          "data": {
-            "method": "POST",
-            "path": "/orders/reserve",
-            "status": 409
+          kind: 'message',
+          id: 'em2',
+          from: 'api',
+          to: 'orders',
+          label: 'reserveOrder',
+          type: 'SYNCHRONOUS',
+          data: {
+            method: 'POST',
+            path: '/orders/reserve',
+            status: 409,
           },
-          "payloadId": "sc-error/em2"
+          payloadId: 'sc-error/em2',
         },
         {
-          "kind": "message",
-          "id": "em3",
-          "from": "orders",
-          "to": "inv",
-          "label": "checkStock(SOCK-01)",
-          "type": "SYNCHRONOUS",
-          "payloadId": "sc-error/em3"
+          kind: 'message',
+          id: 'em3',
+          from: 'orders',
+          to: 'inv',
+          label: 'checkStock(SOCK-01)',
+          type: 'SYNCHRONOUS',
+          payloadId: 'sc-error/em3',
         },
         {
-          "kind": "message",
-          "id": "em4",
-          "from": "inv",
-          "to": "orders",
-          "label": "available=0",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#f87171",
-          "payloadId": "sc-error/em4"
+          kind: 'message',
+          id: 'em4',
+          from: 'inv',
+          to: 'orders',
+          label: 'available=0',
+          type: 'SYNCHRONOUS_RESPONSE',
+          colour: '#f87171',
+          payloadId: 'sc-error/em4',
         },
         {
-          "kind": "message",
-          "id": "em5",
-          "from": "orders",
-          "to": "api",
-          "label": "InsufficientStock",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#f87171",
-          "payloadId": "sc-error/em5"
+          kind: 'message',
+          id: 'em5',
+          from: 'orders',
+          to: 'api',
+          label: 'InsufficientStock',
+          type: 'SYNCHRONOUS_RESPONSE',
+          colour: '#f87171',
+          payloadId: 'sc-error/em5',
         },
         {
-          "kind": "deactivate",
-          "id": "ed2",
-          "participantId": "orders"
+          kind: 'deactivate',
+          id: 'ed2',
+          participantId: 'orders',
         },
         {
-          "kind": "note",
-          "id": "en1",
-          "text": "Payment intentionally skipped",
-          "over": "api"
+          kind: 'note',
+          id: 'en1',
+          text: 'Payment intentionally skipped',
+          over: 'api',
         },
         {
-          "kind": "message",
-          "id": "em6",
-          "from": "api",
-          "to": "customer",
-          "label": "409 Conflict",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#f87171",
-          "data": {
-            "status": 409
+          kind: 'message',
+          id: 'em6',
+          from: 'api',
+          to: 'customer',
+          label: '409 Conflict',
+          type: 'SYNCHRONOUS_RESPONSE',
+          colour: '#f87171',
+          data: {
+            status: 409,
           },
-          "payloadId": "sc-error/em6"
+          payloadId: 'sc-error/em6',
         },
         {
-          "kind": "deactivate",
-          "id": "ed1",
-          "participantId": "api"
-        }
-      ]
-    }
-  ]
+          kind: 'deactivate',
+          id: 'ed1',
+          participantId: 'api',
+        },
+      ],
+    },
+  ],
 } as Report

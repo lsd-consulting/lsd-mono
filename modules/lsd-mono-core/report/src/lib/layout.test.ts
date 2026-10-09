@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramEvent } from '../types'
-import { MESSAGE_LABEL_RISE, NOTE_CARD_MIN_H, NOTE_CARD_W, NOTE_ROW_GAP, ROW_H, SECTION_AFTER_PAD, SECTION_BAND_H, SECTION_BAND_Y, SECTION_LABEL_GAP, SELF_RETURN_DY, TOP_LABEL_PAD, activationDepthAt, activationSpans, eventRowHeight, layoutRows, noteCardMetrics, sortEventsByCreatedAt, virtualRowRange, wrapNoteLines } from './layout'
+import {
+  MESSAGE_LABEL_RISE,
+  NOTE_CARD_MIN_H,
+  NOTE_CARD_W,
+  NOTE_ROW_GAP,
+  ROW_H,
+  SECTION_AFTER_PAD,
+  SECTION_BAND_H,
+  SECTION_BAND_Y,
+  SECTION_LABEL_GAP,
+  SELF_RETURN_DY,
+  TOP_LABEL_PAD,
+  activationDepthAt,
+  activationSpans,
+  eventRowHeight,
+  layoutRows,
+  noteCardMetrics,
+  sortEventsByCreatedAt,
+  virtualRowRange,
+  wrapNoteLines,
+} from './layout'
 
 function uniform(count: number, height = 50): { y: number; height: number }[] {
   return Array.from({ length: count }, (_, i) => ({ y: i * height, height }))
@@ -10,17 +30,13 @@ describe('virtualRowRange', () => {
   it('returns the rows intersecting scrollTop and viewport, plus overscan', () => {
     const rows = uniform(20, 50)
     // view [200, 300): rows y=200 and y=250. overscan 1 → indices 3..6
-    expect(
-      virtualRowRange({ rows, scrollTop: 200, viewportHeight: 100, overscan: 1 }),
-    ).toEqual({ start: 3, end: 7 })
+    expect(virtualRowRange({ rows, scrollTop: 200, viewportHeight: 100, overscan: 1 })).toEqual({ start: 3, end: 7 })
   })
 
   it('starts at the first row when scrollTop is 0', () => {
     const rows = uniform(10, 40)
     // view [0, 100): rows y=0, 40, 80
-    expect(
-      virtualRowRange({ rows, scrollTop: 0, viewportHeight: 100, overscan: 0 }),
-    ).toEqual({ start: 0, end: 3 })
+    expect(virtualRowRange({ rows, scrollTop: 0, viewportHeight: 100, overscan: 0 })).toEqual({ start: 0, end: 3 })
   })
 
   it('shrinks the visible body by the sticky header height', () => {
@@ -39,9 +55,7 @@ describe('virtualRowRange', () => {
 
   it('clamps to the tail when scrolled past the last row', () => {
     const rows = uniform(4, 50)
-    expect(
-      virtualRowRange({ rows, scrollTop: 500, viewportHeight: 100, overscan: 1 }),
-    ).toEqual({ start: 3, end: 4 })
+    expect(virtualRowRange({ rows, scrollTop: 500, viewportHeight: 100, overscan: 1 })).toEqual({ start: 3, end: 4 })
   })
 
   it('returns an empty range when there are no rows', () => {
@@ -163,14 +177,11 @@ describe('eventRowHeight', () => {
   })
 
   it('grows the row when a wrapped note card is taller than the default', () => {
-    const text =
-      'This note is long enough that it must wrap across several lines inside the fixed-width card'
+    const text = 'This note is long enough that it must wrap across several lines inside the fixed-width card'
     const card = noteCardMetrics(text)
     expect(card.lines.length).toBeGreaterThan(1)
     expect(card.height).toBeGreaterThan(NOTE_CARD_MIN_H)
-    expect(eventRowHeight({ kind: 'note', id: 'n', text, placement: 'over' })).toBe(
-      card.height + NOTE_ROW_GAP,
-    )
+    expect(eventRowHeight({ kind: 'note', id: 'n', text, placement: 'over' })).toBe(card.height + NOTE_ROW_GAP)
   })
 })
 
@@ -197,9 +208,7 @@ describe('noteCardMetrics', () => {
 
   it('grows height with each wrapped line while width stays fixed', () => {
     const short = noteCardMetrics('short')
-    const long = noteCardMetrics(
-      'one two three four five six seven eight nine ten eleven twelve',
-    )
+    const long = noteCardMetrics('one two three four five six seven eight nine ten eleven twelve')
     expect(long.lines.length).toBeGreaterThan(short.lines.length)
     expect(long.width).toBe(NOTE_CARD_W)
     expect(long.height).toBeGreaterThan(short.height)
@@ -209,10 +218,34 @@ describe('noteCardMetrics', () => {
 describe('sortEventsByCreatedAt', () => {
   it('sorts out-of-order timestamps and leaves untimed events last', () => {
     const events: DiagramEvent[] = [
-      { kind: 'message', id: 'late', from: 'a', to: 'b', label: 'late', type: 'SYNCHRONOUS', createdAt: '2026-10-03T11:00:00Z' },
-      { kind: 'message', id: 'early', from: 'a', to: 'b', label: 'early', type: 'SYNCHRONOUS', createdAt: '2026-10-03T09:00:00Z' },
+      {
+        kind: 'message',
+        id: 'late',
+        from: 'a',
+        to: 'b',
+        label: 'late',
+        type: 'SYNCHRONOUS',
+        createdAt: '2026-10-03T11:00:00Z',
+      },
+      {
+        kind: 'message',
+        id: 'early',
+        from: 'a',
+        to: 'b',
+        label: 'early',
+        type: 'SYNCHRONOUS',
+        createdAt: '2026-10-03T09:00:00Z',
+      },
       { kind: 'divider', id: 'plain', label: 'untimed' },
-      { kind: 'message', id: 'mid', from: 'a', to: 'b', label: 'mid', type: 'SYNCHRONOUS', createdAt: '2026-10-03T10:00:00Z' },
+      {
+        kind: 'message',
+        id: 'mid',
+        from: 'a',
+        to: 'b',
+        label: 'mid',
+        type: 'SYNCHRONOUS',
+        createdAt: '2026-10-03T10:00:00Z',
+      },
     ]
     expect(sortEventsByCreatedAt(events).map((e) => e.id)).toEqual(['early', 'mid', 'late', 'plain'])
     expect(layoutRows(events).map((r) => r.event.id)).toEqual(['early', 'mid', 'late', 'plain'])

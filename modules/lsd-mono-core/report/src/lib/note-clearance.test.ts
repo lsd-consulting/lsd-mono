@@ -8,7 +8,8 @@ function msg(id: string, from: string, to: string, label: string, type: string =
 
 describe('(c) notes keep clear of the arrow above them', () => {
   it('pushes a tall note down so it does not cover the self-call loop before it', () => {
-    const text = 'Promotions stack in priority order. A long note like this one wraps onto several lines inside the card.'
+    const text =
+      'Promotions stack in priority order. A long note like this one wraps onto several lines inside the card.'
     const rows = layoutRows([
       msg('self', 'orders', 'orders', 'apply promo'),
       { kind: 'activate', id: 'a', participantId: 'orders' },

@@ -249,9 +249,7 @@ async function recordTour(browser, tourDir, file) {
     await page.goto(`http://127.0.0.1:${tourPort}/${encodeURIComponent(tourDiagrams[0])}`, { waitUntil: 'load' })
     await page.locator('.seq-svg').first().waitFor()
     await page.locator('.msg-label').first().waitFor()
-    await page.evaluate(() =>
-      Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]),
-    )
+    await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]))
 
     // Overlays: headless Chromium paints no cursor, so the pointer, click ring and caption are drawn.
     await page.addStyleTag({
@@ -292,11 +290,14 @@ async function recordTour(browser, tourDir, file) {
     const total = () => frames.reduce((sum, frame) => sum + frame.delay, 0)
     async function placePointer(x, y) {
       at = { x, y }
-      await page.evaluate(([px, py]) => {
-        const pointer = document.querySelector('#tour-pointer')
-        pointer.style.left = `${px}px`
-        pointer.style.top = `${py}px`
-      }, [x, y])
+      await page.evaluate(
+        ([px, py]) => {
+          const pointer = document.querySelector('#tour-pointer')
+          pointer.style.left = `${px}px`
+          pointer.style.top = `${py}px`
+        },
+        [x, y],
+      )
     }
     async function moveTo(x, y, steps = 7) {
       const from = at
@@ -314,12 +315,15 @@ async function recordTour(browser, tourDir, file) {
       return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
     }
     async function ring(show) {
-      await page.evaluate(([visible, px, py]) => {
-        const el = document.querySelector('#tour-ring')
-        el.style.display = visible ? 'block' : 'none'
-        el.style.left = `${px}px`
-        el.style.top = `${py}px`
-      }, [show, at.x, at.y])
+      await page.evaluate(
+        ([visible, px, py]) => {
+          const el = document.querySelector('#tour-ring')
+          el.style.display = visible ? 'block' : 'none'
+          el.style.left = `${px}px`
+          el.style.top = `${py}px`
+        },
+        [show, at.x, at.y],
+      )
     }
     /** Point at a control, show the click ring, then really click it. */
     async function click(locator, { hold = 500, settle } = {}) {
@@ -337,15 +341,18 @@ async function recordTour(browser, tourDir, file) {
     let beat = 0
     async function caption(text, { sameBeat = false } = {}) {
       if (!sameBeat) beat++
-      await page.evaluate(([n, words]) => {
-        const el = document.querySelector('#tour-caption')
-        el.innerHTML = ''
-        if (!words) return
-        const step = document.createElement('span')
-        step.id = 'tour-step'
-        step.textContent = String(n)
-        el.append(step, document.createTextNode(words))
-      }, [beat, text])
+      await page.evaluate(
+        ([n, words]) => {
+          const el = document.querySelector('#tour-caption')
+          el.innerHTML = ''
+          if (!words) return
+          const step = document.createElement('span')
+          step.id = 'tour-step'
+          step.textContent = String(n)
+          el.append(step, document.createTextNode(words))
+        },
+        [beat, text],
+      )
     }
 
     const diagram = page.locator('.seq-diagram').first()
@@ -541,9 +548,7 @@ try {
   await page.goto(pageUrl, { waitUntil: 'load' })
   await page.locator('.seq-svg').waitFor()
   await page.locator('.msg-label').first().waitFor()
-  await page.evaluate(() =>
-    Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]),
-  )
+  await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]))
 
   async function placeScenario() {
     await page.evaluate(() => {
@@ -560,9 +565,7 @@ try {
       const cardTop = card?.getBoundingClientRect().top ?? 0
       const diagramBottom = diagram?.getBoundingClientRect().bottom ?? 0
       const inspectorBottom =
-        inspector && getComputedStyle(inspector).display !== 'none'
-          ? inspector.getBoundingClientRect().bottom
-          : 0
+        inspector && getComputedStyle(inspector).display !== 'none' ? inspector.getBoundingClientRect().bottom : 0
       return Math.ceil(Math.max(diagramBottom, inspectorBottom, cardTop) + 32)
     })
     const viewport = page.viewportSize()
@@ -582,7 +585,7 @@ try {
       const s = scroll.getBoundingClientRect()
       // From the top of the page, so the top bar and the icon rail frame the scenario.
       const y = 0
-      const bottom = Math.max(d.bottom, s.top + Math.min(scroll.scrollHeight, s.height) )
+      const bottom = Math.max(d.bottom, s.top + Math.min(scroll.scrollHeight, s.height))
       const height = Math.ceil(bottom - y + 20)
       return {
         x: 0,
@@ -697,9 +700,7 @@ try {
     await page.reload({ waitUntil: 'load' })
     await page.locator('.seq-svg').waitFor()
     await page.locator('.msg-label').first().waitFor()
-    await page.evaluate(() =>
-      Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]),
-    )
+    await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]))
     await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
     // Zoom out under Fit so the whole small diagram shows under the toolbar, as it did when
     // this clip ran after the zoom stills.
