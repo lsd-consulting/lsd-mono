@@ -1,5 +1,5 @@
 import { componentEdgeCaption, type ComponentEdge, type ComponentGraph, type ComponentNode } from './component-graph'
-import { participantHead } from './sequence-diagram'
+import { participantHeadFor, participantLabelSvg } from './sequence-diagram'
 
 /** Horizontal room per node. The participant shape is about 100 wide; the rest is for the name. */
 export const SLOT_W = 150
@@ -11,7 +11,6 @@ const PAD = 20
 /** Rough glyph width for 11px labels. Only used to keep captions inside the viewBox. */
 const CHAR_W = 6.2
 const LABEL_MAX = 34
-const NAME_MAX = 20
 /** Edge clip box around a shape, centred on the shape rather than the name under it. */
 const HIT_HW = 52
 const HIT_HH = 24
@@ -88,7 +87,9 @@ export function layoutComponents(graph: ComponentGraph): ComponentLayout {
   const parents = new Map<string, string[]>(ids.map((id) => [id, []]))
   for (const [from, targets] of forward) for (const to of targets) parents.get(to)!.push(from)
   const widest = Math.max(...ranks.map((row) => row.length))
-  const rowWidth = (count: number) => count * SLOT_W + (count - 1) * GAP_X
+  // Slots widen together for a long name, so wide nodes never touch their neighbours.
+  const slot = Math.max(SLOT_W, ...graph.nodes.map((node) => Math.ceil(participantHeadFor(node).half * 2)))
+  const rowWidth = (count: number) => count * slot + (count - 1) * GAP_X
   const full = rowWidth(widest)
   ranks.forEach((row, r) => {
     if (r > 0) {
@@ -100,7 +101,7 @@ export function layoutComponents(graph: ComponentGraph): ComponentLayout {
     }
     const left = (full - rowWidth(row.length)) / 2
     row.forEach((id, i) => {
-      places.set(id, { x: left + i * (SLOT_W + GAP_X) + SLOT_W / 2, y: r * (NODE_H + GAP_Y), rank: r })
+      places.set(id, { x: left + i * (slot + GAP_X) + slot / 2, y: r * (NODE_H + GAP_Y), rank: r })
     })
   })
   return { places, ranks }
@@ -138,7 +139,12 @@ export function renderComponentDiagram(graph: ComponentGraph, title: string): Co
   const obstacles: Rect[] = []
   const nodes = graph.nodes.map((node) => nodeSvg(node, places.get(node.id)!, grow, obstacles)).join('')
   const names = new Map(graph.nodes.map((node) => [node.id, node.name]))
-  const drawn = graph.edges.map((edge) => edgeSvg(edge, places, graph.edges, names))
+  // Edges stop at the shape, which is wider for a long name in a box, cylinder or queue.
+  const heads = new Map(graph.nodes.map((node) => [node.id, participantHeadFor(node)]))
+  const clipHalf = new Map([...heads].map(([id, head]) => [id, Math.max(HIT_HW, head.shapeHalf + 4)]))
+  // A self-call loop also clears a long name under an actor, entity or boundary mark.
+  const loopHalf = new Map([...heads].map(([id, head]) => [id, Math.max(HIT_HW, head.half + 4)]))
+  const drawn = graph.edges.map((edge) => edgeSvg(edge, places, graph.edges, names, clipHalf, loopHalf))
   // Every edge has a caption (the type cue at least), so labels line up with edges by index.
   const labels = placeLabels(
     drawn.map((edge) => edge.label),
@@ -196,20 +202,18 @@ function nodeSvg(
   grow: (x1: number, y1: number, x2: number, y2: number) => void,
   obstacles: Rect[],
 ): string {
-  const head = participantHead(node.type)
-  const name = abbreviate(node.name, NAME_MAX)
   // Names sit inside the box, cylinder, and queue; under the actor, entity, and boundary marks.
-  const nameY = head.labelY
-  const halfName = (name.length * CHAR_W) / 2
-  const half = Math.max(HIT_HW, halfName)
-  const bottom = Math.max(48, nameY + 6)
+  // Long names widen the shape, then wrap to two lines and end in an ellipsis.
+  const head = participantHeadFor(node)
+  const half = Math.max(HIT_HW, head.half)
+  const bottom = Math.max(48, head.labelYs[head.labelYs.length - 1] + 6)
   grow(at.x - half, at.y, at.x + half, at.y + bottom)
   obstacles.push({ x: at.x - half, y: at.y, w: half * 2, h: bottom })
   const colour = node.colour ? ` style="--pc:${escapeXml(node.colour)}"` : ''
   return `<g class="component-node participant-box" data-component="${escapeXml(node.id)}" data-participant-type="${head.type}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${colour}>
       <title>${escapeXml(node.name)}, ${head.typeLabel}</title>
       ${head.shape}
-      <text class="participant-label" y="${nameY}" text-anchor="middle">${escapeXml(name)}</text>
+      ${participantLabelSvg(head, head.name)}
     </g>`
 }
 
@@ -273,6 +277,8 @@ function edgeSvg(
   places: Map<string, NodePlace>,
   all: ComponentEdge[],
   names: Map<string, string>,
+  clipHalf: Map<string, number>,
+  loopHalf: Map<string, number>,
 ): DrawnEdge {
   const from = places.get(edge.from)!
   const to = places.get(edge.to)!
@@ -285,7 +291,7 @@ function edgeSvg(
 
   if (edge.from === edge.to) {
     // Loop on the right of the shape, caption beside it.
-    const x = from.x + HIT_HW
+    const x = from.x + (loopHalf.get(edge.from) ?? HIT_HW)
     const cy = from.y + HIT_CY
     const d = `M ${fmt(x)} ${fmt(cy - 10)} C ${fmt(x + 46)} ${fmt(cy - 34)}, ${fmt(x + 46)} ${fmt(cy + 34)}, ${fmt(x)} ${fmt(cy + 10)}`
     return {
@@ -304,8 +310,8 @@ function edgeSvg(
   const y1 = from.y + HIT_CY
   const x2 = to.x
   const y2 = to.y + HIT_CY
-  const start = clip(x1, y1, x2, y2, shift)
-  const end = clip(x2, y2, x1, y1, -shift)
+  const start = clip(x1, y1, x2, y2, shift, clipHalf.get(edge.from) ?? HIT_HW)
+  const end = clip(x2, y2, x1, y1, -shift, clipHalf.get(edge.to) ?? HIT_HW)
   const midX = (start[0] + end[0]) / 2
   const midY = (start[1] + end[1]) / 2
   const dx = end[0] - start[0]
@@ -352,7 +358,7 @@ function edgeStyle(edge: ComponentEdge): { cls: string; start: string; end: stri
 }
 
 /** Point where the segment from (cx, cy) towards (tx, ty), shifted sideways, leaves the node's clip box. */
-function clip(cx: number, cy: number, tx: number, ty: number, shift: number): [number, number] {
+function clip(cx: number, cy: number, tx: number, ty: number, shift: number, halfW: number): [number, number] {
   const dx = tx - cx
   const dy = ty - cy
   const len = Math.hypot(dx, dy) || 1
@@ -361,7 +367,7 @@ function clip(cx: number, cy: number, tx: number, ty: number, shift: number): [n
   const sx = cx + ox
   const sy = cy + oy
   if (dx === 0 && dy === 0) return [sx, sy]
-  const scaleX = dx === 0 ? Number.POSITIVE_INFINITY : HIT_HW / Math.abs(dx)
+  const scaleX = dx === 0 ? Number.POSITIVE_INFINITY : halfW / Math.abs(dx)
   const scaleY = dy === 0 ? Number.POSITIVE_INFINITY : HIT_HH / Math.abs(dy)
   const scale = Math.min(scaleX, scaleY)
   return [sx + dx * scale, sy + dy * scale]

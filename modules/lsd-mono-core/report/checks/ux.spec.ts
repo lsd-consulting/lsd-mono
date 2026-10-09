@@ -544,3 +544,79 @@ test('themes and fit keep the top message label on screen', async ({ page }) => 
   expect(overflowX).toBeLessThanOrEqual(0)
   await expect(page.locator('.seq-diagram')).toHaveScreenshot('fit-top-label.png')
 })
+
+/** One long display name per participant shape, next to each other. */
+const longNamesReport = {
+  ...uxFixture,
+  scenarios: [
+    {
+      ...uxFixture.scenarios[0],
+      id: 'names',
+      title: 'Long names',
+      insights: undefined,
+      participants: [
+        { id: 'client', name: 'Client', alias: 'Signed-in Customer (mobile app)', type: 'ACTOR' },
+        { id: 'api', name: 'Api', alias: 'Public API Gateway (rate limited)', type: 'BOUNDARY' },
+        { id: 'db', name: 'Database', alias: 'Orders DB (PostgreSQL primary)', type: 'DATABASE' },
+        { id: 'bus', name: 'Queue', alias: 'Kafka topic order-events.v2', type: 'QUEUE' },
+        { id: 'basket', name: 'Basket', alias: 'Shopping Basket Aggregate', type: 'ENTITY' },
+        { id: 'svc', name: 'Svc', alias: 'Customer Notification Preferences and Delivery Orchestration Service', type: 'PARTICIPANT' },
+        { id: 'stock', name: 'Inventory Service', type: 'PARTICIPANT' },
+      ],
+    },
+  ],
+}
+
+test('long participant names stay inside their shapes and clear of their neighbours', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 })
+  await page.addInitScript((report) => {
+    ;(window as Window & { __LSD_REPORT__?: unknown }).__LSD_REPORT__ = report
+  }, longNamesReport)
+  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
+  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await expect(page.locator('.seq-header-svg')).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+
+  const boxes = await page.evaluate(() =>
+    [...document.querySelectorAll<SVGGElement>('.seq-header-svg .participant-box')].map((g) => {
+      const label = g.querySelector<SVGTextElement>('.participant-label')!.getBBox()
+      const shape = g.querySelector<SVGGraphicsElement>('.participant-shape, .participant-actor')!.getBBox()
+      const header = (g.ownerSVGElement!.viewBox.baseVal)
+      const x = Number(/translate\(([-\d.]+)/.exec(g.getAttribute('transform')!)![1])
+      return {
+        id: g.dataset.participant!,
+        type: g.dataset.participantType!,
+        title: g.querySelector('title')!.textContent!,
+        lines: g.querySelectorAll('tspan').length || 1,
+        label: { left: x + label.x, right: x + label.x + label.width, top: label.y, bottom: label.y + label.height },
+        shape: { left: x + shape.x, right: x + shape.x + shape.width, top: shape.y, bottom: shape.y + shape.height },
+        header: { left: header.x, right: header.x + header.width, height: header.height },
+      }
+    }),
+  )
+  expect(boxes).toHaveLength(7)
+  for (const box of boxes) {
+    // Inside the header block, top to bottom and side to side.
+    expect(box.label.top, box.id).toBeGreaterThanOrEqual(0)
+    expect(box.label.bottom, box.id).toBeLessThanOrEqual(box.header.height + 1)
+    expect(box.label.left, box.id).toBeGreaterThanOrEqual(box.header.left)
+    expect(box.label.right, box.id).toBeLessThanOrEqual(box.header.right)
+    if (['PARTICIPANT', 'DATABASE', 'QUEUE'].includes(box.type)) {
+      expect(box.label.left, box.id).toBeGreaterThanOrEqual(box.shape.left + 2)
+      expect(box.label.right, box.id).toBeLessThanOrEqual(box.shape.right - 2)
+    }
+  }
+  // Neighbours never overlap: neither shapes nor names.
+  for (let i = 1; i < boxes.length; i++) {
+    const before = Math.max(boxes[i - 1].label.right, boxes[i - 1].shape.right)
+    const after = Math.min(boxes[i].label.left, boxes[i].shape.left)
+    expect(after - before, `${boxes[i - 1].id} | ${boxes[i].id}`).toBeGreaterThan(4)
+  }
+  const svc = boxes.find((box) => box.id === 'svc')!
+  expect(svc.lines).toBe(2)
+  expect(svc.title).toBe('Customer Notification Preferences and Delivery Orchestration Service, component')
+  await expect(page.locator('.seq-header-svg')).toHaveAttribute('aria-label', /Customer Notification Preferences and Delivery Orchestration Service/)
+  expect(boxes.find((box) => box.id === 'stock')!.lines).toBe(1)
+})

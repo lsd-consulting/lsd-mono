@@ -68,6 +68,7 @@ import {
   type MessagePlace,
 } from './diagram-a11y'
 import { hasComponentDiagram } from './component-graph'
+import { fitName, type FittedName } from './participant-label'
 import {
   densityBins,
   fractionFromPointer,
@@ -144,7 +145,7 @@ export interface DiagramFrame {
 
 function frameOf(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): DiagramFrame {
   const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
-  const base = diagramWidth(visible.length)
+  const base = laneWidth(laneIndex(visible), visible.length)
   const pads = diagramPads(diagram.scenario.events, visible, diagram.labelMaxWidth)
   return { base, ...pads, total: base + pads.left + pads.right }
 }
@@ -172,14 +173,19 @@ export function diagramPads(
   visible: Participant[],
   labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH,
 ): { left: number; right: number } {
-  const index = new Map(visible.map((p, i) => [p.id, i]))
-  const width = diagramWidth(visible.length)
+  const index = laneIndex(visible)
+  const width = laneWidth(index, visible.length)
   let minX = EDGE_MARGIN
   let maxX = width - EDGE_MARGIN
   const reach = (from: number, to: number) => {
     minX = Math.min(minX, from)
     maxX = Math.max(maxX, to)
   }
+  // Header shapes and names on the outer lifelines.
+  visible.forEach((p, i) => {
+    const half = participantHeadFor(p).half
+    reach(xFor(i, index) - half, xFor(i, index) + half)
+  })
   for (const event of events) {
     if (event.kind === 'note') {
       if (event.over && !index.has(event.over)) continue
@@ -194,7 +200,7 @@ export function diagramPads(
       const i = index.get(id)
       if (i === undefined) continue
       // Nested bars can push the stub right by a few px; allow two levels.
-      const { x1, x2 } = shortMessageEndpoints(event.type, xFor(i), width)
+      const { x1, x2 } = shortMessageEndpoints(event.type, xFor(i, index), width)
       const label = shortLabelAnchor(event.type, x1, x2)
       if (label.anchor === 'start') reach(x1, label.x + w + 2 * ACT_NEST_DX)
       else reach(label.x - w, x2 + 2 * ACT_NEST_DX)
@@ -204,11 +210,11 @@ export function diagramPads(
     const ti = index.get(event.to)
     if (fi === undefined || ti === undefined) continue
     if (event.from === event.to) {
-      const x = xFor(fi)
+      const x = xFor(fi, index)
       reach(x, x + SELF_LABEL_DX + 2 * ACT_NEST_DX + w)
       continue
     }
-    const mid = (xFor(fi) + xFor(ti)) / 2
+    const mid = (xFor(fi, index) + xFor(ti, index)) / 2
     reach(mid - w / 2, mid + w / 2)
   }
   return {
@@ -217,8 +223,43 @@ export function diagramPads(
   }
 }
 
-function xFor(index: number): number {
-  return LEFT_PAD + index * COL_GAP
+/** Space kept between neighbouring participant shapes (or names) in the header. */
+export const LANE_GAP = 20
+
+/** Lifeline x per visible index, for index maps made by [laneIndex]. */
+const laneXs = new WeakMap<Map<string, number>, number[]>()
+
+/**
+ * Lifeline centres. Lanes are COL_GAP apart unless two neighbouring shapes (or
+ * names) are wider than that, in which case the pair moves apart to keep
+ * LANE_GAP between them.
+ */
+export function laneCentres(visible: Participant[]): number[] {
+  const halves = visible.map((p) => participantHeadFor(p).half)
+  const xs: number[] = []
+  halves.forEach((half, i) => {
+    xs.push(i === 0 ? LEFT_PAD : xs[i - 1] + Math.max(COL_GAP, Math.ceil(halves[i - 1] + half + LANE_GAP)))
+  })
+  return xs
+}
+
+/** Participant id to visible index, carrying the lane centres for [xFor]. */
+export function laneIndex(visible: Participant[]): Map<string, number> {
+  const index = new Map(visible.map((p, i) => [p.id, i]))
+  laneXs.set(index, laneCentres(visible))
+  return index
+}
+
+/** Width of the lifeline area: the fixed-gap width plus whatever wide names added. */
+function laneWidth(index: Map<string, number>, count: number): number {
+  const xs = laneXs.get(index)
+  const extra = xs?.length ? xs[xs.length - 1] - (LEFT_PAD + (xs.length - 1) * COL_GAP) : 0
+  return diagramWidth(count) + extra
+}
+
+/** Lifeline x. Index maps not made by [laneIndex] (tests) use the fixed gap. */
+function xFor(i: number, index?: Map<string, number>): number {
+  return (index ? laneXs.get(index)?.[i] : undefined) ?? LEFT_PAD + i * COL_GAP
 }
 
 function escapeXml(s: string): string {
@@ -257,73 +298,140 @@ export function activationBarSvg(args: {
  * Header geometry for one captured participant type.
  * Unknown values (including legacy CONTROL / COLLECTIONS, which this model does not capture)
  * stay on the component box. The shape differs; [typeLabel] is the text cue.
+ *
+ * With a fitted [name], the box, cylinder and queue grow to hold it, and a
+ * two-line name gets a taller shape (or, for the actor, entity and boundary
+ * marks, a smaller mark) so both lines fit the same header height.
  */
 export interface ParticipantHead {
   type: ParticipantType
   typeLabel: string
   /** SVG for the shape only. The name is a separate text node. */
   shape: string
-  /** Baseline for the participant name, in header units. */
+  /** Baseline for the participant name (first line), in header units. */
   labelY: number
+  /** Baseline of each name line. */
+  labelYs: number[]
+  /** Half the width of the shape itself. Edges stop at this. */
+  shapeHalf: number
+  /** Half the width of the shape or its name, whichever is wider. Lanes keep this clear. */
+  half: number
 }
 
-export function participantHead(type: string | undefined): ParticipantHead {
+/** Smaller mark for a two-line name under an actor, entity or boundary. */
+function smallMark(svg: string): string {
+  return `<g transform="translate(0 -3) scale(0.8)">${svg}</g>`
+}
+
+/** Even width, so the shape stays centred on whole pixels. */
+function evenUp(n: number): number {
+  return 2 * Math.ceil(n / 2)
+}
+
+export function participantHead(type: string | undefined, name?: FittedName): ParticipantHead {
+  const w = name?.width ?? 0
+  const two = (name?.lines.length ?? 1) > 1
+  const under = (head: Omit<ParticipantHead, 'labelY' | 'labelYs' | 'half'>): ParticipantHead => ({
+    ...head,
+    shape: two ? smallMark(head.shape) : head.shape,
+    labelY: two ? 41 : 50,
+    labelYs: two ? [41, 52] : [50],
+    half: Math.max(head.shapeHalf, w / 2),
+  })
   switch (type) {
     case 'ACTOR':
-      return {
+      return under({
         type: 'ACTOR',
         typeLabel: 'actor',
-        labelY: 50,
+        shapeHalf: 11,
         shape: `<g class="participant-actor">
           <circle cx="0" cy="11" r="5.5"/>
           <path d="M0 16.5 V28 M-11 22 H11 M0 28 L-8 38 M0 28 L8 38"/>
         </g>`,
-      }
-    case 'DATABASE':
+      })
+    case 'DATABASE': {
+      const rx = Math.max(46, Math.ceil(w / 2 + 10))
+      const top = two ? 9 : 16
+      const body = two ? 34 : 16
       return {
         type: 'DATABASE',
         typeLabel: 'database',
-        labelY: 30,
+        labelY: two ? 28 : 30,
+        labelYs: two ? [28, 40] : [30],
+        shapeHalf: rx,
+        half: rx,
         shape: `<g class="participant-database">
-          <path class="participant-shape" d="M-46 16 v16 a46 6 0 0 0 92 0 v-16"/>
-          <ellipse class="participant-shape" cx="0" cy="16" rx="46" ry="6"/>
+          <path class="participant-shape" d="M-${rx} ${top} v${body} a${rx} 6 0 0 0 ${rx * 2} 0 v-${body}"/>
+          <ellipse class="participant-shape" cx="0" cy="${top}" rx="${rx}" ry="6"/>
         </g>`,
       }
-    case 'QUEUE':
+    }
+    case 'QUEUE': {
+      const hw = Math.max(48, Math.ceil(w / 2 + 16))
+      const bottom = two ? 50 : 44
       return {
         type: 'QUEUE',
         typeLabel: 'queue',
-        labelY: 34,
+        labelY: two ? 31 : 34,
+        labelYs: two ? [31, 43] : [34],
+        shapeHalf: hw + 2,
+        half: hw + 2,
         shape: `<g class="participant-queue">
-          <polygon class="participant-shape participant-queue-back" points="-44,6 34,6 46,16 -32,16"/>
-          <polygon class="participant-shape" points="-48,18 36,18 50,44 -34,44"/>
+          <polygon class="participant-shape participant-queue-back" points="${-hw + 4},6 ${hw - 14},6 ${hw - 2},16 ${-hw + 16},16"/>
+          <polygon class="participant-shape" points="${-hw},18 ${hw - 12},18 ${hw + 2},${bottom} ${-hw + 14},${bottom}"/>
         </g>`,
       }
+    }
     case 'ENTITY':
-      return {
+      return under({
         type: 'ENTITY',
         typeLabel: 'entity',
-        labelY: 50,
+        shapeHalf: 14,
         shape: `<circle class="participant-shape" cx="0" cy="22" r="14"/>`,
-      }
+      })
     case 'BOUNDARY':
-      return {
+      return under({
         type: 'BOUNDARY',
         typeLabel: 'boundary',
-        labelY: 50,
+        shapeHalf: 16,
         shape: `<g class="participant-boundary">
           <line class="participant-mark" x1="-16" y1="6" x2="-16" y2="38"/>
           <circle class="participant-shape" cx="0" cy="22" r="14"/>
         </g>`,
-      }
-    default:
+      })
+    default: {
+      const rw = Math.max(96, evenUp(w + 20))
       return {
         type: 'PARTICIPANT',
         typeLabel: 'component',
-        labelY: 32,
-        shape: `<rect class="participant-shape" x="-48" y="14" width="96" height="28" rx="4"/>`,
+        labelY: two ? 25 : 32,
+        labelYs: two ? [25, 37] : [32],
+        shapeHalf: rw / 2,
+        half: rw / 2,
+        shape: `<rect class="participant-shape" x="${-rw / 2}" y="${two ? 8 : 14}" width="${rw}" height="${two ? 40 : 28}" rx="4"/>`,
       }
+    }
   }
+}
+
+/** Header geometry for a participant with its displayed name fitted. */
+export function participantHeadFor(p: { type?: string; name: string; alias?: string }): ParticipantHead & { name: FittedName } {
+  const name = fitName(p.alias ?? p.name)
+  return { ...participantHead(p.type, name), name }
+}
+
+/**
+ * The participant name as SVG text: one line as plain text (the common case), two
+ * as tspans. The full name is in the shape's title, not here.
+ */
+export function participantLabelSvg(head: ParticipantHead, name: FittedName): string {
+  if (name.lines.length === 1) {
+    return `<text class="participant-label" y="${head.labelY}" text-anchor="middle">${escapeXml(name.lines[0])}</text>`
+  }
+  const lines = name.lines
+    .map((line, i) => `<tspan x="0" y="${head.labelYs[i]}">${escapeXml(line)}</tspan>`)
+    .join('')
+  return `<text class="participant-label" text-anchor="middle">${lines}</text>`
 }
 
 /** Shape/marker rules — colour alone must not distinguish these types (a11y). */
@@ -445,7 +553,7 @@ export function noteLayout(
 ): NoteLayout {
   const place: NotePlacement = placement ?? 'over'
   const i = over ? (index.get(over) ?? 0) : 0
-  const px = over ? xFor(i) : width / 2
+  const px = over ? xFor(i, index) : width / 2
   if (place === 'left') {
     const x = over ? px - 90 : LEFT_PAD
     return { x, textAnchor: 'middle', placement: 'left' }
@@ -763,7 +871,7 @@ function topMessageLabelRect(diagram: MountedDiagram, hiddenIds: ReadonlySet<str
   const frame = frameOf(diagram, hiddenIds)
   const width = frame.base
   const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
-  const index = new Map(visible.map((p, i) => [p.id, i]))
+  const index = laneIndex(visible)
   for (const row of diagram.rows) {
     const event = row.event
     if (event.kind !== 'message' || eventHiddenByColumns(event, hiddenIds)) continue
@@ -782,12 +890,12 @@ function messageEndpoints(
 ): { x1: number; x2: number } {
   if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
     const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
-    const px = xFor(index.get(participantId) ?? 0)
+    const px = xFor(index.get(participantId) ?? 0, index)
     return shortMessageEndpoints(msg.type, px, width)
   }
   const fi = index.get(msg.from) ?? 0
   const ti = index.get(msg.to) ?? 0
-  return { x1: xFor(fi), x2: xFor(ti) }
+  return { x1: xFor(fi, index), x2: xFor(ti, index) }
 }
 
 function onToggleParticipant(scrollport: HTMLElement, participantId: string): void {
@@ -851,17 +959,18 @@ export function bindDiagramScroll(root: ParentNode): void {
 function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlySet<string>, zoom: number): string {
   const width = frame.total
   const visible = visibleParticipants(scenario.participants, hiddenIds)
+  const index = laneIndex(visible)
   const boxes = visible
     .map((p, i) => {
-      const x = xFor(i)
+      const x = xFor(i, index)
       const name = p.alias ?? p.name
-      const head = participantHead(p.type)
+      const head = participantHeadFor(p)
       const colour = escapeXml(p.colour ?? '#94a3b8')
       return `
       <g class="participant-box" data-participant="${escapeXml(p.id)}" data-participant-type="${head.type}" transform="translate(${x}, 0)" style="--pc:${colour}">
         <title>${escapeXml(name)}, ${head.typeLabel}</title>
         ${head.shape}
-        <text class="participant-label" y="${head.labelY}" text-anchor="middle">${escapeXml(name)}</text>
+        ${participantLabelSvg(head, head.name)}
       </g>`
     })
     .join('')
@@ -886,7 +995,7 @@ function windowSvg(
   const end = slice[slice.length - 1].y + slice[slice.length - 1].height
   const height = Math.max(end - viewTop, 1)
   const visible = visibleParticipants(scenario.participants, view.hidden)
-  const index = new Map(visible.map((p, i) => [p.id, i]))
+  const index = laneIndex(visible)
   const colourOf = new Map(scenario.participants.map((p) => [p.id, p.colour ?? 'var(--accent)']))
   const spans = activationSpans(rows, Math.max(diagram.height - BOTTOM_PAD, 0))
 
@@ -895,7 +1004,7 @@ function windowSvg(
 
   const lifelines = visible
     .map((p, i) => {
-      const x = xFor(i)
+      const x = xFor(i, index)
       return `<line class="lifeline-line" data-participant="${escapeXml(p.id)}" x1="${x}" y1="${viewTop}" x2="${x}" y2="${end}" />`
     })
     .join('')
@@ -907,7 +1016,7 @@ function windowSvg(
       const y0 = Math.max(span.y0, offset)
       const y1 = Math.min(span.y1, end)
       if (y1 - y0 < 1) return ''
-      const x = xFor(i) - ACT_W / 2 + span.depth * ACT_NEST_DX
+      const x = xFor(i, index) - ACT_W / 2 + span.depth * ACT_NEST_DX
       const fallback = colourOf.get(span.participantId) ?? '#34d399'
       return activationBarSvg({
         x,
@@ -963,7 +1072,7 @@ export function renderRowSvg(
   paint: RowPaint = EMPTY_PAINT,
 ): string {
   const visible = visibleParticipants(participants, paint.hiddenIds)
-  const index = new Map(visible.map((p, i) => [p.id, i]))
+  const index = laneIndex(visible)
   const colourOf = new Map(participants.map((p) => [p.id, p.colour ?? '#34d399']))
   const markers = markerSet()
   const ensureMarker = markers.ensure
@@ -1119,7 +1228,7 @@ function renderMessageRow(
   if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
     const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
     const pi = index.get(participantId) ?? 0
-    const px = xFor(pi) + nest(participantId, y)
+    const px = xFor(pi, index) + nest(participantId, y)
     const { x1, x2 } = shortMessageEndpoints(msg.type, px, width)
     // The label runs away from the lifeline, so it never sits on the bar.
     const label = shortLabelAnchor(msg.type, x1, x2)
@@ -1134,8 +1243,8 @@ function renderMessageRow(
 
   const fi = index.get(msg.from) ?? 0
   const ti = index.get(msg.to) ?? 0
-  const x1 = xFor(fi)
-  const x2 = xFor(ti)
+  const x1 = xFor(fi, index)
+  const x2 = xFor(ti, index)
   const self = fi === ti && msg.from === msg.to
 
   if (self) {
