@@ -1,0 +1,41 @@
+name: Pages
+
+# Publishes docs/samples (the kitchen-sink report and an index) to GitHub Pages,
+# so https://lsd-consulting.github.io/lsd-mono/kitchen-sink.html opens as a page.
+# Nothing else under docs/ is published.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/samples/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; let a running one finish rather than cancel it mid-deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}kitchen-sink.html
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - name: Stage the samples
+        run: |
+          mkdir -p _site
+          cp docs/samples/index.html docs/samples/kitchen-sink.html docs/samples/kitchen-sink-payloads.js _site/
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v5
