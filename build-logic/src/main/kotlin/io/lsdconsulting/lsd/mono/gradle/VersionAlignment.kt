@@ -63,7 +63,12 @@ object VersionAlignment {
     /**
      * @return null when [actual] is the train version, or the recorded override and that override is legal.
      */
-    fun alignmentFailure(projectPath: String, actual: String, train: String, recorded: VersionOverride?): String? {
+    fun alignmentFailure(
+        projectPath: String,
+        actual: String,
+        train: String,
+        recorded: VersionOverride?,
+    ): String? {
         recordedProblem(projectPath, train, recorded)?.let { return it }
         val expected = recorded?.version ?: train
         if (actual == expected) {

@@ -11,7 +11,9 @@ tasks.withType<AbstractArchiveTask>().configureEach {
     isReproducibleFileOrder = true
 }
 
-val overridesFile = rootProject.layout.projectDirectory.file(VersionAlignment.OVERRIDES_PATH).asFile
+val overridesFile = rootProject.layout.projectDirectory
+    .file(VersionAlignment.OVERRIDES_PATH)
+    .asFile
 if (!overridesFile.isFile) {
     throw GradleException("Missing ${overridesFile.path}. Record a patch or solo major there, or leave the file empty.")
 }

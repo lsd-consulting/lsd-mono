@@ -11,12 +11,19 @@ package io.lsdconsulting.lsd.mono.gradle
  * Open so Gradle can register it as the `majorLines` project extension.
  */
 open class MajorLines {
-    private data class Line(val name: String, val major: Int, val groups: Set<String>, val modules: Set<String>) {
-        fun covers(group: String, module: String): Boolean = group in groups && (modules.isEmpty() || module in modules)
+    private data class Line(
+        val name: String,
+        val major: Int,
+        val groups: Set<String>,
+        val modules: Set<String>,
+    ) {
+        fun covers(group: String, module: String): Boolean =
+            group in groups && (modules.isEmpty() || module in modules)
     }
 
     private data class Ban(val group: String, val module: String?, val reason: String) {
-        fun covers(group: String, module: String): Boolean = group == this.group && (this.module == null || this.module == module)
+        fun covers(group: String, module: String): Boolean =
+            group == this.group && (this.module == null || this.module == module)
     }
 
     private val lines = mutableListOf<Line>()

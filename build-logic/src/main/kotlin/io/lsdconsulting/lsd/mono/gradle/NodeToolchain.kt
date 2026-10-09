@@ -13,23 +13,23 @@ import java.io.File
 private val NODE_22 = Regex("""v22\.(\d+)\.(\d+)""")
 
 /** `bin` of the newest `~/.nvm/versions/node/v22.x.y` that has both node and npm, or null. */
-fun node22BinDir(home: File = File(System.getProperty("user.home"))): File? = File(home, ".nvm/versions/node")
-    .listFiles()
-    ?.filter { dir ->
-        NODE_22.matches(dir.name) &&
-            File(dir, "bin/npm").canExecute() &&
-            File(dir, "bin/node").canExecute()
-    }
-    ?.maxWithOrNull(
-        compareBy(
-            { NODE_22.matchEntire(it.name)!!.groupValues[1].toInt() },
-            { NODE_22.matchEntire(it.name)!!.groupValues[2].toInt() },
-        ),
-    )
-    ?.resolve("bin")
+fun node22BinDir(home: File = File(System.getProperty("user.home"))): File? =
+    File(home, ".nvm/versions/node")
+        .listFiles()
+        ?.filter { dir ->
+            NODE_22.matches(dir.name) &&
+                File(dir, "bin/npm").canExecute() &&
+                File(dir, "bin/node").canExecute()
+        }?.maxWithOrNull(
+            compareBy(
+                { NODE_22.matchEntire(it.name)!!.groupValues[1].toInt() },
+                { NODE_22.matchEntire(it.name)!!.groupValues[2].toInt() },
+            ),
+        )?.resolve("bin")
 
 /** Absolute path of that Node 22 `node`, else plain `node` from PATH. */
-fun nodeExecutable(): String = node22BinDir()?.resolve("node")?.takeIf { it.canExecute() }?.absolutePath ?: "node"
+fun nodeExecutable(): String =
+    node22BinDir()?.resolve("node")?.takeIf { it.canExecute() }?.absolutePath ?: "node"
 
 /**
  * Prepend the Node 22 bin dir to this task's PATH, when there is one. The lookup runs when the

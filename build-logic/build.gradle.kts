@@ -21,14 +21,16 @@ tasks.withType<Test>().configureEach {
 }
 
 // build-logic formats its own sources the way lsd.formatting formats the rest of the repo.
+// As an included build it is its own root project, so point ktlint at the repo's .editorconfig.
 spotless {
     val ktlintVersion = libs.versions.ktlint.get()
+    val editorConfig = layout.projectDirectory.file("../.editorconfig").asFile
     kotlin {
         target("src/**/*.kt")
-        ktlint(ktlintVersion)
+        ktlint(ktlintVersion).setEditorConfigPath(editorConfig)
     }
     kotlinGradle {
         target("*.gradle.kts", "src/**/*.gradle.kts")
-        ktlint(ktlintVersion)
+        ktlint(ktlintVersion).setEditorConfigPath(editorConfig)
     }
 }
