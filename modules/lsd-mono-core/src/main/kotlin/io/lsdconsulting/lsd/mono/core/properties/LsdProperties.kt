@@ -29,11 +29,15 @@ object LsdProperties {
             setProperty("lsd.junit.hideStacktrace", "false")
         }
 
-    private fun resolve(key: String): String? {
-        System.getProperty(key)?.let { return it }
-        System.getenv(key.replace('.', '_').uppercase())?.let { return it }
-        return defaults.getProperty(key)
-    }
+    /** A value the user set (system property or environment), ignoring defaults. */
+    private fun explicit(key: String): String? =
+        System.getProperty(key) ?: System.getenv(key.replace('.', '_').uppercase())
+
+    private fun resolve(key: String): String? = explicit(key) ?: defaults.getProperty(key)
+
+    /** Mono key, then legacy key, then the default. Defaults must not hide a legacy value. */
+    private fun resolveWithLegacy(key: String, legacy: String): String? =
+        explicit(key) ?: explicit(legacy) ?: defaults.getProperty(key)
 
     @JvmStatic
     operator fun get(key: String): String =
@@ -54,17 +58,15 @@ object LsdProperties {
     /** Output dir with mono key first, then legacy. */
     @JvmStatic
     fun outputDirectory(): String =
-        resolve(OUTPUT_DIR)
-            ?: resolve("lsd.core.report.outputDir")
-            ?: "build/reports/lsd"
+        resolveWithLegacy(OUTPUT_DIR, "lsd.core.report.outputDir") ?: "build/reports/lsd"
 
     @JvmStatic
     fun deterministicIds(): Boolean =
-        getBoolean(DETERMINISTIC_IDS, getBoolean("lsd.core.ids.deterministic", false))
+        resolveWithLegacy(DETERMINISTIC_IDS, "lsd.core.ids.deterministic")?.toBoolean() ?: false
 
     @JvmStatic
     fun hideStacktrace(): Boolean =
-        getBoolean(HIDE_STACKTRACE, getBoolean("lsd.junit.hideStacktrace", false))
+        resolveWithLegacy(HIDE_STACKTRACE, "lsd.junit.hideStacktrace")?.toBoolean() ?: false
 
     /**
      * Default **true** so reports keep the message-count metrics that shipped before
@@ -72,12 +74,12 @@ object LsdProperties {
      */
     @JvmStatic
     fun metricsEnabled(): Boolean =
-        getBoolean(METRICS_ENABLED, getBoolean("lsd.core.metrics.enabled", true))
+        resolveWithLegacy(METRICS_ENABLED, "lsd.core.metrics.enabled")?.toBoolean() ?: true
 
     /** Positive character width. Falls back to legacy `lsd.core.label.maxWidth`, then 200. */
     @JvmStatic
     fun labelMaxWidth(): Int {
-        val raw = resolve(LABEL_MAX_WIDTH) ?: resolve("lsd.core.label.maxWidth") ?: "200"
+        val raw = resolveWithLegacy(LABEL_MAX_WIDTH, "lsd.core.label.maxWidth") ?: "200"
         return raw.toIntOrNull()?.takeIf { it > 0 } ?: 200
     }
 }
