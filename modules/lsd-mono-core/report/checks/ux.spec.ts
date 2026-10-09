@@ -703,3 +703,96 @@ test('long participant names stay inside their shapes and clear of their neighbo
   await expect(page.locator('.seq-header-svg')).toHaveAttribute('aria-label', /Customer Notification Preferences and Delivery Orchestration Service/)
   expect(boxes.find((box) => box.id === 'stock')!.lines).toBe(1)
 })
+
+/** Two scenarios too wide for the panel at 100%: twelve lifelines, a chain of 30 calls. */
+function wideScenario(id: string, title: string) {
+  const participants = Array.from({ length: 12 }, (_, i) => ({ id: `p${i}`, name: `Service ${i}`, type: 'PARTICIPANT' }))
+  const events = Array.from({ length: 30 }, (_, i) => ({
+    kind: 'message',
+    id: `m${i}`,
+    from: `p${i % 12}`,
+    to: `p${(i + 5) % 12}`,
+    label: `call ${i}`,
+    type: 'SYNCHRONOUS',
+    data: { n: i },
+  }))
+  return { ...uxFixture.scenarios[0], id, title, insights: undefined, participants, events }
+}
+const wideReport = { ...uxFixture, scenarios: [wideScenario('wide-a', 'Wide A'), wideScenario('wide-b', 'Wide B')] }
+
+async function openWide(page: Page, hash = ''): Promise<void> {
+  await page.addInitScript((report) => {
+    ;(window as Window & { __LSD_REPORT__?: unknown }).__LSD_REPORT__ = report
+  }, wideReport)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(`/${hash}`)
+  await expect(page.locator('.seq-svg').first()).toBeVisible()
+}
+
+/** Zoom readout as a number (85 for "85%") and sideways overflow, for one scenario's diagram. */
+function zoomOf(page: Page, scenarioId: string) {
+  return page.evaluate((id) => {
+    const card = document.getElementById(`card-${id}`)!
+    const scroll = card.querySelector<HTMLElement>('.seq-scroll')!
+    return {
+      percent: Number.parseInt(card.querySelector('.zoom-readout')!.textContent ?? '', 10),
+      overflowX: scroll.scrollWidth - scroll.clientWidth,
+    }
+  }, scenarioId)
+}
+
+test('a wide diagram opens fitted, refits on resize until the user zooms, then keeps their zoom', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 })
+  await openWide(page)
+  const first = await zoomOf(page, 'wide-a')
+  expect(first.percent, 'opens below 100%, fitted to the panel').toBeLessThan(100)
+  expect(first.overflowX, 'nothing to scroll sideways').toBeLessThanOrEqual(0)
+
+  // Not zoomed yet: a narrower window refits.
+  await page.setViewportSize({ width: 900, height: 800 })
+  await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBeLessThan(first.percent)
+  expect((await zoomOf(page, 'wide-a')).overflowX).toBeLessThanOrEqual(0)
+
+  // Once the user zooms, resizing leaves their zoom alone.
+  const card = page.locator('#card-wide-a')
+  await card.getByRole('button', { name: 'Zoom in' }).click()
+  const chosen = (await zoomOf(page, 'wide-a')).percent
+  await page.setViewportSize({ width: 1300, height: 800 })
+  await page.waitForTimeout(250)
+  expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
+
+  // Fit hands it back to automatic fitting.
+  await card.getByRole('button', { name: 'Fit to screen' }).click()
+  const fitted = (await zoomOf(page, 'wide-a')).percent
+  await page.setViewportSize({ width: 1000, height: 800 })
+  await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBeLessThan(fitted)
+  expect((await zoomOf(page, 'wide-a')).overflowX).toBeLessThanOrEqual(0)
+})
+
+test('a collapsed scenario is fitted when it opens', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 })
+  await openWide(page)
+  await page.locator('#card-wide-b .scenario-head').click()
+  await expect(page.locator('#card-wide-b .seq-svg')).toBeVisible()
+  const opened = await zoomOf(page, 'wide-b')
+  expect(opened.percent).toBeLessThan(100)
+  expect(opened.overflowX).toBeLessThanOrEqual(0)
+})
+
+test('a deep link to a message in a collapsed, fitted diagram scrolls to it and opens it', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 })
+  await openWide(page, '#msg=wide-b/m25')
+  await expect(page.locator('#inspector-title')).toHaveText('call 25')
+  expect((await zoomOf(page, 'wide-b')).percent).toBeLessThan(100)
+  const target = page.locator('#card-wide-b button.msg-open[data-message-id="m25"]')
+  await expect(target).toHaveAttribute('tabindex', '0')
+  const placed = await page.evaluate(() => {
+    const scroll = document.querySelector<HTMLElement>('#card-wide-b .seq-scroll')!
+    const header = scroll.querySelector<HTMLElement>('.seq-sticky-header')!
+    const btn = scroll.querySelector<HTMLElement>('button.msg-open[data-message-id="m25"]')!
+    const b = btn.getBoundingClientRect()
+    return { top: b.top, bottom: b.bottom, visibleTop: header.getBoundingClientRect().bottom, visibleBottom: scroll.getBoundingClientRect().bottom }
+  })
+  expect(placed.top).toBeGreaterThanOrEqual(placed.visibleTop - 1)
+  expect(placed.bottom).toBeLessThanOrEqual(placed.visibleBottom + 1)
+})

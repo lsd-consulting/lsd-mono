@@ -40,7 +40,9 @@ import {
 } from './layout'
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
 import {
+  AUTO_FIT_MAX_ZOOM,
   DEFAULT_ZOOM,
+  MAX_ZOOM,
   classifySearchHits,
   eventHiddenByColumns,
   fittedView,
@@ -53,6 +55,7 @@ import {
   visibleParticipants,
   zoomFromWheel,
   zoomLabel,
+  type FittedView,
   type Rect,
 } from './diagram-view'
 import {
@@ -101,6 +104,18 @@ const mounted = new Map<string, MountedDiagram>()
 
 export interface DiagramView {
   zoom: number
+  /**
+   * True until the user zooms in or out. While it is true the diagram fits its panel: on
+   * first render, and again when the panel width changes. Fit makes it true again.
+   */
+  autoFit: boolean
+  /**
+   * Largest scale a refit may use: AUTO_FIT_MAX_ZOOM until the user presses Fit, then
+   * MAX_ZOOM, so later refits fill the width the way Fit does.
+   */
+  fitLimit: number
+  /** Scrollport width the last fit used, so a resize to the same width does not refit. */
+  fittedWidth: number
   hidden: Set<string>
   query: string
   /** Roving tabindex target. Null means the first focusable message. */
@@ -125,7 +140,15 @@ const EMPTY_PAINT: RowPaint = { query: '', hiddenIds: new Set() }
 export function diagramView(scenarioId: string): DiagramView {
   let view = views.get(scenarioId)
   if (!view) {
-    view = { zoom: DEFAULT_ZOOM, hidden: new Set(), query: '', activeMessageId: null }
+    view = {
+      zoom: DEFAULT_ZOOM,
+      autoFit: true,
+      fitLimit: AUTO_FIT_MAX_ZOOM,
+      fittedWidth: 0,
+      hidden: new Set(),
+      query: '',
+      activeMessageId: null,
+    }
     views.set(scenarioId, view)
   }
   return view
@@ -817,6 +840,7 @@ function onDiagramWheel(scrollport: HTMLElement, ev: WheelEvent): void {
   const view = diagramView(id)
   const next = zoomFromWheel(view.zoom, ev.deltaY)
   if (next === view.zoom) return
+  view.autoFit = false
   commitZoom(scrollport, next)
 }
 
@@ -830,23 +854,12 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
   if (action === 'in') next = stepZoom(view.zoom, 1)
   else if (action === 'out') next = stepZoom(view.zoom, -1)
   else if (action === 'fit') {
-    const contentWidth = frameOf(diagram, view.hidden).total
-    const mustInclude = topMessageLabelRect(diagram, view.hidden)
-    const fitAt = (viewportWidth: number) =>
-      fittedView({
-        contentWidth,
-        viewportWidth,
-        viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
-        mustInclude,
-      })
-    // Zooming can add or drop the vertical scrollbar, which changes the width
-    // there is to fit; settle on a width that still fits once zoomed.
-    const width = settleFitWidth(scrollport.clientWidth, (w) => {
-      view.zoom = fitAt(w).scale
-      applyDiagramFrame(scrollport)
-      return scrollport.clientWidth
-    })
-    const fitted = fitAt(width)
+    const prev = view.zoom
+    const fitted = settleFit(scrollport, diagram, view)
+    view.zoom = prev
+    view.autoFit = true
+    view.fitLimit = MAX_ZOOM
+    view.fittedWidth = 0
     commitZoom(
       scrollport,
       fitted.scale,
@@ -856,9 +869,97 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
       },
       zoomScrollBehavior(prefersReducedMotion()),
     )
+    view.fittedWidth = scrollport.clientWidth
     return
   } else return
+  view.autoFit = false
   commitZoom(scrollport, next, undefined, zoomScrollBehavior(prefersReducedMotion()))
+}
+
+/**
+ * Fit the diagram to its scrollport width. Zooming can add or drop the vertical
+ * scrollbar, which changes the width there is to fit, so this settles on a width that
+ * still fits once zoomed. Leaves view.zoom at the fitted scale and the frame applied.
+ */
+function settleFit(
+  scrollport: HTMLElement,
+  diagram: MountedDiagram,
+  view: DiagramView,
+  maxScale?: number,
+): FittedView {
+  const contentWidth = frameOf(diagram, view.hidden).total
+  const mustInclude = topMessageLabelRect(diagram, view.hidden)
+  const fitAt = (viewportWidth: number) =>
+    fittedView({
+      contentWidth,
+      viewportWidth,
+      viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
+      mustInclude,
+      maxScale,
+    })
+  const width = settleFitWidth(scrollport.clientWidth, (w) => {
+    view.zoom = fitAt(w).scale
+    applyDiagramFrame(scrollport)
+    return scrollport.clientWidth
+  })
+  return fitAt(width)
+}
+
+function printing(): boolean {
+  return printAllRows || (typeof matchMedia === 'function' && matchMedia('print').matches)
+}
+
+/**
+ * Fit a diagram the user has not zoomed (see [DiagramView.autoFit]). Does nothing while
+ * its card is collapsed (no width yet), while printing, or when the width is the one it
+ * last fitted. `first` scrolls to the top message like Fit; a refit keeps the scroll
+ * position in proportion.
+ */
+function autoFitDiagram(scrollport: HTMLElement, first: boolean): void {
+  const id = scrollport.dataset.scenarioId
+  const diagram = id ? mounted.get(id) : undefined
+  if (!id || !diagram) return
+  const view = diagramView(id)
+  if (!view.autoFit || printing()) return
+  const width = scrollport.clientWidth
+  if (width <= 0 || Math.abs(width - view.fittedWidth) <= 1) return
+  const prev = view.zoom || 1
+  const top = scrollport.scrollTop
+  const left = scrollport.scrollLeft
+  const fitted = settleFit(scrollport, diagram, view, view.fitLimit)
+  view.zoom = fitted.scale
+  applyDiagramFrame(scrollport)
+  if (first) {
+    scrollport.scrollTo({
+      top: Math.max(0, fitted.originY) * fitted.scale,
+      left: Math.max(0, fitted.originX) * fitted.scale,
+    })
+  } else {
+    const ratio = fitted.scale / prev
+    scrollport.scrollTo({ top: top * ratio, left: left * ratio })
+  }
+  view.fittedWidth = scrollport.clientWidth
+  syncDiagramWindow(scrollport)
+}
+
+// One observer for every diagram: refits auto views when their panel width changes
+// (window resize, side panel or scenario list, a collapsed card opening).
+let widthObserver: ResizeObserver | null = null
+const observedScrollports = new Set<HTMLElement>()
+
+function observeWidth(scrollport: HTMLElement): void {
+  if (typeof ResizeObserver === 'undefined') return
+  widthObserver ??= new ResizeObserver((entries) => {
+    for (const entry of entries) autoFitDiagram(entry.target as HTMLElement, false)
+  })
+  for (const old of observedScrollports) {
+    if (!old.isConnected) {
+      widthObserver.unobserve(old)
+      observedScrollports.delete(old)
+    }
+  }
+  widthObserver.observe(scrollport)
+  observedScrollports.add(scrollport)
 }
 
 /** Label box of the uppermost message still drawn. Fit scrolls this into view. */
@@ -904,6 +1005,11 @@ function onToggleParticipant(scrollport: HTMLElement, participantId: string): vo
     view.activeMessageId = null
   }
   applyDiagramFrame(scrollport)
+  if (view.autoFit) {
+    // Hiding or showing a participant changes the width to fit.
+    view.fittedWidth = 0
+    autoFitDiagram(scrollport, false)
+  }
   syncDiagramWindow(scrollport)
 }
 
@@ -932,7 +1038,13 @@ export function bindDiagramScroll(root: ParentNode): void {
     if (!scroll?.dataset.scenarioId) return
     const id = scroll.dataset.scenarioId
     applyDiagramFrame(scroll)
+    // Fit before anything scrolls to a message (deep link, insight), so that scroll uses
+    // the fitted zoom. A re-render keeps the fit it already has.
+    const view = diagramView(id)
+    if (view.autoFit) view.fittedWidth = 0
+    autoFitDiagram(scroll, true)
     syncDiagramWindow(scroll)
+    observeWidth(scroll)
     scroll.addEventListener('scroll', () => syncDiagramWindow(scroll), { passive: true })
     scroll.addEventListener('wheel', (ev) => onDiagramWheel(scroll, ev), { passive: false })
     diagram.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((btn) => {

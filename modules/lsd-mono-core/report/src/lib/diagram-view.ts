@@ -4,6 +4,12 @@ import { HEADER_BLOCK_H, MESSAGE_LABEL_RISE } from './layout'
 export const MIN_ZOOM = 0.25
 export const MAX_ZOOM = 2.5
 export const DEFAULT_ZOOM = 1
+/**
+ * Automatic fit (first render, and later resizes until the user zooms) shrinks a diagram
+ * that is wider than its panel, but never enlarges one past 100%: a narrow diagram would
+ * otherwise open with oversized text. The Fit button fills the width either way.
+ */
+export const AUTO_FIT_MAX_ZOOM = 1
 /** Button and wheel step, as a fraction of 100%. */
 export const ZOOM_STEP = 0.1
 
@@ -92,8 +98,10 @@ export function fittedView(input: {
   viewportHeight: number
   mustInclude: Rect
   headerBlock?: number
+  /** Upper bound on the scale, for the automatic fit ([AUTO_FIT_MAX_ZOOM]). */
+  maxScale?: number
 }): FittedView {
-  const scale = fitToWidthScale(input.contentWidth, input.viewportWidth)
+  const scale = Math.min(fitToWidthScale(input.contentWidth, input.viewportWidth), input.maxScale ?? MAX_ZOOM)
   const headerCss = (input.headerBlock ?? HEADER_BLOCK_H) * scale
   const visibleW = input.viewportWidth > 0 ? input.viewportWidth / scale : input.contentWidth
   const bodyCss = Math.max(0, input.viewportHeight - headerCss)
