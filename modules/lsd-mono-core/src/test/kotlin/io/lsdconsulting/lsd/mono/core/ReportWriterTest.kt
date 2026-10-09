@@ -59,15 +59,12 @@ class ReportWriterTest {
     }
 
     @Test
-    fun `the old status argument is ignored, not taken as a report key`() {
-        @Suppress("DEPRECATION")
-        val legacy = ReportWriter.writeReport(report("Orders"), tempDir.toFile(), "error")
-        assertEquals(ReportWriter.reportFileStem("Orders") + "-report.html", legacy.name)
-        assertNotEquals(ReportWriter.reportFileStem("Orders", "error") + "-report.html", legacy.name)
-
-        val keyed = ReportWriter.writeReportWithKey(report("Orders"), tempDir.toFile(), "com.example.OrderTest")
-        assertEquals(ReportWriter.reportFileStem("Orders", "com.example.OrderTest") + "-report.html", keyed.name)
-        assertEquals(legacy.name, ReportWriter.writeReportWithKey(report("Orders"), tempDir.toFile(), null).name)
+    fun `a report key, when given, names the files instead of the title`() {
+        val byTitle = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
+        val byKey = ReportWriter.writeReport(report("Orders"), tempDir.toFile(), reportKey = "com.example.OrderTest")
+        assertEquals(ReportWriter.reportFileStem("Orders") + "-report.html", byTitle.name)
+        assertEquals(ReportWriter.reportFileStem("Orders", "com.example.OrderTest") + "-report.html", byKey.name)
+        assertNotEquals(byTitle.name, byKey.name)
     }
 
     @Test

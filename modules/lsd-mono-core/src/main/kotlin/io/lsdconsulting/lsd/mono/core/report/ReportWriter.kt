@@ -63,44 +63,17 @@ object ReportWriter {
         "${sanitizeFilename(title)}-${shortHash(reportKey ?: title)}"
 
     /**
-     * Write a report named from its title ([reportFileStem] of the title).
+     * Write one report. File names are [reportFileStem]: the title plus a hash of
+     * [reportKey] (a test class or feature id) when given, else of the title, so
+     * reports with the same title do not collide.
      * @return the minimal listing HTML (`<stem>-report.html`).
      */
     @JvmStatic
+    @JvmOverloads
     fun writeReport(
         report: ReportJson,
         outputDir: File,
-    ): Path = writeReportWithKey(report, outputDir, reportKey = null)
-
-    /**
-     * The old signature. Its third argument was a status CSS class that was never
-     * used, so it is still ignored: this writes exactly what [writeReport] without it
-     * writes. It is kept so existing callers compile and are not misread as passing
-     * a report key. Use [writeReportWithKey] to name a report by a key.
-     */
-    @Deprecated(
-        "The status was never used and is ignored. Use writeReport(report, outputDir), " +
-            "or writeReportWithKey(report, outputDir, reportKey) to name the report by a key.",
-        ReplaceWith("writeReport(report, outputDir)"),
-    )
-    @JvmStatic
-    fun writeReport(
-        report: ReportJson,
-        outputDir: File,
-        @Suppress("UNUSED_PARAMETER") statusCss: String,
-    ): Path = writeReport(report, outputDir)
-
-    /**
-     * Write a report whose file names come from its title plus a hash of [reportKey]
-     * (a test class or feature id), so reports with the same title do not collide.
-     * A null key hashes the title, the same as [writeReport].
-     * @return the minimal listing HTML (`<stem>-report.html`).
-     */
-    @JvmStatic
-    fun writeReportWithKey(
-        report: ReportJson,
-        outputDir: File,
-        reportKey: String?,
+        reportKey: String? = null,
     ): Path {
         outputDir.mkdirs()
         val stem = reportFileStem(report.title, reportKey)
@@ -262,9 +235,8 @@ object ReportWriter {
             ReportWriter::class.java.getResourceAsStream(SHELL_RESOURCE)
                 ?: error("Missing classpath resource $SHELL_RESOURCE")
         val raw = stream.bufferedReader().use { it.readText() }
-        val hook = "window.__LSD_REPORT__??"
-        if (hook in raw) return raw
-        return raw.replace("const re=", "const re=window.__LSD_REPORT__??")
+        check("window.__LSD_REPORT__??" in raw) { "$SHELL_RESOURCE does not read window.__LSD_REPORT__" }
+        return raw
     }
 
     internal fun sanitizeFilename(title: String): String =
