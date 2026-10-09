@@ -28,6 +28,8 @@ cucumber.publish.enabled=false
 
 The class is `io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`. It implements Cucumber's `ConcurrentEventListener`.
 
+Parallel execution is supported (`cucumber.execution.parallel.enabled=true`, or `--threads` on the CLI). Each scenario gets its own buffer, bound to the thread that runs its steps, so `LsdContext.instance` in a step lands in that scenario, and each feature gets its own report. Work a step hands to another thread needs `LsdContext.instance.wrap(task)`. A capture from a thread that is not bound to a scenario goes to the running scenario when there is only one; with several running it is logged as a warning and kept out of all of them.
+
 ## Capture from a step
 
 Do **not** call `completeScenario` or `completeReport` yourself. The plugin does that when the scenario and the feature finish.
@@ -97,19 +99,19 @@ Feature: Place an order
     Then the order is stored and confirmed
 ```
 
-A passed scenario is stored as a success. The scenario title is the Cucumber scenario name (`places an order`). A scenario outline example is suffixed ` #1`, ` #2`, and so on. The description is the step lines as plain text. A failed scenario is stored with status error and a structured error (headline, message, stack). Anything that is not passed and not failed (skipped, pending, undefined) is a warning.
+A passed scenario is stored as a success. The scenario title is the Cucumber scenario name (`places an order`). A scenario outline example is suffixed ` #1`, ` #2`, and so on, numbered by the row's position in the feature file across all its `Examples` tables, so the numbers do not depend on run order. The description is the step lines as plain text. A failed scenario is stored with status error and a structured error (headline, message, stack). Anything that is not passed and not failed (skipped, pending, undefined) is a warning.
 
 Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step. That stays in the same diagram. It is not a new page.
 
 ## Where the report is written
 
-After the feature finishes, open:
+After the run finishes, open:
 
 ```text
-build/reports/lsd/place_order-diagram.html
+build/reports/lsd/place_order-<hash>-diagram.html
 ```
 
-The file name comes from the feature file (`place_order.feature`), not from the `Feature:` title. That file is the report. `place_order-report.html` is only a short listing. `createIndex()` adds `index.html` when more than one report exists.
+The file name comes from the feature file (`place_order.feature`), not from the `Feature:` title. `<hash>` is 8 hex characters from the feature's path, so two `place_order.feature` files in different folders get separate reports. That file is the report. `place_order-<hash>-report.html` is only a short listing. The plugin writes every feature's report when the run finishes, then `index.html`, which lists every report in the directory.
 
 Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured).
 
