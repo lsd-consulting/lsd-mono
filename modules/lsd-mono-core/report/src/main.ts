@@ -13,6 +13,8 @@ import {
 import { loadExternalPayloads, payloadKey } from './lib/payloads'
 import { clearMessageHash, parseMessageHash, writeMessageHash } from './lib/message-url'
 import { placePrintMetrics, printMetricsSection } from './ui/metrics'
+import { placePrintPanel, printComponentsSection, printMessageSection } from './ui/print-panel'
+import { renderComponentDiagram } from './lib/component-diagram'
 
 declare global {
   interface Window {
@@ -71,6 +73,8 @@ const app = document.querySelector('#app')!
 /** Arrow, Metrics or Component diagram button that opened the inspector. Close returns focus here. */
 let invoker: InspectorInvoker | null = null
 let inspector: InspectorController | null = null
+/** Scenario the side panel is showing, for its print copy. Errors have no invoker, so it is kept here. */
+let panelScenarioId: string | null = null
 /** Suppress hashchange while we write the open-message token ourselves. */
 let writingHash = false
 
@@ -244,9 +248,11 @@ function bindChrome(): void {
 
   inspector = bindInspector(document, {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
+    onContent: () => syncPrintPanel(),
     onClose: (opened) => {
       clearOpenMessageHash()
-      syncPrintMetrics()
+      panelScenarioId = null
+      syncPrintCopies()
       if (opened?.kind === 'components' || opened?.kind === 'metrics') {
         invoker = null
         const button = opened.kind === 'components' ? '[data-show-components]' : '[data-show-metrics]'
@@ -438,7 +444,7 @@ function renderMain(): void {
       </div>
     </div>
     ${items.map((s, i) => scenarioHtml(s, i)).join('')}`
-  syncPrintMetrics()
+  syncPrintCopies()
 
   items.forEach((s) => {
     const card = document.getElementById(`card-${s.id}`)!
@@ -525,6 +531,7 @@ function scenarioHtml(s: Scenario, index: number): string {
 function openError(scenario: Scenario): void {
   const err = scenario.error
   if (!err || !inspector) return
+  panelScenarioId = scenario.id
   invoker = null
   clearOpenMessageHash()
   inspector.openError({
@@ -533,7 +540,32 @@ function openError(scenario: Scenario): void {
     message: err.message,
     stack: err.stack,
   })
+  syncPrintCopies()
+}
+
+/** Print copies of the side panel follow what it shows. The panel itself never prints. */
+function syncPrintCopies(): void {
   syncPrintMetrics()
+  syncPrintPanel()
+}
+
+/**
+ * The message JSON, error, or component diagram open in the side panel prints in
+ * its scenario, after the sequence diagram. A closed panel prints nothing.
+ */
+function syncPrintPanel(): void {
+  const view = inspector?.printView() ?? null
+  const scenario = panelScenarioId ? report.scenarios.find((item) => item.id === panelScenarioId) : undefined
+  if (!view || !scenario || view.view === 'metrics') {
+    placePrintPanel(document, null)
+    return
+  }
+  if (view.view === 'components') {
+    const drawn = renderComponentDiagram(componentGraph(scenario), scenario.title)
+    placePrintPanel(document, { scenarioId: scenario.id, html: printComponentsSection(view, drawn.svg, drawn.width) })
+    return
+  }
+  placePrintPanel(document, { scenarioId: scenario.id, html: printMessageSection(view) })
 }
 
 /**
@@ -554,14 +586,16 @@ function syncPrintMetrics(): void {
 
 function openComponents(scenario: Scenario): void {
   if (!inspector) return
+  panelScenarioId = scenario.id
   invoker = { scenarioId: scenario.id, kind: 'components' }
   clearOpenMessageHash()
   inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
-  syncPrintMetrics()
+  syncPrintCopies()
 }
 
 function openMetrics(scenario: Scenario): void {
   if (!inspector) return
+  panelScenarioId = scenario.id
   invoker = { scenarioId: scenario.id, kind: 'metrics' }
   clearOpenMessageHash()
   inspector.openMetrics(scenario.id, {
@@ -570,15 +604,16 @@ function openMetrics(scenario: Scenario): void {
     insights: scenario.insights,
     labelMaxWidth: report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH,
   })
-  syncPrintMetrics()
+  syncPrintCopies()
 }
 
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
   if (!inspector) return
+  panelScenarioId = scenario.id
   invoker = { scenarioId: scenario.id, messageId: msg.id }
   setOpenMessageHash(scenario.id, msg.id)
   inspector.openMessage(scenario.id, msg)
-  syncPrintMetrics()
+  syncPrintCopies()
 }
 
 /** Open the message named in the URL hash (file:// safe). Payload still loads on open. */

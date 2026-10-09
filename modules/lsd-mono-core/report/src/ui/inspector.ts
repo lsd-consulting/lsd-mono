@@ -24,6 +24,19 @@ export interface InspectorOptions {
   loadPayload: (scenarioId: string, messageId: string) => Promise<unknown>
   /** Escape and the close control. Focus belongs back on the invoking arrow. */
   onClose: (invoker: InspectorInvoker | null) => void
+  /** The JSON (or stack) shown in the panel changed: loaded, shown, or hidden. */
+  onContent?: () => void
+}
+
+/** What the open panel shows, for the print copy in the scenario. */
+export interface PanelPrintView {
+  view: 'message' | 'components' | 'metrics' | 'error'
+  title: string
+  /** The panel's pills, already escaped. */
+  metaHtml: string
+  lead: string | null
+  /** JSON or stack text while it is shown in the panel. Null when hidden or still loading. */
+  text: string | null
 }
 
 export interface InspectorController {
@@ -35,6 +48,8 @@ export interface InspectorController {
   openError: (error: { status: string; headline: string; message: string; stack?: string }) => void
   close: () => void
   isOpen: () => boolean
+  /** Null while the panel is closed. */
+  printView: () => PanelPrintView | null
 }
 
 /** Session-only. A refresh starts from the narrow column again. */
@@ -183,6 +198,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     pre.textContent = ''
     toggle.setAttribute('aria-expanded', 'false')
     toggle.textContent = `Show ${jsonLabel}`
+    options.onContent?.()
   }
 
   async function payloadText(): Promise<string> {
@@ -203,6 +219,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     pre.hidden = false
     toggle.setAttribute('aria-expanded', 'true')
     toggle.textContent = `Hide ${jsonLabel}`
+    options.onContent?.()
   }
 
   function close(): void {
@@ -218,7 +235,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   function begin(next: InspectorInvoker | null): number {
     generation += 1
     invoker = next
-    // Which view is showing. Print CSS leaves the panel out while it shows metrics.
+    // Which view is showing. The panel never prints; main.ts prints a copy of this view in its scenario.
     panel!.dataset.view = next ? (next.kind ?? 'message') : 'error'
     ready = false
     cached = undefined
@@ -240,6 +257,16 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   const controller: InspectorController = {
     isOpen: () => !panel.hidden,
     close,
+    printView() {
+      if (panel.hidden) return null
+      return {
+        view: (panel.dataset.view ?? 'message') as PanelPrintView['view'],
+        title: title.textContent ?? '',
+        metaHtml: meta.innerHTML.trim(),
+        lead: lead.hidden ? null : lead.textContent,
+        text: pre.hidden ? null : pre.textContent,
+      }
+    },
     openMessage(scenarioId, message) {
       const token = begin({ scenarioId, messageId: message.id, kind: 'message' })
       jsonLabel = 'JSON'

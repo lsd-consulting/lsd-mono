@@ -507,6 +507,12 @@ mark {
   display: none;
   margin: 0 0 16px;
 }
+/* Print-only copy of the open message, error or component diagram view, placed in
+   its scenario after the sequence diagram (see print-panel.ts). */
+.print-panel {
+  display: none;
+  margin: 16px 0 0;
+}
 .inspector-empty {
   margin: 0;
   color: var(--text-muted);
@@ -666,7 +672,7 @@ mark {
 }
 
 /* Collapsed scenario list: an icon rail with the status dot and scenario number.
-   Screen only, so print keeps the full list. Names stay in the accessibility tree
+   Screen only. Print leaves the list out altogether. Names stay in the accessibility tree
    (visually hidden) and each item has a tooltip. */
 @media screen and (min-width: 861px) {
   .shell.sidebar-collapsed { --sidebar-w: 60px; }
@@ -789,6 +795,11 @@ mark {
     --shadow-pop: none;
   }
   body { background: #fff; color: #000; }
+  /* Paper has no navigation: the scenario list and the top bar stay off the page.
+     The report title and run time print in the hero. */
+  .topbar,
+  .sidebar,
+  .diagram-hint,
   .search-wrap,
   .top-actions,
   .filters,
@@ -801,24 +812,58 @@ mark {
   .inspector-resize {
     display: none !important;
   }
-  .topbar,
-  .sidebar,
   .seq-sticky-header { position: static; }
-  .shell { display: block; }
-  .sidebar { border-bottom: 1px solid #000; }
+  .shell { display: block; min-height: 0; }
+  .main { padding: 0; }
   .seq-scroll {
     max-height: none !important;
     overflow: visible !important;
     background: #fff;
     border-color: #000;
   }
-  .scenario-card { break-inside: avoid; box-shadow: none; border: 1px solid #000; }
-  /* Metrics print only while the Metrics view is open, in the scenario, at full
-     card width. The panel copy (narrow, scrolled) stays off the page. JSON and
-     component diagram views are not affected. */
+  /* A scenario may run over a page, but its heading stays with its summary, and
+     the summary, the diagram and the panel copy each start whole where they fit. */
+  .scenario-card { break-inside: auto; box-shadow: none; border: 1px solid #000; }
+  .scenario-head { break-after: avoid; }
+  .scenario-head .chev { display: none; }
+  .scenario-body > .cards,
+  .scenario-body > .diagram-panel { break-inside: avoid; }
+  /* The side panel (narrow, scrolled) never prints. What it shows prints as a
+     copy in its scenario at full card width, only while it is open: metrics
+     before the diagram, message JSON, error or component diagram after it. */
+  #inspector { display: none !important; }
   .print-metrics { display: block; break-inside: avoid; }
   .print-metrics .text-btn { display: none; }
   .print-metrics .kv dd { white-space: normal; overflow-wrap: anywhere; }
-  #inspector[data-view="metrics"] { display: none !important; }
+  .print-panel { display: block; }
+  .print-panel .pill { border-color: #000; }
+  .print-panel .print-lead { margin: 0 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* JSON in full: wrapped, never scrolled or clipped. A payload longer than a
+     page runs on to the next one. */
+  .print-message { break-inside: avoid; }
+  .print-panel h3 .print-label { text-transform: none; letter-spacing: normal; }
+  .print-message pre {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    line-height: 1.45;
+    padding: 10px;
+    border: 1px solid #000;
+    border-radius: var(--radius-sm);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: visible;
+    max-height: none;
+  }
+  /* Component diagram: one page, page width, never cut off. A small drawing grows
+     at most 1.5x; a tall one shrinks to fit the page height. */
+  .print-components { break-inside: avoid; }
+  .print-components .component-diagram {
+    width: 100%;
+    max-width: min(100%, var(--print-components-max, 100%));
+    height: auto;
+    max-height: 240mm;
+    overflow: visible;
+  }
   a, button { color: #000; }
 }

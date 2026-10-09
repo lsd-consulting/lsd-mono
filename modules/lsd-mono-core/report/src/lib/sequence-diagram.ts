@@ -534,7 +534,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
         .join('')}</nav>`
     : ''
   return `
-    <div class="seq-diagram">
+    <div class="seq-diagram" style="${printWidthStyle(width)}">
       ${jump}
       ${toolbarHtml(scenario, view)}
       <div class="seq-stage">
@@ -547,6 +547,17 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
         ${minimapMarkup()}
       </div>
     </div>`
+}
+
+/**
+ * Print draws the diagram across the page width. A small diagram grows at most
+ * this much, so a two-lifeline sequence does not print with huge labels.
+ */
+export const PRINT_MAX_UPSCALE = 1.5
+
+/** Upper bound for the printed width, from the unzoomed drawing width. */
+export function printWidthStyle(width: number): string {
+  return `--seq-print-max:${Math.round(width * PRINT_MAX_UPSCALE)}px`
 }
 
 /** One track, one canvas, one window marker. Never one node per event. */
@@ -587,7 +598,8 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   const windowEl = scrollport.querySelector<HTMLElement>('.seq-window')
   if (!windowEl) return
   const offset = slice[0]?.y ?? 0
-  const viewTop = slice.length ? sliceViewTop(offset) : 0
+  // Print paints every row in one drawing from the top, so it can scale to the page width.
+  const viewTop = slice.length && !printAllRows ? sliceViewTop(offset) : 0
   windowEl.style.transform = `translateY(${viewTop * zoom}px)`
   const frame = frameOf(diagram, view.hidden)
   scrollport.style.setProperty('--seq-header-h', `${cssHeader}px`)
@@ -649,8 +661,9 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
     spacer.style.height = `${diagram.height * zoom}px`
     spacer.style.width = `${width * zoom}px`
   }
-  const root = scrollport.closest('.seq-diagram')
+  const root = scrollport.closest<HTMLElement>('.seq-diagram')
   if (!root) return
+  root.style.setProperty('--seq-print-max', `${Math.round(width * PRINT_MAX_UPSCALE)}px`)
   const readout = root.querySelector('.zoom-readout')
   if (readout) readout.textContent = zoomLabel(zoom)
   root.querySelectorAll<HTMLButtonElement>('[data-participant-toggle]').forEach((btn) => {
