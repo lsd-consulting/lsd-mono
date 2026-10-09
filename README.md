@@ -104,11 +104,13 @@ The task captures the tour report with `LsdContext`, then drives the packaged sh
 
 ### Kitchen-sink sample
 
-The [kitchen-sink report](https://lsd-consulting.github.io/lsd-mono/kitchen-sink.html) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in four scenarios: happy path, payment declined, out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, payloads, timestamps, and failed and errored scenarios. The [source](docs/samples/kitchen-sink.html) is in `docs/samples`, next to `kitchen-sink-payloads.js`. GitHub shows that file as source, so open the published page above or open a local copy in a browser. The [Pages workflow](.github/workflows/pages.yml) publishes `docs/samples` when it changes on `main`. Regenerate both files from [`KitchenSinkSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/KitchenSinkSample.kt):
+The [kitchen-sink report](https://lsd-consulting.github.io/lsd-mono/kitchen-sink.html) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in four scenarios: happy path, payment declined, out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, payloads, timestamps, and failed and errored scenarios. [`KitchenSinkSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/KitchenSinkSample.kt) captures it. The report is not committed. The [Pages workflow](.github/workflows/pages.yml) builds it from the current UI on every push to `main` that touches `lsd-mono-core`, the build, or `docs/samples`, and publishes it with [`docs/samples/index.html`](docs/samples/index.html). To build the site locally, then open `modules/lsd-mono-core/build/pages/kitchen-sink.html` in a browser:
 
 ```bash
 ./gradlew :modules:lsd-mono-core:kitchenSinkSample
 ```
+
+[Generated files](docs/generated-files.md) lists every generated file, which ones are committed, and how CI keeps them fresh.
 
 ## Build
 

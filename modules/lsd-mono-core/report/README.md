@@ -1,6 +1,6 @@
 # LSD Report
 
-Report UI for **lsd-mono-core**. Sources live in `modules/lsd-mono-core/report`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `lsd-report.single.html` into the jar. The JVM façade injects captured `ReportJson` as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
+Report UI for **lsd-mono-core**. Sources live in `modules/lsd-mono-core/report`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `dist/lsd-report.html` into the jar as `lsd-report.single.html`. Build output is not committed. The JVM façade injects captured `ReportJson` as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
 
 This is the live UI, not a separate experiment, and it is not published on its own.
 
@@ -40,8 +40,8 @@ npm run build && npm run preview   # http://localhost:4173/
 ```bash
 npm run build:single
 # then open:
-#   modules/lsd-mono-core/report/lsd-report.single.html
 #   modules/lsd-mono-core/report/dist/lsd-report.html
+# (its built-in demo loads dist/lsd-report-payloads.js, written beside it)
 ```
 
 **Multi-file `dist/` after build** (Vite `base: './'`; prefer preview if modules are blocked on `file://`):
@@ -56,7 +56,7 @@ npm run build
 | Dev | `http://localhost:5173/` |
 | Preview | `http://localhost:4173/` |
 | Built static (multi-file) | `modules/lsd-mono-core/report/dist/index.html` |
-| Chrome `file://` | `modules/lsd-mono-core/report/lsd-report.single.html` |
+| Chrome `file://` | `modules/lsd-mono-core/report/dist/lsd-report.html` |
 | Source entry | `modules/lsd-mono-core/report/index.html` |
 
 Gradle produces the same shell without a manual npm build:

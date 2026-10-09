@@ -1,13 +1,19 @@
 name: Pages
 
-# Publishes docs/samples (the kitchen-sink report and an index) to GitHub Pages,
+# Builds the sample site (docs/samples/index.html plus the kitchen-sink report, generated
+# from the current report UI and KitchenSinkSample.kt) and publishes it to GitHub Pages,
 # so https://lsd-consulting.github.io/lsd-mono/kitchen-sink.html opens as a page.
-# Nothing else under docs/ is published.
+# The kitchen-sink report is not committed; nothing else under docs/ is published.
 on:
   push:
     branches: [main]
     paths:
       - "docs/samples/**"
+      - "modules/lsd-mono-core/**"
+      - "build-logic/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -29,13 +35,26 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}kitchen-sink.html
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
       - uses: actions/configure-pages@v6
-      - name: Stage the samples
+      - name: Build the sample site
+        run: ./gradlew :modules:lsd-mono-core:kitchenSinkSample --no-daemon
+      - name: Check the site
         run: |
-          mkdir -p _site
-          cp docs/samples/index.html docs/samples/kitchen-sink.html docs/samples/kitchen-sink-payloads.js _site/
+          site=modules/lsd-mono-core/build/pages
+          for f in index.html kitchen-sink.html kitchen-sink-payloads.js; do
+            test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
+          done
+          grep -qF '__LSD_PAYLOADS_SRC__="kitchen-sink-payloads.js"' "$site/kitchen-sink.html" \
+            || { echo "kitchen-sink.html does not load kitchen-sink-payloads.js"; exit 1; }
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: _site
+          path: modules/lsd-mono-core/build/pages
       - id: deployment
         uses: actions/deploy-pages@v5

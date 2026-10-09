@@ -20,12 +20,10 @@ thin Kotlin/JVM capture and report façade so integrations (e.g.
 lsd-mono-core/
 ├── report/                 # Vite+TS report UI (dev with npm)
 │   ├── src/                     # UI, custom SVG diagram, sample data
-│   ├── lsd-report.single.html
+│   ├── dist/                    # build output (gitignored): lsd-report.html and the demo's lsd-report-payloads.js
 │   └── README.md
 ├── src/main/kotlin/…/mono/core/ # Kotlin façade (capture + write reports)
-├── src/main/resources/lsd-mono-core/report/
-│   └── lsd-report-payloads.js        # sample payloads for the shell's built-in demo
-└── build.gradle.kts                 # reportSingle + reportTest
+└── build.gradle.kts                 # reportSingle + reportTest; packages dist/lsd-report.html as the jar's shell
 ```
 
 ## What runs today (`./gradlew build`)
@@ -38,7 +36,7 @@ lsd-mono-core/
 - Report writer emits, per report, files named `<title>-<hash>` (`ReportWriter.reportFileStem`;
   the hash is of the report key, or of the title). `ReportWriter.writeReport(report, dir)` hashes the
   title; `writeReport(report, dir, reportKey = key)` hashes the key:
-  - `*-diagram.html` — the classpath `lsd-report.single.html` shell with the captured
+  - `*-diagram.html` — the classpath shell (`/lsd-mono-core/report/lsd-report.single.html`) with the captured
     `ReportJson` injected (the shell falls back to sample data when opened without one)
   - `*-payloads.js` — message bodies, loaded when the inspector opens
   - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
@@ -167,9 +165,9 @@ cd modules/lsd-mono-core/report
 npm ci
 npm test             # vitest — layout, diagram view (zoom/fit/columns/search), SVG cues
 npm run dev          # http://localhost:5173/
-# or open report/lsd-report.single.html in Chrome (file://)
+npm run build:single # then open report/dist/lsd-report.html in Chrome (file://)
 ```
 
-`./gradlew :modules:lsd-mono-core:build` runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). The shell is packaged from `build/generated/resources`, not written back into `src/main/resources`. Needs Node 22.6 or later (`engines` in `report/package.json`). The Gradle tasks prepend nvm Node 22 when it is installed (`build-logic` `NodeToolchain.kt`) and do not change your default Node.
+`./gradlew :modules:lsd-mono-core:build` runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). `build:single` writes `report/dist/lsd-report.html` (gitignored), and the build packages it from `build/generated/resources`; no built shell is committed. Set `lsd.mono.report.generatedAt` (an ISO-8601 instant) to fix the report's "generated at" time, as the sample tasks do for reproducible output. Needs Node 22.6 or later (`engines` in `report/package.json`). The Gradle tasks prepend nvm Node 22 when it is installed (`build-logic` `NodeToolchain.kt`) and do not change your default Node.
 
 See `report/README.md` for how to run the report UI.

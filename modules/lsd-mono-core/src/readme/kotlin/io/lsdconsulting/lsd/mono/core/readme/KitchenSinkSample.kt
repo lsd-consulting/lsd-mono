@@ -30,8 +30,8 @@ import java.time.Instant
 /**
  * Kitchen-sink report: an online shop order flow that uses every diagram
  * feature, so layout problems are easy to eyeball. Regenerate with
- * `./gradlew :modules:lsd-mono-core:kitchenSinkSample`, which writes
- * `docs/samples/kitchen-sink.html` and its payload script.
+ * `./gradlew :modules:lsd-mono-core:kitchenSinkSample`, which builds the Pages site
+ * (`build/pages/kitchen-sink.html` and its payload script). The Pages workflow publishes it.
  *
  * Four scenarios (happy path, payment declined, out of stock, async
  * fulfilment) across 14 lifelines cover: all six participant shapes, the

@@ -40,7 +40,11 @@ tasks.jar {
 
 val reportDir = layout.projectDirectory.dir("report")
 val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
-val reportShell = reportDir.file("lsd-report.single.html")
+// Built by `npm run build:single` into report/dist (gitignored), then packaged from there.
+val reportShell = reportDir.file("dist/lsd-report.html")
+// Sample reports (README, feature tour, kitchen sink) use this instead of the time they ran,
+// so regenerating them changes nothing unless the UI or the sample does. See gradle.properties.
+val samplesGeneratedAt = providers.gradleProperty("lsd.samples.generatedAt").get()
 
 val reportSingle = tasks.register<Exec>("reportSingle") {
     group = "build"
@@ -61,14 +65,13 @@ val reportSingle = tasks.register<Exec>("reportSingle") {
     inputs.dir(reportDir.dir("src")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(reportDir.dir("scripts")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(reportDir.dir("public")).withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.file(reportShell)
     outputs.dir(reportDir.dir("dist"))
 }
 
 val copyReportShell = tasks.register<Copy>("copyReportShell") {
     group = "build"
     description =
-        "Copy report/lsd-report.single.html into build/generated/resources. Does not touch src/main/resources."
+        "Copy report/dist/lsd-report.html into build/generated/resources as the classpath shell."
     dependsOn(reportSingle)
     // Drop output left by earlier shell names so a dirty build dir cannot
     // package both the old classpath root and the previous filename.
@@ -76,7 +79,7 @@ val copyReportShell = tasks.register<Copy>("copyReportShell") {
         delete(layout.buildDirectory.dir("generated/resources/lsd-mono-core/report-next"))
         delete(layout.buildDirectory.file("generated/resources/lsd-mono-core/report/lsd-report-next.single.html"))
     }
-    from(reportShell)
+    from(reportShell) { rename { "lsd-report.single.html" } }
     into(generatedResourcesDir.map { it.dir("lsd-mono-core/report") })
 }
 
@@ -140,6 +143,7 @@ tasks.register<JavaExec>("captureReadmeReport") {
     val cleanDir = readmeReportDir.get().asFile
     doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
+    systemProperty("lsd.mono.report.generatedAt", samplesGeneratedAt)
     outputs.dir(readmeReportDir)
 }
 
@@ -161,6 +165,7 @@ tasks.register<JavaExec>("captureFeatureTourReport") {
     val cleanDir = featureTourReportDir.get().asFile
     doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
+    systemProperty("lsd.mono.report.generatedAt", samplesGeneratedAt)
     outputs.dir(featureTourReportDir)
 }
 
@@ -184,7 +189,9 @@ tasks.register<Exec>("readmeSamples") {
 }
 
 // Kitchen-sink sample: every diagram feature in one report, for eyeballing layout.
+// It is not committed: the Pages workflow builds it with kitchenSinkSample and publishes build/pages.
 val kitchenSinkReportDir = layout.buildDirectory.dir("kitchen-sink-report")
+val pagesDir = layout.buildDirectory.dir("pages")
 val samplesDocsDir = rootProject.layout.projectDirectory.dir("docs/samples")
 
 val captureKitchenSinkReport by tasks.registering(JavaExec::class) {
@@ -198,17 +205,20 @@ val captureKitchenSinkReport by tasks.registering(JavaExec::class) {
         },
     )
     systemProperty("lsd.mono.report.outputDir", kitchenSinkReportDir.get().asFile.absolutePath)
-    // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
+    // Report names carry a hash, so start clean: the copy below expects one *-diagram.html.
     val cleanDir = kitchenSinkReportDir.get().asFile
     doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
+    systemProperty("lsd.mono.report.generatedAt", samplesGeneratedAt)
     outputs.dir(kitchenSinkReportDir)
 }
 
-tasks.register<Copy>("kitchenSinkSample") {
+tasks.register<Sync>("kitchenSinkSample") {
     group = "documentation"
-    description = "Regenerate docs/samples/kitchen-sink.html. Not part of build or check."
+    description =
+        "Build the GitHub Pages site (docs/samples/index.html plus the kitchen-sink report) into build/pages. Not part of build or check."
     dependsOn(captureKitchenSinkReport)
+    from(samplesDocsDir) { include("index.html") }
     // Report files carry a short hash (kitchen-sink-<hash>-diagram.html). Publish them under plain names.
     from(kitchenSinkReportDir) {
         include("kitchen-sink-*-diagram.html", "kitchen-sink-*-payloads.js")
@@ -218,5 +228,7 @@ tasks.register<Copy>("kitchenSinkSample") {
             filter { line -> line.replace(Regex("""kitchen-sink-[0-9a-f]{8}-payloads\.js"""), "kitchen-sink-payloads.js") }
         }
     }
-    into(samplesDocsDir)
+    // Reports are written owner-only (atomic temp files); the site is public, so make it world-readable.
+    filePermissions { unix("rw-r--r--") }
+    into(pagesDir)
 }

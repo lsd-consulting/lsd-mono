@@ -17,5 +17,5 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Build
-        run: ./gradlew build --no-daemon
+      - name: Build, then check the build left no changed or new files
+        run: ./gradlew build verifyGenerated --no-daemon

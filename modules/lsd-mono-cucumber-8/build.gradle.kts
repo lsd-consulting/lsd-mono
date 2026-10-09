@@ -102,6 +102,7 @@ tasks.register<JavaExec>("captureReadmeReport") {
     val cleanDir = readmeReportDir.get().asFile
     doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
+    systemProperty("lsd.mono.report.generatedAt", providers.gradleProperty("lsd.samples.generatedAt").get())
     systemProperty("cucumber.publish.enabled", "false")
     outputs.dir(readmeReportDir)
     inputs.file(readmeFeature)

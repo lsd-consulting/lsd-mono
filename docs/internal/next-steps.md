@@ -16,7 +16,7 @@ The root `README.md` is example-led for the current Mono API: depend on `lsd-mon
 
 ## 2. Gradle-wired Vite `build:single` — done
 
-`modules/lsd-mono-core/build.gradle.kts` runs the shell build. `reportSingle` (`npm ci` then `npm run build:single`) writes the single-file HTML, `copyReportShell` places it at `build/generated/resources/lsd-mono-core/report/lsd-report.single.html`, and `processResources` depends on that copy so `jar` / `:modules:lsd-mono-core:build` ship it. `reportTest` (`npm test`, vitest) is on `check`. The hand-maintained classpath HTML under `src/main/resources` is gone; sample payloads stay there. The tasks prepend Node 22 when it is installed and do not change the nvm default alias.
+`modules/lsd-mono-core/build.gradle.kts` runs the shell build. `reportSingle` (`npm ci` then `npm run build:single`) writes the single-file HTML to `report/dist/lsd-report.html` (gitignored), `copyReportShell` places it at `build/generated/resources/lsd-mono-core/report/lsd-report.single.html`, and `processResources` depends on that copy so `jar` / `:modules:lsd-mono-core:build` ship it. `reportTest` (`npm test`, vitest) is on `check`. The hand-maintained classpath HTML under `src/main/resources` is gone, and so is the sample payloads copy (the demo's payloads are written to `report/dist`). The tasks prepend Node 22 when it is installed and do not change the nvm default alias.
 
 ---
 

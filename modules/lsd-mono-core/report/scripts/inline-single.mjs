@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, copyFileSync } from 'fs'
+import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { pathToFileURL } from 'node:url'
 
@@ -42,15 +42,14 @@ ${js}
 `
 const out = join(dist, 'lsd-report.html')
 writeFileSync(out, single)
-copyFileSync(out, join(root, 'lsd-report.single.html'))
 if (js.includes('import.meta') || js.includes('pm_visa')) {
   throw new Error('single-file shell still contains a module import or a demo payload body')
 }
 const payloadsMod = await import(pathToFileURL(join(root, 'src/data/sample-payloads.ts')).href)
 const { jsonForScript } = await import(pathToFileURL(join(root, 'src/lib/escape.ts')).href)
 const payloadJs = 'window.__LSD_PAYLOADS__=' + jsonForScript(payloadsMod.samplePayloads) + ';\n'
-const payloadOut = join(root, 'lsd-report-payloads.js')
+// Beside the shell: with no captured report it shows the built-in demo, which loads these.
+const payloadOut = join(dist, 'lsd-report-payloads.js')
 writeFileSync(payloadOut, payloadJs)
-writeFileSync(join(dist, 'lsd-report-payloads.js'), payloadJs)
-console.log('Wrote', out, `and lsd-report.single.html (${(single.length / 1024).toFixed(1)} KB)`)
+console.log('Wrote', out, `(${(single.length / 1024).toFixed(1)} KB)`)
 console.log('Wrote', payloadOut, `(${(payloadJs.length / 1024).toFixed(1)} KB)`)

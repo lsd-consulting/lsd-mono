@@ -542,7 +542,8 @@ open class LsdContext {
         ReportJson(
             title = title,
             // UTC instant. The report page shows it in the reader's own time zone.
-            generatedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS).toString(),
+            // lsd.mono.report.generatedAt fixes it, for reproducible samples.
+            generatedAt = (LsdProperties.generatedAt() ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString(),
             generator = LsdVersion.generator,
             status = determineOverallStatus(scenarios),
             options = reportOptions().toJson(),

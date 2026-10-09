@@ -1,5 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.properties
 
+import java.time.Instant
+import java.time.format.DateTimeParseException
 import java.util.Properties
 
 /**
@@ -17,6 +19,11 @@ object LsdProperties {
     const val METRICS_ENABLED = "lsd.mono.metrics.enabled"
     /** SVG / summary truncation width. Default 200. Legacy key: `lsd.core.label.maxWidth`. */
     const val LABEL_MAX_WIDTH = "lsd.mono.label.maxWidth"
+    /**
+     * A fixed ISO-8601 instant (for example `2026-01-01T12:00:00Z`) written as every report's
+     * `generatedAt` instead of the time it was written. For reproducible sample reports.
+     */
+    const val GENERATED_AT = "lsd.mono.report.generatedAt"
 
     private val defaults =
         Properties().apply {
@@ -75,6 +82,17 @@ object LsdProperties {
     @JvmStatic
     fun metricsEnabled(): Boolean =
         resolveWithLegacy(METRICS_ENABLED, "lsd.core.metrics.enabled")?.toBoolean() ?: true
+
+    /** The fixed [GENERATED_AT] instant, or null when it is unset or not an ISO-8601 instant. */
+    @JvmStatic
+    fun generatedAt(): Instant? =
+        explicit(GENERATED_AT)?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            try {
+                Instant.parse(it)
+            } catch (_: DateTimeParseException) {
+                null
+            }
+        }
 
     /** Positive character width. Falls back to legacy `lsd.core.label.maxWidth`, then 200. */
     @JvmStatic

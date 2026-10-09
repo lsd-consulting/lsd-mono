@@ -71,6 +71,7 @@ tasks.register<JavaExec>("captureReadmeReport") {
     val cleanDir = readmeReportDir.get().asFile
     doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
+    systemProperty("lsd.mono.report.generatedAt", providers.gradleProperty("lsd.samples.generatedAt").get())
     outputs.dir(readmeReportDir)
 }
 
