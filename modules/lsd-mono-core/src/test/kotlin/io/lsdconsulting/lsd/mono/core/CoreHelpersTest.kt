@@ -89,8 +89,7 @@ class CoreHelpersTest {
     }
 
     @Test
-    fun `escapeHtml and abbreviate`() {
-        assertEquals("&lt;a href=&quot;x&quot;&gt;Tom &amp; Jerry&#x27;s&lt;/a&gt;", "<a href=\"x\">Tom & Jerry's</a>".escapeHtml())
+    fun abbreviate() {
         assertEquals("hello", "  hello  ".abbreviate(10))
         assertEquals("hel...", "hello world".abbreviate(6))
         assertEquals("he", "hello".abbreviate(2), "narrower than the ellipsis is a hard cut")

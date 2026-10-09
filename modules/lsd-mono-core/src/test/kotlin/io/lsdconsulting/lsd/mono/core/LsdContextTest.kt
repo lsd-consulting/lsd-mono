@@ -37,9 +37,4 @@ class LsdContextTest {
         assertTrue(File(tempDir.toFile(), "index.html").readText().contains("$stem-report.html"))
         assertFalse(File(tempDir.toFile(), "lsd-report.single.html").exists(), "no shared latest shell")
     }
-
-    @Test
-    fun `escapeHtml encodes markup`() {
-        assertTrue("&lt;b&gt;".let { "<b>".escapeHtml() == it })
-    }
 }

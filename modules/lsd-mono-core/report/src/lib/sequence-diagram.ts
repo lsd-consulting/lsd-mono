@@ -69,6 +69,7 @@ import {
 } from './diagram-a11y'
 import { hasComponentDiagram } from './component-graph'
 import { fitName, type FittedName } from './participant-label'
+import { cssEscape, escapeAttr, escapeHtml } from './escape'
 import {
   densityBins,
   fractionFromPointer,
@@ -262,13 +263,6 @@ function xFor(i: number, index?: Map<string, number>): number {
   return (index ? laneXs.get(index)?.[i] : undefined) ?? LEFT_PAD + i * COL_GAP
 }
 
-function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
 
 /** Diagonal hatch so a coloured activation is not colour-only (colour blindness). */
 export const ACTIVATION_HATCH =
@@ -288,9 +282,9 @@ export function activationBarSvg(args: {
 }): string {
   const { x, y, width, height } = args
   if (!args.colour) {
-    return `<rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${args.fallback}"/>`
+    return `<rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${escapeAttr(args.fallback)}"/>`
   }
-  const colour = escapeXml(args.colour)
+  const colour = escapeAttr(args.colour)
   return `<g class="activation-coloured" role="img" aria-label="coloured activation"><title>coloured activation</title><rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${colour}"/><rect class="activation-hatch" x="${x}" y="${y}" width="${width}" height="${height}" fill="url(#act-tint-hatch)"/></g>`
 }
 
@@ -426,10 +420,10 @@ export function participantHeadFor(p: { type?: string; name: string; alias?: str
  */
 export function participantLabelSvg(head: ParticipantHead, name: FittedName): string {
   if (name.lines.length === 1) {
-    return `<text class="participant-label" y="${head.labelY}" text-anchor="middle">${escapeXml(name.lines[0])}</text>`
+    return `<text class="participant-label" y="${head.labelY}" text-anchor="middle">${escapeHtml(name.lines[0])}</text>`
   }
   const lines = name.lines
-    .map((line, i) => `<tspan x="0" y="${head.labelYs[i]}">${escapeXml(line)}</tspan>`)
+    .map((line, i) => `<tspan x="0" y="${head.labelYs[i]}">${escapeHtml(line)}</tspan>`)
     .join('')
   return `<text class="participant-label" text-anchor="middle">${lines}</text>`
 }
@@ -456,6 +450,7 @@ export function messageArrowSpec(type: MessageType): MessageArrowSpec {
 
 export function arrowMarker(id: string, colour: string, end: ArrowEnd): string {
   if (end === 'none') return ''
+  colour = escapeAttr(colour)
   if (end === 'open') {
     return `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M1 1 L9 5 L1 9" fill="none" stroke="${colour}" stroke-width="1.6"/>
@@ -582,14 +577,14 @@ export function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_M
 function componentsControl(scenario: Scenario): string {
   const drawable = hasComponentDiagram(scenario)
   const off = drawable ? '' : ' disabled title="No messages between components"'
-  return `<button type="button" class="components-open" data-show-components="${escapeXml(scenario.id)}"${off}>Component diagram</button>`
+  return `<button type="button" class="components-open" data-show-components="${escapeAttr(scenario.id)}"${off}>Component diagram</button>`
 }
 
 /** Opens this scenario's metrics in the inspector. Disabled when there are none (metrics off or nothing timed). */
 function metricsControl(scenario: Scenario): string {
   const any = scenario.metrics.length > 0 || (scenario.insights?.length ?? 0) > 0
   const off = any ? '' : ' disabled title="No metrics for this scenario"'
-  return `<button type="button" class="metrics-open" data-show-metrics="${escapeXml(scenario.id)}"${off}>Metrics</button>`
+  return `<button type="button" class="metrics-open" data-show-metrics="${escapeAttr(scenario.id)}"${off}>Metrics</button>`
 }
 
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {
@@ -599,7 +594,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
       const shown = !view.hidden.has(p.id)
       const name = p.alias ?? p.name
       const cue = shown ? 'shown' : 'hidden'
-      return `<button type="button" data-participant-toggle="${escapeXml(p.id)}" aria-pressed="${shown}" aria-label="${shown ? 'Hide' : 'Show'} ${escapeXml(name)}"><span class="vis-cue">${cue}</span> ${escapeXml(name)}</button>`
+      return `<button type="button" data-participant-toggle="${escapeAttr(p.id)}" aria-pressed="${shown}" aria-label="${shown ? 'Hide' : 'Show'} ${escapeAttr(name)}"><span class="vis-cue">${cue}</span> ${escapeHtml(name)}</button>`
     })
     .join('')
   return `
@@ -613,8 +608,8 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
       <div class="participant-toggles" role="group" aria-label="Show or hide participants">${toggles}</div>
       <label class="diagram-find">
         <span class="diagram-find-label">Find</span>
-        <input type="search" data-diagram-find value="${escapeXml(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
-        <span class="diagram-find-count" aria-live="polite">${escapeXml(searchCountLabel(hits.total, hits.hidden, view.query))}</span>
+        <input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
+        <span class="diagram-find-count" aria-live="polite">${escapeHtml(searchCountLabel(hits.total, hits.hidden, view.query))}</span>
       </label>
       <div class="panel-controls" role="group" aria-label="Open in the side panel">
         ${metricsControl(scenario)}
@@ -637,7 +632,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
     ? `<nav class="section-jump" aria-label="Diagram sections">${sections
         .map((row) => {
           const title = row.event.kind === 'section' ? row.event.title : ''
-          return `<button type="button" data-jump-y="${row.y}">${escapeXml(title)}</button>`
+          return `<button type="button" data-jump-y="${row.y}">${escapeHtml(title)}</button>`
         })
         .join('')}</nav>`
     : ''
@@ -646,7 +641,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
       ${jump}
       ${toolbarHtml(scenario, view)}
       <div class="seq-stage">
-        <div class="seq-scroll" data-scenario-id="${escapeXml(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeXml(scenario.title)}">
+        <div class="seq-scroll" data-scenario-id="${escapeAttr(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeAttr(scenario.title)}">
           <div class="seq-sticky-header" style="width:${width * zoom}px">${headerSvg(scenario, frame, view.hidden, zoom)}</div>
           <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
             <div class="seq-window"></div>
@@ -965,10 +960,10 @@ function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlyS
       const x = xFor(i, index)
       const name = p.alias ?? p.name
       const head = participantHeadFor(p)
-      const colour = escapeXml(p.colour ?? '#94a3b8')
+      const colour = escapeAttr(p.colour ?? '#94a3b8')
       return `
-      <g class="participant-box" data-participant="${escapeXml(p.id)}" data-participant-type="${head.type}" transform="translate(${x}, 0)" style="--pc:${colour}">
-        <title>${escapeXml(name)}, ${head.typeLabel}</title>
+      <g class="participant-box" data-participant="${escapeAttr(p.id)}" data-participant-type="${head.type}" transform="translate(${x}, 0)" style="--pc:${colour}">
+        <title>${escapeHtml(name)}, ${head.typeLabel}</title>
         ${head.shape}
         ${participantLabelSvg(head, head.name)}
       </g>`
@@ -979,7 +974,7 @@ function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlyS
     .join(', ')
   const dispW = width * zoom
   const dispH = HEADER_BLOCK_H * zoom
-  return `<svg class="seq-header-svg" viewBox="${-frame.left} 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants: ${escapeXml(summary)}">${boxes}</svg>`
+  return `<svg class="seq-header-svg" viewBox="${-frame.left} 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants: ${escapeAttr(summary)}">${boxes}</svg>`
 }
 
 function windowSvg(
@@ -1005,7 +1000,7 @@ function windowSvg(
   const lifelines = visible
     .map((p, i) => {
       const x = xFor(i, index)
-      return `<line class="lifeline-line" data-participant="${escapeXml(p.id)}" x1="${x}" y1="${viewTop}" x2="${x}" y2="${end}" />`
+      return `<line class="lifeline-line" data-participant="${escapeAttr(p.id)}" x1="${x}" y1="${viewTop}" x2="${x}" y2="${end}" />`
     })
     .join('')
 
@@ -1099,9 +1094,9 @@ function renderRow(
 
   if (event.kind === 'section') {
     return `
-    <g class="section-row" id="section-${escapeXml(event.id)}" transform="translate(0, ${row.y})">
+    <g class="section-row" id="section-${escapeAttr(event.id)}" transform="translate(0, ${row.y})">
       <rect class="section-band" x="${12 - (paint.frame?.left ?? 0)}" y="${SECTION_BAND_Y}" width="${Math.max(width + (paint.frame?.left ?? 0) + (paint.frame?.right ?? 0) - 24, 24)}" height="${SECTION_BAND_H}" rx="8"/>
-      <text class="section-title" x="${24 - (paint.frame?.left ?? 0)}" y="28">${escapeXml(event.title)}</text>
+      <text class="section-title" x="${24 - (paint.frame?.left ?? 0)}" y="28">${escapeHtml(event.title)}</text>
     </g>`
   }
 
@@ -1110,7 +1105,7 @@ function renderRow(
     <g class="divider" transform="translate(0, ${row.y})">
       <line class="divider-line" x1="${LEFT_PAD - 40}" y1="0" x2="${width - LEFT_PAD + 40}" y2="0"/>
       <rect class="divider-pill" x="${width / 2 - 60}" y="-12" width="120" height="24" rx="12"/>
-      <text class="divider-label" x="${width / 2}" y="4" text-anchor="middle">${escapeXml(event.label)}</text>
+      <text class="divider-label" x="${width / 2}" y="4" text-anchor="middle">${escapeHtml(event.label)}</text>
     </g>`
   }
 
@@ -1119,7 +1114,7 @@ function renderRow(
     return `
     <g class="delay" transform="translate(0, ${row.y})" data-kind="delay">
       <line class="delay-line" x1="${LEFT_PAD - 40}" y1="0" x2="${width - LEFT_PAD + 40}" y2="0"/>
-      <text class="delay-label" x="${width / 2}" y="4" text-anchor="middle">${escapeXml(label)}</text>
+      <text class="delay-label" x="${width / 2}" y="4" text-anchor="middle">${escapeHtml(label)}</text>
     </g>`
   }
 
@@ -1145,8 +1140,8 @@ function renderRow(
     const tspans = card.lines
       .map((line, i) =>
         i === 0
-          ? `<tspan x="0" y="${firstY}">${escapeXml(line)}</tspan>`
-          : `<tspan x="0" dy="${NOTE_LINE_H}">${escapeXml(line)}</tspan>`,
+          ? `<tspan x="0" y="${firstY}">${escapeHtml(line)}</tspan>`
+          : `<tspan x="0" dy="${NOTE_LINE_H}">${escapeHtml(line)}</tspan>`,
       )
       .join('')
     // Search cue sits just above the card's top-right corner, so it never crowds the note copy.
@@ -1154,7 +1149,7 @@ function renderRow(
       ? `<text class="note-match-cue" x="${halfW}" y="${-halfH - 3}" text-anchor="end">[match]</text>`
       : ''
     return `
-    <g class="note note-${place}${hit}" data-placement="${place}"${hitAttr} transform="translate(${layout.x}, ${row.y})">
+    <g class="note note-${escapeAttr(place)}${hit}" data-placement="${escapeAttr(place)}"${hitAttr} transform="translate(${layout.x}, ${row.y})">
       <rect class="note-card" x="${-halfW}" y="${-halfH}" width="${card.width}" height="${card.height}" rx="6"/>
       <text class="note-text" text-anchor="${layout.textAnchor}">${tspans}</text>
       ${matchCue}
@@ -1179,8 +1174,8 @@ function renderRow(
 
 
 function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
-  const full = escapeXml(msg.label)
-  const shown = escapeXml(truncateLabel(msg.label, labelMaxWidth))
+  const full = escapeHtml(msg.label)
+  const shown = escapeHtml(truncateLabel(msg.label, labelMaxWidth))
   return `<title>${full}</title>${shown}`
 }
 
@@ -1200,25 +1195,26 @@ function renderMessageRow(
 ): string {
   const spec = messageArrowSpec(msg.type)
   const match = rowMatchesQuery(msg, query)
-  const colour =
+  const rawColour =
     msg.colour ||
     (msg.type === 'SYNCHRONOUS_RESPONSE'
       ? '#94a3b8'
       : colourOf.get(msg.from || msg.to) || '#34d399')
-  const endId = ensureMarker(colour, spec.end)
-  const startId = ensureMarker(colour, spec.start)
+  const endId = ensureMarker(rawColour, spec.end)
+  const startId = ensureMarker(rawColour, spec.start)
+  const colour = escapeAttr(rawColour)
   const dashed = spec.dashed ? 'stroke-dasharray="5 4"' : ''
   const markerEnd = endId ? `marker-end="url(#${endId})"` : ''
   const markerStart = startId ? `marker-start="url(#${startId})"` : ''
   const hasData = messageHasPayload(msg)
-  const dur = msg.durationMs != null ? `<tspan class="msg-dur"> · ${msg.durationMs}ms</tspan>` : ''
+  const dur = msg.durationMs != null ? `<tspan class="msg-dur"> · ${escapeHtml(msg.durationMs)}ms</tspan>` : ''
   const cue = spec.typeCue
-    ? `<tspan class="msg-type-cue"> [${escapeXml(spec.typeCue)}]</tspan>`
+    ? `<tspan class="msg-type-cue"> [${escapeHtml(spec.typeCue)}]</tspan>`
     : ''
   const matchCue = match ? `<tspan class="msg-match-cue"> [match]</tspan>` : ''
   const hitClass = match ? ' search-hit' : ''
   const hitAttr = match ? ' data-search-hit="match"' : ''
-  const typeAttr = `data-msg-type="${escapeXml(msg.type)}"`
+  const typeAttr = `data-msg-type="${escapeAttr(msg.type)}"`
   if (hasData) buttons.push(messageOpenButton(msg, y, width, index, viewTop, zoom, paint))
 
   // Nested bars sit ACT_NEST_DX right of their parent, so arrows shift with them.
@@ -1302,7 +1298,7 @@ function messageOpenButton(
   const place = places.find((item) => item.id === msg.id) ?? places[0]
   const tab = tabindexFor(msg.id, paint.activeMessageId ?? null, places)
   // posinset/setsize are not valid on button. The listitem carries the real index.
-  return `<div role="listitem" class="msg-place" aria-setsize="${place.setsize}" aria-posinset="${place.posinset}"><button type="button" class="msg-open" data-message-id="${escapeXml(msg.id)}" aria-label="Open ${escapeXml(msg.label)}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button></div>`
+  return `<div role="listitem" class="msg-place" aria-setsize="${place.setsize}" aria-posinset="${place.posinset}"><button type="button" class="msg-open" data-message-id="${escapeAttr(msg.id)}" aria-label="Open ${escapeAttr(msg.label)}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button></div>`
 }
 
 let movingFocus = false
@@ -1439,10 +1435,6 @@ function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-function cssEscape(value: string): string {
-  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(value)
-  return value.replace(/([^a-zA-Z0-9_-])/g, '\\$1')
-}
 
 function paintedMessageIds(slice: LayoutRow[], hiddenIds: ReadonlySet<string>): Set<string> {
   const ids = new Set<string>()

@@ -15,7 +15,12 @@ const PREFIX = '#msg='
 
 /** Build the hash fragment for an open message (includes the leading #). */
 export function messageHash(scenarioId: string, messageId: string): string {
-  return `${PREFIX}${encodeURIComponent(scenarioId)}/${encodeURIComponent(messageId)}`
+  return `${PREFIX}${encodeId(scenarioId)}/${encodeId(messageId)}`
+}
+
+/** encodeURIComponent throws on a lone surrogate; such an id gets U+FFFD in its place. */
+function encodeId(id: string): string {
+  return encodeURIComponent(id.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD'))
 }
 
 /**

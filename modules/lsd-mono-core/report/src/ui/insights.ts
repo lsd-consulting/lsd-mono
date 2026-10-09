@@ -1,10 +1,6 @@
 import type { Insight } from '../types'
 import { truncateLabel } from './format'
-import { escapeHtml } from './scenario-summary'
-
-function escapeAttr(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
-}
+import { escapeAttr, escapeHtml } from '../lib/escape'
 
 /**
  * Ranked duration list. Rank number and kind word are the cues — no colour-only status.
@@ -22,7 +18,7 @@ export function insightsListHtml(insights: Insight[] | undefined, labelMaxWidth:
           : `${insight.totalMs} ms`
       const shown = truncateLabel(insight.label, labelMaxWidth)
       return `<li>
-        <span class="insight-rank">#${insight.rank}</span>
+        <span class="insight-rank">#${escapeHtml(insight.rank)}</span>
         <span class="insight-kind">${escapeHtml(kind)}</span>
         <span class="insight-who">${escapeHtml(insight.participant)}</span>
         <span class="insight-dur">${escapeHtml(duration)}</span>

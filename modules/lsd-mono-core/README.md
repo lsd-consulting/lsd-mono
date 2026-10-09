@@ -34,7 +34,7 @@ lsd-mono-core/
 
 - Kotlin library compiles and tests
 - `LsdContext` façade: facts, `completeScenario`, `completeReport`, `createIndex`,
-  `clear`, id generation, HTML escape, popup helper
+  `clear`, id generation, HTML escapers (`html.Html`), popup helper
 - Report writer emits, per report, files named `<title>-<hash>` (`ReportWriter.reportFileStem`;
   the hash is of the report key, or of the title). `ReportWriter.writeReport(report, dir)` hashes the
   title; `writeReport(report, dir, reportKey = key)` hashes the key:
@@ -141,6 +141,24 @@ lsd.payloads.register(JsonNode::class.java) { mapper.convertValue(it, Map::class
 ```
 
 `lsd.clear()` re-reads the limits and keeps the converters.
+
+### Escaping
+
+Report text is plain data and is escaped wherever it is written, with one escaper
+per context:
+
+| Context | Kotlin (written files) | Report UI (`report/src/lib/escape.ts`) |
+| --- | --- | --- |
+| Element text | `Html.text` | `escapeHtml` |
+| Quoted attribute value | `Html.attribute` | `escapeAttr` |
+| JSON in `<script>` or a `.js` file | `jsonString` / `JsonValue.render()` | `jsonForScript` |
+| CSS selector | | `cssEscape` |
+
+JSON for scripts escapes `<`, `>`, `&`, U+2028, U+2029 and control characters, and
+writes a lone surrogate as `\ufffd`. The Kotlin HTML escapers also replace control
+characters and lone surrogates with U+FFFD, because the files are UTF-8. A scenario
+description that contains `<mark>` keeps only bare `p`, `br`, `mark`, `strong`, `em`,
+`b`, `i` and `code` tags; anything else in it is shown as text.
 
 ## Report UI (manual)
 

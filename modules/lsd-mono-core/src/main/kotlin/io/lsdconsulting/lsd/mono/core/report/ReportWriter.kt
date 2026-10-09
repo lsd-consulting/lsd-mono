@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.report
 
-import io.lsdconsulting.lsd.mono.core.escapeHtml
+import io.lsdconsulting.lsd.mono.core.html.Html
+import io.lsdconsulting.lsd.mono.core.json.jsonString
 import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
@@ -124,9 +125,9 @@ object ReportWriter {
         val rows =
             reportFiles.joinToString("\n") { rf ->
                 """
-                <tr class="${rf.status.escapeHtml()}">
-                  <td><a href="${rf.filename.escapeHtml()}">${rf.title.escapeHtml()}</a></td>
-                  <td>${rf.status.escapeHtml()}</td>
+                <tr class="${Html.attribute(rf.status)}">
+                  <td><a href="${Html.attribute(rf.filename)}">${Html.text(rf.title)}</a></td>
+                  <td>${Html.text(rf.status)}</td>
                 </tr>
                 """.trimIndent()
             }
@@ -166,7 +167,7 @@ object ReportWriter {
         val props =
             Properties().apply {
                 setProperty("filename", entry.filename)
-                setProperty("title", entry.title)
+                setProperty("title", Html.wellFormed(entry.title))
                 setProperty("status", entry.status)
             }
         val text = StringWriter().also { props.store(it, null) }.toString()
@@ -203,7 +204,8 @@ object ReportWriter {
         Files.createDirectories(dir)
         val temp = Files.createTempFile(dir, ".${target.fileName}.", ".tmp")
         try {
-            Files.writeString(temp, text)
+            // Lone surrogates are escaped or replaced before this; never fail a report on one that is not.
+            Files.write(temp, Html.wellFormed(text).toByteArray(Charsets.UTF_8))
             try {
                 Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             } catch (_: AtomicMoveNotSupportedException) {
@@ -217,13 +219,14 @@ object ReportWriter {
     /**
      * Packaged shell boots with `const re = window.__LSD_REPORT__ ?? sample`.
      * Inject the captured report immediately before that script so file:// viewing works.
-     * `<` in JSON is escaped so a payload cannot close the script tag.
+     * Values are written with `jsonString`, which escapes `<`, `>`, `&`, U+2028/2029 and
+     * lone surrogates, so no report text can close the script element.
      */
     private fun renderShell(report: ReportJson, payloadsFile: String?): String {
         val template = readShellTemplate()
         val src =
             if (payloadsFile == null) ""
-            else "window.__LSD_PAYLOADS_SRC__=\"${payloadsFile.replace("\\", "\\\\").replace("\"", "\\\"")}\";"
+            else "window.__LSD_PAYLOADS_SRC__=${jsonString(payloadsFile)};"
         val injection = "<script>${src}window.__LSD_REPORT__=${report.toJson().trim()};</script>\n"
         val marker = "<script>"
         val idx = template.indexOf(marker)
@@ -262,16 +265,16 @@ object ReportWriter {
                     } else {
                         "<ul>" +
                             s.facts.joinToString("") {
-                                "<li><strong>${it.key.escapeHtml()}</strong>: ${it.value.escapeHtml()}</li>"
+                                "<li><strong>${Html.text(it.key)}</strong>: ${Html.text(it.value)}</li>"
                             } +
                             "</ul>"
                     }
                 """
-                <section class="scenario ${s.status.escapeHtml()}" id="${s.id.escapeHtml()}">
-                  <h2>${s.title.escapeHtml()}
-                    <span class="badge">${s.status.escapeHtml()}</span>
+                <section class="scenario ${Html.attribute(s.status)}" id="${Html.attribute(s.id)}">
+                  <h2>${Html.text(s.title)}
+                    <span class="badge">${Html.text(s.status)}</span>
                   </h2>
-                  <div class="description">${s.description.escapeHtml()}</div>
+                  <div class="description">${Html.text(s.description)}</div>
                   ${errorBlock(s)}
                   <h3>Facts</h3>
                   $facts
@@ -286,7 +289,7 @@ object ReportWriter {
             <head>
               <meta charset="UTF-8"/>
               <meta name="viewport" content="width=device-width, initial-scale=1"/>
-              <title>${report.title.escapeHtml()}</title>
+              <title>${Html.text(report.title)}</title>
               <style>
                 :root { color-scheme: light dark; }
                 body { font-family: system-ui, sans-serif; margin: 0; padding: 1.5rem; line-height: 1.45; }
@@ -308,15 +311,15 @@ object ReportWriter {
             </head>
             <body>
               <header>
-                <h1>${report.title.escapeHtml()}</h1>
-                <p class="meta">${report.generator.escapeHtml()} · ${report.generatedAt.escapeHtml()}</p>
+                <h1>${Html.text(report.title)}</h1>
+                <p class="meta">${Html.text(report.generator)} · ${Html.text(report.generatedAt)}</p>
               </header>
               $scenarios
               <div class="note">
                 <strong>Interactive diagram:</strong>
-                <a href="${diagramName.escapeHtml()}">${diagramName.escapeHtml()}</a>
+                <a href="${Html.attribute(diagramName)}">${Html.text(diagramName)}</a>
                 renders this report (injected as <code>window.__LSD_REPORT__</code>).
-                JSON: <a href="${jsonName.escapeHtml()}">${jsonName.escapeHtml()}</a>.
+                JSON: <a href="${Html.attribute(jsonName)}">${Html.text(jsonName)}</a>.
               </div>
             </body>
             </html>
@@ -326,10 +329,10 @@ object ReportWriter {
     private fun errorBlock(scenario: ScenarioJson): String {
         val error = scenario.error ?: return ""
         val stack =
-            error.stack?.let { "<pre>${it.escapeHtml()}</pre>" }.orEmpty()
+            error.stack?.let { "<pre>${Html.text(it)}</pre>" }.orEmpty()
         return """
-            <h3>${error.headline.escapeHtml()}</h3>
-            <p>${error.message.escapeHtml()}</p>
+            <h3>${Html.text(error.headline)}</h3>
+            <p>${Html.text(error.message)}</p>
             $stack
         """.trimIndent()
     }
@@ -351,7 +354,7 @@ object ReportWriter {
                         is SpacerEventJson -> "spacer${event.heightPx?.let { " ${it}px" }.orEmpty()}"
                         is LifelineEventJson -> "${event.kind} ${event.participantId}"
                     }
-                "<li>${label.escapeHtml()}</li>"
+                "<li>${Html.text(label)}</li>"
             }
         return "<ol>$items</ol>"
     }

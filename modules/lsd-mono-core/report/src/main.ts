@@ -47,6 +47,7 @@ import {
 } from './ui/sidebar'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
 import { componentGraph } from './lib/component-graph'
+import { cssEscape, escapeAttr, escapeHtml } from './lib/escape'
 
 interface State {
   query: string
@@ -202,14 +203,6 @@ function renderShell(): void {
   renderMain()
 }
 
-function escapeAttr(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
 function bindChrome(): void {
   const search = document.querySelector<HTMLInputElement>('#search')!
   search.addEventListener('input', () => {
@@ -256,14 +249,14 @@ function bindChrome(): void {
       if (opened?.kind === 'components' || opened?.kind === 'metrics') {
         invoker = null
         const button = opened.kind === 'components' ? '[data-show-components]' : '[data-show-metrics]'
-        document.querySelector<HTMLButtonElement>(`#card-${CSS.escape(opened.scenarioId)} ${button}`)?.focus()
+        document.querySelector<HTMLButtonElement>(`#card-${cssEscape(opened.scenarioId)} ${button}`)?.focus()
         return
       }
       const messageId = focusTargetAfterClose(opened?.messageId ?? null)
       const scenarioId = opened?.scenarioId
       invoker = null
       if (!messageId || !scenarioId) return
-      const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenarioId)} .seq-scroll`)
+      const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenarioId)} .seq-scroll`)
       if (scroll) focusDiagramMessage(scroll, messageId)
     },
   })
@@ -393,12 +386,12 @@ function renderNav(): void {
         : ''
       return `
       <li>
-        <button type="button" data-nav="${s.id}" aria-current="${state.selectedId === s.id}"${tooltip}>
-          <span class="dot ${s.status}"></span>
+        <button type="button" data-nav="${escapeAttr(s.id)}" aria-current="${state.selectedId === s.id}"${tooltip}>
+          <span class="dot ${escapeAttr(s.status)}"></span>
           <span class="nav-icon" aria-hidden="true">${number}</span>
           <span class="nav-text">
             <div class="nav-title">${escapeHtml(s.title)}</div>
-            <div class="nav-meta">${statusLabel(s.status)} · ${msgs} messages</div>
+            <div class="nav-meta">${escapeHtml(statusLabel(s.status))} · ${msgs} messages</div>
           </span>
         </button>
       </li>`
@@ -426,7 +419,7 @@ function renderMain(): void {
       <div class="report-hero">
         <h1>${escapeHtml(report.title)}</h1>
         <div class="meta">
-          <span>Generated ${formatGeneratedAt(report.generatedAt)}</span>
+          <span>Generated ${escapeHtml(formatGeneratedAt(report.generatedAt))}</span>
           <code>${escapeHtml(report.generator)}</code>
         </div>
       </div>
@@ -438,7 +431,7 @@ function renderMain(): void {
     <div class="report-hero">
       <h1>${escapeHtml(report.title)}</h1>
       <div class="meta">
-        <span>Generated ${formatGeneratedAt(report.generatedAt)}</span>
+        <span>Generated ${escapeHtml(formatGeneratedAt(report.generatedAt))}</span>
         <code>${escapeHtml(report.generator)}</code>
         <span>${items.length} shown</span>
       </div>
@@ -446,9 +439,11 @@ function renderMain(): void {
     ${items.map((s, i) => scenarioHtml(s, i)).join('')}`
   syncPrintCopies()
 
-  items.forEach((s) => {
-    const card = document.getElementById(`card-${s.id}`)!
-    const head = card.querySelector('.scenario-head')!
+  // Cards are in the order of items. Not looked up by id: an id is report data.
+  const cards = main.querySelectorAll<HTMLElement>(':scope > .scenario-card')
+  items.forEach((s, i) => {
+    const head = cards[i]?.querySelector('.scenario-head')
+    if (!head) return
     head.addEventListener('click', () => toggleOpen(s.id))
     head.addEventListener('keydown', (ev) => {
       const e = ev as KeyboardEvent
@@ -472,7 +467,7 @@ function revealMessage(scenarioId: string, messageId: string): void {
     renderMain()
   }
   const y = messageOffsetY(scenarioId, messageId)
-  const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenarioId)} .seq-scroll`)
+  const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenarioId)} .seq-scroll`)
   if (!scroll || y == null) return
   scroll.closest('.seq-diagram')?.scrollIntoView({ block: 'nearest' })
   scroll.scrollTop = Math.max(0, y - 24)
@@ -498,11 +493,11 @@ function scenarioHtml(s: Scenario, index: number): string {
   const labelMaxWidth = report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
   const diagram = renderDiagramHtml(s, labelMaxWidth)
   return `
-  <article class="scenario-card ${s.status}" id="card-${s.id}" data-open="${open}" data-status="${s.status}" style="animation-delay:${index * 40}ms">
+  <article class="scenario-card ${escapeAttr(s.status)}" id="card-${escapeAttr(s.id)}" data-open="${open}" data-status="${escapeAttr(s.status)}" style="animation-delay:${index * 40}ms">
     <div class="scenario-head" role="button" tabindex="0" aria-expanded="${open}">
       <span class="chev" aria-hidden="true">▸</span>
       <h2>${escapeHtml(s.title)}</h2>
-      <span class="badge ${s.status}">${s.status}</span>
+      <span class="badge ${escapeAttr(s.status)}">${escapeHtml(s.status)}</span>
     </div>
     <div class="scenario-body">
       <div class="cards">
@@ -632,7 +627,7 @@ function applyOpenMessageFromHash(): void {
   renderNav()
   renderMain()
   requestAnimationFrame(() => {
-    const scroll = document.querySelector<HTMLElement>(`#card-${CSS.escape(scenario.id)} .seq-scroll`)
+    const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenario.id)} .seq-scroll`)
     if (scroll) focusDiagramMessage(scroll, msg.id)
     if (!already) openMessage(scenario, msg)
   })

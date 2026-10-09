@@ -1,5 +1,5 @@
 import type { PanelPrintView } from './inspector'
-import { escapeHtml } from './scenario-summary'
+import { escapeAttr, escapeHtml } from '../lib/escape'
 
 /**
  * Print-only copies of the side panel's message, error and component diagram
@@ -14,7 +14,7 @@ export function printMessageSection(view: PanelPrintView): string {
   const heading = view.view === 'error' ? 'Error' : 'Message'
   const lead = view.lead ? `<p class="print-lead">${escapeHtml(view.lead)}</p>` : ''
   const body = view.text != null ? `<pre>${escapeHtml(view.text)}</pre>` : ''
-  return `<section class="card print-panel print-message" data-print-panel="${view.view}">
+  return `<section class="card print-panel print-message" data-print-panel="${escapeAttr(view.view)}">
     <h3>${heading} · <span class="print-label">${escapeHtml(view.title)}</span></h3>
     ${view.metaHtml ? `<div class="meta-row">${view.metaHtml}</div>` : ''}
     ${lead}${body}

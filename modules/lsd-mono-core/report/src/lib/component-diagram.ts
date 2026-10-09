@@ -1,5 +1,6 @@
 import { componentEdgeTitle, type ComponentEdge, type ComponentGraph, type ComponentNode } from './component-graph'
 import { participantHeadFor, participantLabelSvg } from './sequence-diagram'
+import { escapeAttr, escapeHtml } from './escape'
 
 /** Horizontal room per node. The participant shape is about 100 wide; the rest is for the name. */
 export const SLOT_W = 150
@@ -159,8 +160,8 @@ export function renderComponentDiagram(graph: ComponentGraph, title: string): Co
   const vy = Math.floor(box.minY - PAD)
   const width = Math.ceil(box.maxX + PAD) - vx
   const height = Math.ceil(box.maxY + PAD) - vy
-  const svg = `<svg class="component-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${width} ${height}" width="${width}" height="${height}" style="max-width:${width}px" role="group" aria-label="${escapeXml(summary)}">
-    <title>${escapeXml(summary)}</title>
+  const svg = `<svg class="component-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${width} ${height}" width="${width}" height="${height}" style="max-width:${width}px" role="group" aria-label="${escapeAttr(summary)}">
+    <title>${escapeHtml(summary)}</title>
     <defs>
       <marker id="lsd-comp-filled" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="9" refY="5" orient="auto-start-reverse">
         <path d="M0 0 L10 5 L0 10 Z" class="marker-fill"/>
@@ -197,9 +198,9 @@ function nodeSvg(
   const half = Math.max(HIT_HW, head.half)
   const bottom = Math.max(48, head.labelYs[head.labelYs.length - 1] + 6)
   grow(at.x - half, at.y, at.x + half, at.y + bottom)
-  const colour = node.colour ? ` style="--pc:${escapeXml(node.colour)}"` : ''
-  return `<g class="component-node participant-box" data-component="${escapeXml(node.id)}" data-participant-type="${head.type}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${colour}>
-      <title>${escapeXml(node.name)}, ${head.typeLabel}</title>
+  const colour = node.colour ? ` style="--pc:${escapeAttr(node.colour)}"` : ''
+  return `<g class="component-node participant-box" data-component="${escapeAttr(node.id)}" data-participant-type="${head.type}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${colour}>
+      <title>${escapeHtml(node.name)}, ${head.typeLabel}</title>
       ${head.shape}
       ${participantLabelSvg(head, head.name)}
     </g>`
@@ -247,8 +248,8 @@ function edgeSvg(
   const title = componentEdgeTitle(edge, fromName, toName)
   const label = `${fromName} to ${toName}, ${edge.count} ${edge.count === 1 ? 'interaction' : 'interactions'}`
   const group = (shape: string, hit: string, badge: string): string =>
-    `<g class="edge-group" data-edge-index="${index}" data-edge-from="${escapeXml(edge.from)}" data-edge-to="${escapeXml(edge.to)}" tabindex="0" role="button" aria-label="${escapeXml(label)}">
-      <title>${escapeXml(title)}</title>
+    `<g class="edge-group" data-edge-index="${index}" data-edge-from="${escapeAttr(edge.from)}" data-edge-to="${escapeAttr(edge.to)}" tabindex="0" role="button" aria-label="${escapeAttr(label)}">
+      <title>${escapeHtml(title)}</title>
       ${hit}
       ${shape}
       ${badge}
@@ -353,11 +354,3 @@ function fmt(n: number): string {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
 }
 
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}

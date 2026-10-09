@@ -1,4 +1,5 @@
 import type { DiagramEvent, MessageEvent, Report, Scenario } from '../types'
+import { cssEscape, jsonForScript } from './escape'
 
 /** Keys kept on the message for the first paint. Everything else waits for the inspector. */
 const SUMMARY_KEYS = new Set(['method', 'path', 'status'])
@@ -79,19 +80,15 @@ export interface ShellParts {
 /** What the report writer injects. `payloadsSrc` is the sibling file name, same directory as the HTML. */
 export function shellParts(report: Report, payloadsSrc: string): ShellParts {
   const split = splitReportPayloads(report)
-  const reportJson = encodeScriptJson(split.report)
+  const reportJson = jsonForScript(split.report)
   const hasPayloads = Object.keys(split.payloads).length > 0
-  const srcAssign = hasPayloads ? `window.__LSD_PAYLOADS_SRC__=${JSON.stringify(payloadsSrc)};` : ''
+  const srcAssign = hasPayloads ? `window.__LSD_PAYLOADS_SRC__=${jsonForScript(payloadsSrc)};` : ''
   return {
     report: split.report,
     payloads: split.payloads,
     htmlScript: `<script>${srcAssign}window.__LSD_REPORT__=${reportJson};</script>\n`,
-    payloadsJs: hasPayloads ? `window.__LSD_PAYLOADS__=${encodeScriptJson(split.payloads)};\n` : null,
+    payloadsJs: hasPayloads ? `window.__LSD_PAYLOADS__=${jsonForScript(split.payloads)};\n` : null,
   }
-}
-
-function encodeScriptJson(value: unknown): string {
-  return JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
 }
 
 let payloadsPromise: Promise<Record<string, unknown>> | null = null
@@ -140,7 +137,7 @@ async function fetchPayloads(useSample: boolean): Promise<Record<string, unknown
 
 function injectPayloadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const selector = `script[data-lsd-payloads="${src.replace(/"/g, '\\"')}"]`
+    const selector = `script[data-lsd-payloads="${cssEscape(src)}"]`
     if (document.querySelector(selector)) {
       resolve()
       return

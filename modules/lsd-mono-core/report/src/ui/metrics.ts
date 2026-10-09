@@ -1,6 +1,6 @@
 import type { Insight, Metric } from '../types'
 import { insightsListHtml } from './insights'
-import { escapeHtml } from './scenario-summary'
+import { escapeAttr, escapeHtml } from '../lib/escape'
 
 /**
  * Body of the Metrics view in the side panel: the scenario's metrics as a
@@ -47,8 +47,4 @@ export function placePrintMetrics(doc: Document, open: { scenarioId: string; htm
   if (!open) return
   const cards = doc.getElementById(`card-${open.scenarioId}`)?.querySelector('.scenario-body > .cards')
   cards?.insertAdjacentHTML('afterend', open.html)
-}
-
-function escapeAttr(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 }

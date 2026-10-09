@@ -20,6 +20,10 @@ describe('messageHash / parseMessageHash', () => {
     expect(parseMessageHash(hash)).toEqual({ scenarioId: 'sc/a', messageId: 'm 2' })
   })
 
+  it('does not throw on an id with a lone surrogate', () => {
+    expect(parseMessageHash(messageHash('s\uD800', 'm\uDC00'))).toEqual({ scenarioId: 's\uFFFD', messageId: 'm\uFFFD' })
+  })
+
   it('rejects unrelated fragments', () => {
     expect(parseMessageHash('#section=pay')).toBeNull()
     expect(parseMessageHash('')).toBeNull()

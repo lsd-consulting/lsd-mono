@@ -3,6 +3,7 @@ import { renderComponentDiagram } from '../lib/component-diagram'
 import { edgeInteractions, typeCue, type ComponentGraph } from '../lib/component-graph'
 import { pretty } from './format'
 import { metricsPanelHtml } from './metrics'
+import { escapeHtml } from '../lib/escape'
 
 export interface InspectorInvoker {
   scenarioId: string
@@ -309,7 +310,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       meta.innerHTML = `
         <span class="pill">${escapeHtml(message.type)}</span>
         <span class="pill">${escapeHtml(message.from)} → ${escapeHtml(message.to)}</span>
-        ${message.durationMs != null ? `<span class="pill">${message.durationMs} ms</span>` : ''}
+        ${message.durationMs != null ? `<span class="pill">${escapeHtml(message.durationMs)} ms</span>` : ''}
         ${summaryPills(message.data)}
         <span class="pill">${escapeHtml(scenarioId)}</span>`
       pending = message.payloadId
@@ -541,6 +542,3 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}

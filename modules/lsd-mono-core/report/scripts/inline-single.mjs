@@ -13,6 +13,9 @@ const css = readFileSync(join(dist, 'assets', cssMatch[1]), 'utf8')
 const favicon = readFileSync(join(dist, 'favicon.svg'), 'utf8')
 const faviconData = 'data:image/svg+xml,' + encodeURIComponent(favicon)
 
+if (/<\/script|<!--/i.test(js)) {
+  throw new Error('the bundle contains </script or <!--, which would end or confuse its inline <script>')
+}
 // Classic <script> (not type=module): Vite chunk is already an IIFE — works on file://.
 const single = `<!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -44,10 +47,8 @@ if (js.includes('import.meta') || js.includes('pm_visa')) {
   throw new Error('single-file shell still contains a module import or a demo payload body')
 }
 const payloadsMod = await import(pathToFileURL(join(root, 'src/data/sample-payloads.ts')).href)
-const payloadJs =
-  'window.__LSD_PAYLOADS__=' +
-  JSON.stringify(payloadsMod.samplePayloads).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026') +
-  ';\n'
+const { jsonForScript } = await import(pathToFileURL(join(root, 'src/lib/escape.ts')).href)
+const payloadJs = 'window.__LSD_PAYLOADS__=' + jsonForScript(payloadsMod.samplePayloads) + ';\n'
 const payloadOut = join(root, 'lsd-report-payloads.js')
 writeFileSync(payloadOut, payloadJs)
 writeFileSync(join(dist, 'lsd-report-payloads.js'), payloadJs)
