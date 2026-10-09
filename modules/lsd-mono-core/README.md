@@ -36,7 +36,9 @@ lsd-mono-core/
 - `LsdContext` façade: facts, `completeScenario`, `completeReport`, `createIndex`,
   `clear`, id generation, HTML escape, popup helper
 - Report writer emits, per report, files named `<title>-<hash>` (`ReportWriter.reportFileStem`;
-  the hash is of the report key, or of the title):
+  the hash is of the report key, or of the title). `ReportWriter.writeReport(report, dir)` hashes the
+  title and `writeReportWithKey(report, dir, key)` the key. The old `writeReport(report, dir, statusCss)`
+  still compiles, deprecated, and ignores the status as it always did:
   - `*-diagram.html` — the classpath `lsd-report.single.html` shell with the captured
     `ReportJson` injected (the shell falls back to sample data when opened without one)
   - `*-payloads.js` — message bodies, loaded when the inspector opens

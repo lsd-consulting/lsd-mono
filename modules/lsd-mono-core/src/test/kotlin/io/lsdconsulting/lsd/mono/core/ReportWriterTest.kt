@@ -59,6 +59,18 @@ class ReportWriterTest {
     }
 
     @Test
+    fun `the old status argument is ignored, not taken as a report key`() {
+        @Suppress("DEPRECATION")
+        val legacy = ReportWriter.writeReport(report("Orders"), tempDir.toFile(), "error")
+        assertEquals(ReportWriter.reportFileStem("Orders") + "-report.html", legacy.name)
+        assertNotEquals(ReportWriter.reportFileStem("Orders", "error") + "-report.html", legacy.name)
+
+        val keyed = ReportWriter.writeReportWithKey(report("Orders"), tempDir.toFile(), "com.example.OrderTest")
+        assertEquals(ReportWriter.reportFileStem("Orders", "com.example.OrderTest") + "-report.html", keyed.name)
+        assertEquals(legacy.name, ReportWriter.writeReportWithKey(report("Orders"), tempDir.toFile(), null).name)
+    }
+
+    @Test
     fun `concurrent writes of one report never leave a partial file`() {
         val big = report("Same", scenarioCount = 200)
         val expected = ReportWriter.writeReport(big, tempDir.toFile()).readText()

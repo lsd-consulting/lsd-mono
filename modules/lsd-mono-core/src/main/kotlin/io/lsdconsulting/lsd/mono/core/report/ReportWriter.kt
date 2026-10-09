@@ -63,16 +63,44 @@ object ReportWriter {
         "${sanitizeFilename(title)}-${shortHash(reportKey ?: title)}"
 
     /**
-     * @param reportKey identifies the report when titles may repeat (a test class or
-     * feature id). Defaults to the title.
+     * Write a report named from its title ([reportFileStem] of the title).
      * @return the minimal listing HTML (`<stem>-report.html`).
      */
     @JvmStatic
-    @JvmOverloads
     fun writeReport(
         report: ReportJson,
         outputDir: File,
-        reportKey: String? = null,
+    ): Path = writeReportWithKey(report, outputDir, reportKey = null)
+
+    /**
+     * The old signature. Its third argument was a status CSS class that was never
+     * used, so it is still ignored: this writes exactly what [writeReport] without it
+     * writes. It is kept so existing callers compile and are not misread as passing
+     * a report key. Use [writeReportWithKey] to name a report by a key.
+     */
+    @Deprecated(
+        "The status was never used and is ignored. Use writeReport(report, outputDir), " +
+            "or writeReportWithKey(report, outputDir, reportKey) to name the report by a key.",
+        ReplaceWith("writeReport(report, outputDir)"),
+    )
+    @JvmStatic
+    fun writeReport(
+        report: ReportJson,
+        outputDir: File,
+        @Suppress("UNUSED_PARAMETER") statusCss: String,
+    ): Path = writeReport(report, outputDir)
+
+    /**
+     * Write a report whose file names come from its title plus a hash of [reportKey]
+     * (a test class or feature id), so reports with the same title do not collide.
+     * A null key hashes the title, the same as [writeReport].
+     * @return the minimal listing HTML (`<stem>-report.html`).
+     */
+    @JvmStatic
+    fun writeReportWithKey(
+        report: ReportJson,
+        outputDir: File,
+        reportKey: String?,
     ): Path {
         outputDir.mkdirs()
         val stem = reportFileStem(report.title, reportKey)

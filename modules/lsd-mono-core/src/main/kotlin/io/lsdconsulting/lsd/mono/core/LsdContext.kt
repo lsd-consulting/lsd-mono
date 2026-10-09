@@ -327,7 +327,7 @@ open class LsdContext {
                 completed.remove(reportKey).orEmpty().sortedBy { it.first }.map { it.second }
             }
         val report = buildReportJson(title, taken)
-        val path = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
+        val path = ReportWriter.writeReportWithKey(report = report, outputDir = outputDirectory, reportKey = reportKey)
         synchronized(lock) {
             reportFiles.add(
                 ReportFile(
