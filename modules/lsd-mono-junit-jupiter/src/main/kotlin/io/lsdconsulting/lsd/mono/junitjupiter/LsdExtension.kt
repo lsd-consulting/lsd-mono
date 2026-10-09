@@ -1,11 +1,13 @@
 package io.lsdconsulting.lsd.mono.junitjupiter
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback
+import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.TestWatcher
 import java.lang.reflect.InvocationTargetException
@@ -25,13 +27,27 @@ import java.util.regex.Pattern
  * This extension does not capture interaction events by itself. Call
  * [LsdContext.capture] (or [LsdContext.message]) inside the test, and optionally
  * [LsdPostTestProcessing] for late capture before the scenario is completed.
+ *
+ * **Parallel execution.** Safe with `junit.jupiter.execution.parallel.enabled`. Each
+ * test gets its own [io.lsdconsulting.lsd.mono.core.LsdScenario], keyed by the test's
+ * unique id and bound to the thread that runs it, so `LsdContext.instance.capture`
+ * in the test, its `@BeforeEach`/`@AfterEach` methods and [LsdPostTestProcessing]
+ * lands in that test. Each top-level class is its own report, keyed by the class's
+ * unique id, so parallel classes do not take each other's scenarios. Work the test
+ * hands to other threads should be wrapped with [LsdContext.wrap].
+ * The extension keeps no state of its own.
  */
-class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
+class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
 
     private val lsdContext: LsdContext = LsdContext.instance
 
+    override fun beforeEach(context: ExtensionContext) {
+        lsdContext.findScenario(context.uniqueId)?.discard()
+        lsdContext.beginScenario(reportKey = reportKey(context), key = context.uniqueId)
+    }
+
     override fun testSuccessful(context: ExtensionContext) {
-        lsdContext.completeScenario(
+        scenarioFor(context).complete(
             prefixParentDisplayName(context),
             "Test passed",
             Status.SUCCESS,
@@ -44,7 +60,7 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
                 .filter { it.isNotBlank() }
                 .map { "Test disabled: $it" }
                 .orElse("Test disabled")
-        lsdContext.completeScenario(
+        scenarioFor(context).complete(
             prefixParentDisplayName(context),
             description,
             Status.FAILURE,
@@ -52,7 +68,7 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
     }
 
     override fun testAborted(context: ExtensionContext, cause: Throwable?) {
-        lsdContext.completeScenario(
+        scenarioFor(context).complete(
             prefixParentDisplayName(context),
             "Test aborted",
             Status.FAILURE,
@@ -61,7 +77,7 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
     }
 
     override fun testFailed(context: ExtensionContext, cause: Throwable?) {
-        lsdContext.completeScenario(
+        scenarioFor(context).complete(
             prefixParentDisplayName(context),
             "Test failed",
             Status.ERROR,
@@ -70,15 +86,33 @@ class LsdExtension : TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
     }
 
     override fun afterTestExecution(context: ExtensionContext) {
-        additionalProcessing(context.requiredTestInstance, LsdPostTestProcessing::class.java)
+        // Bind explicitly in case the body ran elsewhere (for example @Timeout on a separate thread).
+        scenarioFor(context).bind().use {
+            additionalProcessing(context.requiredTestInstance, LsdPostTestProcessing::class.java)
+        }
     }
 
     override fun afterAll(context: ExtensionContext) {
         if (isNested(context)) {
             return
         }
-        lsdContext.completeReport(context.displayName)
+        lsdContext.completeReport(context.displayName, reportKey(context))
         lsdContext.createIndex()
+    }
+
+    /** The test's running scenario. A disabled test never ran beforeEach, so it gets an empty one. */
+    private fun scenarioFor(context: ExtensionContext): LsdScenario =
+        lsdContext.findScenario(context.uniqueId)
+            ?: lsdContext.beginScenario(reportKey = reportKey(context), key = context.uniqueId, bindCurrentThread = false)
+
+    /** The top-level class's unique id: one report per top-level class, nested classes included. */
+    private fun reportKey(context: ExtensionContext): String {
+        var current = context
+        while (true) {
+            val parent = current.parent.orElse(null) ?: return current.uniqueId
+            if (!parent.parent.isPresent) return current.uniqueId
+            current = parent
+        }
     }
 
     private fun isNested(context: ExtensionContext): Boolean =

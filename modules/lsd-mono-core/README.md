@@ -83,6 +83,30 @@ lsd.createIndex()
 Property keys use the `lsd.mono.*` prefix (with fallbacks to legacy `lsd.core.*`
 and `lsd.junit.*` names where useful for migration).
 
+### Threads and parallel tests
+
+Every `LsdContext` method is thread-safe. Unscoped calls (`capture`, `message`,
+`addFact`, `completeScenario`) go to:
+
+1. the scenario the calling thread is bound to, if any;
+2. otherwise the only running scenario, if exactly one is running;
+3. otherwise the default scenario, which is how single-threaded code has always
+   worked. With several scenarios running, a warning is logged once.
+
+Test integrations start a scenario per test and group them by report key:
+
+```kotlin
+val scenario = lsd.beginScenario(reportKey = "com.example.OrderTest") // binds this thread
+lsd.message("Client", "Api", "POST /orders")                          // lands in `scenario`
+executor.submit(lsd.wrap { lsd.message("Api", "Db", "INSERT") })       // so does this
+scenario.complete("places an order")
+lsd.completeReport("OrderTest", reportKey = "com.example.OrderTest")
+```
+
+`LsdScenario` also has `capture`, `addFact`, `bind()` (an `AutoCloseable`) and
+`wrapCallable`. A capture into a scenario that has already completed is dropped
+with a warning rather than being given to the next one.
+
 ## Report UI (manual)
 
 ```bash

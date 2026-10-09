@@ -3,7 +3,6 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.capture.SequenceEventBuilder
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
-import io.lsdconsulting.lsd.mono.core.domain.Fact
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
 import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.Message
@@ -39,6 +38,9 @@ import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.capturedMetrics
 import java.io.File
 import java.nio.file.Path
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -62,10 +64,22 @@ import java.time.temporal.ChronoUnit
  * **Timestamps:** optional `createdAt` on events. [completeScenario] sorts by it
  * before the scenario is stored, so layout and JSON see the same order.
  *
+ * **Threads:** every method is thread-safe. Each running scenario has its own
+ * buffer ([LsdScenario]). A thread that called [beginScenario] captures into that
+ * scenario. A thread that is not bound captures into the only running scenario, or
+ * into the default scenario when there are none, which is how single-threaded code
+ * has always worked. With several scenarios running, an unbound capture cannot be
+ * attributed: it goes to the default scenario and a warning is logged once. Use
+ * [LsdScenario.bind] or [wrap] to carry a scenario onto other threads.
+ *
+ * **Reports:** scenarios are grouped by [LsdScenario.reportKey], so parallel test
+ * classes or features each get their own report from [completeReport].
+ *
  * **Deferred:** legacy include-files.
  */
 open class LsdContext {
 
+    @Volatile
     var idGenerator = IdGenerator(LsdProperties.deterministicIds())
         private set
 
@@ -73,37 +87,87 @@ open class LsdContext {
     val outputDirectory: File
         get() = File(LsdProperties.outputDirectory())
 
-    private val scenarios: MutableList<Scenario> = ArrayList()
+    /** Guards report-level state: participants, completed scenarios, report files. */
+    private val lock = Any()
+    private val completed = LinkedHashMap<String?, MutableList<Pair<Long, Scenario>>>()
     private val reportFiles: MutableList<ReportFile> = ArrayList()
     private val participants = linkedMapOf<String, Participant>()
-    private val currentFacts: MutableList<Fact> = ArrayList()
-    private val currentEvents: MutableList<SequenceEvent> = ArrayList()
+
+    private val sequence = AtomicLong()
+    private val active = ConcurrentHashMap<String, LsdScenario>()
+    private val bound = ThreadLocal<LsdScenario>()
+
+    /** Unbound captures with no scenario running. Completed by [completeScenario], as before. */
+    private val defaultScenario = LsdScenario(this, key = "", reportKey = null, sequence = 0)
+
+    @Volatile
+    private var warnedAmbiguous = false
 
     fun addParticipants(vararg additional: Participant) = addParticipants(additional.toList())
 
     fun addParticipants(additional: List<Participant>) {
-        additional.forEach { incoming ->
-            val id =
-                if (participants.containsKey(incoming.id) && participants[incoming.id]?.name != incoming.name) {
-                    uniqueId(incoming.id)
-                } else {
-                    incoming.id
-                }
-            participants[id] = incoming.copy(id = id)
+        synchronized(lock) {
+            additional.forEach { incoming ->
+                val id =
+                    if (participants.containsKey(incoming.id) && participants[incoming.id]?.name != incoming.name) {
+                        uniqueId(incoming.id)
+                    } else {
+                        incoming.id
+                    }
+                participants[id] = incoming.copy(id = id)
+            }
         }
     }
 
+    @JvmOverloads
     fun addFact(key: String, value: String = "") {
-        currentFacts.add(Fact(key, value))
+        target().addFact(key, value)
     }
 
     /**
-     * Capture sequence events for the current scenario. Names that have not been
-     * [addParticipants]'d are registered as plain participants (slug id).
+     * Capture sequence events for the current scenario (see the class notes on threads).
+     * Names that have not been [addParticipants]'d are registered as plain participants (slug id).
      */
     open fun capture(vararg events: SequenceEvent) {
-        events.forEach { currentEvents.add(bind(it)) }
+        captureInto(target(), events.toList())
     }
+
+    /**
+     * Start a scenario and, by default, bind the calling thread to it.
+     * Test integrations call this when a test starts. With no other scenario running,
+     * it takes over anything captured unbound since the last scenario finished (for
+     * example in a `@BeforeAll`), as single-threaded runs always did.
+     *
+     * @param reportKey groups scenarios into one report; pass the same key to [completeReport].
+     * @param key unique among running scenarios; [findScenario] looks it up.
+     */
+    @JvmOverloads
+    fun beginScenario(
+        reportKey: String? = null,
+        key: String = UUID.randomUUID().toString(),
+        bindCurrentThread: Boolean = true,
+    ): LsdScenario {
+        val scenario = LsdScenario(this, key, reportKey, sequence.incrementAndGet())
+        synchronized(lock) {
+            check(!active.containsKey(key)) { "A scenario with key '$key' is already running" }
+            if (active.isEmpty() && !defaultScenario.isEmpty()) scenario.addAll(defaultScenario.drain())
+            active[key] = scenario
+        }
+        if (bindCurrentThread) bound.set(scenario)
+        return scenario
+    }
+
+    /** The scenario the calling thread is bound to, if it is still running. */
+    fun currentScenario(): LsdScenario? = bound.get()?.takeIf { isActive(it) }
+
+    /** A running scenario by the key it was begun with. */
+    fun findScenario(key: String): LsdScenario? = active[key]
+
+    /**
+     * Wrap [task] so it runs bound to the calling thread's current scenario, for
+     * handing work to an executor. Returns [task] unchanged when there is none.
+     */
+    fun wrap(task: Runnable): Runnable = currentScenario()?.wrap(task) ?: task
 
     /** Same as [capture] for builders (`"A" messages "B" withLabel "..."`). */
     fun capture(vararg builders: SequenceEventBuilder) {
@@ -245,41 +309,34 @@ open class LsdContext {
         status: Status = Status.SUCCESS,
         error: ScenarioError? = null,
     ) {
-        val events = orderByCreatedAt(currentEvents.toList())
-        scenarios.add(
-            Scenario(
-                title = title,
-                description = description.orEmpty(),
-                status = status,
-                facts = currentFacts.toList(),
-                participants = participantsFor(events),
-                events = events,
-                error = error,
-            ),
-        )
-        currentFacts.clear()
-        currentEvents.clear()
+        complete(target(), title, description, status, error)
     }
 
     /**
-     * Write the completed scenarios as one report and forget them. File names come
-     * from the title plus a short hash of `reportKey ?: title`, so reports with the
-     * same title (or titles that sanitise the same) do not overwrite each other.
+     * Write the scenarios completed for [reportKey] (the default report when null)
+     * and forget them. File names come from the title plus a short hash of
+     * `reportKey ?: title`, so reports with the same title do not overwrite each other.
      */
     @JvmOverloads
     fun completeReport(title: String, reportKey: String? = null): Path {
-        val report = buildReportJson(title)
+        val taken =
+            synchronized(lock) {
+                // Writing a report has always dropped captures that no scenario was completed for.
+                // Keep that when nothing is running, but say so.
+                if (reportKey == null || active.isEmpty()) dropStrayCaptures(title)
+                completed.remove(reportKey).orEmpty().sortedBy { it.first }.map { it.second }
+            }
+        val report = buildReportJson(title, taken)
         val path = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
-        reportFiles.add(
-            ReportFile(
-                filename = path.fileName.toString(),
-                title = report.title,
-                status = report.status,
-            ),
-        )
-        scenarios.clear()
-        currentFacts.clear()
-        currentEvents.clear()
+        synchronized(lock) {
+            reportFiles.add(
+                ReportFile(
+                    filename = path.fileName.toString(),
+                    title = report.title,
+                    status = report.status,
+                ),
+            )
+        }
         return path
     }
 
@@ -287,20 +344,115 @@ open class LsdContext {
      * Write `index.html` listing every report in the output directory, including
      * reports written by other test JVMs (Gradle forks) or modules sharing it.
      */
-    fun createIndex(): Path = ReportWriter.writeIndex(reportFiles.toList(), outputDirectory)
+    fun createIndex(): Path = ReportWriter.writeIndex(synchronized(lock) { reportFiles.toList() }, outputDirectory)
 
     fun clear() {
-        idGenerator = IdGenerator(LsdProperties.deterministicIds())
-        scenarios.clear()
-        reportFiles.clear()
-        participants.clear()
-        currentFacts.clear()
-        currentEvents.clear()
+        synchronized(lock) {
+            idGenerator = IdGenerator(LsdProperties.deterministicIds())
+            completed.clear()
+            reportFiles.clear()
+            participants.clear()
+            active.clear()
+            defaultScenario.drain()
+            warnedAmbiguous = false
+        }
+        bound.remove()
     }
 
     /** Drops captured events for the in-flight scenario. Facts and participants stay. */
     fun clearScenarioEvents() {
-        currentEvents.clear()
+        target().clearEvents()
+    }
+
+    internal fun isActive(scenario: LsdScenario): Boolean =
+        scenario === defaultScenario || active[scenario.key] === scenario
+
+    internal fun captureInto(scenario: LsdScenario, events: List<SequenceEvent>) {
+        events.forEach { event ->
+            if (!scenario.addEvent(bind(event))) warnLate(scenario, "event")
+        }
+    }
+
+    internal fun bindThread(scenario: LsdScenario): AutoCloseable {
+        val previous = bound.get()
+        bound.set(scenario)
+        return AutoCloseable { if (previous == null) bound.remove() else bound.set(previous) }
+    }
+
+    internal fun complete(
+        scenario: LsdScenario,
+        title: String,
+        description: String?,
+        status: Status,
+        error: ScenarioError?,
+    ) {
+        val (facts, captured) =
+            if (scenario === defaultScenario) {
+                defaultScenario.drain()
+            } else {
+                if (!active.remove(scenario.key, scenario)) return
+                scenario.close()
+            }
+        if (bound.get() === scenario) bound.remove()
+        val events = orderByCreatedAt(captured)
+        synchronized(lock) {
+            val stored =
+                Scenario(
+                    title = title,
+                    description = description.orEmpty(),
+                    status = status,
+                    facts = facts,
+                    participants = participantsFor(events),
+                    events = events,
+                    error = error,
+                )
+            val order = if (scenario === defaultScenario) sequence.incrementAndGet() else scenario.sequence
+            completed.getOrPut(scenario.reportKey) { ArrayList() }.add(order to stored)
+        }
+    }
+
+    internal fun discard(scenario: LsdScenario) {
+        if (scenario === defaultScenario) {
+            defaultScenario.drain()
+            return
+        }
+        if (active.remove(scenario.key, scenario)) scenario.close()
+        if (bound.get() === scenario) bound.remove()
+    }
+
+    private fun dropStrayCaptures(report: String) {
+        val (facts, events) = defaultScenario.drain()
+        if (facts.isEmpty() && events.isEmpty()) return
+        logger.log(
+            System.Logger.Level.WARNING,
+            "LSD: report '$report' dropped ${events.size} event(s) and ${facts.size} fact(s) captured outside " +
+                "any scenario. Capture inside a test, or call completeScenario before completeReport.",
+        )
+    }
+
+    internal fun warnLate(scenario: LsdScenario, what: String) {
+        logger.log(
+            System.Logger.Level.WARNING,
+            "LSD: dropped a $what captured after scenario '${scenario.key}' finished. " +
+                "Capture before the test ends, or wait for background work first.",
+        )
+    }
+
+    /** Where an unscoped call goes: the bound scenario, the only running one, or the default. */
+    private fun target(): LsdScenario {
+        currentScenario()?.let { return it }
+        val running = active.values.toList()
+        if (running.size == 1) return running.single()
+        if (running.size > 1 && !warnedAmbiguous) {
+            warnedAmbiguous = true
+            logger.log(
+                System.Logger.Level.WARNING,
+                "LSD: captured on thread '${Thread.currentThread().name}', which is not bound to a scenario, " +
+                    "while ${running.size} scenarios are running in parallel. It cannot be attributed and goes to " +
+                    "the default scenario. Use LsdScenario.bind() or LsdContext.wrap() on threads you start.",
+            )
+        }
+        return defaultScenario
     }
 
     private fun bind(event: SequenceEvent): SequenceEvent =
@@ -342,7 +494,9 @@ open class LsdContext {
         }
     }
 
-    private fun resolve(ref: String): Participant {
+    private fun resolve(ref: String): Participant = synchronized(lock) { resolveLocked(ref) }
+
+    private fun resolveLocked(ref: String): Participant {
         participants[ref]?.let { return it }
         participants.values.firstOrNull { it.name == ref || it.alias == ref }?.let { return it }
         val id = uniqueId(ParticipantIds.fromName(ref))
@@ -374,7 +528,7 @@ open class LsdContext {
         return participants.values.filter { it.id in ids }
     }
 
-    private fun buildReportJson(title: String): ReportJson =
+    private fun buildReportJson(title: String, scenarios: List<Scenario>): ReportJson =
         ReportJson(
             title = title,
             // UTC instant. The report page shows it in the reader's own time zone.
@@ -467,6 +621,8 @@ open class LsdContext {
             ?: "success"
 
     companion object {
+        private val logger = System.getLogger(LsdContext::class.java.name)
+
         @JvmStatic
         val instance = LsdContext()
     }

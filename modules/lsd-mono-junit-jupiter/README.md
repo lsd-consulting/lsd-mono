@@ -84,14 +84,35 @@ A passed test is stored as a successful scenario titled from the class and metho
 After the class finishes, open:
 
 ```text
-build/reports/lsd/PlaceOrderTest-diagram.html
+build/reports/lsd/PlaceOrderTest-<hash>-diagram.html
 ```
 
-That file is the report. `PlaceOrderTest-report.html` is only a short listing. `createIndex()` (called by the extension) adds `index.html` when more than one report exists.
+`<hash>` is 8 hex characters from the class's unique id, so two classes with the same simple name in different packages get separate reports. It is the same on every run. That file is the report. `PlaceOrderTest-<hash>-report.html` is only a short listing. `createIndex()` (called by the extension) writes `index.html`, which lists every report in the directory, including ones written by other Gradle test forks.
 
 Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured). In this module's own tests that is `build/reports/lsd-test`.
 
 Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Other fields load from the companion payloads file when the panel opens. Participant types set the header shape: `ACTOR`, `DATABASE`, `QUEUE`, and so on.
+
+## Parallel execution
+
+The extension supports JUnit's parallel execution, for methods and classes:
+
+```properties
+# src/test/resources/junit-platform.properties
+junit.jupiter.execution.parallel.enabled=true
+junit.jupiter.execution.parallel.mode.default=concurrent
+junit.jupiter.execution.parallel.mode.classes.default=concurrent
+```
+
+Each test gets its own scenario, started before `@BeforeEach` and bound to the thread that runs the test. Captures in the test, its `@BeforeEach` and `@AfterEach` methods, and `@LsdPostTestProcessing` land in that test. Each top-level class still writes one report, with its nested classes, and never takes another class's scenarios.
+
+Work the test hands to another thread needs the test carried with it:
+
+```kotlin
+executor.submit(LsdContext.instance.wrap { client.placeOrder() })
+```
+
+A thread that is not bound to a test (an embedded server's thread, for example) captures into the running test when only one test is running, as before. With several running, the capture cannot be attributed: it is logged as a warning and kept out of all of them. Captures made in `@BeforeAll` go into the class's first test when nothing else is running.
 
 ## What the report looks like
 
