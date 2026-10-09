@@ -29,6 +29,8 @@ export function printComponentsSection(view: PanelPrintView, svg: string, width:
   const drawing = svg
     .replace(/lsd-comp-/g, 'lsd-comp-print-')
     .replace(/(<svg class="component-diagram"[^>]*?) style="[^"]*"/, '$1')
+    // Paper is not interactive: the links are plain drawings in the copy.
+    .replace(/ tabindex="0" role="button"/g, '')
   return `<section class="card print-panel print-components" data-print-panel="components" style="--print-components-max:${Math.round(width * 1.5)}px">
     <h3>${escapeHtml(view.title)}</h3>
     ${view.metaHtml ? `<div class="meta-row">${view.metaHtml}</div>` : ''}

@@ -1,4 +1,4 @@
-import { componentEdgeCaption, type ComponentEdge, type ComponentGraph, type ComponentNode } from './component-graph'
+import { componentEdgeTitle, type ComponentEdge, type ComponentGraph, type ComponentNode } from './component-graph'
 import { participantHeadFor, participantLabelSvg } from './sequence-diagram'
 
 /** Horizontal room per node. The participant shape is about 100 wide; the rest is for the name. */
@@ -8,9 +8,11 @@ const NODE_H = 56
 const GAP_X = 36
 const GAP_Y = 84
 const PAD = 20
-/** Rough glyph width for 11px labels. Only used to keep captions inside the viewBox. */
-const CHAR_W = 6.2
-const LABEL_MAX = 34
+/** Count badge: digit width at 10px, height, and how far along its link it sits. */
+const BADGE_DIGIT_W = 6.4
+const BADGE_H = 16
+/** Short of halfway, so the badges on an opposing pair do not sit on top of each other. */
+const BADGE_AT = 0.42
 /** Edge clip box around a shape, centred on the shape rather than the name under it. */
 const HIT_HW = 52
 const HIT_HH = 24
@@ -114,7 +116,10 @@ interface Box {
   maxY: number
 }
 
-/** SVG for the inspector panel. Edge type is spelled out in text and markers, never colour alone. */
+/**
+ * SVG for the inspector panel. Edge type is in the line (solid or dashed) and the arrow head,
+ * never colour alone. Each link is a focusable group whose title lists its interactions.
+ */
 export function renderComponentDiagram(graph: ComponentGraph, title: string): ComponentDiagram {
   const summary = `${title} component diagram, ${count(graph.nodes.length, 'component')}, ${count(graph.edges.length, 'link')}`
   if (graph.nodes.length === 0) {
@@ -136,40 +141,25 @@ export function renderComponentDiagram(graph: ComponentGraph, title: string): Co
     box.maxY = Math.max(box.maxY, y2)
   }
 
-  const obstacles: Rect[] = []
-  const nodes = graph.nodes.map((node) => nodeSvg(node, places.get(node.id)!, grow, obstacles)).join('')
+  const nodes = graph.nodes.map((node) => nodeSvg(node, places.get(node.id)!, grow)).join('')
   const names = new Map(graph.nodes.map((node) => [node.id, node.name]))
   // Edges stop at the shape, which is wider for a long name in a box, cylinder or queue.
   const heads = new Map(graph.nodes.map((node) => [node.id, participantHeadFor(node)]))
   const clipHalf = new Map([...heads].map(([id, head]) => [id, Math.max(HIT_HW, head.shapeHalf + 4)]))
   // A self-call loop also clears a long name under an actor, entity or boundary mark.
   const loopHalf = new Map([...heads].map(([id, head]) => [id, Math.max(HIT_HW, head.half + 4)]))
-  const drawn = graph.edges.map((edge) => edgeSvg(edge, places, graph.edges, names, clipHalf, loopHalf))
-  // Every edge has a caption (the type cue at least), so labels line up with edges by index.
-  const labels = placeLabels(
-    drawn.map((edge) => edge.label),
-    obstacles,
-  )
+  // No captions on links, so a busy pair of components stays readable. The type is in the
+  // line and the head, a badge counts a link with more than one message, and the hover
+  // title (and the side panel, on click) lists the messages.
+  const drawn = graph.edges.map((edge, i) => edgeSvg(edge, i, places, graph.edges, names, clipHalf, loopHalf))
   for (const edge of drawn) grow(edge.bounds.minX, edge.bounds.minY, edge.bounds.maxX, edge.bounds.maxY)
-  for (const label of labels) {
-    const r = labelRect(label)
-    grow(r.x, r.y, r.x + r.w, r.y + r.h)
-  }
-  const edges = drawn
-    .map((edge, i) => {
-      const label = labels[i]
-      return `${edge.open}
-      ${edge.path}
-      <text class="edge-label" x="${fmt(label.x)}" y="${fmt(label.y)}" text-anchor="${label.anchor}">${escapeXml(label.text)}</text>
-    </g>`
-    })
-    .join('')
+  const edges = drawn.map((edge) => edge.svg).join('')
 
   const vx = Math.floor(box.minX - PAD)
   const vy = Math.floor(box.minY - PAD)
   const width = Math.ceil(box.maxX + PAD) - vx
   const height = Math.ceil(box.maxY + PAD) - vy
-  const svg = `<svg class="component-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${width} ${height}" width="${width}" height="${height}" style="max-width:${width}px" role="img" aria-label="${escapeXml(summary)}">
+  const svg = `<svg class="component-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${width} ${height}" width="${width}" height="${height}" style="max-width:${width}px" role="group" aria-label="${escapeXml(summary)}">
     <title>${escapeXml(summary)}</title>
     <defs>
       <marker id="lsd-comp-filled" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="9" refY="5" orient="auto-start-reverse">
@@ -200,7 +190,6 @@ function nodeSvg(
   node: ComponentNode,
   at: NodePlace,
   grow: (x1: number, y1: number, x2: number, y2: number) => void,
-  obstacles: Rect[],
 ): string {
   // Names sit inside the box, cylinder, and queue; under the actor, entity, and boundary marks.
   // Long names widen the shape, then wrap to two lines and end in an ellipsis.
@@ -208,7 +197,6 @@ function nodeSvg(
   const half = Math.max(HIT_HW, head.half)
   const bottom = Math.max(48, head.labelYs[head.labelYs.length - 1] + 6)
   grow(at.x - half, at.y, at.x + half, at.y + bottom)
-  obstacles.push({ x: at.x - half, y: at.y, w: half * 2, h: bottom })
   const colour = node.colour ? ` style="--pc:${escapeXml(node.colour)}"` : ''
   return `<g class="component-node participant-box" data-component="${escapeXml(node.id)}" data-participant-type="${head.type}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${colour}>
       <title>${escapeXml(node.name)}, ${head.typeLabel}</title>
@@ -217,63 +205,34 @@ function nodeSvg(
     </g>`
 }
 
-interface Rect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-interface EdgeLabel {
-  x: number
-  /** Baseline. */
-  y: number
-  anchor: 'start' | 'middle' | 'end'
-  text: string
-}
-
 interface DrawnEdge {
-  open: string
-  path: string
-  label: EdgeLabel
+  svg: string
   bounds: Box
 }
 
-const LABEL_H = 14
-
-function labelRect(label: EdgeLabel): Rect {
-  const w = label.text.length * CHAR_W
-  const x = label.anchor === 'start' ? label.x : label.anchor === 'end' ? label.x - w : label.x - w / 2
-  return { x, y: label.y - LABEL_H + 3, w, h: LABEL_H }
+/** Small pill with the number of messages on a link, centred on (x, y). */
+function badgeSvg(count: number, x: number, y: number): { svg: string; bounds: Box } {
+  const text = String(count)
+  const w = Math.max(BADGE_H, 8 + text.length * BADGE_DIGIT_W)
+  const h = BADGE_H
+  return {
+    svg: `<g class="edge-badge" transform="translate(${fmt(x)}, ${fmt(y)})" aria-hidden="true"><rect x="${fmt(-w / 2)}" y="${fmt(-h / 2)}" width="${fmt(w)}" height="${h}" rx="${h / 2}"/><text x="0" y="3.5" text-anchor="middle">${text}</text></g>`,
+    bounds: { minX: x - w / 2, minY: y - h / 2, maxX: x + w / 2, maxY: y + h / 2 },
+  }
 }
 
-function overlaps(a: Rect, b: Rect): boolean {
-  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
-}
-
-/**
- * Greedy, in edge order: a caption that would cover an earlier caption or a component
- * slides down a line at a time, then up, until it is clear. Gives up after a few lines
- * and keeps its first spot, which is no worse than not trying.
- */
-export function placeLabels(labels: EdgeLabel[], obstacles: Rect[]): EdgeLabel[] {
-  const taken: Rect[] = [...obstacles]
-  return labels.map((label) => {
-    const offsets = [0, 1, -1, 2, -2, 3, -3].map((n) => n * (LABEL_H + 1))
-    for (const dy of offsets) {
-      const moved = { ...label, y: label.y + dy }
-      const rect = labelRect(moved)
-      if (taken.some((other) => overlaps(rect, other))) continue
-      taken.push(rect)
-      return moved
-    }
-    taken.push(labelRect(label))
-    return label
-  })
+function union(a: Box, b: Box): Box {
+  return {
+    minX: Math.min(a.minX, b.minX),
+    minY: Math.min(a.minY, b.minY),
+    maxX: Math.max(a.maxX, b.maxX),
+    maxY: Math.max(a.maxY, b.maxY),
+  }
 }
 
 function edgeSvg(
   edge: ComponentEdge,
+  index: number,
   places: Map<string, NodePlace>,
   all: ComponentEdge[],
   names: Map<string, string>,
@@ -282,23 +241,38 @@ function edgeSvg(
 ): DrawnEdge {
   const from = places.get(edge.from)!
   const to = places.get(edge.to)!
-  const full = componentEdgeCaption(edge)
-  const text = abbreviate(full, LABEL_MAX)
   const style = edgeStyle(edge)
-  const title = `${names.get(edge.from) ?? edge.from} to ${names.get(edge.to) ?? edge.to}: ${full}`
-  const open = `<g class="edge-group" data-edge-from="${escapeXml(edge.from)}" data-edge-to="${escapeXml(edge.to)}">
-      <title>${escapeXml(title)}</title>`
+  const fromName = names.get(edge.from) ?? edge.from
+  const toName = names.get(edge.to) ?? edge.to
+  const title = componentEdgeTitle(edge, fromName, toName)
+  const label = `${fromName} to ${toName}, ${edge.count} ${edge.count === 1 ? 'interaction' : 'interactions'}`
+  const group = (shape: string, hit: string, badge: string): string =>
+    `<g class="edge-group" data-edge-index="${index}" data-edge-from="${escapeXml(edge.from)}" data-edge-to="${escapeXml(edge.to)}" tabindex="0" role="button" aria-label="${escapeXml(label)}">
+      <title>${escapeXml(title)}</title>
+      ${hit}
+      ${shape}
+      ${badge}
+    </g>`
 
   if (edge.from === edge.to) {
-    // Loop on the right of the shape, caption beside it.
+    // Loop on the right of the shape.
     const x = from.x + (loopHalf.get(edge.from) ?? HIT_HW)
     const cy = from.y + HIT_CY
     const d = `M ${fmt(x)} ${fmt(cy - 10)} C ${fmt(x + 46)} ${fmt(cy - 34)}, ${fmt(x + 46)} ${fmt(cy + 34)}, ${fmt(x)} ${fmt(cy + 10)}`
+    let bounds: Box = { minX: x, minY: cy - 30, maxX: x + 40, maxY: cy + 30 }
+    let badge = ''
+    if (edge.count > 1) {
+      const drawn = badgeSvg(edge.count, x + 35, cy)
+      badge = drawn.svg
+      bounds = union(bounds, drawn.bounds)
+    }
     return {
-      open,
-      path: `<path d="${d}" class="${style.cls}"${style.start} marker-end="url(#${style.end})"/>`,
-      label: { x: x + 42, y: cy + 4, anchor: 'start', text },
-      bounds: { minX: x, minY: cy - 30, maxX: x + 40, maxY: cy + 30 },
+      svg: group(
+        `<path d="${d}" class="${style.cls}"${style.start} marker-end="url(#${style.end})"/>`,
+        `<path d="${d}" class="edge-hit"/>`,
+        badge,
+      ),
+      bounds,
     }
   }
 
@@ -312,33 +286,30 @@ function edgeSvg(
   const y2 = to.y + HIT_CY
   const start = clip(x1, y1, x2, y2, shift, clipHalf.get(edge.from) ?? HIT_HW)
   const end = clip(x2, y2, x1, y1, -shift, clipHalf.get(edge.to) ?? HIT_HW)
-  const midX = (start[0] + end[0]) / 2
-  const midY = (start[1] + end[1]) / 2
-  const dx = end[0] - start[0]
-  const dy = end[1] - start[1]
-  // Which side of the centre line this edge was moved to (0 when it was not moved).
-  const sideX = midX - (x1 + x2) / 2
-  const sideY = midY - (y1 + y2) / 2
-  let label: EdgeLabel
-  if (Math.abs(dy) >= Math.abs(dx)) {
-    // Mostly vertical: the caption sits to one side. A reverse pair puts its captions left and
-    // right; a lone edge puts its caption on the outside of the way it leans.
-    const right = shift ? sideX >= 0 : dx >= 0
-    label = { x: midX + (right ? 8 : -8), y: midY + 4, anchor: right ? 'start' : 'end', text }
-  } else {
-    // Mostly horizontal: above for one direction, below for the other.
-    label = { x: midX, y: midY + (sideY <= 0 ? -6 : 14), anchor: 'middle', text }
+  let bounds: Box = {
+    minX: Math.min(start[0], end[0]),
+    minY: Math.min(start[1], end[1]),
+    maxX: Math.max(start[0], end[0]),
+    maxY: Math.max(start[1], end[1]),
   }
+  let badge = ''
+  if (edge.count > 1) {
+    const drawn = badgeSvg(
+      edge.count,
+      start[0] + (end[0] - start[0]) * BADGE_AT,
+      start[1] + (end[1] - start[1]) * BADGE_AT,
+    )
+    badge = drawn.svg
+    bounds = union(bounds, drawn.bounds)
+  }
+  const coords = `x1="${fmt(start[0])}" y1="${fmt(start[1])}" x2="${fmt(end[0])}" y2="${fmt(end[1])}"`
   return {
-    open,
-    path: `<line class="${style.cls}" x1="${fmt(start[0])}" y1="${fmt(start[1])}" x2="${fmt(end[0])}" y2="${fmt(end[1])}"${style.start} marker-end="url(#${style.end})"/>`,
-    label,
-    bounds: {
-      minX: Math.min(start[0], end[0]),
-      minY: Math.min(start[1], end[1]),
-      maxX: Math.max(start[0], end[0]),
-      maxY: Math.max(start[1], end[1]),
-    },
+    svg: group(
+      `<line class="${style.cls}" ${coords}${style.start} marker-end="url(#${style.end})"/>`,
+      `<line class="edge-hit" ${coords}/>`,
+      badge,
+    ),
+    bounds,
   }
 }
 
@@ -380,12 +351,6 @@ function count(n: number, noun: string): string {
 function fmt(n: number): string {
   const rounded = Math.round(n * 10) / 10
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
-}
-
-function abbreviate(text: string, max: number): string {
-  const clean = text.replace(/\s+/g, ' ').trim()
-  if (clean.length <= max) return clean
-  return clean.slice(0, Math.max(0, max - 1)) + '…'
 }
 
 function escapeXml(value: string): string {

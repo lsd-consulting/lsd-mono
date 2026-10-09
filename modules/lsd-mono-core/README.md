@@ -54,7 +54,8 @@ Each scenario's diagram toolbar has a **Component diagram** button. Clicking it 
 ![Clicking Component diagram and the diagram opening in the side panel](../../docs/readme/components.gif)
 
 - Every participant on a sync, async, bi-directional, or lost message is a component, drawn with its participant type (actor, database, queue, and so on). Responses and short arrows add no edges.
-- Repeated calls between the same two components share one edge. Its caption has the first label, the type, and a count, for example `INSERT order · sync ×2`. Async edges are dashed.
+- Links carry no captions, so a busy pair of components stays readable. Sync links are solid and async links are dashed, and the head shows the direction. Repeated calls between the same two components share one link with a small count badge.
+- Hover over a link to see its messages in its tooltip, for example `Orders to Orders DB, 3 interactions:` then `load basket · sync` on the next line. Click a link, or focus it and press Enter, to list them under the drawing.
 - Callers sit above the components they call. Escape or Close puts focus back on the button.
 
 `./gradlew :modules:lsd-mono-core:readmeSamples` regenerates the GIF with the other README samples.

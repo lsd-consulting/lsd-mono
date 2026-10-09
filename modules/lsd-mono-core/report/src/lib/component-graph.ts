@@ -20,6 +20,14 @@ export interface ComponentNode {
   colour?: string
 }
 
+/** Messages on one link that share a label and a type. */
+export interface ComponentInteraction {
+  /** Message label, trimmed. Empty when the message had none. */
+  label: string
+  type: string
+  count: number
+}
+
 export interface ComponentEdge {
   from: string
   to: string
@@ -29,6 +37,8 @@ export interface ComponentEdge {
   count: number
   /** First non-empty label on this from-to pair. */
   label?: string
+  /** Every message on this link, grouped by label and type, first-seen order. */
+  interactions?: ComponentInteraction[]
 }
 
 export interface ComponentGraph {
@@ -44,7 +54,14 @@ export interface ComponentGraph {
  */
 export function componentGraph(scenario: Pick<Scenario, 'participants' | 'events'>): ComponentGraph {
   const known = new Map(scenario.participants.map((participant) => [participant.id, participant]))
-  type Acc = { from: string; to: string; types: string[]; count: number; label?: string }
+  type Acc = {
+    from: string
+    to: string
+    types: string[]
+    count: number
+    label?: string
+    interactions: ComponentInteraction[]
+  }
   const edges = new Map<string, Acc>()
   const nodeIds: string[] = []
   const seen = new Set<string>()
@@ -58,13 +75,16 @@ export function componentGraph(scenario: Pick<Scenario, 'participants' | 'events
     const key = JSON.stringify([from, to])
     let acc = edges.get(key)
     if (!acc) {
-      acc = { from, to, types: [], count: 0 }
+      acc = { from, to, types: [], count: 0, interactions: [] }
       edges.set(key, acc)
     }
     if (!acc.types.includes(event.type)) acc.types.push(event.type)
     acc.count += 1
     const label = event.label.trim()
     if (!acc.label && label) acc.label = label
+    const same = acc.interactions.find((item) => item.label === label && item.type === event.type)
+    if (same) same.count += 1
+    else acc.interactions.push({ label, type: event.type, count: 1 })
     for (const id of [from, to]) {
       if (seen.has(id)) continue
       seen.add(id)
@@ -82,12 +102,13 @@ export function componentGraph(scenario: Pick<Scenario, 'participants' | 'events
         ...(participant?.colour ? { colour: participant.colour } : {}),
       }
     }),
-    edges: [...edges.values()].map(({ from, to, types, count, label }) => ({
+    edges: [...edges.values()].map(({ from, to, types, count, label, interactions }) => ({
       from,
       to,
       types,
       count,
       ...(label ? { label } : {}),
+      interactions,
     })),
   }
 }
@@ -118,12 +139,35 @@ export function typeCue(type: string): string {
   }
 }
 
+/** Interactions on a link. Edges built by hand without them fall back to the first label. */
+export function edgeInteractions(edge: ComponentEdge): ComponentInteraction[] {
+  if (edge.interactions?.length) return edge.interactions
+  if (edge.types.length === 1) return [{ label: edge.label ?? '', type: edge.types[0], count: edge.count }]
+  return [{ label: edge.label ?? '', type: edge.types.join(', '), count: edge.count }]
+}
+
+/** One interaction as text: `place order · sync`, `publish · async ×3`, `(no label) · sync`. */
+export function interactionText(item: ComponentInteraction): string {
+  const cue = item.type
+    .split(', ')
+    .map((type) => typeCue(type))
+    .join(', ')
+  const label = item.label.replace(/\s+/g, ' ').trim() || '(no label)'
+  return `${label} · ${cue}${item.count > 1 ? ` ×${item.count}` : ''}`
+}
+
+/** Most interactions a hover title lists before it says how many more there are. */
+export const TITLE_MAX_INTERACTIONS = 12
+
 /**
- * Text cue for an edge, so the type is never colour or marker alone.
- * `place order · sync`, `publish · async ×3`, or `sync, async ×2` when nothing was labelled.
+ * Hover text for a link: who calls whom, how many messages, then one interaction per line.
+ * `Orders to Orders DB, 3 interactions:` then `load basket · sync` and so on.
  */
-export function componentEdgeCaption(edge: ComponentEdge): string {
-  const cue = edge.types.length ? edge.types.map(typeCue).join(', ') : 'edge'
-  const counted = edge.count > 1 ? `${cue} ×${edge.count}` : cue
-  return edge.label ? `${edge.label} · ${counted}` : counted
+export function componentEdgeTitle(edge: ComponentEdge, fromName: string, toName: string): string {
+  const items = edgeInteractions(edge)
+  const head = `${fromName} to ${toName}, ${edge.count} ${edge.count === 1 ? 'interaction' : 'interactions'}:`
+  const lines = items.slice(0, TITLE_MAX_INTERACTIONS).map(interactionText)
+  const rest = items.length - lines.length
+  if (rest > 0) lines.push(`…and ${rest} more`)
+  return [head, ...lines].join('\n')
 }

@@ -124,6 +124,51 @@ describe('inspector', () => {
     await Promise.resolve()
   }
 
+  it('lists a link\'s interactions in the panel when the link is clicked or pressed', () => {
+    const controller = bindInspector(document, { loadPayload: async () => ({}), onClose: () => {} })
+    const call = (id: string, to: string, label: string, type = 'SYNCHRONOUS') => ({
+      kind: 'message' as const,
+      id,
+      from: 'a',
+      to,
+      label,
+      type,
+    })
+    const graph = componentGraph({
+      participants: [
+        { id: 'a', name: 'Orders', type: 'PARTICIPANT' },
+        { id: 'b', name: 'Orders <DB>', type: 'DATABASE' },
+        { id: 'c', name: 'Events', type: 'QUEUE' },
+      ],
+      events: [
+        call('1', 'b', 'load basket'),
+        call('2', 'b', 'reserve stock'),
+        call('3', 'b', 'load basket'),
+        call('4', 'c', 'order.paid', 'ASYNCHRONOUS'),
+      ],
+    })
+    controller.openComponents('s', graph, 'Links')
+    const host = document.querySelector<HTMLElement>('#inspector-graph')!
+    const list = host.querySelector<HTMLElement>('.component-links')!
+    expect(list.textContent).toContain('click it to list them here')
+    const links = host.querySelectorAll<SVGGElement>('.edge-group')
+    expect(links).toHaveLength(2)
+
+    links[0].querySelector('.edge-hit')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(list.querySelector('h3')!.textContent).toBe('Orders → Orders <DB> (3 interactions)')
+    expect([...list.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+      'load basket · sync ×2',
+      'reserve stock · sync',
+    ])
+    expect(links[0].classList.contains('is-selected')).toBe(true)
+
+    links[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    expect(list.querySelector('h3')!.textContent).toBe('Orders → Events (1 interaction)')
+    expect([...list.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['order.paid · async'])
+    expect(links[0].classList.contains('is-selected')).toBe(false)
+    expect(links[1].classList.contains('is-selected')).toBe(true)
+  })
+
   it('shows a component diagram in the same panel, then a message restores the json chrome', async () => {
     const closed: Array<string | undefined> = []
     const controller = bindInspector(document, {

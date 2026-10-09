@@ -1,6 +1,6 @@
 import type { Insight, MessageEvent, Metric } from '../types'
 import { renderComponentDiagram } from '../lib/component-diagram'
-import type { ComponentGraph } from '../lib/component-graph'
+import { edgeInteractions, typeCue, type ComponentGraph } from '../lib/component-graph'
 import { pretty } from './format'
 import { metricsPanelHtml } from './metrics'
 
@@ -165,6 +165,40 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
 
   /** Component diagram and metrics views. Only one is in the panel at a time. */
   const viewHosts = [graphHost, metricsHost]
+  /** Graph behind the drawn component diagram, so a clicked link can list its messages. */
+  let shownGraph: ComponentGraph | null = null
+
+  /** List one link's interactions under the drawing and mark the link as selected. */
+  function showLink(group: Element): void {
+    const graph = shownGraph
+    const list = graphHost.querySelector<HTMLElement>('.component-links')
+    const edge = graph?.edges[Number(group.getAttribute('data-edge-index'))]
+    if (!graph || !list || !edge) return
+    graphHost.querySelectorAll('.edge-group.is-selected').forEach((el) => el.classList.remove('is-selected'))
+    group.classList.add('is-selected')
+    const name = (id: string) => graph.nodes.find((node) => node.id === id)?.name ?? id
+    const items = edgeInteractions(edge)
+      .map((item) => {
+        const cue = item.type.split(', ').map(typeCue).join(', ')
+        const times = item.count > 1 ? ` ×${item.count}` : ''
+        return `<li>${escapeHtml(item.label || '(no label)')} <span class="cue">· ${escapeHtml(cue)}${times}</span></li>`
+      })
+      .join('')
+    const total = `${edge.count} ${edge.count === 1 ? 'interaction' : 'interactions'}`
+    list.innerHTML = `<h3>${escapeHtml(name(edge.from))} → ${escapeHtml(name(edge.to))} <span class="cue">(${total})</span></h3><ol>${items}</ol>`
+  }
+
+  graphHost.addEventListener('click', (event) => {
+    const group = (event.target as Element | null)?.closest?.('.edge-group')
+    if (group) showLink(group)
+  })
+  graphHost.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    const group = (event.target as Element | null)?.closest?.('.edge-group')
+    if (!group) return
+    event.preventDefault()
+    showLink(group)
+  })
 
   function clearViews(): void {
     for (const host of viewHosts) {
@@ -312,7 +346,11 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
         <span class="pill">${escapeHtml(heading)}</span>`
       showViewChrome(graphHost)
       const drawn = renderComponentDiagram(graph, heading)
-      graphHost.innerHTML = drawn.svg
+      shownGraph = graph
+      const hint = graph.edges.length
+        ? '<p class="inspector-empty">Hover over a link to see its messages, or click it to list them here.</p>'
+        : ''
+      graphHost.innerHTML = `${drawn.svg}<div class="component-links" aria-live="polite">${hint}</div>`
       // Widen for this view only when the drawing needs it. The saved width is untouched,
       // so the next message opens at the column the user chose.
       const fit = drawn.width + 40

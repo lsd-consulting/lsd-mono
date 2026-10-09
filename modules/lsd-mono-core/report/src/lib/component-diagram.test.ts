@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ComponentGraph } from './component-graph'
-import { layoutComponents, placeLabels, renderComponentDiagram, renderComponentSvg } from './component-diagram'
+import { layoutComponents, renderComponentDiagram, renderComponentSvg } from './component-diagram'
 
 const checkout: ComponentGraph = {
   nodes: [
@@ -50,7 +50,7 @@ describe('renderComponentDiagram', () => {
     const { svg, width, height } = renderComponentDiagram(checkout, 'Checkout')
     expect(width).toBeGreaterThan(0)
     expect(height).toBeGreaterThan(0)
-    expect(svg).toContain('role="img"')
+    expect(svg).toContain('role="group"')
     expect(svg).toContain('aria-label="Checkout component diagram, 4 components, 3 links"')
     expect(svg).toContain('data-component="customer" data-participant-type="ACTOR"')
     expect(svg).toContain('class="participant-actor"')
@@ -61,14 +61,54 @@ describe('renderComponentDiagram', () => {
     expect(svg).toContain('<title>Customer, actor</title>')
   })
 
-  it('labels every edge in text, with type and fold count, and dashes async', () => {
+  it('draws links without captions, keeps the line style and direction, and counts busy links', () => {
     const { svg } = renderComponentDiagram(checkout, 'Checkout')
     expect(svg.match(/class="edge-group"/g)).toHaveLength(3)
-    expect(svg).toContain('POST /checkout · sync')
-    expect(svg).toContain('INSERT order · sync ×2')
+    expect(svg).not.toContain('edge-label')
+    expect(svg).not.toMatch(/<text[^>]*>POST \/checkout/)
     expect(svg).toContain('class="edge edge-async"')
     expect(svg).toContain('marker-end="url(#lsd-comp-open)"')
-    expect(svg).toContain('<title>CheckoutAPI to OrdersDB: INSERT order · sync ×2</title>')
+    expect(svg).toContain('marker-end="url(#lsd-comp-filled)"')
+    // Only api to db carries more than one message.
+    const badges = [...svg.matchAll(/<g class="edge-badge"[^>]*>.*?<text[^>]*>(\d+)<\/text><\/g>/g)].map((m) => m[1])
+    expect(badges).toEqual(['2'])
+    expect(svg).toContain('<title>CheckoutAPI to OrdersDB, 2 interactions:\nINSERT order · sync ×2</title>')
+    expect(svg).toContain('<title>Customer to CheckoutAPI, 1 interaction:\nPOST /checkout · sync</title>')
+  })
+
+  it('makes each link a focusable button with a wide hit area', () => {
+    const { svg } = renderComponentDiagram(checkout, 'Checkout')
+    expect(svg).toContain('data-edge-index="1" data-edge-from="api" data-edge-to="db" tabindex="0" role="button" aria-label="CheckoutAPI to OrdersDB, 2 interactions"')
+    expect(svg.match(/class="edge-hit"/g)).toHaveLength(3)
+  })
+
+  it('puts the badge short of the middle, so an opposing pair keeps both badges apart', () => {
+    const { svg } = renderComponentDiagram(
+      {
+        nodes: [
+          { id: 'a', name: 'A', type: 'PARTICIPANT' },
+          { id: 'b', name: 'B', type: 'PARTICIPANT' },
+        ],
+        edges: [
+          { from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 3, label: 'go' },
+          { from: 'b', to: 'a', types: ['ASYNCHRONOUS'], count: 4, label: 'back' },
+        ],
+      },
+      'Pair',
+    )
+    const at = [...svg.matchAll(/class="edge-badge" transform="translate\(([\d.-]+), ([\d.-]+)\)"/g)].map((m) => [
+      Number(m[1]),
+      Number(m[2]),
+    ])
+    expect(at).toHaveLength(2)
+    expect(Math.hypot(at[0][0] - at[1][0], at[0][1] - at[1][1])).toBeGreaterThan(20)
+    const [vx, vy, vw, vh] = svg.match(/viewBox="([^"]+)"/)![1].split(' ').map(Number)
+    for (const [x, y] of at) {
+      expect(x).toBeGreaterThan(vx)
+      expect(x).toBeLessThan(vx + vw)
+      expect(y).toBeGreaterThan(vy)
+      expect(y).toBeLessThan(vy + vh)
+    }
   })
 
   it('splits an opposing pair and draws a self call as a loop', () => {
@@ -93,26 +133,6 @@ describe('renderComponentDiagram', () => {
     expect(svg).toMatch(/<path d="M [^"]+ C [^"]+" class="edge" marker-end="url\(#lsd-comp-lost\)"/)
   })
 
-  it('keeps every caption inside the viewBox', () => {
-    const { svg } = renderComponentDiagram(
-      {
-        nodes: [
-          { id: 'a', name: 'A', type: 'PARTICIPANT' },
-          { id: 'b', name: 'B', type: 'PARTICIPANT' },
-        ],
-        edges: [{ from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 1, label: 'x'.repeat(80) }],
-      },
-      'Long',
-    )
-    const [vx, , vw] = svg.match(/viewBox="([^"]+)"/)![1].split(' ').map(Number)
-    const label = svg.match(/<text class="edge-label" x="([\d.-]+)"[^>]*text-anchor="(\w+)">([^<]+)</)!
-    const x = Number(label[1])
-    expect(label[3].endsWith('…')).toBe(true)
-    expect(label[2]).toBe('start')
-    expect(x).toBeGreaterThanOrEqual(vx)
-    expect(x + label[3].length * 6.2).toBeLessThanOrEqual(vx + vw)
-  })
-
   it('escapes names and labels', () => {
     const svg = renderComponentSvg(
       {
@@ -131,22 +151,5 @@ describe('renderComponentDiagram', () => {
 
   it('says there is nothing to draw for an empty graph', () => {
     expect(renderComponentSvg({ nodes: [], edges: [] }, 'Empty')).toContain('Nothing to draw')
-  })
-})
-
-describe('placeLabels', () => {
-  it('moves a caption off an earlier caption and off a component', () => {
-    const placed = placeLabels(
-      [
-        { x: 0, y: 20, anchor: 'start', text: 'first caption' },
-        { x: 10, y: 20, anchor: 'start', text: 'second caption' },
-        { x: 0, y: 100, anchor: 'start', text: 'under a node' },
-      ],
-      [{ x: -10, y: 80, w: 120, h: 30 }],
-    )
-    expect(placed[0].y).toBe(20)
-    expect(placed[1].y).not.toBe(20)
-    expect(Math.abs(placed[1].y - 20)).toBeGreaterThanOrEqual(14)
-    expect(placed[2].y === 100).toBe(false)
   })
 })

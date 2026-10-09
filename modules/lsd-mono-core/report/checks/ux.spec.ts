@@ -95,6 +95,33 @@ test('axe with the component diagram open, and Escape returns focus to its butto
   }
 })
 
+test('component links have no captions, count their messages, and list them on hover and click', async ({ page }) => {
+  await openFixture(page, 'light')
+  await page.getByRole('button', { name: 'Component diagram' }).click()
+  const graph = page.locator('#inspector-graph')
+  await expect(graph.locator('svg.component-diagram')).toBeVisible()
+  await expect(graph.locator('.edge-label')).toHaveCount(0)
+  await expect(graph.locator('svg text', { hasText: 'charge' })).toHaveCount(0)
+  // Client to Api and Api to Database each carry five calls; responses add no link.
+  await expect(graph.locator('.edge-badge text')).toHaveText(['5', '5'])
+  const link = graph.getByRole('button', { name: 'Api to Database, 5 interactions' })
+  await expect(link.locator('> title')).toHaveText(
+    ['Api to Database, 5 interactions:', 'insert 1 · sync', 'insert 4 · sync', 'insert 7 · sync', 'insert 10 · sync', 'insert 13 · sync'].join('\n'),
+  )
+  await link.locator('.edge-hit').click({ force: true })
+  const list = graph.locator('.component-links')
+  await expect(list.locator('h3')).toHaveText('Api → Database (5 interactions)')
+  await expect(list.locator('li')).toHaveCount(5)
+  await expect(list.locator('li').first()).toHaveText('insert 1 · sync')
+  const other = graph.getByRole('button', { name: 'Client to Api, 5 interactions' })
+  await other.focus()
+  await page.keyboard.press('Enter')
+  await expect(list.locator('h3')).toHaveText('Client → Api (5 interactions)')
+  await expect(other).toHaveClass(/is-selected/)
+  const violations = await seriousViolations(page)
+  expect(violations, formatViolations(violations)).toEqual([])
+})
+
 test('axe with metrics in the side panel, and Escape or Close returns focus to the Metrics button', async ({ page }) => {
   for (const theme of THEMES) {
     await openFixture(page, theme)

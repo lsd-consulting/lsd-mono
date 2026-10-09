@@ -538,13 +538,54 @@ mark {
 .component-diagram .edge-async {
   stroke-dasharray: 6 4;
 }
-.component-diagram .edge-label {
+/* Wide, invisible stroke so a thin link is easy to hover and click. */
+.component-diagram .edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+}
+.component-diagram .edge-group {
+  cursor: pointer;
+  outline: none;
+}
+.component-diagram .edge-group:hover,
+.component-diagram .edge-group:focus-visible,
+.component-diagram .edge-group.is-selected {
+  color: var(--accent-strong);
+}
+.component-diagram .edge-group:focus-visible .edge-hit {
+  stroke: var(--accent-soft);
+}
+.component-diagram .edge-badge rect {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+.component-diagram .edge-badge text {
   fill: var(--text);
-  font-size: 11px;
-  paint-order: stroke;
-  stroke: var(--surface);
-  stroke-width: 4px;
-  stroke-linejoin: round;
+  font-size: 10px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.component-links {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.component-links h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.component-links ol {
+  margin: 0;
+  padding-left: 22px;
+}
+.component-links li {
+  margin: 2px 0;
+  overflow-wrap: anywhere;
+}
+.component-links .cue {
+  color: var(--text-muted);
 }
 .component-diagram .marker-fill {
   fill: currentColor;
