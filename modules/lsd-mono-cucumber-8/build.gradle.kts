@@ -5,6 +5,11 @@ plugins {
     `java-library`
 }
 
+// Line coverage was 50.4% when the floor was set (#30). Raise the floor as tests are added.
+lsdCoverage {
+    lineFloor.set(49)
+}
+
 base.archivesName.set("lsd-mono-cucumber-8")
 
 description = "LSD Mono Cucumber 8 integration — plugin for living sequence diagram reports"
@@ -12,7 +17,9 @@ description = "LSD Mono Cucumber 8 integration — plugin for living sequence di
 val readmeSourceSet = sourceSets.create("readme")
 
 majorLines {
-    pin("Cucumber 8", 8,
+    pin(
+        "Cucumber 8",
+        8,
         listOf("io.cucumber"),
         listOf(
             "cucumber-bom",

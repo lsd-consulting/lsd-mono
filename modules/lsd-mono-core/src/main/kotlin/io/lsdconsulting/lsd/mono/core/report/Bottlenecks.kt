@@ -98,6 +98,7 @@ private fun bottleneckInsights(messages: List<Message>, limit: Int): List<Insigh
 internal fun buildTree(messages: List<Message>): CallNode {
     val root = CallNode(order = -1)
     var seq = 0
+
     fun nextOrder(): Int = seq++
     messages.fold(root) { node, message ->
         val nodeName = node.name

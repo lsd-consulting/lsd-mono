@@ -14,7 +14,6 @@ import java.io.File
 import java.nio.file.Path
 
 class LsdContextTest {
-
     @TempDir
     lateinit var tempDir: Path
 

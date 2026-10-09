@@ -12,12 +12,15 @@ import org.junit.jupiter.api.Test
 
 /** Direct tests for Json.kt, [LsdProperties] and StringUtils (#25). */
 class CoreHelpersTest {
-
     private val touched = listOf(
-        LsdProperties.OUTPUT_DIR, "lsd.core.report.outputDir",
-        LsdProperties.LABEL_MAX_WIDTH, "lsd.core.label.maxWidth",
-        LsdProperties.METRICS_ENABLED, "lsd.core.metrics.enabled",
-        LsdProperties.HIDE_STACKTRACE, "lsd.junit.hideStacktrace",
+        LsdProperties.OUTPUT_DIR,
+        "lsd.core.report.outputDir",
+        LsdProperties.LABEL_MAX_WIDTH,
+        "lsd.core.label.maxWidth",
+        LsdProperties.METRICS_ENABLED,
+        "lsd.core.metrics.enabled",
+        LsdProperties.HIDE_STACKTRACE,
+        "lsd.junit.hideStacktrace",
     )
     private val saved = touched.associateWith { System.getProperty(it) }
 
@@ -40,13 +43,27 @@ class CoreHelpersTest {
         val json =
             anyToJson(
                 mapOf(
-                    "s" to "x", "i" to 1, "l" to 2L, "d" to 1.5, "nan" to Double.NaN,
-                    "b" to true, "n" to null, "list" to listOf(1, "two"), "arr" to arrayOf(3), "other" to StringBuilder("sb"),
+                    "s" to "x",
+                    "i" to 1,
+                    "l" to 2L,
+                    "d" to 1.5,
+                    "nan" to Double.NaN,
+                    "b" to true,
+                    "n" to null,
+                    "list" to listOf(1, "two"),
+                    "arr" to arrayOf(3),
+                    "other" to StringBuilder("sb"),
                 ),
             ).render()
         listOf(
-            """"s": "x"""", """"i": 1""", """"l": 2""", """"d": 1.5""", """"nan": "NaN"""",
-            """"b": true""", """"n": null""", """"other": "sb"""",
+            """"s": "x"""",
+            """"i": 1""",
+            """"l": 2""",
+            """"d": 1.5""",
+            """"nan": "NaN"""",
+            """"b": true""",
+            """"n": null""",
+            """"other": "sb"""",
         ).forEach { assertTrue(json.contains(it), "$it in $json") }
         assertTrue(Regex(""""list": \[\s*1,\s*"two"\s*]""").containsMatchIn(json), json)
         assertTrue(Regex(""""arr": \[\s*3\s*]""").containsMatchIn(json), json)

@@ -1,0 +1,29 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{ts,mjs,js,json,yml,yaml,html,css}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{kt,kts}]
+ktlint_code_style = ktlint_official
+max_line_length = 160
+# Keep the author's layout where it is a readability choice rather than a defect.
+ktlint_standard_function-signature = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_multiline-if-else = disabled
+ktlint_standard_blank-line-between-when-conditions = disabled
+# `data class Message @JvmOverloads constructor(` stays on one line for the Java-facing API.
+ktlint_standard_annotation = disabled
+# Compact one-line `when` tables and `val task = tasks.register(...) {` stay as written.
+ktlint_standard_when-entry-bracing = disabled
+ktlint_standard_multiline-expression-wrapping = disabled

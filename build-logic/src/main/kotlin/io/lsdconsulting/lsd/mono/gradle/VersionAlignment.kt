@@ -19,7 +19,7 @@ object VersionAlignment {
 
     private val semver = Regex("""^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z][0-9A-Za-z.-]*))?$""")
     private val entry = Regex(
-        """^(patch|solo-major):(\S+)(?:\s+train-major:(\d+))?$"""
+        """^(patch|solo-major):(\S+)(?:\s+train-major:(\d+))?$""",
     )
 
     fun parse(text: String): Map<String, VersionOverride> {
@@ -63,12 +63,7 @@ object VersionAlignment {
     /**
      * @return null when [actual] is the train version, or the recorded override and that override is legal.
      */
-    fun alignmentFailure(
-        projectPath: String,
-        actual: String,
-        train: String,
-        recorded: VersionOverride?,
-    ): String? {
+    fun alignmentFailure(projectPath: String, actual: String, train: String, recorded: VersionOverride?): String? {
         recordedProblem(projectPath, train, recorded)?.let { return it }
         val expected = recorded?.version ?: train
         if (actual == expected) {
@@ -132,7 +127,5 @@ object VersionAlignment {
         )
     }
 
-    private fun fail(lineNo: Int, message: String): Nothing {
-        throw IllegalArgumentException("$OVERRIDES_PATH:$lineNo: $message")
-    }
+    private fun fail(lineNo: Int, message: String): Nothing = throw IllegalArgumentException("$OVERRIDES_PATH:$lineNo: $message")
 }

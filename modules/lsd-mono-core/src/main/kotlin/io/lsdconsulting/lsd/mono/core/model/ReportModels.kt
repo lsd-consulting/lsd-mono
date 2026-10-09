@@ -320,8 +320,10 @@ fun ReportJson.forShell(): ShellReport {
                     scenario.copy(
                         events =
                             scenario.events.map { event ->
-                                if (event !is MessageEventJson) event
-                                else splitMessageForShell(scenario.id, event, payloads)
+                                if (event !is MessageEventJson)
+                                    event
+                                else
+                                    splitMessageForShell(scenario.id, event, payloads)
                             },
                     )
                 },
@@ -355,8 +357,10 @@ private fun splitPayload(data: Any?): PayloadSplit {
     var defer = false
     for ((key, value) in data) {
         val name = key?.toString() ?: continue
-        if (isSummaryField(name, value)) summary[name] = value
-        else defer = true
+        if (isSummaryField(name, value))
+            summary[name] = value
+        else
+            defer = true
     }
     if (!defer) return PayloadSplit(summary = null, defer = false)
     return PayloadSplit(summary = summary.takeIf { it.isNotEmpty() }, defer = true)

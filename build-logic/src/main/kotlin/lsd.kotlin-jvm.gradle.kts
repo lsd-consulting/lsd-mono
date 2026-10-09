@@ -4,6 +4,8 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("lsd.common")
     id("lsd.major-line")
+    id("lsd.formatting")
+    id("lsd.coverage")
 }
 
 extensions.configure<MajorLines>("majorLines") {

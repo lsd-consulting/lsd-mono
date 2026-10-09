@@ -43,7 +43,8 @@ class LsdCucumberPluginTest {
     @Test
     fun `scenario captured through the plugin lands in ReportJson`() {
         val summary = SummaryGeneratingListener()
-        val request = LauncherDiscoveryRequestBuilder.request()
+        val request = LauncherDiscoveryRequestBuilder
+            .request()
             .selectors(selectClasspathResource("io/lsdconsulting/lsd/mono/cucumber/fixture/place_order.feature"))
             .configurationParameter("cucumber.glue", "io.lsdconsulting.lsd.mono.cucumber.fixture")
             .configurationParameter("cucumber.plugin", "io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin")

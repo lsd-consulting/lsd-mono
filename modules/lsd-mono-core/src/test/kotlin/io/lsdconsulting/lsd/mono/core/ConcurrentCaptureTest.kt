@@ -1,8 +1,8 @@
 package io.lsdconsulting.lsd.mono.core
 
-import org.junit.jupiter.api.AfterEach
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -26,7 +26,6 @@ import kotlin.io.path.readText
  * ConcurrentModificationException). The rest cover scenario scopes and report keys.
  */
 class ConcurrentCaptureTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -242,7 +241,12 @@ class ConcurrentCaptureTest {
         val pool = Executors.newFixedThreadPool(threads)
         val start = CountDownLatch(1)
         try {
-            val futures = (0 until threads).map { t -> pool.submit { start.await(); body(t) } }
+            val futures = (0 until threads).map { t ->
+                pool.submit {
+                    start.await()
+                    body(t)
+                }
+            }
             start.countDown()
             futures.forEach { it.get(60, TimeUnit.SECONDS) }
         } finally {

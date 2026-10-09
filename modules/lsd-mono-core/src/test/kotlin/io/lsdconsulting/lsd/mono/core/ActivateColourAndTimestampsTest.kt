@@ -1,11 +1,11 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.capture.lifeline
 import io.lsdconsulting.lsd.mono.core.capture.withColour
 import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -16,7 +16,6 @@ import java.time.Instant
 import kotlin.io.path.readText
 
 class ActivateColourAndTimestampsTest {
-
     @TempDir
     lateinit var tempDir: Path
 

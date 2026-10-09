@@ -6,6 +6,11 @@ plugins {
     `java-library`
 }
 
+// Line coverage was 73.3% when the floor was set (#30). Raise the floor as tests are added.
+lsdCoverage {
+    lineFloor.set(72)
+}
+
 base.archivesName.set("lsd-mono-core")
 
 description =
@@ -21,6 +26,15 @@ dependencies {
 }
 
 tasks.test {
+    // HtmlEscapingGuardTest scans every module's main Kotlin, not only this one's.
+    inputs
+        .files(
+            rootProject.layout.projectDirectory
+                .dir("modules")
+                .asFileTree
+                .matching { include("*/src/main/**/*.kt") },
+        ).withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("guardedSources")
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
     systemProperty("lsd.mono.test.projectVersion", project.version.toString())
 }

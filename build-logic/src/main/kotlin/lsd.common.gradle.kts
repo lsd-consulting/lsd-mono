@@ -23,7 +23,7 @@ val recorded = try {
 val unknown = recorded.keys.filter { rootProject.findProject(it) == null }
 if (unknown.isNotEmpty()) {
     throw GradleException(
-        "${VersionAlignment.OVERRIDES_PATH} names ${unknown.joinToString()} which is not a project."
+        "${VersionAlignment.OVERRIDES_PATH} names ${unknown.joinToString()} which is not a project.",
     )
 }
 val train = rootProject.version.toString()

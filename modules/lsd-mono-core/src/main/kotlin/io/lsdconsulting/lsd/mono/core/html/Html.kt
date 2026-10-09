@@ -59,7 +59,9 @@ object Html {
 
     private fun paired(value: String, i: Int): Boolean {
         val c = value[i]
-        return if (c.isHighSurrogate()) i + 1 < value.length && value[i + 1].isLowSurrogate()
-        else i > 0 && value[i - 1].isHighSurrogate()
+        return if (c.isHighSurrogate())
+            i + 1 < value.length && value[i + 1].isLowSurrogate()
+        else
+            i > 0 && value[i - 1].isHighSurrogate()
     }
 }

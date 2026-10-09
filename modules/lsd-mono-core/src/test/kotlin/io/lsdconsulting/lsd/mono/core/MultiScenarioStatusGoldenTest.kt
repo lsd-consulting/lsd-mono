@@ -1,7 +1,7 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -19,7 +19,6 @@ import kotlin.io.path.readText
  * golden byte-for-byte, so the golden does not change with the clock or the project version.
  */
 class MultiScenarioStatusGoldenTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -52,7 +51,8 @@ class MultiScenarioStatusGoldenTest {
                 """"generator": "SCRUBBED"""",
             )
         val golden =
-            javaClass.getResource("/golden/multi-scenario-status.json")
+            javaClass
+                .getResource("/golden/multi-scenario-status.json")
                 ?.readText()
                 ?: error("missing golden/multi-scenario-status.json")
         assertEquals(golden, scrubbed)

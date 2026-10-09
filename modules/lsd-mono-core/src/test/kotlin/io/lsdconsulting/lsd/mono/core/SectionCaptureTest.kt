@@ -1,14 +1,14 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.capture.lifeline
 import io.lsdconsulting.lsd.mono.core.capture.messages
 import io.lsdconsulting.lsd.mono.core.capture.section
 import io.lsdconsulting.lsd.mono.core.capture.withLabel
 import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
-import io.lsdconsulting.lsd.mono.core.capture.lifeline
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -22,7 +22,6 @@ import kotlin.io.path.readText
  * drop activate/deactivate events on either side of the boundary.
  */
 class SectionCaptureTest {
-
     @TempDir
     lateinit var tempDir: Path
 

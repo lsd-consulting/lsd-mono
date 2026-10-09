@@ -4,7 +4,6 @@ import io.cucumber.plugin.ConcurrentEventListener
 import io.cucumber.plugin.event.EventPublisher
 import io.cucumber.plugin.event.Node
 import io.cucumber.plugin.event.PickleStepTestStep
-import io.cucumber.plugin.event.Status as CucumberStatus
 import io.cucumber.plugin.event.TestCase
 import io.cucumber.plugin.event.TestCaseFinished
 import io.cucumber.plugin.event.TestCaseStarted
@@ -22,6 +21,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import io.cucumber.plugin.event.Status as CucumberStatus
 
 /**
  * Cucumber 8 plugin. One Cucumber scenario becomes one LSD scenario. The feature
@@ -47,6 +47,7 @@ class LsdCucumberPlugin : ConcurrentEventListener {
 
     /** `uri:line` of each outline example row to its 1-based number within the outline. */
     private val exampleNumbers = ConcurrentHashMap<String, Int>()
+
     /** Fallback numbering when a row was not in a parsed source (start order). */
     private val outlineCounts = ConcurrentHashMap<String, Int>()
 
@@ -94,7 +95,8 @@ class LsdCucumberPlugin : ConcurrentEventListener {
     private fun onTestStepStarted(event: TestStepStarted) {
         val step = event.testStep
         if (splitByStep && step is PickleStepTestStep) {
-            lsd.findScenario(event.testCase.scenarioKey())
+            lsd
+                .findScenario(event.testCase.scenarioKey())
                 ?.capture(Section(id = "", title = "${step.step.keyword}${step.step.text}".trim()))
         }
     }

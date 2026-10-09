@@ -22,7 +22,6 @@ import java.util.UUID
 
 /** The awkward cases of message data (#27). Every result must also render as valid JSON. */
 class PayloadSnapshotTest {
-
     private val snapshot = PayloadSnapshot(Limits())
 
     private fun snap(value: Any?, limits: Limits = Limits()): Any? =
@@ -182,6 +181,7 @@ class PayloadSnapshotTest {
         )
         val badList = object : AbstractList<Any>() {
             override val size = 2
+
             override fun get(index: Int): Any = throw UnsupportedOperationException("no items")
         }
         assertEquals(
@@ -238,9 +238,18 @@ class PayloadSnapshotTest {
         /** A strict JSON (RFC 8259) syntax check, enough to prove the output parses. */
         fun assertValidJson(text: String) {
             var i = 0
+
             fun fail(why: String): Nothing = throw AssertionError("invalid JSON at $i ($why): ${text.take(300)}")
-            fun ws() { while (i < text.length && text[i] in " \t\r\n") i++ }
-            fun expect(c: Char) { if (i >= text.length || text[i] != c) fail("expected $c"); i++ }
+
+            fun ws() {
+                while (i < text.length && text[i] in " \t\r\n") i++
+            }
+
+            fun expect(c: Char) {
+                if (i >= text.length || text[i] != c) fail("expected $c")
+                i++
+            }
+
             fun string() {
                 expect('"')
                 while (true) {
@@ -253,7 +262,9 @@ class PayloadSnapshotTest {
                             if (e == 'u') {
                                 if (i + 4 > text.length || !text.substring(i, i + 4).all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) fail("bad \\u")
                                 i += 4
-                            } else if (e !in "\"\\/bfnrt") fail("bad escape $e")
+                            } else if (e !in "\"\\/bfnrt") {
+                                fail("bad escape $e")
+                            }
                         }
                         c.code < 0x20 -> fail("raw control character")
                         c.isHighSurrogate() -> if (text.getOrNull(i)?.isLowSurrogate() == true) i++ else fail("lone surrogate")
@@ -261,23 +272,46 @@ class PayloadSnapshotTest {
                     }
                 }
             }
+
             fun value() {
                 ws()
                 when (text.getOrNull(i)) {
                     '{' -> {
-                        i++; ws()
-                        if (text.getOrNull(i) == '}') { i++; return }
+                        i++
+                        ws()
+                        if (text.getOrNull(i) == '}') {
+                            i++
+                            return
+                        }
                         while (true) {
-                            ws(); string(); ws(); expect(':'); value(); ws()
-                            if (text.getOrNull(i) == ',') i++ else { expect('}'); return }
+                            ws()
+                            string()
+                            ws()
+                            expect(':')
+                            value()
+                            ws()
+                            if (text.getOrNull(i) != ',') {
+                                expect('}')
+                                return
+                            }
+                            i++
                         }
                     }
                     '[' -> {
-                        i++; ws()
-                        if (text.getOrNull(i) == ']') { i++; return }
+                        i++
+                        ws()
+                        if (text.getOrNull(i) == ']') {
+                            i++
+                            return
+                        }
                         while (true) {
-                            value(); ws()
-                            if (text.getOrNull(i) == ',') i++ else { expect(']'); return }
+                            value()
+                            ws()
+                            if (text.getOrNull(i) != ',') {
+                                expect(']')
+                                return
+                            }
+                            i++
                         }
                     }
                     '"' -> string()
@@ -287,7 +321,8 @@ class PayloadSnapshotTest {
                     }
                 }
             }
-            value(); ws()
+            value()
+            ws()
             if (i != text.length) fail("trailing text")
         }
     }

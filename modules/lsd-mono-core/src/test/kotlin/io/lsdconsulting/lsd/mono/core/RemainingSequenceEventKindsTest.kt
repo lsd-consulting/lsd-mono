@@ -1,6 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.capture.delay
 import io.lsdconsulting.lsd.mono.core.capture.messages
 import io.lsdconsulting.lsd.mono.core.capture.noteLeft
@@ -14,6 +13,7 @@ import io.lsdconsulting.lsd.mono.core.capture.withType
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -29,7 +29,6 @@ import kotlin.io.path.readText
  * Short arrows must not invent a "?" participant.
  */
 class RemainingSequenceEventKindsTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -128,7 +127,8 @@ class RemainingSequenceEventKindsTest {
         val participantsStart = json.indexOf("\"participants\": [")
         val participantsEnd = json.indexOf(']', json.indexOf('[', participantsStart))
         val participantIds =
-            Regex("\"id\": \"([^\"]+)\"").findAll(json.substring(participantsStart, participantsEnd + 1))
+            Regex("\"id\": \"([^\"]+)\"")
+                .findAll(json.substring(participantsStart, participantsEnd + 1))
                 .map { it.groupValues[1] }
                 .toSet()
         assertEquals(setOf("api", "db"), participantIds)

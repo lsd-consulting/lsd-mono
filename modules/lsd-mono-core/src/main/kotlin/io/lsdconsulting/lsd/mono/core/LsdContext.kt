@@ -16,20 +16,20 @@ import io.lsdconsulting.lsd.mono.core.domain.Scenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
-import io.lsdconsulting.lsd.mono.core.domain.orderByCreatedAt
 import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.domain.orderByCreatedAt
 import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.core.model.EventJson
 import io.lsdconsulting.lsd.mono.core.model.FactJson
 import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
-import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
 import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
+import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioErrorJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
@@ -39,11 +39,11 @@ import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.capturedMetrics
 import java.io.File
 import java.nio.file.Path
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 /**
  * Capture + report façade inspired by legacy `com.lsd.core.LsdContext`.
@@ -79,7 +79,6 @@ import java.time.temporal.ChronoUnit
  * **Deferred:** legacy include-files.
  */
 open class LsdContext {
-
     @Volatile
     var idGenerator = IdGenerator(LsdProperties.deterministicIds())
         private set
@@ -331,7 +330,11 @@ open class LsdContext {
                 // Writing a report has always dropped captures that no scenario was completed for.
                 // Keep that when nothing is running, but say so.
                 if (reportKey == null || active.isEmpty()) dropStrayCaptures(title)
-                completed.remove(reportKey).orEmpty().sortedBy { it.first }.map { it.second }
+                completed
+                    .remove(reportKey)
+                    .orEmpty()
+                    .sortedBy { it.first }
+                    .map { it.second }
             }
         val report = buildReportJson(title, taken)
         val path = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)

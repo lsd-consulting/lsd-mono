@@ -122,7 +122,7 @@ object ReportWriter {
     }
 
     private fun renderIndex(reportFiles: List<ReportFile>): String {
-        val rows =
+        val rowsHtml =
             reportFiles.joinToString("\n") { rf ->
                 """
                 <tr class="${Html.attribute(rf.status)}">
@@ -153,7 +153,7 @@ object ReportWriter {
               <table>
                 <thead><tr><th>Report</th><th>Status</th></tr></thead>
                 <tbody>
-                $rows
+                $rowsHtml
                 </tbody>
               </table>
             </body>
@@ -225,8 +225,10 @@ object ReportWriter {
     private fun renderShell(report: ReportJson, payloadsFile: String?): String {
         val template = readShellTemplate()
         val src =
-            if (payloadsFile == null) ""
-            else "window.__LSD_PAYLOADS_SRC__=${jsonString(payloadsFile)};"
+            if (payloadsFile == null)
+                ""
+            else
+                "window.__LSD_PAYLOADS_SRC__=${jsonString(payloadsFile)};"
         val injection = "<script>${src}window.__LSD_REPORT__=${report.toJson().trim()};</script>\n"
         val marker = "<script>"
         val idx = template.indexOf(marker)
@@ -251,15 +253,16 @@ object ReportWriter {
             .ifBlank { "lsd-report" }
 
     internal fun shortHash(text: String): String =
-        MessageDigest.getInstance("SHA-256")
+        MessageDigest
+            .getInstance("SHA-256")
             .digest(text.toByteArray(Charsets.UTF_8))
             .take(4)
             .joinToString("") { "%02x".format(it) }
 
     private fun renderMinimalHtml(report: ReportJson, diagramName: String, jsonName: String): String {
-        val scenarios =
+        val scenariosHtml =
             report.scenarios.joinToString("\n") { s ->
-                val facts =
+                val factsHtml =
                     if (s.facts.isEmpty()) {
                         "<p><em>No facts</em></p>"
                     } else {
@@ -275,11 +278,11 @@ object ReportWriter {
                     <span class="badge">${Html.text(s.status)}</span>
                   </h2>
                   <div class="description">${Html.text(s.description)}</div>
-                  ${errorBlock(s)}
+                  ${errorHtml(s)}
                   <h3>Facts</h3>
-                  $facts
+                  $factsHtml
                   <h3>Sequence (${s.events.size})</h3>
-                  ${eventList(s)}
+                  ${eventListHtml(s)}
                 </section>
                 """.trimIndent()
             }
@@ -314,7 +317,7 @@ object ReportWriter {
                 <h1>${Html.text(report.title)}</h1>
                 <p class="meta">${Html.text(report.generator)} · ${Html.text(report.generatedAt)}</p>
               </header>
-              $scenarios
+              $scenariosHtml
               <div class="note">
                 <strong>Interactive diagram:</strong>
                 <a href="${Html.attribute(diagramName)}">${Html.text(diagramName)}</a>
@@ -326,20 +329,20 @@ object ReportWriter {
             """.trimIndent()
     }
 
-    private fun errorBlock(scenario: ScenarioJson): String {
+    private fun errorHtml(scenario: ScenarioJson): String {
         val error = scenario.error ?: return ""
-        val stack =
+        val stackHtml =
             error.stack?.let { "<pre>${Html.text(it)}</pre>" }.orEmpty()
         return """
             <h3>${Html.text(error.headline)}</h3>
             <p>${Html.text(error.message)}</p>
-            $stack
-        """.trimIndent()
+            $stackHtml
+            """.trimIndent()
     }
 
-    private fun eventList(scenario: ScenarioJson): String {
+    private fun eventListHtml(scenario: ScenarioJson): String {
         if (scenario.events.isEmpty()) return "<p><em>No events</em></p>"
-        val items =
+        val itemsHtml =
             scenario.events.joinToString("") { event ->
                 val label =
                     when (event) {
@@ -356,6 +359,6 @@ object ReportWriter {
                     }
                 "<li>${Html.text(label)}</li>"
             }
-        return "<ol>$items</ol>"
+        return "<ol>$itemsHtml</ol>"
     }
 }

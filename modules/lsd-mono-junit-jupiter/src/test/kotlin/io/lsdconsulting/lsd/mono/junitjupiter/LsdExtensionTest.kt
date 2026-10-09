@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith
  */
 @ExtendWith(LsdExtension::class)
 class LsdExtensionTest {
-
     private val lsd = LsdContext.instance
 
     @Test

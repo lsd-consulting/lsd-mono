@@ -73,6 +73,7 @@ class PayloadSnapshot @JvmOverloads constructor(
             @JvmStatic
             fun fromProperties(): Limits {
                 val defaults = Limits()
+
                 fun read(key: String, default: Int) =
                     LsdProperties[key, default.toString()].trim().toIntOrNull()?.takeIf { it > 0 } ?: default
                 return Limits(
@@ -298,14 +299,18 @@ class PayloadSnapshot @JvmOverloads constructor(
     /** Read-only map produced by a snapshot. Snapshots are not copied again. */
     internal class FrozenMap(private val delegate: Map<String, Any?>) : Map<String, Any?> by delegate {
         override fun equals(other: Any?) = delegate == other
+
         override fun hashCode() = delegate.hashCode()
+
         override fun toString() = delegate.toString()
     }
 
     /** Read-only list produced by a snapshot. Snapshots are not copied again. */
     internal class FrozenList(private val delegate: List<Any?>) : List<Any?> by delegate {
         override fun equals(other: Any?) = delegate == other
+
         override fun hashCode() = delegate.hashCode()
+
         override fun toString() = delegate.toString()
     }
 
@@ -347,8 +352,7 @@ class PayloadSnapshot @JvmOverloads constructor(
                         .filter { f ->
                             !Modifier.isStatic(f.modifiers) && !Modifier.isTransient(f.modifiers) && !f.isSynthetic &&
                                 '$' !in f.name
-                        }
-                        .filter { f -> runCatching { f.trySetAccessible() }.getOrDefault(false) }
+                        }.filter { f -> runCatching { f.trySetAccessible() }.getOrDefault(false) }
                         .let { out.addAll(0, it) }
                     current = current.superclass
                 }
@@ -358,7 +362,8 @@ class PayloadSnapshot @JvmOverloads constructor(
         private fun utf8Text(bytes: ByteArray): String? {
             val decoded =
                 try {
-                    Charsets.UTF_8.newDecoder()
+                    Charsets.UTF_8
+                        .newDecoder()
                         .onMalformedInput(CodingErrorAction.REPORT)
                         .onUnmappableCharacter(CodingErrorAction.REPORT)
                         .decode(ByteBuffer.wrap(bytes))

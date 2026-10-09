@@ -25,7 +25,6 @@ import kotlin.io.path.readText
  * every scenario only its own messages and facts (#24, #25).
  */
 class LsdExtensionParallelTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -46,7 +45,8 @@ class LsdExtensionParallelTest {
     fun `parallel tests and classes each get only their own events`() {
         val summary = SummaryGeneratingListener()
         val request =
-            LauncherDiscoveryRequestBuilder.request()
+            LauncherDiscoveryRequestBuilder
+                .request()
                 .selectors(selectClass(ParallelFixtureA::class.java), selectClass(ParallelFixtureB::class.java))
                 .configurationParameter("junit.jupiter.execution.parallel.enabled", "true")
                 .configurationParameter("junit.jupiter.execution.parallel.mode.default", "concurrent")
@@ -127,10 +127,15 @@ internal object ParallelFixtureState {
 @ExtendWith(LsdExtension::class)
 class ParallelFixtureA {
     @Test fun test1() = ParallelFixtureState.capture("a1")
+
     @Test fun test2() = ParallelFixtureState.capture("a2")
+
     @Test fun test3() = ParallelFixtureState.capture("a3")
+
     @Test fun test4() = ParallelFixtureState.capture("a4")
+
     @Test fun test5() = ParallelFixtureState.capture("a5")
+
     @Test fun test6() = ParallelFixtureState.capture("a6")
 }
 
@@ -138,9 +143,14 @@ class ParallelFixtureA {
 @ExtendWith(LsdExtension::class)
 class ParallelFixtureB {
     @Test fun test1() = ParallelFixtureState.capture("b1")
+
     @Test fun test2() = ParallelFixtureState.capture("b2")
+
     @Test fun test3() = ParallelFixtureState.capture("b3")
+
     @Test fun test4() = ParallelFixtureState.capture("b4")
+
     @Test fun test5() = ParallelFixtureState.capture("b5")
+
     @Test fun test6() = ParallelFixtureState.capture("b6")
 }

@@ -1,6 +1,7 @@
 plugins {
     // Root is a thin aggregator; convention plugins live in build-logic.
     base
+    id("lsd.formatting")
 }
 
 group = "io.lsdconsulting"
@@ -34,10 +35,11 @@ val verifyGenerated = tasks.register("verifyGenerated") {
     group = "verification"
     description = "Build, then fail if git shows changed or new files that the build should not leave."
     val status =
-        providers.exec {
-            commandLine("git", "status", "--porcelain", "--untracked-files=all")
-            workingDir = rootDir
-        }.standardOutput.asText
+        providers
+            .exec {
+                commandLine("git", "status", "--porcelain", "--untracked-files=all")
+                workingDir = rootDir
+            }.standardOutput.asText
     doLast {
         val drift =
             status.get().lines().filter { it.isNotBlank() }.filter { line ->

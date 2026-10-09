@@ -1,6 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.capture.lifeline
 import io.lsdconsulting.lsd.mono.core.capture.messages
 import io.lsdconsulting.lsd.mono.core.capture.noteOver
 import io.lsdconsulting.lsd.mono.core.capture.withData
@@ -12,8 +12,8 @@ import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
-import io.lsdconsulting.lsd.mono.core.capture.lifeline
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -23,7 +23,6 @@ import java.nio.file.Path
 import kotlin.io.path.readText
 
 class CaptureToJsonTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -47,7 +46,7 @@ class CaptureToJsonTest {
             "Customer" messages "Checkout API" withLabel "POST /checkout" withData mapOf("cartId" to "cart-1"),
         )
         lsd.capture(
-            "api" messages "Orders DB" withLabel "INSERT orders" withType MessageType.SYNCHRONOUS withDurationMs(12),
+            "api" messages "Orders DB" withLabel "INSERT orders" withType MessageType.SYNCHRONOUS withDurationMs (12),
         )
         lsd.response("Orders DB", "Checkout API", "ok")
         lsd.message("Checkout API", "Customer", "201 Created", MessageType.ASYNCHRONOUS, mapOf("orderId" to "ord-1"))

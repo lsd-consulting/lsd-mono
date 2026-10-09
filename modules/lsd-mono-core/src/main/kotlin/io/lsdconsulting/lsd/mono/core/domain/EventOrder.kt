@@ -11,10 +11,10 @@ import java.time.Instant
  */
 fun orderByCreatedAt(events: List<SequenceEvent>): List<SequenceEvent> {
     if (events.none { it.createdAt != null }) return events
-    return events.withIndex()
+    return events
+        .withIndex()
         .sortedWith(
             compareBy<IndexedValue<SequenceEvent>> { it.value.createdAt ?: Instant.MAX }
                 .thenBy { it.index },
-        )
-        .map { it.value }
+        ).map { it.value }
 }

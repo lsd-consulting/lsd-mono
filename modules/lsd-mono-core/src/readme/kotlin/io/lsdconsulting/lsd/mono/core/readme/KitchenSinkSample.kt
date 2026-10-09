@@ -212,6 +212,7 @@ private fun happyPath(lsd: LsdContext) {
 /** Captured out of order (as interceptors on different threads would); createdAt restores the sequence. */
 private fun paymentDeclined(lsd: LsdContext) {
     val t0 = Instant.parse("2026-10-08T09:00:00Z")
+
     fun at(seconds: Long) = t0.plusSeconds(seconds)
     lsd.addFact("orderId", "ord-2002")
     lsd.addFact("card", "**** 0002")

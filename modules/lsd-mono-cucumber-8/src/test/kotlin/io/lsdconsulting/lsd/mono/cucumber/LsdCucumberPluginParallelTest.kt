@@ -44,12 +44,12 @@ class LsdCucumberPluginParallelTest {
     fun `parallel scenarios and features each get only their own events`() {
         val summary = SummaryGeneratingListener()
         val request =
-            LauncherDiscoveryRequestBuilder.request()
+            LauncherDiscoveryRequestBuilder
+                .request()
                 .selectors(
                     selectClasspathResource("io/lsdconsulting/lsd/mono/cucumber/fixture/parallel/checkout.feature"),
                     selectClasspathResource("io/lsdconsulting/lsd/mono/cucumber/fixture/parallel/returns.feature"),
-                )
-                .configurationParameter("cucumber.glue", "io.lsdconsulting.lsd.mono.cucumber.fixture")
+                ).configurationParameter("cucumber.glue", "io.lsdconsulting.lsd.mono.cucumber.fixture")
                 .configurationParameter("cucumber.plugin", "io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin")
                 .configurationParameter("cucumber.publish.enabled", "false")
                 .configurationParameter("cucumber.execution.parallel.enabled", "true")

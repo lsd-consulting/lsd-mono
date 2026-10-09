@@ -20,7 +20,11 @@ internal object LsdVersion {
 
     private fun fromResource(): String? =
         LsdVersion::class.java.getResourceAsStream(RESOURCE)?.use { stream ->
-            Properties().apply { load(stream) }.getProperty("version")?.trim()?.takeIf { it.isNotEmpty() }
+            Properties()
+                .apply { load(stream) }
+                .getProperty("version")
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
         }
 
     private fun fromManifest(): String? = LsdVersion::class.java.`package`?.implementationVersion

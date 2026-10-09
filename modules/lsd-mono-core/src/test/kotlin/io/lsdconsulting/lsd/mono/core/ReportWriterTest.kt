@@ -21,7 +21,6 @@ import kotlin.io.path.readText
 
 /** Direct tests for [ReportWriter] file naming, atomic writes, and the shared index (#25). */
 class ReportWriterTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -74,8 +73,13 @@ class ReportWriterTest {
         val pool = Executors.newFixedThreadPool(8)
         val go = CountDownLatch(1)
         try {
-            (1..8).map { pool.submit { go.await(); repeat(10) { ReportWriter.writeReport(big, tempDir.toFile()) } } }
-                .also { go.countDown() }
+            (1..8)
+                .map {
+                    pool.submit {
+                        go.await()
+                        repeat(10) { ReportWriter.writeReport(big, tempDir.toFile()) }
+                    }
+                }.also { go.countDown() }
                 .forEach { it.get(60, TimeUnit.SECONDS) }
         } finally {
             pool.shutdownNow()

@@ -19,13 +19,13 @@ object PopupContent {
         popupContent: String,
     ): String =
         """
-            <a href="#${Html.attribute(id)}">${Html.text(hyperlinkText)}</a>
-            <div id="${Html.attribute(id)}" class="overlay" onclick="location.href='#!';">
-                <div class="popup" onclick="event.stopPropagation();">
-                    <h2>${Html.text(popupTitle)}</h2>
-                    <a class="close" href="#!">&times;</a>
-                    <div class="content">$popupContent</div>
-                </div>
+        <a href="#${Html.attribute(id)}">${Html.text(hyperlinkText)}</a>
+        <div id="${Html.attribute(id)}" class="overlay" onclick="location.href='#!';">
+            <div class="popup" onclick="event.stopPropagation();">
+                <h2>${Html.text(popupTitle)}</h2>
+                <a class="close" href="#!">&times;</a>
+                <div class="content">$popupContent</div>
             </div>
+        </div>
         """.trimIndent()
 }

@@ -16,8 +16,10 @@ fun main(args: Array<String>) {
     LsdContext.instance.clear()
     val status = Main.run(
         arrayOf(
-            "--plugin", "io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin",
-            "--glue", "io.lsdconsulting.lsd.mono.cucumber.readme",
+            "--plugin",
+            "io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin",
+            "--glue",
+            "io.lsdconsulting.lsd.mono.cucumber.readme",
             "--monochrome",
             feature,
         ),

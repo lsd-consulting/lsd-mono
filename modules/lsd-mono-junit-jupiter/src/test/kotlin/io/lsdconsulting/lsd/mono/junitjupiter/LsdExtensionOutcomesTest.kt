@@ -7,7 +7,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.opentest4j.TestAbortedException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.MethodOrderer
@@ -22,6 +21,7 @@ import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener
+import org.opentest4j.TestAbortedException
 import java.nio.file.Path
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
@@ -32,7 +32,6 @@ import kotlin.io.path.readText
  * Fixture classes are not named *Test, so the Gradle suite does not run them directly.
  */
 class LsdExtensionOutcomesTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -109,7 +108,9 @@ class LsdExtensionOutcomesTest {
         val summary = execute(LsdPostProcessingThrowsFixture::class.java)
 
         assertEquals(1, summary.summary.testsFailedCount.toInt())
-        val thrown = summary.summary.failures.single().exception
+        val thrown = summary.summary.failures
+            .single()
+            .exception
         assertEquals(IllegalStateException::class.java, thrown.javaClass, thrown.stackTraceToString())
         assertEquals("post-processing broke", thrown.message)
 
@@ -121,7 +122,8 @@ class LsdExtensionOutcomesTest {
     private fun execute(klass: Class<*>): SummaryGeneratingListener {
         val summary = SummaryGeneratingListener()
         val request =
-            LauncherDiscoveryRequestBuilder.request()
+            LauncherDiscoveryRequestBuilder
+                .request()
                 .selectors(selectClass(klass))
                 .build()
         LauncherFactory.create().execute(request, summary)
@@ -158,9 +160,7 @@ class LsdOutcomeFixtures {
 
     @Test
     @Order(2)
-    fun `blows up with a structured failure`() {
-        throw IllegalStateException("boom: payload <script>")
-    }
+    fun `blows up with a structured failure`(): Unit = throw IllegalStateException("boom: payload <script>")
 
     @Test
     @Order(3)
@@ -171,9 +171,7 @@ class LsdOutcomeFixtures {
 
     @Test
     @Order(4)
-    fun `aborts early`() {
-        throw TestAbortedException("stopped early")
-    }
+    fun `aborts early`(): Unit = throw TestAbortedException("stopped early")
 
     @LsdPostTestProcessing
     private fun captureAfterBody() {
@@ -199,7 +197,5 @@ class LsdPostProcessingThrowsFixture {
     }
 
     @LsdPostTestProcessing
-    private fun breakAfterBody() {
-        throw IllegalStateException("post-processing broke")
-    }
+    private fun breakAfterBody(): Unit = throw IllegalStateException("post-processing broke")
 }

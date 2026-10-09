@@ -2,7 +2,6 @@ package io.lsdconsulting.lsd.mono.core.capture
 
 import io.lsdconsulting.lsd.mono.core.IdGenerator
 import io.lsdconsulting.lsd.mono.core.domain.Delay
-import java.time.Instant
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
 import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
@@ -14,6 +13,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Spacer
+import java.time.Instant
 
 /**
  * Builds a [SequenceEvent] using the context's [IdGenerator] so deterministic ids stay consistent.
@@ -34,14 +34,23 @@ class MessageBuilder : SequenceEventBuilder {
     private var type: MessageType = MessageType.SYNCHRONOUS
 
     fun id(id: String) = apply { this.id = id }
+
     fun from(from: String) = apply { this.from = from }
+
     fun from(from: Participant) = apply { this.from = from.id }
+
     fun to(to: String) = apply { this.to = to }
+
     fun to(to: Participant) = apply { this.to = to.id }
+
     fun label(label: String) = apply { this.label = label }
+
     fun data(data: Any?) = apply { this.data = data }
+
     fun colour(colour: String?) = apply { this.colour = colour }
+
     fun type(type: MessageType) = apply { this.type = type }
+
     fun durationMs(durationMs: Long?) = apply { this.durationMs = durationMs }
 
     override fun build(ids: IdGenerator): Message =

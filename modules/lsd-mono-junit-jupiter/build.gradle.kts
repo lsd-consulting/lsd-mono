@@ -5,6 +5,11 @@ plugins {
     `java-library`
 }
 
+// Line coverage was 71.7% when the floor was set (#30). Raise the floor as tests are added.
+lsdCoverage {
+    lineFloor.set(70)
+}
+
 base.archivesName.set("lsd-mono-junit-jupiter")
 
 description = "LSD Mono JUnit Jupiter 6 integration — extension for living sequence diagram reports"

@@ -12,13 +12,16 @@ object LsdProperties {
     const val OUTPUT_DIR = "lsd.mono.report.outputDir"
     const val DETERMINISTIC_IDS = "lsd.mono.ids.deterministic"
     const val HIDE_STACKTRACE = "lsd.mono.junit.hideStacktrace"
+
     /**
      * Duration insights and the simple message-count metrics. Default **true**,
      * matching the previous always-on simple metrics. Legacy key: `lsd.core.metrics.enabled`.
      */
     const val METRICS_ENABLED = "lsd.mono.metrics.enabled"
+
     /** SVG / summary truncation width. Default 200. Legacy key: `lsd.core.label.maxWidth`. */
     const val LABEL_MAX_WIDTH = "lsd.mono.label.maxWidth"
+
     /**
      * A fixed ISO-8601 instant (for example `2026-01-01T12:00:00Z`) written as every report's
      * `generatedAt` instead of the time it was written. For reproducible sample reports.

@@ -1,9 +1,9 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.durationInsights
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -20,7 +20,6 @@ import kotlin.io.path.readText
  * duration. `lsd.mono.metrics.enabled` defaults on and empties metrics when false.
  */
 class BottleneckInsightsTest {
-
     @TempDir
     lateinit var tempDir: Path
 

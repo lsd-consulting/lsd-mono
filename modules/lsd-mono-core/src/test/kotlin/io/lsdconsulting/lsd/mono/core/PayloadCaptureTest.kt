@@ -21,7 +21,6 @@ import kotlin.io.path.readText
 
 /** Awkward message data through the whole capture and report path (#27). */
 class PayloadCaptureTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -38,6 +37,7 @@ class PayloadCaptureTest {
 
     class Explodes {
         override fun toString(): String = throw IllegalStateException("toString exploded")
+
         override fun hashCode(): Int = throw IllegalStateException("hashCode exploded")
     }
 

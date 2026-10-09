@@ -22,7 +22,6 @@ import kotlin.io.path.name
 
 /** One escaper per context (#28), and a whole hostile report proving nothing leaks. */
 class HtmlEscapingTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -83,17 +82,17 @@ class HtmlEscapingTest {
     @Test
     fun `a hostile report leaks into none of the files written for it`() {
         val lsd = LsdContext()
-        lsd.message(H("Client"), H("Api"), H("label"), data = mapOf(H("key") to H("value"), "method" to H("method")))
-        lsd.response(H("Api"), H("Client"), H("response"), data = H("body"))
-        lsd.note(H("note"), over = H("Api"))
-        lsd.addFact(H("fact key"), H("fact value"))
+        lsd.message(hostile("Client"), hostile("Api"), hostile("label"), data = mapOf(hostile("key") to hostile("value"), "method" to hostile("method")))
+        lsd.response(hostile("Api"), hostile("Client"), hostile("response"), data = hostile("body"))
+        lsd.note(hostile("note"), over = hostile("Api"))
+        lsd.addFact(hostile("fact key"), hostile("fact value"))
         lsd.completeScenario(
-            H("scenario"),
-            H("description"),
+            hostile("scenario"),
+            hostile("description"),
             Status.ERROR,
-            ScenarioError(H("headline"), H("message"), H("stack")),
+            ScenarioError(hostile("headline"), hostile("message"), hostile("stack")),
         )
-        lsd.completeReport(H("Report"))
+        lsd.completeReport(hostile("Report"))
         lsd.createIndex()
 
         val files = tempDir.listDirectoryEntries().filter { Files.isRegularFile(it) }
@@ -133,15 +132,16 @@ class HtmlEscapingTest {
     private companion object {
         const val ATTACK = "\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>"
 
-        fun H(tag: String) = "$tag$ATTACK\u2028\u0001\uD800"
+        fun hostile(tag: String) = "$tag$ATTACK\u2028\u0001\uD800"
 
-        /** What [Html.text] must make of [H]: markup escaped, the control and lone surrogate replaced. */
+        /** What [Html.text] must make of [hostile]: markup escaped, the control and lone surrogate replaced. */
         fun escapedText(tag: String) =
             "$tag\"'&gt;&lt;img src=x onerror=alert(1) data-pwned=1&gt;&lt;/script&gt;&lt;!--&lt;svg onload=alert(2)&gt;\u2028\uFFFD\uFFFD"
 
         fun utf8(bytes: ByteArray): String? =
             try {
-                Charsets.UTF_8.newDecoder()
+                Charsets.UTF_8
+                    .newDecoder()
                     .onMalformedInput(CodingErrorAction.REPORT)
                     .onUnmappableCharacter(CodingErrorAction.REPORT)
                     .decode(ByteBuffer.wrap(bytes))
