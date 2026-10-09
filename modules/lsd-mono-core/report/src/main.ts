@@ -48,6 +48,7 @@ import {
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
 import { componentGraph } from './lib/component-graph'
 import { cssEscape, escapeAttr, escapeHtml } from './lib/escape'
+import { trackTopbarHeight } from './lib/topbar-height'
 
 interface State {
   query: string
@@ -78,6 +79,7 @@ let inspector: InspectorController | null = null
 let panelScenarioId: string | null = null
 /** Suppress hashchange while we write the open-message token ourselves. */
 let writingHash = false
+let stopTopbarTracking: () => void = () => {}
 
 function reportLocation(): { hash: string; replace?: (url: string) => void } {
   return {
@@ -198,6 +200,8 @@ function renderShell(): void {
     </div>
   `
 
+  stopTopbarTracking()
+  stopTopbarTracking = trackTopbarHeight(document.querySelector<HTMLElement>('.topbar')!)
   bindChrome()
   renderNav()
   renderMain()

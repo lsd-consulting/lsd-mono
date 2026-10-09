@@ -30,10 +30,17 @@ mark {
   border-radius: 4px;
 }
 
+/* The sticky top bar covers the top of the page, so in-page jumps (a scenario card, a
+   deep-linked message) stop below it. --topbar-h follows the bar's real height (main.ts). */
+html { scroll-padding-top: var(--topbar-h); }
+
 #app {
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: var(--topbar-h) 1fr;
+  /* auto, not --topbar-h: on a phone the bar wraps onto more rows and must grow to hold
+     them. A fixed row clamped it, and the search box and status chips spilled out of it
+     and floated over the page while it scrolled. */
+  grid-template-rows: auto 1fr;
 }
 
 /* ——— Top bar ——— */
@@ -45,7 +52,7 @@ mark {
   align-items: center;
   gap: 12px;
   padding: 0 16px;
-  height: var(--topbar-h);
+  height: var(--topbar-row-h);
   background: color-mix(in oklab, var(--bg-elevated) 82%, transparent);
   backdrop-filter: blur(14px) saturate(1.2);
   border-bottom: 1px solid var(--border);
@@ -746,7 +753,8 @@ mark {
 }
 
 @media (max-width: 560px) {
-  .topbar { flex-wrap: wrap; height: auto; padding: 10px 12px; gap: 8px; }
+  /* Still sticky, with search and filters inside: the bar wraps onto three short rows. */
+  .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 6px 8px; }
   .search-wrap { max-width: none; order: 3; flex: 1 1 100%; }
   .filters { order: 4; }
 }

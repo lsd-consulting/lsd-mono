@@ -488,6 +488,62 @@ test('the narrow layout has no sidebar toggle', async ({ page }) => {
   await expect(page.locator('#btn-sidebar')).toBeHidden()
 })
 
+test('on a phone the sticky top bar holds its search and status filters while the page scrolls', async ({ browser, baseURL }) => {
+  // iPhone 13 size, as a touch device. The bar wraps onto three rows there. A fixed grid row
+  // used to clamp it to one, and the search box and chips floated over the page on scroll.
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 390, height: 664 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 1,
+    reducedMotion: 'reduce',
+    colorScheme: 'dark',
+  })
+  try {
+    const page = await context.newPage()
+    await openFixture(page, 'dark')
+    const geometry = () =>
+      page.evaluate(() => {
+        const box = (sel: string) => document.querySelector(sel)!.getBoundingClientRect()
+        const bar = box('.topbar')
+        const chip = box('.chip.warn')
+        const hit = document.elementFromPoint(chip.left + chip.width / 2, chip.top + chip.height / 2)
+        return {
+          scrollY: window.scrollY,
+          barTop: bar.top,
+          barBottom: bar.bottom,
+          searchBottom: box('.search-wrap').bottom,
+          filtersBottom: box('.filters').bottom,
+          chipOnTop: !!hit?.closest('.chip.warn'),
+          topbarVar: getComputedStyle(document.documentElement).getPropertyValue('--topbar-h').trim(),
+        }
+      })
+
+    const top = await geometry()
+    expect(top.barBottom, 'the bar wraps onto more than one row').toBeGreaterThan(56)
+    expect(top.filtersBottom).toBeLessThanOrEqual(top.barBottom + 0.5)
+    expect(top.searchBottom).toBeLessThanOrEqual(top.barBottom + 0.5)
+    expect(top.topbarVar).toBe(`${Math.ceil(top.barBottom - top.barTop)}px`)
+
+    await page.evaluate(() => window.scrollBy(0, 600))
+    const scrolled = await geometry()
+    expect(scrolled.scrollY, 'the page scrolls').toBeGreaterThan(0)
+    expect(scrolled.barTop).toBe(0)
+    expect(scrolled.filtersBottom).toBeLessThanOrEqual(scrolled.barBottom + 0.5)
+    expect(scrolled.searchBottom).toBeLessThanOrEqual(scrolled.barBottom + 0.5)
+    expect(scrolled.chipOnTop, 'the Warn chip is on top and clickable').toBe(true)
+
+    // A jump to a scenario stops below the taller bar, not under it.
+    await page.locator('#scenario-nav button').first().click()
+    await expect
+      .poll(() => page.evaluate(() => Math.round(document.querySelector('.scenario-card')!.getBoundingClientRect().top)))
+      .toBeGreaterThanOrEqual(Math.floor(scrolled.barBottom))
+  } finally {
+    await context.close()
+  }
+})
+
 /** sRGB bytes for any CSS colour the page resolves (oklch, color-mix, hex), via a 1px canvas. */
 async function noteColours(page: Page): Promise<{ card: number[]; text: number[] }> {
   return page.evaluate(() => {

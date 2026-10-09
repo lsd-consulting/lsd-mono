@@ -29,7 +29,10 @@
   --font: "Inter", "Geist", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --mono: "JetBrains Mono", "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --sidebar-w: 300px;
-  --topbar-h: 56px;
+  /* One row of the top bar. --topbar-h is the bar's real height, which main.ts keeps up to
+     date when it wraps onto more rows on a narrow screen. */
+  --topbar-row-h: 56px;
+  --topbar-h: var(--topbar-row-h);
   --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
 
