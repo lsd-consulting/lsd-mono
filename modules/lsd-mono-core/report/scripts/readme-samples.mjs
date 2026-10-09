@@ -530,10 +530,13 @@ try {
     reducedMotion: 'reduce',
   })
   const page = await context.newPage()
-  await page.addInitScript(() => {
+  await page.addInitScript((rail) => {
     localStorage.setItem('lsd-report-theme', 'dark')
     sessionStorage.setItem('lsd-report-inspector-width', '440')
-  })
+    // Module stills show the scenario list as its icon rail, so the diagram gets the width.
+    if (rail) localStorage.setItem('lsd-report-sidebar', 'collapsed')
+    else localStorage.removeItem('lsd-report-sidebar')
+  }, !coreMotion)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(pageUrl, { waitUntil: 'load' })
   await page.locator('.seq-svg').waitFor()
@@ -573,13 +576,12 @@ try {
     await placeScenario()
     await fitScenarioViewport()
     const clip = await page.evaluate(() => {
-      const card = document.querySelector('.scenario-card')
       const diagram = document.querySelector('.seq-diagram')
       const scroll = document.querySelector('.seq-scroll')
-      const c = card.getBoundingClientRect()
       const d = diagram.getBoundingClientRect()
       const s = scroll.getBoundingClientRect()
-      const y = Math.max(0, Math.floor(Math.min(c.top, d.top)))
+      // From the top of the page, so the top bar and the icon rail frame the scenario.
+      const y = 0
       const bottom = Math.max(d.bottom, s.top + Math.min(scroll.scrollHeight, s.height) )
       const height = Math.ceil(bottom - y + 20)
       return {
@@ -599,8 +601,20 @@ try {
   if (!coreMotion) {
     const zoomIn = page.locator('.seq-diagram').getByRole('button', { name: 'Zoom in' })
     const zoomOut = page.locator('.seq-diagram').getByRole('button', { name: 'Zoom out' })
-    await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
-    await zoomOut.click()
+    /** Fit, then step out until labels are near their normal size. Fit alone blows a small diagram up past 200%. */
+    async function fitThenEase(maxPct = 140) {
+      await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
+      // The readout settles after the next frame; read it only then.
+      await page.waitForTimeout(150)
+      // Steps are 10 points, and Fit can land as high as 250%.
+      for (let i = 0; i < 16; i++) {
+        const pct = Number.parseInt((await page.locator('.zoom-readout').innerText()).trim(), 10)
+        if (!Number.isFinite(pct) || pct <= maxPct) break
+        await zoomOut.click()
+        await page.waitForTimeout(150)
+      }
+    }
+    await fitThenEase()
     await scroll.evaluate((el) => {
       el.scrollTop = 0
     })
@@ -617,8 +631,10 @@ try {
     }
 
     await hold(5)
-    for (let i = 0; i < 4; i++) {
-      const overflows = await scroll.evaluate((el) => el.scrollHeight > el.clientHeight + 24)
+    // Zoom until there is a visible scroll, not just a few pixels: the full-width column
+    // fits a short diagram at a large zoom.
+    for (let i = 0; i < 10; i++) {
+      const overflows = await scroll.evaluate((el) => el.scrollHeight > el.clientHeight + 120)
       if (overflows) break
       await zoomIn.click()
       await hold(2)
@@ -647,18 +663,17 @@ try {
       const pre = document.querySelector('#inspector-pre')
       return !!pre && (pre.textContent ?? '').includes('SOCK-1')
     })
-    await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
-    await zoomOut.click()
+    await fitThenEase()
     await scroll.evaluate((el) => {
       el.scrollTop = 0
     })
     await placeScenario()
     await fitScenarioViewport()
     const inspectorClip = await page.evaluate(() => {
-      const card = document.querySelector('.scenario-card')?.getBoundingClientRect()
       const pre = document.querySelector('#inspector-pre')?.getBoundingClientRect()
       const diagram = document.querySelector('.seq-diagram')?.getBoundingClientRect()
-      const top = Math.max(0, Math.floor(Math.min(card?.top ?? 0, diagram?.top ?? 0)))
+      // From the top of the page, so the side panel's title and Close are in the picture.
+      const top = 0
       const bottom = Math.max(pre?.bottom ?? 0, diagram?.bottom ?? 0)
       return {
         x: 0,
