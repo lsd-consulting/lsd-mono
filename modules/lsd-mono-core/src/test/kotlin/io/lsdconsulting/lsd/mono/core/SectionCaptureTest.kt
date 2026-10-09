@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.capture.messages
 import io.lsdconsulting.lsd.mono.core.capture.section
 import io.lsdconsulting.lsd.mono.core.capture.withLabel
@@ -47,7 +48,7 @@ class SectionCaptureTest {
         lsd.completeScenario("phased call", "activations survive sections", Status.SUCCESS)
         lsd.completeReport("Sections")
 
-        val json = tempDir.resolve("Sections-report.json").readText()
+        val json = tempDir.resolve(ReportWriter.reportFileStem("Sections") + "-report.json").readText()
         val kinds = Regex(""""kind": "([^"]+)"""").findAll(json).map { it.groupValues[1] }.toList()
         assertEquals(
             listOf("activate", "message", "section", "section", "message", "deactivate"),

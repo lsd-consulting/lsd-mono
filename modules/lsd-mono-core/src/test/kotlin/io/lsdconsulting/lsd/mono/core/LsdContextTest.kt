@@ -1,6 +1,9 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -19,18 +22,20 @@ class LsdContextTest {
     }
 
     @Test
-    fun `completeReport writes html json and copies report shell`() {
+    fun `completeReport writes the listing json diagram and index`() {
         val lsd = LsdContext()
         lsd.addFact("framework", "junit")
         lsd.completeScenario("hello world", "<p>ok</p>", Status.SUCCESS)
         val reportPath = lsd.completeReport("Suite")
         lsd.createIndex()
 
+        val stem = ReportWriter.reportFileStem("Suite")
+        assertEquals("$stem-report.html", reportPath.fileName.toString())
         assertTrue(reportPath.toFile().exists())
-        assertTrue(File(tempDir.toFile(), "Suite-report.json").exists() ||
-            tempDir.toFile().listFiles()?.any { it.name.endsWith("-report.json") } == true)
-        assertTrue(File(tempDir.toFile(), "index.html").exists())
-        assertTrue(File(tempDir.toFile(), "lsd-report.single.html").exists())
+        assertTrue(File(tempDir.toFile(), "$stem-report.json").exists())
+        assertTrue(File(tempDir.toFile(), "$stem-diagram.html").exists())
+        assertTrue(File(tempDir.toFile(), "index.html").readText().contains("$stem-report.html"))
+        assertFalse(File(tempDir.toFile(), "lsd-report.single.html").exists(), "no shared latest shell")
     }
 
     @Test

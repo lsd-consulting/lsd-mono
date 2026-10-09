@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Status
@@ -90,7 +91,7 @@ class BottleneckInsightsTest {
         lsd.completeScenario("timed", "ok", Status.SUCCESS)
         lsd.completeReport("Insights")
 
-        val json = tempDir.resolve("Insights-report.json").readText()
+        val json = tempDir.resolve(ReportWriter.reportFileStem("Insights") + "-report.json").readText()
         assertTrue(json.contains("\"metricsEnabled\": true"))
         assertTrue(json.contains("\"labelMaxWidth\": 12"))
         assertTrue(json.contains("\"key\": \"Messages\""))
@@ -116,7 +117,7 @@ class BottleneckInsightsTest {
         lsd.completeScenario("quiet", "", Status.SUCCESS)
         lsd.completeReport("No metrics")
 
-        val json = tempDir.resolve("No-metrics-report.json").readText()
+        val json = tempDir.resolve(ReportWriter.reportFileStem("No metrics") + "-report.json").readText()
         assertTrue(json.contains("\"metricsEnabled\": false"))
         assertTrue(json.contains("\"metrics\": []"))
         assertFalse(json.contains("\"insights\""))

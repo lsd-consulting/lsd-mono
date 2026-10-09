@@ -136,6 +136,9 @@ tasks.register<JavaExec>("captureReadmeReport") {
         },
     )
     systemProperty("lsd.mono.report.outputDir", readmeReportDir.get().asFile.absolutePath)
+    // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
+    val cleanDir = readmeReportDir.get().asFile
+    doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
     outputs.dir(readmeReportDir)
 }
@@ -154,6 +157,9 @@ tasks.register<JavaExec>("captureFeatureTourReport") {
         },
     )
     systemProperty("lsd.mono.report.outputDir", featureTourReportDir.get().asFile.absolutePath)
+    // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
+    val cleanDir = featureTourReportDir.get().asFile
+    doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
     outputs.dir(featureTourReportDir)
 }
@@ -192,6 +198,9 @@ val captureKitchenSinkReport by tasks.registering(JavaExec::class) {
         },
     )
     systemProperty("lsd.mono.report.outputDir", kitchenSinkReportDir.get().asFile.absolutePath)
+    // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
+    val cleanDir = kitchenSinkReportDir.get().asFile
+    doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
     outputs.dir(kitchenSinkReportDir)
 }
@@ -200,9 +209,14 @@ tasks.register<Copy>("kitchenSinkSample") {
     group = "documentation"
     description = "Regenerate docs/samples/kitchen-sink.html. Not part of build or check."
     dependsOn(captureKitchenSinkReport)
+    // Report files carry a short hash (kitchen-sink-<hash>-diagram.html). Publish them under plain names.
     from(kitchenSinkReportDir) {
-        include("kitchen-sink-diagram.html", "kitchen-sink-payloads.js")
-        rename("kitchen-sink-diagram.html", "kitchen-sink.html")
+        include("kitchen-sink-*-diagram.html", "kitchen-sink-*-payloads.js")
+        rename("""kitchen-sink-[0-9a-f]{8}-diagram\.html""", "kitchen-sink.html")
+        rename("""kitchen-sink-[0-9a-f]{8}-payloads\.js""", "kitchen-sink-payloads.js")
+        filesMatching("*-diagram.html") {
+            filter { line -> line.replace(Regex("""kitchen-sink-[0-9a-f]{8}-payloads\.js"""), "kitchen-sink-payloads.js") }
+        }
     }
     into(samplesDocsDir)
 }

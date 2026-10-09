@@ -24,7 +24,7 @@ lsd-mono-core/
 │   └── README.md
 ├── src/main/kotlin/…/mono/core/ # Kotlin façade (capture + write reports)
 ├── src/main/resources/lsd-mono-core/report/
-│   └── lsd-report-payloads.js        # sample payloads copied beside a report
+│   └── lsd-report-payloads.js        # sample payloads for the shell's built-in demo
 └── build.gradle.kts                 # reportSingle + reportTest
 ```
 
@@ -35,12 +35,16 @@ lsd-mono-core/
 - Kotlin library compiles and tests
 - `LsdContext` façade: facts, `completeScenario`, `completeReport`, `createIndex`,
   `clear`, id generation, HTML escape, popup helper
-- Report writer emits:
+- Report writer emits, per report, files named `<title>-<hash>` (`ReportWriter.reportFileStem`;
+  the hash is of the report key, or of the title):
+  - `*-diagram.html` — the classpath `lsd-report.single.html` shell with the captured
+    `ReportJson` injected (the shell falls back to sample data when opened without one)
+  - `*-payloads.js` — message bodies, loaded when the inspector opens
   - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
-  - copies classpath `lsd-report.single.html` beside the report as the
-    interactive shell with captured `ReportJson` injected (the demo falls back to sample data when opened directly)
-  - `index.html` aggregating report files
+  - `index.html` from `createIndex`, listing every report in the directory
+  - Files are written to a temporary file and moved into place. There are no shared
+    "latest" files, so test classes, forks and modules can share one directory.
 - Report page: a **Component diagram** button per scenario draws the components and their calls in the inspector, in the browser, from that scenario's messages
 
 **Deferred / optional**

@@ -23,6 +23,7 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener
 import java.nio.file.Path
+import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
 
 /**
@@ -60,7 +61,7 @@ class LsdExtensionOutcomesTest {
         assertEquals(1, summary.summary.testsAbortedCount.toInt())
         assertEquals(1, summary.summary.testsSkippedCount.toInt())
 
-        val json = tempDir.resolve("LsdOutcomeFixtures-report.json").readText()
+        val json = reportJson("LsdOutcomeFixtures")
         val prefix = "LsdOutcomeFixtures".deCamelCase()
 
         val passed = scenarioSlice(json, "$prefix: records a passing scenario")
@@ -112,7 +113,7 @@ class LsdExtensionOutcomesTest {
         assertEquals(IllegalStateException::class.java, thrown.javaClass, thrown.stackTraceToString())
         assertEquals("post-processing broke", thrown.message)
 
-        val json = tempDir.resolve("LsdPostProcessingThrowsFixture-report.json").readText()
+        val json = reportJson("LsdPostProcessingThrowsFixture")
         assertTrue(json.contains(""""message": "post-processing broke""""), json)
         assertFalse(json.contains("InvocationTargetException"), json)
     }
@@ -125,6 +126,13 @@ class LsdExtensionOutcomesTest {
                 .build()
         LauncherFactory.create().execute(request, summary)
         return summary
+    }
+
+    /** One report per top-level class, named from its title plus a hash of the class id. */
+    private fun reportJson(className: String): String {
+        val files = tempDir.listDirectoryEntries("$className-*-report.json")
+        assertEquals(1, files.size, "expected one report for $className in ${tempDir.listDirectoryEntries()}")
+        return files.single().readText()
     }
 
     private fun scenarioSlice(json: String, title: String): String {

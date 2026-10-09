@@ -15,55 +15,111 @@ import io.lsdconsulting.lsd.mono.core.model.forShell
 import io.lsdconsulting.lsd.mono.core.model.shellPayloadScript
 import io.lsdconsulting.lsd.mono.core.model.toJson
 import java.io.File
+import java.io.StringWriter
+import java.nio.channels.FileChannel
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
+import java.security.MessageDigest
+import java.util.Properties
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * Writes ReportJson, a minimal HTML listing, and the report single-file shell
  * with `window.__LSD_REPORT__` injected so the SVG UI renders the captured scenario.
  * Message bodies are not in that script. They are written beside the diagram as
- * `<title>-payloads.js` and loaded when the inspector opens.
+ * `<stem>-payloads.js` and loaded when the inspector opens.
  * Embedded sample data is only the fallback when that global is absent.
+ *
+ * **Several writers, one directory.** Test classes, parallel tests, Gradle forks
+ * and modules can share an output directory:
+ * - Each report's files start with [reportFileStem]: the sanitised title plus a short
+ *   hash of the report key (or the title), so two reports never share a file.
+ * - Every file is written to a temporary file and moved into place, so a reader
+ *   never sees half a file and concurrent writers do not interleave.
+ * - Each report also leaves a small entry under `.lsd-index/`. [writeIndex] lists
+ *   every entry in the directory, under a file lock, so the index from any writer
+ *   includes the reports of all the others.
+ * - There are no shared "latest" files (`report.json`, `lsd-report.single.html`).
  */
 object ReportWriter {
     private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report.single.html"
-    private const val SHELL_FILENAME = "lsd-report.single.html"
-    private const val SAMPLE_PAYLOAD_RESOURCE = "/lsd-mono-core/report/lsd-report-payloads.js"
-    private const val SAMPLE_PAYLOAD_FILENAME = "lsd-report-payloads.js"
+    private const val INDEX_DIR = ".lsd-index"
+    private const val INDEX_LOCK = ".lock"
+    private const val MAX_TITLE_CHARS = 80
+    private val jvmIndexLock = ReentrantLock()
 
+    /**
+     * File-name stem for a report: `<sanitised title>-<8 hex chars>`. The hash is of
+     * [reportKey] when given, else of [title], so it is stable across runs and two
+     * titles that sanitise to the same text still get different files.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun reportFileStem(title: String, reportKey: String? = null): String =
+        "${sanitizeFilename(title)}-${shortHash(reportKey ?: title)}"
+
+    /**
+     * @param reportKey identifies the report when titles may repeat (a test class or
+     * feature id). Defaults to the title.
+     * @return the minimal listing HTML (`<stem>-report.html`).
+     */
+    @JvmStatic
+    @JvmOverloads
     fun writeReport(
         report: ReportJson,
         outputDir: File,
-        @Suppress("UNUSED_PARAMETER") statusCss: String,
+        reportKey: String? = null,
     ): Path {
         outputDir.mkdirs()
-        val safeName = sanitizeFilename(report.title)
-        val jsonPath = outputDir.resolve("$safeName-report.json").toPath()
-        val htmlPath = outputDir.resolve("$safeName-report.html").toPath()
-        val diagramName = "$safeName-diagram.html"
-        val payloadsName = "$safeName-payloads.js"
+        val stem = reportFileStem(report.title, reportKey)
+        val jsonName = "$stem-report.json"
+        val htmlPath = outputDir.resolve("$stem-report.html").toPath()
+        val diagramName = "$stem-diagram.html"
+        val payloadsName = "$stem-payloads.js"
         val shellBundle = report.forShell()
+        val payloadsPath = outputDir.resolve(payloadsName).toPath()
         if (shellBundle.payloads.isNotEmpty()) {
-            Files.writeString(outputDir.resolve(payloadsName).toPath(), shellPayloadScript(shellBundle.payloads))
+            writeAtomically(payloadsPath, shellPayloadScript(shellBundle.payloads))
+        } else {
+            Files.deleteIfExists(payloadsPath)
         }
         val shell = renderShell(shellBundle.report, payloadsName.takeIf { shellBundle.payloads.isNotEmpty() })
 
-        Files.writeString(jsonPath, report.toJson())
-        Files.writeString(outputDir.resolve("report.json").toPath(), report.toJson())
-        Files.writeString(outputDir.resolve(diagramName).toPath(), shell)
-        Files.writeString(htmlPath, renderMinimalHtml(report, diagramName))
-        // Shared "latest" shell. createIndex must not clobber an injected copy.
-        Files.writeString(outputDir.resolve(SHELL_FILENAME).toPath(), shell)
-
+        writeAtomically(outputDir.resolve(jsonName).toPath(), report.toJson())
+        writeAtomically(outputDir.resolve(diagramName).toPath(), shell)
+        writeAtomically(htmlPath, renderMinimalHtml(report, diagramName, jsonName))
+        writeIndexEntry(outputDir, ReportFile(filename = htmlPath.fileName.toString(), title = report.title, status = report.status))
         return htmlPath
     }
 
+    /**
+     * Write `index.html` listing [reportFiles] plus every report already recorded in
+     * [outputDir] by any writer, sorted by title. Safe to call from several threads
+     * and processes at once.
+     */
+    @JvmStatic
     fun writeIndex(
         reportFiles: List<ReportFile>,
         outputDir: File,
     ): Path {
         outputDir.mkdirs()
         val index = outputDir.resolve("index.html").toPath()
+        withIndexLock(outputDir) {
+            val all =
+                (readIndexEntries(outputDir) + reportFiles)
+                    .associateBy { it.filename }
+                    .values
+                    .sortedWith(compareBy<ReportFile> { it.title.lowercase() }.thenBy { it.filename })
+            writeAtomically(index, renderIndex(all))
+        }
+        return index
+    }
+
+    private fun renderIndex(reportFiles: List<ReportFile>): String {
         val rows =
             reportFiles.joinToString("\n") { rf ->
                 """
@@ -73,8 +129,7 @@ object ReportWriter {
                 </tr>
                 """.trimIndent()
             }
-        val html =
-            """
+        return """
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -92,8 +147,7 @@ object ReportWriter {
             <body>
               <h1>LSD Mono report index</h1>
               <p>Generated by <code>lsd-mono-core</code>. Each report links to an interactive
-                 sequence diagram of the captured scenario
-                 (<a href="$SHELL_FILENAME">$SHELL_FILENAME</a> is the latest report).</p>
+                 sequence diagram of its scenarios.</p>
               <table>
                 <thead><tr><th>Report</th><th>Status</th></tr></thead>
                 <tbody>
@@ -103,18 +157,60 @@ object ReportWriter {
             </body>
             </html>
             """.trimIndent()
-        Files.writeString(index, html)
-        copyShellIfAbsent(outputDir)
-        return index
     }
 
-    private fun copyShellIfAbsent(outputDir: File) {
-        val dest = outputDir.resolve(SHELL_FILENAME)
-        if (!dest.exists()) dest.writeText(readShellTemplate())
-        val payloads = outputDir.resolve(SAMPLE_PAYLOAD_FILENAME)
-        if (payloads.exists()) return
-        val stream = ReportWriter::class.java.getResourceAsStream(SAMPLE_PAYLOAD_RESOURCE) ?: return
-        payloads.writeText(stream.bufferedReader().use { it.readText() })
+    private fun writeIndexEntry(outputDir: File, entry: ReportFile) {
+        val dir = outputDir.resolve(INDEX_DIR).toPath()
+        Files.createDirectories(dir)
+        val props =
+            Properties().apply {
+                setProperty("filename", entry.filename)
+                setProperty("title", entry.title)
+                setProperty("status", entry.status)
+            }
+        val text = StringWriter().also { props.store(it, null) }.toString()
+        writeAtomically(dir.resolve(entry.filename.removeSuffix(".html") + ".properties"), text)
+    }
+
+    private fun readIndexEntries(outputDir: File): List<ReportFile> {
+        val dir = outputDir.resolve(INDEX_DIR)
+        val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".properties") } ?: return emptyList()
+        return files.mapNotNull { file ->
+            val props = Properties()
+            runCatching { file.reader(Charsets.UTF_8).use { props.load(it) } }.getOrNull() ?: return@mapNotNull null
+            val filename = props.getProperty("filename") ?: return@mapNotNull null
+            // An entry whose report was deleted is stale.
+            if (!outputDir.resolve(filename).exists()) return@mapNotNull null
+            ReportFile(filename, props.getProperty("title").orEmpty(), props.getProperty("status").orEmpty())
+        }
+    }
+
+    /** One index writer at a time: a lock for this JVM plus a file lock for other processes. */
+    private fun withIndexLock(outputDir: File, block: () -> Unit) {
+        val dir = outputDir.resolve(INDEX_DIR).toPath()
+        Files.createDirectories(dir)
+        jvmIndexLock.withLock {
+            FileChannel.open(dir.resolve(INDEX_LOCK), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { channel ->
+                channel.lock().use { block() }
+            }
+        }
+    }
+
+    /** Write to a temporary file beside [target], then move it into place. */
+    internal fun writeAtomically(target: Path, text: String) {
+        val dir = target.toAbsolutePath().parent
+        Files.createDirectories(dir)
+        val temp = Files.createTempFile(dir, ".${target.fileName}.", ".tmp")
+        try {
+            Files.writeString(temp, text)
+            try {
+                Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            Files.deleteIfExists(temp)
+        }
     }
 
     /**
@@ -143,14 +239,21 @@ object ReportWriter {
         return raw.replace("const re=", "const re=window.__LSD_REPORT__??")
     }
 
-    private fun sanitizeFilename(title: String): String =
+    internal fun sanitizeFilename(title: String): String =
         title
             .replace(Regex("[^A-Za-z0-9._-]+"), "-")
-            .trim('-')
+            .trim('-', '.')
+            .take(MAX_TITLE_CHARS)
+            .trim('-', '.')
             .ifBlank { "lsd-report" }
-            .take(80)
 
-    private fun renderMinimalHtml(report: ReportJson, diagramName: String): String {
+    internal fun shortHash(text: String): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(text.toByteArray(Charsets.UTF_8))
+            .take(4)
+            .joinToString("") { "%02x".format(it) }
+
+    private fun renderMinimalHtml(report: ReportJson, diagramName: String, jsonName: String): String {
         val scenarios =
             report.scenarios.joinToString("\n") { s ->
                 val facts =
@@ -213,7 +316,7 @@ object ReportWriter {
                 <strong>Interactive diagram:</strong>
                 <a href="${diagramName.escapeHtml()}">${diagramName.escapeHtml()}</a>
                 renders this report (injected as <code>window.__LSD_REPORT__</code>).
-                JSON: <a href="report.json">report.json</a>.
+                JSON: <a href="${jsonName.escapeHtml()}">${jsonName.escapeHtml()}</a>.
               </div>
             </body>
             </html>

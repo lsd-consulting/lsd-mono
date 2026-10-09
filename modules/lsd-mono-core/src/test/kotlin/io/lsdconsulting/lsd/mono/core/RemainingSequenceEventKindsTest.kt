@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.capture.delay
 import io.lsdconsulting.lsd.mono.core.capture.messages
 import io.lsdconsulting.lsd.mono.core.capture.noteLeft
@@ -63,7 +64,7 @@ class RemainingSequenceEventKindsTest {
         lsd.completeScenario("event kinds", "P1 remaining", Status.SUCCESS)
         lsd.completeReport("Event kinds")
 
-        val json = tempDir.resolve("Event-kinds-report.json").readText()
+        val json = tempDir.resolve(ReportWriter.reportFileStem("Event kinds") + "-report.json").readText()
 
         assertTrue(json.contains("\"placement\": \"over\""))
         assertTrue(json.contains("\"placement\": \"left\""))

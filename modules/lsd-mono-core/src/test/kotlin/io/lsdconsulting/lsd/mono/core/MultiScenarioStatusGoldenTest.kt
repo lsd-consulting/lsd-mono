@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -37,7 +38,7 @@ class MultiScenarioStatusGoldenTest {
         lsd.completeReport("Status mix")
         lsd.createIndex()
 
-        val json = tempDir.resolve("Status-mix-report.json").readText()
+        val json = tempDir.resolve(ReportWriter.reportFileStem("Status mix") + "-report.json").readText()
         val generatedAt = GENERATED_AT.find(json)?.groupValues?.get(1) ?: error("no generatedAt in $json")
         val written = Instant.parse(generatedAt)
         assertTrue(generatedAt.endsWith("Z"), "generatedAt should be a UTC instant: $generatedAt")

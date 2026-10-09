@@ -67,6 +67,9 @@ tasks.register<JavaExec>("captureReadmeReport") {
         },
     )
     systemProperty("lsd.mono.report.outputDir", readmeReportDir.get().asFile.absolutePath)
+    // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
+    val cleanDir = readmeReportDir.get().asFile
+    doFirst { cleanDir.deleteRecursively() }
     systemProperty("lsd.mono.ids.deterministic", "true")
     outputs.dir(readmeReportDir)
 }

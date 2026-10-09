@@ -261,14 +261,15 @@ open class LsdContext {
         currentEvents.clear()
     }
 
-    fun completeReport(title: String): Path {
+    /**
+     * Write the completed scenarios as one report and forget them. File names come
+     * from the title plus a short hash of `reportKey ?: title`, so reports with the
+     * same title (or titles that sanitise the same) do not overwrite each other.
+     */
+    @JvmOverloads
+    fun completeReport(title: String, reportKey: String? = null): Path {
         val report = buildReportJson(title)
-        val path =
-            ReportWriter.writeReport(
-                report = report,
-                outputDir = outputDirectory,
-                statusCss = report.status,
-            )
+        val path = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
         reportFiles.add(
             ReportFile(
                 filename = path.fileName.toString(),
@@ -282,6 +283,10 @@ open class LsdContext {
         return path
     }
 
+    /**
+     * Write `index.html` listing every report in the output directory, including
+     * reports written by other test JVMs (Gradle forks) or modules sharing it.
+     */
     fun createIndex(): Path = ReportWriter.writeIndex(reportFiles.toList(), outputDirectory)
 
     fun clear() {

@@ -13,6 +13,7 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener
 import java.nio.file.Path
+import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
 
 /**
@@ -53,7 +54,7 @@ class LsdCucumberPluginTest {
         assertEquals(0, summary.summary.testsFailedCount.toInt(), summary.summary.failures.toString())
         assertTrue(summary.summary.testsSucceededCount >= 1)
 
-        val json = tempDir.resolve("place_order-report.json").readText()
+        val json = tempDir.listDirectoryEntries("place_order-*-report.json").single().readText()
         assertTrue(json.contains(""""title": "places an order""""), json)
         assertTrue(json.contains("When the customer places an order for socks"), json)
         assertTrue(json.contains(""""label": "POST /orders""""), json)

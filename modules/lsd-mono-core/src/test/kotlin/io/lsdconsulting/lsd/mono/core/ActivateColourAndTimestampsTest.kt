@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
+import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.capture.lifeline
 import io.lsdconsulting.lsd.mono.core.capture.withColour
 import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
@@ -34,7 +35,7 @@ class ActivateColourAndTimestampsTest {
         lsd.completeScenario("coloured activation", status = Status.SUCCESS)
         lsd.completeReport("Activate colour")
 
-        val json = tempDir.resolve("Activate-colour-report.json").readText()
+        val json = tempDir.resolve(ReportWriter.reportFileStem("Activate colour") + "-report.json").readText()
         assertTrue(json.contains("\"kind\": \"activate\""))
         assertTrue(json.contains("\"participantId\": \"api\""))
         assertTrue(json.contains("\"colour\": \"#c026d3\""))
@@ -74,7 +75,7 @@ class ActivateColourAndTimestampsTest {
         lsd.completeScenario("reordered", status = Status.SUCCESS)
         lsd.completeReport("Timestamps")
 
-        val json = tempDir.resolve("Timestamps-report.json").readText()
+        val json = tempDir.resolve(ReportWriter.reportFileStem("Timestamps") + "-report.json").readText()
         val early = json.indexOf("\"label\": \"early\"")
         val mid = json.indexOf("\"label\": \"mid\"")
         val late = json.indexOf("\"label\": \"late\"")

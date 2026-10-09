@@ -70,9 +70,9 @@ val listing = lsd.completeReport("Place an order")
 lsd.createIndex()
 ```
 
-`completeReport` writes under `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it). Open `Place-an-order-diagram.html`. That file is the report. `Place-an-order-report.html` is only a short listing, and `createIndex()` adds `index.html` when you have written more than one.
+`completeReport` writes under `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it). Open `Place-an-order-1153f62c-diagram.html`. That file is the report. `Place-an-order-1153f62c-report.html` is only a short listing, and its path is what `completeReport` returns. The 8 characters are a hash of the title, so two titles that read the same as file names (`Place an order`, `Place-an-order`) never overwrite each other. `createIndex()` writes `index.html`, which lists every report in the directory, including ones written by other test JVMs or modules.
 
-Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Any other fields load from `Place-an-order-payloads.js` when the panel opens.
+Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Any other fields load from `Place-an-order-1153f62c-payloads.js` when the panel opens.
 
 The participant type is the header shape. `ACTOR` is a person, `DATABASE` a cylinder, `QUEUE` stacked plates. `ENTITY` is a circle and `BOUNDARY` a circle with a bar. Anything else, including `PARTICIPANT`, is a rounded box. Sync responses and async messages draw an arrow head at the destination.
 

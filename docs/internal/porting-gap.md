@@ -36,7 +36,7 @@ These are **implemented**, not stubs, unless noted.
 | Kotlin capture DSL (`"A" messages "B" withLabel …`) | `capture/CaptureDsl.kt` |
 | Scenario / report / index / clear / clearScenarioEvents | `LsdContext.kt` |
 | `ReportJson` + `window.__LSD_REPORT__` injection into shell | `report/ReportWriter.renderShell`; locked by `CaptureToJsonTest` |
-| Minimal listing HTML + `report.json` / `*-report.json` | `ReportWriter.writeReport` |
+| Minimal listing HTML + `*-report.json` (per report, `<title>-<hash>` names, atomic writes) | `ReportWriter.writeReport` |
 | report chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, minimap, message deep links, and reduced-motion support | `report/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
 | Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report/src/lib/sequence-diagram.ts` |
 | JUnit Jupiter 6 extension + `@LsdPostTestProcessing` | `LsdExtension.kt` — success / fail / disabled / aborted / nested / post-processing; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
