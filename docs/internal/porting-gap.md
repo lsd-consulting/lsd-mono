@@ -39,7 +39,7 @@ These are **implemented**, not stubs, unless noted.
 | Minimal listing HTML + `*-report.json` (per report, `<title>-<hash>` names, atomic writes) | `ReportWriter.writeReport` |
 | report chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, minimap, message deep links, and reduced-motion support | `report/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
 | Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report/src/lib/sequence-diagram.ts` |
-| JUnit Jupiter 6 extension + `@LsdPostTestProcessing` | `LsdExtension.kt` — success / fail / disabled / aborted / nested / post-processing; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
+| JUnit Jupiter 6 extension + `LsdScenario` parameter | `LsdExtension.kt` — success / fail / disabled / aborted / nested / `@AfterEach` capture; `@LsdPostTestProcessing` was removed in favour of `@AfterEach`; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
 | Cucumber 8 plugin | `modules/lsd-mono-cucumber-8`, `LsdCucumberPlugin`. Completes a scenario per Cucumber scenario. The description is the Given/When/Then lines. The report highlights Given, When, Then, and And in the Description card. Logging and HTTP interceptors are still not in the tree. |
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdKey.kt` (one table of keys, legacy names and defaults), `properties/LsdProperties.kt`, `ReportOptions.kt` |
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
@@ -247,7 +247,7 @@ The large-diagram UX baseline is shipped: sticky participant header, scenario an
 | **Legacy** | Companion junit module drives capture; core provides context + popups. |
 | **Shipped** | `ScenarioError` / scenario JSON `error` (`headline`, `message`, `stack`). Descriptions are plain text (`Test passed` / `Test failed` / `Test aborted` / `Test disabled: …`). Disabled maps to `warn` with no `error` object. Aborted maps to `warn` **with** `error`. report renders the message as text and the stack via the side inspector. |
 | **Still open** | Hide-stacktrace covered by the property but not a dedicated test. No browser click-through of “Show stack trace”. |
-| **Test** | `LsdExtensionOutcomesTest`: success, failed, disabled, aborted, nested class, `@LsdPostTestProcessing` captures `post-processing`. |
+| **Test** | `LsdExtensionOutcomesTest`: success, failed, disabled, aborted, nested class, `@AfterEach` captures `after-each`. `LsdExtensionTest`, `JavaInjectionTest` and `LsdExtensionParallelTest` cover the `LsdScenario` parameter. |
 
 #### P1 — Listener / interceptor migration path
 

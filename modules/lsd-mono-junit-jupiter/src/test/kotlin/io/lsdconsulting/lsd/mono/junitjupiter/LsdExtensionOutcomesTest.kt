@@ -26,7 +26,7 @@ import kotlin.io.path.readText
 
 /**
  * Drives [LsdExtension] through the Jupiter engine so success, failure, disabled,
- * aborted, nested, and post-processing outcomes land in one report.
+ * aborted, nested, and `@AfterEach` outcomes land in one report.
  * Fixture classes are not named *Test, so the Gradle suite does not run them directly.
  */
 class LsdExtensionOutcomesTest {
@@ -65,7 +65,7 @@ class LsdExtensionOutcomesTest {
         assertTrue(passed.contains(""""status": "success""""), passed)
         assertTrue(passed.contains(""""description": "Test passed""""), passed)
         assertTrue(passed.contains(""""label": "ping""""), passed)
-        assertTrue(passed.contains(""""label": "post-processing""""), passed)
+        assertTrue(passed.contains(""""label": "after-each""""), passed)
         assertFalse(passed.contains(""""error""""), passed)
 
         val failed = scenarioSlice(json, "$prefix: blows up with a structured failure")
@@ -83,7 +83,7 @@ class LsdExtensionOutcomesTest {
         assertTrue(disabled.contains(""""status": "warn""""), disabled)
         assertTrue(disabled.contains(""""description": "Test disabled: not today""""), disabled)
         assertFalse(disabled.contains(""""headline""""), disabled)
-        assertFalse(disabled.contains(""""label": "post-processing""""), disabled)
+        assertFalse(disabled.contains(""""label": "after-each""""), disabled)
 
         val aborted = scenarioSlice(json, "$prefix: aborts early")
         assertTrue(aborted.contains(""""status": "warn""""), aborted)
@@ -102,18 +102,18 @@ class LsdExtensionOutcomesTest {
     }
 
     @Test
-    fun `a throwing post-processing method fails the test with its own exception`() {
-        val summary = execute(LsdPostProcessingThrowsFixture::class.java)
+    fun `a throwing @AfterEach method fails the test with its own exception`() {
+        val summary = execute(LsdAfterEachThrowsFixture::class.java)
 
         assertEquals(1, summary.summary.testsFailedCount.toInt())
         val thrown = summary.summary.failures
             .single()
             .exception
         assertEquals(IllegalStateException::class.java, thrown.javaClass, thrown.stackTraceToString())
-        assertEquals("post-processing broke", thrown.message)
+        assertEquals("after-each broke", thrown.message)
 
-        val json = reportJson("LsdPostProcessingThrowsFixture")
-        assertTrue(json.contains(""""message": "post-processing broke""""), json)
+        val json = reportJson("LsdAfterEachThrowsFixture")
+        assertTrue(json.contains(""""message": "after-each broke""""), json)
         assertFalse(json.contains("InvocationTargetException"), json)
     }
 
@@ -171,9 +171,9 @@ class LsdOutcomeFixtures {
     @Order(4)
     fun `aborts early`(): Unit = throw TestAbortedException("stopped early")
 
-    @LsdPostTestProcessing
-    private fun captureAfterBody() {
-        lsd.capture { "Test" calls "LsdMono" label "post-processing" }
+    @AfterEach
+    fun captureAfterBody() {
+        lsd.capture { "Test" calls "LsdMono" label "after-each" }
     }
 
     @Tag("lsd-fixture")
@@ -188,12 +188,12 @@ class LsdOutcomeFixtures {
 
 @Tag("lsd-fixture")
 @ExtendWith(LsdExtension::class)
-class LsdPostProcessingThrowsFixture {
+class LsdAfterEachThrowsFixture {
     @Test
-    fun `passes until post-processing`() {
+    fun `passes until after each`() {
         LsdContext.instance.capture { "Test" calls "LsdMono" label "ping" }
     }
 
-    @LsdPostTestProcessing
-    private fun breakAfterBody(): Unit = throw IllegalStateException("post-processing broke")
+    @AfterEach
+    fun breakAfterBody(): Unit = throw IllegalStateException("after-each broke")
 }

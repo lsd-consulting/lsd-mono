@@ -25,7 +25,6 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
 import io.lsdconsulting.lsd.mono.junitjupiter.LsdExtension
-import io.lsdconsulting.lsd.mono.junitjupiter.LsdPostTestProcessing
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
@@ -60,14 +59,32 @@ class PlaceOrderTest {
             deactivate("Checkout")
         }
     }
-
-    @LsdPostTestProcessing
-    fun captureAfterAsserts() {
-        // Optional. Runs after the test body, before the scenario is completed.
-        // Useful for a last fact or arrow once assertions have finished.
-    }
 }
 ```
+
+To capture after the test body, for example once assertions have run, use `@AfterEach`: the test's scenario is completed only after it.
+
+### Take the scenario as a parameter
+
+A test, `@BeforeEach` or `@AfterEach` method can declare an `LsdScenario` parameter. It is the test's own scenario, so capturing through it lands in that test from any thread, with no `wrap` needed:
+
+```kotlin
+@Test
+fun `places an order`(scenario: LsdScenario) {
+    scenario.addFact("orderId", "ord-1001")
+    scenario.capture { "Customer" calls "Checkout" label "POST /orders" }
+    client.onResponse { scenario.message("Checkout", "Customer", "201 Created") } // callback thread
+}
+```
+
+```java
+@Test
+void placesAnOrder(LsdScenario scenario) {
+    scenario.capture(c -> c.calls("Customer", "Checkout").label("POST /orders"));
+}
+```
+
+The parameter does not change the scenario's title. `LsdContext.instance` keeps working for code that has no parameter, such as interceptors.
 
 A passed test is stored as a successful scenario titled from the class and method display names (for example `PlaceOrderTest: places an order`). A failure or abort is stored with a structured error on the scenario. Nested test classes do not write a second report from the nested `afterAll`.
 
@@ -96,12 +113,13 @@ junit.jupiter.execution.parallel.mode.default=concurrent
 junit.jupiter.execution.parallel.mode.classes.default=concurrent
 ```
 
-Each test gets its own scenario, started before `@BeforeEach` and bound to the thread that runs the test. Captures in the test, its `@BeforeEach` and `@AfterEach` methods, and `@LsdPostTestProcessing` land in that test. Each top-level class still writes one report, with its nested classes, and never takes another class's scenarios.
+Each test gets its own scenario, started before `@BeforeEach` and bound to the thread that runs the test. Captures in the test and its `@BeforeEach` and `@AfterEach` methods land in that test. Each top-level class still writes one report, with its nested classes, and never takes another class's scenarios.
 
-Work the test hands to another thread needs the test carried with it:
+Work the test hands to another thread needs the test carried with it, or the injected `LsdScenario` (see above):
 
 ```kotlin
-executor.submit(LsdContext.instance.wrap { client.placeOrder() })
+executor.submit(LsdContext.instance.wrap { client.placeOrder() })                  // Runnable
+val order = executor.submit(LsdContext.instance.wrap<Order> { client.placeOrder() }) // Callable
 ```
 
 A thread that is not bound to a test (an embedded server's thread, for example) captures into the running test when only one test is running, as before. With several running, the capture cannot be attributed: it is logged as a warning and kept out of all of them. Captures made in `@BeforeAll` go into the class's first test when nothing else is running.

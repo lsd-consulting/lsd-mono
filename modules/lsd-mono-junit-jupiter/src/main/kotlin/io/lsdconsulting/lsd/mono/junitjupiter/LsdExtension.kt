@@ -5,11 +5,12 @@ import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import org.junit.jupiter.api.extension.AfterAllCallback
-import org.junit.jupiter.api.extension.AfterTestExecutionCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.extension.ParameterContext
+import org.junit.jupiter.api.extension.ParameterResolutionException
+import org.junit.jupiter.api.extension.ParameterResolver
 import org.junit.jupiter.api.extension.TestWatcher
-import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.Optional
 import java.util.regex.Pattern
@@ -24,19 +25,19 @@ import java.util.regex.Pattern
  * scenario JSON. Descriptions stay plain text — no legacy `:target` overlay markup.
  *
  * This extension does not capture interaction events by itself. Call
- * [LsdContext.capture] (or [LsdContext.message]) inside the test, and optionally
- * [LsdPostTestProcessing] for late capture before the scenario is completed.
+ * [LsdContext.capture] (or [LsdContext.message]) inside the test, or declare an
+ * [LsdScenario] parameter on the test (or its `@BeforeEach`/`@AfterEach` methods) and
+ * capture through that: it is the test's own scenario, whichever thread uses it.
  *
  * **Parallel execution.** Safe with `junit.jupiter.execution.parallel.enabled`. Each
  * test gets its own [io.lsdconsulting.lsd.mono.core.LsdScenario], keyed by the test's
  * unique id and bound to the thread that runs it, so `LsdContext.instance.capture`
- * in the test, its `@BeforeEach`/`@AfterEach` methods and [LsdPostTestProcessing]
- * lands in that test. Each top-level class is its own report, keyed by the class's
+ * in the test and its `@BeforeEach`/`@AfterEach` methods lands in that test. Each top-level class is its own report, keyed by the class's
  * unique id, so parallel classes do not take each other's scenarios. Work the test
  * hands to other threads should be wrapped with [LsdContext.wrap].
  * The extension keeps no state of its own.
  */
-public class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
+public class LsdExtension : BeforeEachCallback, TestWatcher, AfterAllCallback, ParameterResolver {
     private val lsdContext: LsdContext = LsdContext.instance
 
     override fun beforeEach(context: ExtensionContext) {
@@ -83,12 +84,16 @@ public class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionC
         )
     }
 
-    override fun afterTestExecution(context: ExtensionContext) {
-        // Bind explicitly in case the body ran elsewhere (for example @Timeout on a separate thread).
-        scenarioFor(context).bind().use {
-            additionalProcessing(context.requiredTestInstance, LsdPostTestProcessing::class.java)
-        }
-    }
+    /** An [LsdScenario] parameter of a test, `@BeforeEach` or `@AfterEach` method. */
+    override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
+        parameterContext.parameter.type == LsdScenario::class.java &&
+            parameterContext.declaringExecutable is Method &&
+            extensionContext.testMethod.isPresent
+
+    /** The test's own scenario, begun by [beforeEach]. */
+    override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): LsdScenario =
+        lsdContext.findScenario(extensionContext.uniqueId)
+            ?: throw ParameterResolutionException("No LSD scenario is running for '${extensionContext.displayName}'.")
 
     override fun afterAll(context: ExtensionContext) {
         if (isNested(context)) {
@@ -124,29 +129,20 @@ public class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionC
         if (parent.isPresent) {
             val parentDisplayName = prefixParentDisplayName(parent.get())
             val separator = if (parentDisplayName.isBlank()) "" else ": "
-            return parentDisplayName + separator + context.displayName.deCamelCase()
+            return parentDisplayName + separator + ownName(context).deCamelCase()
         }
         return ""
     }
 
-    private fun additionalProcessing(instance: Any, annotation: Class<out Annotation?>) {
-        var klass: Class<*> = instance.javaClass
-        while (klass != Any::class.java) {
-            klass.declaredMethods
-                .filter { method: Method -> method.isAnnotationPresent(annotation) }
-                .forEach { method -> invokeMethodOn(instance, method) }
-            klass = klass.superclass
-        }
-    }
-
-    private fun invokeMethodOn(instance: Any, method: Method) {
-        method.isAccessible = true
-        try {
-            method.invoke(instance)
-        } catch (e: InvocationTargetException) {
-            // Fail the test with what the @LsdPostTestProcessing method threw, not the reflection wrapper.
-            throw e.targetException ?: e
-        }
+    /**
+     * The context's display name, without the parameter types JUnit adds to a method's
+     * default one (`places an order(LsdScenario)`), so an injected parameter does not
+     * change the scenario's title.
+     */
+    private fun ownName(context: ExtensionContext): String {
+        val name = context.displayName
+        val method = context.element.orElse(null) as? Method ?: return name
+        return if (name.startsWith(method.name + "(") && name.endsWith(")")) method.name else name
     }
 }
 

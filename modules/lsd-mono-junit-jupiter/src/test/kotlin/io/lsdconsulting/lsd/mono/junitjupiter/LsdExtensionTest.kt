@@ -1,10 +1,15 @@
 package io.lsdconsulting.lsd.mono.junitjupiter
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.LsdScenario
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import kotlin.concurrent.thread
 
 /**
  * Smoke test that Jupiter 6 can load [LsdExtension] and complete a successful scenario
@@ -22,9 +27,26 @@ class LsdExtensionTest {
         assertTrue(true)
     }
 
-    @LsdPostTestProcessing
-    private fun afterEachCapture() {
-        // Exercised by the extension after the test body; keep empty for smoke coverage.
+    private var beforeEachScenario: LsdScenario? = null
+
+    @BeforeEach
+    fun rememberScenario(scenario: LsdScenario) {
+        beforeEachScenario = scenario
+    }
+
+    @Test
+    fun `an LsdScenario parameter is the test's own scenario`(scenario: LsdScenario) {
+        assertSame(lsd.currentScenario(), scenario)
+        assertSame(beforeEachScenario, scenario)
+        assertTrue(scenario.isActive)
+        // An unbound thread captures into the test through the parameter.
+        thread { scenario.message("Worker", "LsdMono", "from another thread") }.join()
+    }
+
+    @AfterEach
+    fun afterEachGetsTheSameScenario(scenario: LsdScenario) {
+        assertSame(beforeEachScenario, scenario)
+        assertTrue(scenario.isActive, "the scenario is completed after @AfterEach")
     }
 
     companion object {

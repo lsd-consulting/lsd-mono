@@ -1,6 +1,6 @@
 # lsd-mono public API proposal (#3)
 
-Status: approved. Slices 1 to 5 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
+Status: approved. Slices 1 to 6 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
@@ -488,6 +488,38 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 - **No automatic activation.** §3 doesn't specify it. Drawing bars automatically would add events that today's samples draw explicitly, and a call never replied to would leave a bar open. So `call` draws exactly two messages, like `message` plus `response`, and callers add `activate`/`deactivate` if they want bars.
 - **`LsdHeaders.SCENARIO`** (`"lsd-scenario"`) from §3.3 was added here, because the README's Kafka example needs it.
 - **Samples:** none were migrated. Their call durations are fixed numbers on the request (`took 412`), and `call` would put a measured duration on the response, which would change the byte-identical reports. The core README's new "Interceptors" section has the HTTP and Kafka examples.
+
+### Slice 6 as built
+
+- **`scenario { }`** is `LsdContext.scenario(title, description = "", reportKey = null, block: LsdScenario.() -> T): T`, as in §2.
+  - It begins a scenario, binds the thread with `bind()`, runs the block, and completes the scenario as `SUCCESS`.
+  - If the block throws, it completes the scenario as `ERROR` with `ScenarioError.of("Failed", e)`, the headline the JUnit extension uses, and rethrows the same exception.
+  - The previous binding is restored either way, so nested blocks shadow and then restore.
+  - It returns the block's value.
+- **`report { }`** is `report(title, block: LsdReport.() -> Unit): Path`.
+  - **Deviation:** the block returns `Unit` rather than §2's unused `T`.
+  - `LsdReport` is a new receiver with `title`, `key` and `scenario(title, description, block)`.
+  - At the end it calls `completeReport(title, key)` and `createIndex()`, and returns `completeReport`'s path.
+  - The report is written even when the block throws, and the exception is rethrown (a write failure is added to it as suppressed).
+- **Report key:**
+  - **Deviation:** §4 says "a unique reportKey". As built, the key is the title, with ` #2`, ` #3` and so on added while another open `report { }` has the same title.
+  - Parallel blocks still never share a key. The file name (title plus a hash of the key) stays the same from run to run, and matches what `completeReport(title)` writes.
+- **Report inheritance:**
+  - **Deviation:** a `scenario { }` started on the block's thread inherits the report even through `LsdContext.scenario` (for example in a helper function), not only through the receiver. A thread-local holds the open report.
+  - `LsdReport.scenario` works from any thread.
+- **`@LsdDsl`** now marks `Capturer` (so `LsdContext`, `LsdScenario` and `CaptureBlock`) and `LsdReport`. It stays internal.
+  - I checked that, inside `report { scenario { … } }`, an implicit `scenario(...)` or `complete(...)` that would reach an outer receiver does not compile.
+  - There is no test for this, because a compile error can't be a test case.
+- **Java:**
+  - `scenario` has `@JvmOverloads` `Consumer<LsdScenario>` forms, and `report` has a `Consumer<LsdReport>` form.
+  - **Deviation:** a block that returns a value is a `Callable<T>`, not a `Function<LsdScenario, T>`. With `Consumer` and `Function` overloads, javac rejects `s -> s.addFact("k", "v")` as ambiguous (checked with javac 21). `Callable` differs from `Consumer` in arity, so both forms compile; the block captures through the bound context.
+- **`wrap(Callable)`** is added to `LsdContext` and `LsdScenario`, as in §2. Kotlin `wrap { … }` still resolves to `Runnable`. `wrap<T> { … }` picks `Callable`.
+- **JUnit `ParameterResolver`:**
+  - `LsdExtension` resolves an `LsdScenario` parameter on test, `@BeforeEach` and `@AfterEach` methods to the test's own scenario.
+  - Constructors and `@BeforeAll`/`@AfterAll` are not supported, because there is no test scenario there.
+  - JUnit's default method display name includes parameter types (`test1(LsdScenario)`). Scenario titles now use the method name when the display name is that default, so injecting does not change a title. Existing titles are unchanged.
+- **`@LsdPostTestProcessing` is removed**, as §3 recommends. `@AfterEach` runs after the body and before the scenario is completed, so it covers the same use; nothing in the samples used the annotation for capture. Its tests now cover `@AfterEach` (capture lands, not on disabled tests; a throwing one fails the test with its own exception).
+- **Samples:** none were migrated to `report { }`/`scenario { }`. The reports stay byte-identical.
 
 ### Risks
 
