@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Fact
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import java.util.function.Consumer
 
 /**
  * One scenario being captured. Start one with [LsdContext.beginScenario].
@@ -16,7 +17,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
  * Every method is thread-safe.
  */
 public class LsdScenario internal constructor(
-    private val context: LsdContext,
+    internal val context: LsdContext,
     /** Unique among the scenarios that are running. Integrations use the test's own id. */
     public val key: String,
     /**
@@ -39,6 +40,13 @@ public class LsdScenario internal constructor(
     override fun emit(events: List<SequenceEvent>) {
         context.captureInto(this, events)
     }
+
+    /** Capture several events together into this scenario. See [CaptureBlock]. */
+    @JvmSynthetic
+    public fun capture(block: CaptureBlock.() -> Unit): Unit = CaptureBlock(this).run(block)
+
+    /** Java form of [capture]: `scenario.capture(c -> { c.message("A", "B"); c.activate("B"); })`. */
+    public fun capture(block: Consumer<CaptureBlock>): Unit = capture { block.accept(this) }
 
     override fun fact(key: String, value: String) {
         if (!add { facts.add(Fact(key, value)) }) context.warnLate(this, "fact")
@@ -68,7 +76,7 @@ public class LsdScenario internal constructor(
     /** Stop capturing without writing a scenario. */
     public fun discard(): Unit = context.discard(this)
 
-    internal fun addEvent(event: SequenceEvent): Boolean = add { events.add(event) }
+    internal fun addEvents(added: List<SequenceEvent>): Boolean = add { events.addAll(added) }
 
     /** Close and return what was captured. Later adds are refused. */
     internal fun close(): Pair<List<Fact>, List<SequenceEvent>> =

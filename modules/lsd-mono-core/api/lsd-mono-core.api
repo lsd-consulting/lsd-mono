@@ -1,3 +1,9 @@
+public final class io/lsdconsulting/lsd/mono/core/CaptureBlock : io/lsdconsulting/lsd/mono/core/Capturer {
+	public final fun calls (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
+	public final fun repliesTo (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
+	public final fun sends (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
+}
+
 public abstract class io/lsdconsulting/lsd/mono/core/Capturer {
 	public final fun activate (Ljava/lang/String;)V
 	public final fun activate (Ljava/lang/String;Ljava/lang/String;)V
@@ -62,6 +68,11 @@ public abstract class io/lsdconsulting/lsd/mono/core/Capturer {
 public abstract interface annotation class io/lsdconsulting/lsd/mono/core/InternalLsdApi : java/lang/annotation/Annotation {
 }
 
+public final class io/lsdconsulting/lsd/mono/core/Lsd {
+	public static final fun lsd (Ljava/util/function/Consumer;)V
+	public static final synthetic fun lsd (Lkotlin/jvm/functions/Function1;)V
+}
+
 public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/lsd/mono/core/Capturer {
 	public static final field Companion Lio/lsdconsulting/lsd/mono/core/LsdContext$Companion;
 	public fun <init> ()V
@@ -72,6 +83,8 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public final fun beginScenario (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public final fun beginScenario (Ljava/lang/String;Ljava/lang/String;Z)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public static synthetic fun beginScenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
+	public final fun capture (Ljava/util/function/Consumer;)V
+	public final synthetic fun capture (Lkotlin/jvm/functions/Function1;)V
 	public final fun clear ()V
 	public final fun completeReport (Ljava/lang/String;)Ljava/nio/file/Path;
 	public final fun completeReport (Ljava/lang/String;Ljava/lang/String;)Ljava/nio/file/Path;
@@ -95,6 +108,8 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext$Companion {
 
 public final class io/lsdconsulting/lsd/mono/core/LsdScenario : io/lsdconsulting/lsd/mono/core/Capturer {
 	public final fun bind ()Ljava/lang/AutoCloseable;
+	public final fun capture (Ljava/util/function/Consumer;)V
+	public final synthetic fun capture (Lkotlin/jvm/functions/Function1;)V
 	public final fun complete (Ljava/lang/String;)V
 	public final fun complete (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun complete (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Status;)V
@@ -106,6 +121,14 @@ public final class io/lsdconsulting/lsd/mono/core/LsdScenario : io/lsdconsulting
 	public final fun isActive ()Z
 	public fun toString ()Ljava/lang/String;
 	public final fun wrap (Ljava/lang/Runnable;)Ljava/lang/Runnable;
+}
+
+public final class io/lsdconsulting/lsd/mono/core/MessageSpec {
+	public final fun at (Ljava/time/Instant;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
+	public final fun colour (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
+	public final fun data (Ljava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
+	public final fun label (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
+	public final fun took (J)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/capture/CaptureDslKt {

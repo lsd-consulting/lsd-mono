@@ -81,6 +81,12 @@ class JavaApiTest {
         lsd.addFact("orderId", "o-1");
         lsd.capture(new MessageBuilder().from("Api").to("Customer").label("201").type(MessageType.SYNCHRONOUS_RESPONSE));
         lsd.capture(CaptureDslKt.noteOver("Api", "builder note"), CaptureDslKt.section("Phase 3"));
+        lsd.capture(c -> {
+            c.calls("Api", "Db").label("select").data(Map.of("sql", "select 1")).took(3L).colour("#00f");
+            c.repliesTo("Db", "Api").label("1 row");
+            c.sends("Api", "Queue").label("order.read");
+            c.note("in a block", "Api");
+        });
         lsd.completeScenario("Java", "every verb", Status.SUCCESS);
 
         String json = events(Files.readString(reportJson(lsd.completeReport("Java"))));
@@ -88,7 +94,8 @@ class JavaApiTest {
             List.of(
                 "message", "message", "message", "message", "message", "message", "message", "message", "message",
                 "message", "message", "note", "note", "note", "activate", "activate", "deactivate", "deactivate", "section",
-                "divider", "delay", "delay", "spacer", "spacer", "message", "note", "section"),
+                "divider", "delay", "delay", "spacer", "spacer", "message", "note", "section", "message", "message",
+                "message", "note"),
             all(json, "\"kind\": \"(\\w+)\""));
         assertEquals("late", all(json, "\"label\": \"([^\"]*)\"").get(0), "the timed message sorts first");
         assertTrue(json.contains("\"order\": \"o-1\"") || Files.readString(payloads(tempDir)).contains("o-1"), json);
@@ -104,13 +111,17 @@ class JavaApiTest {
             lsd.message("A", "B", "bound");
         }
         scenario.message("B", "A", "direct");
+        scenario.capture(c -> c.calls("A", "B").label("block"));
+        LsdScenario shared = LsdContext.getInstance().beginScenario("java-shared", "java-api-test-shared");
+        Lsd.lsd(c -> c.note("shorthand", "A"));
+        shared.discard();
         scenario.note("note", "A");
         scenario.addFact("k", "v");
         scenario.complete("Failed", "", Status.ERROR, ScenarioError.of("Failed", new IllegalStateException("boom")));
         assertEquals(LsdContext.class, LsdContext.getInstance().getClass());
 
         String json = Files.readString(reportJson(lsd.completeReport("Java", "java-report")));
-        assertEquals(List.of("bound", "direct"), all(events(json), "\"label\": \"([^\"]*)\""));
+        assertEquals(List.of("bound", "direct", "block"), all(events(json), "\"label\": \"([^\"]*)\""));
         assertTrue(json.contains("\"headline\": \"Failed\""), json);
         assertTrue(json.contains("\"message\": \"boom\""), json);
     }

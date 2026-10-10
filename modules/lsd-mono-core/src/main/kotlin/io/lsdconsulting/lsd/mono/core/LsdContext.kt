@@ -44,6 +44,7 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import java.util.function.Consumer
 
 /**
  * Capture + report façade inspired by legacy `com.lsd.core.LsdContext`.
@@ -228,6 +229,17 @@ public class LsdContext : Capturer() {
         bound.remove()
     }
 
+    /**
+     * Capture several events together, into the current scenario: the bound one, the only
+     * running one, or the default. The scenario is picked once, when the block starts, and
+     * the events are added together when it ends. See [CaptureBlock].
+     */
+    @JvmSynthetic
+    public fun capture(block: CaptureBlock.() -> Unit): Unit = target().capture(block)
+
+    /** Java form of [capture]: `lsd.capture(c -> { c.message("A", "B"); c.activate("B"); })`. */
+    public fun capture(block: Consumer<CaptureBlock>): Unit = target().capture(block)
+
     /** Into the current scenario: the bound one, the only running one, or the default. */
     override fun emit(events: List<SequenceEvent>) {
         captureInto(target(), events)
@@ -240,11 +252,23 @@ public class LsdContext : Capturer() {
     internal fun isActive(scenario: LsdScenario): Boolean =
         scenario === defaultScenario || active[scenario.key] === scenario
 
-    internal fun captureInto(scenario: LsdScenario, events: List<SequenceEvent>) {
-        events.forEach { event ->
-            if (!scenario.addEvent(bind(event))) warnLate(scenario, "event")
-        }
+    /**
+     * Bind [events] and add them to [scenario] together. [dataCopied] is true when a
+     * capture block already copied the message data, at the line that wrote it.
+     */
+    internal fun captureInto(
+        scenario: LsdScenario,
+        events: List<SequenceEvent>,
+        dataCopied: Boolean = false,
+    ) {
+        if (events.isEmpty()) return
+        val bound = events.map { bind(if (dataCopied) it else copyData(it)) }
+        if (!scenario.addEvents(bound)) warnLate(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
     }
+
+    /** Copy a message's data now, so later changes by the caller do not reach the report (#27). */
+    internal fun copyData(event: SequenceEvent): SequenceEvent =
+        if (event is Message && event.data != null) event.copy(data = payloads.snapshot(event.data)) else event
 
     internal fun bindThread(scenario: LsdScenario): AutoCloseable {
         val previous = bound.get()
@@ -348,8 +372,7 @@ public class LsdContext : Capturer() {
         }
 
     private fun bindMessage(captured: Message): Message {
-        // Copy the data now, so later changes by the caller do not reach the report (#27).
-        val event = if (captured.data == null) captured else captured.copy(data = payloads.snapshot(captured.data))
+        val event = captured
         val id = idGenerator.next()
         return when (event.type) {
             MessageType.SHORT_INBOUND -> {
