@@ -28,7 +28,7 @@ concurrency:
 jobs:
   deploy:
     # Pinned for the same reason as the Gradle workflow. See docs/ci.md.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     # Only this job deploys, so only it gets the Pages and OIDC token permissions.
     permissions:
