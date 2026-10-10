@@ -39,27 +39,27 @@ import java.time.Instant
  * and activation colours, durations, out-of-order capture sorted by
  * timestamp, and success, failure and error statuses with structured errors.
  *
- * Some display names (aliases) are deliberately long, one per shape, so the
+ * Some display names are deliberately long, one per shape, so the
  * header shows names that widen their shape, wrap onto two lines, or are cut
  * with an ellipsis (full name on hover).
  */
 fun main() {
     val lsd = LsdContext()
     lsd.addParticipants(
-        ACTOR.called("Customer", alias = "Signed-in Customer (mobile app)"),
+        ACTOR.called("Customer", displayName = "Signed-in Customer (mobile app)"),
         BOUNDARY.called("Web UI"),
-        BOUNDARY.called("API Gateway", alias = "Public API Gateway (rate limited)"),
+        BOUNDARY.called("API Gateway", displayName = "Public API Gateway (rate limited)"),
         PARTICIPANT.called("Order Service", colour = "#2563eb"),
-        ENTITY.called("Basket", alias = "Shopping Basket Aggregate"),
+        ENTITY.called("Basket", displayName = "Shopping Basket Aggregate"),
         PARTICIPANT.called("Inventory Service"),
-        DATABASE.called("Orders DB", alias = "Orders DB (PostgreSQL primary)"),
+        DATABASE.called("Orders DB", displayName = "Orders DB (PostgreSQL primary)"),
         PARTICIPANT.called("Payment Service", colour = "#16a34a"),
         PARTICIPANT.called("Fraud Check"),
-        PARTICIPANT.called("Payment Provider", alias = "Payment Provider (ext)"),
-        QUEUE.called("Kafka order-events", id = "kafka", alias = "Kafka topic order-events.v2"),
+        PARTICIPANT.called("Payment Provider", displayName = "Payment Provider (ext)"),
+        QUEUE.called("Kafka order-events", id = "kafka", displayName = "Kafka topic order-events.v2"),
         PARTICIPANT.called(
             "Notification Service",
-            alias = "Customer Notification Preferences and Delivery Orchestration Service",
+            displayName = "Customer Notification Preferences and Delivery Orchestration Service",
         ),
         ENTITY.called("Email"),
         PARTICIPANT.called("Warehouse", colour = "#ea580c"),

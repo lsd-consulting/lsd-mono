@@ -1,6 +1,6 @@
 # lsd-mono public API proposal (#3)
 
-Status: approved. Slices 1 and 2 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
+Status: approved. Slices 1 to 3 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
@@ -417,6 +417,26 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 - **Parsing quirk kept:** `lsd.mono.label.maxWidth` is not trimmed before parsing, but the payload limits are. I kept that difference so slice 2 doesn't change behaviour.
 - **One documented table:** the core README "Properties" section lists every key with its legacy name, default and effect, and the other READMEs link to it. `LsdPropertiesTest` fails if the README table and `LsdKey` differ, and it covers the legacy fallback of every key.
 
+### Slice 3 as built
+
+- **Both flagged risks hold up, so the shape didn't change.** A throwaway probe (Kotlin 2.4.21, JDK 21) confirmed:
+  - `@JvmOverloads` on the final members of a `sealed class` generates the 2- to 5-argument overloads, and Java calls them.
+  - `capture(block: Function1)` marked `@JvmSynthetic`, `capture(Consumer)` and `capture(vararg …)` have distinct JVM signatures and don't clash.
+  - In Kotlin, `capture { }` picks the lambda form, and `capture()` or `capture("a", "b")` pick the vararg form.
+  - A Java lambda resolves to `Consumer`, and Java can't see the synthetic form.
+- `Capturer` is a `sealed class` with `LsdContext` and `LsdScenario` as its only subclasses (the capture block joins in slice 4). The verbs are final. Each subclass supplies two internal hooks, `emit(events)` and `fact(key, value)`. The context's hooks go to its bound scenario; a scenario's hooks go to itself. Every verb ends with `at: Instant? = null`, which becomes the event's `createdAt`.
+- The verbs are §3.1's, minus `call` (slice 5). `async` and `capture(vararg SequenceEventBuilder)` stay. The old `message(from, to, label, type, data, colour, durationMs)`, `noteLeft`/`noteRight`, `note(text, over)`, `shortInbound`/`shortOutbound` and `addFact`/`capture` copies on `LsdContext` and `LsdScenario` were deleted, not deprecated. `note(text)` with `side = OVER` requires `on`. `activate` ignores a blank colour, as before.
+- **`data` before `type`.** Four existing positional calls still compiled after the reorder, with `MessageType.X` silently landing in `data`. I found them with a search over every `message(` call and fixed them. A Java caller that wants `at` passes the defaults before it (`MessageType.SYNCHRONOUS`, `null`); the core README says so.
+- **The events are internal**: `SequenceEvent` and its seven classes, `Capturer.capture(vararg SequenceEvent)` (tests only) and `MessageBuilder.id()` are gone from the dump. The context gives every event its id when it is captured. The builders used to take ids as they were built, inside the same `capture` call, so the order and the ids are the same, and the sample reports are byte-identical. A short inbound or outbound message holds its diagram-edge end as `null`; the JSON and the insights still write `""`.
+- **Kept public until slice 4:** `LifelineAction`, which `LifelineBuilder` and the infix `lifeline` still need. `NotePlacement` became the public `NoteSide` because the `note` verb takes it. The report UI's TypeScript keeps its own `NotePlacement` name.
+- `Participant.alias` is now `displayName`, also on `ParticipantType.called`. The JSON field is still `alias`.
+- **Not done:**
+  - `Status.WARN` (optional) is left for a decision.
+  - No slice 3 function takes a lambda, so the `Consumer` overloads come with `capture {}` in slice 4; the pattern is the one checked above.
+  - `wrap(Callable)` from §2 is still not added.
+- `JavaApiTest` (core, `src/test/java`) calls every verb and its shorter overloads from Java, as well as the builders, `CaptureDslKt`, `payloads.register`, `beginScenario` with try-with-resources `bind()`, `ScenarioError.of` and `LsdContext.getInstance()`. It asserts the captured event kinds, their order and `createdAt`.
+- Cucumber uses `scenario.section(...)`.
+
 ### Risks
 
 | Risk | Mitigation |
@@ -428,4 +448,4 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 | Thread binding doesn't survive coroutines or reactive hops | `PendingCall` and explicit `LsdScenario` references; later the optional coroutines module. |
 | The top-level `lsd {}` gets shadowed by the common `val lsd = …` | It's only a shorthand. Inside classes, use `lsd.capture {}`. |
 | The `Status` rename touches the JUnit and Cucumber outcome mapping | The JSON strings are unchanged; the existing outcome tests cover it. |
-| I couldn't compile any of this here (no JDK on the box) | The shapes need checking in slice 1, especially `@JvmOverloads` on a sealed class and `@JvmSynthetic` overload clashes. |
+| I couldn't compile any of this here (no JDK on the box) | Checked in slice 3: `@JvmOverloads` on a sealed class and the `@JvmSynthetic` overloads both work (see "Slice 3 as built"). |

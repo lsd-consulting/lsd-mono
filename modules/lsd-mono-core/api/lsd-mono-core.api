@@ -254,8 +254,8 @@ public final class io/lsdconsulting/lsd/mono/core/domain/Participant {
 	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/ParticipantType;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/domain/Participant;
 	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/core/domain/Participant;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/ParticipantType;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/domain/Participant;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getAlias ()Ljava/lang/String;
 	public final fun getColour ()Ljava/lang/String;
+	public final fun getDisplayName ()Ljava/lang/String;
 	public final fun getId ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
 	public final fun getType ()Lio/lsdconsulting/lsd/mono/core/domain/ParticipantType;

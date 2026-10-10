@@ -373,7 +373,7 @@ public class LsdContext : Capturer() {
 
     private fun resolveLocked(ref: String): Participant {
         participants[ref]?.let { return it }
-        participants.values.firstOrNull { it.name == ref || it.alias == ref }?.let { return it }
+        participants.values.firstOrNull { it.name == ref || it.displayName == ref }?.let { return it }
         val id = uniqueId(ParticipantIds.fromName(ref))
         val created = Participant(name = ref, id = id)
         participants[id] = created
@@ -437,7 +437,7 @@ public class LsdContext : Capturer() {
                         id = it.id,
                         name = it.name,
                         type = it.type.name,
-                        alias = it.alias,
+                        alias = it.displayName,
                         colour = it.colour,
                     )
                 },

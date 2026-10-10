@@ -5,7 +5,8 @@ package io.lsdconsulting.lsd.mono.core.domain
  *
  * [id] is what events reference (`from` / `to` / `over` / `participantId`).
  * It defaults to a slug of [name] so `"Checkout API"` becomes `checkout-api`.
- * Pass an explicit id when you want a short alias (`api`) the way report samples do.
+ * Pass an explicit id when you want a short one (`api`) the way report samples do.
+ * [displayName] is what the diagram draws instead of [name]; events can reference either.
  *
  * Types match the report union. Legacy PlantUML-only types (`CONTROL`, `COLLECTIONS`)
  * are not carried — use [ParticipantType.PARTICIPANT].
@@ -14,7 +15,7 @@ public data class Participant @JvmOverloads constructor(
     val name: String,
     val id: String = ParticipantIds.fromName(name),
     val type: ParticipantType = ParticipantType.PARTICIPANT,
-    val alias: String? = null,
+    val displayName: String? = null,
     val colour: String? = null,
 )
 
@@ -31,9 +32,9 @@ public enum class ParticipantType {
     public fun called(
         name: String,
         id: String = ParticipantIds.fromName(name),
-        alias: String? = null,
+        displayName: String? = null,
         colour: String? = null,
-    ): Participant = Participant(name = name, id = id, type = this, alias = alias, colour = colour)
+    ): Participant = Participant(name = name, id = id, type = this, displayName = displayName, colour = colour)
 }
 
 internal object ParticipantIds {
