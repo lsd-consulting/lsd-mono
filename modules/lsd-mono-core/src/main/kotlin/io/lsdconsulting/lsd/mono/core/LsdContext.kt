@@ -41,6 +41,7 @@ import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Consumer
@@ -102,6 +103,8 @@ public class LsdContext : Capturer() {
     private val sequence = AtomicLong()
     private val active = ConcurrentHashMap<String, LsdScenario>()
     private val bound = ThreadLocal<LsdScenario>()
+    private val openReport = ThreadLocal<LsdReport>()
+    private val openReports = HashSet<String>()
 
     /** Unbound captures with no scenario running. Completed by [completeScenario], as before. */
     private val defaultScenario = LsdScenario(this, key = "", reportKey = null, sequence = 0)
@@ -161,6 +164,125 @@ public class LsdContext : Capturer() {
      * handing work to an executor. Returns [task] unchanged when there is none.
      */
     public fun wrap(task: Runnable): Runnable = currentScenario()?.wrap(task) ?: task
+
+    /** [wrap] for a task that returns a value. */
+    public fun <T> wrap(task: Callable<T>): Callable<T> = currentScenario()?.wrap(task) ?: task
+
+    /**
+     * Run [block] as a scenario called [title], bound to the calling thread, and complete it
+     * when the block ends: as [Status.SUCCESS], or, if the block throws, as [Status.ERROR]
+     * with the exception as its [ScenarioError] before the exception is rethrown. The thread
+     * gets back whatever scenario it was bound to before, so scenarios nest: an inner one
+     * shadows the outer one until it ends. Scenarios on different threads are independent.
+     *
+     * ```kotlin
+     * lsd.scenario("Place an order", description = "Given … When … Then …") {
+     *     addFact("orderId", "ord-1001")
+     *     capture { "Customer" calls "Web Shop" label "click Place order" }
+     *     placeOrder()        // interceptors on this thread capture into this scenario
+     * }
+     * ```
+     *
+     * @param reportKey the report to add it to. By default, the [report] block running on
+     * this thread, or else the default report.
+     * @return what [block] returned.
+     */
+    @JvmSynthetic
+    public fun <T> scenario(
+        title: String,
+        description: String = "",
+        reportKey: String? = null,
+        block: LsdScenario.() -> T,
+    ): T {
+        val scenario = beginScenario(reportKey ?: openReport.get()?.key, bindCurrentThread = false)
+        return scenario.bind().use {
+            val result =
+                try {
+                    scenario.block()
+                } catch (e: Throwable) {
+                    scenario.complete(title, description, Status.ERROR, ScenarioError.of("Failed", e))
+                    throw e
+                }
+            scenario.complete(title, description)
+            result
+        }
+    }
+
+    /** Java form of [scenario]: `lsd.scenario("Place an order", s -> s.addFact("orderId", "ord-1001"))`. */
+    @JvmOverloads
+    public fun scenario(
+        title: String,
+        description: String = "",
+        reportKey: String? = null,
+        block: Consumer<LsdScenario>,
+    ): Unit = scenario(title, description, reportKey) { block.accept(this) }
+
+    /**
+     * Java form of [scenario] for a block that returns a value: `int n = lsd.scenario("Count", () -> count())`.
+     * Capture through `lsd`, which is bound to the scenario inside the block.
+     * It is a [Callable] rather than a `Function<LsdScenario, T>` because javac cannot choose
+     * between `Consumer` and `Function` for a lambda such as `s -> s.addFact("k", "v")`.
+     */
+    @JvmOverloads
+    public fun <T> scenario(
+        title: String,
+        description: String = "",
+        reportKey: String? = null,
+        block: Callable<T>,
+    ): T = scenario(title, description, reportKey) { block.call() }
+
+    /**
+     * Run [block] as one report called [title], then write it with [completeReport] and
+     * update the index with [createIndex]. The report has its own key, so `report { }`
+     * blocks on parallel threads never mix scenarios. A [scenario] in the block, or in
+     * code it calls on this thread, goes into this report. The report is written even when
+     * the block throws, and the exception is rethrown.
+     *
+     * ```kotlin
+     * val path = LsdContext.instance.report("Online shop") {
+     *     scenario("Place an order") { capture { "Customer" calls "Web Shop" label "click Place order" } }
+     *     scenario("Card declined") { … }
+     * }
+     * ```
+     *
+     * @return the report file.
+     */
+    @JvmSynthetic
+    public fun report(
+        title: String,
+        block: LsdReport.() -> Unit,
+    ): Path {
+        val report = LsdReport(this, title, openReportKey(title))
+        val previous = openReport.get()
+        openReport.set(report)
+        val failure =
+            try {
+                report.block()
+                null
+            } catch (e: Throwable) {
+                e
+            } finally {
+                if (previous == null) openReport.remove() else openReport.set(previous)
+            }
+        val path =
+            try {
+                completeReport(title, report.key).also { createIndex() }
+            } catch (e: Throwable) {
+                if (failure == null) throw e
+                failure.addSuppressed(e)
+                null
+            } finally {
+                synchronized(lock) { openReports.remove(report.key) }
+            }
+        if (failure != null) throw failure
+        return checkNotNull(path)
+    }
+
+    /** Java form of [report]: `Path path = lsd.report("Online shop", r -> r.scenario("Place an order", s -> { … }));`. */
+    public fun report(
+        title: String,
+        block: Consumer<LsdReport>,
+    ): Path = report(title) { block.accept(this) }
 
     /**
      * @param error structured failure (message + stack). Prefer this over HTML overlay
@@ -356,6 +478,17 @@ public class LsdContext : Capturer() {
                 "Capture before the test ends, or wait for background work first.",
         )
     }
+
+    /**
+     * The key of a new [report] block: its title, so its file name is the same on every run,
+     * with a number added while another open block has the same title.
+     */
+    private fun openReportKey(title: String): String =
+        synchronized(lock) {
+            generateSequence(1) { it + 1 }
+                .map { if (it == 1) title else "$title #$it" }
+                .first { openReports.add(it) }
+        }
 
     /** Where an unscoped call goes: the bound scenario, the only running one, or the default. */
     private fun target(): LsdScenario {

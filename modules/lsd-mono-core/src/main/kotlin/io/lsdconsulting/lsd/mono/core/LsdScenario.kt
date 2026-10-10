@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import java.util.concurrent.Callable
 import java.util.function.Consumer
 
 /**
@@ -83,6 +84,9 @@ public class LsdScenario internal constructor(
 
     /** A [Runnable] that runs [task] with its thread bound to this scenario. */
     public fun wrap(task: Runnable): Runnable = Runnable { bind().use { task.run() } }
+
+    /** A [Callable] that runs [task] with its thread bound to this scenario. */
+    public fun <T> wrap(task: Callable<T>): Callable<T> = Callable { bind().use { task.call() } }
 
     /**
      * Finish the scenario and keep it for the report named by [reportKey].

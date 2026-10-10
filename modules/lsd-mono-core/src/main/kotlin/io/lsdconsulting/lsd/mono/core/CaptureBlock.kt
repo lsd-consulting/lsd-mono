@@ -5,11 +5,6 @@ import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import java.time.Instant
 
-/** Stops a nested block's lambda from reaching an outer block's verbs by accident. */
-@DslMarker
-@Target(AnnotationTarget.CLASS)
-internal annotation class LsdDsl
-
 /**
  * The receiver of `capture { }`: several events captured together.
  *
@@ -32,7 +27,6 @@ internal annotation class LsdDsl
  * Use the receiver only inside the block, on the block's thread. Once the block has
  * ended, calls on it throw.
  */
-@LsdDsl
 public class CaptureBlock internal constructor(
     private val scenario: LsdScenario,
 ) : Capturer() {

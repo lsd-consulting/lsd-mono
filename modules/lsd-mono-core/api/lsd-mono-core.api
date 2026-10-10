@@ -103,7 +103,20 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public final fun findScenario (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public static final fun getInstance ()Lio/lsdconsulting/lsd/mono/core/LsdContext;
 	public final fun getPayloads ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot;
+	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Ljava/nio/file/Path;
+	public final synthetic fun report (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/nio/file/Path;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public final synthetic fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public final fun scenario (Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;ILjava/lang/Object;)V
+	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Object;
 	public final fun wrap (Ljava/lang/Runnable;)Ljava/lang/Runnable;
+	public final fun wrap (Ljava/util/concurrent/Callable;)Ljava/util/concurrent/Callable;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/LsdContext$Companion {
@@ -113,6 +126,20 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext$Companion {
 public final class io/lsdconsulting/lsd/mono/core/LsdHeaders {
 	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/core/LsdHeaders;
 	public static final field SCENARIO Ljava/lang/String;
+}
+
+public final class io/lsdconsulting/lsd/mono/core/LsdReport {
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public final synthetic fun scenario (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdReport;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdReport;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;ILjava/lang/Object;)V
+	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdReport;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/LsdScenario : io/lsdconsulting/lsd/mono/core/Capturer {
@@ -130,6 +157,7 @@ public final class io/lsdconsulting/lsd/mono/core/LsdScenario : io/lsdconsulting
 	public final fun isActive ()Z
 	public fun toString ()Ljava/lang/String;
 	public final fun wrap (Ljava/lang/Runnable;)Ljava/lang/Runnable;
+	public final fun wrap (Ljava/util/concurrent/Callable;)Ljava/util/concurrent/Callable;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/MessageSpec {

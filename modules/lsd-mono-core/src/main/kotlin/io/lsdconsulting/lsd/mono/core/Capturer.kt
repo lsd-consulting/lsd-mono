@@ -26,6 +26,7 @@ import java.time.Instant
  *
  * Only lsd-mono's own classes extend this.
  */
+@LsdDsl
 public sealed class Capturer {
     /** A message from [from] to [to]. The default [type] is a synchronous call. */
     @JvmOverloads

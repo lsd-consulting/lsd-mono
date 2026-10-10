@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.lsdconsulting.lsd.mono.core.domain.MessageType;
@@ -16,6 +17,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
@@ -126,6 +129,43 @@ class JavaApiTest {
         assertEquals(List.of("bound", "direct", "block"), all(events(json), "\"label\": \"([^\"]*)\""));
         assertTrue(json.contains("\"headline\": \"Failed\""), json);
         assertTrue(json.contains("\"message\": \"boom\""), json);
+    }
+
+    @Test
+    void scopedScenariosAndReportsCanBeUsedFromJava() throws Exception {
+        LsdContext lsd = new LsdContext();
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            Path report = lsd.report("Java blocks", r -> {
+                r.scenario("Expression lambda", s -> s.addFact("k", "v"));
+                r.scenario("Block lambda", "with a description", s -> {
+                    s.message("A", "B", "receiver");
+                    lsd.message("A", "B", "context");
+                });
+                int n = r.scenario("Returns a value", () -> {
+                    lsd.message("A", "B", "callable");
+                    return 7;
+                });
+                assertEquals(7, n);
+                lsd.scenario("Through the context", s -> s.message("A", "B", "nested in report"));
+            });
+            String fromPool = lsd.scenario("Wrapped", () -> pool.submit(lsd.wrap(() -> {
+                lsd.message("Worker", "Db", "wrapped");
+                return "row";
+            })).get());
+            assertEquals("row", fromPool);
+            assertThrows(IllegalStateException.class, () -> lsd.scenario("Throws", s -> {
+                throw new IllegalStateException("boom");
+            }));
+
+            String json = Files.readString(reportJson(report));
+            assertEquals(List.of("receiver", "context", "callable", "nested in report"), all(events(json), "\"label\": \"([^\"]*)\""));
+            String other = Files.readString(reportJson(lsd.completeReport("Java default")));
+            assertEquals(List.of("wrapped"), all(events(other), "\"label\": \"([^\"]*)\""));
+            assertTrue(other.contains("\"message\": \"boom\""), other);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     private static Path reportJson(Path reportHtml) {

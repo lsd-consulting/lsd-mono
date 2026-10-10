@@ -206,6 +206,45 @@ PendingCall call = lsd.call("Client", "Orders", "POST /orders", body);
 call.reply("201 Created", responseBody);
 ```
 
+### Scenarios and reports in code
+
+Samples, `main()` programs and frameworks without an integration can scope scenarios and
+reports with blocks instead of `beginScenario` / `completeScenario` / `completeReport`:
+
+```kotlin
+val path = LsdContext.instance.report("Online shop") {
+    scenario("Place an order", description = "Given … When … Then …") {
+        addFact("orderId", "ord-1001")
+        capture { "Customer" calls "Web Shop" label "click Place order" }
+        placeOrder()            // real code; its interceptors capture into this scenario
+    }
+    scenario("Card declined") { … }
+}
+```
+
+- `scenario { }` binds the calling thread to a new scenario, runs the block, and completes
+  it as a success. If the block throws, it completes it as an error with the exception and
+  rethrows. Afterwards the thread is bound to whatever it was bound to before, so a nested
+  `scenario { }` shadows the outer one until it ends. It returns the block's value.
+- `report { }` writes the report (and `index.html`) when the block ends, even if it throws,
+  and returns the file. It has its own report key, so `report { }` blocks on parallel threads
+  never share scenarios. Scenarios started in the block, or by code it calls on that thread,
+  go into it; `scenario` on the receiver also works from other threads. The key is the title
+  (with ` #2` added while another block with that title is open), so the file name stays the
+  same from run to run.
+- Inside the blocks, a lambda only reaches its own receiver: `scenario(...)` inside a
+  `scenario { }` does not silently start a sibling in the enclosing report. Name the outer
+  receiver when you mean it.
+
+From Java, pass a `Consumer`, or a `Callable` for a value:
+
+```java
+Path path = lsd.report("Online shop", r -> {
+    r.scenario("Place an order", s -> s.addFact("orderId", "ord-1001"));
+    int rows = r.scenario("Count rows", () -> repository.count());
+});
+```
+
 ### Properties
 
 Set these as system properties (`-Dlsd.mono.report.outputDir=out`) or as environment
@@ -247,7 +286,8 @@ scenario.complete("places an order")
 lsd.completeReport("OrderTest", reportKey = "com.example.OrderTest")
 ```
 
-`LsdScenario` also has the verbs, `capture { }` and `bind()` (an `AutoCloseable`).
+`wrap` takes a `Runnable` or a `Callable`. `LsdScenario` also has the verbs,
+`capture { }`, `wrap` and `bind()` (an `AutoCloseable`).
 A capture into a scenario that has already completed is dropped
 with a warning rather than being given to the next one.
 
