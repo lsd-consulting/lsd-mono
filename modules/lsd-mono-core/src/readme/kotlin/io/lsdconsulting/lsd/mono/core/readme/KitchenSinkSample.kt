@@ -1,14 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.readme
 
+import io.lsdconsulting.lsd.mono.core.CaptureBlock
 import io.lsdconsulting.lsd.mono.core.LsdContext
-import io.lsdconsulting.lsd.mono.core.capture.logicalDivider
-import io.lsdconsulting.lsd.mono.core.capture.messages
-import io.lsdconsulting.lsd.mono.core.capture.withColour
-import io.lsdconsulting.lsd.mono.core.capture.withData
-import io.lsdconsulting.lsd.mono.core.capture.withDurationMs
-import io.lsdconsulting.lsd.mono.core.capture.withLabel
-import io.lsdconsulting.lsd.mono.core.capture.withType
-import io.lsdconsulting.lsd.mono.core.domain.MessageType.ASYNCHRONOUS
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.BI_DIRECTIONAL
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.LOST
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide
@@ -75,21 +68,19 @@ fun main() {
     println(listing)
 }
 
-private fun placeOrderRequest(lsd: LsdContext, orderId: String) {
-    lsd.capture("Customer" messages "Web UI" withLabel "click Place order")
-    lsd.activate("Web UI")
-    lsd.capture(
-        "Web UI" messages "API Gateway" withLabel "POST /orders" withDurationMs 412 withData mapOf(
-            "method" to "POST",
-            "path" to "/orders",
-            "headers" to mapOf("x-request-id" to "req-$orderId", "content-type" to "application/json"),
-            "body" to mapOf("basketId" to "bsk-9", "currency" to "GBP"),
-        ),
+private fun CaptureBlock.placeOrderRequest(orderId: String) {
+    "Customer" calls "Web UI" label "click Place order"
+    activate("Web UI")
+    "Web UI" calls "API Gateway" label "POST /orders" took 412 data mapOf(
+        "method" to "POST",
+        "path" to "/orders",
+        "headers" to mapOf("x-request-id" to "req-$orderId", "content-type" to "application/json"),
+        "body" to mapOf("basketId" to "bsk-9", "currency" to "GBP"),
     )
-    lsd.activate("API Gateway")
-    lsd.capture("API Gateway" messages "API Gateway" withLabel "check JWT")
-    lsd.capture("API Gateway" messages "Order Service" withLabel "createOrder" withData mapOf("orderId" to orderId))
-    lsd.activate("Order Service", colour = "#c026d3")
+    activate("API Gateway")
+    "API Gateway" calls "API Gateway" label "check JWT"
+    "API Gateway" calls "Order Service" label "createOrder" data mapOf("orderId" to orderId)
+    activate("Order Service", colour = "#c026d3")
 }
 
 private fun happyPath(lsd: LsdContext) {
@@ -98,100 +89,96 @@ private fun happyPath(lsd: LsdContext) {
     lsd.addFact("region", "eu-west-2")
     lsd.addFact("3-D Secure")
 
-    lsd.section("Given a basket with two items")
-    lsd.inbound("API Gateway", "health probe")
-    placeOrderRequest(lsd, "ord-2001")
+    lsd.capture {
+        section("Given a basket with two items")
+        inbound("API Gateway", "health probe")
+        placeOrderRequest("ord-2001")
 
-    lsd.capture("Order Service" messages "Basket" withLabel "load basket" withDurationMs 18)
-    lsd.activate("Basket")
-    lsd.capture("Basket" messages "Basket" withLabel "merge duplicate lines")
-    lsd.response("Basket", "Order Service", "2 items", data = mapOf("lines" to listOf("SOCK-1", "HAT-3")))
-    lsd.deactivate("Basket")
+        "Order Service" calls "Basket" label "load basket" took 18
+        activate("Basket")
+        "Basket" calls "Basket" label "merge duplicate lines"
+        "Basket" repliesTo "Order Service" label "2 items" data mapOf("lines" to listOf("SOCK-1", "HAT-3"))
+        deactivate("Basket")
 
-    // Nested activation opened by a self-call, spanning a wrapping note.
-    lsd.capture("Order Service" messages "Order Service" withLabel "apply promo SOCKS10")
-    lsd.activate("Order Service", colour = "#f59e0b")
-    lsd.note(
-        "Promotions stack in priority order. A long note like this one wraps onto several lines inside the card.",
-        on = "Order Service",
-        side = NoteSide.RIGHT,
-    )
-    lsd.capture("Order Service" messages "Order Service" withLabel "round to pence")
-    lsd.deactivate("Order Service")
+        // Nested activation opened by a self-call, spanning a wrapping note.
+        "Order Service" calls "Order Service" label "apply promo SOCKS10"
+        activate("Order Service", colour = "#f59e0b")
+        note(
+            "Promotions stack in priority order. A long note like this one wraps onto several lines inside the card.",
+            on = "Order Service",
+            side = NoteSide.RIGHT,
+        )
+        "Order Service" calls "Order Service" label "round to pence"
+        deactivate("Order Service")
 
-    lsd.capture("Order Service" messages "Inventory Service" withLabel "reserve stock" withDurationMs 95)
-    lsd.activate("Inventory Service")
-    lsd.capture("Inventory Service" messages "Orders DB" withLabel "upsert reservation" withDurationMs 33)
-    lsd.response("Orders DB", "Inventory Service", "1 row")
-    lsd.note("short note", on = "Orders DB")
-    lsd.response("Inventory Service", "Order Service", "reserved")
-    lsd.deactivate("Inventory Service")
+        "Order Service" calls "Inventory Service" label "reserve stock" took 95
+        activate("Inventory Service")
+        "Inventory Service" calls "Orders DB" label "upsert reservation" took 33
+        "Orders DB" repliesTo "Inventory Service" label "1 row"
+        note("short note", on = "Orders DB")
+        "Inventory Service" repliesTo "Order Service" label "reserved"
+        deactivate("Inventory Service")
 
-    lsd.section("When the customer pays by card")
-    lsd.capture(
-        "Order Service" messages "Payment Service" withLabel "authorise £42.00" withDurationMs 640 withData mapOf(
+        section("When the customer pays by card")
+        "Order Service" calls "Payment Service" label "authorise £42.00" took 640 data mapOf(
             "method" to "POST",
             "path" to "/payments/authorise",
             "status" to 200,
             "body" to mapOf("amount" to 4200, "card" to "**** 4242"),
-        ),
-    )
-    lsd.activate("Payment Service")
-    lsd.capture("Payment Service" messages "Fraud Check" withLabel "score transaction")
-    lsd.activate("Fraud Check")
-    lsd.delay("fraud model warm-up")
-    lsd.response("Fraud Check", "Payment Service", "score 0.02")
-    lsd.deactivate("Fraud Check")
-    // Nested bars on the 10th lifeline.
-    lsd.capture("Payment Service" messages "Payment Provider" withLabel "3-D Secure challenge" withType BI_DIRECTIONAL)
-    lsd.activate("Payment Provider")
-    lsd.capture("Payment Provider" messages "Payment Provider" withLabel "issuer approves")
-    lsd.activate("Payment Provider")
-    lsd.capture("Payment Provider" messages "Payment Provider" withLabel "capture funds" withColour "#dc2626")
-    lsd.deactivate("Payment Provider")
-    lsd.response("Payment Provider", "Payment Service", "auth code A1B2")
-    lsd.deactivate("Payment Provider")
-    lsd.response("Payment Service", "Order Service", "authorised", durationMs = 12)
-    lsd.deactivate("Payment Service")
+        )
+        activate("Payment Service")
+        "Payment Service" calls "Fraud Check" label "score transaction"
+        activate("Fraud Check")
+        delay("fraud model warm-up")
+        "Fraud Check" repliesTo "Payment Service" label "score 0.02"
+        deactivate("Fraud Check")
+        // Nested bars on the 10th lifeline.
+        message("Payment Service", "Payment Provider", "3-D Secure challenge", BI_DIRECTIONAL)
+        activate("Payment Provider")
+        "Payment Provider" calls "Payment Provider" label "issuer approves"
+        activate("Payment Provider")
+        "Payment Provider" calls "Payment Provider" label "capture funds" colour "#dc2626"
+        deactivate("Payment Provider")
+        "Payment Provider" repliesTo "Payment Service" label "auth code A1B2"
+        deactivate("Payment Provider")
+        "Payment Service" repliesTo "Order Service" label "authorised" took 12
+        deactivate("Payment Service")
 
-    // Overlapping (not nested) bars opened by async messages.
-    lsd.capture(
-        "Order Service" messages "Kafka order-events" withLabel "order.placed" withType ASYNCHRONOUS withData mapOf(
+        // Overlapping (not nested) bars opened by async messages.
+        "Order Service" sends "Kafka order-events" label "order.placed" data mapOf(
             "orderId" to "ord-2001",
             "items" to 2,
-        ),
-    )
-    lsd.activate("Kafka order-events")
-    lsd.capture("Kafka order-events" messages "Notification Service" withLabel "consume order.placed" withType ASYNCHRONOUS)
-    lsd.activate("Notification Service", colour = "#0891b2")
-    lsd.deactivate("Kafka order-events")
-    lsd.capture("Notification Service" messages "Email" withLabel "render confirmation")
-    lsd.spacer(60)
-    lsd.outbound("Notification Service", "SMTP relay")
-    lsd.deactivate("Notification Service")
-    lsd.capture("Order Service" messages "Kafka order-events" withLabel "audit.ping" withType LOST)
-    lsd.capture(logicalDivider("checkout complete"))
+        )
+        activate("Kafka order-events")
+        "Kafka order-events" sends "Notification Service" label "consume order.placed"
+        activate("Notification Service", colour = "#0891b2")
+        deactivate("Kafka order-events")
+        "Notification Service" calls "Email" label "render confirmation"
+        spacer(60)
+        outbound("Notification Service", "SMTP relay")
+        deactivate("Notification Service")
+        message("Order Service", "Kafka order-events", "audit.ping", LOST)
+        divider("checkout complete")
 
-    lsd.section("Then the order is confirmed")
-    // Warehouse is first referenced here, halfway down the scenario.
-    lsd.capture("Order Service" messages "Warehouse" withLabel "book pick slot" withColour "#ea580c")
-    lsd.activate("Warehouse")
-    lsd.response("Warehouse", "Order Service", "slot 14:00")
-    lsd.deactivate("Warehouse")
-    lsd.response("Order Service", "API Gateway", "order confirmed")
-    lsd.deactivate("Order Service")
-    lsd.response(
-        "API Gateway",
-        "Web UI",
-        "201 Created",
-        data = mapOf("status" to 201, "body" to mapOf("orderId" to "ord-2001", "eta" to "2026-10-10")),
-    )
-    lsd.deactivate("API Gateway")
-    lsd.response("Web UI", "Customer", "show confirmation")
-    lsd.deactivate("Web UI")
-    lsd.note("Edge note on the left of the diagram.", side = NoteSide.LEFT)
-    lsd.note("Left of Customer", on = "Customer", side = NoteSide.LEFT)
-    lsd.note("Edge note on the right that is long enough to wrap onto a second and third line.", side = NoteSide.RIGHT)
+        section("Then the order is confirmed")
+        // Warehouse is first referenced here, halfway down the scenario.
+        "Order Service" calls "Warehouse" label "book pick slot" colour "#ea580c"
+        activate("Warehouse")
+        "Warehouse" repliesTo "Order Service" label "slot 14:00"
+        deactivate("Warehouse")
+        "Order Service" repliesTo "API Gateway" label "order confirmed"
+        deactivate("Order Service")
+        "API Gateway" repliesTo "Web UI" label "201 Created" data mapOf(
+            "status" to 201,
+            "body" to mapOf("orderId" to "ord-2001", "eta" to "2026-10-10"),
+        )
+        deactivate("API Gateway")
+        "Web UI" repliesTo "Customer" label "show confirmation"
+        deactivate("Web UI")
+        note("Edge note on the left of the diagram.", side = NoteSide.LEFT)
+        note("Left of Customer", on = "Customer", side = NoteSide.LEFT)
+        note("Edge note on the right that is long enough to wrap onto a second and third line.", side = NoteSide.RIGHT)
+    }
 
     lsd.completeScenario(
         "Happy path: card payment",
@@ -249,22 +236,24 @@ private fun paymentDeclined(lsd: LsdContext) {
 private fun outOfStock(lsd: LsdContext) {
     lsd.addFact("orderId", "ord-2003")
     lsd.addFact("sku", "HAT-3")
-    placeOrderRequest(lsd, "ord-2003")
-    lsd.capture("Order Service" messages "Inventory Service" withLabel "reserve stock")
-    lsd.activate("Inventory Service")
-    lsd.capture("Inventory Service" messages "Orders DB" withLabel "select stock for update")
-    lsd.response("Orders DB", "Inventory Service", "HAT-3: 0 left")
-    lsd.capture("Inventory Service" messages "Inventory Service" withLabel "check backorder policy")
-    lsd.note("Backorders are disabled for hats.", on = "Inventory Service", side = NoteSide.LEFT)
-    lsd.response("Inventory Service", "Order Service", "409 out of stock", data = mapOf("sku" to "HAT-3", "available" to 0))
-    lsd.deactivate("Inventory Service")
-    lsd.capture("Order Service" messages "Kafka order-events" withLabel "order.rejected" withType ASYNCHRONOUS)
-    lsd.response("Order Service", "API Gateway", "409 Conflict")
-    lsd.deactivate("Order Service")
-    lsd.response("API Gateway", "Web UI", "409 Conflict")
-    lsd.deactivate("API Gateway")
-    lsd.response("Web UI", "Customer", "show 'out of stock'")
-    lsd.deactivate("Web UI")
+    lsd.capture {
+        placeOrderRequest("ord-2003")
+        "Order Service" calls "Inventory Service" label "reserve stock"
+        activate("Inventory Service")
+        "Inventory Service" calls "Orders DB" label "select stock for update"
+        "Orders DB" repliesTo "Inventory Service" label "HAT-3: 0 left"
+        "Inventory Service" calls "Inventory Service" label "check backorder policy"
+        note("Backorders are disabled for hats.", on = "Inventory Service", side = NoteSide.LEFT)
+        "Inventory Service" repliesTo "Order Service" label "409 out of stock" data mapOf("sku" to "HAT-3", "available" to 0)
+        deactivate("Inventory Service")
+        "Order Service" sends "Kafka order-events" label "order.rejected"
+        "Order Service" repliesTo "API Gateway" label "409 Conflict"
+        deactivate("Order Service")
+        "API Gateway" repliesTo "Web UI" label "409 Conflict"
+        deactivate("API Gateway")
+        "Web UI" repliesTo "Customer" label "show 'out of stock'"
+        deactivate("Web UI")
+    }
     lsd.completeScenario(
         "Out of stock",
         "Given HAT-3 has no stock\nWhen the customer places an order\nThen the order is rejected\nAnd no payment is taken",
@@ -274,24 +263,24 @@ private fun outOfStock(lsd: LsdContext) {
 private fun asyncFulfilment(lsd: LsdContext) {
     lsd.addFact("orderId", "ord-2001")
     lsd.addFact("courier", "Parcelly")
-    lsd.capture(
-        "Kafka order-events" messages "Warehouse" withLabel "consume order.paid" withType ASYNCHRONOUS withData mapOf(
+    lsd.capture {
+        "Kafka order-events" sends "Warehouse" label "consume order.paid" data mapOf(
             "orderId" to "ord-2001",
             "lines" to 2,
-        ),
-    )
-    lsd.activate("Warehouse")
-    lsd.capture("Warehouse" messages "Warehouse" withLabel "pick and pack")
-    lsd.delay("2 hours")
-    lsd.capture("Warehouse" messages "Kafka order-events" withLabel "order.shipped" withType ASYNCHRONOUS)
-    lsd.deactivate("Warehouse")
-    lsd.capture("Kafka order-events" messages "Notification Service" withLabel "consume order.shipped" withType ASYNCHRONOUS)
-    lsd.activate("Notification Service")
-    lsd.capture("Notification Service" messages "Email" withLabel "send 'on its way'")
-    lsd.delay("courier webhook")
-    lsd.inbound("Order Service", "POST /webhooks/courier")
-    lsd.activate("Order Service")
-    lsd.capture("Order Service" messages "Orders DB" withLabel "mark delivered")
+        )
+        activate("Warehouse")
+        "Warehouse" calls "Warehouse" label "pick and pack"
+        delay("2 hours")
+        "Warehouse" sends "Kafka order-events" label "order.shipped"
+        deactivate("Warehouse")
+        "Kafka order-events" sends "Notification Service" label "consume order.shipped"
+        activate("Notification Service")
+        "Notification Service" calls "Email" label "send 'on its way'"
+        delay("courier webhook")
+        inbound("Order Service", "POST /webhooks/courier")
+        activate("Order Service")
+        "Order Service" calls "Orders DB" label "mark delivered"
+    }
     lsd.completeScenario(
         "Async fulfilment",
         "Given an order has been paid\nWhen the warehouse ships it\nThen the customer is told it is on its way\nAnd the delivery webhook is recorded",

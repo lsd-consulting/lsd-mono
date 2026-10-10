@@ -2,9 +2,6 @@ package io.lsdconsulting.lsd.mono.cucumber.fixture
 
 import io.cucumber.java8.En
 import io.lsdconsulting.lsd.mono.core.LsdContext
-import io.lsdconsulting.lsd.mono.core.capture.messages
-import io.lsdconsulting.lsd.mono.core.capture.withData
-import io.lsdconsulting.lsd.mono.core.capture.withLabel
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 
@@ -20,13 +17,13 @@ class PlaceOrderSteps : En {
         }
 
         When("the customer places an order for socks") {
-            lsd.capture(
-                "Customer" messages "Checkout" withLabel "POST /orders" withData mapOf(
+            lsd.capture {
+                "Customer" calls "Checkout" label "POST /orders" data mapOf(
                     "method" to "POST",
                     "path" to "/orders",
                     "status" to 201,
-                ),
-            )
+                )
+            }
         }
 
         Then("the order is accepted") {

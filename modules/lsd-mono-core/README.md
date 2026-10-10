@@ -82,9 +82,9 @@ lsd.createIndex()
 
 ### Capture verbs
 
-`LsdContext` (which captures into the current scenario) and `LsdScenario` (which
-captures into itself) share the same verbs, from their `Capturer` base class. Each
-call records one event at once:
+`LsdContext` (which captures into the current scenario), `LsdScenario` (which
+captures into itself) and a capture block (below) share the same verbs, from their
+`Capturer` base class. On the context or a scenario, each call records one event at once:
 
 | Verb | Draws |
 | --- | --- |
@@ -103,6 +103,45 @@ From Java, the overloads cover the common calls (`lsd.message("A", "B", "label",
 To pass `at`, pass the defaults of the parameters before it (`MessageType.SYNCHRONOUS`, `null`).
 `message(from, to, label, MessageType.LOST)` sets the type, from Kotlin and Java alike:
 a type in the fourth position is never taken as `data`.
+
+### Capture blocks
+
+A capture block writes several events together, with arrows for the messages:
+
+```kotlin
+lsd.capture {
+    "Customer" calls "Orders" label "POST /orders" data body took 412
+    activate("Orders")
+    "Orders" sends "order-events" label "order.paid"
+    note("idempotent by orderId", on = "Orders")
+    "Orders" repliesTo "Customer" label "201 Created"
+    deactivate("Orders")
+}
+```
+
+| Arrow | Draws |
+| --- | --- |
+| `"A" calls "B"` | A synchronous call |
+| `"B" repliesTo "A"` | The reply to a call |
+| `"A" sends "B"` | An asynchronous message |
+
+Each arrow takes `label`, `data`, `took` (milliseconds), `colour` and `at`, in any order.
+The arrows exist only inside a block; every verb above works there too, including
+`message(from, to, label, MessageType.LOST)` for the other arrow types.
+
+The block picks its scenario once, when it starts, and adds its events together when it
+ends, even if it throws. So events from other threads never land between them. Message
+data is still copied when its line runs. Use the block's receiver only inside the block.
+
+`lsd { … }` is shorthand for `LsdContext.instance.capture { … }`. Inside a class with
+its own `val lsd`, write `lsd.capture { … }`. From Java, pass a lambda:
+
+```java
+lsd.capture(c -> {
+    c.calls("Customer", "Orders").label("POST /orders").data(body);
+    c.activate("Orders");
+});
+```
 
 ### Properties
 
@@ -145,7 +184,7 @@ scenario.complete("places an order")
 lsd.completeReport("OrderTest", reportKey = "com.example.OrderTest")
 ```
 
-`LsdScenario` also has `capture`, `addFact` and `bind()` (an `AutoCloseable`).
+`LsdScenario` also has the verbs, `capture { }` and `bind()` (an `AutoCloseable`).
 A capture into a scenario that has already completed is dropped
 with a warning rather than being given to the next one.
 

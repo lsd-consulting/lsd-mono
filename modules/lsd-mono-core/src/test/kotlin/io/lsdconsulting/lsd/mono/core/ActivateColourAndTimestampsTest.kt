@@ -1,8 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.lifeline
-import io.lsdconsulting.lsd.mono.core.capture.withColour
-import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
@@ -28,7 +25,7 @@ class ActivateColourAndTimestampsTest {
     @Test
     fun `activate colour is optional in JSON and omitted when absent`() {
         val lsd = LsdContext()
-        lsd.capture(LifelineAction.ACTIVATE lifeline "api" withColour "#c026d3")
+        lsd.activate("api", colour = "#c026d3")
         lsd.activate("db")
         lsd.deactivate("api")
         lsd.completeScenario("coloured activation", status = Status.SUCCESS)

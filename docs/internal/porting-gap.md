@@ -29,11 +29,11 @@ These are **implemented**, not stubs, unless noted.
 | Participants (name/id/alias/colour + types ACTOR, PARTICIPANT, DATABASE, QUEUE, ENTITY, BOUNDARY) | `modules/lsd-mono-core/.../domain/Participant.kt`; auto-register on capture in `LsdContext.bind` / `resolve` |
 | Facts | `addFact` → `FactJson` in report |
 | Messages: SYNCHRONOUS, SYNCHRONOUS_RESPONSE, ASYNCHRONOUS, LOST, BI_DIRECTIONAL, SHORT_INBOUND, SHORT_OUTBOUND (+ colour, data, durationMs) | `domain/SequenceEvent.kt` `MessageType`; JSON `MessageEventJson` — short types + distinct LOST/BI SVG **landed 2026-10-03** |
-| Note over / left / right | `Note` + `NoteSide`; verb `note(text, on, side)`, DSL `noteOver` / `noteLeft` / `noteRight` — **landed 2026-10-03** |
+| Note over / left / right | `Note` + `NoteSide`; verb `note(text, on, side)` — **landed 2026-10-03** |
 | Delay + spacer | `Delay` / `Spacer` + DSL `delay` / `spacer` — **landed 2026-10-03** |
-| Logical dividers | `Divider` / `logicalDivider` |
+| Logical dividers | `Divider`; verb `divider(label)` |
 | Lifeline activate / deactivate | `Lifeline` + DSL `LifelineAction.lifeline`. Activation bars are pinned to the opening and closing message rows (those keyword events have no row height). **Landed 2026-10-03.** |
-| Kotlin capture DSL (`"A" messages "B" withLabel …`) | `capture/CaptureDsl.kt` |
+| Kotlin capture DSL (`lsd.capture { "A" calls "B" label … }`) | `CaptureBlock.kt` (#3) |
 | Scenario / report / index / clear | `LsdContext.kt` |
 | `ReportJson` + `window.__LSD_REPORT__` injection into shell | `report/ReportWriter.renderShell`; locked by `CaptureToJsonTest` |
 | Minimal listing HTML + `*-report.json` (per report, `<title>-<hash>` names, atomic writes) | `ReportWriter.writeReport` |
@@ -77,7 +77,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | `NoteLeft` / `NoteRight` (± optional `ofParticipant`) → PlantUML `note left` / `note right`. |
-| **Shipped** | Single `Note` with `placement: over \| left \| right` and optional `over` anchor. DSL `noteOver` / `noteLeft` / `noteRight`; the verb `note(text, on, side = NoteSide.LEFT)` (#3). SVG offsets left/right of the lifeline (or diagram centre when unanchored) and adds a placement text cue (not colour-only). |
+| **Shipped** | Single `Note` with `placement: over \| left \| right` and optional `over` anchor. The verb `note(text, on, side = NoteSide.LEFT)` (#3). SVG offsets left/right of the lifeline (or diagram centre when unanchored) and adds a placement text cue (not colour-only). |
 | **Test** | `RemainingSequenceEventKindsTest`; `sequence-diagram.test.ts` (`noteLayout` / placement attrs). |
 
 #### P1 — Time delay & vertical space — **landed 2026-10-03**
@@ -93,7 +93,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | `SHORT_INBOUND` / `SHORT_OUTBOUND` as `?->` / `->?`. |
-| **Shipped** | Message types + DSL `shortInbound` / `shortOutbound`, and the verbs `inbound` / `outbound` (#3). Phantom end is an empty `from`/`to` string — **no** `?` participant. SVG stub toward the diagram edge (`shortMessageEndpoints`) with `[in]` / `[out]` text cues. |
+| **Shipped** | Message types and the verbs `inbound` / `outbound` (#3). The phantom end is null inside and an empty `from`/`to` string in the JSON — **no** `?` participant. SVG stub toward the diagram edge (`shortMessageEndpoints`) with `[in]` / `[out]` text cues. |
 | **Test** | `RemainingSequenceEventKindsTest`; `sequence-diagram.test.ts` (geometry + fragments). |
 
 #### P1 — Distinct LOST / BI_DIRECTIONAL rendering — **landed 2026-10-03**
@@ -109,7 +109,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | `Lifeline.colour` colours PlantUML `activate … #colour`. |
-| **Shipped** | Optional `colour` on activate (`LsdContext.activate(participant, colour)` and `ACTIVATE lifeline "api" withColour "#c026d3"`). Omitted from JSON when absent, so the default bar is unchanged. The SVG bar uses that colour and, when set, a hatch plus the label `coloured activation` (not colour-only). Deactivate ignores colour. |
+| **Shipped** | Optional `colour` on activate (`activate(participant, colour)`). Omitted from JSON when absent, so the default bar is unchanged. The SVG bar uses that colour and, when set, a hatch plus the label `coloured activation` (not colour-only). Deactivate ignores colour. |
 | **Test** | `ActivateColourAndTimestampsTest` (JSON). `activationBarSvg` in `sequence-diagram.test.ts`. `activationSpans` colour in `layout.test.ts`. |
 
 #### P2 — Participant types CONTROL / COLLECTIONS

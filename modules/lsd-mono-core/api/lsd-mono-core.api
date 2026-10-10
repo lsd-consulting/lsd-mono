@@ -17,7 +17,6 @@ public abstract class io/lsdconsulting/lsd/mono/core/Capturer {
 	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
 	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)V
 	public static synthetic fun async$default (Lio/lsdconsulting/lsd/mono/core/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;ILjava/lang/Object;)V
-	public final fun capture ([Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;)V
 	public final fun deactivate (Ljava/lang/String;)V
 	public final fun deactivate (Ljava/lang/String;Ljava/time/Instant;)V
 	public static synthetic fun deactivate$default (Lio/lsdconsulting/lsd/mono/core/Capturer;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)V
@@ -131,62 +130,6 @@ public final class io/lsdconsulting/lsd/mono/core/MessageSpec {
 	public final fun took (J)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
 }
 
-public final class io/lsdconsulting/lsd/mono/core/capture/CaptureDslKt {
-	public static final fun delay (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static synthetic fun delay$default (Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun lifeline (Lio/lsdconsulting/lsd/mono/core/domain/LifelineAction;Lio/lsdconsulting/lsd/mono/core/domain/Participant;)Lio/lsdconsulting/lsd/mono/core/capture/LifelineBuilder;
-	public static final fun lifeline (Lio/lsdconsulting/lsd/mono/core/domain/LifelineAction;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/LifelineBuilder;
-	public static final fun logicalDivider (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun messages (Lio/lsdconsulting/lsd/mono/core/domain/Participant;Lio/lsdconsulting/lsd/mono/core/domain/Participant;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public static final fun messages (Lio/lsdconsulting/lsd/mono/core/domain/Participant;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public static final fun messages (Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Participant;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public static final fun messages (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public static final fun noteLeft (Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Participant;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun noteLeft (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static synthetic fun noteLeft$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun noteOver (Lio/lsdconsulting/lsd/mono/core/domain/Participant;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun noteOver (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun noteRight (Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Participant;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun noteRight (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static synthetic fun noteRight$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun section (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun shortInbound (Lio/lsdconsulting/lsd/mono/core/domain/Participant;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun shortInbound (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static synthetic fun shortInbound$default (Lio/lsdconsulting/lsd/mono/core/domain/Participant;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static synthetic fun shortInbound$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun shortOutbound (Lio/lsdconsulting/lsd/mono/core/domain/Participant;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun shortOutbound (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static synthetic fun shortOutbound$default (Lio/lsdconsulting/lsd/mono/core/domain/Participant;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static synthetic fun shortOutbound$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun spacer (Ljava/lang/Integer;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static synthetic fun spacer$default (Ljava/lang/Integer;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder;
-	public static final fun withColour (Lio/lsdconsulting/lsd/mono/core/capture/LifelineBuilder;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/LifelineBuilder;
-	public static final fun withColour (Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public static final fun withData (Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;Ljava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public static final fun withDurationMs (Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;J)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public static final fun withLabel (Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public static final fun withType (Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;Lio/lsdconsulting/lsd/mono/core/domain/MessageType;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-}
-
-public final class io/lsdconsulting/lsd/mono/core/capture/LifelineBuilder : io/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder {
-	public fun <init> (Lio/lsdconsulting/lsd/mono/core/domain/LifelineAction;Ljava/lang/String;)V
-	public final fun colour (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/LifelineBuilder;
-	public final fun createdAt (Ljava/time/Instant;)Lio/lsdconsulting/lsd/mono/core/capture/LifelineBuilder;
-}
-
-public final class io/lsdconsulting/lsd/mono/core/capture/MessageBuilder : io/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder {
-	public fun <init> ()V
-	public final fun colour (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public final fun data (Ljava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public final fun durationMs (Ljava/lang/Long;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public final fun from (Lio/lsdconsulting/lsd/mono/core/domain/Participant;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public final fun from (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public final fun label (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public final fun to (Lio/lsdconsulting/lsd/mono/core/domain/Participant;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public final fun to (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-	public final fun type (Lio/lsdconsulting/lsd/mono/core/domain/MessageType;)Lio/lsdconsulting/lsd/mono/core/capture/MessageBuilder;
-}
-
 public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot {
 	public static final field Companion Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Companion;
 	public static final field TRUNCATED_KEY Ljava/lang/String;
@@ -228,17 +171,6 @@ public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits
 
 public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits$Companion {
 	public final fun fromProperties ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;
-}
-
-public abstract class io/lsdconsulting/lsd/mono/core/capture/SequenceEventBuilder {
-}
-
-public final class io/lsdconsulting/lsd/mono/core/domain/LifelineAction : java/lang/Enum {
-	public static final field ACTIVATE Lio/lsdconsulting/lsd/mono/core/domain/LifelineAction;
-	public static final field DEACTIVATE Lio/lsdconsulting/lsd/mono/core/domain/LifelineAction;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/domain/LifelineAction;
-	public static fun values ()[Lio/lsdconsulting/lsd/mono/core/domain/LifelineAction;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/domain/MessageType : java/lang/Enum {

@@ -1,6 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.SequenceEventBuilder
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
@@ -175,11 +174,6 @@ public sealed class Capturer {
     /** Capture events built elsewhere. Tests only; callers use the verbs. */
     internal fun capture(vararg events: SequenceEvent) {
         emit(events.toList())
-    }
-
-    /** Capture events from builders (`"A" messages "B" withLabel "..."`). */
-    public fun capture(vararg builders: SequenceEventBuilder) {
-        emit(builders.map { it.build() })
     }
 
     private fun emit(event: SequenceEvent) = emit(listOf(event))

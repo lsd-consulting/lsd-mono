@@ -3,8 +3,6 @@ package io.lsdconsulting.lsd.mono.core;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.lsdconsulting.lsd.mono.core.capture.CaptureDslKt;
-import io.lsdconsulting.lsd.mono.core.capture.MessageBuilder;
 import io.lsdconsulting.lsd.mono.core.domain.MessageType;
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide;
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType;
@@ -26,8 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Locks in how the API reads from Java: the verbs' overloads, statics, scenarios, builders and
- * converters. A change that breaks a call here breaks Java users, so it must be deliberate.
+ * Locks in how the API reads from Java: the verbs' overloads, capture blocks, statics, scenarios
+ * and converters. A change that breaks a call here breaks Java users, so it must be deliberate.
  */
 class JavaApiTest {
     @TempDir
@@ -79,8 +77,6 @@ class JavaApiTest {
         lsd.spacer(48);
         lsd.addFact("flag");
         lsd.addFact("orderId", "o-1");
-        lsd.capture(new MessageBuilder().from("Api").to("Customer").label("201").type(MessageType.SYNCHRONOUS_RESPONSE));
-        lsd.capture(CaptureDslKt.noteOver("Api", "builder note"), CaptureDslKt.section("Phase 3"));
         lsd.capture(c -> {
             c.calls("Api", "Db").label("select").data(Map.of("sql", "select 1")).took(3L).colour("#00f");
             c.repliesTo("Db", "Api").label("1 row");
@@ -94,8 +90,7 @@ class JavaApiTest {
             List.of(
                 "message", "message", "message", "message", "message", "message", "message", "message", "message",
                 "message", "message", "note", "note", "note", "activate", "activate", "deactivate", "deactivate", "section",
-                "divider", "delay", "delay", "spacer", "spacer", "message", "note", "section", "message", "message",
-                "message", "note"),
+                "divider", "delay", "delay", "spacer", "spacer", "message", "message", "message", "note"),
             all(json, "\"kind\": \"(\\w+)\""));
         assertEquals("late", all(json, "\"label\": \"([^\"]*)\"").get(0), "the timed message sorts first");
         assertTrue(json.contains("\"order\": \"o-1\"") || Files.readString(payloads(tempDir)).contains("o-1"), json);

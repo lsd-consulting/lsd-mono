@@ -1,15 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.delay
-import io.lsdconsulting.lsd.mono.core.capture.messages
-import io.lsdconsulting.lsd.mono.core.capture.noteLeft
-import io.lsdconsulting.lsd.mono.core.capture.noteOver
-import io.lsdconsulting.lsd.mono.core.capture.noteRight
-import io.lsdconsulting.lsd.mono.core.capture.shortInbound
-import io.lsdconsulting.lsd.mono.core.capture.shortOutbound
-import io.lsdconsulting.lsd.mono.core.capture.spacer
-import io.lsdconsulting.lsd.mono.core.capture.withLabel
-import io.lsdconsulting.lsd.mono.core.capture.withType
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
@@ -46,21 +36,21 @@ class RemainingSequenceEventKindsTest {
             PARTICIPANT.called("Api", id = "api"),
             PARTICIPANT.called("Db", id = "db"),
         )
-        lsd.capture(noteOver("api", "over card"))
-        lsd.capture(noteLeft("left of api", of = "api"))
-        lsd.capture(noteRight("right edge"))
+        lsd.capture { note("over card", on = "api") }
+        lsd.capture { note("left of api", on = "api", side = NoteSide.LEFT) }
+        lsd.capture { note("right edge", side = NoteSide.RIGHT) }
         lsd.note("ctx left", "api", side = NoteSide.LEFT)
         lsd.note("ctx right", "db", side = NoteSide.RIGHT)
-        lsd.capture(delay("retry window"))
+        lsd.capture { delay("retry window") }
         lsd.delay()
-        lsd.capture(spacer(48))
+        lsd.capture { spacer(48) }
         lsd.spacer()
-        lsd.capture(shortInbound("api", "found"))
-        lsd.capture(shortOutbound("api", "emit"))
+        lsd.capture { inbound("api", "found") }
+        lsd.capture { outbound("api", "emit") }
         lsd.inbound("db", "wake")
         lsd.outbound("db", "ack")
-        lsd.capture("api" messages "db" withLabel "drop" withType MessageType.LOST)
-        lsd.capture("api" messages "db" withLabel "pair" withType MessageType.BI_DIRECTIONAL)
+        lsd.capture { message("api", "db", "drop", MessageType.LOST) }
+        lsd.capture { message("api", "db", "pair", MessageType.BI_DIRECTIONAL) }
         lsd.completeScenario("event kinds", "P1 remaining", Status.SUCCESS)
         lsd.completeReport("Event kinds")
 

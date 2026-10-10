@@ -1,14 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.lifeline
-import io.lsdconsulting.lsd.mono.core.capture.messages
-import io.lsdconsulting.lsd.mono.core.capture.noteOver
-import io.lsdconsulting.lsd.mono.core.capture.withData
-import io.lsdconsulting.lsd.mono.core.capture.withDurationMs
-import io.lsdconsulting.lsd.mono.core.capture.withLabel
-import io.lsdconsulting.lsd.mono.core.capture.withType
-import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
-import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
@@ -41,17 +32,15 @@ class CaptureToJsonTest {
             DATABASE.called("Orders DB"),
         )
         lsd.addFact("orderId", "ord-1")
-        lsd.capture(LifelineAction.ACTIVATE lifeline "api")
-        lsd.capture(
-            "Customer" messages "Checkout API" withLabel "POST /checkout" withData mapOf("cartId" to "cart-1"),
-        )
-        lsd.capture(
-            "api" messages "Orders DB" withLabel "INSERT orders" withType MessageType.SYNCHRONOUS withDurationMs (12),
-        )
+        lsd.activate("api")
+        lsd.capture {
+            "Customer" calls "Checkout API" label "POST /checkout" data mapOf("cartId" to "cart-1")
+            "api" calls "Orders DB" label "INSERT orders" took 12
+        }
         lsd.response("Orders DB", "Checkout API", "ok")
         lsd.async("Checkout API", "Customer", "201 Created", mapOf("orderId" to "ord-1"))
         lsd.divider("done")
-        lsd.capture(noteOver("Orders DB", "email queued"))
+        lsd.capture { note("email queued", on = "Orders DB") }
         lsd.deactivate("api")
         lsd.completeScenario("checkout happy path", "<p>ok</p>", Status.SUCCESS)
 

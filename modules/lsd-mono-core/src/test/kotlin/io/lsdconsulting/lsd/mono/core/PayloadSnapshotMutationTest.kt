@@ -1,8 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.messages
-import io.lsdconsulting.lsd.mono.core.capture.withData
-import io.lsdconsulting.lsd.mono.core.capture.withLabel
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -38,8 +35,10 @@ class PayloadSnapshotMutationTest {
         val bytes = "original".toByteArray()
 
         lsd.message("Client", "Api", "POST /orders", data = body)
-        lsd.capture("Api" messages "Db" withLabel "INSERT" withData text)
-        lsd.capture("Api" messages "Queue" withLabel "publish" withData bytes)
+        lsd.capture {
+            "Api" calls "Db" label "INSERT" data text
+            "Api" calls "Queue" label "publish" data bytes
+        }
 
         body["status"] = 500
         headers["x-request-id"] = "req-2"

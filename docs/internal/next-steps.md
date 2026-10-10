@@ -6,7 +6,7 @@
 
 ## 1. README examples and usage instructions — done
 
-The root `README.md` is example-led for the current Mono API: depend on `lsd-mono-core`, `lsd-mono-junit-jupiter`, and `lsd-mono-cucumber-8`, capture with `LsdContext` and the Kotlin DSL (`"A" messages "B"`), set participant types, `completeReport`, and open `*-diagram.html`. `LsdExtension` is the JUnit Jupiter 6 path. `LsdCucumberPlugin` is the Cucumber 8 path. The root README opens with `docs/readme/feature-tour.gif`, and the core README uses `docs/readme/components.gif`.
+The root `README.md` is example-led for the current Mono API: depend on `lsd-mono-core`, `lsd-mono-junit-jupiter`, and `lsd-mono-cucumber-8`, capture with `LsdContext` and a capture block (`lsd.capture { "A" calls "B" label "…" }`), set participant types, `completeReport`, and open `*-diagram.html`. `LsdExtension` is the JUnit Jupiter 6 path. `LsdCucumberPlugin` is the Cucumber 8 path. The root README opens with `docs/readme/feature-tour.gif`, and the core README uses `docs/readme/components.gif`.
 
 `:modules:lsd-mono-core:readmeSamples` regenerates them. It runs `captureReadmeReport` (the README scenario through `LsdContext`) and `captureFeatureTourReport` (the trimmed shop in `FeatureTourSample.kt`), then headless Chromium against those shells, using Node 22 via nvm the same way as the other npm tasks. It is not on `build` or `check`. The module READMEs keep their own `diagram.png`, `inspector.png`, and `zoom.gif` from their own `readmeSamples` tasks.
 

@@ -1,6 +1,6 @@
 # lsd-mono public API proposal (#3)
 
-Status: approved. Slices 1 to 3 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
+Status: approved. Slices 1 to 4 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
@@ -431,11 +431,43 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 - **Kept public until slice 4:** `LifelineAction`, which `LifelineBuilder` and the infix `lifeline` still need. `NotePlacement` became the public `NoteSide` because the `note` verb takes it. The report UI's TypeScript keeps its own `NotePlacement` name.
 - `Participant.alias` is now `displayName`, also on `ParticipantType.called`. The JSON field is still `alias`.
 - **Not done:**
-  - `Status.WARN` (optional) is left for a decision.
+  - `Status.WARN` (optional) was left for a decision; slice 4 did it.
   - No slice 3 function takes a lambda, so the `Consumer` overloads come with `capture {}` in slice 4; the pattern is the one checked above.
   - `wrap(Callable)` from §2 is still not added.
 - `JavaApiTest` (core, `src/test/java`) calls every verb and its shorter overloads from Java, as well as the builders, `CaptureDslKt`, `payloads.register`, `beginScenario` with try-with-resources `bind()`, `ScenarioError.of` and `LsdContext.getInstance()`. It asserts the captured event kinds, their order and `createdAt`.
 - Cucumber uses `scenario.section(...)`.
+
+### Slice 4 as built
+
+- `CaptureBlock` is the third `Capturer`. It lives in `core`, not `core.capture`, because a sealed class's subclasses must share its package.
+- **Arrows:**
+  - `calls`, `repliesTo` and `sends` are member extensions on `String`, so they only resolve inside a block.
+  - **Deviation from §4:** `label`, `data`, `took`, `colour` and `at` are member infix functions of `MessageSpec`, not extensions declared on the block. Kotlin reads the same, and Java can chain them: `c.calls("A", "B").label("x").data(body)`.
+  - There are no `Participant` overloads (the old `messages` had them); pass the name or id.
+  - `LOST` and `BI_DIRECTIONAL` have no arrow; inside or outside a block, use `message(from, to, label, MessageType.LOST)`.
+- **One scenario, one append:**
+  - `LsdContext.capture { }` resolves its target once, at the start.
+  - The block collects its events, then binds and appends them with one `addAll` under the scenario's lock when it ends. It does this even when the block throws, so a failing test still shows what happened up to the failure.
+  - Facts are added at once.
+  - After the block, its receiver throws `IllegalStateException`.
+  - A late block logs one warning for the batch.
+- **#27 still holds inside a block:** message data is copied when its line runs (the `data` infix or a verb), not when the block ends.
+- **Consumer overloads:** `LsdContext.capture`, `LsdScenario.capture` and the top-level `lsd` each have a `@JvmSynthetic` Kotlin form and a `Consumer<CaptureBlock>` form. `@file:JvmName("Lsd")` gives Java `Lsd.lsd(c -> …)`.
+- **The `@LsdDsl` marker** is internal and only on `CaptureBlock`. With one DSL receiver it changes little yet; it matters when the `scenario {}` and `report {}` receivers arrive in slice 6.
+- **Removed:**
+  - `MessageBuilder`, `LifelineBuilder` and `SequenceEventBuilder`.
+  - `CaptureDslKt`: `messages`, the `with*` infixes, `lifeline`, `noteOver`/`noteLeft`/`noteRight`, `logicalDivider`, `section`, `delay`, `spacer`, `shortInbound`/`shortOutbound`.
+  - `Capturer.capture(vararg SequenceEventBuilder)`.
+- `LifelineAction` is now internal.
+- **`Status.FAILURE` is now `WARN`** (approved). Only the Kotlin name changed: the JSON was already `"warn"`, so the UI and the golden files are unchanged. JUnit's disabled and aborted tests, and Cucumber's non-passed, non-failed results, map to it, as before.
+- **The positional trap from slice 3 is closed:**
+  - `message(from, to, label, type: MessageType)` is an overload with no defaults. Kotlin and Java both pick it over `data: Any?` because it is more specific, so `message(a, b, label, MessageType.LOST)` sets the type.
+  - The old five-argument order (`type` then `data`) no longer compiles.
+  - Calls with fewer arguments can only match the full form, so they are not ambiguous.
+- **Samples:**
+  - The README examples and the sample programs capture in blocks. Helpers became `CaptureBlock` extensions.
+  - The kitchen sink's out-of-order scenario keeps the direct verbs with `at`, because it imitates interceptors on other threads.
+  - The sample reports are byte-identical.
 
 ### Risks
 

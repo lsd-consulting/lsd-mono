@@ -1,7 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot
-import io.lsdconsulting.lsd.mono.core.capture.SequenceEventBuilder
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline

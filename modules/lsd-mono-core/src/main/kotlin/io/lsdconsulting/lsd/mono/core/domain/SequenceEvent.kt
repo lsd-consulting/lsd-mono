@@ -96,7 +96,7 @@ internal data class Spacer(
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
-public enum class LifelineAction { ACTIVATE, DEACTIVATE }
+internal enum class LifelineAction { ACTIVATE, DEACTIVATE }
 
 internal data class Lifeline(
     override val id: String,

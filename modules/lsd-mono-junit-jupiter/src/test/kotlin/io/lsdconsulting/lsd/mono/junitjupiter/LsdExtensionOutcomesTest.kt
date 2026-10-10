@@ -1,8 +1,6 @@
 package io.lsdconsulting.lsd.mono.junitjupiter
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
-import io.lsdconsulting.lsd.mono.core.capture.messages
-import io.lsdconsulting.lsd.mono.core.capture.withLabel
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -155,7 +153,7 @@ class LsdOutcomeFixtures {
     @Test
     @Order(1)
     fun `records a passing scenario`() {
-        lsd.capture("Test" messages "LsdMono" withLabel "ping")
+        lsd.capture { "Test" calls "LsdMono" label "ping" }
     }
 
     @Test
@@ -175,7 +173,7 @@ class LsdOutcomeFixtures {
 
     @LsdPostTestProcessing
     private fun captureAfterBody() {
-        lsd.capture("Test" messages "LsdMono" withLabel "post-processing")
+        lsd.capture { "Test" calls "LsdMono" label "post-processing" }
     }
 
     @Tag("lsd-fixture")
@@ -193,7 +191,7 @@ class LsdOutcomeFixtures {
 class LsdPostProcessingThrowsFixture {
     @Test
     fun `passes until post-processing`() {
-        LsdContext.instance.capture("Test" messages "LsdMono" withLabel "ping")
+        LsdContext.instance.capture { "Test" calls "LsdMono" label "ping" }
     }
 
     @LsdPostTestProcessing
