@@ -1,7 +1,7 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.PayloadSnapshotTest.Companion.assertValidJson
-import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot
+import io.lsdconsulting.lsd.mono.core.PayloadConvertersTest.Companion.assertValidJson
+import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -95,7 +95,7 @@ class PayloadCaptureTest {
 
         System.clearProperty(LsdProperties.PAYLOAD_MAX_STRING_LENGTH)
         lsd.clear()
-        assertEquals(PayloadSnapshot.Limits(), lsd.payloads.limits)
+        assertEquals(PayloadConverters.Limits(), lsd.payloads.limits)
         assertEquals("builder:xy", lsd.payloads.snapshot(StringBuilder("xy")))
     }
 

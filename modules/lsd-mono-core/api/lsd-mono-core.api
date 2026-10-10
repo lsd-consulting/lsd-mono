@@ -102,7 +102,7 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public final fun currentScenario ()Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public final fun findScenario (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public static final fun getInstance ()Lio/lsdconsulting/lsd/mono/core/LsdContext;
-	public final fun getPayloads ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot;
+	public final fun getPayloads ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadConverters;
 	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Ljava/nio/file/Path;
 	public final synthetic fun report (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/nio/file/Path;
 	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
@@ -180,47 +180,9 @@ public final class io/lsdconsulting/lsd/mono/core/PendingCall {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot {
-	public static final field Companion Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Companion;
-	public static final field TRUNCATED_KEY Ljava/lang/String;
-	public fun <init> ()V
-	public fun <init> (Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;)V
-	public synthetic fun <init> (Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun clearConverters ()V
-	public static final fun getDefault ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot;
-	public final fun getLimits ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;
-	public final fun register (Ljava/lang/Class;Ljava/util/function/Function;)Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot;
-	public final fun setLimits (Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;)V
-	public final fun snapshot (Ljava/lang/Object;)Ljava/lang/Object;
-}
-
-public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Companion {
-	public final fun getDefault ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot;
-}
-
-public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits {
-	public static final field Companion Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits$Companion;
-	public fun <init> ()V
-	public fun <init> (IIII)V
-	public synthetic fun <init> (IIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()I
-	public final fun component2 ()I
-	public final fun component3 ()I
-	public final fun component4 ()I
-	public final fun copy (IIII)Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;IIIIILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;
-	public fun equals (Ljava/lang/Object;)Z
-	public static final fun fromProperties ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;
-	public final fun getMaxDepth ()I
-	public final fun getMaxItems ()I
-	public final fun getMaxStringLength ()I
-	public final fun getMaxTotalSize ()I
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits$Companion {
-	public final fun fromProperties ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits;
+public final class io/lsdconsulting/lsd/mono/core/capture/PayloadConverters {
+	public final fun clear ()V
+	public final fun register (Ljava/lang/Class;Ljava/util/function/Function;)Lio/lsdconsulting/lsd/mono/core/capture/PayloadConverters;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/domain/MessageType : java/lang/Enum {

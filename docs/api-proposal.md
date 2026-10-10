@@ -1,6 +1,6 @@
 # lsd-mono public API proposal (#3)
 
-Status: approved. Slices 1 to 6 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
+Status: approved. Slices 1 to 7 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
@@ -520,6 +520,20 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
   - JUnit's default method display name includes parameter types (`test1(LsdScenario)`). Scenario titles now use the method name when the display name is that default, so injecting does not change a title. Existing titles are unchanged.
 - **`@LsdPostTestProcessing` is removed**, as §3 recommends. `@AfterEach` runs after the body and before the scenario is completed, so it covers the same use; nothing in the samples used the annotation for capture. Its tests now cover `@AfterEach` (capture lands, not on disabled tests; a throwing one fails the test with its own exception).
 - **Samples:** none were migrated to `report { }`/`scenario { }`. The reports stay byte-identical.
+
+### Slice 7 as built
+
+- `PayloadSnapshot` is renamed `PayloadConverters`. It stays in the `io.lsdconsulting.lsd.mono.core.capture` package, and `lsd.payloads` is now typed `PayloadConverters`. Its public surface is now:
+  - `register(Class<T>, Function<in T, out Any?>)`, returning `PayloadConverters` for chaining;
+  - a Kotlin-only reified `register<T> { … }` (`@JvmSynthetic` and inline, so it isn't in the JVM dump);
+  - `clear()`. **Deviation:** this replaces `clearConverters()`, as §2 says, because it is the class's only `clear`.
+- These are now internal:
+  - the constructor;
+  - `limits`, `Limits` and `Limits.fromProperties()`. Limits are set only by the `lsd.mono.payload.*` properties and re-read by `LsdContext.clear()`, as before;
+  - `snapshot()`;
+  - the companion's `default` and `TRUNCATED_KEY`. **Deviation:** §2 didn't list these two. Nothing outside the module used them, and the `[lsd: truncated]` key is documented as text in the README.
+- The tests were renamed to match (`PayloadConvertersTest`, `PayloadConvertersMutationTest`), and there is a new test for the reified `register`.
+- Behaviour and the sample reports are unchanged.
 
 ### Risks
 

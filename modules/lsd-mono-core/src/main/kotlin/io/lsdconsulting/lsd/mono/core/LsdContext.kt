@@ -1,6 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot
+import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
@@ -85,10 +85,10 @@ public class LsdContext : Capturer() {
         private set
 
     /**
-     * Copies message data when it is captured (see [PayloadSnapshot]). Register
+     * Copies message data when it is captured (see [PayloadConverters]). Register
      * converters here; limits come from `lsd.mono.payload.*` and are re-read by [clear].
      */
-    public val payloads: PayloadSnapshot = PayloadSnapshot()
+    public val payloads: PayloadConverters = PayloadConverters()
 
     /** Re-read on each access so tests can point a long-lived instance at a TempDir. */
     internal val outputDirectory: File
@@ -339,7 +339,7 @@ public class LsdContext : Capturer() {
     public fun clear() {
         synchronized(lock) {
             idGenerator = IdGenerator(LsdProperties.deterministicIds())
-            payloads.limits = PayloadSnapshot.Limits.fromProperties()
+            payloads.limits = PayloadConverters.Limits.fromProperties()
             completed.clear()
             reportFiles.clear()
             participants.clear()

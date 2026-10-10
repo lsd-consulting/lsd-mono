@@ -320,10 +320,15 @@ To copy a type differently (a JSON tree, say), register a converter. Its result
 is copied in turn:
 
 ```kotlin
-lsd.payloads.register(JsonNode::class.java) { mapper.convertValue(it, Map::class.java) }
+lsd.payloads.register<JsonNode> { mapper.convertValue(it, Map::class.java) }
 ```
 
-`lsd.clear()` re-reads the limits and keeps the converters.
+```java
+lsd.getPayloads().register(JsonNode.class, node -> mapper.convertValue(node, Map.class));
+```
+
+Later registrations win; `lsd.payloads.clear()` removes them all. The limits are set
+only by the properties above; `lsd.clear()` re-reads them and keeps the converters.
 
 ### Escaping
 

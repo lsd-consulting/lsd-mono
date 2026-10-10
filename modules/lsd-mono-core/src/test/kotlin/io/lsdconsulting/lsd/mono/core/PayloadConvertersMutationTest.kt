@@ -11,7 +11,7 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
 
 /** Message data is copied when it is captured, so later changes by the test do not reach the report (#27). */
-class PayloadSnapshotMutationTest {
+class PayloadConvertersMutationTest {
     @TempDir
     lateinit var tempDir: Path
 

@@ -1,7 +1,7 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot
-import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot.Limits
+import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters
+import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters.Limits
 import io.lsdconsulting.lsd.mono.core.json.anyToJson
 import io.lsdconsulting.lsd.mono.core.json.render
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,11 +21,11 @@ import java.util.OptionalInt
 import java.util.UUID
 
 /** The awkward cases of message data (#27). Every result must also render as valid JSON. */
-class PayloadSnapshotTest {
-    private val snapshot = PayloadSnapshot(Limits())
+class PayloadConvertersTest {
+    private val snapshot = PayloadConverters(Limits())
 
     private fun snap(value: Any?, limits: Limits = Limits()): Any? =
-        PayloadSnapshot(limits).snapshot(value).also { assertValidJson(anyToJson(it).render()) }
+        PayloadConverters(limits).snapshot(value).also { assertValidJson(anyToJson(it).render()) }
 
     private fun json(value: Any?): String = anyToJson(snapshot.snapshot(value)).render().also(::assertValidJson)
 
@@ -92,7 +92,7 @@ class PayloadSnapshotTest {
         assertEquals(listOf(0L, 1L, 2L, "[lsd: 7 more items]"), snap(IntArray(10) { it }, limits))
         assertEquals(listOf(0L, 1L, 2L, "[lsd: more items not read]"), snap(generateSequence(0) { it + 1 }.asIterable(), limits))
         assertEquals(
-            mapOf("k0" to 0L, "k1" to 1L, "k2" to 2L, PayloadSnapshot.TRUNCATED_KEY to "7 more entries"),
+            mapOf("k0" to 0L, "k1" to 1L, "k2" to 2L, PayloadConverters.TRUNCATED_KEY to "7 more entries"),
             snap((0 until 10).associate { "k$it" to it }, limits),
         )
 
@@ -101,7 +101,7 @@ class PayloadSnapshotTest {
         assertEquals("[lsd: payload larger than 1000 characters, rest dropped]", total.last())
         assertEquals(1, total.count { it.toString().startsWith("[lsd:") })
         val totalMap = snap((0 until 50).associate { "k$it" to "x".repeat(100) }, Limits(maxTotalSize = 1_000)) as Map<*, *>
-        assertEquals("payload larger than 1000 characters, rest dropped", totalMap[PayloadSnapshot.TRUNCATED_KEY])
+        assertEquals("payload larger than 1000 characters, rest dropped", totalMap[PayloadConverters.TRUNCATED_KEY])
 
         val huge = "y".repeat(5_000_000)
         val rendered = json(huge)
@@ -188,7 +188,7 @@ class PayloadSnapshotTest {
             mapOf("ok" to 1L, "bad" to "[lsd: ${badList.javaClass.name} could not be read: java.lang.UnsupportedOperationException: no items]"),
             snap(mapOf("ok" to 1, "bad" to badList)),
         )
-        val throwing = PayloadSnapshot(Limits()).register(Address::class.java) { throw IllegalArgumentException("nope") }
+        val throwing = PayloadConverters(Limits()).register(Address::class.java) { throw IllegalArgumentException("nope") }
         assertEquals(
             mapOf("a" to "[lsd: ${Address::class.java.name} could not be read: java.lang.IllegalArgumentException: nope]"),
             throwing.snapshot(mapOf("a" to Address("s", null))),
@@ -197,14 +197,21 @@ class PayloadSnapshotTest {
 
     @Test
     fun `registered converters run first, later registrations win and results are snapshotted`() {
-        val payloads = PayloadSnapshot(Limits())
+        val payloads = PayloadConverters(Limits())
             .register(Address::class.java) { "first" }
             .register(Address::class.java) { address -> mutableMapOf("line" to address.street, "at" to Instant.EPOCH) }
             .register(Colour::class.java) { it } // returns itself: no loop
         assertEquals(mapOf("line" to "High St", "at" to "1970-01-01T00:00:00Z"), payloads.snapshot(Address("High St", null)))
         assertEquals("RED", payloads.snapshot(Colour.RED))
-        payloads.clearConverters()
+        payloads.clear()
         assertEquals(mapOf("street" to "High St", "postcode" to null), payloads.snapshot(Address("High St", null)))
+    }
+
+    @Test
+    fun `the reified register picks the type from its type argument`() {
+        val payloads = PayloadConverters(Limits()).register<Address> { mapOf("line" to it.street) }
+        assertEquals(mapOf("line" to "High St"), payloads.snapshot(Address("High St", null)))
+        assertEquals("RED", payloads.snapshot(Colour.RED))
     }
 
     @Test

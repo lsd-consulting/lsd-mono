@@ -25,7 +25,20 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Function
 
 /**
- * Copies message data into an immutable, JSON-shaped value when it is captured, so
+ * The converters for message data, reached as `lsd.payloads`. Register one for a type
+ * that should not be copied field by field, for example a JSON tree:
+ *
+ * ```kotlin
+ * lsd.payloads.register<JsonNode> { mapper.convertValue(it, Map::class.java) }
+ * ```
+ * ```java
+ * lsd.getPayloads().register(JsonNode.class, node -> mapper.convertValue(node, Map.class));
+ * ```
+ *
+ * A converter's result is copied in turn. A converter that throws gives a marker.
+ * Later registrations win. Thread-safe.
+ *
+ * Message data is copied into an immutable, JSON-shaped value when it is captured, so
  * later changes by the test (a reused body, a builder, a pooled buffer) cannot change
  * the report.
  *
@@ -43,15 +56,12 @@ import java.util.function.Function
  * - Anything else becomes its `toString()`.
  *
  * It never throws. Cycles, too-deep nesting, oversized strings, collections or totals,
- * and failing `toString()`s or getters become `[lsd: ...]` marker strings. See [Limits].
- *
- * Register a converter for types it should treat differently, for example a JSON tree:
- * `lsd.payloads.register(JsonNode::class.java) { mapper.convertValue(it, Map::class.java) }`
- * (Java: `lsd.getPayloads().register(JsonNode.class, node -> mapper.convertValue(node, Map.class))`).
- * A converter's result is snapshotted in turn. A converter that throws gives a marker. Thread-safe.
+ * and failing `toString()`s or getters become `[lsd: ...]` marker strings. The limits
+ * come from the `lsd.mono.payload.*` properties (see [LsdProperties]), re-read by
+ * `LsdContext.clear()`.
  */
-public class PayloadSnapshot @JvmOverloads constructor(
-    @Volatile public var limits: Limits = Limits.fromProperties(),
+public class PayloadConverters internal constructor(
+    @Volatile internal var limits: Limits = Limits.fromProperties(),
 ) {
     /**
      * @property maxDepth nesting depth before `[lsd: max depth N reached]`.
@@ -59,16 +69,15 @@ public class PayloadSnapshot @JvmOverloads constructor(
      * @property maxItems entries kept from one collection, map, array or object.
      * @property maxTotalSize rough size budget for one payload, in characters.
      */
-    public data class Limits(
+    internal data class Limits(
         val maxDepth: Int = LsdKey.PAYLOAD_MAX_DEPTH.defaultInt(),
         val maxStringLength: Int = LsdKey.PAYLOAD_MAX_STRING_LENGTH.defaultInt(),
         val maxItems: Int = LsdKey.PAYLOAD_MAX_ITEMS.defaultInt(),
         val maxTotalSize: Int = LsdKey.PAYLOAD_MAX_TOTAL_SIZE.defaultInt(),
     ) {
-        public companion object {
+        companion object {
             /** The limits set by the `lsd.mono.payload.*` properties (see [LsdProperties]). */
-            @JvmStatic
-            public fun fromProperties(): Limits =
+            fun fromProperties(): Limits =
                 Limits(
                     maxDepth = LsdProperties.payloadLimit(LsdKey.PAYLOAD_MAX_DEPTH),
                     maxStringLength = LsdProperties.payloadLimit(LsdKey.PAYLOAD_MAX_STRING_LENGTH),
@@ -86,14 +95,19 @@ public class PayloadSnapshot @JvmOverloads constructor(
      * Convert values of [type] (and subtypes) with [converter] first. Later registrations
      * win. The result is snapshotted in turn, without applying a converter to it again.
      */
-    public fun <T : Any> register(type: Class<T>, converter: Function<in T, out Any?>): PayloadSnapshot =
+    public fun <T : Any> register(type: Class<T>, converter: Function<in T, out Any?>): PayloadConverters =
         apply { converters.add(0, Converter(type, converter)) }
 
+    /** Kotlin form of [register]: `lsd.payloads.register<JsonNode> { mapper.convertValue(it, Map::class.java) }`. */
+    @JvmSynthetic
+    public inline fun <reified T : Any> register(noinline converter: (T) -> Any?): PayloadConverters =
+        register(T::class.java, Function(converter))
+
     /** Remove every registered converter. */
-    public fun clearConverters(): Unit = converters.clear()
+    public fun clear(): Unit = converters.clear()
 
     /** An immutable, JSON-shaped copy of [value]. Never throws. */
-    public fun snapshot(value: Any?): Any? =
+    internal fun snapshot(value: Any?): Any? =
         try {
             Walk(limits).copy(value, 0)
         } catch (e: StackOverflowError) {
@@ -306,13 +320,12 @@ public class PayloadSnapshot @JvmOverloads constructor(
         override fun toString() = delegate.toString()
     }
 
-    public companion object {
+    internal companion object {
         /** Key added to a map or object whose remaining entries were dropped. */
-        public const val TRUNCATED_KEY: String = "[lsd: truncated]"
+        const val TRUNCATED_KEY: String = "[lsd: truncated]"
 
         /** Default limits and no converters. Used for data that was never captured. */
-        @JvmStatic
-        public val default: PayloadSnapshot = PayloadSnapshot(Limits())
+        val default: PayloadConverters = PayloadConverters(Limits())
 
         private val opaquePackages = listOf("java.", "javax.", "jdk.", "sun.", "com.sun.", "kotlin.", "kotlinx.", "scala.", "groovy.")
 

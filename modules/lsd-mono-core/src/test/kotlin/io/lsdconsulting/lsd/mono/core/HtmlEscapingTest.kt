@@ -1,6 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.PayloadSnapshotTest.Companion.assertValidJson
+import io.lsdconsulting.lsd.mono.core.PayloadConvertersTest.Companion.assertValidJson
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.html.Html

@@ -1,6 +1,6 @@
 package io.lsdconsulting.lsd.mono.core.json
 
-import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot
+import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -106,17 +106,17 @@ private fun isPairedSurrogate(value: String, i: Int): Boolean {
 }
 
 /**
- * Any value as JSON. Captured data is already a [PayloadSnapshot] (or an immutable
+ * Any value as JSON. Captured data is already a copy made by [PayloadConverters] (or an immutable
  * scalar) and is used as is, so its truncation markers are kept; anything else is
  * snapshotted with the default limits first, so this never throws and never recurses forever.
  */
 internal fun anyToJson(value: Any?): JsonValue =
     when (value) {
         null, is String, is Boolean, is Long, is BigInteger, is BigDecimal -> snapshotToJson(value)
-        else -> snapshotToJson(PayloadSnapshot.default.snapshot(value))
+        else -> snapshotToJson(PayloadConverters.default.snapshot(value))
     }
 
-/** Converts the JSON-shaped values a [PayloadSnapshot] produces. */
+/** Converts the JSON-shaped values [PayloadConverters] copies data into. */
 private fun snapshotToJson(value: Any?): JsonValue =
     when (value) {
         null -> JsonNull
