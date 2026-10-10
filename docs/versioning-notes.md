@@ -4,21 +4,21 @@ Not a release. No tag, no publish, and no version bump in this note.
 
 ## How it is versioned today
 
-Group is `io.lsdconsulting`. The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), and cucumber-integration (`lsd-mono-cucumber-8`).
+Group is `io.lsdconsulting`. The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), and coroutines-integration (`lsd-mono-coroutines`).
 
 The train version is `0.0.1-SNAPSHOT`, set once on the root project. Each module inherits it. A module leaves the train only through a line in `gradle/version-overrides.properties`: `patch`, or `solo-major` with the train major it is allowed to diverge from. There is no such line today. The build fails if a module version differs from the train and no override is recorded.
 
 Nothing is published. There is no tag. `.github/workflows/gradle.yml` only runs `./gradlew build` on push to `main` and on pull requests.
 
-`gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`). It is not the version of these libraries. There is no release plugin.
+`gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`, kotlinx.coroutines `1.11.0`). It is not the version of these libraries. There is no release plugin.
 
-Renovate is the root `renovate.json`. It reads that shared catalog. JUnit and Cucumber updates are separate pull requests, each capped at the current major. A future Cucumber 9 module would be another catalog line plus another rule.
+Renovate is the root `renovate.json`. It reads that shared catalog. JUnit and Cucumber updates are separate pull requests, each capped at the current major, and kotlinx.coroutines is capped at major 1. A future Cucumber 9 module would be another catalog line plus another rule.
 
-junit-integration and cucumber-integration depend on core as a project. A consumer takes core plus one integration. Cucumber 8 is pinned to major 8: the catalog holds the exact version and the build fails if anything resolves to another major.
+junit-integration, cucumber-integration and coroutines-integration depend on core as a project. A consumer takes core plus the integrations it needs. Cucumber 8 is pinned to major 8, and coroutines-integration to kotlinx.coroutines major 1: the catalog holds the exact version and the build fails if anything resolves to another major.
 
 ## The train
 
-One shared version across core, junit-integration, and cucumber-integration is the compatibility promise. Matching numbers mean those artifacts were released together and are meant to be used together.
+One shared version across core, junit-integration, cucumber-integration, and coroutines-integration is the compatibility promise. Matching numbers mean those artifacts were released together and are meant to be used together.
 
 Stay on `0.0.1-SNAPSHOT` until a real release. [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): while the version is `0.y.z`, the API is not stable. A released version is immutable. Maven Central will not take a version that ends in `-SNAPSHOT`.
 
@@ -28,11 +28,11 @@ A Renovate bump that moves one artifact's transitive dependencies releases that 
 
 cucumber-integration `1.2.0` to `1.2.1` because Cucumber's patch moved. core and junit-integration stay at `1.2.0`.
 
-### Core major, all three
+### Core major, all four
 
-A core major puts all three on that major, in one train, even when an integration had no code change.
+A core major puts all four on that major, in one train, even when an integration had no code change.
 
-core `1.4.2` to `2.0.0` also publishes junit-integration `2.0.0` and cucumber-integration `2.0.0`.
+core `1.4.2` to `2.0.0` also publishes junit-integration `2.0.0`, cucumber-integration `2.0.0` and coroutines-integration `2.0.0`.
 
 ### Solo major, then the train wins
 

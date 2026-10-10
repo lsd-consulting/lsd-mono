@@ -357,13 +357,13 @@ val path = LsdContext().report("Online shop") {
 | `report { }` | Generates a unique `reportKey`, so parallel `report {}` blocks never mix scenarios. `scenario` inside `report` inherits that key. |
 | `PendingCall` | Holds its scenario, so `reply` from any thread lands correctly. Only the first `reply` or `fail` counts. A reply after the scenario completed is dropped with the existing "late capture" warning. |
 | Executors | `wrap(Runnable)` / `wrap(Callable)`, as today. |
-| Coroutines | A `ThreadLocal` binding is lost when a coroutine suspends. Later, an optional `lsd-mono-coroutines` module could add `scenario.asContextElement()` (a `ThreadContextElement`). Until then, capture through the `LsdScenario` reference, which doesn't depend on the thread. |
+| Coroutines | A `ThreadLocal` binding is lost when a coroutine suspends and resumes on another thread. The optional `lsd-mono-coroutines` module (#38) adds `scenario.asContextElement()` (a `ThreadContextElement`) and `withLsdScenario(scenario) { }`. Without it, capture through the `LsdScenario` reference, which doesn't depend on the thread. |
 
 ---
 
 ## 5. Explicit API + ABI validation
 
-In `build-logic/src/main/kotlin/lsd.kotlin-jvm.gradle.kts` (all three modules):
+In `build-logic/src/main/kotlin/lsd.kotlin-jvm.gradle.kts` (every module):
 
 ```kotlin
 kotlin {
@@ -572,7 +572,7 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 
 **Left for later:**
 - A Java `null` for `Status` or `NoteSide` still throws a NullPointerException. These have no overload ambiguity, so passing `null` is a caller error rather than a trap; they were not in the review.
-- The coroutines module (§4) is out of scope for #3 and proposed as a separate issue.
+- The coroutines module (§4) was out of scope for #3. It is built as `lsd-mono-coroutines` under #38.
 
 ### Risks
 
@@ -582,7 +582,7 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 | The experimental ABI DSL changes on a Kotlin bump | It's isolated in one convention plugin; Renovate runs CI on Kotlin bumps. |
 | Hiding the event classes removes a lower-level extension point that a future interceptors library might want | The verbs cover every event kind. If a batch API is needed, `capture {}` is it. Re-check when the first real interceptor module is written. |
 | `capture {}` appends at block end, so a long block and another thread's captures can interleave around it | Keep blocks short; long-running code belongs in `scenario {}` with direct verbs. Document it. |
-| Thread binding doesn't survive coroutines or reactive hops | `PendingCall` and explicit `LsdScenario` references; later the optional coroutines module. |
+| Thread binding doesn't survive coroutines or reactive hops | `PendingCall` and explicit `LsdScenario` references; for coroutines, the `lsd-mono-coroutines` module (#38). Reactive hops (Reactor, RxJava) are still uncovered. |
 | The top-level `lsd {}` gets shadowed by the common `val lsd = …` | It's only a shorthand. Inside classes, use `lsd.capture {}`. |
 | The `Status` rename touches the JUnit and Cucumber outcome mapping | The JSON strings are unchanged; the existing outcome tests cover it. |
 | I couldn't compile any of this here (no JDK on the box) | Checked in slice 3: `@JvmOverloads` on a sealed class and the `@JvmSynthetic` overloads both work (see "Slice 3 as built"). |

@@ -293,6 +293,11 @@ lsd.completeReport("OrderTest", reportKey = "com.example.OrderTest")
 A capture into a scenario that has already completed is dropped
 with a warning rather than being given to the next one.
 
+The binding belongs to a thread, so it does not follow a coroutine that resumes on another
+dispatcher thread. In Kotlin coroutines use `withLsdScenario` from
+[`lsd-mono-coroutines`](../lsd-mono-coroutines/README.md), or capture through the
+`LsdScenario` reference.
+
 ### Message data
 
 Message data is copied when it is captured, so changing a body, builder or buffer

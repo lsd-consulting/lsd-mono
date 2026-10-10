@@ -30,6 +30,13 @@
       "allowedVersions": "/^8\\./",
       "groupName": "Cucumber 8",
       "groupSlug": "cucumber-8"
+    },
+    {
+      "description": "Stay on kotlinx.coroutines 1. lsd-mono-coroutines is built against that major; a 2.x release is a human decision.",
+      "matchManagers": ["gradle"],
+      "matchPackageNames": ["org.jetbrains.kotlinx:kotlinx-coroutines-core"],
+      "matchCurrentVersion": "/^1\\./",
+      "allowedVersions": "/^1\\./"
     }
   ]
 }

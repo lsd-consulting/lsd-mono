@@ -1,0 +1,5 @@
+public final class io/lsdconsulting/lsd/mono/coroutines/LsdCoroutinesKt {
+	public static final fun asContextElement (Lio/lsdconsulting/lsd/mono/core/LsdScenario;)Lkotlinx/coroutines/ThreadContextElement;
+	public static final fun withLsdScenario (Lio/lsdconsulting/lsd/mono/core/LsdScenario;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+

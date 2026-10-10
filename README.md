@@ -8,6 +8,8 @@ LSD Mono records a scenario as a sequence of messages and writes an interactive 
 
 [`lsd-mono-junit-jupiter` README](modules/lsd-mono-junit-jupiter/README.md) covers the JUnit Jupiter 6 extension that completes a scenario for each test.
 
+[`lsd-mono-coroutines` README](modules/lsd-mono-coroutines/README.md) covers keeping a scenario bound while a coroutine moves between threads.
+
 Origin is https://github.com/lsd-consulting/lsd-mono.git. `main` has been pushed there.
 
 ## Depend on it
@@ -19,10 +21,11 @@ dependencies {
     implementation(project(":modules:lsd-mono-core"))
     testImplementation(project(":modules:lsd-mono-junit-jupiter"))
     testImplementation(project(":modules:lsd-mono-cucumber-8"))
+    testImplementation(project(":modules:lsd-mono-coroutines")) // only if tests capture from coroutines
 }
 ```
 
-The artifacts are `io.lsdconsulting:lsd-mono-core`, `io.lsdconsulting:lsd-mono-junit-jupiter`, and `io.lsdconsulting:lsd-mono-cucumber-8`, version `0.0.1-SNAPSHOT`. They are not published. JDK 21. Cucumber support is major 8.
+The artifacts are `io.lsdconsulting:lsd-mono-core`, `io.lsdconsulting:lsd-mono-junit-jupiter`, `io.lsdconsulting:lsd-mono-cucumber-8`, and `io.lsdconsulting:lsd-mono-coroutines`, version `0.0.1-SNAPSHOT`. They are not published. JDK 21. Cucumber support is major 8.
 
 ## Capture a scenario
 
@@ -81,7 +84,7 @@ See the [Cucumber 8 module README](modules/lsd-mono-cucumber-8/README.md) for pl
 
 Capture is thread-safe, and both integrations support parallel runs (JUnit's `junit.jupiter.execution.parallel.enabled`, Cucumber's `cucumber.execution.parallel.enabled`). Each test or scenario gets its own buffer, bound to the thread that runs it, so `LsdContext.instance.capture` in a test lands in that test. Each test class or feature gets its own report.
 
-A thread that is not bound to a test, such as an HTTP server thread, captures into the running test when only one test is running. When several are running, LSD cannot tell which test the capture belongs to: it logs a warning and keeps the capture out of all of them. Carry the test onto threads you start with `LsdContext.instance.wrap(task)` or `lsd.currentScenario()?.bind()`.
+A thread that is not bound to a test, such as an HTTP server thread, captures into the running test when only one test is running. When several are running, LSD cannot tell which test the capture belongs to: it logs a warning and keeps the capture out of all of them. Carry the test onto threads you start with `LsdContext.instance.wrap(task)` or `lsd.currentScenario()?.bind()`. A coroutine that changes dispatcher thread drops a thread binding; use `withLsdScenario` from the [coroutines module](modules/lsd-mono-coroutines/README.md).
 
 ## What the report looks like
 
@@ -119,6 +122,7 @@ JDK 21. `:modules:lsd-mono-core:build` runs the Vite shell build (`npm ci`, then
 modules/lsd-mono-core/            lsd-mono-core, report UI in report/
 modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
 modules/lsd-mono-cucumber-8/      Cucumber 8 plugin
+modules/lsd-mono-coroutines/      keeps a scenario bound across coroutine thread hops
 build-logic/                      convention plugins (lsd.kotlin-jvm)
 ```
 
