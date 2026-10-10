@@ -5,12 +5,17 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 /**
  * Structured failure for a scenario. Rendered by report as text plus a dialog,
  * not as legacy `:target` overlay HTML inside [Scenario.description].
+ *
+ * @property headline a short title for the failure, such as `Failed` or `Test aborted`.
+ * @property message the failure's message; empty when there is none.
+ * @property stack the stack trace, or a note when it is hidden or there is no cause.
  */
 public data class ScenarioError(
     val headline: String,
     val message: String,
     val stack: String? = null,
 ) {
+    /** Holds [of]. */
     public companion object {
         internal const val HIDDEN_STACK: String = "[Displaying the stacktrace was disabled or no cause was provided]"
 

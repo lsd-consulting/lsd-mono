@@ -1,6 +1,6 @@
 # lsd-mono public API proposal (#3)
 
-Status: approved. Slices 1 to 7 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
+Status: **complete**. Slices 1 to 8 are implemented (see "as built" under §6). Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
@@ -534,6 +534,45 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
   - the companion's `default` and `TRUNCATED_KEY`. **Deviation:** §2 didn't list these two. Nothing outside the module used them, and the `[lsd: truncated]` key is documented as text in the README.
 - The tests were renamed to match (`PayloadConvertersTest`, `PayloadConvertersMutationTest`), and there is a new test for the reified `register`.
 - Behaviour and the sample reports are unchanged.
+
+### Slice 8 as built
+
+**The review.** I reviewed the three ABI dumps line by line: 65 declarations, 59 kept and 6 renamed, with nothing to make internal or remove. All the approved fixes are done.
+
+**1. `message(from, to, label, null)` from Java no longer throws.**
+- `type` is now `MessageType?` in the 4-argument overload and in the full form, and `null` means `SYNCHRONOUS`.
+- Java picks the `MessageType` overload for a bare `null`; before, it threw a NullPointerException.
+
+**2. A note can no longer silently lack its participant.**
+- `note`'s `on` is now required (still nullable), so the one-argument `note(text)`, which always threw, is gone.
+- An `OVER` note with `on = null` still fails at runtime with the same message.
+- Edge notes now pass `on = null` with `LEFT` or `RIGHT` (the kitchen-sink sample and one test).
+
+**3. Binding a scenario needs no `catch` in Java.**
+- `LsdScenario.bind()` now returns `LsdBinding`, an `AutoCloseable` whose `close()` throws nothing. Closing it twice does nothing.
+
+**4. `description` is `String? = null` everywhere.**
+- This covers `completeScenario`, `LsdScenario.complete`, `scenario { }` and `LsdReport.scenario`, chosen to match the existing nullable parameters.
+- No description is still written as `""` in the JSON, so the reports are unchanged.
+- The Java overloads are unchanged.
+
+**5. `PayloadConverters`** moved from `core.capture` to `io.lsdconsulting.lsd.mono.core`. The `capture` package is gone.
+
+**6. `completeReport` and `report { }` return `ReportFiles`.**
+- It has `diagramHtml` (the page to open), `listingHtml` (`-report.html`, which `index.html` links to) and `reportJson`.
+- It is a plain class, not a data class, so no `copy`/`componentN` enters the ABI.
+- The root and JUnit READMEs now say which file is which, instead of calling the diagram "the report" and the returned listing "only a short listing".
+- The samples print `diagramHtml`.
+
+**7. KDoc.** Every public declaration, including enum entries, now has KDoc.
+- `MessageType` maps each entry to its verb (`message`/`call`, `response`/`reply`, `async`, `inbound`, `outbound`). It also says that only `LOST` and `BI_DIRECTIONAL` need an explicit type.
+- `Participant` and `ScenarioError` document their properties.
+
+**Tests and reports.** `JavaApiTest` adds `nullsAndBindingsNeedNoWorkaroundsFromJava`. It declares only `throws IOException`, so it compiles only if `LsdBinding.close()` throws nothing. It covers a `null` type with and without data, a binding restored on close, and an edge note. The sample reports are byte-identical.
+
+**Left for later:**
+- A Java `null` for `Status` or `NoteSide` still throws a NullPointerException. These have no overload ambiguity, so passing `null` is a caller error rather than a trap; they were not in the review.
+- The coroutines module (§4) is out of scope for #3 and proposed as a separate issue.
 
 ### Risks
 

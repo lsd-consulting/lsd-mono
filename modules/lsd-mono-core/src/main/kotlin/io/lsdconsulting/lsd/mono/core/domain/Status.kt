@@ -8,8 +8,13 @@ package io.lsdconsulting.lsd.mono.core.domain
  * such as a disabled or aborted JUnit test or an undefined Cucumber step.
  */
 public enum class Status {
+    /** Failed: an exception or a failed assertion. */
     ERROR,
+
+    /** Neither passed nor failed: disabled, aborted or undefined. */
     WARN,
+
+    /** Passed. */
     SUCCESS,
     ;
 

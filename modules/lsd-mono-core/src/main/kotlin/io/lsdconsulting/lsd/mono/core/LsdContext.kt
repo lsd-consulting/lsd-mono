@@ -111,8 +111,16 @@ public class LsdContext : Capturer() {
     @Volatile
     private var warnedAmbiguous = false
 
+    /**
+     * Declare participants, to give them a type (shape), display name or colour, and to fix
+     * their order on the diagram. Events refer to them by name, id or display name. A
+     * participant that is never declared is drawn as a plain [ParticipantType.PARTICIPANT]
+     * the first time an event names it. Declaring an id twice with a different name keeps both,
+     * with a numbered id for the second.
+     */
     public fun addParticipants(vararg additional: Participant): Unit = addParticipants(additional.toList())
 
+    /** [addParticipants] for a list. */
     public fun addParticipants(additional: List<Participant>) {
         synchronized(lock) {
             additional.forEach { incoming ->
@@ -337,6 +345,12 @@ public class LsdContext : Capturer() {
      */
     public fun createIndex(): Path = ReportWriter.writeIndex(synchronized(lock) { reportFiles.toList() }, outputDirectory)
 
+    /**
+     * Forget everything: participants, running and completed scenarios, the default scenario's
+     * captures and the reports written so far (files on disk stay). Calls still waiting for a
+     * reply are abandoned without a warning. Re-reads the properties (deterministic ids, payload
+     * limits) and keeps the registered payload converters. For test isolation.
+     */
     public fun clear() {
         synchronized(lock) {
             idGenerator = IdGenerator(LsdProperties.deterministicIds())
@@ -676,9 +690,15 @@ public class LsdContext : Capturer() {
             ?.toCssClass()
             ?: "success"
 
+    /** Holds [instance]. */
     public companion object {
         private val logger = System.getLogger(LsdContext::class.java.name)
 
+        /**
+         * The shared context that the JUnit and Cucumber integrations use, and that
+         * interceptors and the top-level `lsd { }` capture into. Create your own
+         * `LsdContext()` only for isolated reports, such as in tests of lsd-mono itself.
+         */
         @JvmStatic
         public val instance: LsdContext = LsdContext()
     }

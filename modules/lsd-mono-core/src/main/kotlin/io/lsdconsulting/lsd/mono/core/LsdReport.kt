@@ -10,6 +10,7 @@ import java.util.function.Consumer
 @LsdDsl
 public class LsdReport internal constructor(
     private val context: LsdContext,
+    /** The report's title, as passed to [LsdContext.report]. */
     public val title: String,
     /** The report key its scenarios carry; unique among the open `report { }` blocks. */
     public val key: String,

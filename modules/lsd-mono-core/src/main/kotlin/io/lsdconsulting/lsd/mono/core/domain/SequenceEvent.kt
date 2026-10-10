@@ -27,19 +27,51 @@ internal sealed class SequenceEvent {
     abstract val createdAt: Instant?
 }
 
+/**
+ * How a message's arrow is drawn. Most code never names a type, because each verb on
+ * [io.lsdconsulting.lsd.mono.core.Capturer] sets one: `message` and `call` draw [SYNCHRONOUS], `response` and
+ * `PendingCall.reply` draw [SYNCHRONOUS_RESPONSE], `async` draws [ASYNCHRONOUS], `inbound` draws
+ * [SHORT_INBOUND] and `outbound` draws [SHORT_OUTBOUND]. Pass a type to `message` only for the
+ * two that have no verb, [LOST] and [BI_DIRECTIONAL]: `message("A", "B", "dropped", MessageType.LOST)`.
+ */
 public enum class MessageType {
+    /** A call, solid with a filled head. The verbs `message` and `call`. */
     SYNCHRONOUS,
+
+    /** The reply to a call, dashed with a filled head. The verbs `response` and `PendingCall.reply`. */
     SYNCHRONOUS_RESPONSE,
+
+    /** A fire-and-forget message, dashed with an open head. The verb `async`. */
     ASYNCHRONOUS,
+
+    /** A message that never arrives, ending in a cross. No verb: `message(from, to, label, MessageType.LOST)`. */
     LOST,
+
+    /** An exchange in both directions, with a head at each end. No verb. */
     BI_DIRECTIONAL,
+
+    /**
+     * A short arrow into a participant from off the diagram. The verb `inbound(to)`; through
+     * `message`, only `to` is kept.
+     */
     SHORT_INBOUND,
+
+    /**
+     * A short arrow out of a participant to off the diagram. The verb `outbound(from)`; through
+     * `message`, only `from` is kept.
+     */
     SHORT_OUTBOUND,
 }
 
+/** Where a note goes, relative to its participant. See [io.lsdconsulting.lsd.mono.core.Capturer.note]. */
 public enum class NoteSide {
+    /** Over the participant, which is required. */
     OVER,
+
+    /** Left of the participant, or at the diagram's left edge when there is none. */
     LEFT,
+
+    /** Right of the participant, or at the diagram's right edge when there is none. */
     RIGHT,
 }
 
