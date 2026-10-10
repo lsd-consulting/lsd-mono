@@ -29,7 +29,6 @@ internal fun SequenceEventBuilder(build: () -> SequenceEvent): SequenceEventBuil
     }
 
 public class MessageBuilder : SequenceEventBuilder() {
-    private var id: String? = null
     private var from: String = ""
     private var to: String = ""
     private var label: String = ""
@@ -37,8 +36,6 @@ public class MessageBuilder : SequenceEventBuilder() {
     private var colour: String? = null
     private var durationMs: Long? = null
     private var type: MessageType = MessageType.SYNCHRONOUS
-
-    public fun id(id: String): MessageBuilder = apply { this.id = id }
 
     public fun from(from: String): MessageBuilder = apply { this.from = from }
 
@@ -60,7 +57,7 @@ public class MessageBuilder : SequenceEventBuilder() {
 
     override fun build(): SequenceEvent =
         Message(
-            id = id ?: "",
+            id = "",
             from = from,
             to = to,
             label = label,
@@ -168,7 +165,7 @@ public fun shortInbound(to: String, label: String = ""): SequenceEventBuilder =
     SequenceEventBuilder {
         Message(
             id = "",
-            from = "",
+            from = null,
             to = to,
             label = label,
             type = MessageType.SHORT_INBOUND,
@@ -183,7 +180,7 @@ public fun shortOutbound(from: String, label: String = ""): SequenceEventBuilder
         Message(
             id = "",
             from = from,
-            to = "",
+            to = null,
             label = label,
             type = MessageType.SHORT_OUTBOUND,
         )

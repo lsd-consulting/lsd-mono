@@ -29,7 +29,7 @@ These are **implemented**, not stubs, unless noted.
 | Participants (name/id/alias/colour + types ACTOR, PARTICIPANT, DATABASE, QUEUE, ENTITY, BOUNDARY) | `modules/lsd-mono-core/.../domain/Participant.kt`; auto-register on capture in `LsdContext.bind` / `resolve` |
 | Facts | `addFact` → `FactJson` in report |
 | Messages: SYNCHRONOUS, SYNCHRONOUS_RESPONSE, ASYNCHRONOUS, LOST, BI_DIRECTIONAL, SHORT_INBOUND, SHORT_OUTBOUND (+ colour, data, durationMs) | `domain/SequenceEvent.kt` `MessageType`; JSON `MessageEventJson` — short types + distinct LOST/BI SVG **landed 2026-10-03** |
-| Note over / left / right | `Note` + `NotePlacement` + DSL `noteOver` / `noteLeft` / `noteRight` — **landed 2026-10-03** |
+| Note over / left / right | `Note` + `NoteSide`; verb `note(text, on, side)`, DSL `noteOver` / `noteLeft` / `noteRight` — **landed 2026-10-03** |
 | Delay + spacer | `Delay` / `Spacer` + DSL `delay` / `spacer` — **landed 2026-10-03** |
 | Logical dividers | `Divider` / `logicalDivider` |
 | Lifeline activate / deactivate | `Lifeline` + DSL `LifelineAction.lifeline`. Activation bars are pinned to the opening and closing message rows (those keyword events have no row height). **Landed 2026-10-03.** |

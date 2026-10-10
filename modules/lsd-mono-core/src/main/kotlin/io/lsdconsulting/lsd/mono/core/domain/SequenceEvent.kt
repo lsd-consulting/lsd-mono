@@ -11,7 +11,10 @@ import java.time.Instant
  * Notes use [NoteSide] (`over` / `left` / `right`) instead of separate
  * NoteLeft / NoteRight types. [Delay] and [Spacer] replace PlantUML `...` / `|||`.
  * [MessageType.SHORT_INBOUND] / [MessageType.SHORT_OUTBOUND] draw from/to a
- * phantom diagram edge — not a fake participant.
+ * phantom diagram edge — not a fake participant. That end is null here and `""` in the JSON.
+ *
+ * Internal: callers capture through the [io.lsdconsulting.lsd.mono.core.Capturer] verbs, and
+ * the context gives every event its id when it is captured.
  *
  * Optional [createdAt] is an ISO instant used to reorder out-of-order capture
  * before the report is written. Events without it keep capture order and sort
@@ -19,9 +22,9 @@ import java.time.Instant
  *
  * Deferred vs legacy: PageTitle as its own event.
  */
-public sealed class SequenceEvent {
-    public abstract val id: String
-    public abstract val createdAt: Instant?
+internal sealed class SequenceEvent {
+    abstract val id: String
+    abstract val createdAt: Instant?
 }
 
 public enum class MessageType {
@@ -40,10 +43,12 @@ public enum class NoteSide {
     RIGHT,
 }
 
-public data class Message @JvmOverloads constructor(
+internal data class Message(
     override val id: String,
-    val from: String,
-    val to: String,
+    /** Null for a [MessageType.SHORT_INBOUND] arrow, which starts at the diagram's edge. */
+    val from: String?,
+    /** Null for a [MessageType.SHORT_OUTBOUND] arrow, which ends at the diagram's edge. */
+    val to: String?,
     val label: String = "",
     val type: MessageType = MessageType.SYNCHRONOUS,
     val colour: String? = null,
@@ -56,7 +61,7 @@ public data class Message @JvmOverloads constructor(
  * Note card. [placement] defaults to [NoteSide.OVER] (requires [over]).
  * Left/right may omit [over] (diagram-edge note) or set it as the anchor lifeline.
  */
-public data class Note @JvmOverloads constructor(
+internal data class Note(
     override val id: String,
     val text: String,
     val over: String? = null,
@@ -64,28 +69,28 @@ public data class Note @JvmOverloads constructor(
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
-public data class Divider(
+internal data class Divider(
     override val id: String,
     val label: String,
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Titled break in a continuous diagram. Does not split the SVG or drop activations. */
-public data class Section(
+internal data class Section(
     override val id: String,
     val title: String,
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Time-delay ellipsis row (`...label...` in PlantUML). */
-public data class Delay @JvmOverloads constructor(
+internal data class Delay(
     override val id: String,
     val label: String? = null,
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Vertical spacer (`|||` / sized `||N||` in PlantUML). [heightPx] defaults in the UI. */
-public data class Spacer @JvmOverloads constructor(
+internal data class Spacer(
     override val id: String,
     val heightPx: Int? = null,
     override val createdAt: Instant? = null,
@@ -93,7 +98,7 @@ public data class Spacer @JvmOverloads constructor(
 
 public enum class LifelineAction { ACTIVATE, DEACTIVATE }
 
-public data class Lifeline @JvmOverloads constructor(
+internal data class Lifeline(
     override val id: String,
     val participantId: String,
     val action: LifelineAction = LifelineAction.ACTIVATE,

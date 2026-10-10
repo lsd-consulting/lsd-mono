@@ -1,7 +1,6 @@
 package io.lsdconsulting.lsd.mono.core.readme
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
-import io.lsdconsulting.lsd.mono.core.capture.lifeline
 import io.lsdconsulting.lsd.mono.core.capture.logicalDivider
 import io.lsdconsulting.lsd.mono.core.capture.messages
 import io.lsdconsulting.lsd.mono.core.capture.withColour
@@ -9,14 +8,9 @@ import io.lsdconsulting.lsd.mono.core.capture.withData
 import io.lsdconsulting.lsd.mono.core.capture.withDurationMs
 import io.lsdconsulting.lsd.mono.core.capture.withLabel
 import io.lsdconsulting.lsd.mono.core.capture.withType
-import io.lsdconsulting.lsd.mono.core.domain.LifelineAction.ACTIVATE
-import io.lsdconsulting.lsd.mono.core.domain.LifelineAction.DEACTIVATE
-import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.ASYNCHRONOUS
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.BI_DIRECTIONAL
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.LOST
-import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS
-import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS_RESPONSE
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.BOUNDARY
@@ -218,37 +212,18 @@ private fun paymentDeclined(lsd: LsdContext) {
     fun at(seconds: Long) = t0.plusSeconds(seconds)
     lsd.addFact("orderId", "ord-2002")
     lsd.addFact("card", "**** 0002")
-    lsd.capture(
-        Message(id = "", from = "Payment Service", to = "Order Service", label = "402 declined", type = SYNCHRONOUS_RESPONSE, createdAt = at(7)),
-        Message(id = "", from = "Order Service", to = "Payment Service", label = "authorise £42.00", type = SYNCHRONOUS, createdAt = at(1)),
-        Message(
-            id = "",
-            from = "Payment Service",
-            to = "Payment Provider",
-            label = "authorise",
-            data = mapOf("amount" to 4200, "card" to "**** 0002"),
-            createdAt = at(4),
-        ),
-        Message(id = "", from = "Payment Service", to = "Fraud Check", label = "score transaction", createdAt = at(2)),
-        Message(id = "", from = "Fraud Check", to = "Payment Service", label = "score 0.41", type = SYNCHRONOUS_RESPONSE, createdAt = at(3)),
-        Message(
-            id = "",
-            from = "Payment Provider",
-            to = "Payment Service",
-            label = "do_not_honour",
-            type = SYNCHRONOUS_RESPONSE,
-            data = mapOf("code" to "05", "reason" to "do_not_honour"),
-            createdAt = at(6),
-        ),
-    )
-    lsd.capture(
-        (ACTIVATE lifeline "Payment Service").createdAt(at(1)),
-        (ACTIVATE lifeline "Fraud Check").createdAt(at(2)),
-        (DEACTIVATE lifeline "Fraud Check").createdAt(at(3)),
-        (ACTIVATE lifeline "Payment Provider" withColour "#dc2626").createdAt(at(4)),
-        (DEACTIVATE lifeline "Payment Provider").createdAt(at(6)),
-        (DEACTIVATE lifeline "Payment Service").createdAt(at(7)),
-    )
+    lsd.response("Payment Service", "Order Service", "402 declined", at = at(7))
+    lsd.message("Order Service", "Payment Service", "authorise £42.00", at = at(1))
+    lsd.message("Payment Service", "Payment Provider", "authorise", mapOf("amount" to 4200, "card" to "**** 0002"), at = at(4))
+    lsd.message("Payment Service", "Fraud Check", "score transaction", at = at(2))
+    lsd.response("Fraud Check", "Payment Service", "score 0.41", at = at(3))
+    lsd.response("Payment Provider", "Payment Service", "do_not_honour", mapOf("code" to "05", "reason" to "do_not_honour"), at = at(6))
+    lsd.activate("Payment Service", at = at(1))
+    lsd.activate("Fraud Check", at = at(2))
+    lsd.deactivate("Fraud Check", at = at(3))
+    lsd.activate("Payment Provider", "#dc2626", at = at(4))
+    lsd.deactivate("Payment Provider", at = at(6))
+    lsd.deactivate("Payment Service", at = at(7))
     lsd.completeScenario(
         "Payment declined (captured out of order)",
         """

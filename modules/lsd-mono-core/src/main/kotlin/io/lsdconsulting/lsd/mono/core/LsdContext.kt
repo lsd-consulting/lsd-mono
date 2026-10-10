@@ -333,16 +333,16 @@ public class LsdContext : Capturer() {
             is Message -> bindMessage(event)
             is Note ->
                 event.copy(
-                    id = event.id.ifBlank { idGenerator.next() },
+                    id = idGenerator.next(),
                     over = event.over?.takeIf { it.isNotBlank() }?.let { resolve(it).id },
                 )
-            is Divider -> event.copy(id = event.id.ifBlank { idGenerator.next() })
-            is Section -> event.copy(id = event.id.ifBlank { idGenerator.next() })
-            is Delay -> event.copy(id = event.id.ifBlank { idGenerator.next() })
-            is Spacer -> event.copy(id = event.id.ifBlank { idGenerator.next() })
+            is Divider -> event.copy(id = idGenerator.next())
+            is Section -> event.copy(id = idGenerator.next())
+            is Delay -> event.copy(id = idGenerator.next())
+            is Spacer -> event.copy(id = idGenerator.next())
             is Lifeline ->
                 event.copy(
-                    id = event.id.ifBlank { idGenerator.next() },
+                    id = idGenerator.next(),
                     participantId = resolve(event.participantId).id,
                 )
         }
@@ -350,21 +350,21 @@ public class LsdContext : Capturer() {
     private fun bindMessage(captured: Message): Message {
         // Copy the data now, so later changes by the caller do not reach the report (#27).
         val event = if (captured.data == null) captured else captured.copy(data = payloads.snapshot(captured.data))
-        val id = event.id.ifBlank { idGenerator.next() }
+        val id = idGenerator.next()
         return when (event.type) {
             MessageType.SHORT_INBOUND -> {
-                val toRef = event.to.ifBlank { event.from }
-                event.copy(id = id, from = "", to = resolve(toRef).id)
+                val toRef = event.to?.takeIf { it.isNotBlank() } ?: event.from.orEmpty()
+                event.copy(id = id, from = null, to = resolve(toRef).id)
             }
             MessageType.SHORT_OUTBOUND -> {
-                val fromRef = event.from.ifBlank { event.to }
-                event.copy(id = id, from = resolve(fromRef).id, to = "")
+                val fromRef = event.from?.takeIf { it.isNotBlank() } ?: event.to.orEmpty()
+                event.copy(id = id, from = resolve(fromRef).id, to = null)
             }
             else ->
                 event.copy(
                     id = id,
-                    from = resolve(event.from).id,
-                    to = resolve(event.to).id,
+                    from = resolve(event.from.orEmpty()).id,
+                    to = resolve(event.to.orEmpty()).id,
                 )
         }
     }
@@ -392,8 +392,8 @@ public class LsdContext : Capturer() {
         events.forEach { event ->
             when (event) {
                 is Message -> {
-                    if (event.from.isNotBlank()) ids.add(event.from)
-                    if (event.to.isNotBlank()) ids.add(event.to)
+                    event.from?.takeIf { it.isNotBlank() }?.let(ids::add)
+                    event.to?.takeIf { it.isNotBlank() }?.let(ids::add)
                 }
                 is Note -> event.over?.let { ids.add(it) }
                 is Lifeline -> ids.add(event.participantId)
@@ -450,8 +450,9 @@ public class LsdContext : Capturer() {
             is Message ->
                 MessageEventJson(
                     id = id,
-                    from = from,
-                    to = to,
+                    // The JSON draws a diagram-edge end as "".
+                    from = from.orEmpty(),
+                    to = to.orEmpty(),
                     label = label,
                     type = type.name,
                     colour = colour?.takeIf { it.isNotBlank() },

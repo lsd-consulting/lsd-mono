@@ -13,7 +13,7 @@ export type MessageType =
   | 'SHORT_INBOUND'
   | 'SHORT_OUTBOUND'
 
-export type NoteSide = 'over' | 'left' | 'right'
+export type NotePlacement = 'over' | 'left' | 'right'
 
 export interface Participant {
   id: string
@@ -31,7 +31,7 @@ export interface NoteEvent {
   text: string
   /** Anchor participant. Required for placement `over`; optional for left/right. */
   over?: string
-  placement?: NoteSide
+  placement?: NotePlacement
 }
 
 export interface DividerEvent {

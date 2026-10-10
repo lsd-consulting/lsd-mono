@@ -83,13 +83,13 @@ public sealed class Capturer {
     /** A short arrow into [to] from the edge of the diagram, for a caller that is not drawn. */
     @JvmOverloads
     public fun inbound(to: String, label: String = "", at: Instant? = null) {
-        emit(Message(id = "", from = "", to = to, label = label, type = MessageType.SHORT_INBOUND, createdAt = at))
+        emit(Message(id = "", from = null, to = to, label = label, type = MessageType.SHORT_INBOUND, createdAt = at))
     }
 
     /** A short arrow from [from] to the edge of the diagram, for a callee that is not drawn. */
     @JvmOverloads
     public fun outbound(from: String, label: String = "", at: Instant? = null) {
-        emit(Message(id = "", from = from, to = "", label = label, type = MessageType.SHORT_OUTBOUND, createdAt = at))
+        emit(Message(id = "", from = from, to = null, label = label, type = MessageType.SHORT_OUTBOUND, createdAt = at))
     }
 
     /**
@@ -158,8 +158,8 @@ public sealed class Capturer {
         fact(key, value)
     }
 
-    /** Capture events built elsewhere. */
-    public fun capture(vararg events: SequenceEvent) {
+    /** Capture events built elsewhere. Tests only; callers use the verbs. */
+    internal fun capture(vararg events: SequenceEvent) {
         emit(events.toList())
     }
 
