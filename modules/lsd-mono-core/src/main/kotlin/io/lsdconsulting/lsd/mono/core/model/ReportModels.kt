@@ -31,7 +31,7 @@ internal data class ReportJson(
     val generator: String,
     /**
      * Worst scenario outcome: `error` > `warn` > `success`
-     * (legacy ERROR > FAILURE > SUCCESS). `success` when there are no scenarios.
+     * (legacy ERROR > WARN > SUCCESS). `success` when there are no scenarios.
      */
     val status: String,
     val options: ReportOptionsJson = ReportOptionsJson(),

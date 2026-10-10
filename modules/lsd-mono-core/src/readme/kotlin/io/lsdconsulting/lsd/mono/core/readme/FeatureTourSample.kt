@@ -148,7 +148,7 @@ private fun cardDeclined(lsd: LsdContext) {
     lsd.completeScenario(
         "Card declined",
         "Given a card the issuer will decline\nWhen the customer pays\nThen the order is confirmed",
-        status = Status.FAILURE,
+        status = Status.WARN,
         error =
             ScenarioError(
                 headline = "AssertionFailedError",

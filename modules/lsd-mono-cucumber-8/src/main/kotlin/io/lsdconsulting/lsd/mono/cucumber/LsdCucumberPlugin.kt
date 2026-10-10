@@ -114,7 +114,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
             when (result.status) {
                 CucumberStatus.PASSED -> Status.SUCCESS
                 CucumberStatus.FAILED -> Status.ERROR
-                else -> Status.FAILURE
+                else -> Status.WARN
             }
         val error =
             result.error?.takeIf { result.status == CucumberStatus.FAILED }?.let { ScenarioError.of("Failed", it) }

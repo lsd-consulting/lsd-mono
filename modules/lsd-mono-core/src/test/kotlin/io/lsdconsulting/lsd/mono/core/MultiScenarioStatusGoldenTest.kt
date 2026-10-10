@@ -14,7 +14,7 @@ import kotlin.io.path.readText
 
 /**
  * Locks the multi-scenario status contract: per-scenario `success` / `warn` / `error`
- * and the report-level rollup (worst of ERROR > FAILURE > SUCCESS).
+ * and the report-level rollup (worst of ERROR > WARN > SUCCESS).
  * `generatedAt` and `generator` are checked, then scrubbed; everything else must match the
  * golden byte-for-byte, so the golden does not change with the clock or the project version.
  */
@@ -32,7 +32,7 @@ class MultiScenarioStatusGoldenTest {
     fun `three scenarios lock success warn and error with error rollup`() {
         val lsd = LsdContext()
         lsd.completeScenario("checkout happy path", "placed", Status.SUCCESS)
-        lsd.completeScenario("payment declined", "card rejected", Status.FAILURE)
+        lsd.completeScenario("payment declined", "card rejected", Status.WARN)
         lsd.completeScenario("inventory outage", "timeout", Status.ERROR)
         lsd.completeReport("Status mix")
         lsd.createIndex()

@@ -304,8 +304,8 @@ public final class io/lsdconsulting/lsd/mono/core/domain/ScenarioError$Companion
 
 public final class io/lsdconsulting/lsd/mono/core/domain/Status : java/lang/Enum {
 	public static final field ERROR Lio/lsdconsulting/lsd/mono/core/domain/Status;
-	public static final field FAILURE Lio/lsdconsulting/lsd/mono/core/domain/Status;
 	public static final field SUCCESS Lio/lsdconsulting/lsd/mono/core/domain/Status;
+	public static final field WARN Lio/lsdconsulting/lsd/mono/core/domain/Status;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/domain/Status;
 	public static fun values ()[Lio/lsdconsulting/lsd/mono/core/domain/Status;

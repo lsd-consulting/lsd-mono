@@ -231,7 +231,7 @@ private fun paymentDeclined(lsd: LsdContext) {
         When the customer pays
         Then the order is confirmed
         """.trimIndent(),
-        status = Status.FAILURE,
+        status = Status.WARN,
         error =
             ScenarioError(
                 headline = "AssertionFailedError",

@@ -489,7 +489,7 @@ public class LsdContext : Capturer() {
                 compareBy {
                     when (it) {
                         Status.ERROR -> 0
-                        Status.FAILURE -> 1
+                        Status.WARN -> 1
                         Status.SUCCESS -> 2
                     }
                 },
