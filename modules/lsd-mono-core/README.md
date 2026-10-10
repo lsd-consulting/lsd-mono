@@ -90,6 +90,7 @@ captures into itself) and a capture block (below) share the same verbs, from the
 | --- | --- |
 | `message(from, to, label, data, type, durationMs, colour, at)` | An arrow; a synchronous call unless `type` says otherwise |
 | `response(from, to, label, data, durationMs, at)` | The reply to a call |
+| `call(from, to, label, data, at)` | A call now, returning a `PendingCall`; its `reply(label, data, at)` or `fail(error)` draws the timed response later (see [Interceptors](#interceptors)) |
 | `async(from, to, label, data, at)` | An asynchronous message, such as an event on a queue |
 | `inbound(to, label, at)` / `outbound(from, label, at)` | A short arrow from or to the edge of the diagram |
 | `note(text, on, side, at)` | A note over `on`, or beside it with `side = NoteSide.LEFT` or `RIGHT` (at the edge when `on` is null) |
@@ -141,6 +142,68 @@ lsd.capture(c -> {
     c.calls("Customer", "Orders").label("POST /orders").data(body);
     c.activate("Orders");
 });
+```
+
+### Interceptors
+
+An interceptor sees a request go out and its response come back, often on another thread.
+`call` captures the request and returns a `PendingCall`. `reply` draws the response from the
+callee back to the caller, with the time since the call as its duration, in the scenario the
+call was made in, whichever thread replies. `fail(error)` draws an error reply named after the
+exception, with its class and message as data.
+
+```kotlin
+class LsdHttpInterceptor(private val lsd: LsdContext = LsdContext.instance) : ClientHttpRequestInterceptor {
+    override fun intercept(req: HttpRequest, body: ByteArray, exec: ClientHttpRequestExecution): ClientHttpResponse {
+        val call = lsd.call("Test", "Orders", "${req.method} ${req.uri.path}", data = mapOf("headers" to req.headers, "body" to body))
+        val res =
+            try {
+                exec.execute(req, body)
+            } catch (e: IOException) {
+                call.fail(e)
+                throw e
+            }
+        call.reply(res.statusCode.toString(), data = mapOf("headers" to res.headers))
+        return res
+    }
+}
+```
+
+Only the first `reply` or `fail` counts; another is ignored with a warning. A call still
+waiting when its scenario completes is listed in a warning, and a later reply is dropped.
+`call` does not draw activation bars; add `activate` and `deactivate` around it if you want them.
+In a capture block, a reply that comes before the block ends keeps its place among the
+block's events.
+
+A message that crosses a queue can carry its scenario in a header. `LsdHeaders.SCENARIO`
+(`lsd-scenario`) is the name to use, for HTTP too:
+
+```kotlin
+// Kafka producer interceptor
+override fun onSend(record: ProducerRecord<String, String>) =
+    record.also { r ->
+        lsd.currentScenario()?.let { r.headers().add(LsdHeaders.SCENARIO, it.key.toByteArray()) }
+        lsd.async("Orders", r.topic(), "publish ${r.key()}", data = r.value())
+    }
+
+// Kafka consumer interceptor: the poll thread is not bound to a scenario
+override fun onConsume(records: ConsumerRecords<String, String>) =
+    records.also {
+        it.forEach { r ->
+            val target: Capturer =
+                r.headers().lastHeader(LsdHeaders.SCENARIO)?.let { h -> lsd.findScenario(String(h.value())) } ?: lsd
+            target.async(r.topic(), "Orders", "consume ${r.key()}", data = r.value(), at = Instant.ofEpochMilli(r.timestamp()))
+        }
+    }
+```
+
+`at` puts consumption that arrives out of order back in time order.
+
+From Java:
+
+```java
+PendingCall call = lsd.call("Client", "Orders", "POST /orders", body);
+call.reply("201 Created", responseBody);
 ```
 
 ### Properties

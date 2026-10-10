@@ -40,6 +40,9 @@ public class CaptureBlock internal constructor(
     private val entries = ArrayList<Any>()
     private var ended = false
 
+    /** Guards [entries] and [ended]: a [PendingCall] from this block may be replied to from another thread. */
+    private val lock = Any()
+
     /** A synchronous call from this participant to [to]. */
     public infix fun String.calls(to: String): MessageSpec = spec(this, to, MessageType.SYNCHRONOUS)
 
@@ -60,13 +63,33 @@ public class CaptureBlock internal constructor(
     }
 
     override fun fact(key: String, value: String) {
-        checkOpen()
+        synchronized(lock) { checkOpen() }
         scenario.addFact(key, value)
     }
 
+    /** The request joins the block; the reply joins it too if it comes before the block ends. */
+    override fun startCall(request: Message): PendingCall {
+        val call = PendingCall(scenario, request, ::deliverReply)
+        scenario.track(call)
+        add(scenario.context.copyData(request))
+        return call
+    }
+
+    private fun deliverReply(reply: Message) {
+        synchronized(lock) {
+            if (!ended) {
+                entries.add(scenario.context.copyData(reply))
+                return
+            }
+        }
+        scenario.emit(listOf(reply))
+    }
+
     private fun add(entry: Any) {
-        checkOpen()
-        entries.add(entry)
+        synchronized(lock) {
+            checkOpen()
+            entries.add(entry)
+        }
     }
 
     private fun checkOpen() = check(!ended) { "This capture block has ended; use its receiver only inside the block" }
@@ -75,9 +98,12 @@ public class CaptureBlock internal constructor(
         try {
             block()
         } finally {
-            ended = true
-            val events = entries.map { if (it is MessageSpec) it.toMessage() else it as SequenceEvent }
-            scenario.context.captureInto(scenario, events, dataCopied = true)
+            // Commit under the lock, so a reply that arrives now waits and lands after the block's events.
+            synchronized(lock) {
+                ended = true
+                val events = entries.map { if (it is MessageSpec) it.toMessage() else it as SequenceEvent }
+                scenario.context.captureInto(scenario, events, dataCopied = true)
+            }
         }
     }
 }

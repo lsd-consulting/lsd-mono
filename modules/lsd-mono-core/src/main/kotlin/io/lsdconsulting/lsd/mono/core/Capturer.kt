@@ -68,6 +68,23 @@ public sealed class Capturer {
         message(from, to, label, null, type)
     }
 
+    /**
+     * A synchronous call from [from] to [to], captured now. Finish it with
+     * [PendingCall.reply] or [PendingCall.fail], from any thread: the response is drawn
+     * back from [to], timed, in the same scenario.
+     */
+    @JvmOverloads
+    public fun call(
+        from: String,
+        to: String,
+        label: String = "",
+        data: Any? = null,
+        at: Instant? = null,
+    ): PendingCall =
+        startCall(
+            Message(id = "", from = from, to = to, label = label, type = MessageType.SYNCHRONOUS, data = data, createdAt = at),
+        )
+
     /** The response to a synchronous call: [from] is the callee. */
     @JvmOverloads
     public fun response(
@@ -182,4 +199,7 @@ public sealed class Capturer {
     internal abstract fun emit(events: List<SequenceEvent>)
 
     internal abstract fun fact(key: String, value: String)
+
+    /** Capture [request] and return the call that waits for its reply. */
+    internal abstract fun startCall(request: Message): PendingCall
 }

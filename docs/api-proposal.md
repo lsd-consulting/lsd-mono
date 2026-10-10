@@ -1,6 +1,6 @@
 # lsd-mono public API proposal (#3)
 
-Status: approved. Slices 1 to 4 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
+Status: approved. Slices 1 to 5 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
@@ -468,6 +468,26 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
   - The README examples and the sample programs capture in blocks. Helpers became `CaptureBlock` extensions.
   - The kitchen sink's out-of-order scenario keeps the direct verbs with `at`, because it imitates interceptors on other threads.
   - The sample reports are byte-identical.
+
+### Slice 5 as built
+
+- `call(from, to, label, data, at)` is on `Capturer`, so `LsdContext`, `LsdScenario` and the capture block all have it. The context resolves its scenario once, so the request and the reply always land in the same scenario.
+- **`PendingCall`:**
+  - `reply(label, data, at)` and `fail(error, at)`, both `@JvmOverloads`.
+  - **Deviation:** `fail` takes an optional `at`, which §3.1 doesn't show.
+  - The response goes from the callee back to the caller as `SYNCHRONOUS_RESPONSE`.
+  - Its `durationMs` is the time since `call`, from `System.nanoTime()`. When both the call and the reply have an `at`, it is the time between them instead.
+  - The duration is on the response, and the request has none. The bottleneck tree already adds a request's and its response's durations.
+  - `fail` labels the reply with the exception's simple name, with data `{exception: <class name>, message}`, as §3.1 says. It adds no colour.
+- **Threads:**
+  - `PendingCall` holds its scenario, so a reply from any thread (an executor, a `CompletableFuture` callback) lands there.
+  - In a capture block, a reply that comes before the block ends joins the block's events in order.
+  - A reply that comes after goes to the scenario, after the block's events. The block now commits under a lock, so a reply racing the commit waits for it.
+- **Double reply:** the first `reply` or `fail` wins. Later ones are ignored with a warning rather than an exception, because they usually come from interceptor error paths.
+- **Unreplied calls:** when a scenario completes, every call still waiting is abandoned and listed in one warning. A later reply is dropped with the late-capture warning, which also covers calls made in the default scenario. `discard`, `clear` and stray captures dropped by `completeReport` abandon calls without a warning.
+- **No automatic activation.** §3 doesn't specify it. Drawing bars automatically would add events that today's samples draw explicitly, and a call never replied to would leave a bar open. So `call` draws exactly two messages, like `message` plus `response`, and callers add `activate`/`deactivate` if they want bars.
+- **`LsdHeaders.SCENARIO`** (`"lsd-scenario"`) from §3.3 was added here, because the README's Kafka example needs it.
+- **Samples:** none were migrated. Their call durations are fixed numbers on the request (`took 412`), and `call` would put a measured duration on the response, which would change the byte-identical reports. The core README's new "Interceptors" section has the HTTP and Kafka examples.
 
 ### Risks
 

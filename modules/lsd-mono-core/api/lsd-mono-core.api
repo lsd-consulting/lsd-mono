@@ -17,6 +17,11 @@ public abstract class io/lsdconsulting/lsd/mono/core/Capturer {
 	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
 	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)V
 	public static synthetic fun async$default (Lio/lsdconsulting/lsd/mono/core/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;ILjava/lang/Object;)V
+	public final fun call (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/PendingCall;
+	public final fun call (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/PendingCall;
+	public final fun call (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/PendingCall;
+	public final fun call (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)Lio/lsdconsulting/lsd/mono/core/PendingCall;
+	public static synthetic fun call$default (Lio/lsdconsulting/lsd/mono/core/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/PendingCall;
 	public final fun deactivate (Ljava/lang/String;)V
 	public final fun deactivate (Ljava/lang/String;Ljava/time/Instant;)V
 	public static synthetic fun deactivate$default (Lio/lsdconsulting/lsd/mono/core/Capturer;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)V
@@ -105,6 +110,11 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext$Companion {
 	public final fun getInstance ()Lio/lsdconsulting/lsd/mono/core/LsdContext;
 }
 
+public final class io/lsdconsulting/lsd/mono/core/LsdHeaders {
+	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/core/LsdHeaders;
+	public static final field SCENARIO Ljava/lang/String;
+}
+
 public final class io/lsdconsulting/lsd/mono/core/LsdScenario : io/lsdconsulting/lsd/mono/core/Capturer {
 	public final fun bind ()Ljava/lang/AutoCloseable;
 	public final fun capture (Ljava/util/function/Consumer;)V
@@ -128,6 +138,18 @@ public final class io/lsdconsulting/lsd/mono/core/MessageSpec {
 	public final fun data (Ljava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
 	public final fun label (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
 	public final fun took (J)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
+}
+
+public final class io/lsdconsulting/lsd/mono/core/PendingCall {
+	public final fun fail (Ljava/lang/Throwable;)V
+	public final fun fail (Ljava/lang/Throwable;Ljava/time/Instant;)V
+	public static synthetic fun fail$default (Lio/lsdconsulting/lsd/mono/core/PendingCall;Ljava/lang/Throwable;Ljava/time/Instant;ILjava/lang/Object;)V
+	public final fun reply ()V
+	public final fun reply (Ljava/lang/String;)V
+	public final fun reply (Ljava/lang/String;Ljava/lang/Object;)V
+	public final fun reply (Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;)V
+	public static synthetic fun reply$default (Lio/lsdconsulting/lsd/mono/core/PendingCall;Ljava/lang/String;Ljava/lang/Object;Ljava/time/Instant;ILjava/lang/Object;)V
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot {

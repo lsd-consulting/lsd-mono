@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Fact
+import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
@@ -30,6 +31,7 @@ public class LsdScenario internal constructor(
     private val lock = Any()
     private val facts = ArrayList<Fact>()
     private val events = ArrayList<SequenceEvent>()
+    private val waiting = LinkedHashSet<PendingCall>()
     private var closed = false
 
     /** True until the scenario is completed, discarded, or the context is cleared. */
@@ -47,6 +49,27 @@ public class LsdScenario internal constructor(
 
     /** Java form of [capture]: `scenario.capture(c -> { c.message("A", "B"); c.activate("B"); })`. */
     public fun capture(block: Consumer<CaptureBlock>): Unit = capture { block.accept(this) }
+
+    override fun startCall(request: Message): PendingCall {
+        val call = PendingCall(this, request) { emit(listOf(it)) }
+        track(call)
+        emit(listOf(request))
+        return call
+    }
+
+    internal fun track(call: PendingCall) {
+        synchronized(lock) { waiting.add(call) }
+    }
+
+    internal fun callEnded(call: PendingCall) {
+        synchronized(lock) { waiting.remove(call) }
+    }
+
+    /** Stop waiting for replies; returns the calls that never got one. */
+    internal fun abandonCalls(): List<PendingCall> {
+        val open = synchronized(lock) { waiting.toList().also { waiting.clear() } }
+        return open.filter { it.abandon() }
+    }
 
     override fun fact(key: String, value: String) {
         if (!add { facts.add(Fact(key, value)) }) context.warnLate(this, "fact")

@@ -221,7 +221,9 @@ public class LsdContext : Capturer() {
             completed.clear()
             reportFiles.clear()
             participants.clear()
+            active.values.forEach { it.abandonCalls() }
             active.clear()
+            defaultScenario.abandonCalls()
             defaultScenario.drain()
             warnedAmbiguous = false
         }
@@ -247,6 +249,8 @@ public class LsdContext : Capturer() {
     override fun fact(key: String, value: String) {
         target().addFact(key, value)
     }
+
+    override fun startCall(request: Message): PendingCall = target().startCall(request)
 
     internal fun isActive(scenario: LsdScenario): Boolean =
         scenario === defaultScenario || active[scenario.key] === scenario
@@ -290,6 +294,7 @@ public class LsdContext : Capturer() {
                 scenario.close()
             }
         if (bound.get() === scenario) bound.remove()
+        warnUnreplied(title, scenario.abandonCalls())
         val events = orderByCreatedAt(captured)
         synchronized(lock) {
             val stored =
@@ -308,6 +313,7 @@ public class LsdContext : Capturer() {
     }
 
     internal fun discard(scenario: LsdScenario) {
+        scenario.abandonCalls()
         if (scenario === defaultScenario) {
             defaultScenario.drain()
             return
@@ -317,12 +323,29 @@ public class LsdContext : Capturer() {
     }
 
     private fun dropStrayCaptures(report: String) {
+        defaultScenario.abandonCalls()
         val (facts, events) = defaultScenario.drain()
         if (facts.isEmpty() && events.isEmpty()) return
         logger.log(
             System.Logger.Level.WARNING,
             "LSD: report '$report' dropped ${events.size} event(s) and ${facts.size} fact(s) captured outside " +
                 "any scenario. Capture inside a test, or call completeScenario before completeReport.",
+        )
+    }
+
+    private fun warnUnreplied(title: String, calls: List<PendingCall>) {
+        if (calls.isEmpty()) return
+        logger.log(
+            System.Logger.Level.WARNING,
+            "LSD: scenario '$title' completed with ${calls.size} call(s) still waiting for a reply: " +
+                calls.joinToString { it.describe() } + ". Reply before the test ends; a later reply is dropped.",
+        )
+    }
+
+    internal fun warnDoubleReply(call: String) {
+        logger.log(
+            System.Logger.Level.WARNING,
+            "LSD: ignored a second reply to the call $call. Only the first reply or fail counts.",
         )
     }
 

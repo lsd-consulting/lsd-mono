@@ -83,6 +83,10 @@ class JavaApiTest {
             c.sends("Api", "Queue").label("order.read");
             c.note("in a block", "Api");
         });
+        PendingCall call = lsd.call("Customer", "Api", "GET /orders");
+        call.reply("200 OK", Map.of("orders", 0));
+        lsd.call("Api", "Db", "select", Map.of("sql", "select 1")).fail(new IllegalStateException("timeout"));
+        lsd.call("Api", "Db").reply();
         lsd.completeScenario("Java", "every verb", Status.SUCCESS);
 
         String json = events(Files.readString(reportJson(lsd.completeReport("Java"))));
@@ -90,11 +94,13 @@ class JavaApiTest {
             List.of(
                 "message", "message", "message", "message", "message", "message", "message", "message", "message",
                 "message", "message", "note", "note", "note", "activate", "activate", "deactivate", "deactivate", "section",
-                "divider", "delay", "delay", "spacer", "spacer", "message", "message", "message", "note"),
+                "divider", "delay", "delay", "spacer", "spacer", "message", "message", "message", "note", "message",
+                "message", "message", "message", "message", "message"),
             all(json, "\"kind\": \"(\\w+)\""));
         assertEquals("late", all(json, "\"label\": \"([^\"]*)\"").get(0), "the timed message sorts first");
         assertTrue(json.contains("\"order\": \"o-1\"") || Files.readString(payloads(tempDir)).contains("o-1"), json);
         assertTrue(json.contains("\"createdAt\": \"2026-01-01T00:00:00Z\""), json);
+        assertTrue(json.contains("\"label\": \"IllegalStateException\""), json);
         assertEquals(2, all(json, "\"type\": \"(LOST)\"").size(), "a MessageType in the data position is the type");
     }
 
@@ -114,6 +120,7 @@ class JavaApiTest {
         scenario.addFact("k", "v");
         scenario.complete("Failed", "", Status.ERROR, ScenarioError.of("Failed", new IllegalStateException("boom")));
         assertEquals(LsdContext.class, LsdContext.getInstance().getClass());
+        assertEquals("lsd-scenario", LsdHeaders.SCENARIO);
 
         String json = Files.readString(reportJson(lsd.completeReport("Java", "java-report")));
         assertEquals(List.of("bound", "direct", "block"), all(events(json), "\"label\": \"([^\"]*)\""));
