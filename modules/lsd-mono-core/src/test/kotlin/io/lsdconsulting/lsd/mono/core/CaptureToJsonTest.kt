@@ -49,7 +49,7 @@ class CaptureToJsonTest {
             "api" messages "Orders DB" withLabel "INSERT orders" withType MessageType.SYNCHRONOUS withDurationMs (12),
         )
         lsd.response("Orders DB", "Checkout API", "ok")
-        lsd.message("Checkout API", "Customer", "201 Created", MessageType.ASYNCHRONOUS, mapOf("orderId" to "ord-1"))
+        lsd.async("Checkout API", "Customer", "201 Created", mapOf("orderId" to "ord-1"))
         lsd.divider("done")
         lsd.capture(noteOver("Orders DB", "email queued"))
         lsd.deactivate("api")

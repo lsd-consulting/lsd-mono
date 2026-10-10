@@ -9,7 +9,7 @@ import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Note
-import io.lsdconsulting.lsd.mono.core.domain.NotePlacement
+import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantIds
 import io.lsdconsulting.lsd.mono.core.domain.Scenario
@@ -78,7 +78,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * **Deferred:** legacy include-files.
  */
-public class LsdContext {
+public class LsdContext : Capturer() {
     @Volatile
     internal var idGenerator = IdGenerator(LsdProperties.deterministicIds())
         private set
@@ -125,19 +125,6 @@ public class LsdContext {
         }
     }
 
-    @JvmOverloads
-    public fun addFact(key: String, value: String = "") {
-        target().addFact(key, value)
-    }
-
-    /**
-     * Capture sequence events for the current scenario (see the class notes on threads).
-     * Names that have not been [addParticipants]'d are registered as plain participants (slug id).
-     */
-    public fun capture(vararg events: SequenceEvent) {
-        captureInto(target(), events.toList())
-    }
-
     /**
      * Start a scenario and, by default, bind the calling thread to it.
      * Test integrations call this when a test starts. With no other scenario running,
@@ -174,135 +161,6 @@ public class LsdContext {
      * handing work to an executor. Returns [task] unchanged when there is none.
      */
     public fun wrap(task: Runnable): Runnable = currentScenario()?.wrap(task) ?: task
-
-    /** Same as [capture] for builders (`"A" messages "B" withLabel "..."`). */
-    public fun capture(vararg builders: SequenceEventBuilder) {
-        capture(*builders.map { it.build(idGenerator) }.toTypedArray())
-    }
-
-    @JvmOverloads
-    public fun message(
-        from: String,
-        to: String,
-        label: String,
-        type: MessageType = MessageType.SYNCHRONOUS,
-        data: Any? = null,
-        colour: String? = null,
-        durationMs: Long? = null,
-    ) {
-        capture(
-            Message(
-                id = idGenerator.next(),
-                from = from,
-                to = to,
-                label = label,
-                type = type,
-                colour = colour,
-                data = data,
-                durationMs = durationMs,
-            ),
-        )
-    }
-
-    @JvmOverloads
-    public fun response(
-        from: String,
-        to: String,
-        label: String,
-        data: Any? = null,
-        durationMs: Long? = null,
-    ) {
-        message(
-            from = from,
-            to = to,
-            label = label,
-            type = MessageType.SYNCHRONOUS_RESPONSE,
-            data = data,
-            durationMs = durationMs,
-        )
-    }
-
-    public fun note(text: String, over: String) {
-        capture(Note(id = idGenerator.next(), text = text, over = over, placement = NotePlacement.OVER))
-    }
-
-    @JvmOverloads
-    public fun noteLeft(text: String, of: String? = null) {
-        capture(Note(id = idGenerator.next(), text = text, over = of, placement = NotePlacement.LEFT))
-    }
-
-    @JvmOverloads
-    public fun noteRight(text: String, of: String? = null) {
-        capture(Note(id = idGenerator.next(), text = text, over = of, placement = NotePlacement.RIGHT))
-    }
-
-    public fun divider(label: String) {
-        capture(Divider(id = idGenerator.next(), label = label))
-    }
-
-    /**
-     * Insert a titled section in the current scenario.
-     * Unlike legacy `newpage`, this does not split the diagram or deactivate lifelines.
-     */
-    public fun section(title: String) {
-        capture(Section(id = idGenerator.next(), title = title))
-    }
-
-    @JvmOverloads
-    public fun delay(label: String? = null) {
-        capture(Delay(id = idGenerator.next(), label = label))
-    }
-
-    @JvmOverloads
-    public fun spacer(heightPx: Int? = null) {
-        capture(Spacer(id = idGenerator.next(), heightPx = heightPx))
-    }
-
-    @JvmOverloads
-    public fun shortInbound(to: String, label: String = "") {
-        capture(
-            Message(
-                id = idGenerator.next(),
-                from = "",
-                to = to,
-                label = label,
-                type = MessageType.SHORT_INBOUND,
-            ),
-        )
-    }
-
-    @JvmOverloads
-    public fun shortOutbound(from: String, label: String = "") {
-        capture(
-            Message(
-                id = idGenerator.next(),
-                from = from,
-                to = "",
-                label = label,
-                type = MessageType.SHORT_OUTBOUND,
-            ),
-        )
-    }
-
-    /**
-     * @param colour optional activation-bar colour (for example `#c026d3`).
-     * Omitted from JSON when null or blank. The shell also draws a hatch, not colour alone.
-     */
-    @JvmOverloads
-    public fun activate(participant: String, colour: String? = null) {
-        capture(
-            Lifeline(
-                id = idGenerator.next(),
-                participantId = participant,
-                action = LifelineAction.ACTIVATE,
-                colour = colour?.takeIf { it.isNotBlank() },
-            ),
-        )
-    }
-
-    public fun deactivate(participant: String) {
-        capture(Lifeline(id = idGenerator.next(), participantId = participant, action = LifelineAction.DEACTIVATE))
-    }
 
     /**
      * @param error structured failure (message + stack). Prefer this over HTML overlay
@@ -368,6 +226,15 @@ public class LsdContext {
             warnedAmbiguous = false
         }
         bound.remove()
+    }
+
+    /** Into the current scenario: the bound one, the only running one, or the default. */
+    override fun emit(events: List<SequenceEvent>) {
+        captureInto(target(), events)
+    }
+
+    override fun fact(key: String, value: String) {
+        target().addFact(key, value)
     }
 
     internal fun isActive(scenario: LsdScenario): Boolean =

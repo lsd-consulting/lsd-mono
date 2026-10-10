@@ -17,6 +17,7 @@ import io.lsdconsulting.lsd.mono.core.domain.MessageType.BI_DIRECTIONAL
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.LOST
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS_RESPONSE
+import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.BOUNDARY
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
@@ -104,7 +105,7 @@ private fun happyPath(lsd: LsdContext) {
     lsd.addFact("3-D Secure")
 
     lsd.section("Given a basket with two items")
-    lsd.shortInbound("API Gateway", "health probe")
+    lsd.inbound("API Gateway", "health probe")
     placeOrderRequest(lsd, "ord-2001")
 
     lsd.capture("Order Service" messages "Basket" withLabel "load basket" withDurationMs 18)
@@ -116,9 +117,10 @@ private fun happyPath(lsd: LsdContext) {
     // Nested activation opened by a self-call, spanning a wrapping note.
     lsd.capture("Order Service" messages "Order Service" withLabel "apply promo SOCKS10")
     lsd.activate("Order Service", colour = "#f59e0b")
-    lsd.noteRight(
+    lsd.note(
         "Promotions stack in priority order. A long note like this one wraps onto several lines inside the card.",
-        of = "Order Service",
+        on = "Order Service",
+        side = NoteSide.RIGHT,
     )
     lsd.capture("Order Service" messages "Order Service" withLabel "round to pence")
     lsd.deactivate("Order Service")
@@ -127,7 +129,7 @@ private fun happyPath(lsd: LsdContext) {
     lsd.activate("Inventory Service")
     lsd.capture("Inventory Service" messages "Orders DB" withLabel "upsert reservation" withDurationMs 33)
     lsd.response("Orders DB", "Inventory Service", "1 row")
-    lsd.note("short note", over = "Orders DB")
+    lsd.note("short note", on = "Orders DB")
     lsd.response("Inventory Service", "Order Service", "reserved")
     lsd.deactivate("Inventory Service")
 
@@ -171,7 +173,7 @@ private fun happyPath(lsd: LsdContext) {
     lsd.deactivate("Kafka order-events")
     lsd.capture("Notification Service" messages "Email" withLabel "render confirmation")
     lsd.spacer(60)
-    lsd.shortOutbound("Notification Service", "SMTP relay")
+    lsd.outbound("Notification Service", "SMTP relay")
     lsd.deactivate("Notification Service")
     lsd.capture("Order Service" messages "Kafka order-events" withLabel "audit.ping" withType LOST)
     lsd.capture(logicalDivider("checkout complete"))
@@ -193,9 +195,9 @@ private fun happyPath(lsd: LsdContext) {
     lsd.deactivate("API Gateway")
     lsd.response("Web UI", "Customer", "show confirmation")
     lsd.deactivate("Web UI")
-    lsd.noteLeft("Edge note on the left of the diagram.")
-    lsd.noteLeft("Left of Customer", of = "Customer")
-    lsd.noteRight("Edge note on the right that is long enough to wrap onto a second and third line.")
+    lsd.note("Edge note on the left of the diagram.", side = NoteSide.LEFT)
+    lsd.note("Left of Customer", on = "Customer", side = NoteSide.LEFT)
+    lsd.note("Edge note on the right that is long enough to wrap onto a second and third line.", side = NoteSide.RIGHT)
 
     lsd.completeScenario(
         "Happy path: card payment",
@@ -278,7 +280,7 @@ private fun outOfStock(lsd: LsdContext) {
     lsd.capture("Inventory Service" messages "Orders DB" withLabel "select stock for update")
     lsd.response("Orders DB", "Inventory Service", "HAT-3: 0 left")
     lsd.capture("Inventory Service" messages "Inventory Service" withLabel "check backorder policy")
-    lsd.noteLeft("Backorders are disabled for hats.", of = "Inventory Service")
+    lsd.note("Backorders are disabled for hats.", on = "Inventory Service", side = NoteSide.LEFT)
     lsd.response("Inventory Service", "Order Service", "409 out of stock", data = mapOf("sku" to "HAT-3", "available" to 0))
     lsd.deactivate("Inventory Service")
     lsd.capture("Order Service" messages "Kafka order-events" withLabel "order.rejected" withType ASYNCHRONOUS)
@@ -312,7 +314,7 @@ private fun asyncFulfilment(lsd: LsdContext) {
     lsd.activate("Notification Service")
     lsd.capture("Notification Service" messages "Email" withLabel "send 'on its way'")
     lsd.delay("courier webhook")
-    lsd.shortInbound("Order Service", "POST /webhooks/courier")
+    lsd.inbound("Order Service", "POST /webhooks/courier")
     lsd.activate("Order Service")
     lsd.capture("Order Service" messages "Orders DB" withLabel "mark delivered")
     lsd.completeScenario(

@@ -74,7 +74,7 @@ class HtmlEscapingTest {
         val lsd = LsdContext()
         lsd.message(hostile("Client"), hostile("Api"), hostile("label"), data = mapOf(hostile("key") to hostile("value"), "method" to hostile("method")))
         lsd.response(hostile("Api"), hostile("Client"), hostile("response"), data = hostile("body"))
-        lsd.note(hostile("note"), over = hostile("Api"))
+        lsd.note(hostile("note"), on = hostile("Api"))
         lsd.addFact(hostile("fact key"), hostile("fact value"))
         lsd.completeScenario(
             hostile("scenario"),

@@ -1,6 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.SequenceEventBuilder
 import io.lsdconsulting.lsd.mono.core.domain.Fact
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
@@ -9,8 +8,8 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 /**
  * One scenario being captured. Start one with [LsdContext.beginScenario].
  *
- * The thread that begins a scenario is bound to it, so plain [LsdContext.capture]
- * calls on that thread land here even when other scenarios run at the same time.
+ * The thread that begins a scenario is bound to it, so captures through [LsdContext]
+ * on that thread land here even when other scenarios run at the same time.
  * Work on other threads (an executor, an HTTP server thread) can use [bind] or
  * [wrap], or capture through this object directly.
  *
@@ -26,7 +25,7 @@ public class LsdScenario internal constructor(
      */
     public val reportKey: String?,
     internal val sequence: Long,
-) {
+) : Capturer() {
     private val lock = Any()
     private val facts = ArrayList<Fact>()
     private val events = ArrayList<SequenceEvent>()
@@ -36,15 +35,12 @@ public class LsdScenario internal constructor(
     public val isActive: Boolean
         get() = context.isActive(this)
 
-    /** Capture into this scenario, whichever thread calls it. */
-    public fun capture(vararg events: SequenceEvent): Unit = context.captureInto(this, events.toList())
+    /** Into this scenario, whichever thread calls it. */
+    override fun emit(events: List<SequenceEvent>) {
+        context.captureInto(this, events)
+    }
 
-    /** Same as [capture] for builders (`"A" messages "B" withLabel "..."`). */
-    public fun capture(vararg builders: SequenceEventBuilder): Unit =
-        context.captureInto(this, builders.map { it.build(context.idGenerator) })
-
-    @JvmOverloads
-    public fun addFact(key: String, value: String = "") {
+    override fun fact(key: String, value: String) {
         if (!add { facts.add(Fact(key, value)) }) context.warnLate(this, "fact")
     }
 

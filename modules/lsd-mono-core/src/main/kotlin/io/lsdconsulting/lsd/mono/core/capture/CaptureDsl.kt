@@ -1,6 +1,5 @@
 package io.lsdconsulting.lsd.mono.core.capture
 
-import io.lsdconsulting.lsd.mono.core.IdGenerator
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
@@ -8,7 +7,7 @@ import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Note
-import io.lsdconsulting.lsd.mono.core.domain.NotePlacement
+import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
@@ -16,17 +15,17 @@ import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import java.time.Instant
 
 /**
- * Builds a [SequenceEvent] using the context's [IdGenerator] so deterministic ids stay consistent.
+ * Builds a [SequenceEvent] for `capture`. The context gives it an id when it is captured.
  * Mirrors legacy `SequenceEventBuilder` (passed to `LsdContext.capture`).
  */
 public abstract class SequenceEventBuilder internal constructor() {
-    internal abstract fun build(ids: IdGenerator): SequenceEvent
+    internal abstract fun build(): SequenceEvent
 }
 
-/** A builder from a function of the context's [IdGenerator]. */
-internal fun SequenceEventBuilder(build: (IdGenerator) -> SequenceEvent): SequenceEventBuilder =
+/** A builder from a function. */
+internal fun SequenceEventBuilder(build: () -> SequenceEvent): SequenceEventBuilder =
     object : SequenceEventBuilder() {
-        override fun build(ids: IdGenerator): SequenceEvent = build(ids)
+        override fun build(): SequenceEvent = build()
     }
 
 public class MessageBuilder : SequenceEventBuilder() {
@@ -59,9 +58,9 @@ public class MessageBuilder : SequenceEventBuilder() {
 
     public fun durationMs(durationMs: Long?): MessageBuilder = apply { this.durationMs = durationMs }
 
-    override fun build(ids: IdGenerator): SequenceEvent =
+    override fun build(): SequenceEvent =
         Message(
-            id = id ?: ids.next(),
+            id = id ?: "",
             from = from,
             to = to,
             label = label,
@@ -105,9 +104,9 @@ public class LifelineBuilder(
 
     public fun createdAt(at: Instant?): LifelineBuilder = apply { this.createdAt = at }
 
-    override fun build(ids: IdGenerator): SequenceEvent =
+    override fun build(): SequenceEvent =
         Lifeline(
-            id = ids.next(),
+            id = "",
             participantId = participant,
             action = action,
             colour = colour?.takeIf { action == LifelineAction.ACTIVATE && it.isNotBlank() },
@@ -123,52 +122,52 @@ public infix fun LifelineAction.lifeline(participant: Participant): LifelineBuil
 public infix fun LifelineBuilder.withColour(colour: String): LifelineBuilder = colour(colour)
 
 public fun noteOver(participant: String, text: String): SequenceEventBuilder =
-    SequenceEventBuilder { ids ->
-        Note(id = ids.next(), text = text, over = participant, placement = NotePlacement.OVER)
+    SequenceEventBuilder {
+        Note(id = "", text = text, over = participant, placement = NoteSide.OVER)
     }
 
 public fun noteOver(participant: Participant, text: String): SequenceEventBuilder = noteOver(participant.id, text)
 
 /** Note left of an optional anchor participant (migration-friendly vs legacy NoteLeft). */
 public fun noteLeft(text: String, of: String? = null): SequenceEventBuilder =
-    SequenceEventBuilder { ids ->
-        Note(id = ids.next(), text = text, over = of, placement = NotePlacement.LEFT)
+    SequenceEventBuilder {
+        Note(id = "", text = text, over = of, placement = NoteSide.LEFT)
     }
 
 public fun noteLeft(text: String, of: Participant): SequenceEventBuilder = noteLeft(text, of.id)
 
 /** Note right of an optional anchor participant (migration-friendly vs legacy NoteRight). */
 public fun noteRight(text: String, of: String? = null): SequenceEventBuilder =
-    SequenceEventBuilder { ids ->
-        Note(id = ids.next(), text = text, over = of, placement = NotePlacement.RIGHT)
+    SequenceEventBuilder {
+        Note(id = "", text = text, over = of, placement = NoteSide.RIGHT)
     }
 
 public fun noteRight(text: String, of: Participant): SequenceEventBuilder = noteRight(text, of.id)
 
 /** Legacy name for a diagram section break (`== label ==` in PlantUML). */
 public fun logicalDivider(label: String): SequenceEventBuilder =
-    SequenceEventBuilder { ids -> Divider(id = ids.next(), label = label) }
+    SequenceEventBuilder { Divider(id = "", label = label) }
 
 /**
  * Continuous-diagram section (replaces legacy `newpage`).
  * `capture(section("Phase 2"))` — activations stay open across the boundary.
  */
 public fun section(title: String): SequenceEventBuilder =
-    SequenceEventBuilder { ids -> Section(id = ids.next(), title = title) }
+    SequenceEventBuilder { Section(id = "", title = title) }
 
 /** Time delay (`...` / `...label...`). */
 public fun delay(label: String? = null): SequenceEventBuilder =
-    SequenceEventBuilder { ids -> Delay(id = ids.next(), label = label) }
+    SequenceEventBuilder { Delay(id = "", label = label) }
 
 /** Vertical spacer (`|||` / sized). */
 public fun spacer(heightPx: Int? = null): SequenceEventBuilder =
-    SequenceEventBuilder { ids -> Spacer(id = ids.next(), heightPx = heightPx) }
+    SequenceEventBuilder { Spacer(id = "", heightPx = heightPx) }
 
 /** Short inbound arrow from diagram edge to [to] (no fake participant). */
 public fun shortInbound(to: String, label: String = ""): SequenceEventBuilder =
-    SequenceEventBuilder { ids ->
+    SequenceEventBuilder {
         Message(
-            id = ids.next(),
+            id = "",
             from = "",
             to = to,
             label = label,
@@ -180,9 +179,9 @@ public fun shortInbound(to: Participant, label: String = ""): SequenceEventBuild
 
 /** Short outbound arrow from [from] toward diagram edge (no fake participant). */
 public fun shortOutbound(from: String, label: String = ""): SequenceEventBuilder =
-    SequenceEventBuilder { ids ->
+    SequenceEventBuilder {
         Message(
-            id = ids.next(),
+            id = "",
             from = from,
             to = "",
             label = label,

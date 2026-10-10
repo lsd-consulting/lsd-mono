@@ -13,7 +13,6 @@ import io.cucumber.plugin.event.TestSourceParsed
 import io.cucumber.plugin.event.TestStepStarted
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
-import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import java.net.URI
@@ -97,7 +96,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
         if (splitByStep && step is PickleStepTestStep) {
             lsd
                 .findScenario(event.testCase.scenarioKey())
-                ?.capture(Section(id = "", title = "${step.step.keyword}${step.step.text}".trim()))
+                ?.section("${step.step.keyword}${step.step.text}".trim())
         }
     }
 

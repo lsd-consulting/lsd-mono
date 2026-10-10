@@ -7,6 +7,7 @@ import io.lsdconsulting.lsd.mono.core.capture.withDurationMs
 import io.lsdconsulting.lsd.mono.core.capture.withLabel
 import io.lsdconsulting.lsd.mono.core.capture.withType
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.ASYNCHRONOUS
+import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.BOUNDARY
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
@@ -70,7 +71,7 @@ private fun placeOrder(lsd: LsdContext) {
     lsd.capture("Orders" messages "Orders DB" withLabel "load basket" withDurationMs 18)
     lsd.response("Orders DB", "Orders", "2 lines", data = mapOf("lines" to listOf("SOCK-1", "SOCK-1")))
     lsd.capture("Orders" messages "Orders" withLabel "apply promo SOCKS10")
-    lsd.noteRight("SOCKS10 takes 10% off socks.", of = "Orders")
+    lsd.note("SOCKS10 takes 10% off socks.", on = "Orders", side = NoteSide.RIGHT)
     lsd.capture("Orders" messages "Orders DB" withLabel "reserve stock" withDurationMs 95)
     lsd.response("Orders DB", "Orders", "reserved", durationMs = 4)
 

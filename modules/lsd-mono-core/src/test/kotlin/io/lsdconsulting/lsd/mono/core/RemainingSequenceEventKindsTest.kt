@@ -11,6 +11,7 @@ import io.lsdconsulting.lsd.mono.core.capture.spacer
 import io.lsdconsulting.lsd.mono.core.capture.withLabel
 import io.lsdconsulting.lsd.mono.core.capture.withType
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
+import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
@@ -48,16 +49,16 @@ class RemainingSequenceEventKindsTest {
         lsd.capture(noteOver("api", "over card"))
         lsd.capture(noteLeft("left of api", of = "api"))
         lsd.capture(noteRight("right edge"))
-        lsd.noteLeft("ctx left", "api")
-        lsd.noteRight("ctx right", "db")
+        lsd.note("ctx left", "api", side = NoteSide.LEFT)
+        lsd.note("ctx right", "db", side = NoteSide.RIGHT)
         lsd.capture(delay("retry window"))
         lsd.delay()
         lsd.capture(spacer(48))
         lsd.spacer()
         lsd.capture(shortInbound("api", "found"))
         lsd.capture(shortOutbound("api", "emit"))
-        lsd.shortInbound("db", "wake")
-        lsd.shortOutbound("db", "ack")
+        lsd.inbound("db", "wake")
+        lsd.outbound("db", "ack")
         lsd.capture("api" messages "db" withLabel "drop" withType MessageType.LOST)
         lsd.capture("api" messages "db" withLabel "pair" withType MessageType.BI_DIRECTIONAL)
         lsd.completeScenario("event kinds", "P1 remaining", Status.SUCCESS)

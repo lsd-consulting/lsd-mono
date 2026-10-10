@@ -4,7 +4,7 @@ import type {
   MessageEvent,
   MessageType,
   NoteEvent,
-  NotePlacement,
+  NoteSide,
   Participant,
   ParticipantType,
   Scenario,
@@ -565,16 +565,16 @@ export interface NoteLayout {
   /** Translate X for the note group (card is centred on 0). */
   x: number
   textAnchor: 'middle' | 'start' | 'end'
-  placement: NotePlacement
+  placement: NoteSide
 }
 
 export function noteLayout(
-  placement: NotePlacement | undefined,
+  placement: NoteSide | undefined,
   over: string | undefined,
   index: Map<string, number>,
   width: number,
 ): NoteLayout {
-  const place: NotePlacement = placement ?? 'over'
+  const place: NoteSide = placement ?? 'over'
   const i = over ? (index.get(over) ?? 0) : 0
   const px = over ? xFor(i, index) : width / 2
   if (place === 'left') {

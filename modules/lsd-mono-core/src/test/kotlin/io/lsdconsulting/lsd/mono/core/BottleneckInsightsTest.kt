@@ -83,8 +83,8 @@ class BottleneckInsightsTest {
         System.setProperty("lsd.mono.label.maxWidth", "12")
         val lsd = LsdContext()
         val longLabel = "abcdefghijklmnopqrstuvwxyz"
-        lsd.message("A", "B", "parent", MessageType.SYNCHRONOUS, durationMs = 100)
-        lsd.message("B", "C", longLabel, MessageType.SYNCHRONOUS, durationMs = 80)
+        lsd.message("A", "B", "parent", durationMs = 100)
+        lsd.message("B", "C", longLabel, durationMs = 80)
         lsd.response("C", "B", "ok")
         lsd.response("B", "A", "done")
         lsd.completeScenario("timed", "ok", Status.SUCCESS)

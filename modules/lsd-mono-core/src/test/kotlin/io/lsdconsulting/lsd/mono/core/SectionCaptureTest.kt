@@ -42,7 +42,7 @@ class SectionCaptureTest {
         lsd.capture("api" messages "Db" withLabel "read")
         lsd.section("Phase 2")
         lsd.capture(section("Phase 3"))
-        lsd.message("Db", "api", "rows", MessageType.SYNCHRONOUS_RESPONSE)
+        lsd.response("Db", "api", "rows")
         lsd.deactivate("api")
         lsd.completeScenario("phased call", "activations survive sections", Status.SUCCESS)
         lsd.completeReport("Sections")

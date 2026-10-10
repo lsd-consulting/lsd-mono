@@ -8,7 +8,7 @@ import java.time.Instant
  * A [Section] is the greenfield replacement for PlantUML `newpage`: a titled row
  * in one continuous diagram. Activations are not closed at section boundaries.
  *
- * Notes use [NotePlacement] (`over` / `left` / `right`) instead of separate
+ * Notes use [NoteSide] (`over` / `left` / `right`) instead of separate
  * NoteLeft / NoteRight types. [Delay] and [Spacer] replace PlantUML `...` / `|||`.
  * [MessageType.SHORT_INBOUND] / [MessageType.SHORT_OUTBOUND] draw from/to a
  * phantom diagram edge — not a fake participant.
@@ -34,7 +34,7 @@ public enum class MessageType {
     SHORT_OUTBOUND,
 }
 
-public enum class NotePlacement {
+public enum class NoteSide {
     OVER,
     LEFT,
     RIGHT,
@@ -53,14 +53,14 @@ public data class Message @JvmOverloads constructor(
 ) : SequenceEvent()
 
 /**
- * Note card. [placement] defaults to [NotePlacement.OVER] (requires [over]).
+ * Note card. [placement] defaults to [NoteSide.OVER] (requires [over]).
  * Left/right may omit [over] (diagram-edge note) or set it as the anchor lifeline.
  */
 public data class Note @JvmOverloads constructor(
     override val id: String,
     val text: String,
     val over: String? = null,
-    val placement: NotePlacement = NotePlacement.OVER,
+    val placement: NoteSide = NoteSide.OVER,
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 

@@ -80,6 +80,28 @@ lsd.completeReport("My Suite")
 lsd.createIndex()
 ```
 
+### Capture verbs
+
+`LsdContext` (which captures into the current scenario) and `LsdScenario` (which
+captures into itself) share the same verbs, from their `Capturer` base class. Each
+call records one event at once:
+
+| Verb | Draws |
+| --- | --- |
+| `message(from, to, label, data, type, durationMs, colour, at)` | An arrow; a synchronous call unless `type` says otherwise |
+| `response(from, to, label, data, durationMs, at)` | The reply to a call |
+| `async(from, to, label, data, at)` | An asynchronous message, such as an event on a queue |
+| `inbound(to, label, at)` / `outbound(from, label, at)` | A short arrow from or to the edge of the diagram |
+| `note(text, on, side, at)` | A note over `on`, or beside it with `side = NoteSide.LEFT` or `RIGHT` (at the edge when `on` is null) |
+| `activate(participant, colour, at)` / `deactivate(participant, at)` | An activation bar |
+| `section(title, at)`, `divider(label, at)`, `delay(label, at)`, `spacer(heightPx, at)` | Rows that structure the diagram |
+| `addFact(key, value)` | A fact shown with the scenario |
+
+Everything after the first required arguments is optional. `at` is when the event
+happened: the report orders timed events by it, for capture that arrives out of order.
+From Java, the overloads cover the common calls (`lsd.message("A", "B", "label", body)`).
+To pass `at`, pass the defaults of the parameters before it (`MessageType.SYNCHRONOUS`, `null`).
+
 ### Properties
 
 Set these as system properties (`-Dlsd.mono.report.outputDir=out`) or as environment

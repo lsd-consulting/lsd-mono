@@ -77,7 +77,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | `NoteLeft` / `NoteRight` (± optional `ofParticipant`) → PlantUML `note left` / `note right`. |
-| **Shipped** | Single `Note` with `placement: over \| left \| right` and optional `over` anchor. DSL `noteOver` / `noteLeft` / `noteRight`; `LsdContext.noteLeft` / `noteRight`. SVG offsets left/right of the lifeline (or diagram centre when unanchored) and adds a placement text cue (not colour-only). |
+| **Shipped** | Single `Note` with `placement: over \| left \| right` and optional `over` anchor. DSL `noteOver` / `noteLeft` / `noteRight`; the verb `note(text, on, side = NoteSide.LEFT)` (#3). SVG offsets left/right of the lifeline (or diagram centre when unanchored) and adds a placement text cue (not colour-only). |
 | **Test** | `RemainingSequenceEventKindsTest`; `sequence-diagram.test.ts` (`noteLayout` / placement attrs). |
 
 #### P1 — Time delay & vertical space — **landed 2026-10-03**
@@ -93,7 +93,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | `SHORT_INBOUND` / `SHORT_OUTBOUND` as `?->` / `->?`. |
-| **Shipped** | Message types + DSL `shortInbound` / `shortOutbound`. Phantom end is an empty `from`/`to` string — **no** `?` participant. SVG stub toward the diagram edge (`shortMessageEndpoints`) with `[in]` / `[out]` text cues. |
+| **Shipped** | Message types + DSL `shortInbound` / `shortOutbound`, and the verbs `inbound` / `outbound` (#3). Phantom end is an empty `from`/`to` string — **no** `?` participant. SVG stub toward the diagram edge (`shortMessageEndpoints`) with `[in]` / `[out]` text cues. |
 | **Test** | `RemainingSequenceEventKindsTest`; `sequence-diagram.test.ts` (geometry + fragments). |
 
 #### P1 — Distinct LOST / BI_DIRECTIONAL rendering — **landed 2026-10-03**
