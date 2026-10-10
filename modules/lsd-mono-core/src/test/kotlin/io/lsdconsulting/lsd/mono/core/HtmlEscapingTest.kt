@@ -5,7 +5,6 @@ import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.html.Html
 import io.lsdconsulting.lsd.mono.core.json.jsonString
-import io.lsdconsulting.lsd.mono.core.report.PopupContent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -68,15 +67,6 @@ class HtmlEscapingTest {
             json,
         )
         assertValidJson(json)
-    }
-
-    @Test
-    fun `popup escapes its id, title and link text but keeps its HTML content`() {
-        val html = PopupContent.popupHyperlink(id = "p\"1", popupTitle = "<b>t</b>", hyperlinkText = "a & b", popupContent = "<pre>x</pre>")
-        assertTrue(html.contains("""<a href="#p&quot;1">a &amp; b</a>"""), html)
-        assertTrue(html.contains("""<div id="p&quot;1" class="overlay""""), html)
-        assertTrue(html.contains("<h2>&lt;b&gt;t&lt;/b&gt;</h2>"), html)
-        assertTrue(html.contains("<pre>x</pre>"), html)
     }
 
     @Test

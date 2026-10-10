@@ -49,8 +49,8 @@ import java.util.function.Function
  * (Java: `lsd.getPayloads().register(JsonNode.class, node -> mapper.convertValue(node, Map.class))`).
  * A converter's result is snapshotted in turn. A converter that throws gives a marker. Thread-safe.
  */
-class PayloadSnapshot @JvmOverloads constructor(
-    @Volatile var limits: Limits = Limits.fromProperties(),
+public class PayloadSnapshot @JvmOverloads constructor(
+    @Volatile public var limits: Limits = Limits.fromProperties(),
 ) {
     /**
      * @property maxDepth nesting depth before `[lsd: max depth N reached]`.
@@ -58,20 +58,20 @@ class PayloadSnapshot @JvmOverloads constructor(
      * @property maxItems entries kept from one collection, map, array or object.
      * @property maxTotalSize rough size budget for one payload, in characters.
      */
-    data class Limits(
+    public data class Limits(
         val maxDepth: Int = 32,
         val maxStringLength: Int = 100_000,
         val maxItems: Int = 1_000,
         val maxTotalSize: Int = 1_000_000,
     ) {
-        companion object {
-            const val MAX_DEPTH = "lsd.mono.payload.maxDepth"
-            const val MAX_STRING_LENGTH = "lsd.mono.payload.maxStringLength"
-            const val MAX_ITEMS = "lsd.mono.payload.maxItems"
-            const val MAX_TOTAL_SIZE = "lsd.mono.payload.maxTotalSize"
+        public companion object {
+            public const val MAX_DEPTH: String = "lsd.mono.payload.maxDepth"
+            public const val MAX_STRING_LENGTH: String = "lsd.mono.payload.maxStringLength"
+            public const val MAX_ITEMS: String = "lsd.mono.payload.maxItems"
+            public const val MAX_TOTAL_SIZE: String = "lsd.mono.payload.maxTotalSize"
 
             @JvmStatic
-            fun fromProperties(): Limits {
+            public fun fromProperties(): Limits {
                 val defaults = Limits()
 
                 fun read(key: String, default: Int) =
@@ -94,14 +94,14 @@ class PayloadSnapshot @JvmOverloads constructor(
      * Convert values of [type] (and subtypes) with [converter] first. Later registrations
      * win. The result is snapshotted in turn, without applying a converter to it again.
      */
-    fun <T : Any> register(type: Class<T>, converter: Function<in T, out Any?>): PayloadSnapshot =
+    public fun <T : Any> register(type: Class<T>, converter: Function<in T, out Any?>): PayloadSnapshot =
         apply { converters.add(0, Converter(type, converter)) }
 
     /** Remove every registered converter. */
-    fun clearConverters() = converters.clear()
+    public fun clearConverters(): Unit = converters.clear()
 
     /** An immutable, JSON-shaped copy of [value]. Never throws. */
-    fun snapshot(value: Any?): Any? =
+    public fun snapshot(value: Any?): Any? =
         try {
             Walk(limits).copy(value, 0)
         } catch (e: StackOverflowError) {
@@ -314,13 +314,13 @@ class PayloadSnapshot @JvmOverloads constructor(
         override fun toString() = delegate.toString()
     }
 
-    companion object {
+    public companion object {
         /** Key added to a map or object whose remaining entries were dropped. */
-        const val TRUNCATED_KEY = "[lsd: truncated]"
+        public const val TRUNCATED_KEY: String = "[lsd: truncated]"
 
         /** Default limits and no converters. Used for data that was never captured. */
         @JvmStatic
-        val default = PayloadSnapshot(Limits())
+        public val default: PayloadSnapshot = PayloadSnapshot(Limits())
 
         private val opaquePackages = listOf("java.", "javax.", "jdk.", "sun.", "com.sun.", "kotlin.", "kotlinx.", "scala.", "groovy.")
 

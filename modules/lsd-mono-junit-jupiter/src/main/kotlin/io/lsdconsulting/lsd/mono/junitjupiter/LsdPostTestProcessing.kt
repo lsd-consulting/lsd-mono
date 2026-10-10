@@ -9,4 +9,4 @@ package io.lsdconsulting.lsd.mono.junitjupiter
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
-annotation class LsdPostTestProcessing
+public annotation class LsdPostTestProcessing

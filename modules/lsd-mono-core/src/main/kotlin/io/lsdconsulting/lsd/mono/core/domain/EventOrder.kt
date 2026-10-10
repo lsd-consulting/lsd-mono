@@ -9,7 +9,7 @@ import java.time.Instant
  * Timed events sort by that instant (stable on ties). Untimed events keep
  * their relative capture order and come after every timed event.
  */
-fun orderByCreatedAt(events: List<SequenceEvent>): List<SequenceEvent> {
+internal fun orderByCreatedAt(events: List<SequenceEvent>): List<SequenceEvent> {
     if (events.none { it.createdAt != null }) return events
     return events
         .withIndex()

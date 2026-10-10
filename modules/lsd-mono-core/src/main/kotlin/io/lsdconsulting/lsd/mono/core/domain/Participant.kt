@@ -10,7 +10,7 @@ package io.lsdconsulting.lsd.mono.core.domain
  * Types match the report union. Legacy PlantUML-only types (`CONTROL`, `COLLECTIONS`)
  * are not carried — use [ParticipantType.PARTICIPANT].
  */
-data class Participant @JvmOverloads constructor(
+public data class Participant @JvmOverloads constructor(
     val name: String,
     val id: String = ParticipantIds.fromName(name),
     val type: ParticipantType = ParticipantType.PARTICIPANT,
@@ -18,7 +18,7 @@ data class Participant @JvmOverloads constructor(
     val colour: String? = null,
 )
 
-enum class ParticipantType {
+public enum class ParticipantType {
     ACTOR,
     PARTICIPANT,
     DATABASE,
@@ -28,7 +28,7 @@ enum class ParticipantType {
     ;
 
     @JvmOverloads
-    fun called(
+    public fun called(
         name: String,
         id: String = ParticipantIds.fromName(name),
         alias: String? = null,
@@ -36,7 +36,7 @@ enum class ParticipantType {
     ): Participant = Participant(name = name, id = id, type = this, alias = alias, colour = colour)
 }
 
-object ParticipantIds {
+internal object ParticipantIds {
     fun fromName(name: String): String =
         name
             .trim()

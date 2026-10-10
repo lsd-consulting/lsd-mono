@@ -37,7 +37,7 @@ import java.util.regex.Pattern
  * hands to other threads should be wrapped with [LsdContext.wrap].
  * The extension keeps no state of its own.
  */
-class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
+public class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionCallback, AfterAllCallback {
     private val lsdContext: LsdContext = LsdContext.instance
 
     override fun beforeEach(context: ExtensionContext) {

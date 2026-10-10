@@ -165,7 +165,6 @@ class HtmlEscapingGuardTest {
             )
         val ALLOWED =
             listOf(
-                Allowed("report/PopupContent.kt", "popupContent", "documented as caller-supplied HTML, the lsd-core API"),
                 Allowed("report/ReportWriter.kt", "src", "a script statement whose only value is written by jsonString"),
                 Allowed("report/ReportWriter.kt", "report.toJson().trim()", "JSON whose strings are written by jsonString, which escapes <, > and &"),
             )

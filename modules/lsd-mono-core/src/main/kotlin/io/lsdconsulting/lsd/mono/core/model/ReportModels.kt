@@ -12,20 +12,20 @@ import io.lsdconsulting.lsd.mono.core.json.render
 /**
  * Report JSON aligned with report `src/types.ts` (`Report` / `Scenario` / `DiagramEvent`).
  */
-data class ReportFile(
+internal data class ReportFile(
     val filename: String,
     val title: String,
     val status: String,
 )
 
-data class ReportOptionsJson(
+internal data class ReportOptionsJson(
     /** When false, scenario `metrics` and `insights` are empty. Default true. */
     val metricsEnabled: Boolean = true,
     /** Character width used to truncate labels in the shell and in metric summaries. */
     val labelMaxWidth: Int = 200,
 )
 
-data class ReportJson(
+internal data class ReportJson(
     val title: String,
     val generatedAt: String,
     val generator: String,
@@ -38,13 +38,13 @@ data class ReportJson(
     val scenarios: List<ScenarioJson>,
 )
 
-data class ScenarioErrorJson(
+internal data class ScenarioErrorJson(
     val headline: String,
     val message: String,
     val stack: String? = null,
 )
 
-data class ScenarioJson(
+internal data class ScenarioJson(
     val id: String,
     val title: String,
     val status: String,
@@ -59,12 +59,12 @@ data class ScenarioJson(
     val error: ScenarioErrorJson? = null,
 )
 
-data class FactJson(
+internal data class FactJson(
     val key: String,
     val value: String,
 )
 
-data class MetricJson(
+internal data class MetricJson(
     val key: String,
     val value: String,
 )
@@ -73,7 +73,7 @@ data class MetricJson(
  * One ranked duration insight. [kind] is `bottleneck` (paired call, isolated time)
  * or `slowest` (no response pairing). [rank] is 1-based and is the non-colour cue.
  */
-data class InsightJson(
+internal data class InsightJson(
     val rank: Int,
     val kind: String,
     val participant: String,
@@ -85,7 +85,7 @@ data class InsightJson(
     val isolatedMs: Long,
 )
 
-data class ParticipantJson(
+internal data class ParticipantJson(
     val id: String,
     val name: String,
     val type: String = "PARTICIPANT",
@@ -93,11 +93,11 @@ data class ParticipantJson(
     val colour: String? = null,
 )
 
-sealed class EventJson {
+internal sealed class EventJson {
     internal abstract fun toJsonValue(): JsonValue
 }
 
-data class MessageEventJson(
+internal data class MessageEventJson(
     val id: String,
     val from: String,
     val to: String,
@@ -128,7 +128,7 @@ data class MessageEventJson(
         )
 }
 
-data class NoteEventJson(
+internal data class NoteEventJson(
     val id: String,
     val text: String,
     /** Anchor participant. Required for placement `over`; optional for left/right. */
@@ -149,7 +149,7 @@ data class NoteEventJson(
         )
 }
 
-data class DelayEventJson(
+internal data class DelayEventJson(
     val id: String,
     val label: String? = null,
     val createdAt: String? = null,
@@ -165,7 +165,7 @@ data class DelayEventJson(
         )
 }
 
-data class SpacerEventJson(
+internal data class SpacerEventJson(
     val id: String,
     val heightPx: Int? = null,
     val createdAt: String? = null,
@@ -181,7 +181,7 @@ data class SpacerEventJson(
         )
 }
 
-data class DividerEventJson(
+internal data class DividerEventJson(
     val id: String,
     val label: String,
     val createdAt: String? = null,
@@ -197,7 +197,7 @@ data class DividerEventJson(
         )
 }
 
-data class SectionEventJson(
+internal data class SectionEventJson(
     val id: String,
     val title: String,
     val createdAt: String? = null,
@@ -213,7 +213,7 @@ data class SectionEventJson(
         )
 }
 
-data class LifelineEventJson(
+internal data class LifelineEventJson(
     val kind: String,
     val id: String,
     val participantId: String,
@@ -233,7 +233,7 @@ data class LifelineEventJson(
         )
 }
 
-fun ReportJson.toJson(): String =
+internal fun ReportJson.toJson(): String =
     obj(
         listOf(
             "title" to JsonString(title),
@@ -311,7 +311,7 @@ private fun obj(fields: List<Pair<String, JsonValue>>): JsonObject = JsonObject(
  * Any other payload field is removed from this copy and returned for the sidecar script.
  * [ReportJson.toJson] is unchanged so `report.json` still has the full capture.
  */
-fun ReportJson.forShell(): ShellReport {
+internal fun ReportJson.forShell(): ShellReport {
     val payloads = linkedMapOf<String, Any?>()
     val light =
         copy(
@@ -331,7 +331,7 @@ fun ReportJson.forShell(): ShellReport {
     return ShellReport(light, payloads)
 }
 
-data class ShellReport(
+internal data class ShellReport(
     val report: ReportJson,
     val payloads: Map<String, Any?>,
 )
@@ -374,5 +374,5 @@ private fun isSummaryField(name: String, value: Any?): Boolean =
     }
 
 /** One entry per deferred payload. The outer map is not subject to the payload item limit. */
-fun shellPayloadScript(payloads: Map<String, Any?>): String =
+internal fun shellPayloadScript(payloads: Map<String, Any?>): String =
     "window.__LSD_PAYLOADS__=${JsonObject(payloads.map { (id, data) -> id to anyToJson(data) }).render()};\n"

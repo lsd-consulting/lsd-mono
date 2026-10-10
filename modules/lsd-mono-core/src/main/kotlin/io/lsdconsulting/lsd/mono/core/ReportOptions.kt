@@ -14,7 +14,7 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
  * `lsd.core.label.maxWidth` fallback). Full labels stay on events; summaries and
  * the SVG shell truncate to this width.
  */
-data class ReportOptions(
+internal data class ReportOptions(
     val metricsEnabled: Boolean = true,
     val labelMaxWidth: Int = DEFAULT_LABEL_MAX_WIDTH,
 ) {

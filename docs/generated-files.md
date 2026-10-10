@@ -1,8 +1,9 @@
 # Generated files
 
-Build outputs are not committed. The only generated files in git are images: README pictures, the
-check:ux baselines, and the perf screenshots. A Linux CI runner cannot reproduce them byte for byte,
-so CI does not verify them. Retake them on a Mac with the commands below.
+Build outputs are not committed. The generated files in git are the public API dumps, which `check`
+verifies, and images: README pictures, the check:ux baselines, and the perf screenshots. A Linux CI
+runner cannot reproduce the images byte for byte, so CI does not verify them. Retake them on a Mac
+with the commands below.
 
 ## What CI checks
 
@@ -21,6 +22,21 @@ notes, are not checked. Run it locally on a tree with no uncommitted changes.
 | `modules/lsd-mono-core/report/dist/lsd-report-payloads.js` | `reportSingle` | The shell's built-in demo when you open `dist/lsd-report.html` with no captured report |
 | `modules/lsd-mono-core/build/pages/` (`index.html`, `kitchen-sink.html`, `kitchen-sink-payloads.js`) | `./gradlew :modules:lsd-mono-core:kitchenSinkSample` | The [Pages workflow](../.github/workflows/pages.yml) builds and publishes it on pushes to `main`. `index.html` is copied from [`docs/samples/index.html`](samples/index.html), which is source |
 | `docs/perf-samples/` | `docs/perf/generate-*.mjs` | Local perf runs (gitignored) |
+
+## Committed API dumps (verified by `check`)
+
+| File | How to update |
+|------|----------|
+| `modules/lsd-mono-core/api/lsd-mono-core.api` | `./gradlew updateKotlinAbi` |
+| `modules/lsd-mono-junit-jupiter/api/lsd-mono-junit-jupiter.api` | `./gradlew updateKotlinAbi` |
+| `modules/lsd-mono-cucumber-8/api/lsd-mono-cucumber-8.api` | `./gradlew updateKotlinAbi` |
+
+Every published module uses Kotlin's explicit API mode and the Kotlin Gradle plugin's built-in ABI
+validation (the `lsd.kotlin-jvm` convention in `build-logic`). The dump lists the module's public
+binary API. `checkKotlinAbi` runs as part of `check`, so `./gradlew build` fails when the public API
+no longer matches its dump. When the change is intended, run `updateKotlinAbi` and commit the new
+dump with the change, so the API difference is reviewed with the code. The build never writes these
+files, so `verifyGenerated` does not need to know about them.
 
 ## Committed images (not verified in CI)
 

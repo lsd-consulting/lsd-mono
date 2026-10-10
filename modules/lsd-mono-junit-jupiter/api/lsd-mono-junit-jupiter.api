@@ -1,0 +1,14 @@
+public final class io/lsdconsulting/lsd/mono/junitjupiter/LsdExtension : org/junit/jupiter/api/extension/AfterAllCallback, org/junit/jupiter/api/extension/AfterTestExecutionCallback, org/junit/jupiter/api/extension/BeforeEachCallback, org/junit/jupiter/api/extension/TestWatcher {
+	public fun <init> ()V
+	public fun afterAll (Lorg/junit/jupiter/api/extension/ExtensionContext;)V
+	public fun afterTestExecution (Lorg/junit/jupiter/api/extension/ExtensionContext;)V
+	public fun beforeEach (Lorg/junit/jupiter/api/extension/ExtensionContext;)V
+	public fun testAborted (Lorg/junit/jupiter/api/extension/ExtensionContext;Ljava/lang/Throwable;)V
+	public fun testDisabled (Lorg/junit/jupiter/api/extension/ExtensionContext;Ljava/util/Optional;)V
+	public fun testFailed (Lorg/junit/jupiter/api/extension/ExtensionContext;Ljava/lang/Throwable;)V
+	public fun testSuccessful (Lorg/junit/jupiter/api/extension/ExtensionContext;)V
+}
+
+public abstract interface annotation class io/lsdconsulting/lsd/mono/junitjupiter/LsdPostTestProcessing : java/lang/annotation/Annotation {
+}
+

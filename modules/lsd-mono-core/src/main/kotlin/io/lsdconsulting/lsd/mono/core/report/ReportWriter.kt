@@ -46,7 +46,7 @@ import kotlin.concurrent.withLock
  *   includes the reports of all the others.
  * - There are no shared "latest" files (`report.json`, `lsd-report.single.html`).
  */
-object ReportWriter {
+internal object ReportWriter {
     private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report.single.html"
     private const val INDEX_DIR = ".lsd-index"
     private const val INDEX_LOCK = ".lock"

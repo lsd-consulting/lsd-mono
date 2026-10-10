@@ -19,12 +19,12 @@ import java.time.Instant
  *
  * Deferred vs legacy: PageTitle as its own event.
  */
-sealed class SequenceEvent {
-    abstract val id: String
-    abstract val createdAt: Instant?
+public sealed class SequenceEvent {
+    public abstract val id: String
+    public abstract val createdAt: Instant?
 }
 
-enum class MessageType {
+public enum class MessageType {
     SYNCHRONOUS,
     SYNCHRONOUS_RESPONSE,
     ASYNCHRONOUS,
@@ -34,13 +34,13 @@ enum class MessageType {
     SHORT_OUTBOUND,
 }
 
-enum class NotePlacement {
+public enum class NotePlacement {
     OVER,
     LEFT,
     RIGHT,
 }
 
-data class Message @JvmOverloads constructor(
+public data class Message @JvmOverloads constructor(
     override val id: String,
     val from: String,
     val to: String,
@@ -56,7 +56,7 @@ data class Message @JvmOverloads constructor(
  * Note card. [placement] defaults to [NotePlacement.OVER] (requires [over]).
  * Left/right may omit [over] (diagram-edge note) or set it as the anchor lifeline.
  */
-data class Note @JvmOverloads constructor(
+public data class Note @JvmOverloads constructor(
     override val id: String,
     val text: String,
     val over: String? = null,
@@ -64,36 +64,36 @@ data class Note @JvmOverloads constructor(
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
-data class Divider(
+public data class Divider(
     override val id: String,
     val label: String,
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Titled break in a continuous diagram. Does not split the SVG or drop activations. */
-data class Section(
+public data class Section(
     override val id: String,
     val title: String,
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Time-delay ellipsis row (`...label...` in PlantUML). */
-data class Delay @JvmOverloads constructor(
+public data class Delay @JvmOverloads constructor(
     override val id: String,
     val label: String? = null,
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Vertical spacer (`|||` / sized `||N||` in PlantUML). [heightPx] defaults in the UI. */
-data class Spacer @JvmOverloads constructor(
+public data class Spacer @JvmOverloads constructor(
     override val id: String,
     val heightPx: Int? = null,
     override val createdAt: Instant? = null,
 ) : SequenceEvent()
 
-enum class LifelineAction { ACTIVATE, DEACTIVATE }
+public enum class LifelineAction { ACTIVATE, DEACTIVATE }
 
-data class Lifeline @JvmOverloads constructor(
+public data class Lifeline @JvmOverloads constructor(
     override val id: String,
     val participantId: String,
     val action: LifelineAction = LifelineAction.ACTIVATE,

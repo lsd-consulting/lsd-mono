@@ -19,11 +19,17 @@ import java.time.Instant
  * Builds a [SequenceEvent] using the context's [IdGenerator] so deterministic ids stay consistent.
  * Mirrors legacy `SequenceEventBuilder` (passed to `LsdContext.capture`).
  */
-fun interface SequenceEventBuilder {
-    fun build(ids: IdGenerator): SequenceEvent
+public abstract class SequenceEventBuilder internal constructor() {
+    internal abstract fun build(ids: IdGenerator): SequenceEvent
 }
 
-class MessageBuilder : SequenceEventBuilder {
+/** A builder from a function of the context's [IdGenerator]. */
+internal fun SequenceEventBuilder(build: (IdGenerator) -> SequenceEvent): SequenceEventBuilder =
+    object : SequenceEventBuilder() {
+        override fun build(ids: IdGenerator): SequenceEvent = build(ids)
+    }
+
+public class MessageBuilder : SequenceEventBuilder() {
     private var id: String? = null
     private var from: String = ""
     private var to: String = ""
@@ -33,27 +39,27 @@ class MessageBuilder : SequenceEventBuilder {
     private var durationMs: Long? = null
     private var type: MessageType = MessageType.SYNCHRONOUS
 
-    fun id(id: String) = apply { this.id = id }
+    public fun id(id: String): MessageBuilder = apply { this.id = id }
 
-    fun from(from: String) = apply { this.from = from }
+    public fun from(from: String): MessageBuilder = apply { this.from = from }
 
-    fun from(from: Participant) = apply { this.from = from.id }
+    public fun from(from: Participant): MessageBuilder = apply { this.from = from.id }
 
-    fun to(to: String) = apply { this.to = to }
+    public fun to(to: String): MessageBuilder = apply { this.to = to }
 
-    fun to(to: Participant) = apply { this.to = to.id }
+    public fun to(to: Participant): MessageBuilder = apply { this.to = to.id }
 
-    fun label(label: String) = apply { this.label = label }
+    public fun label(label: String): MessageBuilder = apply { this.label = label }
 
-    fun data(data: Any?) = apply { this.data = data }
+    public fun data(data: Any?): MessageBuilder = apply { this.data = data }
 
-    fun colour(colour: String?) = apply { this.colour = colour }
+    public fun colour(colour: String?): MessageBuilder = apply { this.colour = colour }
 
-    fun type(type: MessageType) = apply { this.type = type }
+    public fun type(type: MessageType): MessageBuilder = apply { this.type = type }
 
-    fun durationMs(durationMs: Long?) = apply { this.durationMs = durationMs }
+    public fun durationMs(durationMs: Long?): MessageBuilder = apply { this.durationMs = durationMs }
 
-    override fun build(ids: IdGenerator): Message =
+    override fun build(ids: IdGenerator): SequenceEvent =
         Message(
             id = id ?: ids.next(),
             from = from,
@@ -64,47 +70,42 @@ class MessageBuilder : SequenceEventBuilder {
             data = data,
             durationMs = durationMs,
         )
-
-    companion object {
-        @JvmStatic
-        fun messageBuilder(): MessageBuilder = MessageBuilder()
-    }
 }
 
-infix fun String.messages(other: String): MessageBuilder = MessageBuilder().from(this).to(other)
+public infix fun String.messages(other: String): MessageBuilder = MessageBuilder().from(this).to(other)
 
-infix fun String.messages(other: Participant): MessageBuilder = MessageBuilder().from(this).to(other)
+public infix fun String.messages(other: Participant): MessageBuilder = MessageBuilder().from(this).to(other)
 
-infix fun Participant.messages(other: String): MessageBuilder = MessageBuilder().from(this).to(other)
+public infix fun Participant.messages(other: String): MessageBuilder = MessageBuilder().from(this).to(other)
 
-infix fun Participant.messages(other: Participant): MessageBuilder = MessageBuilder().from(this).to(other)
+public infix fun Participant.messages(other: Participant): MessageBuilder = MessageBuilder().from(this).to(other)
 
-infix fun MessageBuilder.withLabel(label: String): MessageBuilder = label(label)
+public infix fun MessageBuilder.withLabel(label: String): MessageBuilder = label(label)
 
-infix fun MessageBuilder.withData(data: Any?): MessageBuilder = data(data)
+public infix fun MessageBuilder.withData(data: Any?): MessageBuilder = data(data)
 
-infix fun MessageBuilder.withType(type: MessageType): MessageBuilder = type(type)
+public infix fun MessageBuilder.withType(type: MessageType): MessageBuilder = type(type)
 
-infix fun MessageBuilder.withColour(colour: String): MessageBuilder = colour(colour)
+public infix fun MessageBuilder.withColour(colour: String): MessageBuilder = colour(colour)
 
-infix fun MessageBuilder.withDurationMs(durationMs: Long): MessageBuilder = durationMs(durationMs)
+public infix fun MessageBuilder.withDurationMs(durationMs: Long): MessageBuilder = durationMs(durationMs)
 
 /**
  * Legacy-shaped lifeline: `capture(LifelineAction.ACTIVATE lifeline "api")`.
  * Optional colour (`withColour`) applies to activate only and is written on the JSON event.
  */
-class LifelineBuilder(
+public class LifelineBuilder(
     private val action: LifelineAction,
     private val participant: String,
-) : SequenceEventBuilder {
+) : SequenceEventBuilder() {
     private var colour: String? = null
     private var createdAt: Instant? = null
 
-    fun colour(colour: String?) = apply { this.colour = colour }
+    public fun colour(colour: String?): LifelineBuilder = apply { this.colour = colour }
 
-    fun createdAt(at: Instant?) = apply { this.createdAt = at }
+    public fun createdAt(at: Instant?): LifelineBuilder = apply { this.createdAt = at }
 
-    override fun build(ids: IdGenerator): Lifeline =
+    override fun build(ids: IdGenerator): SequenceEvent =
         Lifeline(
             id = ids.next(),
             participantId = participant,
@@ -114,57 +115,57 @@ class LifelineBuilder(
         )
 }
 
-infix fun LifelineAction.lifeline(participant: String): LifelineBuilder = LifelineBuilder(this, participant)
+public infix fun LifelineAction.lifeline(participant: String): LifelineBuilder = LifelineBuilder(this, participant)
 
-infix fun LifelineAction.lifeline(participant: Participant): LifelineBuilder = lifeline(participant.id)
+public infix fun LifelineAction.lifeline(participant: Participant): LifelineBuilder = lifeline(participant.id)
 
 /** Sets the activation-bar colour. No effect on deactivate. */
-infix fun LifelineBuilder.withColour(colour: String): LifelineBuilder = colour(colour)
+public infix fun LifelineBuilder.withColour(colour: String): LifelineBuilder = colour(colour)
 
-fun noteOver(participant: String, text: String): SequenceEventBuilder =
+public fun noteOver(participant: String, text: String): SequenceEventBuilder =
     SequenceEventBuilder { ids ->
         Note(id = ids.next(), text = text, over = participant, placement = NotePlacement.OVER)
     }
 
-fun noteOver(participant: Participant, text: String): SequenceEventBuilder = noteOver(participant.id, text)
+public fun noteOver(participant: Participant, text: String): SequenceEventBuilder = noteOver(participant.id, text)
 
 /** Note left of an optional anchor participant (migration-friendly vs legacy NoteLeft). */
-fun noteLeft(text: String, of: String? = null): SequenceEventBuilder =
+public fun noteLeft(text: String, of: String? = null): SequenceEventBuilder =
     SequenceEventBuilder { ids ->
         Note(id = ids.next(), text = text, over = of, placement = NotePlacement.LEFT)
     }
 
-fun noteLeft(text: String, of: Participant): SequenceEventBuilder = noteLeft(text, of.id)
+public fun noteLeft(text: String, of: Participant): SequenceEventBuilder = noteLeft(text, of.id)
 
 /** Note right of an optional anchor participant (migration-friendly vs legacy NoteRight). */
-fun noteRight(text: String, of: String? = null): SequenceEventBuilder =
+public fun noteRight(text: String, of: String? = null): SequenceEventBuilder =
     SequenceEventBuilder { ids ->
         Note(id = ids.next(), text = text, over = of, placement = NotePlacement.RIGHT)
     }
 
-fun noteRight(text: String, of: Participant): SequenceEventBuilder = noteRight(text, of.id)
+public fun noteRight(text: String, of: Participant): SequenceEventBuilder = noteRight(text, of.id)
 
 /** Legacy name for a diagram section break (`== label ==` in PlantUML). */
-fun logicalDivider(label: String): SequenceEventBuilder =
+public fun logicalDivider(label: String): SequenceEventBuilder =
     SequenceEventBuilder { ids -> Divider(id = ids.next(), label = label) }
 
 /**
  * Continuous-diagram section (replaces legacy `newpage`).
  * `capture(section("Phase 2"))` — activations stay open across the boundary.
  */
-fun section(title: String): SequenceEventBuilder =
+public fun section(title: String): SequenceEventBuilder =
     SequenceEventBuilder { ids -> Section(id = ids.next(), title = title) }
 
 /** Time delay (`...` / `...label...`). */
-fun delay(label: String? = null): SequenceEventBuilder =
+public fun delay(label: String? = null): SequenceEventBuilder =
     SequenceEventBuilder { ids -> Delay(id = ids.next(), label = label) }
 
 /** Vertical spacer (`|||` / sized). */
-fun spacer(heightPx: Int? = null): SequenceEventBuilder =
+public fun spacer(heightPx: Int? = null): SequenceEventBuilder =
     SequenceEventBuilder { ids -> Spacer(id = ids.next(), heightPx = heightPx) }
 
 /** Short inbound arrow from diagram edge to [to] (no fake participant). */
-fun shortInbound(to: String, label: String = ""): SequenceEventBuilder =
+public fun shortInbound(to: String, label: String = ""): SequenceEventBuilder =
     SequenceEventBuilder { ids ->
         Message(
             id = ids.next(),
@@ -175,10 +176,10 @@ fun shortInbound(to: String, label: String = ""): SequenceEventBuilder =
         )
     }
 
-fun shortInbound(to: Participant, label: String = ""): SequenceEventBuilder = shortInbound(to.id, label)
+public fun shortInbound(to: Participant, label: String = ""): SequenceEventBuilder = shortInbound(to.id, label)
 
 /** Short outbound arrow from [from] toward diagram edge (no fake participant). */
-fun shortOutbound(from: String, label: String = ""): SequenceEventBuilder =
+public fun shortOutbound(from: String, label: String = ""): SequenceEventBuilder =
     SequenceEventBuilder { ids ->
         Message(
             id = ids.next(),
@@ -189,4 +190,4 @@ fun shortOutbound(from: String, label: String = ""): SequenceEventBuilder =
         )
     }
 
-fun shortOutbound(from: Participant, label: String = ""): SequenceEventBuilder = shortOutbound(from.id, label)
+public fun shortOutbound(from: Participant, label: String = ""): SequenceEventBuilder = shortOutbound(from.id, label)

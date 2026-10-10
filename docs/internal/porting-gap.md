@@ -34,14 +34,13 @@ These are **implemented**, not stubs, unless noted.
 | Logical dividers | `Divider` / `logicalDivider` |
 | Lifeline activate / deactivate | `Lifeline` + DSL `LifelineAction.lifeline`. Activation bars are pinned to the opening and closing message rows (those keyword events have no row height). **Landed 2026-10-03.** |
 | Kotlin capture DSL (`"A" messages "B" withLabel …`) | `capture/CaptureDsl.kt` |
-| Scenario / report / index / clear / clearScenarioEvents | `LsdContext.kt` |
+| Scenario / report / index / clear | `LsdContext.kt` |
 | `ReportJson` + `window.__LSD_REPORT__` injection into shell | `report/ReportWriter.renderShell`; locked by `CaptureToJsonTest` |
 | Minimal listing HTML + `*-report.json` (per report, `<title>-<hash>` names, atomic writes) | `ReportWriter.writeReport` |
 | report chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, minimap, message deep links, and reduced-motion support | `report/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
 | Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report/src/lib/sequence-diagram.ts` |
 | JUnit Jupiter 6 extension + `@LsdPostTestProcessing` | `LsdExtension.kt` — success / fail / disabled / aborted / nested / post-processing; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
 | Cucumber 8 plugin | `modules/lsd-mono-cucumber-8`, `LsdCucumberPlugin`. Completes a scenario per Cucumber scenario. The description is the Given/When/Then lines. The report highlights Given, When, Then, and And in the Description card. Logging and HTTP interceptors are still not in the tree. |
-| Popup HTML helper (legacy-shaped `:target` overlay markup) | `report/PopupContent.kt` — **no longer used by the JUnit extension**. Left as a migration shim only. |
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdProperties.kt`, `ReportOptions.kt` |
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
 | Component graph from captured messages | In the report page. The **Component diagram** button in each scenario's diagram toolbar draws it in the inspector, in the browser, from messages already in the sequence report (issue #4). The JVM flag, `components.json`, and `components-report.html` stay removed. Not PlantUML. |
@@ -160,7 +159,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 | | |
 |--|--|
 | **Legacy** | Message labels are PlantUML links to `#id` overlays; `DataHolder` list feeds popup content; `PopupContent.popupHyperlink` for arbitrary HTML (e.g. stacktraces). `javascript` partial loads `custom.js` for scroll/open helpers. |
-| **Mono today** | Message `data` opens the report side inspector. **JUnit failures landed 2026-10-03** as scenario `error: { headline, message, stack }` — plain-text `description`, no `:target` overlay. report shows the message as escaped text and opens the stack in the inspector (`Show stack trace`). `PopupContent` remains unused by the extension. |
+| **Mono today** | Message `data` opens the report side inspector. **JUnit failures landed 2026-10-03** as scenario `error: { headline, message, stack }` — plain-text `description`, no `:target` overlay. report shows the message as escaped text and opens the stack in the inspector (`Show stack trace`). The legacy-shaped `PopupContent` helper was unused and has been removed (#3). |
 | **Still open** | Pretty-print / size limits for message payloads (P1). Browser check that the inspector copy button works. |
 | **Priority** | **P1** for payload polish. The JUnit structured-failure slice is **done**. |
 | **Test** | `LsdExtensionOutcomesTest` (TempDir, deterministic ids) asserts failed/aborted JSON has `headline` / `message` / `stack` and no `overlay`. `scenario-summary.test.ts` locks escaped message HTML and that the stack is not inlined. |

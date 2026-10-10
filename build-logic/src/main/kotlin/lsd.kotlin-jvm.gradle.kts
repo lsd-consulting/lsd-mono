@@ -21,6 +21,18 @@ java {
     withSourcesJar()
 }
 
+// Every module using this convention is published, so its public API is deliberate:
+// explicit API mode makes each declaration state its visibility and return type
+// (tests are exempt), and the committed `api/<module>.api` dump makes any change to
+// the public ABI show up in review. `check` runs `checkKotlinAbi`; after an intended
+// API change run `./gradlew updateKotlinAbi` and commit the new dump.
+kotlin {
+    explicitApi()
+
+    @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
+    abiValidation()
+}
+
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)

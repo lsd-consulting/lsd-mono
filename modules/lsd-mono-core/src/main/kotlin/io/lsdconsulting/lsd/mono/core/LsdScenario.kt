@@ -5,7 +5,6 @@ import io.lsdconsulting.lsd.mono.core.domain.Fact
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import java.util.concurrent.Callable
 
 /**
  * One scenario being captured. Start one with [LsdContext.beginScenario].
@@ -17,15 +16,15 @@ import java.util.concurrent.Callable
  *
  * Every method is thread-safe.
  */
-class LsdScenario internal constructor(
+public class LsdScenario internal constructor(
     private val context: LsdContext,
     /** Unique among the scenarios that are running. Integrations use the test's own id. */
-    val key: String,
+    public val key: String,
     /**
      * Scenarios with the same report key go into the same report, written by
      * [LsdContext.completeReport] with that key. `null` is the default report.
      */
-    val reportKey: String?,
+    public val reportKey: String?,
     internal val sequence: Long,
 ) {
     private val lock = Any()
@@ -34,18 +33,18 @@ class LsdScenario internal constructor(
     private var closed = false
 
     /** True until the scenario is completed, discarded, or the context is cleared. */
-    val isActive: Boolean
+    public val isActive: Boolean
         get() = context.isActive(this)
 
     /** Capture into this scenario, whichever thread calls it. */
-    fun capture(vararg events: SequenceEvent) = context.captureInto(this, events.toList())
+    public fun capture(vararg events: SequenceEvent): Unit = context.captureInto(this, events.toList())
 
     /** Same as [capture] for builders (`"A" messages "B" withLabel "..."`). */
-    fun capture(vararg builders: SequenceEventBuilder) =
+    public fun capture(vararg builders: SequenceEventBuilder): Unit =
         context.captureInto(this, builders.map { it.build(context.idGenerator) })
 
     @JvmOverloads
-    fun addFact(key: String, value: String = "") {
+    public fun addFact(key: String, value: String = "") {
         if (!add { facts.add(Fact(key, value)) }) context.warnLate(this, "fact")
     }
 
@@ -53,32 +52,27 @@ class LsdScenario internal constructor(
      * Bind the calling thread to this scenario until the returned handle is closed.
      * Closing restores whatever the thread was bound to before.
      */
-    fun bind(): AutoCloseable = context.bindThread(this)
+    public fun bind(): AutoCloseable = context.bindThread(this)
 
     /** A [Runnable] that runs [task] with its thread bound to this scenario. */
-    fun wrap(task: Runnable): Runnable = Runnable { bind().use { task.run() } }
-
-    /** A [Callable] that runs [task] with its thread bound to this scenario. */
-    fun <T> wrapCallable(task: Callable<T>): Callable<T> = Callable { bind().use { task.call() } }
+    public fun wrap(task: Runnable): Runnable = Runnable { bind().use { task.run() } }
 
     /**
      * Finish the scenario and keep it for the report named by [reportKey].
      * Captures that arrive afterwards are dropped with a warning. A second call does nothing.
      */
     @JvmOverloads
-    fun complete(
+    public fun complete(
         title: String,
         description: String? = "",
         status: Status = Status.SUCCESS,
         error: ScenarioError? = null,
-    ) = context.complete(this, title, description, status, error)
+    ): Unit = context.complete(this, title, description, status, error)
 
     /** Stop capturing without writing a scenario. */
-    fun discard() = context.discard(this)
+    public fun discard(): Unit = context.discard(this)
 
     internal fun addEvent(event: SequenceEvent): Boolean = add { events.add(event) }
-
-    internal fun clearEvents() = synchronized(lock) { events.clear() }
 
     /** Close and return what was captured. Later adds are refused. */
     internal fun close(): Pair<List<Fact>, List<SequenceEvent>> =

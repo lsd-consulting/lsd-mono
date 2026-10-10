@@ -78,19 +78,19 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * **Deferred:** legacy include-files.
  */
-open class LsdContext {
+public class LsdContext {
     @Volatile
-    var idGenerator = IdGenerator(LsdProperties.deterministicIds())
+    internal var idGenerator = IdGenerator(LsdProperties.deterministicIds())
         private set
 
     /**
      * Copies message data when it is captured (see [PayloadSnapshot]). Register
      * converters here; limits come from `lsd.mono.payload.*` and are re-read by [clear].
      */
-    val payloads = PayloadSnapshot()
+    public val payloads: PayloadSnapshot = PayloadSnapshot()
 
     /** Re-read on each access so tests can point a long-lived instance at a TempDir. */
-    val outputDirectory: File
+    internal val outputDirectory: File
         get() = File(LsdProperties.outputDirectory())
 
     /** Guards report-level state: participants, completed scenarios, report files. */
@@ -109,9 +109,9 @@ open class LsdContext {
     @Volatile
     private var warnedAmbiguous = false
 
-    fun addParticipants(vararg additional: Participant) = addParticipants(additional.toList())
+    public fun addParticipants(vararg additional: Participant): Unit = addParticipants(additional.toList())
 
-    fun addParticipants(additional: List<Participant>) {
+    public fun addParticipants(additional: List<Participant>) {
         synchronized(lock) {
             additional.forEach { incoming ->
                 val id =
@@ -126,7 +126,7 @@ open class LsdContext {
     }
 
     @JvmOverloads
-    fun addFact(key: String, value: String = "") {
+    public fun addFact(key: String, value: String = "") {
         target().addFact(key, value)
     }
 
@@ -134,7 +134,7 @@ open class LsdContext {
      * Capture sequence events for the current scenario (see the class notes on threads).
      * Names that have not been [addParticipants]'d are registered as plain participants (slug id).
      */
-    open fun capture(vararg events: SequenceEvent) {
+    public fun capture(vararg events: SequenceEvent) {
         captureInto(target(), events.toList())
     }
 
@@ -148,7 +148,7 @@ open class LsdContext {
      * @param key unique among running scenarios; [findScenario] looks it up.
      */
     @JvmOverloads
-    fun beginScenario(
+    public fun beginScenario(
         reportKey: String? = null,
         key: String = UUID.randomUUID().toString(),
         bindCurrentThread: Boolean = true,
@@ -164,24 +164,24 @@ open class LsdContext {
     }
 
     /** The scenario the calling thread is bound to, if it is still running. */
-    fun currentScenario(): LsdScenario? = bound.get()?.takeIf { isActive(it) }
+    public fun currentScenario(): LsdScenario? = bound.get()?.takeIf { isActive(it) }
 
     /** A running scenario by the key it was begun with. */
-    fun findScenario(key: String): LsdScenario? = active[key]
+    public fun findScenario(key: String): LsdScenario? = active[key]
 
     /**
      * Wrap [task] so it runs bound to the calling thread's current scenario, for
      * handing work to an executor. Returns [task] unchanged when there is none.
      */
-    fun wrap(task: Runnable): Runnable = currentScenario()?.wrap(task) ?: task
+    public fun wrap(task: Runnable): Runnable = currentScenario()?.wrap(task) ?: task
 
     /** Same as [capture] for builders (`"A" messages "B" withLabel "..."`). */
-    fun capture(vararg builders: SequenceEventBuilder) {
+    public fun capture(vararg builders: SequenceEventBuilder) {
         capture(*builders.map { it.build(idGenerator) }.toTypedArray())
     }
 
     @JvmOverloads
-    fun message(
+    public fun message(
         from: String,
         to: String,
         label: String,
@@ -205,7 +205,7 @@ open class LsdContext {
     }
 
     @JvmOverloads
-    fun response(
+    public fun response(
         from: String,
         to: String,
         label: String,
@@ -222,21 +222,21 @@ open class LsdContext {
         )
     }
 
-    fun note(text: String, over: String) {
+    public fun note(text: String, over: String) {
         capture(Note(id = idGenerator.next(), text = text, over = over, placement = NotePlacement.OVER))
     }
 
     @JvmOverloads
-    fun noteLeft(text: String, of: String? = null) {
+    public fun noteLeft(text: String, of: String? = null) {
         capture(Note(id = idGenerator.next(), text = text, over = of, placement = NotePlacement.LEFT))
     }
 
     @JvmOverloads
-    fun noteRight(text: String, of: String? = null) {
+    public fun noteRight(text: String, of: String? = null) {
         capture(Note(id = idGenerator.next(), text = text, over = of, placement = NotePlacement.RIGHT))
     }
 
-    fun divider(label: String) {
+    public fun divider(label: String) {
         capture(Divider(id = idGenerator.next(), label = label))
     }
 
@@ -244,22 +244,22 @@ open class LsdContext {
      * Insert a titled section in the current scenario.
      * Unlike legacy `newpage`, this does not split the diagram or deactivate lifelines.
      */
-    fun section(title: String) {
+    public fun section(title: String) {
         capture(Section(id = idGenerator.next(), title = title))
     }
 
     @JvmOverloads
-    fun delay(label: String? = null) {
+    public fun delay(label: String? = null) {
         capture(Delay(id = idGenerator.next(), label = label))
     }
 
     @JvmOverloads
-    fun spacer(heightPx: Int? = null) {
+    public fun spacer(heightPx: Int? = null) {
         capture(Spacer(id = idGenerator.next(), heightPx = heightPx))
     }
 
     @JvmOverloads
-    fun shortInbound(to: String, label: String = "") {
+    public fun shortInbound(to: String, label: String = "") {
         capture(
             Message(
                 id = idGenerator.next(),
@@ -272,7 +272,7 @@ open class LsdContext {
     }
 
     @JvmOverloads
-    fun shortOutbound(from: String, label: String = "") {
+    public fun shortOutbound(from: String, label: String = "") {
         capture(
             Message(
                 id = idGenerator.next(),
@@ -289,7 +289,7 @@ open class LsdContext {
      * Omitted from JSON when null or blank. The shell also draws a hatch, not colour alone.
      */
     @JvmOverloads
-    fun activate(participant: String, colour: String? = null) {
+    public fun activate(participant: String, colour: String? = null) {
         capture(
             Lifeline(
                 id = idGenerator.next(),
@@ -300,7 +300,7 @@ open class LsdContext {
         )
     }
 
-    fun deactivate(participant: String) {
+    public fun deactivate(participant: String) {
         capture(Lifeline(id = idGenerator.next(), participantId = participant, action = LifelineAction.DEACTIVATE))
     }
 
@@ -309,7 +309,7 @@ open class LsdContext {
      * markup in [description].
      */
     @JvmOverloads
-    fun completeScenario(
+    public fun completeScenario(
         title: String,
         description: String? = "",
         status: Status = Status.SUCCESS,
@@ -324,7 +324,7 @@ open class LsdContext {
      * `reportKey ?: title`, so reports with the same title do not overwrite each other.
      */
     @JvmOverloads
-    fun completeReport(title: String, reportKey: String? = null): Path {
+    public fun completeReport(title: String, reportKey: String? = null): Path {
         val taken =
             synchronized(lock) {
                 // Writing a report has always dropped captures that no scenario was completed for.
@@ -354,9 +354,9 @@ open class LsdContext {
      * Write `index.html` listing every report in the output directory, including
      * reports written by other test JVMs (Gradle forks) or modules sharing it.
      */
-    fun createIndex(): Path = ReportWriter.writeIndex(synchronized(lock) { reportFiles.toList() }, outputDirectory)
+    public fun createIndex(): Path = ReportWriter.writeIndex(synchronized(lock) { reportFiles.toList() }, outputDirectory)
 
-    fun clear() {
+    public fun clear() {
         synchronized(lock) {
             idGenerator = IdGenerator(LsdProperties.deterministicIds())
             payloads.limits = PayloadSnapshot.Limits.fromProperties()
@@ -368,11 +368,6 @@ open class LsdContext {
             warnedAmbiguous = false
         }
         bound.remove()
-    }
-
-    /** Drops captured events for the in-flight scenario. Facts and participants stay. */
-    fun clearScenarioEvents() {
-        target().clearEvents()
     }
 
     internal fun isActive(scenario: LsdScenario): Boolean =
@@ -634,10 +629,10 @@ open class LsdContext {
             ?.toCssClass()
             ?: "success"
 
-    companion object {
+    public companion object {
         private val logger = System.getLogger(LsdContext::class.java.name)
 
         @JvmStatic
-        val instance = LsdContext()
+        public val instance: LsdContext = LsdContext()
     }
 }

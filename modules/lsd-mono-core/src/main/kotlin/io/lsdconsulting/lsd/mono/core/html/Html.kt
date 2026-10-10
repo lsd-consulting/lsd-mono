@@ -13,7 +13,7 @@ package io.lsdconsulting.lsd.mono.core.html
  * where a lone surrogate cannot be encoded, and those controls are not allowed in HTML.
  * The report UI has the same escapers for markup it builds (`report/src/lib/escape.ts`).
  */
-object Html {
+internal object Html {
     /** For element text. Escapes `&`, `<` and `>`. Null becomes empty. */
     @JvmStatic
     fun text(value: String?): String = escape(value, quotes = false)

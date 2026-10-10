@@ -38,7 +38,7 @@ import io.cucumber.plugin.event.Status as CucumberStatus
  * file is one report keyed by its URI, written when the run finishes. Scenario outline
  * rows are numbered by their position in the feature file, not by the order they ran.
  */
-class LsdCucumberPlugin : ConcurrentEventListener {
+public class LsdCucumberPlugin : ConcurrentEventListener {
     private val lsd: LsdContext = LsdContext.instance
 
     /** Feature URI to its title and when it first started, for report order. */
@@ -167,7 +167,7 @@ class LsdCucumberPlugin : ConcurrentEventListener {
         return file.removeSuffix(".feature").ifBlank { name }
     }
 
-    companion object {
-        const val SPLIT_BY_STEPS = "lsd.mono.cucumber.splitBySteps"
+    public companion object {
+        public const val SPLIT_BY_STEPS: String = "lsd.mono.cucumber.splitBySteps"
     }
 }

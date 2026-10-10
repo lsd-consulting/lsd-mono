@@ -9,9 +9,9 @@ import io.lsdconsulting.lsd.mono.core.model.InsightJson
 import io.lsdconsulting.lsd.mono.core.model.MetricJson
 
 /** How many duration insights to keep. Not a diagram split. */
-const val MAX_INSIGHTS = 5
+internal const val MAX_INSIGHTS = 5
 
-data class CapturedMetrics(
+internal data class CapturedMetrics(
     val metrics: List<MetricJson>,
     val insights: List<InsightJson>,
 )
@@ -26,7 +26,7 @@ data class CapturedMetrics(
  *
  * Returns empty lists when [ReportOptions.metricsEnabled] is false.
  */
-fun capturedMetrics(events: List<SequenceEvent>, options: ReportOptions): CapturedMetrics {
+internal fun capturedMetrics(events: List<SequenceEvent>, options: ReportOptions): CapturedMetrics {
     if (!options.metricsEnabled) return CapturedMetrics(emptyList(), emptyList())
     val messages = events.filterIsInstance<Message>()
     val duration = messages.mapNotNull { it.durationMs }.sum()

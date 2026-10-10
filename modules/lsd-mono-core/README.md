@@ -32,10 +32,11 @@ lsd-mono-core/
 
 - Kotlin library compiles and tests
 - `LsdContext` façade: facts, `completeScenario`, `completeReport`, `createIndex`,
-  `clear`, id generation, HTML escapers (`html.Html`), popup helper
-- Report writer emits, per report, files named `<title>-<hash>` (`ReportWriter.reportFileStem`;
-  the hash is of the report key, or of the title). `ReportWriter.writeReport(report, dir)` hashes the
-  title; `writeReport(report, dir, reportKey = key)` hashes the key:
+  `clear`, id generation and HTML escaping
+- The public API is checked: explicit API mode, and an ABI dump in `api/lsd-mono-core.api`
+  that `check` compares against (see [generated files](../../docs/generated-files.md))
+- `completeReport` writes, per report, files named `<title>-<hash>` (the hash is of the report
+  key, or of the title when there is no key):
   - `*-diagram.html` — the classpath shell (`/lsd-mono-core/report/lsd-report.single.html`) with the captured
     `ReportJson` injected (the shell falls back to sample data when opened without one)
   - `*-payloads.js` — message bodies, loaded when the inspector opens
@@ -102,8 +103,8 @@ scenario.complete("places an order")
 lsd.completeReport("OrderTest", reportKey = "com.example.OrderTest")
 ```
 
-`LsdScenario` also has `capture`, `addFact`, `bind()` (an `AutoCloseable`) and
-`wrapCallable`. A capture into a scenario that has already completed is dropped
+`LsdScenario` also has `capture`, `addFact` and `bind()` (an `AutoCloseable`).
+A capture into a scenario that has already completed is dropped
 with a warning rather than being given to the next one.
 
 ### Message data
