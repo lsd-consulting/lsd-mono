@@ -101,6 +101,8 @@ Everything after the first required arguments is optional. `at` is when the even
 happened: the report orders timed events by it, for capture that arrives out of order.
 From Java, the overloads cover the common calls (`lsd.message("A", "B", "label", body)`).
 To pass `at`, pass the defaults of the parameters before it (`MessageType.SYNCHRONOUS`, `null`).
+`message(from, to, label, MessageType.LOST)` sets the type, from Kotlin and Java alike:
+a type in the fourth position is never taken as `data`.
 
 ### Properties
 

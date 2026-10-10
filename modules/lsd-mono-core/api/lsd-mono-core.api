@@ -28,6 +28,7 @@ public abstract class io/lsdconsulting/lsd/mono/core/Capturer {
 	public static synthetic fun inbound$default (Lio/lsdconsulting/lsd/mono/core/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)V
 	public final fun message (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/MessageType;)V
 	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
 	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/lsdconsulting/lsd/mono/core/domain/MessageType;)V
 	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/lsdconsulting/lsd/mono/core/domain/MessageType;Ljava/lang/Long;)V

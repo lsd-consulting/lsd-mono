@@ -57,6 +57,7 @@ class JavaApiTest {
         lsd.message("Customer", "Api", "POST /orders");
         lsd.message("Customer", "Api", "POST /orders", new Order("o-1"));
         lsd.message("Customer", "Api", "lost", null, MessageType.LOST);
+        lsd.message("Customer", "Api", "lost again", MessageType.LOST);
         lsd.message("Api", "Db", "late", null, MessageType.SYNCHRONOUS, 5L, "#f00", Instant.parse("2026-01-01T00:00:00Z"));
         lsd.response("Db", "Api");
         lsd.response("Db", "Api", "1 row", Map.of("rows", 1));
@@ -86,12 +87,13 @@ class JavaApiTest {
         assertEquals(
             List.of(
                 "message", "message", "message", "message", "message", "message", "message", "message", "message",
-                "message", "note", "note", "note", "activate", "activate", "deactivate", "deactivate", "section",
+                "message", "message", "note", "note", "note", "activate", "activate", "deactivate", "deactivate", "section",
                 "divider", "delay", "delay", "spacer", "spacer", "message", "note", "section"),
             all(json, "\"kind\": \"(\\w+)\""));
         assertEquals("late", all(json, "\"label\": \"([^\"]*)\"").get(0), "the timed message sorts first");
         assertTrue(json.contains("\"order\": \"o-1\"") || Files.readString(payloads(tempDir)).contains("o-1"), json);
         assertTrue(json.contains("\"createdAt\": \"2026-01-01T00:00:00Z\""), json);
+        assertEquals(2, all(json, "\"type\": \"(LOST)\"").size(), "a MessageType in the data position is the type");
     }
 
     @Test

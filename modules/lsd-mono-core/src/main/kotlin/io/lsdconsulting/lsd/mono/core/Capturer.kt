@@ -55,6 +55,20 @@ public sealed class Capturer {
         )
     }
 
+    /**
+     * A message of [type] with no data. With this overload, `message(from, to, label, MessageType.LOST)`
+     * means the type, from Kotlin and Java. Without it the type would be taken as `data`, because
+     * `data` comes before `type` in the full form.
+     */
+    public fun message(
+        from: String,
+        to: String,
+        label: String,
+        type: MessageType,
+    ) {
+        message(from, to, label, null, type)
+    }
+
     /** The response to a synchronous call: [from] is the callee. */
     @JvmOverloads
     public fun response(
