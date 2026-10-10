@@ -4,7 +4,6 @@ import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
@@ -71,7 +70,7 @@ public class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionC
             prefixParentDisplayName(context),
             "Test aborted",
             Status.FAILURE,
-            structuredError(cause, "Test aborted"),
+            ScenarioError.of("Test aborted", cause),
         )
     }
 
@@ -80,7 +79,7 @@ public class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionC
             prefixParentDisplayName(context),
             "Test failed",
             Status.ERROR,
-            structuredError(cause, "Failed"),
+            ScenarioError.of("Failed", cause),
         )
     }
 
@@ -130,13 +129,6 @@ public class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionC
         return ""
     }
 
-    private fun structuredError(cause: Throwable?, headline: String): ScenarioError =
-        ScenarioError(
-            headline = headline,
-            message = cause?.message.orEmpty(),
-            stack = readStackTrace(cause),
-        )
-
     private fun additionalProcessing(instance: Any, annotation: Class<out Annotation?>) {
         var klass: Class<*> = instance.javaClass
         while (klass != Any::class.java) {
@@ -145,13 +137,6 @@ public class LsdExtension : BeforeEachCallback, TestWatcher, AfterTestExecutionC
                 .forEach { method -> invokeMethodOn(instance, method) }
             klass = klass.superclass
         }
-    }
-
-    private fun readStackTrace(cause: Throwable?): String {
-        if (cause == null || LsdProperties.hideStacktrace()) {
-            return "[Displaying the stacktrace was disabled or no cause was provided]"
-        }
-        return cause.stackTraceToString()
     }
 
     private fun invokeMethodOn(instance: Any, method: Method) {

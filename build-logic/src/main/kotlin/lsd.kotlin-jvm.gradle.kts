@@ -25,12 +25,19 @@ java {
 // explicit API mode makes each declaration state its visibility and return type
 // (tests are exempt), and the committed `api/<module>.api` dump makes any change to
 // the public ABI show up in review. `check` runs `checkKotlinAbi`; after an intended
-// API change run `./gradlew updateKotlinAbi` and commit the new dump.
+// API change run `./gradlew updateKotlinAbi` and commit the new dump. API marked
+// @InternalLsdApi is only for lsd-mono's own integrations, so it is left out of the dump.
 kotlin {
     explicitApi()
 
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation()
+    abiValidation {
+        filters {
+            exclude {
+                annotatedWith.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi")
+            }
+        }
+    }
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {

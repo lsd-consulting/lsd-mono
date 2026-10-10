@@ -89,7 +89,6 @@ class CoreHelpersTest {
 
         System.setProperty(LsdProperties.HIDE_STACKTRACE, "true")
         assertTrue(LsdProperties.hideStacktrace())
-        assertEquals("fallback", LsdProperties["lsd.mono.not.set", "fallback"])
     }
 
     @Test

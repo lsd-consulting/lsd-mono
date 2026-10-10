@@ -1,3 +1,6 @@
+public abstract interface annotation class io/lsdconsulting/lsd/mono/core/InternalLsdApi : java/lang/annotation/Annotation {
+}
+
 public final class io/lsdconsulting/lsd/mono/core/LsdContext {
 	public static final field Companion Lio/lsdconsulting/lsd/mono/core/LsdContext$Companion;
 	public fun <init> ()V
@@ -166,10 +169,6 @@ public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Compan
 
 public final class io/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits {
 	public static final field Companion Lio/lsdconsulting/lsd/mono/core/capture/PayloadSnapshot$Limits$Companion;
-	public static final field MAX_DEPTH Ljava/lang/String;
-	public static final field MAX_ITEMS Ljava/lang/String;
-	public static final field MAX_STRING_LENGTH Ljava/lang/String;
-	public static final field MAX_TOTAL_SIZE Ljava/lang/String;
 	public fun <init> ()V
 	public fun <init> (IIII)V
 	public synthetic fun <init> (IIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -382,6 +381,7 @@ public final class io/lsdconsulting/lsd/mono/core/domain/ParticipantType : java/
 }
 
 public final class io/lsdconsulting/lsd/mono/core/domain/ScenarioError {
+	public static final field Companion Lio/lsdconsulting/lsd/mono/core/domain/ScenarioError$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
@@ -394,7 +394,12 @@ public final class io/lsdconsulting/lsd/mono/core/domain/ScenarioError {
 	public final fun getMessage ()Ljava/lang/String;
 	public final fun getStack ()Ljava/lang/String;
 	public fun hashCode ()I
+	public static final fun of (Ljava/lang/String;Ljava/lang/Throwable;)Lio/lsdconsulting/lsd/mono/core/domain/ScenarioError;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lsdconsulting/lsd/mono/core/domain/ScenarioError$Companion {
+	public final fun of (Ljava/lang/String;Ljava/lang/Throwable;)Lio/lsdconsulting/lsd/mono/core/domain/ScenarioError;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/domain/Section : io/lsdconsulting/lsd/mono/core/domain/SequenceEvent {
@@ -446,6 +451,7 @@ public final class io/lsdconsulting/lsd/mono/core/domain/Status : java/lang/Enum
 }
 
 public final class io/lsdconsulting/lsd/mono/core/properties/LsdProperties {
+	public static final field CUCUMBER_SPLIT_BY_STEPS Ljava/lang/String;
 	public static final field DETERMINISTIC_IDS Ljava/lang/String;
 	public static final field GENERATED_AT Ljava/lang/String;
 	public static final field HIDE_STACKTRACE Ljava/lang/String;
@@ -453,15 +459,9 @@ public final class io/lsdconsulting/lsd/mono/core/properties/LsdProperties {
 	public static final field LABEL_MAX_WIDTH Ljava/lang/String;
 	public static final field METRICS_ENABLED Ljava/lang/String;
 	public static final field OUTPUT_DIR Ljava/lang/String;
-	public static final fun deterministicIds ()Z
-	public static final fun generatedAt ()Ljava/time/Instant;
-	public static final fun get (Ljava/lang/String;)Ljava/lang/String;
-	public static final fun get (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-	public static final fun getBoolean (Ljava/lang/String;)Z
-	public static final fun getBoolean (Ljava/lang/String;Z)Z
-	public static final fun hideStacktrace ()Z
-	public static final fun labelMaxWidth ()I
-	public static final fun metricsEnabled ()Z
-	public static final fun outputDirectory ()Ljava/lang/String;
+	public static final field PAYLOAD_MAX_DEPTH Ljava/lang/String;
+	public static final field PAYLOAD_MAX_ITEMS Ljava/lang/String;
+	public static final field PAYLOAD_MAX_STRING_LENGTH Ljava/lang/String;
+	public static final field PAYLOAD_MAX_TOTAL_SIZE Ljava/lang/String;
 }
 

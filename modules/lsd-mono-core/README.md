@@ -80,8 +80,26 @@ lsd.completeReport("My Suite")
 lsd.createIndex()
 ```
 
-Property keys use the `lsd.mono.*` prefix (with fallbacks to legacy `lsd.core.*`
-and `lsd.junit.*` names where useful for migration).
+### Properties
+
+Set these as system properties (`-Dlsd.mono.report.outputDir=out`) or as environment
+variables, in upper case with dots as underscores (`LSD_MONO_REPORT_OUTPUTDIR=out`). A
+property with a legacy name falls back to that name when the `lsd.mono.*` one is not set, to
+ease migration from lsd-core. `LsdProperties` has a constant for each name.
+
+| Property | Legacy name | Default | Effect |
+| --- | --- | --- | --- |
+| `lsd.mono.report.outputDir` | `lsd.core.report.outputDir` | `build/reports/lsd` | Directory the reports are written to |
+| `lsd.mono.ids.deterministic` | `lsd.core.ids.deterministic` | `false` | `true` numbers ids 1, 2, 3… instead of random ones, for reproducible reports |
+| `lsd.mono.junit.hideStacktrace` | `lsd.junit.hideStacktrace` | `false` | `true` leaves the stack trace out of a failed scenario's error (JUnit and Cucumber) |
+| `lsd.mono.metrics.enabled` | `lsd.core.metrics.enabled` | `true` | Message counts and duration insights |
+| `lsd.mono.label.maxWidth` | `lsd.core.label.maxWidth` | `200` | Width labels are cut to in summaries and the diagram. Not a positive number: the default |
+| `lsd.mono.report.generatedAt` | | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |
+| `lsd.mono.cucumber.splitBySteps` | | `false` | `true` makes the Cucumber plugin start a section at each step |
+| `lsd.mono.payload.maxDepth` | | `32` | Payload limit, see [Message data](#message-data) |
+| `lsd.mono.payload.maxStringLength` | | `100000` | Payload limit, see [Message data](#message-data) |
+| `lsd.mono.payload.maxItems` | | `1000` | Payload limit, see [Message data](#message-data) |
+| `lsd.mono.payload.maxTotalSize` | | `1000000` | Payload limit, see [Message data](#message-data) |
 
 ### Threads and parallel tests
 
@@ -123,14 +141,14 @@ after the call does not change the report. The copy is plain JSON:
 
 Capturing never throws. Anything that cannot be copied becomes a `[lsd: ...]`
 marker in its place: a cycle, a `toString()` or accessor that throws, or a value
-past one of these limits:
+past one of these limits (defaults in [Properties](#properties)):
 
-| Property | Default | Marker |
-| --- | --- | --- |
-| `lsd.mono.payload.maxDepth` | 32 | `[lsd: max depth 32 reached]` |
-| `lsd.mono.payload.maxStringLength` | 100000 | `… [lsd: truncated N characters]` |
-| `lsd.mono.payload.maxItems` | 1000 | `[lsd: N more items]`, or a `"[lsd: truncated]"` key |
-| `lsd.mono.payload.maxTotalSize` | 1000000 | `[lsd: payload larger than N characters, rest dropped]` |
+| Limit | Marker |
+| --- | --- |
+| `lsd.mono.payload.maxDepth` | `[lsd: max depth 32 reached]` |
+| `lsd.mono.payload.maxStringLength` | `… [lsd: truncated N characters]` |
+| `lsd.mono.payload.maxItems` | `[lsd: N more items]`, or a `"[lsd: truncated]"` key |
+| `lsd.mono.payload.maxTotalSize` | `[lsd: payload larger than N characters, rest dropped]` |
 
 To copy a type differently (a JSON tree, say), register a converter. Its result
 is copied in turn:

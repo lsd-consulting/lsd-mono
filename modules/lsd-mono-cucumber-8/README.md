@@ -101,7 +101,7 @@ Feature: Place an order
 
 A passed scenario is stored as a success. The scenario title is the Cucumber scenario name (`places an order`). A scenario outline example is suffixed ` #1`, ` #2`, and so on, numbered by the row's position in the feature file across all its `Examples` tables, so the numbers do not depend on run order. The description is the step lines as plain text. A failed scenario is stored with status error and a structured error (headline, message, stack). Anything that is not passed and not failed (skipped, pending, undefined) is a warning.
 
-Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step. That stays in the same diagram. It is not a new page.
+Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step (every property is listed in the [core README](../lsd-mono-core/README.md#properties)). That stays in the same diagram. It is not a new page.
 
 ## Where the report is written
 

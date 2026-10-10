@@ -1,25 +1,28 @@
 package io.lsdconsulting.lsd.mono.core.properties
 
+import io.lsdconsulting.lsd.mono.core.InternalLsdApi
 import java.time.Instant
 import java.time.format.DateTimeParseException
-import java.util.Properties
 
 /**
- * Mono property bag. Prefers `lsd.mono.*` keys; falls back to legacy `lsd.core.*`
- * / `lsd.junit.*` system properties for easier migration.
+ * The names of the properties lsd-mono reads. Set them as system properties or environment
+ * variables (`LSD_MONO_REPORT_OUTPUTDIR`). The lsd-mono-core README lists each one with its
+ * default and the legacy `lsd.core.*` / `lsd.junit.*` name that is still accepted.
  */
 public object LsdProperties {
+    /** Directory reports are written to. Default `build/reports/lsd`. */
     public const val OUTPUT_DIR: String = "lsd.mono.report.outputDir"
+
+    /** `true` numbers ids 1, 2, 3… instead of random ones, for reproducible reports. */
     public const val DETERMINISTIC_IDS: String = "lsd.mono.ids.deterministic"
+
+    /** `true` leaves stack traces out of a failed scenario's error (JUnit and Cucumber). */
     public const val HIDE_STACKTRACE: String = "lsd.mono.junit.hideStacktrace"
 
-    /**
-     * Duration insights and the simple message-count metrics. Default **true**,
-     * matching the previous always-on simple metrics. Legacy key: `lsd.core.metrics.enabled`.
-     */
+    /** Duration insights and message-count metrics. Default `true`. */
     public const val METRICS_ENABLED: String = "lsd.mono.metrics.enabled"
 
-    /** SVG / summary truncation width. Default 200. Legacy key: `lsd.core.label.maxWidth`. */
+    /** Width summaries and the diagram truncate labels to. Default 200. */
     public const val LABEL_MAX_WIDTH: String = "lsd.mono.label.maxWidth"
 
     /**
@@ -28,68 +31,32 @@ public object LsdProperties {
      */
     public const val GENERATED_AT: String = "lsd.mono.report.generatedAt"
 
-    private val defaults =
-        Properties().apply {
-            setProperty(OUTPUT_DIR, "build/reports/lsd")
-            setProperty(DETERMINISTIC_IDS, "false")
-            setProperty(HIDE_STACKTRACE, "false")
-            // Legacy aliases as defaults lookup keys (read via get with fallbacks)
-            setProperty("lsd.core.report.outputDir", "build/reports/lsd")
-            setProperty("lsd.core.ids.deterministic", "false")
-            setProperty("lsd.junit.hideStacktrace", "false")
-        }
+    /** `true` makes the Cucumber plugin start a section at each step. */
+    public const val CUCUMBER_SPLIT_BY_STEPS: String = "lsd.mono.cucumber.splitBySteps"
 
-    /** A value the user set (system property or environment), ignoring defaults. */
-    private fun explicit(key: String): String? =
-        System.getProperty(key) ?: System.getenv(key.replace('.', '_').uppercase())
+    /** Payload nesting depth kept. Default 32. */
+    public const val PAYLOAD_MAX_DEPTH: String = "lsd.mono.payload.maxDepth"
 
-    private fun resolve(key: String): String? = explicit(key) ?: defaults.getProperty(key)
+    /** Characters kept from one payload string. Default 100000. */
+    public const val PAYLOAD_MAX_STRING_LENGTH: String = "lsd.mono.payload.maxStringLength"
 
-    /** Mono key, then legacy key, then the default. Defaults must not hide a legacy value. */
-    private fun resolveWithLegacy(key: String, legacy: String): String? =
-        explicit(key) ?: explicit(legacy) ?: defaults.getProperty(key)
+    /** Entries kept from one payload collection, map, array or object. Default 1000. */
+    public const val PAYLOAD_MAX_ITEMS: String = "lsd.mono.payload.maxItems"
 
-    @JvmStatic
-    public operator fun get(key: String): String =
-        resolve(key) ?: error("Missing property: $key")
+    /** Rough size budget for one payload, in characters. Default 1000000. */
+    public const val PAYLOAD_MAX_TOTAL_SIZE: String = "lsd.mono.payload.maxTotalSize"
 
-    @JvmStatic
-    public operator fun get(key: String, default: String): String =
-        resolve(key) ?: default
+    internal fun outputDirectory(): String = checkNotNull(LsdKey.OUTPUT_DIR.value())
 
-    @JvmStatic
-    public fun getBoolean(key: String): Boolean =
-        resolve(key)?.toBoolean() ?: false
+    internal fun deterministicIds(): Boolean = LsdKey.DETERMINISTIC_IDS.boolean()
 
-    @JvmStatic
-    public fun getBoolean(key: String, default: Boolean): Boolean =
-        resolve(key)?.toBoolean() ?: default
+    internal fun hideStacktrace(): Boolean = LsdKey.HIDE_STACKTRACE.boolean()
 
-    /** Output dir with mono key first, then legacy. */
-    @JvmStatic
-    public fun outputDirectory(): String =
-        resolveWithLegacy(OUTPUT_DIR, "lsd.core.report.outputDir") ?: "build/reports/lsd"
-
-    @JvmStatic
-    public fun deterministicIds(): Boolean =
-        resolveWithLegacy(DETERMINISTIC_IDS, "lsd.core.ids.deterministic")?.toBoolean() ?: false
-
-    @JvmStatic
-    public fun hideStacktrace(): Boolean =
-        resolveWithLegacy(HIDE_STACKTRACE, "lsd.junit.hideStacktrace")?.toBoolean() ?: false
-
-    /**
-     * Default **true** so reports keep the message-count metrics that shipped before
-     * the gate existed. Set `lsd.mono.metrics.enabled=false` (or the legacy key) to omit them.
-     */
-    @JvmStatic
-    public fun metricsEnabled(): Boolean =
-        resolveWithLegacy(METRICS_ENABLED, "lsd.core.metrics.enabled")?.toBoolean() ?: true
+    internal fun metricsEnabled(): Boolean = LsdKey.METRICS_ENABLED.boolean()
 
     /** The fixed [GENERATED_AT] instant, or null when it is unset or not an ISO-8601 instant. */
-    @JvmStatic
-    public fun generatedAt(): Instant? =
-        explicit(GENERATED_AT)?.trim()?.takeIf { it.isNotEmpty() }?.let {
+    internal fun generatedAt(): Instant? =
+        LsdKey.GENERATED_AT.value()?.trim()?.takeIf { it.isNotEmpty() }?.let {
             try {
                 Instant.parse(it)
             } catch (_: DateTimeParseException) {
@@ -97,10 +64,22 @@ public object LsdProperties {
             }
         }
 
-    /** Positive character width. Falls back to legacy `lsd.core.label.maxWidth`, then 200. */
+    /** A positive width; anything else falls back to the default. */
+    internal fun labelMaxWidth(): Int =
+        LsdKey.LABEL_MAX_WIDTH
+            .value()
+            ?.toIntOrNull()
+            ?.takeIf { it > 0 } ?: LsdKey.LABEL_MAX_WIDTH.defaultInt()
+
+    /** A positive payload limit; anything else falls back to the default. */
+    internal fun payloadLimit(key: LsdKey): Int = key
+        .value()
+        ?.trim()
+        ?.toIntOrNull()
+        ?.takeIf { it > 0 } ?: key.defaultInt()
+
+    /** Whether the Cucumber plugin starts a section at each step ([CUCUMBER_SPLIT_BY_STEPS]). */
+    @InternalLsdApi
     @JvmStatic
-    public fun labelMaxWidth(): Int {
-        val raw = resolveWithLegacy(LABEL_MAX_WIDTH, "lsd.core.label.maxWidth") ?: "200"
-        return raw.toIntOrNull()?.takeIf { it > 0 } ?: 200
-    }
+    public fun cucumberSplitBySteps(): Boolean = LsdKey.CUCUMBER_SPLIT_BY_STEPS.boolean()
 }

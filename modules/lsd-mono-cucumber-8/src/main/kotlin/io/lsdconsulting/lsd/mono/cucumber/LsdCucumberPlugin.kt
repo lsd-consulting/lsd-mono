@@ -54,7 +54,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     private var splitByStep: Boolean = false
 
     override fun setEventPublisher(publisher: EventPublisher) {
-        splitByStep = LsdProperties.getBoolean(SPLIT_BY_STEPS, false)
+        splitByStep = LsdProperties.cucumberSplitBySteps()
         publisher.registerHandlerFor(TestRunStarted::class.java) { reset() }
         publisher.registerHandlerFor(TestSourceParsed::class.java, ::onTestSourceParsed)
         publisher.registerHandlerFor(TestCaseStarted::class.java, ::onTestCaseStarted)
@@ -118,18 +118,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
                 else -> Status.FAILURE
             }
         val error =
-            result.error?.takeIf { result.status == CucumberStatus.FAILED }?.let {
-                ScenarioError(
-                    headline = "Failed",
-                    message = it.message.orEmpty(),
-                    stack =
-                        if (LsdProperties.hideStacktrace()) {
-                            "[Displaying the stacktrace was disabled or no cause was provided]"
-                        } else {
-                            it.stackTraceToString()
-                        },
-                )
-            }
+            result.error?.takeIf { result.status == CucumberStatus.FAILED }?.let { ScenarioError.of("Failed", it) }
         scenario.complete(testCase.scenarioTitle(), description, status, error)
     }
 
@@ -165,9 +154,5 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
         val text = uri.toString().substringBefore('?').substringBefore('#')
         val file = text.substringAfterLast('/').substringAfterLast(':')
         return file.removeSuffix(".feature").ifBlank { name }
-    }
-
-    public companion object {
-        public const val SPLIT_BY_STEPS: String = "lsd.mono.cucumber.splitBySteps"
     }
 }

@@ -14,6 +14,13 @@ base.archivesName.set("lsd-mono-cucumber-8")
 
 description = "LSD Mono Cucumber 8 integration — plugin for living sequence diagram reports"
 
+// Reads its split-by-steps property through core's integration-only API.
+kotlin {
+    compilerOptions {
+        optIn.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi")
+    }
+}
+
 val readmeSourceSet = sourceSets.create("readme")
 
 majorLines {

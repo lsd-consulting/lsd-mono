@@ -1,6 +1,6 @@
 # lsd-mono public API proposal (#3)
 
-Status: approved. Slice 1 is implemented (see "Slice 1 as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
+Status: approved. Slices 1 and 2 are implemented (see "as built" under §6); later slices are not. Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
@@ -406,6 +406,16 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 - `@InternalLsdApi` is not added yet. After the internal pass the integrations use only public API, so nothing needed it; it arrives with slice 2, which needs it for the integration readers. The `abiValidation` exclusion filter comes with it.
 - `IdGenerator` is internal. `SequenceEventBuilder` was a `fun interface` whose `build(IdGenerator)` exposed it, so until slice 4 removes the builders it is an `abstract class` with an `internal` constructor and an `internal` `build`. Callers still pass builders to `capture` from Kotlin and Java; only outside implementations (there were none) are no longer possible. The builders' `build` overrides return `SequenceEvent` so no synthetic bridge mentions `IdGenerator` in the dump.
 - `LsdScenario.clearEvents` went with `clearScenarioEvents`, its only caller.
+
+### Slice 2 as built
+
+- `LsdKey` is the internal table from §2, with the four `lsd.mono.payload.*` keys added. Each row takes its key string from the matching public `LsdProperties` constant, so every name is written once. The values are read in the same order as before: system property, then environment variable, then the legacy name the same two ways, then the default.
+- **All key constants are now on `LsdProperties`**, not just Cucumber's. `PayloadSnapshot.Limits.MAX_*` became `LsdProperties.PAYLOAD_MAX_*`. `Limits`' defaults come from the table, and `Limits` itself stays public until slice 7.
+- **The generic `get` and `getBoolean` were removed, not made internal.** Once the typed readers read from `LsdKey`, nothing used them. The typed readers are internal.
+- **There's only one `@InternalLsdApi` reader, `LsdProperties.cucumberSplitBySteps()`.** `hideStacktrace()` is read inside `ScenarioError.of` in core, so JUnit uses no internal API and doesn't opt in. Only `lsd-mono-cucumber-8` opts in, with `optIn.add(...)` in its build file. The annotation's `@RequiresOptIn` is at level `ERROR`. The `abiValidation` filter uses `exclude { annotatedWith }`, which is the Kotlin 2.4 name; the Kotlin docs still show the deprecated `excluded`. Members marked `@InternalLsdApi` are left out of the dump, but the annotation class itself is listed.
+- `ScenarioError.of(headline, cause)` is `@JvmStatic`. It keeps the old note text when there is no cause or stack traces are hidden. The property is still `lsd.mono.junit.hideStacktrace` and still covers Cucumber too. Renaming it was out of scope.
+- **Parsing quirk kept:** `lsd.mono.label.maxWidth` is not trimmed before parsing, but the payload limits are. I kept that difference so slice 2 doesn't change behaviour.
+- **One documented table:** the core README "Properties" section lists every key with its legacy name, default and effect, and the other READMEs link to it. `LsdPropertiesTest` fails if the README table and `LsdKey` differ, and it covers the legacy fallback of every key.
 
 ### Risks
 

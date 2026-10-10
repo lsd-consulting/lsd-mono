@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.PayloadSnapshotTest.Companion.assertValidJson
 import io.lsdconsulting.lsd.mono.core.capture.PayloadSnapshot
+import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -32,7 +33,7 @@ class PayloadCaptureTest {
     @AfterEach
     fun restore() {
         System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
-        System.clearProperty(PayloadSnapshot.Limits.MAX_STRING_LENGTH)
+        System.clearProperty(LsdProperties.PAYLOAD_MAX_STRING_LENGTH)
     }
 
     class Explodes {
@@ -81,7 +82,7 @@ class PayloadCaptureTest {
 
     @Test
     fun `limits come from properties and clear re-reads them, keeping converters`() {
-        System.setProperty(PayloadSnapshot.Limits.MAX_STRING_LENGTH, "4")
+        System.setProperty(LsdProperties.PAYLOAD_MAX_STRING_LENGTH, "4")
         val lsd = LsdContext()
         lsd.payloads.register(StringBuilder::class.java) { "builder:$it" }
         lsd.message("A", "B", "short", data = "abcdefgh")
@@ -92,7 +93,7 @@ class PayloadCaptureTest {
         assertTrue(json.contains(""""data": "abcd… [lsd: truncated 4 characters]""""), json)
         assertTrue(json.contains(""""data": "buil… [lsd: truncated 6 characters]""""), json)
 
-        System.clearProperty(PayloadSnapshot.Limits.MAX_STRING_LENGTH)
+        System.clearProperty(LsdProperties.PAYLOAD_MAX_STRING_LENGTH)
         lsd.clear()
         assertEquals(PayloadSnapshot.Limits(), lsd.payloads.limits)
         assertEquals("builder:xy", lsd.payloads.snapshot(StringBuilder("xy")))

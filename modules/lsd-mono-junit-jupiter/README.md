@@ -89,7 +89,7 @@ build/reports/lsd/PlaceOrderTest-<hash>-diagram.html
 
 `<hash>` is 8 hex characters from the class's unique id, so two classes with the same simple name in different packages get separate reports. It is the same on every run. That file is the report. `PlaceOrderTest-<hash>-report.html` is only a short listing. `createIndex()` (called by the extension) writes `index.html`, which lists every report in the directory, including ones written by other Gradle test forks.
 
-Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured). In this module's own tests that is `build/reports/lsd-test`.
+Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured; every property is listed in the [core README](../lsd-mono-core/README.md#properties)). In this module's own tests that is `build/reports/lsd-test`.
 
 Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Other fields load from the companion payloads file when the panel opens. Participant types set the header shape: `ACTOR`, `DATABASE`, `QUEUE`, and so on.
 

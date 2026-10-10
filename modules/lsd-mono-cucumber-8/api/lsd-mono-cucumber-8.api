@@ -1,10 +1,5 @@
 public final class io/lsdconsulting/lsd/mono/cucumber/LsdCucumberPlugin : io/cucumber/plugin/ConcurrentEventListener {
-	public static final field Companion Lio/lsdconsulting/lsd/mono/cucumber/LsdCucumberPlugin$Companion;
-	public static final field SPLIT_BY_STEPS Ljava/lang/String;
 	public fun <init> ()V
 	public fun setEventPublisher (Lio/cucumber/plugin/event/EventPublisher;)V
-}
-
-public final class io/lsdconsulting/lsd/mono/cucumber/LsdCucumberPlugin$Companion {
 }
 

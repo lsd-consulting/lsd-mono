@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core.capture
 
+import io.lsdconsulting.lsd.mono.core.properties.LsdKey
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -59,30 +60,21 @@ public class PayloadSnapshot @JvmOverloads constructor(
      * @property maxTotalSize rough size budget for one payload, in characters.
      */
     public data class Limits(
-        val maxDepth: Int = 32,
-        val maxStringLength: Int = 100_000,
-        val maxItems: Int = 1_000,
-        val maxTotalSize: Int = 1_000_000,
+        val maxDepth: Int = LsdKey.PAYLOAD_MAX_DEPTH.defaultInt(),
+        val maxStringLength: Int = LsdKey.PAYLOAD_MAX_STRING_LENGTH.defaultInt(),
+        val maxItems: Int = LsdKey.PAYLOAD_MAX_ITEMS.defaultInt(),
+        val maxTotalSize: Int = LsdKey.PAYLOAD_MAX_TOTAL_SIZE.defaultInt(),
     ) {
         public companion object {
-            public const val MAX_DEPTH: String = "lsd.mono.payload.maxDepth"
-            public const val MAX_STRING_LENGTH: String = "lsd.mono.payload.maxStringLength"
-            public const val MAX_ITEMS: String = "lsd.mono.payload.maxItems"
-            public const val MAX_TOTAL_SIZE: String = "lsd.mono.payload.maxTotalSize"
-
+            /** The limits set by the `lsd.mono.payload.*` properties (see [LsdProperties]). */
             @JvmStatic
-            public fun fromProperties(): Limits {
-                val defaults = Limits()
-
-                fun read(key: String, default: Int) =
-                    LsdProperties[key, default.toString()].trim().toIntOrNull()?.takeIf { it > 0 } ?: default
-                return Limits(
-                    maxDepth = read(MAX_DEPTH, defaults.maxDepth),
-                    maxStringLength = read(MAX_STRING_LENGTH, defaults.maxStringLength),
-                    maxItems = read(MAX_ITEMS, defaults.maxItems),
-                    maxTotalSize = read(MAX_TOTAL_SIZE, defaults.maxTotalSize),
+            public fun fromProperties(): Limits =
+                Limits(
+                    maxDepth = LsdProperties.payloadLimit(LsdKey.PAYLOAD_MAX_DEPTH),
+                    maxStringLength = LsdProperties.payloadLimit(LsdKey.PAYLOAD_MAX_STRING_LENGTH),
+                    maxItems = LsdProperties.payloadLimit(LsdKey.PAYLOAD_MAX_ITEMS),
+                    maxTotalSize = LsdProperties.payloadLimit(LsdKey.PAYLOAD_MAX_TOTAL_SIZE),
                 )
-            }
         }
     }
 
