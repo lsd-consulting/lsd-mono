@@ -63,7 +63,7 @@ val listing = lsd.completeReport("Place an order")
 lsd.createIndex()
 ```
 
-`completeReport` writes under `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it). Open `Place-an-order-1153f62c-diagram.html`. That file is the report. `Place-an-order-1153f62c-report.html` is only a short listing, and its path is what `completeReport` returns. The 8 characters are a hash of the title, so two titles that read the same as file names (`Place an order`, `Place-an-order`) never overwrite each other. `createIndex()` writes `index.html`, which lists every report in the directory, including ones written by other test JVMs or modules.
+`completeReport` writes under `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it). Open `Place-an-order-1153f62c-diagram.html`: the interactive diagram. `Place-an-order-1153f62c-report.html` is a short listing of the scenarios that links to it, and `Place-an-order-1153f62c-report.json` holds the data. `completeReport` returns all three as `ReportFiles` (`diagramHtml`, `listingHtml`, `reportJson`). The 8 characters are a hash of the title, so two titles that read the same as file names (`Place an order`, `Place-an-order`) never overwrite each other. `createIndex()` writes `index.html`, which lists every report in the directory, including ones written by other test JVMs or modules.
 
 Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Any other fields load from `Place-an-order-1153f62c-payloads.js` when the panel opens.
 

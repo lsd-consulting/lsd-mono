@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core.report
 
+import io.lsdconsulting.lsd.mono.core.ReportFiles
 import io.lsdconsulting.lsd.mono.core.html.Html
 import io.lsdconsulting.lsd.mono.core.json.jsonString
 import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
@@ -67,7 +68,7 @@ internal object ReportWriter {
      * Write one report. File names are [reportFileStem]: the title plus a hash of
      * [reportKey] (a test class or feature id) when given, else of the title, so
      * reports with the same title do not collide.
-     * @return the minimal listing HTML (`<stem>-report.html`).
+     * @return the diagram, listing and JSON files.
      */
     @JvmStatic
     @JvmOverloads
@@ -75,7 +76,7 @@ internal object ReportWriter {
         report: ReportJson,
         outputDir: File,
         reportKey: String? = null,
-    ): Path {
+    ): ReportFiles {
         outputDir.mkdirs()
         val stem = reportFileStem(report.title, reportKey)
         val jsonName = "$stem-report.json"
@@ -91,11 +92,13 @@ internal object ReportWriter {
         }
         val shell = renderShell(shellBundle.report, payloadsName.takeIf { shellBundle.payloads.isNotEmpty() })
 
-        writeAtomically(outputDir.resolve(jsonName).toPath(), report.toJson())
-        writeAtomically(outputDir.resolve(diagramName).toPath(), shell)
+        val jsonPath = outputDir.resolve(jsonName).toPath()
+        val diagramPath = outputDir.resolve(diagramName).toPath()
+        writeAtomically(jsonPath, report.toJson())
+        writeAtomically(diagramPath, shell)
         writeAtomically(htmlPath, renderMinimalHtml(report, diagramName, jsonName))
         writeIndexEntry(outputDir, ReportFile(filename = htmlPath.fileName.toString(), title = report.title, status = report.status))
-        return htmlPath
+        return ReportFiles(diagramHtml = diagramPath, listingHtml = htmlPath, reportJson = jsonPath)
     }
 
     /**

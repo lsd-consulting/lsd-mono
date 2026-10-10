@@ -38,7 +38,7 @@ fun main() {
         deactivate("Checkout")
     }
     lsd.completeScenario("Place an order", "Customer checks out two pairs of socks.")
-    val listing = lsd.completeReport("Place an order")
+    val files = lsd.completeReport("Place an order")
     lsd.createIndex()
-    println(listing)
+    println(files.diagramHtml)
 }

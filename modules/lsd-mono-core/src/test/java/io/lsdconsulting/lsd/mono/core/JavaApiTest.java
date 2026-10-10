@@ -137,7 +137,7 @@ class JavaApiTest {
         LsdContext lsd = new LsdContext();
         ExecutorService pool = Executors.newSingleThreadExecutor();
         try {
-            Path report = lsd.report("Java blocks", r -> {
+            ReportFiles report = lsd.report("Java blocks", r -> {
                 r.scenario("Expression lambda", s -> s.addFact("k", "v"));
                 r.scenario("Block lambda", "with a description", s -> {
                     s.message("A", "B", "receiver");
@@ -190,8 +190,8 @@ class JavaApiTest {
         assertEquals(List.of("SYNCHRONOUS", "SYNCHRONOUS"), all(json, "\"type\": \"(\\w+)\""));
     }
 
-    private static Path reportJson(Path reportHtml) {
-        return reportHtml.resolveSibling(reportHtml.getFileName().toString().replace("-report.html", "-report.json"));
+    private static Path reportJson(ReportFiles files) {
+        return files.getReportJson();
     }
 
     private static Path payloads(Path dir) throws IOException {

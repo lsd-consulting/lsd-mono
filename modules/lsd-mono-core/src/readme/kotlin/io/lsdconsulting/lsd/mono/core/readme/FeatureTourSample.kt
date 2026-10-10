@@ -37,9 +37,9 @@ fun main() {
     outOfStock(lsd)
     shippingUpdate(lsd)
 
-    val listing = lsd.completeReport("Online shop")
+    val files = lsd.completeReport("Online shop")
     lsd.createIndex()
-    println(listing)
+    println(files.diagramHtml)
 }
 
 private fun CaptureBlock.checkout(orderId: String, sku: String) {

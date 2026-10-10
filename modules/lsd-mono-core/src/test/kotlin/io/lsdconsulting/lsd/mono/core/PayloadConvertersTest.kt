@@ -1,7 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters
-import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters.Limits
+import io.lsdconsulting.lsd.mono.core.PayloadConverters.Limits
 import io.lsdconsulting.lsd.mono.core.json.anyToJson
 import io.lsdconsulting.lsd.mono.core.json.render
 import org.junit.jupiter.api.Assertions.assertEquals

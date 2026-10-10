@@ -27,7 +27,7 @@ class LsdContextTest {
         val lsd = LsdContext()
         lsd.addFact("framework", "junit")
         lsd.completeScenario("hello world", "<p>ok</p>", Status.SUCCESS)
-        val reportPath = lsd.completeReport("Suite")
+        val reportPath = lsd.completeReport("Suite").listingHtml
         lsd.createIndex()
 
         val stem = ReportWriter.reportFileStem("Suite")

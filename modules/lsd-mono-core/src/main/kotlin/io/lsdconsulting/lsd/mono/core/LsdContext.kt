@@ -1,6 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
@@ -190,7 +189,7 @@ public class LsdContext : Capturer() {
     @JvmSynthetic
     public fun <T> scenario(
         title: String,
-        description: String = "",
+        description: String? = null,
         reportKey: String? = null,
         block: LsdScenario.() -> T,
     ): T {
@@ -212,7 +211,7 @@ public class LsdContext : Capturer() {
     @JvmOverloads
     public fun scenario(
         title: String,
-        description: String = "",
+        description: String? = null,
         reportKey: String? = null,
         block: Consumer<LsdScenario>,
     ): Unit = scenario(title, description, reportKey) { block.accept(this) }
@@ -226,7 +225,7 @@ public class LsdContext : Capturer() {
     @JvmOverloads
     public fun <T> scenario(
         title: String,
-        description: String = "",
+        description: String? = null,
         reportKey: String? = null,
         block: Callable<T>,
     ): T = scenario(title, description, reportKey) { block.call() }
@@ -239,19 +238,19 @@ public class LsdContext : Capturer() {
      * the block throws, and the exception is rethrown.
      *
      * ```kotlin
-     * val path = LsdContext.instance.report("Online shop") {
+     * val files = LsdContext.instance.report("Online shop") {
      *     scenario("Place an order") { capture { "Customer" calls "Web Shop" label "click Place order" } }
      *     scenario("Card declined") { … }
      * }
      * ```
      *
-     * @return the report file.
+     * @return the files written; open [ReportFiles.diagramHtml].
      */
     @JvmSynthetic
     public fun report(
         title: String,
         block: LsdReport.() -> Unit,
-    ): Path {
+    ): ReportFiles {
         val report = LsdReport(this, title, openReportKey(title))
         val previous = openReport.get()
         openReport.set(report)
@@ -278,11 +277,11 @@ public class LsdContext : Capturer() {
         return checkNotNull(path)
     }
 
-    /** Java form of [report]: `Path path = lsd.report("Online shop", r -> r.scenario("Place an order", s -> { … }));`. */
+    /** Java form of [report]: `ReportFiles files = lsd.report("Online shop", r -> r.scenario("Place an order", s -> { … }));`. */
     public fun report(
         title: String,
         block: Consumer<LsdReport>,
-    ): Path = report(title) { block.accept(this) }
+    ): ReportFiles = report(title) { block.accept(this) }
 
     /**
      * @param error structured failure (message + stack). Prefer this over HTML overlay
@@ -291,7 +290,7 @@ public class LsdContext : Capturer() {
     @JvmOverloads
     public fun completeScenario(
         title: String,
-        description: String? = "",
+        description: String? = null,
         status: Status = Status.SUCCESS,
         error: ScenarioError? = null,
     ) {
@@ -302,9 +301,11 @@ public class LsdContext : Capturer() {
      * Write the scenarios completed for [reportKey] (the default report when null)
      * and forget them. File names come from the title plus a short hash of
      * `reportKey ?: title`, so reports with the same title do not overwrite each other.
+     *
+     * @return the files written; open [ReportFiles.diagramHtml].
      */
     @JvmOverloads
-    public fun completeReport(title: String, reportKey: String? = null): Path {
+    public fun completeReport(title: String, reportKey: String? = null): ReportFiles {
         val taken =
             synchronized(lock) {
                 // Writing a report has always dropped captures that no scenario was completed for.
@@ -317,17 +318,17 @@ public class LsdContext : Capturer() {
                     .map { it.second }
             }
         val report = buildReportJson(title, taken)
-        val path = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
+        val files = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
         synchronized(lock) {
             reportFiles.add(
                 ReportFile(
-                    filename = path.fileName.toString(),
+                    filename = files.listingHtml.fileName.toString(),
                     title = report.title,
                     status = report.status,
                 ),
             )
         }
-        return path
+        return files
     }
 
     /**

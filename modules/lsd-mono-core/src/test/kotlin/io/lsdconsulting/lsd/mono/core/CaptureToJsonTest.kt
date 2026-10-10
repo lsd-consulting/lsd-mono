@@ -44,7 +44,7 @@ class CaptureToJsonTest {
         lsd.deactivate("api")
         lsd.completeScenario("checkout happy path", "<p>ok</p>", Status.SUCCESS)
 
-        val html = lsd.completeReport("Orders flow")
+        val html = lsd.completeReport("Orders flow").listingHtml
         lsd.createIndex()
 
         val json = tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-report.json").readText()

@@ -130,7 +130,8 @@ class ScopedBlocksTest {
                 placeOrder()
             }
 
-        assertTrue(path.exists(), "$path")
+        assertTrue(path.diagramHtml.exists(), "$path")
+        assertTrue(path.listingHtml.exists(), "$path")
         assertTrue(tempDir.resolve("index.html").exists())
         assertEquals(
             mapOf("Place an order" to listOf("order"), "From a helper" to listOf("helper")),
@@ -163,7 +164,7 @@ class ScopedBlocksTest {
             val paths =
                 (1..threads)
                     .map { t ->
-                        pool.submit<Path> {
+                        pool.submit<ReportFiles> {
                             start.await()
                             // Two reports per title, so keys must differ while both are open.
                             lsd.report("Shop ${(t + 1) / 2}") {
@@ -182,7 +183,7 @@ class ScopedBlocksTest {
 
             assertEquals(threads, paths.toSet().size, "every report gets its own file: $paths")
             paths.forEach { path ->
-                val json = path.resolveSibling(path.fileName.toString().replace("-report.html", "-report.json")).readText()
+                val json = path.reportJson.readText()
                 val scenarios = labelsByScenario(json)
                 assertEquals(3, scenarios.size, "$path: ${scenarios.keys}")
                 val owner = scenarios.keys.map { it.substringBefore(' ') }.toSet()

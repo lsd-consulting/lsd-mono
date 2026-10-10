@@ -63,9 +63,9 @@ fun main() {
     outOfStock(lsd)
     asyncFulfilment(lsd)
 
-    val listing = lsd.completeReport("kitchen-sink")
+    val files = lsd.completeReport("kitchen-sink")
     lsd.createIndex()
-    println(listing)
+    println(files.diagramHtml)
 }
 
 private fun CaptureBlock.placeOrderRequest(orderId: String) {

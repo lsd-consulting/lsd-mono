@@ -1,6 +1,6 @@
 package io.lsdconsulting.lsd.mono.core.json
 
-import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters
+import io.lsdconsulting.lsd.mono.core.PayloadConverters
 import java.math.BigDecimal
 import java.math.BigInteger
 

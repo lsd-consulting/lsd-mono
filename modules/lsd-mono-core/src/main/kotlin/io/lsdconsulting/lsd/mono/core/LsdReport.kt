@@ -18,7 +18,7 @@ public class LsdReport internal constructor(
     @JvmSynthetic
     public fun <T> scenario(
         title: String,
-        description: String = "",
+        description: String? = null,
         block: LsdScenario.() -> T,
     ): T = context.scenario(title, description, key, block)
 
@@ -26,7 +26,7 @@ public class LsdReport internal constructor(
     @JvmOverloads
     public fun scenario(
         title: String,
-        description: String = "",
+        description: String? = null,
         block: Consumer<LsdScenario>,
     ): Unit = context.scenario(title, description, key, block)
 
@@ -34,7 +34,7 @@ public class LsdReport internal constructor(
     @JvmOverloads
     public fun <T> scenario(
         title: String,
-        description: String = "",
+        description: String? = null,
         block: Callable<T>,
     ): T = context.scenario(title, description, key, block)
 

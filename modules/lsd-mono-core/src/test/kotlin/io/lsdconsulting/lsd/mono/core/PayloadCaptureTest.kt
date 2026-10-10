@@ -1,7 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.PayloadConvertersTest.Companion.assertValidJson
-import io.lsdconsulting.lsd.mono.core.capture.PayloadConverters
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals

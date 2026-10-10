@@ -66,7 +66,7 @@ class LsdPropertiesTest {
         System.setProperty(LsdProperties.PAYLOAD_MAX_ITEMS, "-1")
         System.setProperty(LsdProperties.PAYLOAD_MAX_TOTAL_SIZE, "lots")
         System.clearProperty(LsdProperties.PAYLOAD_MAX_STRING_LENGTH)
-        val limits = io.lsdconsulting.lsd.mono.core.capture.PayloadConverters.Limits
+        val limits = io.lsdconsulting.lsd.mono.core.PayloadConverters.Limits
             .fromProperties()
         assertEquals(7, limits.maxDepth)
         assertEquals(1000, limits.maxItems)

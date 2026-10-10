@@ -93,9 +93,9 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public final fun capture (Ljava/util/function/Consumer;)V
 	public final synthetic fun capture (Lkotlin/jvm/functions/Function1;)V
 	public final fun clear ()V
-	public final fun completeReport (Ljava/lang/String;)Ljava/nio/file/Path;
-	public final fun completeReport (Ljava/lang/String;Ljava/lang/String;)Ljava/nio/file/Path;
-	public static synthetic fun completeReport$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/nio/file/Path;
+	public final fun completeReport (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/ReportFiles;
+	public final fun completeReport (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/ReportFiles;
+	public static synthetic fun completeReport$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/ReportFiles;
 	public final fun completeScenario (Ljava/lang/String;)V
 	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Status;)V
@@ -105,9 +105,9 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public final fun currentScenario ()Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public final fun findScenario (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public static final fun getInstance ()Lio/lsdconsulting/lsd/mono/core/LsdContext;
-	public final fun getPayloads ()Lio/lsdconsulting/lsd/mono/core/capture/PayloadConverters;
-	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Ljava/nio/file/Path;
-	public final synthetic fun report (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/nio/file/Path;
+	public final fun getPayloads ()Lio/lsdconsulting/lsd/mono/core/PayloadConverters;
+	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Lio/lsdconsulting/lsd/mono/core/ReportFiles;
+	public final synthetic fun report (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lio/lsdconsulting/lsd/mono/core/ReportFiles;
 	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
 	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;)V
 	public final synthetic fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
@@ -171,6 +171,11 @@ public final class io/lsdconsulting/lsd/mono/core/MessageSpec {
 	public final fun took (J)Lio/lsdconsulting/lsd/mono/core/MessageSpec;
 }
 
+public final class io/lsdconsulting/lsd/mono/core/PayloadConverters {
+	public final fun clear ()V
+	public final fun register (Ljava/lang/Class;Ljava/util/function/Function;)Lio/lsdconsulting/lsd/mono/core/PayloadConverters;
+}
+
 public final class io/lsdconsulting/lsd/mono/core/PendingCall {
 	public final fun fail (Ljava/lang/Throwable;)V
 	public final fun fail (Ljava/lang/Throwable;Ljava/time/Instant;)V
@@ -183,9 +188,13 @@ public final class io/lsdconsulting/lsd/mono/core/PendingCall {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class io/lsdconsulting/lsd/mono/core/capture/PayloadConverters {
-	public final fun clear ()V
-	public final fun register (Ljava/lang/Class;Ljava/util/function/Function;)Lio/lsdconsulting/lsd/mono/core/capture/PayloadConverters;
+public final class io/lsdconsulting/lsd/mono/core/ReportFiles {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDiagramHtml ()Ljava/nio/file/Path;
+	public final fun getListingHtml ()Ljava/nio/file/Path;
+	public final fun getReportJson ()Ljava/nio/file/Path;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/domain/MessageType : java/lang/Enum {

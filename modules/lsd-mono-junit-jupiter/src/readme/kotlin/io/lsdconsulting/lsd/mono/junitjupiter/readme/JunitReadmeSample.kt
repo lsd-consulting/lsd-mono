@@ -45,7 +45,7 @@ fun main() {
     }
     // Same titles LsdExtension would use for PlaceOrderTest / `places an order`.
     lsd.completeScenario("PlaceOrderTest: places an order", "Test passed", Status.SUCCESS)
-    val listing = lsd.completeReport("PlaceOrderTest")
+    val files = lsd.completeReport("PlaceOrderTest")
     lsd.createIndex()
-    println(listing)
+    println(files.diagramHtml)
 }

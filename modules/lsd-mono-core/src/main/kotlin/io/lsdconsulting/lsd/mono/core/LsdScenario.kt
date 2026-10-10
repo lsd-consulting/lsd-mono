@@ -95,7 +95,7 @@ public class LsdScenario internal constructor(
     @JvmOverloads
     public fun complete(
         title: String,
-        description: String? = "",
+        description: String? = null,
         status: Status = Status.SUCCESS,
         error: ScenarioError? = null,
     ): Unit = context.complete(this, title, description, status, error)

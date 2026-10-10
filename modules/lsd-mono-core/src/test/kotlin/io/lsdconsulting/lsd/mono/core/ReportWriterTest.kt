@@ -48,9 +48,12 @@ class ReportWriterTest {
 
     @Test
     fun `writeReport writes its own files only and leaves no temporary files`() {
-        val html = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
+        val files = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
+        val html = files.listingHtml
         val stem = ReportWriter.reportFileStem("Orders")
         assertEquals("$stem-report.html", html.name)
+        assertEquals("$stem-diagram.html", files.diagramHtml.name)
+        assertEquals("$stem-report.json", files.reportJson.name)
         val names = tempDir.listDirectoryEntries().map { it.name }.toSet()
         assertEquals(setOf("$stem-report.html", "$stem-report.json", "$stem-diagram.html", ".lsd-index"), names)
         assertTrue(html.readText().contains("""href="$stem-report.json""""))
@@ -59,8 +62,8 @@ class ReportWriterTest {
 
     @Test
     fun `a report key, when given, names the files instead of the title`() {
-        val byTitle = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
-        val byKey = ReportWriter.writeReport(report("Orders"), tempDir.toFile(), reportKey = "com.example.OrderTest")
+        val byTitle = ReportWriter.writeReport(report("Orders"), tempDir.toFile()).listingHtml
+        val byKey = ReportWriter.writeReport(report("Orders"), tempDir.toFile(), reportKey = "com.example.OrderTest").listingHtml
         assertEquals(ReportWriter.reportFileStem("Orders") + "-report.html", byTitle.name)
         assertEquals(ReportWriter.reportFileStem("Orders", "com.example.OrderTest") + "-report.html", byKey.name)
         assertNotEquals(byTitle.name, byKey.name)
@@ -69,7 +72,7 @@ class ReportWriterTest {
     @Test
     fun `concurrent writes of one report never leave a partial file`() {
         val big = report("Same", scenarioCount = 200)
-        val expected = ReportWriter.writeReport(big, tempDir.toFile()).readText()
+        val expected = ReportWriter.writeReport(big, tempDir.toFile()).listingHtml.readText()
         val pool = Executors.newFixedThreadPool(8)
         val go = CountDownLatch(1)
         try {
@@ -115,7 +118,7 @@ class ReportWriterTest {
 
     @Test
     fun `index skips entries whose report was deleted and keeps explicit entries`() {
-        val gone = ReportWriter.writeReport(report("Gone"), tempDir.toFile())
+        val gone = ReportWriter.writeReport(report("Gone"), tempDir.toFile()).listingHtml
         ReportWriter.writeReport(report("Kept"), tempDir.toFile())
         Files.delete(gone)
         val extra = ReportFile(filename = "elsewhere.html", title = "Extra", status = "warn")

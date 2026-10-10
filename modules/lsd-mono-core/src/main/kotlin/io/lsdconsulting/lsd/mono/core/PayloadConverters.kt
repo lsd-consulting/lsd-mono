@@ -1,4 +1,4 @@
-package io.lsdconsulting.lsd.mono.core.capture
+package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.properties.LsdKey
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties

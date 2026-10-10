@@ -213,7 +213,7 @@ Samples, `main()` programs and frameworks without an integration can scope scena
 reports with blocks instead of `beginScenario` / `completeScenario` / `completeReport`:
 
 ```kotlin
-val path = LsdContext.instance.report("Online shop") {
+val files = LsdContext.instance.report("Online shop") {
     scenario("Place an order", description = "Given … When … Then …") {
         addFact("orderId", "ord-1001")
         capture { "Customer" calls "Web Shop" label "click Place order" }
@@ -228,7 +228,7 @@ val path = LsdContext.instance.report("Online shop") {
   rethrows. Afterwards the thread is bound to whatever it was bound to before, so a nested
   `scenario { }` shadows the outer one until it ends. It returns the block's value.
 - `report { }` writes the report (and `index.html`) when the block ends, even if it throws,
-  and returns the file. It has its own report key, so `report { }` blocks on parallel threads
+  and returns its `ReportFiles` (open `files.diagramHtml`). It has its own report key, so `report { }` blocks on parallel threads
   never share scenarios. Scenarios started in the block, or by code it calls on that thread,
   go into it; `scenario` on the receiver also works from other threads. The key is the title
   (with ` #2` added while another block with that title is open), so the file name stays the
@@ -240,7 +240,7 @@ val path = LsdContext.instance.report("Online shop") {
 From Java, pass a `Consumer`, or a `Callable` for a value:
 
 ```java
-Path path = lsd.report("Online shop", r -> {
+ReportFiles files = lsd.report("Online shop", r -> {
     r.scenario("Place an order", s -> s.addFact("orderId", "ord-1001"));
     int rows = r.scenario("Count rows", () -> repository.count());
 });
