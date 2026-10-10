@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -166,6 +167,27 @@ class JavaApiTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    /** Only IOException, from reading the report: binding a scenario must not force a catch. */
+    @Test
+    void nullsAndBindingsNeedNoWorkaroundsFromJava() throws IOException {
+        LsdContext lsd = new LsdContext();
+        LsdScenario scenario = lsd.beginScenario("java-traps", "java-traps", false);
+        try (LsdBinding bound = scenario.bind()) {
+            lsd.message("A", "B", "null type", null);
+            lsd.message("A", "B", "null type with data", Map.of("k", 1), null);
+            assertSame(scenario, lsd.currentScenario());
+        }
+        assertEquals(null, lsd.currentScenario(), "closing the binding restores the previous one");
+        scenario.note("over", "A");
+        scenario.note("edge", null, NoteSide.RIGHT);
+        assertThrows(IllegalArgumentException.class, () -> scenario.note("over nothing", null));
+        scenario.complete("Traps");
+
+        String json = events(Files.readString(reportJson(lsd.completeReport("Java traps", "java-traps"))));
+        assertEquals(List.of("null type", "null type with data"), all(json, "\"label\": \"([^\"]*)\""));
+        assertEquals(List.of("SYNCHRONOUS", "SYNCHRONOUS"), all(json, "\"type\": \"(\\w+)\""));
     }
 
     private static Path reportJson(Path reportHtml) {

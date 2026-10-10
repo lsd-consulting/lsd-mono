@@ -175,9 +175,9 @@ private fun happyPath(lsd: LsdContext) {
         deactivate("API Gateway")
         "Web UI" repliesTo "Customer" label "show confirmation"
         deactivate("Web UI")
-        note("Edge note on the left of the diagram.", side = NoteSide.LEFT)
+        note("Edge note on the left of the diagram.", on = null, side = NoteSide.LEFT)
         note("Left of Customer", on = "Customer", side = NoteSide.LEFT)
-        note("Edge note on the right that is long enough to wrap onto a second and third line.", side = NoteSide.RIGHT)
+        note("Edge note on the right that is long enough to wrap onto a second and third line.", on = null, side = NoteSide.RIGHT)
     }
 
     lsd.completeScenario(

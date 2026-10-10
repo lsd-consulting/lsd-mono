@@ -38,7 +38,7 @@ class RemainingSequenceEventKindsTest {
         )
         lsd.capture { note("over card", on = "api") }
         lsd.capture { note("left of api", on = "api", side = NoteSide.LEFT) }
-        lsd.capture { note("right edge", side = NoteSide.RIGHT) }
+        lsd.capture { note("right edge", on = null, side = NoteSide.RIGHT) }
         lsd.note("ctx left", "api", side = NoteSide.LEFT)
         lsd.note("ctx right", "db", side = NoteSide.RIGHT)
         lsd.capture { delay("retry window") }

@@ -28,14 +28,17 @@ import java.time.Instant
  */
 @LsdDsl
 public sealed class Capturer {
-    /** A message from [from] to [to]. The default [type] is a synchronous call. */
+    /**
+     * A message from [from] to [to]. [type] defaults to [MessageType.SYNCHRONOUS], and so
+     * does a `null` type (so Java can pass `null`).
+     */
     @JvmOverloads
     public fun message(
         from: String,
         to: String,
         label: String = "",
         data: Any? = null,
-        type: MessageType = MessageType.SYNCHRONOUS,
+        type: MessageType? = MessageType.SYNCHRONOUS,
         durationMs: Long? = null,
         colour: String? = null,
         at: Instant? = null,
@@ -46,7 +49,7 @@ public sealed class Capturer {
                 from = from,
                 to = to,
                 label = label,
-                type = type,
+                type = type ?: MessageType.SYNCHRONOUS,
                 colour = colour,
                 data = data,
                 durationMs = durationMs,
@@ -58,13 +61,14 @@ public sealed class Capturer {
     /**
      * A message of [type] with no data. With this overload, `message(from, to, label, MessageType.LOST)`
      * means the type, from Kotlin and Java. Without it the type would be taken as `data`, because
-     * `data` comes before `type` in the full form.
+     * `data` comes before `type` in the full form. A `null` [type] is a synchronous call with
+     * no data, so Java's `message(from, to, label, null)` (which picks this overload) works.
      */
     public fun message(
         from: String,
         to: String,
         label: String,
-        type: MessageType,
+        type: MessageType?,
     ) {
         message(from, to, label, null, type)
     }
@@ -126,12 +130,15 @@ public sealed class Capturer {
     /**
      * A note. [NoteSide.OVER] (the default) puts it over participant [on], which it needs.
      * [NoteSide.LEFT] and [NoteSide.RIGHT] put it beside [on], or at the edge of the diagram
-     * when [on] is null.
+     * when [on] is null: `note("retries", on = null, side = NoteSide.RIGHT)`.
+     * [on] has no default, so a note cannot silently lack its participant.
+     *
+     * @throws IllegalArgumentException for an [NoteSide.OVER] note with no [on].
      */
     @JvmOverloads
     public fun note(
         text: String,
-        on: String? = null,
+        on: String?,
         side: NoteSide = NoteSide.OVER,
         at: Instant? = null,
     ) {

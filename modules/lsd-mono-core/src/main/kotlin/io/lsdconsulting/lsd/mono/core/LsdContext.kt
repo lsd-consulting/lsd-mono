@@ -395,10 +395,10 @@ public class LsdContext : Capturer() {
     internal fun copyData(event: SequenceEvent): SequenceEvent =
         if (event is Message && event.data != null) event.copy(data = payloads.snapshot(event.data)) else event
 
-    internal fun bindThread(scenario: LsdScenario): AutoCloseable {
+    internal fun bindThread(scenario: LsdScenario): LsdBinding {
         val previous = bound.get()
         bound.set(scenario)
-        return AutoCloseable { if (previous == null) bound.remove() else bound.set(previous) }
+        return LsdBinding { if (previous == null) bound.remove() else bound.set(previous) }
     }
 
     internal fun complete(

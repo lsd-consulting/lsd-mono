@@ -80,7 +80,7 @@ public class LsdScenario internal constructor(
      * Bind the calling thread to this scenario until the returned handle is closed.
      * Closing restores whatever the thread was bound to before.
      */
-    public fun bind(): AutoCloseable = context.bindThread(this)
+    public fun bind(): LsdBinding = context.bindThread(this)
 
     /** A [Runnable] that runs [task] with its thread bound to this scenario. */
     public fun wrap(task: Runnable): Runnable = Runnable { bind().use { task.run() } }

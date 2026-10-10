@@ -93,7 +93,7 @@ captures into itself) and a capture block (below) share the same verbs, from the
 | `call(from, to, label, data, at)` | A call now, returning a `PendingCall`; its `reply(label, data, at)` or `fail(error)` draws the timed response later (see [Interceptors](#interceptors)) |
 | `async(from, to, label, data, at)` | An asynchronous message, such as an event on a queue |
 | `inbound(to, label, at)` / `outbound(from, label, at)` | A short arrow from or to the edge of the diagram |
-| `note(text, on, side, at)` | A note over `on`, or beside it with `side = NoteSide.LEFT` or `RIGHT` (at the edge when `on` is null) |
+| `note(text, on, side, at)` | A note over `on`, or beside it with `side = NoteSide.LEFT` or `RIGHT`. `on` is required; pass `on = null` with `LEFT` or `RIGHT` for a note at the diagram's edge |
 | `activate(participant, colour, at)` / `deactivate(participant, at)` | An activation bar |
 | `section(title, at)`, `divider(label, at)`, `delay(label, at)`, `spacer(heightPx, at)` | Rows that structure the diagram |
 | `addFact(key, value)` | A fact shown with the scenario |
@@ -101,9 +101,10 @@ captures into itself) and a capture block (below) share the same verbs, from the
 Everything after the first required arguments is optional. `at` is when the event
 happened: the report orders timed events by it, for capture that arrives out of order.
 From Java, the overloads cover the common calls (`lsd.message("A", "B", "label", body)`).
-To pass `at`, pass the defaults of the parameters before it (`MessageType.SYNCHRONOUS`, `null`).
-`message(from, to, label, MessageType.LOST)` sets the type, from Kotlin and Java alike:
-a type in the fourth position is never taken as `data`.
+To pass `at`, pass `null` for the optional parameters before it: a `null` type means
+`MessageType.SYNCHRONOUS`. `message(from, to, label, MessageType.LOST)` sets the type, from
+Kotlin and Java alike: a type in the fourth position is never taken as `data`, and Java's
+`message(from, to, label, null)` is a plain synchronous message.
 
 ### Capture blocks
 
@@ -287,7 +288,8 @@ lsd.completeReport("OrderTest", reportKey = "com.example.OrderTest")
 ```
 
 `wrap` takes a `Runnable` or a `Callable`. `LsdScenario` also has the verbs,
-`capture { }`, `wrap` and `bind()` (an `AutoCloseable`).
+`capture { }`, `wrap` and `bind()`, which returns an `LsdBinding`: an `AutoCloseable` whose
+`close()` throws nothing, so Java's try-with-resources needs no `catch`.
 A capture into a scenario that has already completed is dropped
 with a warning rather than being given to the next one.
 
