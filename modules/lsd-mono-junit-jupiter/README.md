@@ -124,6 +124,8 @@ val order = executor.submit(LsdContext.instance.wrap<Order> { client.placeOrder(
 
 A thread that is not bound to a test (an embedded server's thread, for example) captures into the running test when only one test is running, as before. With several running, the capture cannot be attributed: it is logged as a warning and kept out of all of them. Captures made in `@BeforeAll` go into the class's first test when nothing else is running.
 
+In Kotlin coroutines, a thread binding does not follow the coroutine when it resumes on another dispatcher thread. Bind the injected `LsdScenario` for the coroutine with `withLsdScenario` from [`lsd-mono-coroutines`](../lsd-mono-coroutines/README.md#in-a-junit-test).
+
 ## What the report looks like
 
 The diagram for the scenario above after a successful test.

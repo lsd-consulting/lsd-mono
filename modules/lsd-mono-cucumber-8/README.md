@@ -30,6 +30,8 @@ The class is `io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`. It implemen
 
 Parallel execution is supported (`cucumber.execution.parallel.enabled=true`, or `--threads` on the CLI). Each scenario gets its own buffer, bound to the thread that runs its steps, so `LsdContext.instance` in a step lands in that scenario, and each feature gets its own report. Work a step hands to another thread needs `LsdContext.instance.wrap(task)`. A capture from a thread that is not bound to a scenario goes to the running scenario when there is only one; with several running it is logged as a warning and kept out of all of them.
 
+In Kotlin coroutines, a thread binding does not follow the coroutine when it resumes on another dispatcher thread. Take `LsdContext.instance.currentScenario()` at the start of the step and bind it for the coroutine with `withLsdScenario` from [`lsd-mono-coroutines`](../lsd-mono-coroutines/README.md).
+
 ## Capture from a step
 
 Do **not** call `completeScenario` or `completeReport` yourself. The plugin does that when the scenario and the feature finish.
