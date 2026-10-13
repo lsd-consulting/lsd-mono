@@ -8,10 +8,13 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFileAttributeView
+import java.nio.file.attribute.PosixFilePermission
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -58,6 +61,24 @@ class ReportWriterTest {
         assertEquals(setOf("$stem-report.html", "$stem-report.json", "$stem-diagram.html", ".lsd-index"), names)
         assertTrue(html.readText().contains("""href="$stem-report.json""""))
         assertTrue(tempDir.resolve("$stem-diagram.html").readText().contains("window.__LSD_REPORT__="))
+    }
+
+    @Test
+    fun `report files get the same mode as any new file, not owner-only (POSIX)`() {
+        assumeTrue(Files.getFileAttributeView(tempDir, PosixFileAttributeView::class.java) != null, "POSIX file system")
+        // The JVM cannot set the umask, so compare with a file created the ordinary way.
+        val reference = Files.newOutputStream(tempDir.resolve("reference")).use { tempDir.resolve("reference") }
+        val expected = Files.getPosixFilePermissions(reference)
+        Files.delete(reference)
+
+        val files = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
+        ReportWriter.writeReport(report("Orders"), tempDir.toFile()) // replacing keeps the mode
+        val written = listOf(files.listingHtml, files.diagramHtml, files.reportJson)
+        for (file in written) assertEquals(expected, Files.getPosixFilePermissions(file), file.name)
+        if (PosixFilePermission.OTHERS_READ in expected) {
+            // The usual umask (022): readable by everyone, which createTempFile's 0600 was not.
+            written.forEach { assertTrue(PosixFilePermission.OTHERS_READ in Files.getPosixFilePermissions(it), it.name) }
+        }
     }
 
     @Test

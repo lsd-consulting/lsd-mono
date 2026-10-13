@@ -239,7 +239,5 @@ tasks.register<Sync>("kitchenSinkSample") {
             filter { line -> line.replace(Regex("""kitchen-sink-[0-9a-f]{8}-payloads\.js"""), "kitchen-sink-payloads.js") }
         }
     }
-    // Reports are written owner-only (atomic temp files); the site is public, so make it world-readable.
-    filePermissions { unix("rw-r--r--") }
     into(pagesDir)
 }

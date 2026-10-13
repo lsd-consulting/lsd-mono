@@ -20,12 +20,14 @@ import java.io.File
 import java.io.StringWriter
 import java.nio.channels.FileChannel
 import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
 import java.util.Properties
+import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -201,14 +203,19 @@ internal object ReportWriter {
         }
     }
 
-    /** Write to a temporary file beside [target], then move it into place. */
+    /**
+     * Write to a temporary file beside [target], then move it into place. The temporary file
+     * is created like any other new file, so it gets the usual mode under the umask (`0644`
+     * under `022`) and the report is readable by others. `Files.createTempFile` would make it
+     * owner-only (`0600`), and the move keeps that mode.
+     */
     internal fun writeAtomically(target: Path, text: String) {
         val dir = target.toAbsolutePath().parent
         Files.createDirectories(dir)
-        val temp = Files.createTempFile(dir, ".${target.fileName}.", ".tmp")
+        // Lone surrogates are escaped or replaced before this; never fail a report on one that is not.
+        val bytes = Html.wellFormed(text).toByteArray(Charsets.UTF_8)
+        val temp = createTemp(dir, target.fileName.toString(), bytes)
         try {
-            // Lone surrogates are escaped or replaced before this; never fail a report on one that is not.
-            Files.write(temp, Html.wellFormed(text).toByteArray(Charsets.UTF_8))
             try {
                 Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             } catch (_: AtomicMoveNotSupportedException) {
@@ -216,6 +223,22 @@ internal object ReportWriter {
             }
         } finally {
             Files.deleteIfExists(temp)
+        }
+    }
+
+    /** A new file `.<name>.<random>.tmp` in [dir] holding [bytes]; `CREATE_NEW`, so never someone else's file. */
+    private fun createTemp(dir: Path, name: String, bytes: ByteArray): Path {
+        while (true) {
+            val temp = dir.resolve(".$name.${UUID.randomUUID()}.tmp")
+            try {
+                Files.newOutputStream(temp, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE).use { it.write(bytes) }
+                return temp
+            } catch (_: FileAlreadyExistsException) {
+                continue
+            } catch (e: Exception) {
+                Files.deleteIfExists(temp)
+                throw e
+            }
         }
     }
 
