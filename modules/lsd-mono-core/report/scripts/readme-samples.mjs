@@ -359,14 +359,17 @@ async function recordTour(browser, tourDir, file) {
     const scroll = diagram.locator('.seq-scroll')
     const button = (name, exact = false) => diagram.getByRole('button', { name, exact })
 
-    // 1. Overview: scenarios with every status, and the list down the side.
+    // 1. Overview: the list down the side, one scenario at a time (the first failing one first).
     await placePointer(at.x, at.y)
-    await caption('A report of every scenario, with its status')
-    await snap(800)
-    await moveTo(130, 190)
-    await snap(300)
+    await caption('Every scenario in the list; the first failing one opens first')
+    await snap(900)
     await moveTo(130, 330, 6)
-    await snap(700)
+    await snap(500)
+    await caption('Choose a scenario to see it on its own', { sameBeat: true })
+    await click(page.locator('#scenario-nav [data-nav]').filter({ hasText: 'Place an order and pay by card' }), {
+      hold: 900,
+      settle: () => page.locator('.scenario-card h2', { hasText: 'Place an order and pay by card' }).waitFor(),
+    })
 
     // 2. Zoom.
     await caption('Zoom in and out, or Fit the diagram to the panel')

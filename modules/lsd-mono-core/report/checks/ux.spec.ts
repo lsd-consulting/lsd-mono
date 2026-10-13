@@ -831,17 +831,19 @@ test('a wide diagram opens fitted, refits on resize until the user zooms, then k
   expect((await zoomOf(page, 'wide-a')).overflowX).toBeLessThanOrEqual(0)
 })
 
-test('a collapsed scenario is fitted when it opens', async ({ page }) => {
+test('a scenario chosen from the list is fitted when it shows', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 800 })
   await openWide(page)
-  await page.locator('#card-wide-b .scenario-head').click()
+  await page.locator('#scenario-nav [data-nav="wide-b"]').click()
   await expect(page.locator('#card-wide-b .seq-svg')).toBeVisible()
   const opened = await zoomOf(page, 'wide-b')
   expect(opened.percent).toBeLessThan(100)
   expect(opened.overflowX).toBeLessThanOrEqual(0)
 })
 
-test('a deep link to a message in a collapsed, fitted diagram scrolls to it and opens it', async ({ page }) => {
+test('a deep link to a message in another scenario shows it, fitted, scrolls to the message and opens it', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1200, height: 800 })
   await openWide(page, '#msg=wide-b/m25')
   await expect(page.locator('#inspector-title')).toHaveText('call 25')
@@ -1004,9 +1006,14 @@ test('hiding refits a diagram the user has not zoomed, and keeps a zoom they cho
   await page.waitForTimeout(200)
   expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
   // Per scenario: the other diagram keeps all its participants.
-  await page.locator('#card-wide-b .scenario-head').click()
+  await page.locator('#scenario-nav [data-nav="wide-b"]').click()
   await expect(page.locator('#card-wide-b .participant-box')).toHaveCount(12)
   await expect(page.locator('#card-wide-b .hidden-chip')).toHaveCount(0)
+  // Back on the first scenario, its hidden participants and its zoom are as they were.
+  await page.locator('#scenario-nav [data-nav="wide-a"]').click()
+  await expect(page.locator('#card-wide-a .participant-box')).toHaveCount(7)
+  await expect(page.locator('#card-wide-a .hidden-chip')).toHaveText('5 hidden')
+  expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
 })
 
 test('print keeps hidden participants hidden and leaves out the header buttons and the chip', async ({ page }) => {
@@ -1084,6 +1091,199 @@ test('on a phone a tap shows a header’s buttons below it, a long press opens t
     await page.getByRole('menuitem', { name: 'Hide all but Database' }).tap()
     expect(await headerNames(page)).toEqual(['db'])
     await expect(page.locator('.hidden-chip')).toHaveText('3 hidden')
+  } finally {
+    await context.close()
+  }
+})
+
+// One scenario at a time, chosen from the sidebar (#39).
+
+const threeScenarios: Report = {
+  ...uxFixture,
+  scenarios: [
+    { ...uxFixture.scenarios[0], id: 'browse', title: 'Browse the catalogue', status: 'success' },
+    { ...uxFixture.scenarios[0], id: 'pay', title: 'Payment declined', status: 'error' },
+    { ...uxFixture.scenarios[0], id: 'stock', title: 'Low stock warning', status: 'warn' },
+  ],
+}
+
+async function openThree(page: Page, hash = ''): Promise<void> {
+  await page.addInitScript((report) => {
+    window.__LSD_REPORT__ = report
+  }, threeScenarios)
+  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
+  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(`/${hash}`)
+  await expect(page.locator('.seq-svg')).toBeVisible()
+}
+
+const shown = (page: Page) =>
+  page.locator('#main .scenario-card').evaluateAll((cards) => cards.map((card) => card.id.slice('card-'.length)))
+const current = (page: Page) => page.locator('#scenario-nav [aria-current="true"]')
+
+test('the main column shows only the selected scenario: the first failing one by default, then the one chosen', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await openThree(page)
+  expect(await shown(page)).toEqual(['pay'])
+  await expect(current(page)).toHaveAttribute('data-nav', 'pay')
+  await expect(page.locator('#scenario-nav [aria-current]')).toHaveCount(1)
+  // A plain heading now: nothing to open or close.
+  await expect(page.locator('.scenario-head[role="button"]')).toHaveCount(0)
+  await expect(page.locator('#main .seq-diagram')).toHaveCount(1)
+
+  await page.locator('#scenario-nav [data-nav="stock"]').click()
+  expect(await shown(page)).toEqual(['stock'])
+  await expect(current(page)).toHaveAttribute('data-nav', 'stock')
+  await expect(page.locator('#scenario-nav [data-nav="stock"]')).toBeFocused()
+  await expect(page).toHaveURL(/#scenario=stock$/)
+
+  // A reload or a shared link shows the same scenario.
+  await page.reload()
+  await expect(page.locator('.seq-svg')).toBeVisible()
+  expect(await shown(page)).toEqual(['stock'])
+
+  // Print has only the selected scenario.
+  await startPrint(page)
+  await expect(page.locator('.scenario-card')).toHaveCount(1)
+  await expect(page.locator('.scenario-card h2')).toHaveText('Low stock warning')
+  await endPrint(page)
+
+  const violations = await seriousViolations(page)
+  expect(violations, formatViolations(violations)).toEqual([])
+})
+
+test('a message link selects its scenario and opens the message; closing the panel keeps the scenario in the URL', async ({
+  page,
+}) => {
+  await openThree(page, '#msg=browse/m3')
+  expect(await shown(page)).toEqual(['browse'])
+  await expect(page.locator('#inspector-title')).toHaveText('charge 3')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('#inspector')).toBeHidden()
+  await expect(page).toHaveURL(/#scenario=browse$/)
+  // Editing the address (or Back) follows the hash.
+  await page.evaluate(() => {
+    window.location.hash = '#scenario=pay'
+  })
+  await expect.poll(() => shown(page)).toEqual(['pay'])
+})
+
+test('search and status filters narrow the list, move the selection on, and show an empty state', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await openThree(page)
+  // Error off: Payment declined leaves the list, and the next match shows.
+  await page.locator('[data-filter="error"]').click()
+  await expect(page.locator('#scenario-nav [data-nav]')).toHaveCount(2)
+  expect(await shown(page)).toEqual(['stock'])
+  await expect(current(page)).toHaveAttribute('data-nav', 'stock')
+
+  // Search keeps the selection while it still matches, and does not redraw it.
+  await page.locator('.seq-scroll').evaluate((el) => el.setAttribute('data-kept', 'yes'))
+  await page.locator('#search').fill('stock')
+  await expect(page.locator('.seq-scroll')).toHaveAttribute('data-kept', 'yes')
+
+  await page.locator('#search').fill('no scenario has this')
+  await expect(page.locator('#scenario-nav [data-nav]')).toHaveCount(0)
+  await expect(page.locator('#main .scenario-card')).toHaveCount(0)
+  const empty = page.locator('#main .empty')
+  await expect(empty).toContainText('No scenarios match your search and status filters.')
+  for (const theme of THEMES) {
+    await page.evaluate((name) => document.documentElement.setAttribute('data-theme', name), theme)
+    const violations = await seriousViolations(page)
+    expect(violations, `${theme}\n${formatViolations(violations)}`).toEqual([])
+  }
+
+  await empty.getByRole('button', { name: 'Clear filters' }).click()
+  await expect(page.locator('#search')).toHaveValue('')
+  await expect(page.locator('[data-filter="error"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('#scenario-nav [data-nav]')).toHaveCount(3)
+  expect(await shown(page)).toEqual(['stock'])
+  await expect(page.locator('#scenario-title')).toBeFocused()
+})
+
+test('j/k and the arrow keys move the selection, Enter goes into the diagram, focus follows sensibly', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await openThree(page)
+  // On the list, arrows move the selection and focus with it.
+  await page.locator('#scenario-nav [data-nav="browse"]').focus()
+  await page.keyboard.press('ArrowDown')
+  await expect(current(page)).toHaveAttribute('data-nav', 'pay')
+  await expect(page.locator('#scenario-nav [data-nav="pay"]')).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('ArrowDown')
+  expect(await shown(page)).toEqual(['stock'])
+  await page.keyboard.press('ArrowUp')
+  expect(await shown(page)).toEqual(['pay'])
+
+  // From inside the scenario, j replaces it and focus lands on the new heading.
+  await page.getByRole('button', { name: 'Zoom in' }).focus()
+  await page.keyboard.press('j')
+  expect(await shown(page)).toEqual(['stock'])
+  await expect(page.locator('#scenario-title')).toBeFocused()
+  await page.keyboard.press('k')
+  expect(await shown(page)).toEqual(['pay'])
+
+  // Enter (not on a button) goes into the diagram, on its first message.
+  await page.keyboard.press('Enter')
+  await expect(page.locator('button.msg-open[data-message-id="m0"]')).toBeFocused()
+
+  // Arrows in the diagram toolbar do not switch scenarios.
+  await page.getByRole('button', { name: 'Zoom in' }).focus()
+  await page.keyboard.press('ArrowDown')
+  expect(await shown(page)).toEqual(['pay'])
+
+  await expect(page.locator('#help')).toContainText('next/prev scenario')
+  await expect(page.locator('#help')).toContainText('go to its diagram')
+})
+
+test('the collapsed rail is enough to move between scenarios', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.addInitScript(() => localStorage.setItem('lsd-report-sidebar', 'collapsed'))
+  await openThree(page)
+  await expect(page.locator('#btn-sidebar')).toHaveAttribute('aria-expanded', 'false')
+  const rail = page.locator('#scenario-nav [data-nav="browse"]')
+  await expect(rail).toHaveAccessibleName(/Browse the catalogue/)
+  await expect(rail.locator('.nav-icon')).toHaveText('1')
+  await rail.click()
+  expect(await shown(page)).toEqual(['browse'])
+  await expect(rail).toHaveAttribute('aria-current', 'true')
+  await page.keyboard.press('ArrowDown')
+  expect(await shown(page)).toEqual(['pay'])
+  const violations = await seriousViolations(page)
+  expect(violations, formatViolations(violations)).toEqual([])
+})
+
+test('on a phone the list sits above the scenario, and choosing one scrolls it into view below the bar', async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 390, height: 664 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 1,
+    reducedMotion: 'reduce',
+    colorScheme: 'dark',
+  })
+  try {
+    const page = await context.newPage()
+    await openThree(page)
+    await page.locator('#scenario-nav [data-nav="browse"]').tap()
+    expect(await shown(page)).toEqual(['browse'])
+    const placed = await page.evaluate(() => ({
+      bar: document.querySelector('.topbar')!.getBoundingClientRect().bottom,
+      card: document.querySelector('.scenario-card')!.getBoundingClientRect().top,
+    }))
+    expect(placed.card).toBeGreaterThanOrEqual(Math.floor(placed.bar))
+    expect(placed.card).toBeLessThan(placed.bar + 40)
+    const violations = await seriousViolations(page)
+    expect(violations, formatViolations(violations)).toEqual([])
   } finally {
     await context.close()
   }

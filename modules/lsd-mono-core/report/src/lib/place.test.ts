@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Scenario } from '../types'
 import { bindInspector, inspectorMarkup } from '../ui/inspector'
-import { clearMessageHash, parseMessageHash, writeMessageHash } from './message-url'
+import { parseReportHash, writeReportHash } from './report-hash'
 import {
   bindDiagramScroll,
   messageOffsetY,
@@ -94,7 +94,7 @@ describe('open message in the URL', () => {
     ;(window as unknown as { locationHash: string }).locationHash = ''
   })
 
-  it('writes the message hash on open and clears it on close', () => {
+  it('writes the message hash on open and goes back to the scenario hash on close', () => {
     const loc = {
       hash: '',
       replace(url: string) {
@@ -105,13 +105,13 @@ describe('open message in the URL', () => {
     if (message.kind !== 'message') throw new Error('expected message')
     const controller = bindInspector(document, {
       loadPayload: async () => ({ body: 'lazy' }),
-      onClose: () => clearMessageHash(loc),
+      onClose: () => writeReportHash(loc, { scenarioId: scenario.id }),
     })
-    writeMessageHash(loc, { scenarioId: scenario.id, messageId: message.id })
+    writeReportHash(loc, { scenarioId: scenario.id, messageId: message.id })
     controller.openMessage(scenario.id, message)
-    expect(parseMessageHash(loc.hash)).toEqual({ scenarioId: 'sc-happy', messageId: 'm1' })
+    expect(parseReportHash(loc.hash)).toEqual({ scenarioId: 'sc-happy', messageId: 'm1' })
     controller.close()
-    expect(loc.hash).toBe('')
-    expect(parseMessageHash(loc.hash)).toBeNull()
+    // Closing the panel keeps the scenario in the URL.
+    expect(parseReportHash(loc.hash)).toEqual({ scenarioId: 'sc-happy' })
   })
 })

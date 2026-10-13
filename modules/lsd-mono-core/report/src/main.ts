@@ -11,7 +11,8 @@ import {
   type InspectorInvoker,
 } from './ui/inspector'
 import { loadExternalPayloads, payloadKey } from './lib/payloads'
-import { clearMessageHash, parseMessageHash, writeMessageHash } from './lib/message-url'
+import { parseReportHash, writeReportHash, type HashRef } from './lib/report-hash'
+import { defaultScenarioId, reselect, stepSelection } from './ui/selection'
 import { placePrintMetrics, printMetricsSection } from './ui/metrics'
 import { placePrintPanel, printComponentsSection, printMessageSection } from './ui/print-panel'
 import { renderComponentDiagram } from './lib/component-diagram'
@@ -53,7 +54,7 @@ import { trackTopbarHeight } from './lib/topbar-height'
 interface State {
   query: string
   status: Record<Status, boolean>
-  openIds: Set<string>
+  /** The scenario shown in the main column (#39). Kept while filters hide it all. */
   selectedId: string | null
   helpOpen: boolean
   sidebarCollapsed: boolean
@@ -64,20 +65,33 @@ const report: Report = window.__LSD_REPORT__ ?? sampleReport
 const state: State = {
   query: '',
   status: { success: true, warn: true, error: true },
-  openIds: new Set<string>(report.scenarios[0] ? [report.scenarios[0].id] : []),
-  selectedId: report.scenarios[0]?.id ?? null,
+  selectedId: initialSelection(),
   helpOpen: false,
   sidebarCollapsed: getSidebarCollapsed(),
 }
 
 const app = document.querySelector('#app')!
 
+/** The scenario in the URL (a link or a reload), otherwise the first failing one, otherwise the first. */
+function initialSelection(): string | null {
+  const ref = parseReportHash(window.location.hash)
+  if (ref && report.scenarios.some((s) => s.id === ref.scenarioId)) return ref.scenarioId
+  return defaultScenarioId(report.scenarios)
+}
+
+/** Scenario whose card is in the main column now. Null while the empty state shows. */
+let renderedId: string | null = null
+/** True while a selection change closes the side panel: its focus return has nowhere to go. */
+let switchingScenario = false
+/** False until the URL hash has been read, so the first render cannot overwrite a #msg= link. */
+let booted = false
+
 /** Arrow, Metrics or Component diagram button that opened the inspector. Close returns focus here. */
 let invoker: InspectorInvoker | null = null
 let inspector: InspectorController | null = null
 /** Scenario the side panel is showing, for its print copy. Errors have no invoker, so it is kept here. */
 let panelScenarioId: string | null = null
-/** Suppress hashchange while we write the open-message token ourselves. */
+/** Suppress hashchange while we write the hash ourselves. */
 let writingHash = false
 let stopTopbarTracking: () => void = () => {}
 
@@ -100,16 +114,15 @@ function reportLocation(): { hash: string; replace?: (url: string) => void } {
   }
 }
 
-function setOpenMessageHash(scenarioId: string, messageId: string): void {
+function writeHash(ref: HashRef | null): void {
   writingHash = true
-  writeMessageHash(reportLocation(), { scenarioId, messageId })
+  writeReportHash(reportLocation(), ref)
   writingHash = false
 }
 
-function clearOpenMessageHash(): void {
-  writingHash = true
-  clearMessageHash(reportLocation())
-  writingHash = false
+/** The URL names the shown scenario; an open message replaces it with #msg= (see openMessage). */
+function writeScenarioHash(): void {
+  writeHash(state.selectedId ? { scenarioId: state.selectedId } : null)
 }
 
 function counts() {
@@ -194,7 +207,7 @@ function renderShell(): void {
     </div>
     <div class="help-toast" id="help" data-open="false" role="note">
       <strong style="color:var(--text)">Keyboard</strong><br/>
-      <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> next/prev scenario · <kbd>Enter</kbd> open/close<br/>
+      <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> or <kbd>↓</kbd>/<kbd>↑</kbd> next/prev scenario · <kbd>Enter</kbd> go to its diagram<br/>
       In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages · <kbd>Enter</kbd> opens the side panel<br/>
       <kbd>d</kbd> theme (dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close
     </div>
@@ -213,6 +226,17 @@ function bindChrome(): void {
     state.query = search.value
     renderNav()
     renderMain()
+  })
+  // The empty state's Clear filters button.
+  document.querySelector('#main')!.addEventListener('click', (ev) => {
+    if (!(ev.target as Element).closest?.('[data-clear-filters]')) return
+    state.query = ''
+    search.value = ''
+    for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
+    document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
+    renderNav()
+    renderMain()
+    focusScenarioHeading()
   })
 
   document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((btn) => {
@@ -251,9 +275,13 @@ function bindChrome(): void {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onContent: () => syncPrintPanel(),
     onClose: (opened) => {
-      clearOpenMessageHash()
+      writeScenarioHash()
       panelScenarioId = null
       syncPrintCopies()
+      if (switchingScenario) {
+        invoker = null
+        return
+      }
       if (opened?.kind === 'components' || opened?.kind === 'metrics') {
         invoker = null
         const button = opened.kind === 'components' ? '[data-show-components]' : '[data-show-metrics]'
@@ -392,6 +420,8 @@ function bindChrome(): void {
 
 function renderNav(): void {
   const list = document.querySelector('#scenario-nav')!
+  // Rebuilding the list drops focus; a nav button that had it gets it back (the selected one).
+  const hadFocus = list.contains(document.activeElement)
   const items = filtered()
   list.innerHTML = items
     .map((s) => {
@@ -402,7 +432,7 @@ function renderNav(): void {
         : ''
       return `
       <li>
-        <button type="button" data-nav="${escapeAttr(s.id)}" aria-current="${state.selectedId === s.id}"${tooltip}>
+        <button type="button" data-nav="${escapeAttr(s.id)}"${state.selectedId === s.id ? ' aria-current="true"' : ''} aria-controls="main"${tooltip}>
           <span class="dot ${escapeAttr(s.status)}"></span>
           <span class="nav-icon" aria-hidden="true">${number}</span>
           <span class="nav-text">
@@ -415,72 +445,101 @@ function renderNav(): void {
     .join('')
 
   list.querySelectorAll<HTMLButtonElement>('[data-nav]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.nav!
-      state.selectedId = id
-      state.openIds.add(id)
-      renderNav()
-      renderMain()
-      document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
+    btn.addEventListener('click', () => selectScenario(btn.dataset.nav!))
   })
+  if (hadFocus) selectedNavButton()?.focus()
 }
 
-function renderMain(): void {
+function selectedNavButton(): HTMLButtonElement | null {
+  return document.querySelector<HTMLButtonElement>('#scenario-nav [aria-current="true"]')
+}
+
+/**
+ * Show one scenario. Focus stays where the user is: on the list when they chose
+ * from it, otherwise on the new scenario's heading when the old card had focus.
+ * The page scrolls back to the scenario's top.
+ */
+function selectScenario(id: string): void {
+  if (!report.scenarios.some((s) => s.id === id)) return
   const main = document.querySelector('#main')!
-  const items = filtered()
+  const focusInMain = main.contains(document.activeElement)
+  state.selectedId = id
+  renderNav()
+  renderMain()
+  if (focusInMain) focusScenarioHeading()
+  scrollToScenario()
+}
 
-  if (!items.length) {
-    main.innerHTML = `
-      <div class="report-hero">
-        <h1>${escapeHtml(report.title)}</h1>
-        <div class="meta">
-          <span>Generated ${escapeHtml(formatGeneratedAt(report.generatedAt))}</span>
-          <code>${escapeHtml(report.generator)}</code>
-        </div>
-      </div>
-      <div class="empty">No scenarios match your filters. Toggle status chips or clear search.</div>`
-    return
-  }
+function focusScenarioHeading(): void {
+  document.querySelector<HTMLElement>('#main .scenario-head h2')?.focus({ preventScroll: true })
+}
 
-  main.innerHTML = `
+/**
+ * Wide layout: back to the top of the page, where the scenario starts. Narrow layout
+ * (the list sits above it): to the scenario, below the sticky top bar.
+ */
+function scrollToScenario(): void {
+  const card = document.querySelector<HTMLElement>('#main .scenario-card')
+  if (!card) return
+  if (matchMedia('(max-width: 860px)').matches) card.scrollIntoView({ block: 'start' })
+  else window.scrollTo({ top: 0 })
+}
+
+function heroHtml(): string {
+  return `
     <div class="report-hero">
       <h1>${escapeHtml(report.title)}</h1>
       <div class="meta">
         <span>Generated ${escapeHtml(formatGeneratedAt(report.generatedAt))}</span>
         <code>${escapeHtml(report.generator)}</code>
-        <span>${items.length} shown</span>
       </div>
-    </div>
-    ${items.map((s, i) => scenarioHtml(s, i)).join('')}`
-  syncPrintCopies()
+    </div>`
+}
 
-  // Cards are in the order of items. Not looked up by id: an id is report data.
-  const cards = main.querySelectorAll<HTMLElement>(':scope > .scenario-card')
-  items.forEach((s, i) => {
-    const head = cards[i]?.querySelector('.scenario-head')
-    if (!head) return
-    head.addEventListener('click', () => toggleOpen(s.id))
-    head.addEventListener('keydown', (ev) => {
-      const e = ev as KeyboardEvent
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        toggleOpen(s.id)
-      }
-    })
-  })
+/**
+ * The main column shows the selected scenario alone. When search or the status filters
+ * drop it, the next match is shown, or an empty state when nothing matches. Only a
+ * different scenario is redrawn: typing in search does not rebuild the diagram.
+ */
+function renderMain(): void {
+  const main = document.querySelector('#main')!
+  const items = filtered()
+  const next = reselect(report.scenarios, items, state.selectedId)
+  if (next !== state.selectedId && next) {
+    state.selectedId = next
+    renderNav()
+  }
+  const showId = next
+  if (showId === renderedId && (showId === null ? main.querySelector('.empty') : main.querySelector('.scenario-card')))
+    return
+
+  // The side panel shows something from the scenario being replaced.
+  if (inspector?.isOpen() && panelScenarioId !== showId) {
+    switchingScenario = true
+    inspector.close()
+    switchingScenario = false
+  }
+  renderedId = showId
+  const scenario = showId ? report.scenarios.find((s) => s.id === showId) : undefined
+  if (!scenario) {
+    main.innerHTML = `${heroHtml()}
+      <div class="empty" role="status">
+        <p>No scenarios match your search and status filters.</p>
+        <button type="button" class="text-btn" data-clear-filters>Clear filters</button>
+      </div>`
+    syncPrintCopies()
+    return
+  }
+  main.innerHTML = `${heroHtml()}${scenarioHtml(scenario)}`
+  if (booted && !panelScenarioId) writeScenarioHash()
+  syncPrintCopies()
   bindDiagramScroll(main)
 }
 
-/** Scroll a scenario's diagram to a message. Opens the scenario first when it is collapsed. */
+/** Scroll a scenario's diagram to a message. Shows that scenario first. */
 function revealMessage(scenarioId: string, messageId: string): void {
   if (!report.scenarios.some((item) => item.id === scenarioId)) return
-  if (!state.openIds.has(scenarioId)) {
-    state.openIds.add(scenarioId)
-    state.selectedId = scenarioId
-    renderNav()
-    renderMain()
-  }
+  if (renderedId !== scenarioId) selectScenario(scenarioId)
   const y = messageOffsetY(scenarioId, messageId)
   const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenarioId)} .seq-scroll`)
   if (!scroll || y == null) return
@@ -495,23 +554,13 @@ function scenarioFrom(node: Element): Scenario | undefined {
   return report.scenarios.find((s) => s.id === card.id.slice('card-'.length))
 }
 
-function toggleOpen(id: string): void {
-  if (state.openIds.has(id)) state.openIds.delete(id)
-  else state.openIds.add(id)
-  state.selectedId = id
-  renderNav()
-  renderMain()
-}
-
-function scenarioHtml(s: Scenario, index: number): string {
-  const open = state.openIds.has(s.id)
+function scenarioHtml(s: Scenario): string {
   const labelMaxWidth = report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
   const diagram = renderDiagramHtml(s, labelMaxWidth)
   return `
-  <article class="scenario-card ${escapeAttr(s.status)}" id="card-${escapeAttr(s.id)}" data-open="${open}" data-status="${escapeAttr(s.status)}" style="animation-delay:${index * 40}ms">
-    <div class="scenario-head" role="button" tabindex="0" aria-expanded="${open}">
-      <span class="chev" aria-hidden="true">▸</span>
-      <h2>${escapeHtml(s.title)}</h2>
+  <article class="scenario-card ${escapeAttr(s.status)}" id="card-${escapeAttr(s.id)}" data-status="${escapeAttr(s.status)}" aria-labelledby="scenario-title">
+    <div class="scenario-head">
+      <h2 id="scenario-title" tabindex="-1">${escapeHtml(s.title)}</h2>
       <span class="badge ${escapeAttr(s.status)}">${escapeHtml(s.status)}</span>
     </div>
     <div class="scenario-body">
@@ -543,7 +592,7 @@ function openError(scenario: Scenario): void {
   if (!err || !inspector) return
   panelScenarioId = scenario.id
   invoker = null
-  clearOpenMessageHash()
+  writeScenarioHash()
   inspector.openError({
     status: scenario.status,
     headline: err.headline,
@@ -601,7 +650,7 @@ function openComponents(scenario: Scenario): void {
   if (!inspector) return
   panelScenarioId = scenario.id
   invoker = { scenarioId: scenario.id, kind: 'components' }
-  clearOpenMessageHash()
+  writeScenarioHash()
   inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
   syncPrintCopies()
 }
@@ -610,7 +659,7 @@ function openMetrics(scenario: Scenario): void {
   if (!inspector) return
   panelScenarioId = scenario.id
   invoker = { scenarioId: scenario.id, kind: 'metrics' }
-  clearOpenMessageHash()
+  writeScenarioHash()
   inspector.openMetrics(scenario.id, {
     heading: scenario.title,
     metrics: scenario.metrics,
@@ -624,25 +673,34 @@ function openMessage(scenario: Scenario, msg: MessageEvent): void {
   if (!inspector) return
   panelScenarioId = scenario.id
   invoker = { scenarioId: scenario.id, messageId: msg.id }
-  setOpenMessageHash(scenario.id, msg.id)
+  writeHash({ scenarioId: scenario.id, messageId: msg.id })
   inspector.openMessage(scenario.id, msg)
   syncPrintCopies()
 }
 
-/** Open the message named in the URL hash (file:// safe). Payload still loads on open. */
-function applyOpenMessageFromHash(): void {
+/**
+ * Follow the URL hash (a link, a reload, an edited address or Back): show its scenario,
+ * and open its message when it names one. Payload still loads on open.
+ */
+function applyHash(): void {
   if (writingHash) return
-  const ref = parseMessageHash(window.location.hash)
+  const ref = parseReportHash(window.location.hash)
   if (!ref) return
   const scenario = report.scenarios.find((item) => item.id === ref.scenarioId)
   if (!scenario) return
+  // A scenario the filters hide is shown anyway: the link asked for it.
+  if (!filtered().some((s) => s.id === scenario.id)) {
+    state.query = ''
+    for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
+    const search = document.querySelector<HTMLInputElement>('#search')
+    if (search) search.value = ''
+    document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
+  }
+  if (renderedId !== scenario.id) selectScenario(scenario.id)
+  if (!ref.messageId) return
   const msg = findMessage(scenario, ref.messageId)
   if (!msg) return
   const already = inspector?.isOpen() && invoker?.scenarioId === ref.scenarioId && invoker?.messageId === ref.messageId
-  state.selectedId = scenario.id
-  state.openIds.add(scenario.id)
-  renderNav()
-  renderMain()
   requestAnimationFrame(() => {
     const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenario.id)} .seq-scroll`)
     if (scroll) focusDiagramMessage(scroll, msg.id)
@@ -666,20 +724,25 @@ async function loadMessagePayload(scenarioId: string, messageId: string): Promis
   return undefined
 }
 
-function visibleIds(): string[] {
-  return filtered().map((s) => s.id)
+/** One step from `from` (the focused list item), or from the shown scenario. */
+function moveSelection(delta: number, from: string | null = state.selectedId): void {
+  const next = stepSelection(filtered(), from, delta)
+  if (!next) return
+  if (next !== state.selectedId) selectScenario(next)
+  // Stepping onto the scenario already shown still moves focus along the list.
+  else if (document.querySelector('#scenario-nav')?.contains(document.activeElement)) selectedNavButton()?.focus()
 }
 
-function moveSelection(delta: number): void {
-  const ids = visibleIds()
-  if (!ids.length) return
-  const cur = state.selectedId ? ids.indexOf(state.selectedId) : -1
-  const next = ids[Math.max(0, Math.min(ids.length - 1, (cur < 0 ? 0 : cur) + delta))]
-  state.selectedId = next
-  state.openIds.add(next)
-  renderNav()
-  renderMain()
-  document.getElementById(`card-${next}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+/** Enter: into the shown scenario's diagram, on its current message (or the diagram itself). */
+function focusSelectedDiagram(): void {
+  const scroll = document.querySelector<HTMLElement>('#main .seq-scroll')
+  if (!scroll) return
+  const stop = scroll.querySelector<HTMLElement>('button.msg-open[tabindex="0"]') ?? scroll
+  stop.focus()
+}
+
+function focusedNavId(target: Element): string | null {
+  return target.closest<HTMLElement>('#scenario-nav [data-nav]')?.dataset.nav ?? state.selectedId
 }
 
 function onKey(e: KeyboardEvent): void {
@@ -714,22 +777,26 @@ function onKey(e: KeyboardEvent): void {
     document.querySelector<HTMLInputElement>('#search')?.focus()
     return
   }
-  if (e.key === 'j' || e.key === 'ArrowDown') {
+  // j/k anywhere outside a text box; arrows only on the list, the page or the scenario
+  // heading, so they keep their own meaning in the diagram toolbar and its popovers.
+  // On the list, focus follows the selection.
+  const arrows = target === document.body || target.closest('#scenario-nav') || target.matches('#scenario-title')
+  if (e.key === 'j' || (e.key === 'ArrowDown' && arrows)) {
     e.preventDefault()
-    moveSelection(1)
+    moveSelection(1, focusedNavId(target))
     return
   }
-  if (e.key === 'k' || e.key === 'ArrowUp') {
+  if (e.key === 'k' || (e.key === 'ArrowUp' && arrows)) {
     e.preventDefault()
-    moveSelection(-1)
+    moveSelection(-1, focusedNavId(target))
     return
   }
-  // Enter on a focused button presses that button (sidebar toggle, filters, theme…),
-  // not the selected scenario.
-  if (e.key === 'Enter' && target.closest('button')) return
-  if (e.key === 'Enter' && state.selectedId) {
+  // Enter on a focused button presses that button (a list item, filters, theme…).
+  // Anywhere else it goes into the shown scenario's diagram.
+  if (e.key === 'Enter' && target.closest('button, a, [role="slider"]')) return
+  if (e.key === 'Enter' && renderedId) {
     e.preventDefault()
-    toggleOpen(state.selectedId)
+    focusSelectedDiagram()
     return
   }
   if (e.key === 'd') {
@@ -746,8 +813,9 @@ function onKey(e: KeyboardEvent): void {
 
 applyTheme(getPreferredTheme())
 renderShell()
-applyOpenMessageFromHash()
-window.addEventListener('hashchange', () => applyOpenMessageFromHash())
+applyHash()
+booted = true
+window.addEventListener('hashchange', () => applyHash())
 window.addEventListener('keydown', onKey)
 window.addEventListener('resize', () => {
   document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => {

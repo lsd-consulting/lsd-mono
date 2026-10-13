@@ -2,7 +2,7 @@
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
 
-![A tour of the report: scenarios and statuses, zoom and Fit, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the minimap, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
+![A tour of the report: choosing a scenario from the list, zoom and Fit, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the minimap, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
 
 [`lsd-mono-cucumber-8` README](modules/lsd-mono-cucumber-8/README.md) covers the Cucumber 8 plugin.
 

@@ -463,12 +463,15 @@ html {
   align-items: flex-start;
   gap: 12px;
   padding: 16px 18px;
-  cursor: pointer;
-  user-select: none;
 }
-.scenario-head:focus-visible {
+/* Focus lands on the heading when the selection changes from inside the old scenario. */
+.scenario-head h2:focus {
   outline: none;
-  box-shadow: inset var(--focus);
+}
+.scenario-head h2:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 .scenario-head h2 {
   margin: 0;
@@ -501,22 +504,9 @@ html {
   color: var(--error);
   border-color: transparent;
 }
-.chev {
-  color: var(--text-faint);
-  transition: transform 0.2s;
-  margin-top: 4px;
-}
-.scenario-card[data-open="true"] .chev {
-  transform: rotate(90deg);
-}
-
 .scenario-body {
-  display: none;
   padding: 0 18px 20px;
   border-top: 1px solid var(--border);
-}
-.scenario-card[data-open="true"] .scenario-body {
-  display: block;
 }
 
 .cards {
@@ -1166,9 +1156,6 @@ html {
   }
   .scenario-head {
     break-after: avoid;
-  }
-  .scenario-head .chev {
-    display: none;
   }
   .scenario-body > .cards,
   .scenario-body > .diagram-panel {

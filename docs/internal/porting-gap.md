@@ -228,7 +228,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### 3.4 UX gaps that remain
 
-The large-diagram UX baseline is shipped: sticky participant header, scenario and in-diagram search, dark/light/high-contrast themes, keyboard message navigation, 24-pixel message hit targets, real `aria-posinset` / `aria-setsize`, side inspector with lazy payloads, minimap and `#msg=` links, zoom/fit, participant hiding, reduced motion, and axe/theme/Fit checks. These are not open tasks.
+The large-diagram UX baseline is shipped: sticky participant header, scenario and in-diagram search, dark/light/high-contrast themes, keyboard message navigation, 24-pixel message hit targets, real `aria-posinset` / `aria-setsize`, side inspector with lazy payloads, minimap, `#scenario=` and `#msg=` links, one scenario at a time chosen from the sidebar (#39), zoom/fit, participant hiding, reduced motion, and axe/theme/Fit checks. These are not open tasks.
 
 | Area | Remaining work | Priority |
 |------|----------------|----------|

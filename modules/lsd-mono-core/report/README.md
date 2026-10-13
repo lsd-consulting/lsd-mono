@@ -85,7 +85,7 @@ Gradle produces the same shell without a manual npm build:
 | Colour | **OKLCH tokens** + dark/light/high contrast | `d` or the theme button cycles dark → light → high contrast. Persisted as `lsd-report-theme`. Print uses a light page. |
 | Inspector | **Side panel** | Keeps the diagram active; lazy payloads, copy, focus return, and `#msg=` deep links |
 | Typography | Geist → system-ui fallback | Product feel when online; readable offline via system fonts |
-| State | In-memory filter/selection | Enough for the report shell; no UI framework |
+| State | One scenario at a time, in the URL hash | The sidebar chooses the scenario; only it is drawn. `#scenario=<id>` (or `#msg=<id>/<message>`) survives a reload or a shared link. Search, status filters and per-diagram views stay in memory |
 
 The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG output from that engine.
 
