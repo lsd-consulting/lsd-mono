@@ -515,8 +515,8 @@ async function recordTour(browser, tourDir, file) {
     await ring(false)
     await snap(1000)
 
-    // 9. Themes: light, high contrast, then dark.
-    await caption('Light, high-contrast and dark themes')
+    // 9. Themes: light, high contrast, then Auto (follows the OS, light here).
+    await caption('Light and high-contrast themes, or Auto to follow the OS')
     await page.evaluate(() => window.scrollTo(0, 0))
     await snap(200)
     await click(page.locator('#btn-theme'), { hold: 800 })

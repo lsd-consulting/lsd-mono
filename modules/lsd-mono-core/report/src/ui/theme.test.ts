@@ -4,10 +4,12 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   applyTheme,
+  chooseMode,
   chooseTheme,
+  currentMode,
   followOsTheme,
   getPreferredTheme,
-  nextTheme,
+  nextMode,
   osTheme,
   resolveTheme,
   THEME_KEY,
@@ -51,19 +53,26 @@ beforeEach(() => {
   localStorage.clear()
   document.documentElement.setAttribute('data-theme', 'dark')
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('theme cycle', () => {
-  it('cycles dark, light, then high contrast', () => {
-    expect(nextTheme('dark')).toBe('light')
-    expect(nextTheme('light')).toBe('contrast')
-    expect(nextTheme('contrast')).toBe('dark')
+  it('cycles Auto, dark, light, high contrast, then back to Auto', () => {
+    expect(nextMode('auto')).toBe('dark')
+    expect(nextMode('dark')).toBe('light')
+    expect(nextMode('light')).toBe('contrast')
+    expect(nextMode('contrast')).toBe('auto')
   })
 
-  it('names the theme in text, not colour alone', () => {
+  it('names the mode in text, not colour alone, with the theme Auto resolved to', () => {
+    expect(themeGlyph('auto')).toBe('A')
     expect(themeGlyph('contrast')).toBe('HC')
-    expect(themeButtonLabel('light')).toContain('high contrast')
-    expect(themeButtonLabel('contrast')).toContain('Theme: high contrast')
+    expect(themeButtonLabel('auto', 'dark')).toBe('Theme: Auto (dark). Switch to dark')
+    expect(themeButtonLabel('auto', 'contrast')).toBe('Theme: Auto (high contrast). Switch to dark')
+    expect(themeButtonLabel('light', 'light')).toBe('Theme: light. Switch to high contrast')
+    expect(themeButtonLabel('contrast', 'contrast')).toBe('Theme: high contrast. Switch to Auto (follow the OS)')
   })
 })
 
@@ -96,12 +105,34 @@ describe('OS default and explicit choice', () => {
     expect(localStorage.getItem(THEME_KEY)).toBe('contrast')
   })
 
-  it('toggles from the theme on screen and stores the result', () => {
+  it('toggles through the modes, storing fixed choices and clearing the store for Auto', () => {
     fakeOs({ light: true })
     applyTheme('light')
-    expect(toggleTheme()).toBe('contrast')
+    expect(currentMode()).toBe('auto')
+    expect(toggleTheme()).toEqual({ mode: 'dark', theme: 'dark' })
+    expect(localStorage.getItem(THEME_KEY)).toBe('dark')
+    expect(toggleTheme()).toEqual({ mode: 'light', theme: 'light' })
+    expect(toggleTheme()).toEqual({ mode: 'contrast', theme: 'contrast' })
     expect(shown()).toBe('contrast')
-    expect(localStorage.getItem(THEME_KEY)).toBe('contrast')
+    expect(currentMode()).toBe('contrast')
+    expect(toggleTheme()).toEqual({ mode: 'auto', theme: 'light' })
+    expect(shown()).toBe('light')
+    expect(localStorage.getItem(THEME_KEY)).toBeNull()
+    expect(currentMode()).toBe('auto')
+  })
+
+  it('Auto resumes following the OS live after a fixed choice', () => {
+    const os = fakeOs()
+    const seen: string[] = []
+    followOsTheme((t) => seen.push(t))
+    chooseTheme('light')
+    os.set({ light: true })
+    os.set({ light: false })
+    expect(shown()).toBe('light')
+    expect(chooseMode('auto')).toBe('dark')
+    os.set({ moreContrast: true })
+    expect(shown()).toBe('contrast')
+    expect(seen).toEqual(['contrast'])
   })
 })
 
@@ -147,6 +178,11 @@ describe('followOsTheme', () => {
     expect(getPreferredTheme()).toBe('light')
     chooseTheme('dark')
     expect(shown()).toBe('dark')
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    expect(chooseMode('auto')).toBe('light')
+    expect(currentMode()).toBe('auto')
     spy.mockRestore()
     set.mockRestore()
   })

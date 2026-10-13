@@ -39,12 +39,14 @@ import {
 } from './lib/sequence-diagram'
 import {
   applyTheme,
+  currentMode,
   followOsTheme,
   getPreferredTheme,
   themeButtonLabel,
   themeGlyph,
   toggleTheme,
   type Theme,
+  type ThemeMode,
 } from './ui/theme'
 import {
   applySidebarCollapsed,
@@ -153,10 +155,13 @@ function filtered(): Scenario[] {
   })
 }
 
-function paintThemeButton(theme: Theme, btn: Element | null = document.querySelector('#btn-theme')): void {
+function paintThemeButton(
+  { mode, theme }: { mode: ThemeMode; theme: Theme },
+  btn: Element | null = document.querySelector('#btn-theme'),
+): void {
   if (!btn) return
-  const label = themeButtonLabel(theme)
-  btn.textContent = themeGlyph(theme)
+  const label = themeButtonLabel(mode, theme)
+  btn.textContent = themeGlyph(mode)
   btn.setAttribute('aria-label', label)
   btn.setAttribute('title', label)
 }
@@ -165,6 +170,7 @@ function renderShell(): void {
   const c = counts()
   const total = report.scenarios.length
   const theme = getPreferredTheme()
+  const mode = currentMode()
 
   app.innerHTML = `
     <header class="topbar" role="banner">
@@ -191,7 +197,7 @@ function renderShell(): void {
           .join('')}
       </div>
       <div class="top-actions">
-        <button type="button" class="icon-btn" id="btn-theme" title="${escapeAttr(themeButtonLabel(theme))}" aria-label="${escapeAttr(themeButtonLabel(theme))}">${escapeHtml(themeGlyph(theme))}</button>
+        <button type="button" class="icon-btn" id="btn-theme" title="${escapeAttr(themeButtonLabel(mode, theme))}" aria-label="${escapeAttr(themeButtonLabel(mode, theme))}">${escapeHtml(themeGlyph(mode))}</button>
         <button type="button" class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Show keyboard help">?</button>
       </div>
     </header>
@@ -217,7 +223,7 @@ function renderShell(): void {
       <strong style="color:var(--text)">Keyboard</strong><br/>
       <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> or <kbd>↓</kbd>/<kbd>↑</kbd> next/prev scenario · <kbd>Enter</kbd> go to its diagram<br/>
       In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages · <kbd>Enter</kbd> opens the side panel<br/>
-      <kbd>d</kbd> theme (dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close
+      <kbd>d</kbd> theme (Auto follows the OS, dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close
     </div>
   `
 
@@ -821,7 +827,7 @@ function onKey(e: KeyboardEvent): void {
 
 // The head script already set it before first paint; this keeps the two in step.
 applyTheme(getPreferredTheme())
-followOsTheme((theme) => paintThemeButton(theme))
+followOsTheme((theme) => paintThemeButton({ mode: 'auto', theme }))
 renderShell()
 applyHash()
 booted = true

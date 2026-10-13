@@ -82,7 +82,7 @@ Gradle produces the same shell without a manual npm build:
 | Tooling | **Vite 7 + TypeScript** | Fast local DX; `base: './'` for `file://` / CI artifact drops |
 | Runtime | **Vanilla TS** (no React/Vue) | Tiny shipped JS; reports stay self-contained |
 | Diagrams | **Custom SVG** from domain events | CSS and accessibility control, clickable messages, activations, notes, dividers — no PlantUML or Mermaid runtime in the browser |
-| Colour | **OKLCH tokens** + dark/light/high contrast | Until you choose, follows the OS live: `prefers-color-scheme` picks dark or light, and `prefers-contrast: more` picks high contrast. A head script sets it before first paint, so there is no flash. `d` or the theme button cycles dark → light → high contrast; that choice is persisted as `lsd-report-theme` and wins over the OS. Print uses a light page. |
+| Colour | **OKLCH tokens** + dark/light/high contrast | Until you choose, follows the OS live: `prefers-color-scheme` picks dark or light, and `prefers-contrast: more` picks high contrast. A head script sets it before first paint, so there is no flash. `d` or the theme button cycles Auto → dark → light → high contrast. A fixed choice is persisted as `lsd-report-theme` and wins over the OS; Auto clears it and resumes following the OS. The button names the mode, e.g. "Theme: Auto (dark)". Print uses a light page. |
 | Inspector | **Side panel** | Keeps the diagram active; lazy payloads, copy, focus return, and `#msg=` deep links |
 | Typography | Geist → system-ui fallback | Product feel when online; readable offline via system fonts |
 | State | One scenario at a time, in the URL hash | The sidebar chooses the scenario; only it is drawn. `#scenario=<id>` (or `#msg=<id>/<message>`) survives a reload or a shared link. Search, status filters and per-diagram views stay in memory |
@@ -97,7 +97,7 @@ The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG o
 | Message detail | CSS `:target` hash overlays | Side inspector + lazy payload + copy + type/from→to pills |
 | Navigation | Sticky chips + jump menu | Sidebar + status histogram + `j`/`k` keyboard nav, diagram Up/Down/Enter, minimap, and deep links |
 | Search | Scenario title filter | Title + description + facts, plus in-diagram message/note find |
-| Theme | Light-only GitHub-ish tokens | Follows the OS (dark, light, more contrast) until you choose; a choice persists |
+| Theme | Light-only GitHub-ish tokens | Auto follows the OS (dark, light, more contrast); a fixed choice persists until you pick Auto again |
 | Mobile | Improved in the shell refresh | Sidebar collapses to grid; toolbar wraps; diagram scrolls horizontally |
 | Offline chrome | CDN d3 / hljs / mark.js unless assets are embedded | No diagram CDN; fonts optional |
 | Accessibility | Partial | Focus rings, `aria-pressed` / `aria-current`, one tab stop with message navigation, real position metadata, reduced-motion, and axe checks |
@@ -121,7 +121,7 @@ The shape stays close to `ScenarioModel` + `SequenceEvent` / `Message` / `DataHo
 | `/` | Focus search |
 | `j` / `k` | Next / previous scenario |
 | `Enter` | Open / close selected |
-| `d` | Cycle theme: dark, light, high contrast (`HC`) |
+| `d` | Cycle theme: Auto (`A`, follows the OS), dark, light, high contrast (`HC`) |
 | `?` | Help |
 | `Esc` | Close dialog / help / blur search |
 

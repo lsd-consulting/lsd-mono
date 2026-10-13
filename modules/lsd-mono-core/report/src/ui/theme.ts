@@ -1,8 +1,10 @@
 export type Theme = 'dark' | 'light' | 'contrast'
+/** What the user picked: a fixed theme, or Auto (no stored choice; the OS decides, live). */
+export type ThemeMode = Theme | 'auto'
 
 /** Holds an explicit choice only. With nothing stored the report follows the OS. */
 export const THEME_KEY = 'lsd-report-theme'
-const ORDER: Theme[] = ['dark', 'light', 'contrast']
+const ORDER: ThemeMode[] = ['auto', 'dark', 'light', 'contrast']
 const LIGHT = '(prefers-color-scheme: light)'
 const MORE_CONTRAST = '(prefers-contrast: more)'
 
@@ -10,24 +12,33 @@ export function isTheme(value: string | null): value is Theme {
   return value === 'dark' || value === 'light' || value === 'contrast'
 }
 
-/** Next theme in the cycle dark → light → high contrast → dark. */
-export function nextTheme(current: Theme): Theme {
+/** Next mode in the cycle Auto → dark → light → high contrast → Auto. */
+export function nextMode(current: ThemeMode): ThemeMode {
   const index = ORDER.indexOf(current)
   return ORDER[(index + 1) % ORDER.length]
 }
 
-export function themeGlyph(theme: Theme): string {
-  if (theme === 'contrast') return 'HC'
-  return theme === 'dark' ? '☀' : '☾'
+export function themeGlyph(mode: ThemeMode): string {
+  if (mode === 'auto') return 'A'
+  if (mode === 'contrast') return 'HC'
+  return mode === 'dark' ? '☀' : '☾'
 }
 
 export function themeName(theme: Theme): string {
   return theme === 'contrast' ? 'high contrast' : theme
 }
 
-/** Names the current theme and the next one. Not a colour-only control. */
-export function themeButtonLabel(theme: Theme): string {
-  return `Theme: ${themeName(theme)}. Switch to ${themeName(nextTheme(theme))}`
+function modeName(mode: ThemeMode, shown?: Theme): string {
+  if (mode !== 'auto') return themeName(mode)
+  return shown ? `Auto (${themeName(shown)})` : 'Auto (follow the OS)'
+}
+
+/**
+ * Names the current mode (with the theme Auto resolved to) and the next one,
+ * e.g. "Theme: Auto (dark). Switch to dark". Not a colour-only control.
+ */
+export function themeButtonLabel(mode: ThemeMode, shown: Theme): string {
+  return `Theme: ${modeName(mode, shown)}. Switch to ${modeName(nextMode(mode))}`
 }
 
 export interface OsPreference {
@@ -44,6 +55,12 @@ export function osTheme(os: OsPreference): Theme {
 /** A stored explicit choice wins; otherwise the OS decides. Unknown stored values are ignored. */
 export function resolveTheme(stored: string | null, os: OsPreference): Theme {
   return isTheme(stored) ? stored : osTheme(os)
+}
+
+/** The stored choice, or Auto when there is none. */
+export function currentMode(): ThemeMode {
+  const stored = storedChoice()
+  return isTheme(stored) ? stored : 'auto'
 }
 
 function storedChoice(): string | null {
@@ -78,11 +95,26 @@ export function chooseTheme(theme: Theme): void {
   }
 }
 
-export function toggleTheme(): Theme {
-  const current = document.documentElement.getAttribute('data-theme')
-  const next = nextTheme(isTheme(current) ? current : getPreferredTheme())
-  chooseTheme(next)
-  return next
+/** Auto forgets the stored choice and shows the OS theme; any other mode is a choice. Returns the theme shown. */
+export function chooseMode(mode: ThemeMode): Theme {
+  if (mode !== 'auto') {
+    chooseTheme(mode)
+    return mode
+  }
+  try {
+    localStorage.removeItem(THEME_KEY)
+  } catch {
+    // Storage off: nothing was stored to forget.
+  }
+  const theme = osTheme(osPreference())
+  applyTheme(theme)
+  return theme
+}
+
+/** Steps the theme button / `d` cycle. Returns the new mode and the theme it shows. */
+export function toggleTheme(): { mode: ThemeMode; theme: Theme } {
+  const mode = nextMode(currentMode())
+  return { mode, theme: chooseMode(mode) }
 }
 
 /**
