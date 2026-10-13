@@ -173,6 +173,9 @@ public final class io/lsdconsulting/lsd/mono/core/MessageSpec {
 
 public final class io/lsdconsulting/lsd/mono/core/PayloadConverters {
 	public final fun clear ()V
+	public final fun clearRedaction ()V
+	public final fun redact ([Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/PayloadConverters;
+	public final fun redactWhen (Ljava/util/function/Predicate;)Lio/lsdconsulting/lsd/mono/core/PayloadConverters;
 	public final fun register (Ljava/lang/Class;Ljava/util/function/Function;)Lio/lsdconsulting/lsd/mono/core/PayloadConverters;
 }
 
@@ -304,5 +307,7 @@ public final class io/lsdconsulting/lsd/mono/core/properties/LsdProperties {
 	public static final field PAYLOAD_MAX_ITEMS Ljava/lang/String;
 	public static final field PAYLOAD_MAX_STRING_LENGTH Ljava/lang/String;
 	public static final field PAYLOAD_MAX_TOTAL_SIZE Ljava/lang/String;
+	public static final field PAYLOAD_REDACT Ljava/lang/String;
+	public static final field PAYLOAD_REDACT_KEYS Ljava/lang/String;
 }
 

@@ -23,6 +23,11 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Function
+import java.util.function.Predicate
+
+/** Key names redacted by default (see [PayloadConverters]). The lsd-mono-core README lists the same names. */
+internal val DEFAULT_REDACTED_KEYS: List<String> =
+    listOf("password", "passwd", "secret", "token", "authorization", "apiKey", "api_key", "cookie", "set-cookie")
 
 /**
  * The converters for message data, reached as `lsd.payloads`. Register one for a type
@@ -37,6 +42,17 @@ import java.util.function.Function
  *
  * A converter's result is copied in turn. A converter that throws gives a marker.
  * Later registrations win. Thread-safe.
+ *
+ * **Redaction.** A value whose key looks like a secret is written as `[lsd: redacted]`.
+ * The key is a map key (header maps included), an object field or a record component.
+ * Keys are compared ignoring case and the separators `-`, `_`, `.` and spaces, and a key
+ * matches a name when it equals it or ends with it: `token` also covers `accessToken`
+ * and `refresh_token`, and `apiKey` covers `X-Api-Key`. Built in, on by default:
+ * `password`, `passwd`, `secret`, `token`, `authorization`, `apiKey`, `api_key`, `cookie`, `set-cookie`. Turn the built-in names off with `lsd.mono.payload.redact=false`
+ * and add names with `lsd.mono.payload.redactKeys` (see [LsdProperties]); add rules in code
+ * with [redact] and [redactWhen]. Only keys are checked: secrets inside free text (a raw
+ * JSON body held as a `String`, an exception message) are not found. Convert such a body
+ * to a map with [register] so its keys are checked.
  *
  * Message data is copied into an immutable, JSON-shaped value when it is captured, so
  * later changes by the test (a reused body, a builder, a pooled buffer) cannot change
@@ -62,7 +78,23 @@ import java.util.function.Function
  */
 public class PayloadConverters internal constructor(
     @Volatile internal var limits: Limits = Limits.fromProperties(),
+    @Volatile internal var redaction: Redaction = Redaction.fromProperties(),
 ) {
+    /**
+     * The key names redacted without any code: the built-in names unless switched off,
+     * plus `lsd.mono.payload.redactKeys`. Stored normalised (see [normaliseKey]).
+     */
+    internal data class Redaction(
+        val keys: Set<String> = DEFAULT_REDACTED_KEYS.mapTo(LinkedHashSet(), ::normaliseKey),
+    ) {
+        companion object {
+            fun fromProperties(): Redaction {
+                val defaults = if (LsdProperties.redactDefaults()) DEFAULT_REDACTED_KEYS else emptyList()
+                return Redaction((defaults + LsdProperties.redactKeys()).mapTo(LinkedHashSet(), ::normaliseKey))
+            }
+        }
+    }
+
     /**
      * @property maxDepth nesting depth before `[lsd: max depth N reached]`.
      * @property maxStringLength characters kept from one string (or base64 text).
@@ -103,8 +135,47 @@ public class PayloadConverters internal constructor(
     public inline fun <reified T : Any> register(noinline converter: (T) -> Any?): PayloadConverters =
         register(T::class.java, Function(converter))
 
-    /** Remove every registered converter. */
+    /** Remove every registered converter. Redaction rules are kept; see [clearRedaction]. */
     public fun clear(): Unit = converters.clear()
+
+    private val redactedKeys = CopyOnWriteArrayList<String>()
+    private val redactRules = CopyOnWriteArrayList<Predicate<String>>()
+
+    /**
+     * Also redact values under these key names, matched like the built-in ones
+     * (ignoring case and separators, equal or as a suffix): `lsd.payloads.redact("ssn", "pin")`.
+     */
+    public fun redact(vararg keys: String): PayloadConverters =
+        apply { keys.map(::normaliseKey).filter { it.isNotEmpty() }.let(redactedKeys::addAll) }
+
+    /**
+     * Also redact a value when [rule] returns true for its key, given exactly as captured
+     * (a map key's text, or a field name): `lsd.payloads.redactWhen { it.startsWith("x-internal-") }`.
+     * A rule that throws redacts.
+     */
+    public fun redactWhen(rule: Predicate<String>): PayloadConverters = apply { redactRules.add(rule) }
+
+    /** Remove the rules added with [redact] and [redactWhen]. The property-driven names stay. */
+    public fun clearRedaction() {
+        redactedKeys.clear()
+        redactRules.clear()
+    }
+
+    /** Whether a value under [key] is written as [REDACTED]. */
+    internal fun isRedacted(key: String): Boolean {
+        val normal = normaliseKey(key)
+        if (normal.isNotEmpty()) {
+            if (redaction.keys.any { normal.endsWith(it) }) return true
+            if (redactedKeys.any { normal.endsWith(it) }) return true
+        }
+        return redactRules.any { rule ->
+            try {
+                rule.test(key)
+            } catch (_: Exception) {
+                true
+            }
+        }
+    }
 
     /** An immutable, JSON-shaped copy of [value]. Never throws. */
     internal fun snapshot(value: Any?): Any? =
@@ -205,7 +276,8 @@ public class PayloadConverters internal constructor(
                     out[TRUNCATED_KEY] = tooLarge()
                     break
                 }
-                out[uniqueKey(out, keyText(key, depth))] = copy(item, depth + 1)
+                val name = keyText(key, depth)
+                out[uniqueKey(out, name)] = if (isRedacted(name)) REDACTED else copy(item, depth + 1)
                 kept++
             }
             return FrozenMap(out)
@@ -248,6 +320,10 @@ public class PayloadConverters internal constructor(
                 if (budget <= 0) {
                     out[TRUNCATED_KEY] = tooLarge()
                     break
+                }
+                if (isRedacted(name)) {
+                    out[name] = REDACTED
+                    continue
                 }
                 out[name] =
                     try {
@@ -321,6 +397,9 @@ public class PayloadConverters internal constructor(
     }
 
     internal companion object {
+        /** Written in place of a value whose key is redacted. */
+        const val REDACTED: String = "[lsd: redacted]"
+
         /** Key added to a map or object whose remaining entries were dropped. */
         const val TRUNCATED_KEY: String = "[lsd: truncated]"
 
@@ -330,6 +409,9 @@ public class PayloadConverters internal constructor(
         private val opaquePackages = listOf("java.", "javax.", "jdk.", "sun.", "com.sun.", "kotlin.", "kotlinx.", "scala.", "groovy.")
 
         internal fun marker(text: String) = "[lsd: $text]"
+
+        /** Lower case without `-`, `_`, `.` or whitespace: `X-Api-Key` and `api_key` both become `xapikey` / `apikey`. */
+        internal fun normaliseKey(key: String): String = key.lowercase().filterNot { it == '-' || it == '_' || it == '.' || it.isWhitespace() }
 
         private fun finite(value: Double, raw: String): Any = if (value.isFinite()) value else raw
 

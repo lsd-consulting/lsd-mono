@@ -1,9 +1,9 @@
 package io.lsdconsulting.lsd.mono.core;
 
 /** A Java record whose accessor throws, captured as message data in PayloadConvertersTest. */
-public record FailingRecord(String name, String secret) {
+public record FailingRecord(String name, String detail) {
     @Override
-    public String secret() {
+    public String detail() {
         throw new IllegalStateException("accessor failed");
     }
 }

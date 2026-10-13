@@ -25,6 +25,8 @@ internal enum class LsdKey(
     PAYLOAD_MAX_STRING_LENGTH(LsdProperties.PAYLOAD_MAX_STRING_LENGTH, null, "100000"),
     PAYLOAD_MAX_ITEMS(LsdProperties.PAYLOAD_MAX_ITEMS, null, "1000"),
     PAYLOAD_MAX_TOTAL_SIZE(LsdProperties.PAYLOAD_MAX_TOTAL_SIZE, null, "1000000"),
+    PAYLOAD_REDACT(LsdProperties.PAYLOAD_REDACT, null, "true"),
+    PAYLOAD_REDACT_KEYS(LsdProperties.PAYLOAD_REDACT_KEYS, null, null),
     ;
 
     /** The value the user set under the key or, failing that, its legacy name; else [default]. */

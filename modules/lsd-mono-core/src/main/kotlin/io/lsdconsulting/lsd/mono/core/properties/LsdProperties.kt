@@ -46,6 +46,15 @@ public object LsdProperties {
     /** Rough size budget for one payload, in characters. Default 1000000. */
     public const val PAYLOAD_MAX_TOTAL_SIZE: String = "lsd.mono.payload.maxTotalSize"
 
+    /**
+     * `false` turns off the built-in list of secret key names (`password`, `token`,
+     * `authorization`…) whose values are written as `[lsd: redacted]`. Default `true`.
+     */
+    public const val PAYLOAD_REDACT: String = "lsd.mono.payload.redact"
+
+    /** Comma-separated key names to redact as well as the built-in ones, for example `ssn,x-session`. */
+    public const val PAYLOAD_REDACT_KEYS: String = "lsd.mono.payload.redactKeys"
+
     internal fun outputDirectory(): String = checkNotNull(LsdKey.OUTPUT_DIR.value())
 
     internal fun deterministicIds(): Boolean = LsdKey.DETERMINISTIC_IDS.boolean()
@@ -77,6 +86,18 @@ public object LsdProperties {
         ?.trim()
         ?.toIntOrNull()
         ?.takeIf { it > 0 } ?: key.defaultInt()
+
+    /** `false` only when [PAYLOAD_REDACT] is explicitly `false`: redaction stays on for any other value. */
+    internal fun redactDefaults(): Boolean = !LsdKey.PAYLOAD_REDACT.value().equals("false", ignoreCase = true)
+
+    /** The extra key names in [PAYLOAD_REDACT_KEYS], trimmed, blanks dropped. */
+    internal fun redactKeys(): List<String> =
+        LsdKey.PAYLOAD_REDACT_KEYS
+            .value()
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
 
     /** Whether the Cucumber plugin starts a section at each step ([CUCUMBER_SPLIT_BY_STEPS]). */
     @InternalLsdApi

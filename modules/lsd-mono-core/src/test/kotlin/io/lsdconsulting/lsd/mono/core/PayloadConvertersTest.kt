@@ -175,7 +175,7 @@ class PayloadConvertersTest {
     fun `failing toString, accessors, iterators and converters become markers`() {
         assertEquals("[lsd: toString() of ${BadToString::class.java.name} threw java.lang.IllegalStateException: boom]", snap(BadToString()))
         assertEquals(
-            mapOf("name" to "n", "secret" to "[lsd: secret could not be read: java.lang.IllegalStateException: accessor failed]"),
+            mapOf("name" to "n", "detail" to "[lsd: detail could not be read: java.lang.IllegalStateException: accessor failed]"),
             snap(FailingRecord("n", "s")),
         )
         val badList = object : AbstractList<Any>() {

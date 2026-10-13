@@ -85,7 +85,8 @@ public class LsdContext : Capturer() {
 
     /**
      * Copies message data when it is captured (see [PayloadConverters]). Register
-     * converters here; limits come from `lsd.mono.payload.*` and are re-read by [clear].
+     * converters and redaction rules here; limits and the built-in redaction come from
+     * `lsd.mono.payload.*` and are re-read by [clear].
      */
     public val payloads: PayloadConverters = PayloadConverters()
 
@@ -349,12 +350,13 @@ public class LsdContext : Capturer() {
      * Forget everything: participants, running and completed scenarios, the default scenario's
      * captures and the reports written so far (files on disk stay). Calls still waiting for a
      * reply are abandoned without a warning. Re-reads the properties (deterministic ids, payload
-     * limits) and keeps the registered payload converters. For test isolation.
+     * limits and redaction) and keeps the registered payload converters and redaction rules. For test isolation.
      */
     public fun clear() {
         synchronized(lock) {
             idGenerator = IdGenerator(LsdProperties.deterministicIds())
             payloads.limits = PayloadConverters.Limits.fromProperties()
+            payloads.redaction = PayloadConverters.Redaction.fromProperties()
             completed.clear()
             reportFiles.clear()
             participants.clear()

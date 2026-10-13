@@ -266,6 +266,8 @@ ease migration from lsd-core. `LsdProperties` has a constant for each name.
 | `lsd.mono.payload.maxStringLength` | | `100000` | Payload limit, see [Message data](#message-data) |
 | `lsd.mono.payload.maxItems` | | `1000` | Payload limit, see [Message data](#message-data) |
 | `lsd.mono.payload.maxTotalSize` | | `1000000` | Payload limit, see [Message data](#message-data) |
+| `lsd.mono.payload.redact` | | `true` | `false` turns off the built-in secret key names, see [Redaction](#redaction) |
+| `lsd.mono.payload.redactKeys` | | unset | Comma-separated key names to redact as well, see [Redaction](#redaction) |
 
 ### Threads and parallel tests
 
@@ -336,6 +338,42 @@ lsd.getPayloads().register(JsonNode.class, node -> mapper.convertValue(node, Map
 
 Later registrations win; `lsd.payloads.clear()` removes them all. The limits are set
 only by the properties above; `lsd.clear()` re-reads them and keeps the converters.
+
+#### Redaction
+
+A value whose key looks like a secret is written as `[lsd: redacted]`, on by default.
+The key is a map key (header maps included), an object field or a record component, and
+the whole value under it is dropped, however deep. Keys are compared ignoring case and
+`-`, `_`, `.` and spaces, and match a name when they equal it or end with it. The built-in
+names are:
+
+`password`, `passwd`, `secret`, `token`, `authorization`, `apiKey`, `api_key`, `cookie`, `set-cookie`
+
+So `accessToken`, `refresh_token`, `X-Api-Key`, `client_secret` and `Set-Cookie` are
+redacted, while `tokenType` and `passwordPolicy` are not.
+
+Set `lsd.mono.payload.redact=false` to turn off the built-in names, and
+`lsd.mono.payload.redactKeys=ssn,x-session` to add names. In code:
+
+```kotlin
+lsd.payloads.redact("ssn", "pin")
+lsd.payloads.redactWhen { key -> key.startsWith("x-internal-") }
+```
+
+```java
+lsd.getPayloads().redact("ssn", "pin");
+lsd.getPayloads().redactWhen(key -> key.startsWith("x-internal-"));
+```
+
+A `redactWhen` rule sees the key as captured, and a rule that throws redacts.
+`lsd.payloads.clearRedaction()` removes the rules added in code; `lsd.clear()` re-reads
+the properties and keeps them.
+
+Only keys are checked, never free text. A raw JSON body held as a `String` is not
+searched: register a converter that parses it into a map so its keys are checked. The
+`message` of `PendingCall.fail(error)` is kept as it is, because exception messages are
+free text and rarely hold secrets under a recognisable key. Add
+`redactWhen { it == "message" }` if yours might.
 
 ### Escaping
 

@@ -66,7 +66,7 @@ class PayloadCaptureTest {
         assertValidJson(json)
         assertTrue(json.contains("[lsd: cycle back to java.util.LinkedHashMap]"), json.take(2_000))
         assertTrue(json.contains("[lsd: toString() of ${Explodes::class.java.name} threw java.lang.IllegalStateException: toString exploded]"))
-        assertTrue(json.contains("[lsd: secret could not be read: java.lang.IllegalStateException: accessor failed]"))
+        assertTrue(json.contains("[lsd: detail could not be read: java.lang.IllegalStateException: accessor failed]"))
         assertTrue(json.contains("[lsd: max depth 32 reached]"))
         assertTrue(json.contains("[lsd: binary, 3 bytes] base64:AP8Q"))
         assertTrue(json.contains("[lsd: truncated 200000 characters]"))
