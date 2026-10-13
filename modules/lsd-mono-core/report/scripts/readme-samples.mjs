@@ -473,8 +473,18 @@ async function recordTour(browser, tourDir, file) {
     await page.waitForTimeout(150)
 
     // 7. Hide a participant.
-    await caption('Hide participants you do not need')
-    await click(button('Hide Order events'), { hold: 1300 })
+    await caption('Hover a participant and press × to hide it')
+    const hideX = button('Hide Order events', true)
+    const head = hideX.locator('xpath=ancestor::div[@data-participant-head][1]')
+    const headAt = await centre(head)
+    await moveTo(headAt.x, headAt.y)
+    await page.mouse.move(headAt.x, headAt.y)
+    await snap(700)
+    await click(hideX, { hold: 900 })
+    // The chip lists what is hidden, with Show and Show all.
+    await click(diagram.locator('.hidden-chip'), { hold: 1300 })
+    await page.keyboard.press('Escape')
+    await snap(200)
 
     // 8. Minimap.
     await caption('Drag the minimap to move through a long diagram')

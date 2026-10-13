@@ -126,7 +126,6 @@ for (const spec of pages) {
       )
       const firstOffLeft = Boolean(firstRect && firstRect.right < srect.left + 8)
       scroller.scrollLeft = 0
-      const toggles = document.querySelector('.participant-toggles')
       return {
         overflowX: style.overflowX,
         overflowY: style.overflowY,
@@ -151,9 +150,6 @@ for (const spec of pages) {
         typeCounts,
         headerNodes: header.getElementsByTagName('*').length,
         nodes: document.getElementsByTagName('*').length,
-        toggleHeight: toggles ? Math.round(toggles.getBoundingClientRect().height) : null,
-        toggleScrollWidth: toggles ? toggles.scrollWidth : null,
-        toggleClientWidth: toggles ? toggles.clientWidth : null,
       }
     })
     if (layout.error) throw new Error(layout.error)

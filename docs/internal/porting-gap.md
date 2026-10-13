@@ -44,7 +44,7 @@ These are **implemented**, not stubs, unless noted.
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (+ legacy key fallbacks) | `properties/LsdKey.kt` (one table of keys, legacy names and defaults), `properties/LsdProperties.kt`, `ReportOptions.kt` |
 | Duration insights (bottleneck tree or slowest messages) + label truncation | `report/Bottlenecks.kt`; shell `ui/insights.ts` + `truncateLabel`. **Landed 2026-10-03.** Not PlantUML timings. |
 | Component graph from captured messages | In the report page. The **Component diagram** button in each scenario's diagram toolbar draws it in the inspector, in the browser, from messages already in the sequence report (issue #4). The JVM flag, `components.json`, and `components-report.html` stay removed. Not PlantUML. |
-| Diagram zoom, fit, hide columns, in-diagram find | report toolbar on the sequence diagram. Out / Fit / In, ctrl or meta + wheel, fit-to-width (clamped). Hide/show is in-memory per diagram: the column goes, messages and anchored notes that need it are omitted, other columns reflow. Find highlights message labels and notes with a `[match]` cue and a live count. **Landed 2026-10-03.** Not colour-only. Virtualisation and the sticky header stay. |
+| Diagram zoom, fit, hide columns, in-diagram find | report toolbar on the sequence diagram. Out / Fit / In, ctrl or meta + wheel, fit-to-width (clamped). Hide/show is in-memory per diagram (#8: a × on each participant header on hover, keyboard focus or tap; an “N hidden” chip with Show and Show all; “Hide all but this one” on right-click, long-press, ⋯ or Shift+F10): the column goes, messages and anchored notes that need it are omitted, other columns reflow. Find highlights message labels and notes with a `[match]` cue and a live count. **Landed 2026-10-03.** Not colour-only. Virtualisation and the sticky header stay. |
 
 ---
 
@@ -228,7 +228,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 
 ### 3.4 UX gaps that remain
 
-The large-diagram UX baseline is shipped: sticky participant header, scenario and in-diagram search, dark/light/high-contrast themes, keyboard message navigation, 24-pixel message hit targets, real `aria-posinset` / `aria-setsize`, side inspector with lazy payloads, minimap and `#msg=` links, zoom/fit, participant toggles, reduced motion, and axe/theme/Fit checks. These are not open tasks.
+The large-diagram UX baseline is shipped: sticky participant header, scenario and in-diagram search, dark/light/high-contrast themes, keyboard message navigation, 24-pixel message hit targets, real `aria-posinset` / `aria-setsize`, side inspector with lazy payloads, minimap and `#msg=` links, zoom/fit, participant hiding, reduced motion, and axe/theme/Fit checks. These are not open tasks.
 
 | Area | Remaining work | Priority |
 |------|----------------|----------|
@@ -283,7 +283,7 @@ The following slices are complete and remain here as migration history rather th
 4. Remaining sequence event kinds: notes, delay, spacer, short arrows, LOST, and BI_DIRECTIONAL.
 5. Metrics insights, properties, and label truncation.
 6. Component graph file generation was built, then removed. The in-page view replaced it (issue #4).
-7. Diagram UX: zoom, fit, participant toggles, in-diagram find, keyboard navigation, inspector, minimap, deep links, reduced motion, and accessibility checks.
+7. Diagram UX: zoom, fit, participant hiding, in-diagram find, keyboard navigation, inspector, minimap, deep links, reduced motion, and accessibility checks.
 8. Lifeline colour, timestamps, print, high contrast, clickable arrows, and browser performance results.
 
 Open implementation work is tracked in `docs/internal/next-steps.md` and the **Still open** rows above.

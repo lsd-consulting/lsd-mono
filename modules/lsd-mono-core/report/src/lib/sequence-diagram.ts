@@ -73,6 +73,7 @@ import {
 import { hasComponentDiagram } from './component-graph'
 import { fitName, type FittedName } from './participant-label'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
+import { bindParticipantFilter, headActionsHtml, headSlots } from './participant-filter'
 import {
   densityBins,
   fractionFromPointer,
@@ -617,14 +618,8 @@ function metricsControl(scenario: Scenario): string {
 
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   const hits = classifySearchHits(scenario.events, view.query, view.hidden)
-  const toggles = scenario.participants
-    .map((p) => {
-      const shown = !view.hidden.has(p.id)
-      const name = p.alias ?? p.name
-      const cue = shown ? 'shown' : 'hidden'
-      return `<button type="button" data-participant-toggle="${escapeAttr(p.id)}" aria-pressed="${shown}" aria-label="${shown ? 'Hide' : 'Show'} ${escapeAttr(name)}"><span class="vis-cue">${cue}</span> ${escapeHtml(name)}</button>`
-    })
-    .join('')
+  // The hidden-participants chip is drawn by bindParticipantFilter, and only while
+  // something is hidden. The status line announces each hide and show.
   return `
     <div class="seq-toolbar" role="toolbar" aria-label="Diagram view">
       <div class="zoom-controls" role="group" aria-label="Zoom">
@@ -633,7 +628,8 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
         <span class="zoom-readout" aria-live="polite">${escapeHtml(zoomLabel(view.zoom))}</span>
         <button type="button" data-zoom="in" aria-label="Zoom in">In</button>
       </div>
-      <div class="participant-toggles" role="group" aria-label="Show or hide participants">${toggles}</div>
+      <div class="participant-filter" data-participant-filter></div>
+      <span class="participant-filter-status visually-hidden" role="status"></span>
       <label class="diagram-find">
         <span class="diagram-find-label">Find</span>
         <input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
@@ -670,7 +666,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
       ${toolbarHtml(scenario, view)}
       <div class="seq-stage">
         <div class="seq-scroll" data-scenario-id="${escapeAttr(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeAttr(scenario.title)}">
-          <div class="seq-sticky-header" style="width:${width * zoom}px">${headerSvg(scenario, frame, view.hidden, zoom)}</div>
+          <div class="seq-sticky-header" style="width:${width * zoom}px">${headerHtml(scenario, frame, view.hidden, zoom, null)}</div>
           <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
             <div class="seq-window"></div>
           </div>
@@ -783,7 +779,13 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
   if (header) {
     header.style.width = `${width * zoom}px`
-    header.innerHTML = headerSvg(diagram.scenario, frame, view.hidden, zoom)
+    // Keep the header's tab stop, and its focus, across the redraw.
+    const stop = header.querySelector<HTMLElement>('.participant-heads button[tabindex="0"]')
+    const key = stop ? headActionKey(stop) : null
+    const focused = Boolean(stop && stop === document.activeElement)
+    header.innerHTML = headerHtml(diagram.scenario, frame, view.hidden, zoom, key)
+    if (focused)
+      header.querySelector<HTMLElement>('.participant-heads button[tabindex="0"]')?.focus({ preventScroll: true })
   }
   const spacer = scrollport.querySelector<HTMLElement>('.seq-spacer')
   if (spacer) {
@@ -795,19 +797,6 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   root.style.setProperty('--seq-print-max', `${Math.round(width * PRINT_MAX_UPSCALE)}px`)
   const readout = root.querySelector('.zoom-readout')
   if (readout) readout.textContent = zoomLabel(zoom)
-  root.querySelectorAll<HTMLButtonElement>('[data-participant-toggle]').forEach((btn) => {
-    const participantId = btn.dataset.participantToggle ?? ''
-    const shown = !view.hidden.has(participantId)
-    btn.setAttribute('aria-pressed', String(shown))
-    const cue = btn.querySelector('.vis-cue')
-    if (cue) cue.textContent = shown ? 'shown' : 'hidden'
-    const labelName = Array.from(btn.childNodes)
-      .filter((node) => node.nodeType === Node.TEXT_NODE)
-      .map((node) => node.textContent ?? '')
-      .join('')
-      .trim()
-    btn.setAttribute('aria-label', `${shown ? 'Hide' : 'Show'} ${labelName}`)
-  })
   const count = root.querySelector('.diagram-find-count')
   if (count) {
     const hits = classifySearchHits(diagram.scenario.events, view.query, view.hidden)
@@ -987,12 +976,13 @@ function messageEndpoints(msg: MessageEvent, index: Map<string, number>, width: 
   return { x1: xFor(fi, index), x2: xFor(ti, index) }
 }
 
-function onToggleParticipant(scrollport: HTMLElement, participantId: string): void {
+/** Replace a diagram's hidden participants, then redraw, refit and repaint. */
+export function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string>): void {
   const id = scrollport.dataset.scenarioId
-  if (!id || !participantId) return
+  if (!id) return
   const view = diagramView(id)
-  if (view.hidden.has(participantId)) view.hidden.delete(participantId)
-  else view.hidden.add(participantId)
+  view.hidden.clear()
+  for (const participantId of next) view.hidden.add(participantId)
   const places = messagePlaces(mounted.get(id)?.scenario.events ?? [], view.hidden)
   if (view.activeMessageId && !focusablePlaces(places).some((place) => place.id === view.activeMessageId)) {
     view.activeMessageId = null
@@ -1043,8 +1033,10 @@ export function bindDiagramScroll(root: ParentNode): void {
     diagram.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((btn) => {
       btn.addEventListener('click', () => onZoomClick(scroll, btn.dataset.zoom))
     })
-    diagram.querySelectorAll<HTMLButtonElement>('[data-participant-toggle]').forEach((btn) => {
-      btn.addEventListener('click', () => onToggleParticipant(scroll, btn.dataset.participantToggle ?? ''))
+    bindParticipantFilter(diagram, {
+      participants: () => mounted.get(id)?.scenario.participants ?? [],
+      hidden: () => diagramView(id).hidden,
+      setHidden: (next) => setHiddenParticipants(scroll, next),
     })
     const find = diagram.querySelector<HTMLInputElement>('[data-diagram-find]')
     find?.addEventListener('input', () => {
@@ -1054,6 +1046,36 @@ export function bindDiagramScroll(root: ParentNode): void {
     })
     bindMinimap(diagram, scroll)
   })
+}
+
+/** "hide:<id>" or "more:<id>": which header button holds the roving tab stop. */
+function headActionKey(btn: HTMLElement): string | null {
+  const hide = btn.dataset.hideParticipant
+  if (hide != null) return `hide:${hide}`
+  const more = btn.dataset.participantMenu
+  return more != null ? `more:${more}` : null
+}
+
+/** Sticky header: the drawn participants, and each one's Hide and More buttons over it. */
+export function headerHtml(
+  scenario: Scenario,
+  frame: DiagramFrame,
+  hiddenIds: ReadonlySet<string>,
+  zoom: number,
+  focusKey: string | null,
+): string {
+  const visible = visibleParticipants(scenario.participants, hiddenIds)
+  const index = laneIndex(visible)
+  const slots = headSlots(
+    visible.map((p, i) => ({
+      id: p.id,
+      name: p.alias ?? p.name,
+      typeLabel: participantHead(p.type).typeLabel,
+      x: (xFor(i, index) + frame.left) * zoom,
+    })),
+    frame.total * zoom,
+  )
+  return headerSvg(scenario, frame, hiddenIds, zoom) + headActionsHtml(slots, HEADER_BLOCK_H * zoom, focusKey)
 }
 
 function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlySet<string>, zoom: number): string {
@@ -1434,8 +1456,9 @@ export function paintMinimapDensity(scrollport: HTMLElement): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   ctx.clearRect(0, 0, cssW, cssH)
   const contentHeight = Math.max(1, diagram.height * view.zoom)
+  // Only rows that are drawn: a message or note on a hidden column leaves a gap.
   const bins = densityBins(
-    diagram.rows.map((row) => row.y * view.zoom),
+    diagram.rows.filter((row) => !eventHiddenByColumns(row.event, view.hidden)).map((row) => row.y * view.zoom),
     contentHeight,
     MINIMAP_BINS,
   )
