@@ -72,7 +72,7 @@ const state: State = {
 
 const app = document.querySelector('#app')!
 
-/** The scenario in the URL (a link or a reload), otherwise the first failing one, otherwise the first. */
+/** The scenario in the URL (a link or a reload), otherwise the first in the list. */
 function initialSelection(): string | null {
   const ref = parseReportHash(window.location.hash)
   if (ref && report.scenarios.some((s) => s.id === ref.scenarioId)) return ref.scenarioId

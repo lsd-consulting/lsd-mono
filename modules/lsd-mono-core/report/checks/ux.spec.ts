@@ -1122,13 +1122,14 @@ const shown = (page: Page) =>
   page.locator('#main .scenario-card').evaluateAll((cards) => cards.map((card) => card.id.slice('card-'.length)))
 const current = (page: Page) => page.locator('#scenario-nav [aria-current="true"]')
 
-test('the main column shows only the selected scenario: the first failing one by default, then the one chosen', async ({
+test('the main column shows only the selected scenario: the first in the list by default, then the one chosen', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1400, height: 900 })
   await openThree(page)
-  expect(await shown(page)).toEqual(['pay'])
-  await expect(current(page)).toHaveAttribute('data-nav', 'pay')
+  // The first in the list, even though a later one failed.
+  expect(await shown(page)).toEqual(['browse'])
+  await expect(current(page)).toHaveAttribute('data-nav', 'browse')
   await expect(page.locator('#scenario-nav [aria-current]')).toHaveCount(1)
   // A plain heading now: nothing to open or close.
   await expect(page.locator('.scenario-head[role="button"]')).toHaveCount(0)
@@ -1173,7 +1174,7 @@ test('a message link selects its scenario and opens the message; closing the pan
 
 test('search and status filters narrow the list, move the selection on, and show an empty state', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 })
-  await openThree(page)
+  await openThree(page, '#scenario=pay')
   // Error off: Payment declined leaves the list, and the next match shows.
   await page.locator('[data-filter="error"]').click()
   await expect(page.locator('#scenario-nav [data-nav]')).toHaveCount(2)
@@ -1246,14 +1247,15 @@ test('the collapsed rail is enough to move between scenarios', async ({ page }) 
   await page.addInitScript(() => localStorage.setItem('lsd-report-sidebar', 'collapsed'))
   await openThree(page)
   await expect(page.locator('#btn-sidebar')).toHaveAttribute('aria-expanded', 'false')
-  const rail = page.locator('#scenario-nav [data-nav="browse"]')
-  await expect(rail).toHaveAccessibleName(/Browse the catalogue/)
-  await expect(rail.locator('.nav-icon')).toHaveText('1')
-  await rail.click()
   expect(await shown(page)).toEqual(['browse'])
+  const rail = page.locator('#scenario-nav [data-nav="pay"]')
+  await expect(rail).toHaveAccessibleName(/Payment declined/)
+  await expect(rail.locator('.nav-icon')).toHaveText('2')
+  await rail.click()
+  expect(await shown(page)).toEqual(['pay'])
   await expect(rail).toHaveAttribute('aria-current', 'true')
   await page.keyboard.press('ArrowDown')
-  expect(await shown(page)).toEqual(['pay'])
+  expect(await shown(page)).toEqual(['stock'])
   const violations = await seriousViolations(page)
   expect(violations, formatViolations(violations)).toEqual([])
 })

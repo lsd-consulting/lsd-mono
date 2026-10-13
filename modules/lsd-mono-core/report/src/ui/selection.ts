@@ -5,9 +5,9 @@ import type { Scenario } from '../types'
  * and the main column shows the selected scenario alone.
  */
 
-/** The first failing scenario, otherwise the first. Null for an empty report. */
+/** The first scenario in sidebar (report) order, whatever its status. Null for an empty report. */
 export function defaultScenarioId(scenarios: readonly Scenario[]): string | null {
-  return (scenarios.find((s) => s.status === 'error') ?? scenarios[0])?.id ?? null
+  return scenarios[0]?.id ?? null
 }
 
 /**

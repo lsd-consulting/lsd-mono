@@ -17,11 +17,11 @@ const all = [s('a'), s('b', 'warn'), s('c', 'error'), s('d'), s('e', 'error')]
 const pick = (...ids: string[]) => all.filter((item) => ids.includes(item.id))
 
 describe('defaultScenarioId', () => {
-  it('picks the first failing scenario, not a warning', () => {
-    expect(defaultScenarioId(all)).toBe('c')
+  it('picks the first scenario in list order, even when a later one failed', () => {
+    expect(defaultScenarioId(all)).toBe('a')
   })
-  it('falls back to the first scenario, or null when there are none', () => {
-    expect(defaultScenarioId([s('x', 'warn'), s('y')])).toBe('x')
+  it('does not prefer any status, and is null when there are none', () => {
+    expect(defaultScenarioId([s('x', 'warn'), s('y', 'error')])).toBe('x')
     expect(defaultScenarioId([])).toBeNull()
   })
 })
