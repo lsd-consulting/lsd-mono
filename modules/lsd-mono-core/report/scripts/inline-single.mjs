@@ -11,6 +11,9 @@ if (!jsMatch || !cssMatch) throw new Error('Could not find assets in dist/index.
 const js = readFileSync(join(dist, 'assets', jsMatch[1]), 'utf8')
 const css = readFileSync(join(dist, 'assets', cssMatch[1]), 'utf8')
 const favicon = readFileSync(join(dist, 'favicon.svg'), 'utf8')
+// The pre-paint theme script from index.html, so both pages pick the theme the same way.
+const themeBoot = html.match(/ *<script data-theme-boot>[\s\S]*?<\/script>\n/)
+if (!themeBoot) throw new Error('Could not find the theme boot script in dist/index.html')
 const faviconData = 'data:image/svg+xml,' + encodeURIComponent(favicon)
 
 if (/<\/script|<!--/i.test(js)) {
@@ -23,7 +26,7 @@ const single = `<!DOCTYPE html>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <title>LSD Report — Living Sequence Diagrams</title>
+${themeBoot[0]}    <title>LSD Report — Living Sequence Diagrams</title>
     <link rel="icon" href="${faviconData}" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

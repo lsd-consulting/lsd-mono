@@ -37,7 +37,15 @@ import {
   renderDiagramHtml,
   syncDiagramWindow,
 } from './lib/sequence-diagram'
-import { applyTheme, getPreferredTheme, themeButtonLabel, themeGlyph, toggleTheme, type Theme } from './ui/theme'
+import {
+  applyTheme,
+  followOsTheme,
+  getPreferredTheme,
+  themeButtonLabel,
+  themeGlyph,
+  toggleTheme,
+  type Theme,
+} from './ui/theme'
 import {
   applySidebarCollapsed,
   getSidebarCollapsed,
@@ -811,7 +819,9 @@ function onKey(e: KeyboardEvent): void {
   }
 }
 
+// The head script already set it before first paint; this keeps the two in step.
 applyTheme(getPreferredTheme())
+followOsTheme((theme) => paintThemeButton(theme))
 renderShell()
 applyHash()
 booted = true
