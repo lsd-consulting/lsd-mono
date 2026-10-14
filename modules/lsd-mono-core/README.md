@@ -338,7 +338,7 @@ a feature off.
 | `lsd.mono.report.outputDir` | `lsd.core.report.outputDir` | `build/reports/lsd` | Directory the reports are written to |
 | `lsd.mono.ids.deterministic` | `lsd.core.ids.deterministic` | `false` | `true` numbers ids 1, 2, 3… instead of random ones, for reproducible reports |
 | `lsd.mono.hideStacktrace` | `lsd.junit.hideStacktrace` | `false` | `true` leaves the stack trace out of a failed scenario's error (JUnit and Cucumber) |
-| `lsd.mono.metrics.enabled` | `lsd.core.metrics.enabled` | `true` | Message counts and duration insights |
+| `lsd.mono.metrics.enabled` | `lsd.core.metrics.enabled` | `true` | Message count and captured duration in the Metrics view |
 | `lsd.mono.label.maxWidth` | `lsd.core.label.maxWidth` | `200` | Width labels are cut to in summaries and the diagram. Not a positive number: the default |
 | `lsd.mono.report.generatedAt` | | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |
 | `lsd.mono.cucumber.splitBySteps` | | `false` | `true` makes the Cucumber plugin start a section at each step |

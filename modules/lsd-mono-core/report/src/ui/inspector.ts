@@ -1,4 +1,4 @@
-import type { Insight, MessageEvent, Metric } from '../types'
+import type { MessageEvent, Metric } from '../types'
 import { renderComponentDiagram } from '../lib/component-diagram'
 import type { ComponentGraph } from '../lib/component-graph'
 import { pretty } from './format'
@@ -26,8 +26,6 @@ export interface MetricsView {
   /** Scenario title, shown as a pill. */
   heading: string
   metrics: Metric[]
-  insights?: Insight[]
-  labelMaxWidth: number
   /** Timing view (summary, swim lanes, waterfall), shown above the metrics. */
   timingHtml?: string
 }
@@ -56,7 +54,7 @@ export interface InspectorController {
   openMessage: (scenarioId: string, message: MessageEvent) => void
   /** Component diagram for one scenario, in this same panel. Drawn from messages already loaded. */
   openComponents: (scenarioId: string, graph: ComponentGraph, title: string) => void
-  /** Scenario metrics and duration insights, in this same panel. No JSON or Copy. */
+  /** Scenario timing and metrics, in this same panel. No JSON or Copy. */
   openMetrics: (scenarioId: string, view: MetricsView) => void
   openError: (error: { status: string; headline: string; message: string; stack?: string }) => void
   close: () => void

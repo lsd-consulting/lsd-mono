@@ -9,7 +9,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 ### Added
 
 - Core capture and report API (`lsd-mono-core`), with JUnit Jupiter, Cucumber 8 and coroutines integrations.
-- Interactive report UI: sequence diagram, component diagram, inspector, metrics and insights.
+- Interactive report UI: sequence diagram, component diagram, inspector, timing and metrics. The Metrics view lists the
+  message count and captured duration; slow calls show in the Timing view's summary strip, swim lanes and waterfall
+  (there is no separate ranked Bottlenecks list, and report JSON has no `insights`).
 - Timing API (slice 1): accuracy, call pairing, clock ordering with structural guards, and the Timing view
   (summary strip, swim lanes and waterfall).
 - The report index (`index.html`) is the report app for every report in the directory: a sidebar lists

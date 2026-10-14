@@ -62,7 +62,7 @@ Legend: **U** = unused outside its own file or tests. **L** = mirrors legacy lsd
 |---|---|
 | `object ReportWriter`: `reportFileStem`, `writeReport(ReportJson, dir, key?)`, `writeIndex(files, dir)` | **X**: `completeReport` and `createIndex` already cover this |
 | `model/*`: `ReportJson`, `ScenarioJson`, the 7 `*EventJson` types, `ReportFile`, `ShellReport`, `forShell()`, `toJson()`, `shellPayloadScript()`, … (about 20) | **X**: this is the wire format, not an API |
-| `capturedMetrics`, `CapturedMetrics`, `MAX_INSIGHTS` | **X** |
+| `capturedMetrics` | **X** |
 | `object PopupContent.popupHyperlink(...)` | **U**, **L** ("migration shim only", per `porting-gap.md`) |
 | `object Html` (`text`, `attribute`, `wellFormed`) | **X** (#28 escaper; integrations don't need it) |
 | `object LsdProperties`: 6 key constants, `get`, `getBoolean` (x2 each), 6 typed readers | legacy keys live in `defaults` and again in each `resolveWithLegacy` call; generic `get`/`getBoolean` **X** |
@@ -83,7 +83,7 @@ What the integrations import from core: `LsdContext`, `LsdScenario`, `ScenarioEr
 
 | Item | Action | Why |
 |---|---|---|
-| `model/*`, `ReportWriter`, `Bottlenecks`, `ReportOptions`, `orderByCreatedAt`, `IdGenerator`, `ParticipantIds`, `Fact`, `Scenario`, `abbreviate`, `Html`, `LsdVersion` | `internal` | Wire format and implementation. Only same-module tests use them, and internal still works there. |
+| `model/*`, `ReportWriter`, `ScenarioMetrics`, `ReportOptions`, `orderByCreatedAt`, `IdGenerator`, `ParticipantIds`, `Fact`, `Scenario`, `abbreviate`, `Html`, `LsdVersion` | `internal` | Wire format and implementation. Only same-module tests use them, and internal still works there. |
 | `SequenceEvent` + the 7 event classes, `NotePlacement`, `LifelineAction` | `internal` | Callers use verbs instead. Ids are always assigned by the context, and from/to become nullable inside (fixes the `""` sentinel). The JSON still writes `""`, so the UI doesn't change. |
 | `SequenceEventBuilder`, `MessageBuilder`, `LifelineBuilder`, `messageBuilder()`, the top-level `noteOver/noteLeft/noteRight/logicalDivider/section/delay/spacer/shortInbound/shortOutbound` builders | **remove** | Replaced by the verbs and the `capture { }` block (§3, §4). Two capture paths become one. |
 | `LsdContext.capture(vararg SequenceEvent)` / `(vararg SequenceEventBuilder)` | **remove** | Replaced by `capture { }`. |
@@ -479,7 +479,7 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
   - **Deviation:** `fail` takes an optional `at`, which §3.1 doesn't show.
   - The response goes from the callee back to the caller as `SYNCHRONOUS_RESPONSE`.
   - Its `durationMs` is the time since `call`, from `System.nanoTime()`. When both the call and the reply have an `at`, it is the time between them instead.
-  - The duration is on the response, and the request has none. The bottleneck tree already adds a request's and its response's durations.
+  - The duration is on the response, and the request has none. The Timing view already pairs a request with its response.
   - `fail` labels the reply with the exception's simple name, with data `{exception: <class name>, message}`, as §3.1 says. It adds no colour.
 - **Threads:**
   - `PendingCall` holds its scenario, so a reply from any thread (an executor, a `CompletableFuture` callback) lands there.

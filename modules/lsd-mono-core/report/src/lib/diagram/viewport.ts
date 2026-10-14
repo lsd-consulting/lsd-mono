@@ -350,7 +350,7 @@ export function bindDiagramScroll(root: ParentNode): void {
     if (!scroll?.dataset.scenarioId) return
     const id = scroll.dataset.scenarioId
     applyDiagramFrame(scroll)
-    // Fit before anything scrolls to a message (deep link, insight), so that scroll uses
+    // Fit before anything scrolls to a message (deep link, Timing view row), so that scroll uses
     // the fitted zoom. A re-render keeps the fit it already has.
     const view = diagramView(id)
     if (view.autoFit) view.fittedWidth = 0

@@ -131,22 +131,8 @@ export interface Metric {
   value: string
 }
 
-/** Ranked duration insight. `rank` and `kind` are text cues — not colour. */
-export interface Insight {
-  rank: number
-  /** `bottleneck` (isolated call time) or `slowest` (no response pairing). */
-  kind: 'bottleneck' | 'slowest'
-  participant: string
-  label: string
-  from: string
-  to: string
-  messageId: string
-  totalMs: number
-  isolatedMs: number
-}
-
 export interface ReportOptions {
-  /** Default true. When false, metrics and insights are empty. */
+  /** Default true. When false, metrics are empty. */
   metricsEnabled: boolean
   /** Character budget for diagram labels and metric summaries. Default 200. */
   labelMaxWidth: number
@@ -168,8 +154,6 @@ export interface Scenario {
   error?: ScenarioError
   facts: Fact[]
   metrics: Metric[]
-  /** Present when metrics are enabled and at least one timed message ranked. */
-  insights?: Insight[]
   participants: Participant[]
   events: DiagramEvent[]
   /** Timing summary. Absent on older reports, which are treated as structure only. */

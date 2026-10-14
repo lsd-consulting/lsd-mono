@@ -352,7 +352,7 @@ function bindChrome(): void {
     },
   })
 
-  // Insight "show" buttons live in the Metrics view, outside the scenario card.
+  // Timing view rows (swim lanes, waterfall) live in the side panel, outside the scenario card.
   document.querySelector<HTMLElement>('#inspector')!.addEventListener('click', (ev) => {
     const showMsg = (ev.target as Element | null)?.closest?.<HTMLButtonElement>('[data-show-message]')
     const scenarioId = showMsg?.dataset.scenarioId
@@ -814,13 +814,12 @@ function syncPrintPanel(): void {
 function syncPrintMetrics(): void {
   const id = inspector?.isOpen() && invoker?.kind === 'metrics' ? invoker.scenarioId : null
   const scenario = id ? report.scenarios.find((item) => item.id === id) : undefined
-  const labelMaxWidth = report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
   placePrintMetrics(
     document,
     scenario
       ? {
           scenarioId: scenario.id,
-          html: printMetricsSection(scenario.id, scenario.metrics, scenario.insights, labelMaxWidth),
+          html: printMetricsSection(scenario.id, scenario.metrics),
         }
       : null,
   )
@@ -843,8 +842,6 @@ function openMetrics(scenario: Scenario): void {
   inspector.openMetrics(scenario.id, {
     heading: scenario.title,
     metrics: scenario.metrics,
-    insights: scenario.insights,
-    labelMaxWidth: report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH,
     timingHtml: timingPanelHtml(scenario),
   })
   syncPrintCopies()

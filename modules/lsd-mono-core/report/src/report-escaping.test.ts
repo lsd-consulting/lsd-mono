@@ -24,19 +24,6 @@ const hostile = {
       error: { headline: H('headline'), message: H('message'), stack: H('stack') },
       facts: [{ key: H('fact key'), value: H('fact value') }],
       metrics: [{ key: H('metric key'), value: H('metric value') }],
-      insights: [
-        {
-          rank: H('rank'),
-          kind: 'slowest',
-          participant: H('insight participant'),
-          label: H('insight label'),
-          from: 'a',
-          to: 'b',
-          messageId: H('m1'),
-          totalMs: 5,
-          isolatedMs: 5,
-        },
-      ],
       participants: [
         { id: 'a', name: H('participant a'), type: 'ACTOR', colour: `red" ${ATTACK}` },
         { id: 'b', name: H('participant b'), alias: H('alias b'), type: H('type'), colour: `blue' ${ATTACK}` },

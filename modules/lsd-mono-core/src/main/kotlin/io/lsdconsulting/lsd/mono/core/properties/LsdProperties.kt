@@ -23,7 +23,7 @@ public object LsdProperties {
     /** `true` leaves stack traces out of a failed scenario's error (JUnit and Cucumber). */
     public const val HIDE_STACKTRACE: String = "lsd.mono.hideStacktrace"
 
-    /** Duration insights and message-count metrics. Default `true`. */
+    /** Message-count and captured-duration metrics. Default `true`. */
     public const val METRICS_ENABLED: String = "lsd.mono.metrics.enabled"
 
     /**

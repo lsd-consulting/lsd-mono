@@ -57,16 +57,14 @@ export function metricsTitle(view: MetricsView): string {
 
 export function metricsMetaHtml(view: MetricsView): string {
   const count = view.metrics.length
-  const ranked = view.insights?.length ?? 0
   return `
         <span class="pill">${count} ${count === 1 ? 'metric' : 'metrics'}</span>
-        ${ranked ? `<span class="pill">${ranked} ${ranked === 1 ? 'insight' : 'insights'}</span>` : ''}
         <span class="pill">${escapeHtml(view.heading)}</span>`
 }
 
-/** The Timing view, when there is one, above the metrics and insights. */
+/** The Timing view, when there is one, above the metrics. */
 export function metricsBodyHtml(scenarioId: string, view: MetricsView): string {
-  return (view.timingHtml ?? '') + metricsPanelHtml(scenarioId, view.metrics, view.insights, view.labelMaxWidth)
+  return (view.timingHtml ?? '') + metricsPanelHtml(view.metrics)
 }
 
 export function errorMetaHtml(error: { status: string; headline: string }): string {

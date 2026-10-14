@@ -1,24 +1,13 @@
-import type { Insight, Metric } from '../types'
-import { insightsListHtml } from './insights'
+import type { Metric } from '../types'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 
 /**
- * Body of the Metrics view in the side panel: the scenario's metrics as a
- * term list, then the ranked duration insights. Each insight's show button
- * carries its scenario id, because the panel sits outside the scenario card.
+ * Body of the Metrics view in the side panel: the scenario's metrics as a term list.
+ * Slow calls are in the Timing view above it (summary strip, swim lanes, waterfall).
  */
-export function metricsPanelHtml(
-  scenarioId: string,
-  metrics: Metric[],
-  insights: Insight[] | undefined,
-  labelMaxWidth: number,
-): string {
-  const list = insightsListHtml(insights, labelMaxWidth, scenarioId)
-  if (!metrics.length && !list) return '<p class="inspector-empty">No metrics for this scenario.</p>'
-  const terms = metrics.length
-    ? `<dl class="kv">${metrics.map((m) => `<dt>${escapeHtml(m.key)}</dt><dd>${escapeHtml(m.value)}</dd>`).join('')}</dl>`
-    : ''
-  return `${terms}${list}`
+export function metricsPanelHtml(metrics: Metric[]): string {
+  if (!metrics.length) return '<p class="inspector-empty">No metrics for this scenario.</p>'
+  return `<dl class="kv">${metrics.map((m) => `<dt>${escapeHtml(m.key)}</dt><dd>${escapeHtml(m.value)}</dd>`).join('')}</dl>`
 }
 
 /**
@@ -26,15 +15,10 @@ export function metricsPanelHtml(
  * hidden on screen. It exists only while the Metrics view is open, so a printout
  * has metrics exactly when the user was looking at them.
  */
-export function printMetricsSection(
-  scenarioId: string,
-  metrics: Metric[],
-  insights: Insight[] | undefined,
-  labelMaxWidth: number,
-): string {
+export function printMetricsSection(scenarioId: string, metrics: Metric[]): string {
   return `<section class="card print-metrics" data-print-metrics="${escapeAttr(scenarioId)}">
     <h3>Metrics</h3>
-    ${metricsPanelHtml(scenarioId, metrics, insights, labelMaxWidth)}
+    ${metricsPanelHtml(metrics)}
   </section>`
 }
 

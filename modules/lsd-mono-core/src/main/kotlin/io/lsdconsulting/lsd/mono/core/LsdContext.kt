@@ -41,8 +41,8 @@ import java.util.function.Consumer
  * **Sections** (`section`) replace PlantUML `newpage`: they stay in the same
  * event stream and do not drop lifeline activations.
  *
- * **Metrics:** message count, summed `durationMs`, and ranked bottleneck or
- * slowest-message insights. Gated by [ReportOptions.metricsEnabled] (default on).
+ * **Metrics:** message count and summed `durationMs`. Slow calls show in the
+ * Timing view. Gated by [ReportOptions.metricsEnabled] (default on).
  * Labels in the shell truncate to [ReportOptions.labelMaxWidth].
  *
  * **Activate colour:** optional on [activate]; omitted from JSON when absent.

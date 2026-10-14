@@ -35,10 +35,6 @@ export const sampleReport = {
           key: 'Messages',
           value: '7',
         },
-        {
-          key: 'Slowest hop',
-          value: 'PaymentCapture 62 ms [show]',
-        },
       ],
       participants: [
         {
@@ -265,10 +261,6 @@ export const sampleReport = {
         {
           key: 'Messages',
           value: '6',
-        },
-        {
-          key: 'Bottleneck',
-          value: 'PaymentGateway timeout [open]',
         },
       ],
       participants: [

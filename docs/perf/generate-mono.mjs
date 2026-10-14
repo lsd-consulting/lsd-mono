@@ -111,20 +111,6 @@ function reportFor(size) {
         metrics: [
           { key: 'Messages', value: String(size) },
           { key: 'Captured duration', value: `${chargeCount * 15} ms` },
-          { key: 'Bottleneck 1', value: 'payments rank 1 isolated 15 ms (total 15 ms) — charge' },
-        ],
-        insights: [
-          {
-            rank: 1,
-            kind: 'bottleneck',
-            participant: 'payments',
-            label: 'charge',
-            from: 'api',
-            to: 'payments',
-            messageId: '2',
-            totalMs: 15,
-            isolatedMs: 15,
-          },
         ],
         participants,
         events,

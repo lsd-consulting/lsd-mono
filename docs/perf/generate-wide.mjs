@@ -139,7 +139,6 @@ function reportFor(count, size) {
           { key: 'Participants', value: String(count) },
           { key: 'Messages', value: String(size) },
         ],
-        insights: [],
         participants,
         events,
       },

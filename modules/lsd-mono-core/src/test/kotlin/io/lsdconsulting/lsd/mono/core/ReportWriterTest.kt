@@ -222,7 +222,6 @@ class ReportWriterTest {
                         facts = emptyList(),
                         error = null,
                         metrics = emptyList(),
-                        insights = emptyList(),
                         participants = emptyList(),
                         events = emptyList(),
                     )

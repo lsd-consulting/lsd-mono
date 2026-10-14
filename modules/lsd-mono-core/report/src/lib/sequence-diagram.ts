@@ -181,8 +181,7 @@ function componentsControl(scenario: Scenario): string {
 
 /** Opens this scenario's metrics in the inspector. Disabled when there are none (metrics off or nothing timed). */
 function metricsControl(scenario: Scenario): string {
-  const any = scenario.metrics.length > 0 || (scenario.insights?.length ?? 0) > 0
-  const off = any ? '' : ' disabled title="No metrics for this scenario"'
+  const off = scenario.metrics.length > 0 ? '' : ' disabled title="No metrics for this scenario"'
   return `<button type="button" class="metrics-open" data-show-metrics="${escapeAttr(scenario.id)}"${off}>Metrics</button>`
 }
 
@@ -309,7 +308,7 @@ export function focusDiagramMessage(scrollport: HTMLElement, messageId: string):
   btn?.focus({ preventScroll: true })
 }
 
-/** Y of a message row in the mounted diagram, for insight "show" scrolling. */
+/** Y of a message row in the mounted diagram, for the Timing view's rows. */
 export function messageOffsetY(scenarioId: string, messageId: string): number | null {
   const diagram = diagramState.mounted.get(scenarioId)
   if (!diagram) return null

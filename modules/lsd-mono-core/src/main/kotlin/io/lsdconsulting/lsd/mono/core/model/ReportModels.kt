@@ -57,7 +57,7 @@ internal data class ScenarioCounts(
 }
 
 internal data class ReportOptionsJson(
-    /** When false, scenario `metrics` and `insights` are empty. Default true. */
+    /** When false, scenario `metrics` are empty. Default true. */
     val metricsEnabled: Boolean = true,
     /** Character width used to truncate labels in the shell and in metric summaries. */
     val labelMaxWidth: Int = 200,
@@ -89,8 +89,6 @@ internal data class ScenarioJson(
     val description: String,
     val facts: List<FactJson>,
     val metrics: List<MetricJson> = emptyList(),
-    /** Omitted from JSON when empty (metrics disabled, or no timed messages). */
-    val insights: List<InsightJson> = emptyList(),
     val participants: List<ParticipantJson> = emptyList(),
     val events: List<EventJson> = emptyList(),
     /** Present for failed/aborted scenarios. Omitted from JSON when null. */
@@ -136,22 +134,6 @@ internal data class FactJson(
 internal data class MetricJson(
     val key: String,
     val value: String,
-)
-
-/**
- * One ranked duration insight. [kind] is `bottleneck` (paired call, isolated time)
- * or `slowest` (no response pairing). [rank] is 1-based and is the non-colour cue.
- */
-internal data class InsightJson(
-    val rank: Int,
-    val kind: String,
-    val participant: String,
-    val label: String,
-    val from: String,
-    val to: String,
-    val messageId: String,
-    val totalMs: Long,
-    val isolatedMs: Long,
 )
 
 internal data class ParticipantJson(
@@ -359,7 +341,6 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
             if (error != null) add("error" to error.toJsonValue())
             add("facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
             add("metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
-            if (insights.isNotEmpty()) add("insights" to JsonArray(insights.map { it.toJsonValue() }))
             add("participants" to JsonArray(participants.map { it.toJsonValue() }))
             add("events" to JsonArray(events.map { it.toJsonValue() }))
             if (timing != null) {
@@ -392,21 +373,6 @@ private fun ReportOptionsJson.toJsonValue(): JsonValue =
         listOf(
             "metricsEnabled" to JsonBool(metricsEnabled),
             "labelMaxWidth" to JsonNumber(labelMaxWidth.toString()),
-        ),
-    )
-
-private fun InsightJson.toJsonValue(): JsonValue =
-    obj(
-        listOf(
-            "rank" to JsonNumber(rank.toString()),
-            "kind" to JsonString(kind),
-            "participant" to JsonString(participant),
-            "label" to JsonString(label),
-            "from" to JsonString(from),
-            "to" to JsonString(to),
-            "messageId" to JsonString(messageId),
-            "totalMs" to JsonNumber(totalMs.toString()),
-            "isolatedMs" to JsonNumber(isolatedMs.toString()),
         ),
     )
 

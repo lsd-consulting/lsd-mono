@@ -214,7 +214,7 @@ class JavaApiTest {
         }
     }
 
-    /** The scenarios' event lists, without the insights that precede them. */
+    /** The scenarios' event lists, without the metrics that precede them. */
     private static String events(String json) {
         return json.substring(json.indexOf("\"events\""));
     }

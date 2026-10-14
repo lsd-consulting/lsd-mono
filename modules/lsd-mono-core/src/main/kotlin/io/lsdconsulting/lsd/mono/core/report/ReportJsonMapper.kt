@@ -56,42 +56,38 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
     private fun ReportOptions.toJson(): ReportOptionsJson =
         ReportOptionsJson(metricsEnabled = metricsEnabled, labelMaxWidth = labelMaxWidth)
 
-    private fun Scenario.toJsonModel(options: ReportOptions): ScenarioJson {
-        val captured = capturedMetrics(events, options)
-        return ScenarioJson(
-            id = nextId(),
-            title = title,
-            status = status.toReportStatus(),
-            description = description,
-            facts = facts.map { FactJson(it.key, it.value) },
-            error = error?.let { ScenarioErrorJson(it.headline, it.message, it.stack) },
-            metrics = captured.metrics,
-            insights = captured.insights,
-            participants =
-                participants.map {
-                    ParticipantJson(
-                        id = it.id,
-                        name = it.name,
-                        type = it.type.name,
-                        alias = it.displayName,
-                        colour = it.colour,
-                    )
-                },
-            events = events.map { it.toEventJson(timing) },
-            timing =
-                ScenarioTimingJson(
-                    accuracy = timing.accuracy.name,
-                    measuredCoverage = timing.measuredCoverage,
-                    pairingCoverage = timing.pairingCoverage,
-                    sources = timing.sources,
-                    wallClockMs = timing.wallClockMs,
-                    clockOrdering = timing.clockOrdering.name,
-                    clockOrdered = timing.clockOrdered,
-                    warnings = timing.warnings,
-                    reorderedByClock = timing.reorderedByClock,
-                ),
-        )
-    }
+    private fun Scenario.toJsonModel(options: ReportOptions): ScenarioJson = ScenarioJson(
+        id = nextId(),
+        title = title,
+        status = status.toReportStatus(),
+        description = description,
+        facts = facts.map { FactJson(it.key, it.value) },
+        error = error?.let { ScenarioErrorJson(it.headline, it.message, it.stack) },
+        metrics = capturedMetrics(events, options),
+        participants =
+            participants.map {
+                ParticipantJson(
+                    id = it.id,
+                    name = it.name,
+                    type = it.type.name,
+                    alias = it.displayName,
+                    colour = it.colour,
+                )
+            },
+        events = events.map { it.toEventJson(timing) },
+        timing =
+            ScenarioTimingJson(
+                accuracy = timing.accuracy.name,
+                measuredCoverage = timing.measuredCoverage,
+                pairingCoverage = timing.pairingCoverage,
+                sources = timing.sources,
+                wallClockMs = timing.wallClockMs,
+                clockOrdering = timing.clockOrdering.name,
+                clockOrdered = timing.clockOrdered,
+                warnings = timing.warnings,
+                reorderedByClock = timing.reorderedByClock,
+            ),
+    )
 
     /** `capturedAt` is a wall-clock hint; reproducible reports leave it out. */
     private val writeCapturedAt: Boolean

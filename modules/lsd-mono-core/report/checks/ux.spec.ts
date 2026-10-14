@@ -149,7 +149,8 @@ test('axe with metrics in the side panel, and Escape or Close returns focus to t
     await open.click()
     await expect(page.locator('#inspector-title')).toHaveText(/metrics/i)
     await expect(page.locator('#inspector-metrics dl.kv dt')).toHaveText(['Messages'])
-    await expect(page.locator('#inspector-metrics ol.insights li')).toHaveCount(1)
+    // No ranked duration insights: slow calls are in the Timing view.
+    await expect(page.locator('#inspector-metrics ol.insights')).toHaveCount(0)
     await expect(page.locator('#inspector-copy')).toBeHidden()
     await expect(page.locator('.json-row')).toBeHidden()
     const violations = await seriousViolations(page)
@@ -178,7 +179,6 @@ test('print shows metrics only while the Metrics view is open, in its scenario',
   await page.emulateMedia({ media: 'print', reducedMotion: 'reduce' })
   await expect(printed).toBeVisible()
   await expect(printed.locator('dl.kv dt')).toHaveText(['Messages'])
-  await expect(printed.locator('ol.insights li')).toHaveCount(1)
   await expect(printed.locator('button')).toBeHidden()
   await expect(page.locator('#inspector')).toBeHidden()
   // Full card width, not the panel's column, and nothing scrolled out of view.
@@ -390,7 +390,6 @@ const shortReport: Report = {
       ...uxFixture.scenarios[0],
       id: 'short',
       title: 'Short',
-      insights: undefined,
       participants: uxFixture.scenarios[0].participants.slice(0, 3),
       events: uxFixture.scenarios[0].events.slice(0, 4),
     },
@@ -693,7 +692,6 @@ const longNamesReport: Report = {
       ...uxFixture.scenarios[0],
       id: 'names',
       title: 'Long names',
-      insights: undefined,
       participants: [
         { id: 'client', name: 'Client', alias: 'Signed-in Customer (mobile app)', type: 'ACTOR' },
         { id: 'api', name: 'Api', alias: 'Public API Gateway (rate limited)', type: 'BOUNDARY' },
@@ -785,7 +783,7 @@ function wideScenario(id: string, title: string): Scenario {
     type: 'SYNCHRONOUS',
     data: { n: i },
   }))
-  return { ...uxFixture.scenarios[0], id, title, insights: undefined, participants, events }
+  return { ...uxFixture.scenarios[0], id, title, participants, events }
 }
 const wideReport: Report = {
   ...uxFixture,

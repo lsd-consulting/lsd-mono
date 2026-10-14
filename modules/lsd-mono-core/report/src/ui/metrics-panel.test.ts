@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { Insight, MessageEvent, Metric, Scenario } from '../types'
+import type { MessageEvent, Metric, Scenario } from '../types'
 import { renderDiagramHtml } from '../lib/sequence-diagram'
 import { bindInspector, inspectorMarkup } from './inspector'
 import { metricsPanelHtml } from './metrics'
@@ -9,18 +9,6 @@ const metrics: Metric[] = [
   { key: 'Messages', value: '14' },
   { key: 'Captured duration', value: '1210 ms' },
 ]
-const insight: Insight = {
-  rank: 1,
-  kind: 'bottleneck',
-  participant: 'payment-service',
-  label: 'authorise £42.00',
-  from: 'api',
-  to: 'payment-service',
-  messageId: 'm7',
-  totalMs: 652,
-  isolatedMs: 652,
-}
-
 function scenario(overrides: Partial<Scenario> = {}): Scenario {
   return {
     id: 'pay',
@@ -29,7 +17,6 @@ function scenario(overrides: Partial<Scenario> = {}): Scenario {
     description: '',
     facts: [],
     metrics,
-    insights: [insight],
     participants: [
       { id: 'api', name: 'API', type: 'PARTICIPANT' },
       { id: 'payment-service', name: 'Payments', type: 'PARTICIPANT' },
@@ -52,32 +39,29 @@ describe('metrics button', () => {
     expect(toolbar).not.toMatch(/data-show-metrics="pay"[^>]*disabled/)
   })
 
-  it('is enabled for insights alone and disabled when there is nothing to show', () => {
-    expect(toolbarOf(renderDiagramHtml(scenario({ metrics: [] })))).not.toMatch(/data-show-metrics="pay"[^>]*disabled/)
-    expect(toolbarOf(renderDiagramHtml(scenario({ metrics: [], insights: undefined })))).toMatch(
-      /data-show-metrics="pay"[^>]*disabled/,
-    )
+  it('is disabled when there are no metrics', () => {
+    expect(toolbarOf(renderDiagramHtml(scenario({ metrics: [] })))).toMatch(/data-show-metrics="pay"[^>]*disabled/)
   })
 })
 
 describe('metricsPanelHtml', () => {
-  it('lists the metrics and the ranked insights, and ties each show button to its scenario', () => {
+  it('lists the metrics, and no ranked duration insights', () => {
     const host = document.createElement('div')
-    host.innerHTML = metricsPanelHtml('pay', metrics, [insight], 200)
+    host.innerHTML = metricsPanelHtml(metrics)
     const terms = [...host.querySelectorAll('dl.kv dt')].map((dt) => dt.textContent)
     const values = [...host.querySelectorAll('dl.kv dd')].map((dd) => dd.textContent)
     expect(terms).toEqual(['Messages', 'Captured duration'])
     expect(values).toEqual(['14', '1210 ms'])
-    const show = host.querySelector<HTMLButtonElement>('ol.insights button[data-show-message="m7"]')!
-    expect(show.dataset.scenarioId).toBe('pay')
+    expect(host.querySelector('ol.insights')).toBeNull()
+    expect(host.querySelector('[data-show-message]')).toBeNull()
   })
 
   it('says so when there is nothing to show', () => {
-    expect(metricsPanelHtml('pay', [], [], 200)).toContain('No metrics')
+    expect(metricsPanelHtml([])).toContain('No metrics')
   })
 
   it('escapes metric keys and values', () => {
-    const html = metricsPanelHtml('pay', [{ key: '<b>', value: '<i>' }], [], 200)
+    const html = metricsPanelHtml([{ key: '<b>', value: '<i>' }])
     expect(html).not.toContain('<b>')
     expect(html).toContain('&lt;b&gt;')
   })
@@ -95,7 +79,7 @@ describe('metrics in the side panel', () => {
       loadPayload: async () => ({ ok: true }),
       onClose: (invoker) => closed.push(invoker?.kind),
     })
-    controller.openMetrics('pay', { heading: 'Happy path', metrics, insights: [insight], labelMaxWidth: 200 })
+    controller.openMetrics('pay', { heading: 'Happy path', metrics })
 
     const panel = document.querySelector<HTMLElement>('#inspector')!
     const host = document.querySelector<HTMLElement>('#inspector-metrics')!
@@ -103,11 +87,10 @@ describe('metrics in the side panel', () => {
     expect(document.activeElement).toBe(panel)
     expect(document.querySelector('#inspector-title')!.textContent).toBe('Metrics')
     expect(document.querySelector('#inspector-meta')!.textContent).toContain('2 metrics')
-    expect(document.querySelector('#inspector-meta')!.textContent).toContain('1 insight')
+    expect(document.querySelector('#inspector-meta')!.textContent).not.toContain('insight')
     expect(document.querySelector('#inspector-meta')!.textContent).toContain('Happy path')
     expect(host.hidden).toBe(false)
     expect(host.querySelectorAll('dl.kv dt')).toHaveLength(2)
-    expect(host.querySelector('ol.insights')).not.toBeNull()
     expect(document.querySelector<HTMLElement>('#inspector-graph')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('.json-row')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(true)
@@ -117,7 +100,7 @@ describe('metrics in the side panel', () => {
     expect(panel.hidden).toBe(true)
     expect(closed).toEqual(['metrics'])
 
-    controller.openMetrics('pay', { heading: 'Happy path', metrics, insights: [], labelMaxWidth: 200 })
+    controller.openMetrics('pay', { heading: 'Happy path', metrics })
     const message: MessageEvent = {
       kind: 'message',
       id: 'm7',
@@ -133,14 +116,14 @@ describe('metrics in the side panel', () => {
     expect(document.querySelector<HTMLElement>('.json-row')!.hidden).toBe(false)
     expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(false)
 
-    controller.openMetrics('pay', { heading: 'Happy path', metrics, insights: [], labelMaxWidth: 200 })
+    controller.openMetrics('pay', { heading: 'Happy path', metrics })
     document.querySelector<HTMLButtonElement>('#inspector-close')!.click()
     expect(closed).toEqual(['metrics', 'metrics'])
   })
 
   it('swapping to the component diagram clears the metrics view', () => {
     const controller = bindInspector(document, { loadPayload: async () => undefined, onClose: () => {} })
-    controller.openMetrics('pay', { heading: 'Happy path', metrics, insights: [insight], labelMaxWidth: 200 })
+    controller.openMetrics('pay', { heading: 'Happy path', metrics })
     controller.openComponents('pay', { nodes: [], edges: [] }, 'Happy path')
     const host = document.querySelector<HTMLElement>('#inspector-metrics')!
     expect(host.hidden).toBe(true)
