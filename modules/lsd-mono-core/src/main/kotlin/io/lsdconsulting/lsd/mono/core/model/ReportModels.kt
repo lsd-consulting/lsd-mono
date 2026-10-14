@@ -57,7 +57,38 @@ internal data class ScenarioJson(
     val events: List<EventJson> = emptyList(),
     /** Present for failed/aborted scenarios. Omitted from JSON when null. */
     val error: ScenarioErrorJson? = null,
+    val timing: ScenarioTimingJson? = null,
 )
+
+/** Scenario-level timing: accuracy, coverage, sources and clock ordering. */
+internal data class ScenarioTimingJson(
+    val accuracy: String,
+    val measuredCoverage: Double?,
+    val pairingCoverage: Double?,
+    val sources: List<String>,
+    val wallClockMs: Double?,
+    val clockOrdering: String,
+    val clockOrdered: Int,
+    val warnings: List<String>,
+    val reorderedByClock: List<String>,
+)
+
+/** Trace ids on a message. */
+internal data class TraceJson(
+    val traceId: String,
+    val spanId: String?,
+    val parentSpanId: String?,
+)
+
+/** Fractional milliseconds, to the microsecond, without trailing zeros. */
+internal fun msNumber(ms: Double): JsonNumber =
+    JsonNumber(
+        java.math.BigDecimal
+            .valueOf(ms)
+            .setScale(3, java.math.RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString(),
+    )
 
 internal data class FactJson(
     val key: String,
@@ -104,11 +135,23 @@ internal data class MessageEventJson(
     val label: String,
     val type: String,
     val colour: String? = null,
-    val durationMs: Long? = null,
+    /** Fractional ms. */
+    val durationMs: Double? = null,
     val data: Any? = null,
     /** Set when [data] is only method/path/status and the rest lives in the payload sidecar. */
     val payloadId: String? = null,
     val createdAt: String? = null,
+    val seq: Long? = null,
+    val callId: String? = null,
+    val replyTo: String? = null,
+    val causedBy: String? = null,
+    val trace: TraceJson? = null,
+    val source: String? = null,
+    val capturedAt: String? = null,
+    val status: String? = null,
+    val timing: String? = null,
+    val pairing: String? = null,
+    val order: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -120,10 +163,33 @@ internal data class MessageEventJson(
                 add("label" to JsonString(label))
                 add("type" to JsonString(type))
                 if (colour != null) add("colour" to JsonString(colour))
-                if (durationMs != null) add("durationMs" to JsonNumber(durationMs.toString()))
+                if (durationMs != null) add("durationMs" to msNumber(durationMs))
                 if (data != null) add("data" to anyToJson(data))
                 if (payloadId != null) add("payloadId" to JsonString(payloadId))
                 if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (seq != null) add("seq" to JsonNumber(seq.toString()))
+                if (callId != null) add("callId" to JsonString(callId))
+                if (replyTo != null) add("replyTo" to JsonString(replyTo))
+                if (causedBy != null) add("causedBy" to JsonString(causedBy))
+                if (trace != null) {
+                    add(
+                        "trace" to
+                            obj(
+                                buildList {
+                                    add("traceId" to JsonString(trace.traceId))
+                                    if (trace.spanId != null) add("spanId" to JsonString(trace.spanId))
+                                    if (trace.parentSpanId != null) add("parentSpanId" to JsonString(trace.parentSpanId))
+                                },
+                            ),
+                    )
+                }
+                if (source != null) add("source" to JsonString(source))
+                if (createdAt != null) add("startedAt" to JsonString(createdAt))
+                if (capturedAt != null) add("capturedAt" to JsonString(capturedAt))
+                if (status != null) add("status" to JsonString(status))
+                if (timing != null) add("timing" to JsonString(timing))
+                if (pairing != null) add("pairing" to JsonString(pairing))
+                if (order != null) add("order" to JsonString(order))
             },
         )
 }
@@ -258,6 +324,19 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
             if (insights.isNotEmpty()) add("insights" to JsonArray(insights.map { it.toJsonValue() }))
             add("participants" to JsonArray(participants.map { it.toJsonValue() }))
             add("events" to JsonArray(events.map { it.toJsonValue() }))
+            if (timing != null) {
+                add("accuracy" to JsonString(timing.accuracy))
+                if (timing.measuredCoverage != null) add("measuredCoverage" to msNumber(timing.measuredCoverage))
+                if (timing.pairingCoverage != null) add("pairingCoverage" to msNumber(timing.pairingCoverage))
+                add("sources" to JsonArray(timing.sources.map(::JsonString)))
+                if (timing.wallClockMs != null) add("wallClockMs" to msNumber(timing.wallClockMs))
+                add("clockOrdering" to JsonString(timing.clockOrdering))
+                add("clockOrdered" to JsonNumber(timing.clockOrdered.toString()))
+                if (timing.warnings.isNotEmpty()) add("warnings" to JsonArray(timing.warnings.map(::JsonString)))
+                if (timing.reorderedByClock.isNotEmpty()) {
+                    add("reorderedByClock" to JsonArray(timing.reorderedByClock.map(::JsonString)))
+                }
+            }
         },
     )
 

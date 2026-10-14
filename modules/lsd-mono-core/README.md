@@ -238,6 +238,40 @@ The test DSL stays strict, because a mistake there is in the test and should fai
 
 Payload conversion has always been safe as well (see [Message data](#message-data)).
 
+### Timing
+
+Timing is optional: a report with none is a valid structural sketch, and each fact a caller adds
+makes it more accurate. Every message verb takes a `Timing` and a `Trace`:
+
+```kotlin
+// Measured automatically: the time between call() and reply(), in fractional ms.
+lsd.call("web", "api", "POST /orders").reply("201")
+// Measured by the caller, with a start time, a clock source and trace ids.
+lsd.call("api", "payments", "authorise",
+    timing = Timing.of(sentAt, Duration.ofNanos(652_250_000)),
+    trace = Trace(traceId, spanId = "s2", parentSpanId = "s1")).reply("ok")
+// Publish and consume, linked so the consume is never drawn before its publish.
+val placed = lsd.async("orders", "kafka", "order.placed", timing = Timing.at(t1).withSource("orders"))
+lsd.async("kafka", "billing", "consume", timing = Timing.at(t2), causedBy = placed)
+// From another library (an interceptor or importer): LsdContext is an InteractionSink.
+lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "api", "200", replyTo = callId, durationMs = 12.5))
+```
+
+Each message in the JSON carries `seq` (capture order), `timing` (`NONE`, `TIMESTAMPED`,
+`MEASURED`, `DERIVED`), `pairing` for calls and replies (`NONE`, `GUESSED`, `CALL_ID`, `TRACE`)
+and `order` (`SEQUENCE`, `STRUCTURE`, `CLOCK`), plus `callId`, `replyTo`, `causedBy`, `trace`,
+`source` and `startedAt` when known. `durationMs` is fractional. Each scenario carries `accuracy`
+(`STRUCTURE_ONLY`, `TIMESTAMPED`, `MEASURED`, `TRACED`), `measuredCoverage`, `pairingCoverage`,
+`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`.
+
+**Clock ordering** (`lsd.mono.timing.orderByCreatedAt`, or `LsdContext.orderByCreatedAt`): by
+default (`source`) events from one source that have a start time but no measured duration are
+ordered by it, among their siblings in the same parent call; untimed events keep their place.
+`all` also compares different sources, `false` turns it off, and `Timing.orderByCreatedAt` opts
+one event in or out. Moved events are marked `order: CLOCK`, and it never raises `accuracy`. A
+reply never moves before its call, a consume before its publish, or a child out of its parent:
+clock order that would do so is ignored, with a `skew` warning.
+
 ### Scenarios and reports in code
 
 Samples, `main()` programs and frameworks without an integration can scope scenarios and
@@ -315,6 +349,7 @@ a feature off.
 | `lsd.mono.payload.redactKeys` | | unset | Comma-separated key names to redact as well, see [Redaction](#redaction) |
 | `lsd.mono.propagation.allowedHosts` | | `localhost,127.0.0.1,::1` | Hosts `scenarioHeaderValue` gives the scenario header for: names, `*.domain` or `*`. See [Interceptors](#interceptors) |
 | `lsd.mono.scenario.inheritBinding` | | `true` | `false` stops threads inheriting the scenario of the thread that started them, see [Threads](#threads-and-parallel-tests) |
+| `lsd.mono.timing.orderByCreatedAt` | | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
 
 ### Threads and parallel tests
 

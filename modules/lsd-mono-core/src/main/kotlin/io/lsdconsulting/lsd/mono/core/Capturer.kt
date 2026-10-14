@@ -20,9 +20,13 @@ import java.time.Instant
  * Participants are named by their name, id or display name. A name that was never passed
  * to [LsdContext.addParticipants] becomes a plain participant.
  *
- * Every verb takes an optional [Instant] `at`: when it happened. The report orders timed
- * events by it, for capture that arrives out of order (interceptors on other threads);
- * untimed events keep their capture order and come after the timed ones.
+ * Every verb takes an optional [Instant] `at`: when it happened (its `startedAt`). By default
+ * (`lsd.mono.timing.orderByCreatedAt=source`) events from one source that have it and no measured
+ * duration are ordered by it, for capture that arrives out of order (interceptors on other
+ * threads); untimed events keep their capture position. A reply never moves before its call,
+ * nor a child out of its parent. The message verbs also take a [Timing] (start, measured
+ * fractional `durationMs`, clock source, ordering hint) and a [Trace] (trace and span ids), and
+ * [ingest] takes [Interaction]s from other libraries.
  *
  * Capturing never throws into the application because of something going wrong inside
  * LSD, so an interceptor can call these verbs on a request path: a failure is logged
@@ -49,6 +53,8 @@ public sealed class Capturer {
         durationMs: Long? = null,
         colour: String? = null,
         at: Instant? = null,
+        timing: Timing? = null,
+        trace: Trace? = null,
     ) {
         emit(
             Message(
@@ -61,7 +67,7 @@ public sealed class Capturer {
                 data = data,
                 durationMs = durationMs,
                 createdAt = at,
-            ),
+            ).withTiming(timing, trace),
         )
     }
 
@@ -83,7 +89,8 @@ public sealed class Capturer {
     /**
      * A synchronous call from [from] to [to], captured now. Finish it with
      * [PendingCall.reply] or [PendingCall.fail], from any thread: the response is drawn
-     * back from [to], timed, in the same scenario.
+     * back from [to], timed, in the same scenario. The time between this and the reply counts
+     * as a measured duration unless [timing] gives one. [PendingCall.callId] is the call's id.
      */
     @JvmOverloads
     public fun call(
@@ -92,12 +99,27 @@ public sealed class Capturer {
         label: String = "",
         data: Any? = null,
         at: Instant? = null,
+        timing: Timing? = null,
+        trace: Trace? = null,
     ): PendingCall =
         startCall(
-            Message(id = "", from = from, to = to, label = label, type = MessageType.SYNCHRONOUS, data = data, createdAt = at),
+            Message(
+                id = "",
+                from = from,
+                to = to,
+                label = label,
+                type = MessageType.SYNCHRONOUS,
+                data = data,
+                createdAt = at,
+                callRef = CallRef(null),
+            ).withTiming(timing, trace),
         )
 
-    /** The response to a synchronous call: [from] is the callee. */
+    /**
+     * The response to a synchronous call: [from] is the callee. [replyTo] pairs it with its call
+     * exactly; without it (or a span id in [trace]) the pairing is guessed from the direction.
+     * A duration here belongs to the call.
+     */
     @JvmOverloads
     public fun response(
         from: String,
@@ -106,11 +128,29 @@ public sealed class Capturer {
         data: Any? = null,
         durationMs: Long? = null,
         at: Instant? = null,
+        timing: Timing? = null,
+        trace: Trace? = null,
+        replyTo: CallRef? = null,
     ) {
-        message(from, to, label, data, MessageType.SYNCHRONOUS_RESPONSE, durationMs, at = at)
+        emit(
+            Message(
+                id = "",
+                from = from,
+                to = to,
+                label = label,
+                type = MessageType.SYNCHRONOUS_RESPONSE,
+                data = data,
+                durationMs = durationMs,
+                createdAt = at,
+                replyTo = replyTo,
+            ).withTiming(timing, trace),
+        )
     }
 
-    /** An asynchronous message, such as an event published to a queue. */
+    /**
+     * An asynchronous message, such as an event published to a queue. Returns its id: pass it
+     * as [causedBy] when capturing the consume, so the consume is never drawn before it.
+     */
     @JvmOverloads
     public fun async(
         from: String,
@@ -118,8 +158,34 @@ public sealed class Capturer {
         label: String = "",
         data: Any? = null,
         at: Instant? = null,
-    ) {
-        message(from, to, label, data, MessageType.ASYNCHRONOUS, at = at)
+        timing: Timing? = null,
+        trace: Trace? = null,
+        causedBy: CallRef? = null,
+    ): CallRef {
+        val ref = CallRef(null)
+        emit(
+            Message(
+                id = "",
+                from = from,
+                to = to,
+                label = label,
+                type = MessageType.ASYNCHRONOUS,
+                data = data,
+                createdAt = at,
+                callRef = ref,
+                causedBy = causedBy,
+            ).withTiming(timing, trace),
+        )
+        return ref
+    }
+
+    /**
+     * Capture an [Interaction] from another library (an interceptor, a listener, an importer).
+     * Whatever it leaves out degrades gracefully: no ids means guessed pairing, no duration means
+     * no measured timing. A zero duration is treated as absent.
+     */
+    public fun ingest(interaction: Interaction) {
+        emit(interaction.toMessage())
     }
 
     /** A short arrow into [to] from the edge of the diagram, for a caller that is not drawn. */
@@ -210,6 +276,39 @@ public sealed class Capturer {
 
     private fun emit(event: SequenceEvent) = emit(listOf(event))
 
+    private fun Interaction.toMessage(): Message {
+        val base =
+            when (kind) {
+                InteractionKind.REQUEST, InteractionKind.MESSAGE -> MessageType.SYNCHRONOUS
+                InteractionKind.RESPONSE -> MessageType.SYNCHRONOUS_RESPONSE
+                InteractionKind.PUBLISH, InteractionKind.CONSUME -> MessageType.ASYNCHRONOUS
+            }
+        val type =
+            when {
+                from == null && to != null -> MessageType.SHORT_INBOUND
+                to == null && from != null -> MessageType.SHORT_OUTBOUND
+                else -> base
+            }
+        val opens = kind == InteractionKind.REQUEST || kind == InteractionKind.PUBLISH
+        return Message(
+            id = "",
+            from = from,
+            to = to,
+            label = label,
+            type = type,
+            data = data,
+            createdAt = startedAt,
+            exactMs = durationMs?.takeIf { it > 0.0 && it.isFinite() },
+            source = source,
+            trace = trace,
+            callRef = if (opens) CallRef(interactionId) else null,
+            replyTo = if (kind == InteractionKind.RESPONSE) replyTo?.let(CallRef::of) else null,
+            causedBy = if (kind == InteractionKind.CONSUME) replyTo?.let(CallRef::of) else null,
+            status = status,
+            orderHint = orderByCreatedAt,
+        )
+    }
+
     /** Record [events] in order. Ids are assigned here, from the context's generator. */
     internal abstract fun emit(events: List<SequenceEvent>)
 
@@ -218,3 +317,20 @@ public sealed class Capturer {
     /** Capture [request] and return the call that waits for its reply. */
     internal abstract fun startCall(request: Message): PendingCall
 }
+
+/** Apply the caller's [timing] and [trace] to a captured message. */
+internal fun Message.withTiming(
+    timing: Timing?,
+    trace: Trace?,
+): Message =
+    if (timing == null && trace == null) {
+        this
+    } else {
+        copy(
+            createdAt = timing?.startedAt ?: createdAt,
+            exactMs = timing?.durationMs ?: exactMs,
+            source = timing?.source ?: source,
+            orderHint = timing?.orderByCreatedAt ?: orderHint,
+            trace = trace ?: this.trace,
+        )
+    }

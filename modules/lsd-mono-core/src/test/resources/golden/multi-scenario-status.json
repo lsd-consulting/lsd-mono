@@ -21,7 +21,11 @@
         }
       ],
       "participants": [],
-      "events": []
+      "events": [],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
     },
     {
       "id": "2",
@@ -36,7 +40,11 @@
         }
       ],
       "participants": [],
-      "events": []
+      "events": [],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
     },
     {
       "id": "3",
@@ -51,7 +59,11 @@
         }
       ],
       "participants": [],
-      "events": []
+      "events": [],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
     }
   ]
 }

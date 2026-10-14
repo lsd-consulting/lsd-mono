@@ -29,6 +29,7 @@ internal enum class LsdKey(
     PAYLOAD_REDACT_KEYS(LsdProperties.PAYLOAD_REDACT_KEYS, null, null),
     PROPAGATION_ALLOWED_HOSTS(LsdProperties.PROPAGATION_ALLOWED_HOSTS, null, "localhost,127.0.0.1,::1"),
     INHERIT_BINDING(LsdProperties.INHERIT_BINDING, null, "true"),
+    TIMING_ORDER_BY_CREATED_AT(LsdProperties.TIMING_ORDER_BY_CREATED_AT, null, "source"),
     ;
 
     /** The value the user set under the key or, failing that, its legacy name; else [default]. */

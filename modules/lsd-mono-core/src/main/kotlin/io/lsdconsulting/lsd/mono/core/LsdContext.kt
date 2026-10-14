@@ -12,11 +12,12 @@ import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantIds
 import io.lsdconsulting.lsd.mono.core.domain.Scenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
+import io.lsdconsulting.lsd.mono.core.domain.ScenarioTiming
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.domain.orderByCreatedAt
+import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.core.model.EventJson
@@ -30,8 +31,10 @@ import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioErrorJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
+import io.lsdconsulting.lsd.mono.core.model.ScenarioTimingJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
+import io.lsdconsulting.lsd.mono.core.model.TraceJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.capturedMetrics
@@ -63,8 +66,9 @@ import java.util.function.Consumer
  * Labels in the shell truncate to [ReportOptions.labelMaxWidth].
  *
  * **Activate colour:** optional on [activate]; omitted from JSON when absent.
- * **Timestamps:** optional `createdAt` on events. [completeScenario] sorts by it
- * before the scenario is stored, so layout and JSON see the same order.
+ * **Timing:** see `domain/EventTiming.kt`. [completeScenario] pairs calls and replies, works out
+ * each scenario's accuracy and applies clock ordering ([orderByCreatedAt]) before the scenario
+ * is stored, so layout and JSON see the same order.
  *
  * **Threads:** every method is thread-safe. Each running scenario has its own
  * buffer ([LsdScenario]). A thread that called [beginScenario] captures into that
@@ -79,7 +83,21 @@ import java.util.function.Consumer
  *
  * **Deferred:** legacy include-files.
  */
-public class LsdContext : Capturer() {
+public class LsdContext :
+    Capturer(),
+    InteractionSink {
+    /**
+     * Clock ordering for scenarios completed from now on. `null` (the default) reads
+     * `lsd.mono.timing.orderByCreatedAt`, which defaults to [ClockOrdering.SAME_SOURCE].
+     */
+    @Volatile
+    public var orderByCreatedAt: ClockOrdering? = null
+
+    private val seq = AtomicLong()
+
+    /** Same as [ingest]. */
+    override fun accept(interaction: Interaction): Unit = ingest(interaction)
+
     @Volatile
     internal var idGenerator = IdGenerator(LsdProperties.deterministicIds())
         private set
@@ -391,6 +409,7 @@ public class LsdContext : Capturer() {
     public fun clear() {
         synchronized(lock) {
             idGenerator = IdGenerator(LsdProperties.deterministicIds())
+            seq.set(0)
             payloads.limits = PayloadConverters.Limits.fromProperties()
             payloads.redaction = PayloadConverters.Redaction.fromProperties()
             completed.clear()
@@ -502,7 +521,7 @@ public class LsdContext : Capturer() {
             }
         bound.forget(scenario)
         warnUnreplied(title, scenario.abandonCalls())
-        val events = orderByCreatedAt(captured)
+        val (events, timing) = orderAndAnalyse(captured, orderByCreatedAt ?: LsdProperties.clockOrdering())
         synchronized(lock) {
             val stored =
                 Scenario(
@@ -513,6 +532,7 @@ public class LsdContext : Capturer() {
                     participants = participantsFor(events),
                     events = events,
                     error = error,
+                    timing = timing,
                 )
             val order = if (scenario === defaultScenario) sequence.incrementAndGet() else scenario.sequence
             completed.getOrPut(scenario.reportKey) { ArrayList() }.add(order to stored)
@@ -629,8 +649,9 @@ public class LsdContext : Capturer() {
         }
 
     private fun bindMessage(captured: Message): Message {
-        val event = captured
         val id = idGenerator.next()
+        captured.callRef?.let { if (it.id == null) it.id = id }
+        val event = captured.copy(seq = seq.incrementAndGet(), capturedAt = Instant.now())
         return when (event.type) {
             MessageType.SHORT_INBOUND -> {
                 val toRef = event.to?.takeIf { it.isNotBlank() } ?: event.from.orEmpty()
@@ -721,11 +742,27 @@ public class LsdContext : Capturer() {
                         colour = it.colour,
                     )
                 },
-            events = events.map { it.toEventJson() },
+            events = events.map { it.toEventJson(timing) },
+            timing =
+                ScenarioTimingJson(
+                    accuracy = timing.accuracy.name,
+                    measuredCoverage = timing.measuredCoverage,
+                    pairingCoverage = timing.pairingCoverage,
+                    sources = timing.sources,
+                    wallClockMs = timing.wallClockMs,
+                    clockOrdering = timing.clockOrdering.name,
+                    clockOrdered = timing.clockOrdered,
+                    warnings = timing.warnings,
+                    reorderedByClock = timing.reorderedByClock,
+                ),
         )
     }
 
-    private fun SequenceEvent.toEventJson(): EventJson =
+    /** `capturedAt` is a wall-clock hint; reproducible reports leave it out. */
+    private val writeCapturedAt: Boolean
+        get() = LsdProperties.generatedAt() == null && !LsdProperties.deterministicIds()
+
+    private fun SequenceEvent.toEventJson(timing: ScenarioTiming): EventJson =
         when (this) {
             is Message ->
                 MessageEventJson(
@@ -736,9 +773,20 @@ public class LsdContext : Capturer() {
                     label = label,
                     type = type.name,
                     colour = colour?.takeIf { it.isNotBlank() },
-                    durationMs = durationMs,
+                    durationMs = timedMs,
                     data = data,
                     createdAt = createdAt?.toString(),
+                    seq = seq.takeIf { it > 0 },
+                    callId = callRef?.id,
+                    replyTo = replyTo?.id,
+                    causedBy = causedBy?.id,
+                    trace = trace?.let { TraceJson(it.traceId, it.spanId, it.parentSpanId) },
+                    source = source,
+                    capturedAt = capturedAt?.takeIf { writeCapturedAt }?.toString(),
+                    status = status,
+                    timing = timing.perEvent[id]?.timing?.name,
+                    pairing = timing.perEvent[id]?.pairing?.name,
+                    order = timing.perEvent[id]?.order?.name,
                 )
             is Note ->
                 NoteEventJson(

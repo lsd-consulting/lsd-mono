@@ -26,19 +26,27 @@ public class PendingCall internal constructor(
     detached: Boolean = false,
 ) {
     private val started = System.nanoTime()
+
+    /** The call's id: pass it as `replyTo` to pair a reply captured elsewhere. */
+    public val ref: CallRef = request.callRef ?: CallRef(null)
+
+    /** The call's id as a string; `""` if its capture failed. */
+    public val callId: String get() = ref.callId
     private val state = AtomicReference(if (detached) State.DETACHED else State.WAITING)
 
     /**
      * Capture the response, from the callee back to the caller. The duration is the time
-     * since [Capturer.call], or the time between the two `at`s when both were given.
+     * since [Capturer.call] (measured), or the time between the two `at`s when both were given
+     * (derived), unless [timing] gives a measured duration.
      */
     @JvmOverloads
     public fun reply(
         label: String = "",
         data: Any? = null,
         at: Instant? = null,
+        timing: Timing? = null,
     ) {
-        scenario.context.guarded("reply", { }) { respond(label, data, at) }
+        scenario.context.guarded("reply", { }) { respond(label, data, timing?.startedAt ?: at, timing) }
     }
 
     /**
@@ -52,7 +60,7 @@ public class PendingCall internal constructor(
     ) {
         scenario.context.guarded("reply", { }) {
             val type = error.javaClass
-            respond(type.simpleName.ifEmpty { type.name }, mapOf("exception" to type.name, "message" to error.message), at)
+            respond(type.simpleName.ifEmpty { type.name }, mapOf("exception" to type.name, "message" to error.message), at, null)
         }
     }
 
@@ -60,10 +68,17 @@ public class PendingCall internal constructor(
         label: String,
         data: Any?,
         at: Instant?,
+        timing: Timing?,
     ) {
         if (state.get() == State.DETACHED) return
         if (state.compareAndSet(State.WAITING, State.REPLIED)) {
+            val elapsedMs = (System.nanoTime() - started) / 1_000_000.0
             scenario.callEnded(this)
+            val sent = request.createdAt
+            val bothTimed = sent != null && at != null && timing?.durationMs == null
+            val exact =
+                timing?.durationMs
+                    ?: if (bothTimed) Duration.between(sent, at).toNanos().coerceAtLeast(0) / 1_000_000.0 else elapsedMs
             deliver(
                 Message(
                     id = "",
@@ -74,6 +89,12 @@ public class PendingCall internal constructor(
                     data = data,
                     durationMs = durationMs(at),
                     createdAt = at,
+                    exactMs = exact,
+                    derived = bothTimed,
+                    source = timing?.source ?: request.source,
+                    trace = request.trace,
+                    replyTo = ref,
+                    orderHint = timing?.orderByCreatedAt,
                 ),
             )
         } else if (state.get() == State.ABANDONED) {

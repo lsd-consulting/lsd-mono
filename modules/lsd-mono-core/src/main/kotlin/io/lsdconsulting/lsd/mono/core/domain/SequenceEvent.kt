@@ -1,5 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.domain
 
+import io.lsdconsulting.lsd.mono.core.CallRef
+import io.lsdconsulting.lsd.mono.core.Trace
 import java.time.Instant
 
 /**
@@ -16,9 +18,9 @@ import java.time.Instant
  * Internal: callers capture through the [io.lsdconsulting.lsd.mono.core.Capturer] verbs, and
  * the context gives every event its id when it is captured.
  *
- * Optional [createdAt] is an ISO instant used to reorder out-of-order capture
- * before the report is written. Events without it keep capture order and sort
- * after any timed events.
+ * Optional [createdAt] is the caller's `startedAt` (the verbs' `at`). With clock ordering on
+ * (the default, same source only) events that have it and no measured duration are reordered
+ * by it among their siblings; events without it keep their capture position. See `EventOrder.kt`.
  *
  * Deferred vs legacy: PageTitle as its own event.
  */
@@ -85,9 +87,34 @@ internal data class Message(
     val type: MessageType = MessageType.SYNCHRONOUS,
     val colour: String? = null,
     val data: Any? = null,
+    /** Legacy whole-ms duration, as before. Kept alongside [exactMs]. */
     val durationMs: Long? = null,
+    /** `startedAt`: the caller's `at`. */
     override val createdAt: Instant? = null,
-) : SequenceEvent()
+    /** Capture order within the context, set when the event is bound. */
+    val seq: Long = 0,
+    /** When lsd-mono captured it. A soft hint only. */
+    val capturedAt: Instant? = null,
+    /** Measured duration, fractional ms. Written as `durationMs` in the JSON. */
+    val exactMs: Double? = null,
+    /** The duration was computed from two same-source timestamps, not measured. */
+    val derived: Boolean = false,
+    /** Clock domain; null is `"local"`. */
+    val source: String? = null,
+    val trace: Trace? = null,
+    /** Set on a call or publish: its id, filled in when bound. */
+    val callRef: CallRef? = null,
+    /** On a reply: the call it answers. */
+    val replyTo: CallRef? = null,
+    /** On a consume: the publish that caused it. */
+    val causedBy: CallRef? = null,
+    val status: String? = null,
+    /** Per-interaction clock-ordering hint. */
+    val orderHint: Boolean? = null,
+) : SequenceEvent() {
+    /** The measured or derived duration, fractional ms. */
+    val timedMs: Double? get() = exactMs ?: durationMs?.toDouble()
+}
 
 /**
  * Note card. [placement] defaults to [NoteSide.OVER] (requires [over]).

@@ -117,6 +117,9 @@ public class MessageSpec internal constructor(
     private var durationMs: Long? = null
     private var colour: String? = null
     private var at: Instant? = null
+    private var exactMs: Double? = null
+    private var trace: Trace? = null
+    private var source: String? = null
 
     /** The text on the arrow. */
     public infix fun label(text: String): MessageSpec = apply { label = text }
@@ -126,6 +129,15 @@ public class MessageSpec internal constructor(
 
     /** How long the call took, for the metrics. */
     public infix fun took(ms: Long): MessageSpec = apply { durationMs = ms }
+
+    /** How long the call took, measured, in fractional milliseconds. */
+    public infix fun took(ms: Double): MessageSpec = apply { exactMs = ms }
+
+    /** Trace and span ids, for exact pairing and nesting. */
+    public infix fun trace(ids: Trace): MessageSpec = apply { trace = ids }
+
+    /** The clock domain (service or JVM) it was timed in. */
+    public infix fun source(name: String): MessageSpec = apply { source = name }
 
     /** The arrow's colour, such as `#dc2626`. */
     public infix fun colour(css: String): MessageSpec = apply { colour = css }
@@ -144,5 +156,9 @@ public class MessageSpec internal constructor(
             data = data,
             durationMs = durationMs,
             createdAt = at,
+            exactMs = exactMs,
+            trace = trace,
+            source = source,
+            callRef = if (type == MessageType.ASYNCHRONOUS) CallRef(null) else null,
         )
 }

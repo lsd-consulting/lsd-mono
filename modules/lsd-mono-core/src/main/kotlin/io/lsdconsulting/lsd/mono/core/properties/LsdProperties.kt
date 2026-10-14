@@ -26,6 +26,12 @@ public object LsdProperties {
     /** Duration insights and message-count metrics. Default `true`. */
     public const val METRICS_ENABLED: String = "lsd.mono.metrics.enabled"
 
+    /**
+     * Clock ordering of events that have a `createdAt` but no measured duration: `false` (off),
+     * `source` (default; same source only, also `true`) or `all` (across sources).
+     */
+    public const val TIMING_ORDER_BY_CREATED_AT: String = "lsd.mono.timing.orderByCreatedAt"
+
     /** Width summaries and the diagram truncate labels to. Default 200. */
     public const val LABEL_MAX_WIDTH: String = "lsd.mono.label.maxWidth"
 
@@ -79,6 +85,21 @@ public object LsdProperties {
     internal fun hideStacktrace(): Boolean = LsdKey.HIDE_STACKTRACE.boolean()
 
     internal fun metricsEnabled(): Boolean = LsdKey.METRICS_ENABLED.boolean()
+
+    internal fun clockOrdering(): io.lsdconsulting.lsd.mono.core.ClockOrdering {
+        val raw = LsdKey.TIMING_ORDER_BY_CREATED_AT.value()
+        return when (raw?.trim()?.lowercase()) {
+            "source", "same_source", "true", "yes", "on", "1" -> io.lsdconsulting.lsd.mono.core.ClockOrdering.SAME_SOURCE
+            "all", "all_sources" -> io.lsdconsulting.lsd.mono.core.ClockOrdering.ALL_SOURCES
+            "false", "off", "no", "0" -> io.lsdconsulting.lsd.mono.core.ClockOrdering.OFF
+            else -> {
+                LsdConfig.warnOnce(TIMING_ORDER_BY_CREATED_AT, raw.toString()) {
+                    "LSD: '$raw' is not valid for $TIMING_ORDER_BY_CREATED_AT, so 'source' is used. Use false, source or all."
+                }
+                io.lsdconsulting.lsd.mono.core.ClockOrdering.SAME_SOURCE
+            }
+        }
+    }
 
     /** The fixed [GENERATED_AT] instant, or null when it is unset or not an ISO-8601 instant. */
     internal fun generatedAt(): Instant? =

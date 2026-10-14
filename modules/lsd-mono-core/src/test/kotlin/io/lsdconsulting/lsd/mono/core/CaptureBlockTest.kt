@@ -53,7 +53,8 @@ class CaptureBlockTest {
                 deactivate("Orders")
             }
 
-        assertEquals(viaVerbs.events().toString(), viaBlock.events().toString())
+        val noClock = Regex("capturedAt=[^,]*, ")
+        assertEquals(viaVerbs.events().toString().replace(noClock, ""), viaBlock.events().toString().replace(noClock, ""))
     }
 
     @Test

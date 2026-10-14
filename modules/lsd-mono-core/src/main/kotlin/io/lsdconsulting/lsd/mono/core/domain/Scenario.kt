@@ -42,4 +42,5 @@ internal data class Scenario(
     val participants: List<Participant> = emptyList(),
     val events: List<SequenceEvent> = emptyList(),
     val error: ScenarioError? = null,
+    val timing: ScenarioTiming = ScenarioTiming(),
 )

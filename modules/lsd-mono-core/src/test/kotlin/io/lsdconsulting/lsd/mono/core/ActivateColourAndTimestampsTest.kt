@@ -76,9 +76,11 @@ class ActivateColourAndTimestampsTest {
         val mid = json.indexOf("\"label\": \"mid\"")
         val late = json.indexOf("\"label\": \"late\"")
         val untimed = json.indexOf("\"label\": \"untimed\"")
+        // Timed events fill the timed slots in time order; the untimed one keeps its slot.
         assertTrue(early in 0 until mid, json)
-        assertTrue(mid < late)
-        assertTrue(late < untimed)
+        assertTrue(mid < untimed)
+        assertTrue(untimed < late)
+        assertTrue(json.contains("\"order\": \"CLOCK\""), json)
         assertTrue(json.contains("\"createdAt\": \"2026-10-03T09:00:00Z\""))
         assertTrue(json.contains("\"createdAt\": \"2026-10-03T10:00:00Z\""))
         assertTrue(json.contains("\"createdAt\": \"2026-10-03T11:00:00Z\""))
