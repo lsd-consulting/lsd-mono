@@ -18,6 +18,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   reports (failed first) with their scenario counts, a report's data loads only when it is opened, and
   `#report=<id>` links open a report, scenario or message directly. It replaces the per-report `-report.html`
   listing page, which is no longer written (`ReportFiles.listingHtml` is gone).
+- In-diagram find scrolls the first match into view as you type (debounced) and on Enter / the phone keyboard's Go,
+  allowing for zoom, the sticky header and the on-screen keyboard. Matches get a theme-aware highlight, the current
+  match a stronger one; the visible `[match]` text is gone (screen readers hear “search match” instead).
 - The Pages site opens on the kitchen-sink report's index; `kitchen-sink.html` still opens the report alone.
 - A sequence diagram taller than the screen extends the page and scrolls with it, instead of scrolling inside its panel.
   The section links above a diagram scroll the page to that section again, at any zoom.

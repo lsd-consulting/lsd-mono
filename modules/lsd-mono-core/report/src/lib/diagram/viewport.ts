@@ -24,6 +24,7 @@ import { bindMinimap, paintMinimapDensity, syncMinimap } from './minimap-view'
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, sizeStage } from './page-scroll'
+import { SEARCH_REVEAL_DELAY_MS, revealSearchHit, updateSearchCurrent } from './search-reveal'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './state'
 
 /** Paint only the rows inside the scrollport (plus overscan). Row units stay unscaled; zoom is display-only. */
@@ -369,10 +370,17 @@ export function bindDiagramScroll(root: ParentNode): void {
       setHidden: (next) => setHiddenParticipants(scroll, next),
     })
     const find = diagram.querySelector<HTMLInputElement>('[data-diagram-find]')
+    let reveal: ReturnType<typeof setTimeout> | undefined
     find?.addEventListener('input', () => {
       diagramView(id).query = find.value
+      updateSearchCurrent(id)
       applyDiagramFrame(scroll)
       syncDiagramWindow(scroll)
+      // Typing on a phone has no Enter: bring the first match on screen once typing pauses.
+      clearTimeout(reveal)
+      reveal = setTimeout(() => {
+        if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
+      }, SEARCH_REVEAL_DELAY_MS)
     })
     bindMinimap(diagram, scroll)
   })

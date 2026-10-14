@@ -147,6 +147,7 @@ export function windowSvg(
     hiddenIds: view.hidden,
     places: messagePlaces(scenario.events, view.hidden),
     activeMessageId: view.activeMessageId,
+    searchCurrentId: view.searchCurrentId ?? null,
     neighbors: focusableNeighbors(rows, view.hidden),
     activations: spans,
     frame,
@@ -249,8 +250,9 @@ function renderRow(
     const layout = noteLayout(event.placement, event.over, index, width)
     const place = layout.placement
     const match = rowMatchesQuery(event, paint.query)
-    const hit = match ? ' search-hit' : ''
-    const hitAttr = match ? ' data-search-hit="match"' : ''
+    const current = match && paint.searchCurrentId === event.id
+    const hit = match ? ` search-hit${current ? ' search-current' : ''}` : ''
+    const hitAttr = match ? ` data-search-hit="${current ? 'current' : 'match'}"` : ''
     const card = noteCardMetrics(event.text)
     const halfW = card.width / 2
     const halfH = card.height / 2
@@ -264,15 +266,10 @@ function renderRow(
           : `<tspan x="0" dy="${NOTE_LINE_H}">${escapeHtml(line)}</tspan>`,
       )
       .join('')
-    // Search cue sits just above the card's top-right corner, so it never crowds the note copy.
-    const matchCue = match
-      ? `<text class="note-match-cue" x="${halfW}" y="${-halfH - 3}" text-anchor="end">[match]</text>`
-      : ''
     return `
     <g class="note note-${escapeAttr(place)}${hit}" data-placement="${escapeAttr(place)}"${hitAttr} transform="translate(${layout.x}, ${row.y})">
       <rect class="note-card" x="${-halfW}" y="${-halfH}" width="${card.width}" height="${card.height}" rx="6"/>
       <text class="note-text" text-anchor="${layout.textAnchor}">${tspans}</text>
-      ${matchCue}
     </g>`
   }
 
@@ -325,9 +322,9 @@ function renderMessageRow(
   const hasData = messageHasPayload(msg)
   const dur = msg.durationMs != null ? `<tspan class="msg-dur"> · ${escapeHtml(msg.durationMs)}ms</tspan>` : ''
   const cue = spec.typeCue ? `<tspan class="msg-type-cue"> [${escapeHtml(spec.typeCue)}]</tspan>` : ''
-  const matchCue = match ? `<tspan class="msg-match-cue"> [match]</tspan>` : ''
-  const hitClass = match ? ' search-hit' : ''
-  const hitAttr = match ? ' data-search-hit="match"' : ''
+  const current = match && paint.searchCurrentId === msg.id
+  const hitClass = match ? ` search-hit${current ? ' search-current' : ''}` : ''
+  const hitAttr = match ? ` data-search-hit="${current ? 'current' : 'match'}"` : ''
   const typeAttr = `data-msg-type="${escapeAttr(msg.type)}"`
   if (hasData) buttons.push(messageOpenButton(msg, y, width, index, viewTop, zoom, paint))
 
@@ -346,7 +343,7 @@ function renderMessageRow(
     return `
     <g class="message message-short${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
-      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
+      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
       ${hasData ? `<circle class="msg-hit" cx="${hitX}" cy="0" r="16"/>` : ''}
     </g>`
   }
@@ -375,7 +372,7 @@ function renderMessageRow(
     return `
     <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <path class="msg-path" d="M${out} 0 C${bend} 0, ${bend} ${SELF_RETURN_DY}, ${back} ${SELF_RETURN_DY}" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-      <text class="msg-label" x="${bend + 8}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
+      <text class="msg-label" x="${bend + 8}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
       ${hasData ? `<circle class="msg-hit" cx="${bend - 8}" cy="11" r="14"/>` : ''}
     </g>`
   }
@@ -386,7 +383,7 @@ function renderMessageRow(
   return `
   <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
     <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${matchCue}${dur}</text>
+    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
     ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
   </g>`
 }
@@ -395,6 +392,12 @@ function renderMessageRow(
  * Real button over the arrow and its label. The SVG itself is aria-hidden,
  * so a role on the line would be skipped by screen readers.
  */
+/** Spoken in place of the highlight: the SVG is hidden from assistive tech, its buttons are not. */
+function searchCue(msg: MessageEvent, paint: RowPaint): string {
+  if (!rowMatchesQuery(msg, paint.query)) return ''
+  return paint.searchCurrentId === msg.id ? ', current search match' : ', search match'
+}
+
 function messageOpenButton(
   msg: MessageEvent,
   y: number,
@@ -420,5 +423,5 @@ function messageOpenButton(
   const place = places.find((item) => item.id === msg.id) ?? places[0]
   const tab = tabindexFor(msg.id, paint.activeMessageId ?? null, places)
   // posinset/setsize are not valid on button. The listitem carries the real index.
-  return `<div role="listitem" class="msg-place" aria-setsize="${place.setsize}" aria-posinset="${place.posinset}"><button type="button" class="msg-open" data-message-id="${escapeAttr(msg.id)}" aria-label="Open ${escapeAttr(msg.label)}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button></div>`
+  return `<div role="listitem" class="msg-place" aria-setsize="${place.setsize}" aria-posinset="${place.posinset}"><button type="button" class="msg-open" data-message-id="${escapeAttr(msg.id)}" aria-label="${escapeAttr(`Open ${msg.label}${searchCue(msg, paint)}`)}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button></div>`
 }

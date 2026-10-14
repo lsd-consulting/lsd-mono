@@ -192,7 +192,7 @@ for (const spec of pages) {
         const scroller = document.querySelector('.seq-scroll')
         if (scroller) scroller.scrollTop = scroller.scrollHeight
       })
-      const match = page.locator('.note-match-cue', { hasText: '[match]' })
+      const match = page.locator('.seq-svg [data-search-hit]')
       try {
         await match.first().waitFor({ state: 'attached', timeout: 5000 })
         row.matchVisible = true

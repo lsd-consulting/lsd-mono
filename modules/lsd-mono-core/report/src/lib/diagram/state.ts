@@ -52,6 +52,8 @@ export interface DiagramView {
   query: string
   /** Roving tabindex target. Null means the first focusable message. */
   activeMessageId: string | null
+  /** The find match brought on screen (the first one), drawn stronger than the others. */
+  searchCurrentId?: string | null
 }
 
 export interface RowPaint {
@@ -59,6 +61,8 @@ export interface RowPaint {
   hiddenIds: ReadonlySet<string>
   places?: MessagePlace[]
   activeMessageId?: string | null
+  /** Event id of the current find match. */
+  searchCurrentId?: string | null
   neighbors?: Map<string, { prevArrowY?: number; nextArrowY?: number }>
   /** Bars for the whole scenario. Arrows attach to the innermost bar at their row. */
   activations?: ActivationSpan[]

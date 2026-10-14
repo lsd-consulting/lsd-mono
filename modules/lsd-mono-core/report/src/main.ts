@@ -43,6 +43,7 @@ declare global {
 }
 import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from './lib/diagram-a11y'
 import { scrollDiagramTo, scrollDiagramToOffset } from './lib/diagram/page-scroll'
+import { revealSearchHit, updateSearchCurrent } from './lib/diagram/search-reveal'
 import {
   bindDiagramScroll,
   diagramView,
@@ -420,11 +421,17 @@ function bindChrome(): void {
           diagramView(scenario.id).hidden,
         )
         const msg = messageId ? findMessage(scenario, messageId) : undefined
+        ev.preventDefault()
+        updateSearchCurrent(scenario.id)
+        if (msg) diagramView(scenario.id).searchCurrentId = msg.id
+        syncDiagramWindow(scroll)
+        // A soft keyboard's Go / Search key sends Enter: close the keyboard so the match has the screen.
+        if (matchMedia('(pointer: coarse)').matches) target.blur()
         if (msg) {
-          ev.preventDefault()
           focusDiagramMessage(scroll, msg.id)
           openMessage(scenario, msg)
         }
+        if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
       }
       return
     }

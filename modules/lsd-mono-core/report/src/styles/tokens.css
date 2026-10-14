@@ -34,6 +34,12 @@
   --topbar-row-h: 56px;
   --topbar-h: var(--topbar-row-h);
   --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  /* Find in the diagram: every match gets a highlighter band, the current one a stronger one. */
+  --find-hit-bg: oklch(0.45 0.1 80);
+  --find-hit-text: oklch(0.98 0.01 90);
+  --find-current-bg: oklch(0.86 0.17 90);
+  --find-current-text: oklch(0.2 0.03 250);
+  --find-ring: oklch(0.86 0.17 90);
 }
 
 [data-theme="light"] {
@@ -60,6 +66,11 @@
   --shadow: 0 1px 2px oklch(0.4 0.02 250 / 0.08), 0 12px 32px oklch(0.4 0.02 250 / 0.1);
   --shadow-pop: 0 8px 32px oklch(0.55 0.12 175 / 0.2);
   --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --find-hit-bg: oklch(0.93 0.1 95);
+  --find-hit-text: oklch(0.2 0.03 250);
+  --find-current-bg: oklch(0.8 0.17 75);
+  --find-current-text: oklch(0.16 0.03 250);
+  --find-ring: oklch(0.55 0.16 60);
 }
 
 /* Third theme. Black/white with thick borders. Status still uses text plus pattern, not hue alone. */
@@ -87,6 +98,11 @@
   --shadow: none;
   --shadow-pop: none;
   --focus: 0 0 0 3px #fff, 0 0 0 6px #000;
+  --find-hit-bg: #ff0;
+  --find-hit-text: #000;
+  --find-current-bg: #000;
+  --find-current-text: #ff0;
+  --find-ring: #000;
 }
 
 @media (prefers-reduced-motion: reduce) {

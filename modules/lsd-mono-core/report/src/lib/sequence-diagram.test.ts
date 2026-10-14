@@ -359,7 +359,7 @@ describe('renderRowSvg fragments', () => {
     expect(card.height).toBe(Math.max(NOTE_CARD_MIN_H, card.lines.length * NOTE_LINE_H + 2 * NOTE_PAD_Y))
   })
 
-  it('still marks a note that matches the search with a text cue', () => {
+  it('marks a note that matches the search, with no visible text cue', () => {
     const svg = renderRowSvg(
       rowFor({ kind: 'note', id: 'n-hit', text: 'Payment retried', over: 'api', placement: 'over' }),
       400,
@@ -368,7 +368,7 @@ describe('renderRowSvg fragments', () => {
       { query: 'retried', hiddenIds: new Set() },
     )
     expect(svg).toContain('search-hit')
-    expect(svg).toContain('[match]')
+    expect(svg).not.toContain('[match]')
   })
 
   it('keeps left/right long notes wrapped the same way', () => {
@@ -449,7 +449,7 @@ describe('diagram view paint', () => {
     expect(svg).not.toContain('data-search-hit')
   })
 
-  it('marks a matching label with a text cue, not colour alone', () => {
+  it('marks a matching label with a highlight class, no [match] text, and names it on its button', () => {
     const svg = renderRowSvg(
       rowFor({
         kind: 'message',
@@ -465,11 +465,11 @@ describe('diagram view paint', () => {
       { query: 'read', hiddenIds: new Set() },
     )
     expect(svg).toContain('data-search-hit="match"')
-    expect(svg).toContain('[match]')
+    expect(svg).not.toContain('[match]')
     expect(svg).toContain('search-hit')
   })
 
-  it('marks a matching note the same way', () => {
+  it('marks a matching note the same way, and the current match more strongly', () => {
     const svg = renderRowSvg(
       rowFor({ kind: 'note', id: 'n-s', text: 'cache miss', over: 'api', placement: 'over' }),
       400,
@@ -478,7 +478,16 @@ describe('diagram view paint', () => {
       { query: 'CACHE', hiddenIds: new Set() },
     )
     expect(svg).toContain('data-search-hit="match"')
-    expect(svg).toContain('[match]')
+    expect(svg).not.toContain('[match]')
+    const current = renderRowSvg(
+      rowFor({ kind: 'note', id: 'n-s', text: 'cache miss', over: 'api', placement: 'over' }),
+      400,
+      participants,
+      200,
+      { query: 'CACHE', hiddenIds: new Set(), searchCurrentId: 'n-s' },
+    )
+    expect(current).toContain('search-hit search-current')
+    expect(current).toContain('data-search-hit="current"')
   })
 })
 
