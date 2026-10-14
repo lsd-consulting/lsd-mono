@@ -6,11 +6,16 @@
  * - `#scenario=<scenarioId>`: that scenario is shown.
  * - `#msg=<scenarioId>/<messageId>`: that scenario is shown and the message is open
  *   in the side panel.
+ * - On the index page, either form follows `#report=<reportId>&`, naming the report
+ *   the scenario is in. `#report=<reportId>` alone opens that report at its first scenario.
  *
  * Ids are URI-encoded, so a slash in an id cannot split the token.
  */
 
 export interface HashRef {
+  /** The report, on the index page. Absent on a single report's page. */
+  reportId?: string
+  /** Empty when only the report is named. */
   scenarioId: string
   /** Set when a message is open. */
   messageId?: string
@@ -18,9 +23,16 @@ export interface HashRef {
 
 const MESSAGE = '#msg='
 const SCENARIO = '#scenario='
+const REPORT = '#report='
 
 /** The hash for a scenario, or for an open message in it (includes the leading #). */
 export function reportHash(ref: HashRef): string {
+  if (ref.reportId !== undefined) {
+    const report = `${REPORT}${encodeId(ref.reportId)}`
+    return ref.scenarioId
+      ? `${report}&${reportHash({ scenarioId: ref.scenarioId, messageId: ref.messageId }).slice(1)}`
+      : report
+  }
   return ref.messageId
     ? `${MESSAGE}${encodeId(ref.scenarioId)}/${encodeId(ref.messageId)}`
     : `${SCENARIO}${encodeId(ref.scenarioId)}`
@@ -48,6 +60,14 @@ function decodeId(raw: string): string | null {
 export function parseReportHash(hash: string): HashRef | null {
   if (!hash) return null
   const raw = hash.startsWith('#') ? hash : `#${hash}`
+  if (raw.startsWith(REPORT)) {
+    const amp = raw.indexOf('&')
+    const reportId = decodeId(raw.slice(REPORT.length, amp < 0 ? undefined : amp))
+    if (!reportId) return null
+    if (amp < 0) return { reportId, scenarioId: '' }
+    const rest = parseReportHash(`#${raw.slice(amp + 1)}`)
+    return rest && rest.reportId === undefined ? { reportId, ...rest } : null
+  }
   if (raw.startsWith(SCENARIO)) {
     const scenarioId = decodeId(raw.slice(SCENARIO.length))
     return scenarioId ? { scenarioId } : null

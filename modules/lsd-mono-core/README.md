@@ -40,8 +40,10 @@ lsd-mono-core/
   - `*-report.js` — the same report data as a script, which the index page loads when the report is opened
   - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
-  - `index.html` from `createIndex`, listing every report in the directory: failed reports
-    first, scenario counts per report, a title filter, and links to each diagram
+  - `index.html` from `createIndex`: the report app for every report in the directory. Reports
+    are listed failed first with scenario counts; a report's `*-report.js` loads when it is opened,
+    so the page stays small for large suites. `index.html#report=<stem>` opens one report, and
+    `#report=<stem>&scenario=<id>` or `&msg=<scenario>/<message>` opens a scenario or message.
   - Files are written to a temporary file and moved into place. There are no shared
     "latest" files, so test classes, forks and modules can share one directory.
 - Timing: durations, start times, call/reply pairing and clock ordering, with an accuracy level per scenario (see [Timing](#timing))

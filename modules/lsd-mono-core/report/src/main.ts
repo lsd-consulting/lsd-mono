@@ -11,7 +11,15 @@ import {
   type InspectorController,
   type InspectorInvoker,
 } from './ui/inspector'
-import { loadExternalPayloads, payloadKey } from './lib/payloads'
+import { loadExternalPayloads, loadPayloadsFrom, payloadKey } from './lib/payloads'
+import {
+  defaultReportId,
+  indexTotals,
+  loadReportData,
+  type IndexManifest,
+  type IndexReport,
+  type ReportData,
+} from './lib/report-index'
 import { parseReportHash, writeReportHash, type HashRef } from './lib/report-hash'
 import { defaultScenarioId, reselect, stepSelection } from './ui/selection'
 import { placePrintMetrics, printMetricsSection } from './ui/metrics'
@@ -27,6 +35,10 @@ declare global {
     __LSD_PAYLOADS__?: Record<string, unknown>
     /** Sibling script that assigns `__LSD_PAYLOADS__`. Relative to the report HTML. */
     __LSD_PAYLOADS_SRC__?: string
+    /** Set on the index page instead of `__LSD_REPORT__`: every report in the directory. */
+    __LSD_INDEX__?: IndexManifest
+    /** Filled by each `<stem>-report.js` as the index page opens reports. */
+    __LSD_REPORTS__?: Record<string, ReportData>
   }
 }
 import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from './lib/diagram-a11y'
@@ -35,6 +47,7 @@ import {
   diagramView,
   findMessage,
   focusDiagramMessage,
+  forgetDiagrams,
   messageOffsetY,
   renderDiagramHtml,
   syncDiagramWindow,
@@ -60,6 +73,7 @@ import {
 } from './ui/sidebar'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
 import { componentGraph } from './lib/component-graph'
+import { indexNavHtml } from './ui/index-nav'
 import { cssEscape, escapeAttr, escapeHtml } from './lib/escape'
 import { trackTopbarHeight } from './lib/topbar-height'
 
@@ -70,9 +84,23 @@ interface State {
   selectedId: string | null
   helpOpen: boolean
   sidebarCollapsed: boolean
+  /** Index page: reports whose scenarios are listed in the sidebar. */
+  expanded: Set<string>
 }
 
-const report: Report = window.__LSD_REPORT__ ?? sampleReport
+/** The index page's manifest. Null on a single report's page. */
+const index: IndexManifest | null = window.__LSD_REPORT__ ? null : (window.__LSD_INDEX__ ?? null)
+/** The report shown. On the index page it changes as reports are opened; empty until the first one loads. */
+let report: Report =
+  window.__LSD_REPORT__ ??
+  (index
+    ? { title: index.title, generatedAt: index.generatedAt, generator: index.generator, scenarios: [] }
+    : sampleReport)
+/** Index page: the open report's id, and its payload script. */
+let reportId: string | null = null
+let reportPayloadsSrc: string | null = null
+/** Index page: the report being loaded, so a slower earlier load cannot replace a later choice. */
+let loadingReportId: string | null = null
 
 const state: State = {
   query: '',
@@ -80,12 +108,14 @@ const state: State = {
   selectedId: initialSelection(),
   helpOpen: false,
   sidebarCollapsed: getSidebarCollapsed(),
+  expanded: new Set(),
 }
 
 const app = document.querySelector('#app')!
 
 /** The scenario in the URL (a link or a reload), otherwise the first in the list. */
 function initialSelection(): string | null {
+  if (index) return null
   const ref = parseReportHash(window.location.hash)
   if (ref && report.scenarios.some((s) => s.id === ref.scenarioId)) return ref.scenarioId
   return defaultScenarioId(report.scenarios)
@@ -128,7 +158,8 @@ function reportLocation(): { hash: string; replace?: (url: string) => void } {
 
 function writeHash(ref: HashRef | null): void {
   writingHash = true
-  writeReportHash(reportLocation(), ref)
+  const named = index && reportId ? { ...(ref ?? { scenarioId: '' }), reportId } : ref
+  writeReportHash(reportLocation(), named)
   writingHash = false
 }
 
@@ -138,6 +169,7 @@ function writeScenarioHash(): void {
 }
 
 function counts() {
+  if (index) return indexTotals(index)
   return report.scenarios.reduce(
     (acc, s) => {
       acc[s.status]++
@@ -149,12 +181,18 @@ function counts() {
 
 function filtered(): Scenario[] {
   const q = state.query.trim().toLowerCase()
+  // On the index page a query that matches the report's title keeps all its scenarios.
+  const reportMatches = !q || (index !== null && report.title.toLowerCase().includes(q))
   return report.scenarios.filter((s) => {
     if (!state.status[s.status]) return false
-    if (!q) return true
+    if (reportMatches) return true
     const hay = scenarioHaystack(s).toLowerCase()
     return hay.includes(q)
   })
+}
+
+function indexEntry(id: string | null): IndexReport | undefined {
+  return id ? index?.reports.find((r) => r.id === id) : undefined
 }
 
 function paintThemeButton(
@@ -170,7 +208,7 @@ function paintThemeButton(
 
 function renderShell(): void {
   const c = counts()
-  const total = report.scenarios.length
+  const total = c.success + c.warn + c.error
   const theme = getPreferredTheme()
   const mode = currentMode()
 
@@ -185,7 +223,7 @@ function renderShell(): void {
       </div>
       <div class="search-wrap">
         <span class="search-icon" aria-hidden="true">⌕</span>
-        <input type="search" id="search" placeholder="Search scenarios, facts…" value="${escapeAttr(state.query)}" aria-label="Search scenarios" autocomplete="off"/>
+        <input type="search" id="search" placeholder="${index ? 'Search reports, scenarios…' : 'Search scenarios, facts…'}" value="${escapeAttr(state.query)}" aria-label="Search scenarios" autocomplete="off"/>
         <span class="kbd">/</span>
       </div>
       <div class="filters" role="group" aria-label="Status filters">
@@ -204,9 +242,9 @@ function renderShell(): void {
       </div>
     </header>
     <div class="shell${state.sidebarCollapsed ? ' sidebar-collapsed' : ''}">
-      <aside class="sidebar" id="sidebar" aria-label="Scenarios">
+      <aside class="sidebar" id="sidebar" aria-label="${index ? 'Reports' : 'Scenarios'}">
         <div class="sidebar-head">
-          <p class="sidebar-title">Scenarios · ${total}</p>
+          <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : `Scenarios · ${total}`}</p>
           <button type="button" class="icon-btn sidebar-toggle" id="btn-sidebar" aria-controls="sidebar"
             aria-expanded="${!state.sidebarCollapsed}" aria-label="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}"
             title="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}">${escapeHtml(sidebarToggleGlyph(state.sidebarCollapsed))}</button>
@@ -216,7 +254,7 @@ function renderShell(): void {
           <span class="w" style="width:${(c.warn / total) * 100 || 0}%"></span>
           <span class="e" style="width:${(c.error / total) * 100 || 0}%"></span>
         </div>
-        <ul class="scenario-nav" id="scenario-nav"></ul>
+        <ul class="scenario-nav${index ? ' index-nav' : ''}" id="scenario-nav"></ul>
       </aside>
       <main class="main" id="main"></main>
       ${inspectorMarkup()}
@@ -435,6 +473,10 @@ function bindChrome(): void {
 }
 
 function renderNav(): void {
+  if (index) {
+    renderIndexNav(index)
+    return
+  }
   const list = document.querySelector('#scenario-nav')!
   // Rebuilding the list drops focus; a nav button that had it gets it back (the selected one).
   const hadFocus = list.contains(document.activeElement)
@@ -464,6 +506,116 @@ function renderNav(): void {
     btn.addEventListener('click', () => selectScenario(btn.dataset.nav!))
   })
   if (hadFocus) selectedNavButton()?.focus()
+}
+
+/**
+ * Index page: one group per report, failed reports first. A group lists its scenarios
+ * when it is expanded (the open report always is) or while a search is typed. Choosing a
+ * scenario in another report loads that report.
+ */
+function renderIndexNav(manifest: IndexManifest): void {
+  const list = document.querySelector('#scenario-nav')!
+  const hadFocus = list.contains(document.activeElement)
+  const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.navKey
+  const matchesLoaded = (scenarioId: string, q: string) => {
+    const s = report.scenarios.find((item) => item.id === scenarioId)
+    return s ? scenarioHaystack(s).toLowerCase().includes(q) : false
+  }
+  list.innerHTML = indexNavHtml(manifest, {
+    reportId,
+    selectedId: state.selectedId,
+    expanded: state.expanded,
+    query: state.query,
+    status: state.status,
+    collapsed: state.sidebarCollapsed,
+    matchesLoaded,
+  })
+
+  list.querySelectorAll<HTMLButtonElement>('[data-group]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.group!
+      if (state.expanded.has(id)) state.expanded.delete(id)
+      else state.expanded.add(id)
+      renderNav()
+    })
+  })
+  list.querySelectorAll<HTMLButtonElement>('[data-nav]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const rid = btn.dataset.report!
+      const sid = btn.dataset.nav!
+      if (rid === reportId) selectScenario(sid)
+      else void openReport(rid, { reportId: rid, scenarioId: sid })
+    })
+  })
+  if (hadFocus) {
+    const again = focusKey
+      ? [...list.querySelectorAll<HTMLElement>('[data-nav-key]')].find((el) => el.dataset.navKey === focusKey)
+      : null
+    ;(again ?? selectedNavButton())?.focus()
+  }
+}
+
+/**
+ * Index page: load a report's data and show it, at the scenario (and message) the
+ * reference names, else its first scenario. Shows a loading state meanwhile and an
+ * error when the data script cannot be loaded.
+ */
+async function openReport(id: string, ref?: HashRef, scroll = true): Promise<void> {
+  const entry = indexEntry(id)
+  if (!entry) return
+  if (!entry.data) {
+    window.location.href = entry.href
+    return
+  }
+  loadingReportId = id
+  state.expanded.add(id)
+  const main = document.querySelector('#main')!
+  if (reportId !== id) {
+    main.innerHTML = `<div class="empty" role="status"><p>Loading ${escapeHtml(entry.title)}…</p></div>`
+  }
+  let data: ReportData
+  try {
+    data = await loadReportData(entry)
+  } catch {
+    if (loadingReportId !== id) return
+    loadingReportId = null
+    main.innerHTML = `<div class="empty" role="alert"><p>Could not load ${escapeHtml(entry.title)}. Its data file, <code>${escapeHtml(entry.data)}</code>, should be next to this page.</p></div>`
+    return
+  }
+  if (loadingReportId !== id) return
+  loadingReportId = null
+  if (reportId !== id) {
+    if (inspector?.isOpen()) {
+      switchingScenario = true
+      inspector.close()
+      switchingScenario = false
+    }
+    forgetDiagrams()
+    report = data.report
+    reportId = id
+    reportPayloadsSrc = data.payloadsSrc
+    renderedId = null
+    document.title = `${report.title} · ${index?.title ?? 'LSD reports'}`
+  }
+  const wanted = ref?.scenarioId && report.scenarios.some((s) => s.id === ref.scenarioId) ? ref.scenarioId : null
+  // A failed report opens at its first failure.
+  state.selectedId =
+    wanted ?? report.scenarios.find((s) => s.status === 'error')?.id ?? defaultScenarioId(report.scenarios)
+  if (wanted) revealFiltered(wanted)
+  renderNav()
+  renderMain()
+  if (scroll) scrollToScenario()
+  if (ref?.messageId && wanted) applyRef({ scenarioId: wanted, messageId: ref.messageId })
+}
+
+/** A linked scenario the filters hide is shown anyway: clear them. */
+function revealFiltered(scenarioId: string): void {
+  if (filtered().some((s) => s.id === scenarioId)) return
+  state.query = ''
+  for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
+  const search = document.querySelector<HTMLInputElement>('#search')
+  if (search) search.value = ''
+  document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
 }
 
 function selectedNavButton(): HTMLButtonElement | null {
@@ -502,8 +654,12 @@ function scrollToScenario(): void {
 }
 
 function heroHtml(): string {
+  const back = index
+    ? `<p class="hero-index">${escapeHtml(index.title)} · report ${index.reports.findIndex((r) => r.id === reportId) + 1} of ${index.reports.length}</p>`
+    : ''
   return `
     <div class="report-hero">
+      ${back}
       <h1>${escapeHtml(report.title)}</h1>
       <div class="meta">
         <span>Generated ${escapeHtml(formatGeneratedAt(report.generatedAt))}</span>
@@ -519,6 +675,12 @@ function heroHtml(): string {
  */
 function renderMain(): void {
   const main = document.querySelector('#main')!
+  if (index && !reportId) {
+    if (!loadingReportId) {
+      main.innerHTML = `<div class="empty" role="status"><p>${index.reports.length ? 'Choose a report.' : 'No reports have been written to this directory yet.'}</p></div>`
+    }
+    return
+  }
   const items = filtered()
   const next = reselect(report.scenarios, items, state.selectedId)
   if (next !== state.selectedId && next) {
@@ -703,17 +865,25 @@ function openMessage(scenario: Scenario, msg: MessageEvent): void {
 function applyHash(): void {
   if (writingHash) return
   const ref = parseReportHash(window.location.hash)
+  if (index) {
+    const id = ref?.reportId && indexEntry(ref.reportId) ? ref.reportId : reportId ? null : defaultReportId(index)
+    if (id && id !== reportId) {
+      // The first report opens where the page starts; a later link scrolls to its scenario.
+      void openReport(id, ref ?? undefined, booted)
+      return
+    }
+    if (!ref || ref.reportId !== reportId) return
+  }
   if (!ref) return
+  applyRef(ref)
+}
+
+/** Show the scenario a reference names in the open report, and open its message when it names one. */
+function applyRef(ref: HashRef): void {
   const scenario = report.scenarios.find((item) => item.id === ref.scenarioId)
   if (!scenario) return
   // A scenario the filters hide is shown anyway: the link asked for it.
-  if (!filtered().some((s) => s.id === scenario.id)) {
-    state.query = ''
-    for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
-    const search = document.querySelector<HTMLInputElement>('#search')
-    if (search) search.value = ''
-    document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
-  }
+  revealFiltered(scenario.id)
   if (renderedId !== scenario.id) selectScenario(scenario.id)
   if (!ref.messageId) return
   const msg = findMessage(scenario, ref.messageId)
@@ -736,7 +906,11 @@ function messageFromNode(node: Element): { scenarioId: string; message: MessageE
 }
 
 async function loadMessagePayload(scenarioId: string, messageId: string): Promise<unknown> {
-  const map = await loadExternalPayloads(report === sampleReport)
+  const map = index
+    ? reportPayloadsSrc
+      ? await loadPayloadsFrom(reportPayloadsSrc)
+      : {}
+    : await loadExternalPayloads(report === sampleReport)
   const key = payloadKey(scenarioId, messageId)
   if (key in map) return map[key]
   return undefined
@@ -832,6 +1006,7 @@ function onKey(e: KeyboardEvent): void {
 // The head script already set it before first paint; this keeps the two in step.
 applyTheme(getPreferredTheme())
 followOsTheme((theme) => paintThemeButton({ mode: 'auto', theme }))
+if (index) document.title = index.title
 renderShell()
 applyHash()
 booted = true

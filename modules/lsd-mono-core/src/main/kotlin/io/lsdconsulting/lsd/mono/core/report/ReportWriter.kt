@@ -1,8 +1,15 @@
 package io.lsdconsulting.lsd.mono.core.report
 
+import io.lsdconsulting.lsd.mono.core.LsdVersion
 import io.lsdconsulting.lsd.mono.core.ReportFiles
 import io.lsdconsulting.lsd.mono.core.html.Html
+import io.lsdconsulting.lsd.mono.core.json.JsonArray
+import io.lsdconsulting.lsd.mono.core.json.JsonNumber
+import io.lsdconsulting.lsd.mono.core.json.JsonObject
+import io.lsdconsulting.lsd.mono.core.json.JsonString
+import io.lsdconsulting.lsd.mono.core.json.JsonValue
 import io.lsdconsulting.lsd.mono.core.json.jsonString
+import io.lsdconsulting.lsd.mono.core.json.render
 import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.core.model.IndexScenario
@@ -18,6 +25,7 @@ import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.core.model.forShell
 import io.lsdconsulting.lsd.mono.core.model.shellPayloadScript
 import io.lsdconsulting.lsd.mono.core.model.toJson
+import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import java.io.File
 import java.io.StringWriter
 import java.nio.channels.FileChannel
@@ -28,6 +36,8 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.Properties
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
@@ -56,6 +66,7 @@ internal object ReportWriter {
     private const val INDEX_DIR = ".lsd-index"
     private const val INDEX_LOCK = ".lock"
     private const val INDEX_FORMAT = "2"
+    private const val INDEX_TITLE = "LSD reports"
     private const val MAX_TITLE_CHARS = 80
     private val jvmIndexLock = ReentrantLock()
 
@@ -105,19 +116,22 @@ internal object ReportWriter {
         writeAtomically(jsonPath, report.toJson())
         writeAtomically(diagramPath, shell)
         writeAtomically(htmlPath, renderMinimalHtml(report, diagramName, jsonName))
-        writeIndexEntry(
-            outputDir,
-            ReportFile(
-                filename = diagramName,
-                title = report.title,
-                status = report.status,
-                counts = ScenarioCounts.of(report.scenarios.map { it.status }),
-                stem = stem,
-                dataScript = dataName,
-                scenarios = report.scenarios.map { IndexScenario(it.id, it.title, it.status, it.events.count { e -> e is MessageEventJson }) },
-            ),
-        )
+        writeIndexEntry(outputDir, indexEntry(report, reportKey))
         return ReportFiles(diagramHtml = diagramPath, listingHtml = htmlPath, reportJson = jsonPath)
+    }
+
+    /** What the index lists for a report written with [writeReport]. */
+    fun indexEntry(report: ReportJson, reportKey: String? = null): ReportFile {
+        val stem = reportFileStem(report.title, reportKey)
+        return ReportFile(
+            filename = "$stem-diagram.html",
+            title = report.title,
+            status = report.status,
+            counts = ScenarioCounts.of(report.scenarios.map { it.status }),
+            stem = stem,
+            dataScript = "$stem-report.js",
+            scenarios = report.scenarios.map { IndexScenario(it.id, it.title, it.status, it.events.count { e -> e is MessageEventJson }) },
+        )
     }
 
     /**
@@ -151,164 +165,57 @@ internal object ReportWriter {
 
     private val STATUS_ORDER = listOf("error", "warn", "success")
 
-    private fun statusText(status: String): String =
-        when (status) {
-            "error" -> "Failed"
-            "warn" -> "Warning"
-            "success" -> "Passed"
-            else -> status
-        }
-
-    private fun statusIcon(status: String): String =
-        when (status) {
-            "error" -> "✕"
-            "warn" -> "!"
-            "success" -> "✓"
-            else -> "·"
-        }
-
+    /**
+     * The index page: the report shell with a manifest of every report in
+     * `window.__LSD_INDEX__`. Each report's data loads from its `<stem>-report.js` when it is
+     * opened, so the page stays small however many reports the directory holds.
+     */
     internal fun renderIndex(reportFiles: List<ReportFile>): String {
-        val totals = reportFiles.fold(ScenarioCounts()) { acc, rf -> acc + rf.counts }
-        val failedReports = reportFiles.count { it.status == "error" }
-        val failedOnlyStateHtml = if (failedReports == 0) " disabled" else ""
-        val rowsHtml =
-            reportFiles.joinToString("\n") { rf ->
-                val c = rf.counts
-                val stem = rf.filename.removeSuffix("-diagram.html").takeIf { rf.filename.endsWith("-diagram.html") }
-                val dataLinkHtml = stem?.let { """ <a class="data" href="${Html.attribute("$it-report.json")}">JSON</a>""" }.orEmpty()
-                val countsHtml =
-                    if (c.total == 0) {
-                        "<span class=\"none\">—</span>"
-                    } else {
-                        listOf("success" to c.success, "warn" to c.warn, "error" to c.error)
-                            .filter { it.second > 0 }
-                            .joinToString(
-                                " ",
-                            ) { (s, n) ->
-                                """<span class="count ${Html.attribute(
-                                    s,
-                                )}">${Html.text("${statusIcon(s)} $n ${statusText(s).lowercase()}")}</span>"""
-                            }
-                    }
-                """
-                <tr data-status="${Html.attribute(rf.status)}" data-title="${Html.attribute(rf.title.lowercase())}">
-                  <td><span class="badge ${Html.attribute(
-                    rf.status,
-                )}"><span aria-hidden="true">${Html.text(statusIcon(rf.status))}</span> ${Html.text(statusText(rf.status))}</span></td>
-                  <th scope="row"><a href="${Html.attribute(rf.filename)}">${Html.text(rf.title)}</a>$dataLinkHtml</th>
-                  <td class="num">${Html.text(c.total.toString())}</td>
-                  <td>$countsHtml</td>
-                </tr>
-                """.trimIndent()
-            }
-        val summary =
-            "${reportFiles.size} report${if (reportFiles.size == 1) "" else "s"} · ${totals.total} scenario${if (totals.total == 1) "" else "s"}: " +
-                "${totals.success} passed, ${totals.warn} with warnings, ${totals.error} failed"
-        return """
-            <!DOCTYPE html>
-            <html lang="en" data-theme="dark">
-            <head>
-              <meta charset="UTF-8"/>
-              <meta name="viewport" content="width=device-width, initial-scale=1"/>
-              <meta name="color-scheme" content="dark light"/>
-              <script>
-                try {
-                  var t = localStorage.getItem('lsd-report-theme')
-                  if (t !== 'dark' && t !== 'light' && t !== 'contrast') {
-                    t = matchMedia('(prefers-contrast: more)').matches ? 'contrast'
-                      : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
-                  }
-                  document.documentElement.setAttribute('data-theme', t)
-                } catch (e) {}
-              </script>
-              <title>LSD Mono reports</title>
-              <style>
-                :root, [data-theme="dark"] { color-scheme: dark; --bg: oklch(0.16 0.02 250); --surface: oklch(0.23 0.028 250);
-                  --border: oklch(0.35 0.03 250 / 0.7); --text: oklch(0.95 0.01 250); --muted: oklch(0.72 0.02 250);
-                  --accent: oklch(0.82 0.16 175); --success: oklch(0.72 0.17 150); --warn: oklch(0.82 0.14 85); --error: oklch(0.74 0.17 25); }
-                [data-theme="light"] { color-scheme: light; --bg: oklch(0.97 0.01 250); --surface: oklch(1 0 0);
-                  --border: oklch(0.88 0.015 250); --text: oklch(0.22 0.03 250); --muted: oklch(0.42 0.025 250);
-                  --accent: oklch(0.45 0.12 175); --success: oklch(0.46 0.13 150); --warn: oklch(0.48 0.12 80); --error: oklch(0.48 0.17 25); }
-                [data-theme="contrast"] { color-scheme: light; --bg: #fff; --surface: #fff; --border: #000; --text: #000; --muted: #000;
-                  --accent: #000; --success: #064e3b; --warn: #78350f; --error: #7f1d1d; }
-                * { box-sizing: border-box; }
-                body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5;
-                  font: 15px/1.5 "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif; }
-                main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
-                h1 { font-size: 1.6rem; margin: 0 0 4px; }
-                .summary { color: var(--muted); margin: 0 0 16px; }
-                .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-                #filter { flex: 1 1 240px; min-width: 0; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
-                  background: var(--surface); color: var(--text); font: inherit; }
-                .tools label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); white-space: nowrap; }
-                a { color: var(--accent); }
-                a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-                table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-                caption { text-align: left; padding: 0 0 8px; color: var(--muted); }
-                th, td { border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
-                thead th { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
-                tbody th { font-weight: 600; }
-                tr:last-child > * { border-bottom: 0; }
-                .num { text-align: right; font-variant-numeric: tabular-nums; }
-                .badge { display: inline-block; white-space: nowrap; padding: 1px 10px; border-radius: 999px; border: 1px solid currentColor; font-size: .85rem; font-weight: 600; }
-                .badge.success, .count.success { color: var(--success); }
-                .badge.warn, .count.warn { color: var(--warn); }
-                .badge.error, .count.error { color: var(--error); }
-                .count { white-space: nowrap; margin-right: 8px; font-size: .9rem; }
-                .data { margin-left: 8px; font-weight: 400; font-size: .85rem; color: var(--muted); }
-                .none, .empty { color: var(--muted); }
-                [data-theme="contrast"] table, [data-theme="contrast"] .badge { border-width: 2px; }
-                @media (max-width: 560px) {
-                  main { padding: 16px 10px 32px; }
-                  thead { display: none; }
-                  table, caption, tbody, tr, th, td { display: block; width: 100%; }
-                  caption { padding: 8px 12px; }
-                  tr { border-bottom: 1px solid var(--border); padding: 8px 0; }
-                  th, td { border: 0; padding: 2px 12px; }
-                  td.num { display: none; }
-                }
-              </style>
-            </head>
-            <body>
-              <main>
-                <h1>LSD Mono reports</h1>
-                <p class="summary" id="summary">${Html.text(summary)}</p>
-                <div class="tools">
-                  <input type="search" id="filter" placeholder="Filter reports by title" aria-label="Filter reports by title" autocomplete="off"/>
-                  <label><input type="checkbox" id="failed-only"$failedOnlyStateHtml/> Failed only (${Html.text(failedReports.toString())})</label>
-                </div>
-                <table>
-                  <caption>Failed reports first. Each title opens that report's sequence diagrams.</caption>
-                  <thead><tr><th scope="col">Status</th><th scope="col">Report</th><th scope="col" class="num">Scenarios</th><th scope="col">Outcomes</th></tr></thead>
-                  <tbody>
-                  $rowsHtml
-                  </tbody>
-                </table>
-                <p class="empty" id="no-match" hidden>No reports match the filter.</p>
-              </main>
-              <script>
-                (function () {
-                  var filter = document.getElementById('filter')
-                  var failed = document.getElementById('failed-only')
-                  var rows = Array.prototype.slice.call(document.querySelectorAll('tbody tr'))
-                  function apply() {
-                    var q = filter.value.trim().toLowerCase()
-                    var shown = 0
-                    rows.forEach(function (row) {
-                      var ok = (!q || row.getAttribute('data-title').indexOf(q) >= 0) &&
-                        (!failed.checked || row.getAttribute('data-status') === 'error')
-                      row.hidden = !ok
-                      if (ok) shown++
-                    })
-                    document.getElementById('no-match').hidden = shown > 0
-                  }
-                  filter.addEventListener('input', apply)
-                  failed.addEventListener('change', apply)
-                })()
-              </script>
-            </body>
-            </html>
-            """.trimIndent()
+        val manifest =
+            JsonObject(
+                listOf(
+                    "title" to JsonString(INDEX_TITLE),
+                    "generatedAt" to JsonString((LsdProperties.generatedAt() ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString()),
+                    "generator" to JsonString(LsdVersion.generator),
+                    "reports" to JsonArray(reportFiles.map(::manifestEntry)),
+                ),
+            )
+        return injectIntoShell("<script>window.__LSD_INDEX__=${manifest.render().trim()};</script>\n")
+            .replaceFirst(Regex("<title>[^<]*</title>"), "<title>${Html.text(INDEX_TITLE)}</title>")
+    }
+
+    private fun manifestEntry(rf: ReportFile): JsonValue {
+        val id = rf.stem ?: rf.filename
+        val fields =
+            mutableListOf<Pair<String, JsonValue>>(
+                "id" to JsonString(id),
+                "title" to JsonString(rf.title),
+                "status" to JsonString(rf.status),
+                "href" to JsonString(rf.filename),
+                "counts" to
+                    JsonObject(
+                        listOf(
+                            "success" to JsonNumber(rf.counts.success.toString()),
+                            "warn" to JsonNumber(rf.counts.warn.toString()),
+                            "error" to JsonNumber(rf.counts.error.toString()),
+                        ),
+                    ),
+                "scenarios" to
+                    JsonArray(
+                        rf.scenarios.map {
+                            JsonObject(
+                                listOf(
+                                    "id" to JsonString(it.id),
+                                    "title" to JsonString(it.title),
+                                    "status" to JsonString(it.status),
+                                    "messages" to JsonNumber(it.messages.toString()),
+                                ),
+                            )
+                        },
+                    ),
+            )
+        rf.dataScript?.let { fields.add(4, "data" to JsonString(it)) }
+        return JsonObject(fields)
     }
 
     private fun writeIndexEntry(outputDir: File, entry: ReportFile) {
@@ -458,13 +365,17 @@ internal object ReportWriter {
      * lone surrogates, so no report text can close the script element.
      */
     private fun renderShell(report: ReportJson, payloadsFile: String?): String {
-        val template = readShellTemplate()
         val src =
             if (payloadsFile == null)
                 ""
             else
                 "window.__LSD_PAYLOADS_SRC__=${jsonString(payloadsFile)};"
-        val injection = "<script>${src}window.__LSD_REPORT__=${report.toJson().trim()};</script>\n"
+        return injectIntoShell("<script>${src}window.__LSD_REPORT__=${report.toJson().trim()};</script>\n")
+    }
+
+    /** The packaged shell with [injection] placed before its first script. */
+    private fun injectIntoShell(injection: String): String {
+        val template = readShellTemplate()
         val marker = "<script>"
         val idx = template.indexOf(marker)
         return if (idx < 0) injection + template else template.substring(0, idx) + injection + template.substring(idx)

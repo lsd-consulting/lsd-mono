@@ -167,6 +167,7 @@ class HtmlEscapingGuardTest {
             listOf(
                 Allowed("report/ReportWriter.kt", "src", "a script statement whose only value is written by jsonString"),
                 Allowed("report/ReportWriter.kt", "report.toJson().trim()", "JSON whose strings are written by jsonString, which escapes <, > and &"),
+                Allowed("report/ReportWriter.kt", "manifest.render().trim()", "the index manifest: JSON whose strings are written by jsonString"),
             )
 
         /** (path relative to the repository, text) for every module's `src/main` Kotlin. */

@@ -97,7 +97,7 @@ class HtmlEscapingTest {
                 assertFalse(text.contains(raw), "${file.name} contains raw $raw")
             }
             assertFalse(text.contains('\uD800'), "${file.name} contains a lone surrogate")
-            if (!file.name.endsWith(".html") || file.name.endsWith("-diagram.html")) {
+            if (!file.name.endsWith(".html") || file.name.endsWith("-diagram.html") || file.name == "index.html") {
                 assertFalse(text.contains('\u2028') || text.contains('\u2029'), "${file.name} has a raw line separator in script")
             }
         }
@@ -109,7 +109,8 @@ class HtmlEscapingTest {
         assertTrue(report.contains("<title>${escapedText("Report")}</title>"), report)
 
         val index = files.single { it.name == "index.html" }.let(Files::readString)
-        assertTrue(index.contains(">${escapedText("Report")}</a>"), index)
+        assertTrue(index.contains("window.__LSD_INDEX__="), index.take(500))
+        assertTrue(index.contains("<title>LSD reports</title>"), "the index page title is fixed, not a report's")
 
         val diagram = files.single { it.name.endsWith("-diagram.html") }.let(Files::readString)
         val injected = diagram.substringAfter("<script>").substringBefore("</script>")

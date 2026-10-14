@@ -63,7 +63,14 @@ export {
   shortLabelAnchor,
   shortMessageEndpoints,
 } from './diagram/shapes'
-export { type DiagramFrame, type DiagramView, type MountedDiagram, type RowPaint, diagramView } from './diagram/state'
+export {
+  type DiagramFrame,
+  type DiagramView,
+  type MountedDiagram,
+  type RowPaint,
+  diagramView,
+  forgetDiagrams,
+} from './diagram/state'
 export {
   applyDiagramFrame,
   bindDiagramScroll,

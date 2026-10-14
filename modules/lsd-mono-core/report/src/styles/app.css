@@ -367,6 +367,73 @@ html {
   display: none;
 }
 
+/* Index page: one group per report, its scenarios under it. */
+.index-nav .nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.index-nav .nav-group-head {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.index-nav .nav-group-head:hover {
+  background: var(--surface);
+}
+.index-nav .nav-group-head:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.index-nav .nav-group.current > .nav-group-head {
+  border-color: var(--border);
+}
+.nav-group-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.index-nav .nav-group-head .nav-meta {
+  display: block;
+}
+.nav-group-caret {
+  color: var(--text-faint);
+  font-size: 12px;
+  line-height: 20px;
+}
+.nav-group-items {
+  list-style: none;
+  margin: 0 0 6px 14px;
+  padding: 0 0 0 8px;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-empty {
+  color: var(--text-muted);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.hero-index {
+  margin: 0 0 4px;
+  color: var(--text-faint);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .sidebar-head {
   display: flex;
   align-items: center;
@@ -917,6 +984,9 @@ html {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
+  .scenario-nav.index-nav {
+    display: flex;
+  }
   .kbd {
     display: none;
   }
@@ -957,6 +1027,22 @@ html {
     gap: 5px;
     padding: 8px 0;
     text-align: center;
+  }
+  .sidebar-collapsed .nav-group-head {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 8px 0;
+  }
+  .sidebar-collapsed .nav-group-head .dot {
+    margin-top: 0;
+  }
+  .sidebar-collapsed .nav-group-caret {
+    display: none;
+  }
+  .sidebar-collapsed .nav-group-items {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
   }
   .sidebar-collapsed .scenario-nav .dot {
     margin-top: 0;

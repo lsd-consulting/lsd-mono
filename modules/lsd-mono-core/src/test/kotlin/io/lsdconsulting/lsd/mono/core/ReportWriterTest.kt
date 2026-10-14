@@ -128,10 +128,10 @@ class ReportWriterTest {
             val fromB = tempDir.resolve("index.html").readText()
             forkA.createIndex()
             val fromA = tempDir.resolve("index.html").readText()
-            listOf(fromA, fromB).forEach { index ->
+            listOf(fromA, fromB).map(::manifest).forEach { index ->
                 assertTrue(index.contains("Fork A") && index.contains("Fork B"), index)
             }
-            assertTrue(fromA.indexOf("Fork A") < fromA.indexOf("Fork B"), "sorted by title")
+            assertTrue(manifest(fromA).indexOf("Fork A") < manifest(fromA).indexOf("Fork B"), "sorted by title")
             assertFalse(fromA.contains("lsd-report.single.html"), "no shared latest link")
         } finally {
             System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
@@ -144,32 +144,33 @@ class ReportWriterTest {
         ReportWriter.writeReport(report("Kept"), tempDir.toFile())
         Files.delete(gone)
         val extra = ReportFile(filename = "elsewhere.html", title = "Extra", status = "warn")
-        val index = ReportWriter.writeIndex(listOf(extra), tempDir.toFile()).readText()
+        val index = manifest(ReportWriter.writeIndex(listOf(extra), tempDir.toFile()).readText())
         assertFalse(index.contains("Gone"), index)
         assertTrue(index.contains("Kept"), index)
-        assertTrue(index.contains("""<a href="elsewhere.html">Extra</a>"""), index)
+        assertTrue(index.contains(""""id":"elsewhere.html","title":"Extra","status":"warn","href":"elsewhere.html""""), index)
     }
 
     @Test
     fun `index escapes titles`() {
-        val index =
-            ReportWriter.writeIndex(listOf(ReportFile("x.html", "<b>bold</b> & co", "success")), tempDir.toFile()).readText()
-        assertTrue(index.contains("&lt;b&gt;bold&lt;/b&gt; &amp; co"), index)
+        val page = ReportWriter.writeIndex(listOf(ReportFile("x.html", "<b>bold</b> </script> & co", "success")), tempDir.toFile()).readText()
+        val index = manifest(page)
+        assertFalse(index.contains("</script>") || index.contains("<b>"), index)
+        assertTrue(index.contains("bold"), index)
     }
 
     @Test
     fun `index links each report to its diagram, lists failed reports first and counts scenarios`() {
         ReportWriter.writeReport(report("Alpha", scenarioCount = 2), tempDir.toFile())
         ReportWriter.writeReport(report("Zulu", scenarioCount = 3, failing = 1), tempDir.toFile())
-        val index = ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText()
+        val page = ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText()
+        val index = manifest(page)
         val zulu = ReportWriter.reportFileStem("Zulu")
-        assertTrue(index.contains("""<a href="$zulu-diagram.html">Zulu</a>"""), index)
-        assertTrue(index.contains("""href="$zulu-report.json""""), index)
+        assertTrue(index.contains(""""id":"$zulu","title":"Zulu","status":"error","href":"$zulu-diagram.html","data":"$zulu-report.js""""), index)
+        assertTrue(index.contains(""""counts":{"success":2,"warn":0,"error":1}"""), index)
+        assertTrue(index.contains("""{"id":"s0","title":"scenario 0","status":"error","messages":0}"""), index)
         assertTrue(index.indexOf("Zulu") < index.indexOf("Alpha"), "failed first")
-        assertTrue(index.contains("2 reports · 5 scenarios: 4 passed, 0 with warnings, 1 failed"), index)
-        assertTrue(index.contains("✕ 1 failed"), index)
-        assertTrue(index.contains("""name="viewport""""), index)
-        assertTrue(index.contains("lsd-report-theme"), index)
+        assertTrue(page.contains("""name="viewport""""), "the index is the report shell")
+        assertFalse(page.contains("window.__LSD_REPORT__="), "no report is embedded in the index")
     }
 
     @Test
@@ -195,9 +196,17 @@ class ReportWriterTest {
         Files.createDirectories(dir)
         tempDir.resolve("old-report.html").writeText("old")
         dir.resolve("old-report.properties").writeText("filename=old-report.html\ntitle=Old\nstatus=success\n")
-        val index = ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText()
-        assertFalse(index.contains("Old"), index)
+        val index = manifest(ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText())
+        assertTrue(index.contains(""""reports":[]"""), index)
     }
+
+    /** The manifest the index page carries, compacted so assertions need not follow its layout. */
+    private fun manifest(page: String): String =
+        page
+            .substringAfter("window.__LSD_INDEX__=")
+            .substringBefore(";</script>")
+            .replace(Regex("\\s*\n\\s*"), "")
+            .replace("\": ", "\":")
 
     private fun report(title: String, scenarioCount: Int = 0, failing: Int = 0): ReportJson =
         ReportJson(

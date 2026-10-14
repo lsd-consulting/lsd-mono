@@ -20,6 +20,12 @@ export const diagramState = {
   movingFocus: false,
 }
 
+/** Forget every diagram and its view: another report's scenarios may reuse the same ids. */
+export function forgetDiagrams(): void {
+  diagramState.mounted.clear()
+  diagramState.views.clear()
+}
+
 export interface MountedDiagram {
   scenario: Scenario
   rows: LayoutRow[]

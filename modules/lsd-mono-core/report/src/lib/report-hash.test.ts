@@ -77,4 +77,18 @@ describe('writeReportHash', () => {
     writeReportHash(loc, { scenarioId: 'b' })
     expect(loc.hash).toBe('#scenario=b')
   })
+
+  it('names the report on the index page', () => {
+    const scenario = { reportId: 'Checkout-tests-1a2b3c4d', scenarioId: 's1' }
+    const message = { ...scenario, messageId: 'm/2' }
+    expect(reportHash(scenario)).toBe('#report=Checkout-tests-1a2b3c4d&scenario=s1')
+    expect(reportHash(message)).toBe('#report=Checkout-tests-1a2b3c4d&msg=s1/m%2F2')
+    expect(reportHash({ reportId: 'r&1', scenarioId: '' })).toBe('#report=r%261')
+    expect(parseReportHash(reportHash(scenario))).toEqual(scenario)
+    expect(parseReportHash(reportHash(message))).toEqual(message)
+    expect(parseReportHash('#report=r%261')).toEqual({ reportId: 'r&1', scenarioId: '' })
+    expect(parseReportHash('#report=')).toBeNull()
+    expect(parseReportHash('#report=r&bogus')).toBeNull()
+    expect(parseReportHash('#report=r&report=s')).toBeNull()
+  })
 })

@@ -63,9 +63,9 @@ class MultiScenarioStatusGoldenTest {
         assertEquals(2, count(scrubbed, """"status": "error""""))
 
         val index = tempDir.resolve("index.html").readText()
-        assertTrue(index.contains("""data-status="error""""), "index should use the error rollup")
-        assertTrue(index.contains(""" Failed</span>"""), "index status cell should say Failed")
-        assertTrue(index.contains("1 passed, 1 with warnings, 1 failed"), "index should count the three scenarios")
+        val manifest = index.substringAfter("window.__LSD_INDEX__=").substringBefore(";</script>").replace(Regex("\\s+"), "")
+        assertTrue(manifest.contains(""""status":"error","href""""), "index should use the error rollup")
+        assertTrue(manifest.contains(""""counts":{"success":1,"warn":1,"error":1}"""), "index should count the three scenarios")
     }
 
     private fun count(text: String, needle: String): Int = Regex(Regex.escape(needle)).findAll(text).count()

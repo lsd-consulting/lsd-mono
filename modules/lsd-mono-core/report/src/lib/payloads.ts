@@ -93,9 +93,41 @@ export function shellParts(report: Report, payloadsSrc: string): ShellParts {
 
 let payloadsPromise: Promise<Record<string, unknown>> | null = null
 
+/** Payloads by script, for the index page, where several reports load their own. */
+const payloadsBySrc = new Map<string, Promise<Record<string, unknown>>>()
+/** Payload scripts all assign `__LSD_PAYLOADS__`, so they load one at a time. */
+let payloadQueue: Promise<unknown> = Promise.resolve()
+
+/**
+ * Bodies from one report's payload script (`<stem>-payloads.js`), on the index page.
+ * Each script assigns the same global, so loads are queued and each result is kept
+ * under its script name before the next one runs.
+ */
+export function loadPayloadsFrom(src: string): Promise<Record<string, unknown>> {
+  let pending = payloadsBySrc.get(src)
+  if (!pending) {
+    pending = payloadQueue.then(async () => {
+      const before = window.__LSD_PAYLOADS__
+      window.__LSD_PAYLOADS__ = undefined
+      try {
+        await injectPayloadScript(src)
+        return window.__LSD_PAYLOADS__ ?? {}
+      } finally {
+        window.__LSD_PAYLOADS__ = before
+      }
+    })
+    pending.catch(() => payloadsBySrc.delete(src))
+    payloadsBySrc.set(src, pending)
+    payloadQueue = pending.catch(() => undefined)
+  }
+  return pending
+}
+
 /** Test hook. The report page loads once. */
 export function resetPayloadCache(): void {
   payloadsPromise = null
+  payloadsBySrc.clear()
+  payloadQueue = Promise.resolve()
 }
 
 /**
@@ -147,7 +179,11 @@ function injectPayloadScript(src: string): Promise<void> {
     script.async = false
     script.setAttribute('data-lsd-payloads', src)
     script.onload = () => resolve()
-    script.onerror = () => reject(new Error(`Could not load payloads from ${src}`))
+    script.onerror = () => {
+      // Gone, so opening a message again tries the file again.
+      script.remove()
+      reject(new Error(`Could not load payloads from ${src}`))
+    }
     document.head.appendChild(script)
   })
 }
