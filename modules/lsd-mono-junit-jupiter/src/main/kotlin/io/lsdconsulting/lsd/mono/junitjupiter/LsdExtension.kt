@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ParameterResolver
 import org.junit.jupiter.api.extension.TestWatcher
 import java.lang.reflect.Method
 import java.util.Optional
-import java.util.regex.Pattern
 
 /**
  * JUnit Jupiter 6 extension that turns each test into an LSD scenario and writes
@@ -164,10 +163,14 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
     }
 }
 
+private val lowerUpper = Regex("([a-z])([A-Z])")
+private val upperLower = Regex("([A-Z])([a-z])")
+private val parentheses = Regex("[()]")
+
 internal fun String.deCamelCase(): String =
-    replace(Pattern.compile("([a-z])([A-Z])").toRegex(), "$1 $2")
-        .replace(Pattern.compile("([A-Z])([a-z])").toRegex(), " $1$2")
+    replace(lowerUpper, "$1 $2")
+        .replace(upperLower, " $1$2")
         .replace("  ", " ")
-        .replace(Pattern.compile("[()]").toRegex(), "")
+        .replace(parentheses, "")
         .trim()
         .lowercase()

@@ -50,6 +50,8 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     /** Fallback numbering when a row was not in a parsed source (start order). */
     private val outlineCounts = ConcurrentHashMap<String, Int>()
 
+    /** Set on Cucumber's thread; read on the threads that run steps. */
+    @Volatile
     private var splitByStep: Boolean = false
 
     override fun setEventPublisher(publisher: EventPublisher) {
