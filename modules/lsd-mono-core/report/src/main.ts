@@ -1,4 +1,5 @@
 import './styles/app.css'
+import './styles/timing.css'
 import './styles/diagram.css'
 import { sampleReport } from './data/sample-report'
 import type { MessageEvent, Report, Scenario, Status } from './types'
