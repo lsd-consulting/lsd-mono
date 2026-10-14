@@ -4,7 +4,7 @@
 
 Status: **complete**. Slices 1 to 8 are implemented (see "as built" under §6). Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
-Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
+Ground rules: unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
 Includes the REVIEW.md items folded into #3: `explicitApi()` and an ABI validator, `createdAt` missing from some builders, the `""` phantom-edge sentinel, `open LsdContext`, and the legacy property keys being kept in two places.
 

@@ -2,7 +2,7 @@
 
 Report UI for **lsd-mono-core**. Sources live in `modules/lsd-mono-core/report`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `dist/lsd-report.html` into the jar as `lsd-report.single.html`. Build output is not committed. The JVM façade injects captured `ReportJson` as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
 
-This is the live UI, not a separate experiment, and it is not published on its own.
+It is not published on its own.
 
 ## Tests
 
@@ -31,7 +31,7 @@ cd modules/lsd-mono-core/report
 npm run check:ux
 ```
 
-Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` stays manual, because its baselines are macOS screenshots and Linux CI renders fonts differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%. It refits when the panel width changes until you zoom in or out; Fit fills the width and turns refitting back on. Sections are `kind: "section"` rows with a jump list; the diagram stays one continuous scrollport with a sticky participant header.
+Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` stays manual, because its baselines are macOS screenshots and Linux CI renders fonts differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%. It refits when the panel width changes until you zoom in or out; Fit fills the width and turns refitting back on. Sections are `kind: "section"` rows with a jump list. A diagram taller than the screen extends the page: the stage is as tall as the drawing, the toolbar, participant header and minimap stay in view, and the page scroll drives the windowed painting (`src/lib/diagram/page-scroll.ts`). Horizontal scrolling stays inside the panel.
 
 ## Open the demo
 
@@ -95,6 +95,7 @@ The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG o
 |------------|----------------|-------------|
 | Sequence look | PlantUML mono SVG | Custom SVG with participant cards, activation bars, duration chips, glow-on-hover |
 | Message detail | CSS `:target` hash overlays | Side inspector + lazy payload + copy + type/from→to pills |
+| Timing | Durations on arrows | Accuracy per scenario, summary strip, swim lanes and waterfall; clock-ordered and guessed-pairing badges |
 | Navigation | Sticky chips + jump menu | Sidebar + status histogram + `j`/`k` keyboard nav, diagram Up/Down/Enter, minimap, and deep links |
 | Search | Scenario title filter | Title + description + facts, plus in-diagram message/note find |
 | Theme | Light-only GitHub-ish tokens | Auto follows the OS (dark, light, more contrast); a fixed choice persists until you pick Auto again |
@@ -102,7 +103,7 @@ The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG o
 | Offline chrome | CDN d3 / hljs / mark.js unless assets are embedded | No diagram CDN; fonts optional |
 | Accessibility | Partial | Focus rings, `aria-pressed` / `aria-current`, one tab stop with message navigation, real position metadata, reduced-motion, and axe checks |
 
-Remaining gaps: sprite includes and full PlantUML colour/skinparam fidelity are intentionally out; payload pretty-print/size limits and density modes remain open. Sections, short arrows, notes, delays, spacers, clickable arrows, the in-page component diagram, and the major accessibility checks are shipped.
+Not supported by design: PlantUML sprite includes and skinparam colours. Still open: a compact density mode. Sections, short arrows, notes, delays, spacers, clickable arrows, the in-page component diagram, and the major accessibility checks are shipped.
 
 ## Sample data
 

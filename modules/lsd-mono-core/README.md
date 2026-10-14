@@ -1,9 +1,9 @@
 # lsd-mono-core
 
-First-party **LSD Mono** core library. This is the greenfield product path:
-report UI in `report/` (Vite + TypeScript + custom SVG), plus a
-thin Kotlin/JVM capture and report façade so integrations (e.g.
-`lsd-mono-junit-jupiter`) can migrate off published Maven `lsd-core`.
+The core of LSD Mono: a Kotlin capture API (`LsdContext`), timing analysis, and the writer that
+produces the report JSON and the interactive HTML report. The report UI lives in `report/`
+(Vite, TypeScript and a custom SVG diagram). The JUnit, Cucumber and coroutines integrations
+depend on this module only.
 
 ## What this is / is not
 
@@ -12,7 +12,7 @@ thin Kotlin/JVM capture and report façade so integrations (e.g.
 | **Is** | Mono-owned artifact `lsd-mono-core`, package `io.lsdconsulting.lsd.mono.core` |
 | **Is** | Report UI in `report/` (`modules/lsd-mono-core/report`) |
 | **Is not** | A vendor of legacy Maven `io.github.lsd-consulting:lsd-core` sources |
-| **Legacy reference** | Upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) for API / behaviour comparison |
+| **Earlier library** | Upstream [lsd-core](https://github.com/lsd-consulting/lsd-core), for comparing behaviour |
 
 ## Layout
 
@@ -26,12 +26,9 @@ lsd-mono-core/
 └── build.gradle.kts                 # reportSingle + reportTest; packages dist/lsd-report.html as the jar's shell
 ```
 
-## What runs today (`./gradlew build`)
+## What it does
 
-**Works now**
-
-- Kotlin library compiles and tests
-- `LsdContext` façade: facts, `completeScenario`, `completeReport`, `createIndex`,
+- `LsdContext`: facts, `completeScenario`, `completeReport`, `createIndex`,
   `clear`, id generation and HTML escaping
 - The public API is checked: explicit API mode, and an ABI dump in `api/lsd-mono-core.api`
   that `check` compares against (see [generated files](../../docs/generated-files.md))
@@ -45,11 +42,11 @@ lsd-mono-core/
   - `index.html` from `createIndex`, listing every report in the directory
   - Files are written to a temporary file and moved into place. There are no shared
     "latest" files, so test classes, forks and modules can share one directory.
-- Report page: a **Component diagram** button per scenario draws the components and their calls in the inspector, in the browser, from that scenario's messages
+- Timing: durations, start times, call/reply pairing and clock ordering, with an accuracy level per scenario (see [Timing](#timing))
+- Payloads are copied when captured, with size limits and redaction of secret-looking keys (see [Message data](#message-data))
+- The report page shows one scenario at a time. Per scenario: the sequence diagram, the component diagram, timing (summary strip, swim lanes and waterfall) and metrics. A diagram taller than the screen extends the page and scrolls with it, with the toolbar, participant header and minimap kept in view. The theme follows the operating system until a fixed theme is chosen
 
-**Deferred / optional**
-
-- PlantUML / Handlebars compatibility — intentionally out of the Mono product path; see upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) for legacy reference
+PlantUML and Handlebars output are not supported; the report is drawn by the report UI.
 
 ## Component diagram
 
@@ -64,10 +61,10 @@ Each scenario's diagram toolbar has a **Component diagram** button. Clicking it 
 
 `./gradlew :modules:lsd-mono-core:readmeSamples` regenerates the GIF with the other README samples.
 
-## Kotlin API (migration-oriented)
+## Kotlin API
 
-Inspired by legacy entry points (`LsdContext`, `Status`, properties, popup links)
-but under the **mono** package:
+The entry points follow lsd-core's (`LsdContext`, `Status`, properties, clickable arrows), in the
+`io.lsdconsulting.lsd.mono` packages:
 
 ```kotlin
 import io.lsdconsulting.lsd.mono.core.LsdContext
@@ -311,9 +308,10 @@ ReportFiles files = lsd.report("Online shop", r -> {
 });
 ```
 
-### Properties
+### Configuration reference
 
-Each property is read from the first of these that sets it:
+This table is the complete list of settings. `LsdPropertiesTest` fails when it differs from the
+code. Each property is read from the first of these that sets it:
 
 1. a system property: `-Dlsd.mono.report.outputDir=out`;
 2. an environment variable, in upper case with dots as underscores:
@@ -350,6 +348,18 @@ a feature off.
 | `lsd.mono.propagation.allowedHosts` | | `localhost,127.0.0.1,::1` | Hosts `scenarioHeaderValue` gives the scenario header for: names, `*.domain` or `*`. See [Interceptors](#interceptors) |
 | `lsd.mono.scenario.inheritBinding` | | `true` | `false` stops threads inheriting the scenario of the thread that started them, see [Threads](#threads-and-parallel-tests) |
 | `lsd.mono.timing.orderByCreatedAt` | | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
+
+Settings made in code rather than by property:
+
+| Setting | Effect |
+| --- | --- |
+| `LsdContext.orderByCreatedAt` | Clock ordering for scenarios completed from now on; `null` reads `lsd.mono.timing.orderByCreatedAt` |
+| `Timing.orderByCreatedAt` | Opts one event in or out of clock ordering |
+| `LsdContext.payloads` | Payload converters and redaction rules (see [Message data](#message-data)); `clear()` re-reads the payload properties |
+
+The report page remembers a few choices in the reader's browser, not in the report: the theme
+(`lsd-report-theme`, local storage), the collapsed scenario list (`lsd-report-sidebar`, local storage) and the side
+panel width (`lsd-report-inspector-width`, session storage).
 
 ### Threads and parallel tests
 
@@ -421,7 +431,7 @@ after the call does not change the report. The copy is plain JSON:
 
 Capturing never throws. Anything that cannot be copied becomes a `[lsd: ...]`
 marker in its place: a cycle, a `toString()` or accessor that throws, or a value
-past one of these limits (defaults in [Properties](#properties)):
+past one of these limits (defaults in the [configuration reference](#configuration-reference)):
 
 | Limit | Marker |
 | --- | --- |

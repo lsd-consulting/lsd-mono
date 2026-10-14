@@ -12,6 +12,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Interactive report UI: sequence diagram, component diagram, inspector, metrics and insights.
 - Timing API (slice 1): accuracy, call pairing, clock ordering with structural guards, and the Timing view
   (summary strip, swim lanes and waterfall).
+- A sequence diagram taller than the screen extends the page and scrolls with it, instead of scrolling inside its panel.
 - CI `gate` job, a single required check that passes for docs-only changes.
 - Coverage ratchet for Kover and Vitest.
 

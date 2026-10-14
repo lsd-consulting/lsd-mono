@@ -2,7 +2,7 @@
 
 `lsd-mono-junit-jupiter` is the JUnit Jupiter 6 extension for [lsd-mono-core](../lsd-mono-core) that turns each test into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside the test. When the test ends, the extension stores a passed test as a successful scenario, and a failure or abort with a structured error. It writes the report when the class finishes. It depends on first-party `lsd-mono-core`, not the old published `lsd-core`, and there is no PlantUML on this path.
 
-This module replaces the older published `lsd-junit5` / `lsd-junit-jupiter` stack for greenfield Mono work.
+It replaces the earlier published `lsd-junit5` and `lsd-junit-jupiter` libraries for projects that use LSD Mono.
 
 ## Depend on it
 
@@ -98,7 +98,7 @@ build/reports/lsd/PlaceOrderTest-<hash>-diagram.html
 
 `<hash>` is 8 hex characters from the class's unique id, so two classes with the same simple name in different packages get separate reports. It is the same on every run. Open the `-diagram.html` file: it is the interactive diagram. Next to it, `PlaceOrderTest-<hash>-report.html` is a short listing of the class's scenarios that links to the diagram, and `PlaceOrderTest-<hash>-report.json` holds the data. `createIndex()` (called by the extension) writes `index.html`, which lists every report in the directory, including ones written by other Gradle test forks.
 
-Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured; every property is listed in the [core README](../lsd-mono-core/README.md#properties)). In this module's own tests that is `build/reports/lsd-test`.
+Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured; every property is listed in the [core README](../lsd-mono-core/README.md#configuration-reference)). In this module's own tests that is `build/reports/lsd-test`.
 
 Any `lsd.mono.*` property can also go in `src/test/resources/junit-platform.properties`, next to
 your JUnit settings. JUnit configuration parameters come after system properties and

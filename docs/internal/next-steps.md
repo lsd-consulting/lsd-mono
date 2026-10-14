@@ -1,6 +1,6 @@
 # LSD Mono — next steps
 
-**Status:** `main` is on origin (https://github.com/lsd-consulting/lsd-mono.git). Completed porting and UX slices are recorded in `docs/internal/porting-gap.md` and `docs/perf-results.md`. This file is the runbook for open work.
+**Status:** Completed porting and UX slices are recorded in `docs/internal/porting-gap.md` and `docs/perf-results.md`. This file is the runbook for open work.
 
 ---
 
@@ -22,9 +22,9 @@ Each new module gets a contract test that the events it captures land in `Report
 
 ## Trailing notes (not new projects)
 
-- **CI.** Origin is `https://github.com/lsd-consulting/lsd-mono.git` and `main` has been pushed. `.github/workflows/gradle.yml` runs on push to `main` and on pull requests: Java 17 toolchain (the baseline) with Java 25 running Gradle, JVM tests also on 21 and 25, Node from `.nvmrc`, `./gradlew build verifyGenerated` (Vite shell, vitest and build-logic tests included). See `docs/ci.md`. `readmeSamples` is not on that workflow. Publishing is still open; see `docs/versioning-notes.md`.
+- **CI.** `.github/workflows/gradle.yml` runs on push to `main` and on pull requests, and its `gate` job is the required check: Java 17 toolchain (the baseline) with Java 25 running Gradle, JVM tests also on 21 and 25, Node from `.nvmrc`, `./gradlew build verifyGenerated` (Vite shell, vitest and build-logic tests included). See `docs/ci.md`. `readmeSamples` is not on that workflow. Publishing is still open; see `docs/versioning-notes.md`.
 - **Publish later.** Maven Central for `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`, and `lsd-mono-coroutines` (Central Portal, signing, Mono artifact names so they do not clash with legacy). Not part of steps 1–3. The checklist stays in `docs/versioning-notes.md`.
 - Small leftovers, still not a slice of their own: `CONTROL` / `COLLECTIONS` only if a migration needs a distinct icon; no in-memory `renderReport`; hide-stacktrace has a property but no dedicated test; virtualisation rebuilds the window SVG on scroll instead of recycling nodes. Density mode is still unscoped.
 - `docs/readme/feature-tour.gif` replaced the root README's `diagram.png`, `inspector.png`, `zoom.gif`, `fit.gif`, and `inspector-drag.gif`. It shows zoom and Fit, and a mouse drag widening the JSON panel, in one pass.
-- Cucumber scenario screenshots leave a lot of empty space to the left of the description card and the diagram, and a smaller margin on the right that may not matter by itself. Worth exploring later whether the capture can use the available space better overall, not only by closing the left gap. Nice-to-have, not urgent.
-- Cucumber scenario report, later. Not taking the stats section down. "the metrics, I wonder if we could kind of have a think about the design of that section as well, um, at a later point." Nice-to-have, not urgent.
+- Cucumber scenario screenshots leave a lot of empty space to the left of the description card and the diagram, and a smaller margin on the right that may not matter by itself. Revisit whether the capture can use the available space better overall, not only by closing the left gap. Not urgent.
+- Cucumber scenario report: keep the metrics section, and revisit its design later. Not urgent.

@@ -10,7 +10,7 @@ LSD Mono records a scenario as a sequence of messages and writes an interactive 
 
 [`lsd-mono-coroutines` README](modules/lsd-mono-coroutines/README.md) covers keeping a scenario bound while a coroutine moves between threads.
 
-Origin is https://github.com/lsd-consulting/lsd-mono.git. `main` has been pushed there.
+The source is at https://github.com/lsd-consulting/lsd-mono.
 
 ## Depend on it
 
@@ -86,9 +86,24 @@ Capture is thread-safe, and both integrations support parallel runs (JUnit's `ju
 
 A thread that is not bound to a test, such as an HTTP server thread, captures into the running test when only one test is running. When several are running, LSD cannot tell which test the capture belongs to: it logs a warning and keeps the capture out of all of them. Carry the test onto threads you start with `LsdContext.instance.wrap(task)` or `lsd.currentScenario()?.bind()`. A coroutine that changes dispatcher thread drops a thread binding; use `withLsdScenario` from the [coroutines module](modules/lsd-mono-coroutines/README.md).
 
+## Configuration
+
+Every setting is a `lsd.mono.*` property, read from a system property, an environment variable
+(`LSD_MONO_REPORT_OUTPUTDIR`), a JUnit configuration parameter, or `lsd-mono.properties` on the
+classpath, in that order. The [configuration reference](modules/lsd-mono-core/README.md#configuration-reference)
+lists each one with its default; a test keeps that table in step with the code.
+
 ## What the report looks like
 
 The tour at the top clicks around a small shop report: four scenarios with every status, six participants, payloads, and durations. [`FeatureTourSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/FeatureTourSample.kt) captures it. The [lsd-mono-core README](modules/lsd-mono-core/README.md#component-diagram) covers the **Component diagram** button.
+
+The report shows one scenario at a time, chosen from the sidebar, and the choice is kept in the URL. Each scenario has:
+
+- the sequence diagram, fitted to its panel, with zoom, Fit, find, participant hiding and a minimap. A diagram taller than the screen extends the page and scrolls with it; the toolbar and the participant header stay at the top while you scroll;
+- a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are redacted when captured), the component diagram, and timing and metrics;
+- a timing summary (wall-clock, calls, slowest call, accuracy) with swim lanes and a waterfall, when the scenario has timing.
+
+The theme follows the operating system (dark, light, or more contrast) until you choose one with the theme button or `d`.
 
 Regenerate the tour, and the component diagram clip, from the current UI:
 

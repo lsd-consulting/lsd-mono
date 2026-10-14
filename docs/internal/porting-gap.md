@@ -2,7 +2,7 @@
 
 Next steps: [next-steps.md](next-steps.md)
 
-**Scope:** features still to port from legacy [lsd-core](https://github.com/lsd-consulting/lsd-core) (`com.lsd.core`) into greenfield `modules/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report/` UI.
+**Scope:** features still to port from legacy [lsd-core](https://github.com/lsd-consulting/lsd-core) (`com.lsd.core`) into LSD Mono `modules/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report/` UI.
 
 **Inspected (local tree, through the UX checks, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report types, SVG renderer, chrome.
 
@@ -50,7 +50,7 @@ These are **implemented**, not stubs, unless noted.
 
 ## 3. Missing features (by area)
 
-Each item: legacy behaviour → why it matters → suggested greenfield shape → priority → locking test.
+Each item: legacy behaviour → why it matters → suggested LSD Mono shape → priority → locking test.
 
 ### 3.1 Capture / events not yet mirrored
 
@@ -118,7 +118,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |--|--|
 | **Legacy** | `ParticipantType.CONTROL`, `COLLECTIONS` (`domain/Participant.kt`); used in component + sequence PlantUML participant keywords. Explicitly omitted in mono `Participant.kt` comments. |
 | **Why** | Rare; approval sample uses `CONTROL.called("Cat")`. |
-| **Greenfield** | Either map to `PARTICIPANT` with a visual variant icon, or add optional types to the report union if migration demand appears. Prefer **not** inventing PlantUML stereotypes. |
+| **LSD Mono** | Either map to `PARTICIPANT` with a visual variant icon, or add optional types to the report union if migration demand appears. Prefer **not** inventing PlantUML stereotypes. |
 | **Priority** | **P2** |
 | **Test** | Golden participant `type` if added; otherwise migration guide only. |
 
@@ -136,7 +136,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |--|--|
 | **Legacy** | `LsdContext.includeFiles` → `!include` lines in sequence UML (`SequenceDiagramGenerator`). Approval test pulls Font Awesome sprites. |
 | **Why** | Pure PlantUML theming / sprites. |
-| **Greenfield** | **Do not port.** Optional later: first-party icon set or custom participant icon URLs in JSON — not PlantUML includes. |
+| **LSD Mono** | **Do not port.** Optional later: first-party icon set or custom participant icon URLs in JSON — not PlantUML includes. |
 | **Priority** | **OUT** |
 | **Test** | n/a |
 
@@ -189,7 +189,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |--|--|
 | **Legacy** | Writes `lsd-index.html` via Handlebars (`HtmlIndexWriter` / `html-index.hbs`) with branded chrome. |
 | **Mono** | Plain `index.html` table. Functional but not the product shell. |
-| **Greenfield** | Either a tiny report “index” mode (list of reports) or keep minimal HTML but align naming/status styling; print absolute `file://` path like legacy. |
+| **LSD Mono** | Either a tiny report “index” mode (list of reports) or keep minimal HTML but align naming/status styling; print absolute `file://` path like legacy. |
 | **Priority** | **P1** |
 | **Test** | Unit: index lists all `ReportFile`s after two `completeReport`s. |
 
@@ -208,7 +208,7 @@ Each item: legacy behaviour → why it matters → suggested greenfield shape �
 |--|--|
 | **Legacy** | `devMode` inlines local JS vs CDN (`templates/partials/javascript.hbs`). |
 | **Mono** | Self-contained single HTML shell — largely solves offline. |
-| **Greenfield** | Keep single-file as default; optional multi-file dist for debugging. |
+| **LSD Mono** | Keep single-file as default; optional multi-file dist for debugging. |
 | **Priority** | **P2** |
 | **Test** | Build check that packaged shell contains `__LSD_REPORT__` hook. |
 
@@ -255,7 +255,7 @@ The large-diagram UX baseline is shipped: sticky participant header, scenario an
 |--|--|
 | **Legacy** | Ecosystem (interceptors, cucumber, etc.) calls `LsdContext.capture` / builders. |
 | **Mono** | `lsd-mono-cucumber-8` is shipped. Logging and HTTP interceptor modules are still open. |
-| **Greenfield** | Document capture contract; later `lsd-mono-*` integrations depend on `lsd-mono-core` only. |
+| **LSD Mono** | Document capture contract; later `lsd-mono-*` integrations depend on `lsd-mono-core` only. |
 | **Priority** | **P1** (docs + contract); modules themselves later |
 | **Test** | Contract suite: DSL + `capture(vararg SequenceEvent)` golden. |
 
