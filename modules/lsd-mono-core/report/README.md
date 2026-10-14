@@ -79,7 +79,7 @@ Gradle produces the same shell without a manual npm build:
 
 | Layer | Choice | Why |
 |-------|--------|-----|
-| Tooling | **Vite 7 + TypeScript** | Fast local DX; `base: './'` for `file://` / CI artifact drops |
+| Tooling | **Vite 8 + TypeScript** | Fast local DX; `base: './'` for `file://` / CI artifact drops. Dependencies are pinned to exact versions (Renovate bumps them). Two TypeScript packages are installed on purpose: `@typescript/native` (TypeScript 7, `tsc`) and `typescript` (TypeScript 6, for typescript-eslint); see `docs/ci.md` |
 | Runtime | **Vanilla TS** (no React/Vue) | Tiny shipped JS; reports stay self-contained |
 | Diagrams | **Custom SVG** from domain events | CSS and accessibility control, clickable messages, activations, notes, dividers — no PlantUML or Mermaid runtime in the browser |
 | Colour | **OKLCH tokens** + dark/light/high contrast | Until you choose, follows the OS live: `prefers-color-scheme` picks dark or light, and `prefers-contrast: more` picks high contrast. A head script sets it before first paint, so there is no flash. `d` or the theme button cycles Auto → dark → light → high contrast. A fixed choice is persisted as `lsd-report-theme` and wins over the OS; Auto clears it and resumes following the OS. The button names the mode, e.g. "Theme: Auto (dark)". Print uses a light page. |
