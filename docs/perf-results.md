@@ -248,3 +248,59 @@ Horizontal scroll, the sticky header during the vertical sweep, label overlap (0
 - **Wide popup.** The 100×2000 click takes 152 ms (89 ms before) and the 400-message clicks 67–83 ms (66 ms before). Most of the 100×2000 time is parsing the 5.6 MB sibling payload script on that click.
 - **Long tasks.** The wide pages show one 50–64 ms long task each (none before). Frame p95 stays at 16.7 ms on every page.
 - First interactive is within 20–90 ms of the 3 Oct numbers, and varies by that much between runs.
+
+## Report index at 200 reports (14 Oct 2026, 20:20 BST)
+
+`index.html` is the report app with a manifest of every report in the directory. A report's data
+(`<stem>-report.js`) loads only when it is opened. This checks that the index stays cheap for a large suite.
+Measured on an Apple M3 Max, headless Chromium 156 (Playwright 1.64.0), viewport 1280×800, `file://`.
+
+### Fixture
+
+[`IndexPerf.java`](perf/IndexPerf.java): 200 test classes, each one report of 5 scenarios with 20
+call/reply pairs (40 arrows) and a ~250-byte payload per call. 12 scenarios fail and 19 warn. Each class
+runs `completeReport` and then `createIndex`, as the JUnit extension does.
+
+| File (per report) | Size |
+| --- | --- |
+| `-report.js` (loaded when opened) | 70.6 KB |
+| `-payloads.js` (loaded when a message opens) | 27.1 KB |
+| `-diagram.html` (the report on its own) | 219.7 KB |
+| `-report.json` | 97.9 KB |
+| `index.html` for all 200 | **362 KB** (55.7 KB gzipped): the ~150 KB shell plus ~1 KB of manifest per report |
+
+The whole directory is 83 MB, but the index page reads only `index.html` plus one report.
+
+### Writing the index
+
+| | Time |
+| --- | --- |
+| `createIndex` after each class, median of classes 181–200 | 3.5 ms |
+| `createIndex` after class 1 (JVM warm-up) | 9 ms |
+| `createIndex` in a fresh JVM over 200 entries (a new test fork) | 87 ms |
+| `completeReport` per class, after warm-up | 2–3 ms |
+
+Index entries are cached by modification time, so each later call rereads only the entries that changed.
+The cost per class grows slowly with the number of reports (2 ms at 10 reports, 3 ms at 200).
+
+### Browser ([`measure-index.mjs`](perf/measure-index.mjs), 5 runs, medians)
+
+| | 200 reports | 5 reports |
+| --- | --- | --- |
+| `goto` to the first diagram drawn (failed report opens first) | 179 ms | 173 ms |
+| JS heap after load (after GC) | 2.0 MB | 1.7 MB |
+| JS heap after opening 20 other reports | 3.0 MB | 2.3 MB |
+| Switching to another report (`#report=`), until its diagram is drawn | 26 ms (p90 27, max 31) | — |
+| Sidebar rows | 205 (200 report rows plus the open report's 5 scenarios) | 8 |
+
+The first view costs about the same at 200 reports as at 5. Switching reports loads one 70 KB script and
+draws one diagram. Reports that were opened before stay in memory (about 50 KB of heap each here).
+
+To rerun (after `./gradlew :modules:lsd-mono-core:jar`):
+
+```bash
+CP=modules/lsd-mono-core/build/libs/lsd-mono-core-0.0.1-SNAPSHOT.jar:$(find ~/.gradle/caches -name 'kotlin-stdlib-2.3.10.jar' | head -1)
+java -cp "$CP" docs/perf/IndexPerf.java 200 /tmp/lsd-index-200
+java -cp "$CP" docs/perf/IndexPerfCold.java /tmp/lsd-index-200
+node docs/perf/measure-index.mjs /tmp/lsd-index-200
+```
