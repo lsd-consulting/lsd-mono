@@ -176,20 +176,50 @@ internal object ReportWriter {
                 setProperty("status", entry.status)
             }
         val text = StringWriter().also { props.store(it, null) }.toString()
-        writeAtomically(dir.resolve(entry.filename.removeSuffix(".html") + ".properties"), text)
+        val file = dir.resolve(entry.filename.removeSuffix(".html") + ".properties")
+        writeAtomically(file, text)
+        // A rewrite in the same second with the same size would otherwise look unchanged.
+        jvmIndexLock.withLock { entryCache.remove(file.toFile().absolutePath) }
     }
+
+    /**
+     * Parsed index entries, per entry file, kept while the file's size and modified time are
+     * unchanged. `createIndex` runs once per test class, so without this a suite of N classes
+     * would parse N entries N times. Only read and written under [withIndexLock].
+     */
+    private val entryCache = HashMap<String, CachedEntry>()
+
+    private class CachedEntry(
+        val modified: Long,
+        val size: Long,
+        val entry: ReportFile?,
+    )
 
     private fun readIndexEntries(outputDir: File): List<ReportFile> {
         val dir = outputDir.resolve(INDEX_DIR)
         val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".properties") } ?: return emptyList()
-        return files.mapNotNull { file ->
-            val props = Properties()
-            runCatching { file.reader(Charsets.UTF_8).use { props.load(it) } }.getOrNull() ?: return@mapNotNull null
-            val filename = props.getProperty("filename") ?: return@mapNotNull null
-            // An entry whose report was deleted is stale.
-            if (!outputDir.resolve(filename).exists()) return@mapNotNull null
-            ReportFile(filename, props.getProperty("title").orEmpty(), props.getProperty("status").orEmpty())
-        }
+        val seen = HashSet<String>()
+        val entries =
+            files.mapNotNull { file ->
+                val key = file.absolutePath
+                seen += key
+                val modified = file.lastModified()
+                val size = file.length()
+                val cached = entryCache[key]?.takeIf { it.modified == modified && it.size == size }
+                val entry = cached?.entry ?: if (cached != null) null else parseEntry(file).also { entryCache[key] = CachedEntry(modified, size, it) }
+                // An entry whose report was deleted is stale.
+                entry?.takeIf { outputDir.resolve(it.filename).exists() }
+            }
+        val prefix = dir.absolutePath + File.separator
+        entryCache.keys.removeIf { it.startsWith(prefix) && it !in seen }
+        return entries
+    }
+
+    private fun parseEntry(file: File): ReportFile? {
+        val props = Properties()
+        runCatching { file.reader(Charsets.UTF_8).use { props.load(it) } }.getOrNull() ?: return null
+        val filename = props.getProperty("filename") ?: return null
+        return ReportFile(filename, props.getProperty("title").orEmpty(), props.getProperty("status").orEmpty())
     }
 
     /** One index writer at a time: a lock for this JVM plus a file lock for other processes. */
