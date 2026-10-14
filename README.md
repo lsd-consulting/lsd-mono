@@ -127,3 +127,7 @@ build-logic/                      convention plugins (lsd.kotlin-jvm)
 ```
 
 Legacy behaviour for comparison is upstream at [lsd-core](https://github.com/lsd-consulting/lsd-core). It is not in this tree.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
