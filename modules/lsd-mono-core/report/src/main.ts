@@ -42,6 +42,7 @@ declare global {
   }
 }
 import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from './lib/diagram-a11y'
+import { scrollDiagramTo, scrollDiagramToOffset } from './lib/diagram/page-scroll'
 import {
   bindDiagramScroll,
   diagramView,
@@ -366,7 +367,7 @@ function bindChrome(): void {
     const jump = target.closest<HTMLButtonElement>('[data-jump-y]')
     if (jump) {
       const scroll = jump.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
-      if (scroll) scroll.scrollTop = Number(jump.dataset.jumpY)
+      if (scroll) scrollDiagramTo(scroll, Number(jump.dataset.jumpY))
       return
     }
     if (
@@ -722,7 +723,7 @@ function revealMessage(scenarioId: string, messageId: string): void {
   const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenarioId)} .seq-scroll`)
   if (!scroll || y == null) return
   scroll.closest('.seq-diagram')?.scrollIntoView({ block: 'nearest' })
-  scroll.scrollTop = Math.max(0, y - 24)
+  scrollDiagramToOffset(scroll, Math.max(0, y * diagramView(scenarioId).zoom - 24))
   syncDiagramWindow(scroll)
 }
 

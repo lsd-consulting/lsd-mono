@@ -18,6 +18,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   listing page, which is no longer written (`ReportFiles.listingHtml` is gone).
 - The Pages site opens on the kitchen-sink report's index; `kitchen-sink.html` still opens the report alone.
 - A sequence diagram taller than the screen extends the page and scrolls with it, instead of scrolling inside its panel.
+  The section links above a diagram scroll the page to that section again, at any zoom.
 - CI `gate` job, a single required check that passes for docs-only changes.
 - Coverage ratchet for Kover and Vitest.
 

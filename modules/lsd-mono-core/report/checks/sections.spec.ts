@@ -1,0 +1,172 @@
+import { expect, test, type Page } from '@playwright/test'
+import type { IndexManifest } from '../src/lib/report-index'
+import type { Report, DiagramEvent } from '../src/types'
+
+/**
+ * The section jump list above a diagram brings that section to the top of the diagram, in the
+ * report page and in the index page, on desktop and phone, whether the drawing is taller than
+ * the screen or fits on it. Find (Enter) brings the first match on screen the same way.
+ */
+function sectionsReport(perSection: number): Report {
+  const events: DiagramEvent[] = []
+  for (const s of [1, 2, 3]) {
+    events.push({ kind: 'section', id: `s${s}`, title: `Part ${s}` })
+    for (let i = 0; i < perSection; i++)
+      events.push({
+        kind: 'message',
+        id: `m${s}-${i}`,
+        from: 'a',
+        to: 'b',
+        label: `call ${s}.${i}`,
+        type: 'SYNCHRONOUS',
+        data: { n: i },
+      })
+  }
+  return {
+    title: 'Sections',
+    generatedAt: '2026-01-15T12:00:00+00:00',
+    generator: 'ux-fixture',
+    scenarios: [
+      {
+        id: 'sections',
+        title: 'Sections',
+        status: 'success',
+        description: '',
+        facts: [],
+        metrics: [],
+        participants: [
+          { id: 'a', name: 'Client', type: 'PARTICIPANT' },
+          { id: 'b', name: 'Server', type: 'PARTICIPANT' },
+        ],
+        events,
+      },
+    ],
+  }
+}
+
+async function openReport(page: Page, report: Report): Promise<void> {
+  await page.addInitScript((r) => {
+    window.__LSD_REPORT__ = r
+  }, report)
+  await page.goto('/')
+}
+
+async function openIndex(page: Page, report: Report): Promise<void> {
+  const manifest: IndexManifest = {
+    title: 'LSD reports',
+    generatedAt: report.generatedAt,
+    generator: 'ux-fixture',
+    reports: [
+      {
+        id: 'sections',
+        title: 'Sections',
+        status: 'success',
+        href: 'sections-diagram.html',
+        data: 'sections-report.js',
+        counts: { success: 1, warn: 0, error: 0 },
+        scenarios: [{ id: 'sections', title: 'Sections', status: 'success', messages: 0 }],
+      },
+    ],
+  }
+  await page.addInitScript((m) => {
+    window.__LSD_INDEX__ = m
+  }, manifest)
+  await page.route('**/sections-report.js', (route) =>
+    route.fulfill({
+      contentType: 'text/javascript',
+      body: `(window.__LSD_REPORTS__=window.__LSD_REPORTS__||{}).sections={report:${JSON.stringify(report)},payloadsSrc:null};`,
+    }),
+  )
+  await page.goto('/')
+}
+
+/** Where the section's row is, against the top of the area the diagram sticks under. */
+async function sectionOffset(page: Page, id: string): Promise<number | null> {
+  return page.evaluate((sid) => {
+    const row = document.getElementById(`section-${sid}`)
+    const port = document.querySelector<HTMLElement>('.seq-scroll')
+    const header = document.querySelector<HTMLElement>('.seq-sticky-header')
+    if (!row || !port || !header) return null
+    const top = Number.parseFloat(getComputedStyle(port).top) || 0
+    return row.getBoundingClientRect().top - (top + header.offsetHeight)
+  }, id)
+}
+
+const PAGES = { report: openReport, index: openIndex } as const
+const SIZES = { desktop: { width: 1280, height: 800 }, phone: { width: 390, height: 844 } } as const
+
+for (const [pageName, open] of Object.entries(PAGES)) {
+  for (const [sizeName, viewport] of Object.entries(SIZES)) {
+    for (const [drawing, perSection] of [
+      ['tall', 30],
+      ['short', 3],
+    ] as const) {
+      test(`section jump: ${pageName} page, ${sizeName}, ${drawing} drawing`, async ({ page }) => {
+        await page.setViewportSize(viewport)
+        await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
+        await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
+        await page.emulateMedia({ reducedMotion: 'reduce' })
+        await open(page, sectionsReport(perSection))
+        await expect(page.locator('.seq-svg')).toBeVisible()
+        for (const id of ['s2', 's3', 's1']) {
+          await page.locator('.section-jump button', { hasText: `Part ${id.slice(1)}` }).click()
+          // The last section of a short drawing can only come as far up as the page can scroll.
+          const atEnd = await page.evaluate(
+            () => Math.ceil(scrollY + innerHeight) >= document.documentElement.scrollHeight,
+          )
+          await expect
+            .poll(() => sectionOffset(page, id), { message: `Part ${id.slice(1)} at the top of the diagram` })
+            .toBeGreaterThanOrEqual(-2)
+          const offset = (await sectionOffset(page, id)) ?? Infinity
+          if (!atEnd) expect(offset).toBeLessThanOrEqual(24)
+          else expect(offset).toBeLessThan(viewport.height)
+        }
+      })
+    }
+  }
+}
+
+for (const [pageName, open] of Object.entries(PAGES)) {
+  for (const [sizeName, viewport] of Object.entries(SIZES)) {
+    for (const [drawing, perSection] of [
+      ['tall', 30],
+      ['short', 6],
+    ] as const) {
+      test(`find: ${pageName} page, ${sizeName}, ${drawing} drawing, Enter brings the match on screen`, async ({
+        page,
+      }) => {
+        await page.setViewportSize(viewport)
+        await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
+        await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
+        await page.emulateMedia({ reducedMotion: 'reduce' })
+        await open(page, sectionsReport(perSection))
+        await expect(page.locator('.seq-svg')).toBeVisible()
+        for (const label of [`call 3.${perSection - 2}`, 'call 1.2']) {
+          const find = page.locator('[data-diagram-find]')
+          await find.fill(label)
+          await find.press('Enter')
+          await expect
+            .poll(
+              () =>
+                page.evaluate((text) => {
+                  const hit = [...document.querySelectorAll<SVGTextElement>('.seq-svg .msg-label')].find((t) => {
+                    const label = t.textContent?.trim() ?? ''
+                    return label.startsWith(text) && !'0123456789'.includes(label.charAt(text.length) || 'x')
+                  })
+                  const header = document.querySelector<HTMLElement>('.seq-sticky-header')
+                  if (!hit || !header) return 'not drawn'
+                  const box = hit.getBoundingClientRect()
+                  const under = header.getBoundingClientRect().bottom
+                  return box.top >= under - 2 && box.bottom <= innerHeight
+                    ? 'on screen'
+                    : `at ${Math.round(box.top)}, header ends ${Math.round(under)}`
+                }, label),
+              { message: `${label} on screen` },
+            )
+            .toBe('on screen')
+          await page.keyboard.press('Escape')
+        }
+      })
+    }
+  }
+}

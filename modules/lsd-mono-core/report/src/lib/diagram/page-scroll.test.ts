@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { bindPageScroll, sizeStage } from './page-scroll'
-import { diagramState } from './state'
+import { bindPageScroll, scrollDiagramTo, sizeStage } from './page-scroll'
+import { diagramState, diagramView } from './state'
 
 /** A diagram whose drawing is [content] px tall in a scrollport [port] px tall, stage top at [stageTop]. */
 function mount(content: number, port: number, stageTop: number) {
@@ -60,5 +60,27 @@ describe('page scroll', () => {
     scroll.scrollTop = 700
     scroll.dispatchEvent(new Event('scroll'))
     expect(scrollTo).toHaveBeenCalledWith({ top: window.scrollY + 700, behavior: 'instant' })
+  })
+})
+
+describe('section jump', () => {
+  it('moves the page so the row sits at the top of the diagram, at the current zoom, even when the drawing fits', () => {
+    const { scroll } = mount(566, 566, 300)
+    scroll.dataset.scenarioId = 'sections'
+    diagramView('sections').zoom = 0.5
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    scrollDiagramTo(scroll, 648)
+    expect(scrollTo).toHaveBeenCalledWith({ top: window.scrollY + 300 - 56 + 324, behavior: 'instant' })
+  })
+
+  it('scrolls the scrollport itself when it is not linked to the page (print)', () => {
+    const { scroll } = mount(5000, 800, 300)
+    scroll.dataset.scenarioId = 'print'
+    diagramView('print').zoom = 2
+    diagramState.printAllRows = true
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    scrollDiagramTo(scroll, 100)
+    expect(scroll.scrollTop).toBe(200)
+    expect(scrollTo).not.toHaveBeenCalled()
   })
 })

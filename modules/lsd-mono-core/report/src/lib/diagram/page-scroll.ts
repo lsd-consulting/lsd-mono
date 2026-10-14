@@ -3,7 +3,7 @@
 // past the top of the stage is mirrored into the scrollport's scrollTop, so windowed painting,
 // the sticky participant header, the minimap and focus keep working from scrollTop. When the
 // diagram moves its own scrollTop (minimap, focus, section jump, zoom), the page follows.
-import { diagramState } from './state'
+import { diagramState, diagramView } from './state'
 
 /** Distance between the page's position past the stage top and the scrollport's scrollTop. */
 const TOLERANCE_PX = 1
@@ -77,6 +77,32 @@ function leadPage(scrollport: HTMLElement): void {
   const top = window.scrollY + delta
   led.set(scrollport, top)
   window.scrollTo({ top, behavior: 'instant' })
+}
+
+/**
+ * Bring a row of the drawing to the top of the diagram: `y` is the row's top in drawing pixels
+ * (the section jump list). The diagram scrolls with the page, so this moves the page: the stage
+ * goes up by `y` at the current zoom, and the scrollport follows. Setting the scrollport's
+ * scrollTop alone does nothing when the whole drawing fits on screen (it has nothing to scroll),
+ * and the page would put it back anyway.
+ */
+export function scrollDiagramTo(scrollport: HTMLElement, y: number): void {
+  scrollDiagramToOffset(scrollport, y * diagramView(scrollport.dataset.scenarioId ?? '').zoom)
+}
+
+/**
+ * Bring a point `offset` CSS pixels below the participant header (the scrollTop that would show
+ * it at the top) to the top of the diagram. Moves the page when the diagram scrolls with it.
+ */
+export function scrollDiagramToOffset(scrollport: HTMLElement, offset: number): void {
+  const stage = stageOf(scrollport)
+  if (!stage || !linked(scrollport)) {
+    scrollport.scrollTop = offset
+    return
+  }
+  const top = Math.max(0, window.scrollY + stage.getBoundingClientRect().top - stickyTop(scrollport) + offset)
+  window.scrollTo({ top, behavior: 'instant' })
+  followPage(scrollport)
 }
 
 const scrollports = new Set<HTMLElement>()
