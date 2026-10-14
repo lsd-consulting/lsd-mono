@@ -131,7 +131,7 @@ class ScopedBlocksTest {
             }
 
         assertTrue(path.diagramHtml.exists(), "$path")
-        assertTrue(path.listingHtml.exists(), "$path")
+        assertTrue(path.reportJson.exists(), "$path")
         assertTrue(tempDir.resolve("index.html").exists())
         assertEquals(
             mapOf("Place an order" to listOf("order"), "From a helper" to listOf("helper")),

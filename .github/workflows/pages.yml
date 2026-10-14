@@ -1,14 +1,14 @@
 name: Pages
 
-# Builds the sample site (docs/samples/index.html plus the kitchen-sink report, generated
-# from the current report UI and KitchenSinkSample.kt) and publishes it to GitHub Pages,
-# so https://lsd-consulting.github.io/lsd-mono/kitchen-sink.html opens as a page.
+# Builds the sample site (the kitchen-sink report and the index.html that lsd-mono-core writes
+# for it, generated from the current report UI and KitchenSinkSample.kt) and publishes it to
+# GitHub Pages, so https://lsd-consulting.github.io/lsd-mono/ opens the report index and
+# kitchen-sink.html opens the report on its own.
 # The kitchen-sink report is not committed; nothing else under docs/ is published.
 on:
   push:
     branches: [main]
     paths:
-      - "docs/samples/**"
       - "modules/lsd-mono-core/**"
       - "build-logic/**"
       - "gradle/**"
@@ -37,7 +37,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}kitchen-sink.html
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -62,11 +62,14 @@ jobs:
       - name: Check the site
         run: |
           site=modules/lsd-mono-core/build/pages
-          for f in index.html kitchen-sink.html kitchen-sink-payloads.js; do
+          for f in index.html kitchen-sink.html; do
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
           done
-          grep -qF '__LSD_PAYLOADS_SRC__="kitchen-sink-payloads.js"' "$site/kitchen-sink.html" \
-            || { echo "kitchen-sink.html does not load kitchen-sink-payloads.js"; exit 1; }
+          grep -qF 'window.__LSD_INDEX__=' "$site/index.html" || { echo "index.html has no report manifest"; exit 1; }
+          # Every script the pages load is published.
+          for f in $(grep -ohE 'kitchen-sink-[0-9a-f]{8}-(report|payloads)\.js' "$site/index.html" "$site/kitchen-sink.html" "$site"/*-report.js | sort -u); do
+            test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
+          done
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: modules/lsd-mono-core/build/pages

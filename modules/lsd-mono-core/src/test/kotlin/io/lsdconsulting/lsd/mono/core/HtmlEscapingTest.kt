@@ -87,7 +87,7 @@ class HtmlEscapingTest {
 
         val files = tempDir.listDirectoryEntries().filter { Files.isRegularFile(it) }
         assertEquals(
-            setOf("report.html", "report.json", "report.js", "diagram.html", "payloads.js", "index.html"),
+            setOf("report.json", "report.js", "diagram.html", "payloads.js", "index.html"),
             files.map { it.name.substringAfterLast('-') }.toSet(),
             files.map { it.name }.toString(),
         )
@@ -101,12 +101,6 @@ class HtmlEscapingTest {
                 assertFalse(text.contains('\u2028') || text.contains('\u2029'), "${file.name} has a raw line separator in script")
             }
         }
-
-        val report = files.single { it.name.endsWith("-report.html") }.let(Files::readString)
-        assertTrue(report.contains(escapedText("Report")), report)
-        assertTrue(report.contains(escapedText("fact value")), report)
-        assertTrue(report.contains(escapedText("message")), report)
-        assertTrue(report.contains("<title>${escapedText("Report")}</title>"), report)
 
         val index = files.single { it.name == "index.html" }.let(Files::readString)
         assertTrue(index.contains("window.__LSD_INDEX__="), index.take(500))

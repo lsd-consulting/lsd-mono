@@ -328,7 +328,6 @@ public final class io/lsdconsulting/lsd/mono/core/PendingCall {
 public final class io/lsdconsulting/lsd/mono/core/ReportFiles {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDiagramHtml ()Ljava/nio/file/Path;
-	public final fun getListingHtml ()Ljava/nio/file/Path;
 	public final fun getReportJson ()Ljava/nio/file/Path;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

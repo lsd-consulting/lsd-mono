@@ -5,7 +5,7 @@ Two workflows run on GitHub-hosted runners.
 | Workflow | Runs on | Does |
 |----------|---------|------|
 | [Gradle](../.github/workflows/gradle.yml) | Pushes to `main`, pull requests, manual dispatch. Skipped when a change only touches Markdown, `docs/` or `modules/*/docs/` | `./gradlew build verifyGenerated`: compile, JVM tests, build-logic tests, the report shell build and Vitest, plus the [lint, format and coverage](#lint-format-and-coverage) checks. It then checks the build left no changed or new files ([generated files](generated-files.md)). Test reports are uploaded when it fails |
-| [Pages](../.github/workflows/pages.yml) | Pushes to `main` that touch the report, the build or `docs/samples`, and manual dispatch | Builds the kitchen-sink site with `kitchenSinkSample` and deploys it to GitHub Pages |
+| [Pages](../.github/workflows/pages.yml) | Pushes to `main` that touch the report or the build, and manual dispatch | Builds the kitchen-sink site (report index plus report) with `kitchenSinkSample` and deploys it to GitHub Pages |
 
 ## Lint, format and coverage
 

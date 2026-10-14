@@ -193,7 +193,6 @@ tasks.register<Exec>("readmeSamples") {
 // It is not committed: the Pages workflow builds it with kitchenSinkSample and publishes build/pages.
 val kitchenSinkReportDir = layout.buildDirectory.dir("kitchen-sink-report")
 val pagesDir = layout.buildDirectory.dir("pages")
-val samplesDocsDir = rootProject.layout.projectDirectory.dir("docs/samples")
 
 val captureKitchenSinkReport = tasks.register<JavaExec>("captureKitchenSinkReport") {
     group = "documentation"
@@ -212,17 +211,15 @@ val captureKitchenSinkReport = tasks.register<JavaExec>("captureKitchenSinkRepor
 tasks.register<Sync>("kitchenSinkSample") {
     group = "documentation"
     description =
-        "Build the GitHub Pages site (docs/samples/index.html plus the kitchen-sink report) into build/pages. Not part of build or check."
+        "Build the GitHub Pages site (the kitchen-sink report and its index.html) into build/pages. Not part of build or check."
     dependsOn(captureKitchenSinkReport)
-    from(samplesDocsDir) { include("index.html") }
-    // Report files carry a short hash (kitchen-sink-<hash>-diagram.html). Publish them under plain names.
+    // The report directory as written: index.html is the site's front page and loads each report's
+    // data script. Index entries (.lsd-index) are bookkeeping and are not published.
+    from(kitchenSinkReportDir) { exclude(".lsd-index/**") }
+    // A stable address for the kitchen-sink diagram (files carry a short hash). It loads the hashed payloads file.
     from(kitchenSinkReportDir) {
-        include("kitchen-sink-*-diagram.html", "kitchen-sink-*-payloads.js")
+        include("kitchen-sink-*-diagram.html")
         rename("""kitchen-sink-[0-9a-f]{8}-diagram\.html""", "kitchen-sink.html")
-        rename("""kitchen-sink-[0-9a-f]{8}-payloads\.js""", "kitchen-sink-payloads.js")
-        filesMatching("*-diagram.html") {
-            filter { line -> line.replace(Regex("""kitchen-sink-[0-9a-f]{8}-payloads\.js"""), "kitchen-sink-payloads.js") }
-        }
     }
     into(pagesDir)
 }

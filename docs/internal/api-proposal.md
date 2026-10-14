@@ -561,7 +561,7 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 **5. `PayloadConverters`** moved from `core.capture` to `io.lsdconsulting.lsd.mono.core`. The `capture` package is gone.
 
 **6. `completeReport` and `report { }` return `ReportFiles`.**
-- It has `diagramHtml` (the page to open), `listingHtml` (`-report.html`, which `index.html` links to) and `reportJson`.
+- It has `diagramHtml` (the page to open) and `reportJson`. `index.html` loads each report's `-report.js` data script.
 - It is a plain class, not a data class, so no `copy`/`componentN` enters the ABI.
 - The root and JUnit READMEs now say which file is which, instead of calling the diagram "the report" and the returned listing "only a short listing".
 - The samples print `diagramHtml`.

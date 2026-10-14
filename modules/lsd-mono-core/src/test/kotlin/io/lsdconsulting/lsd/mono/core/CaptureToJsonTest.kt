@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -44,7 +45,7 @@ class CaptureToJsonTest {
         lsd.deactivate("api")
         lsd.completeScenario("checkout happy path", "<p>ok</p>", Status.SUCCESS)
 
-        val html = lsd.completeReport("Orders flow").listingHtml
+        val files = lsd.completeReport("Orders flow")
         lsd.createIndex()
 
         val json = tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-report.json").readText()
@@ -98,9 +99,8 @@ class CaptureToJsonTest {
         assertTrue(payloads.contains("window.__LSD_PAYLOADS__="))
         assertTrue(payloads.contains("\"cartId\": \"cart-1\""))
 
-        val listing = html.toFile().readText()
-        assertTrue(listing.contains("POST /checkout"))
-        assertTrue(listing.contains("href=\"${ReportWriter.reportFileStem("Orders flow")}-report.json\""), "listing links its own JSON")
+        assertEquals(ReportWriter.reportFileStem("Orders flow") + "-report.json", files.reportJson.fileName.toString())
+        assertFalse(tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-report.html").toFile().exists(), "no listing page")
         // No shared "latest" copies that another report would overwrite (#25).
         assertFalse(tempDir.resolve("report.json").toFile().exists())
         assertFalse(tempDir.resolve("lsd-report.single.html").toFile().exists())

@@ -53,14 +53,11 @@ class ReportWriterTest {
     @Test
     fun `writeReport writes its own files only and leaves no temporary files`() {
         val files = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
-        val html = files.listingHtml
         val stem = ReportWriter.reportFileStem("Orders")
-        assertEquals("$stem-report.html", html.name)
         assertEquals("$stem-diagram.html", files.diagramHtml.name)
         assertEquals("$stem-report.json", files.reportJson.name)
         val names = tempDir.listDirectoryEntries().map { it.name }.toSet()
-        assertEquals(setOf("$stem-report.html", "$stem-report.json", "$stem-report.js", "$stem-diagram.html", ".lsd-index"), names)
-        assertTrue(html.readText().contains("""href="$stem-report.json""""))
+        assertEquals(setOf("$stem-report.json", "$stem-report.js", "$stem-diagram.html", ".lsd-index"), names)
         assertTrue(tempDir.resolve("$stem-diagram.html").readText().contains("window.__LSD_REPORT__="))
     }
 
@@ -74,7 +71,7 @@ class ReportWriterTest {
 
         val files = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
         ReportWriter.writeReport(report("Orders"), tempDir.toFile()) // replacing keeps the mode
-        val written = listOf(files.listingHtml, files.diagramHtml, files.reportJson)
+        val written = listOf(files.diagramHtml, files.reportJson)
         for (file in written) assertEquals(expected, Files.getPosixFilePermissions(file), file.name)
         if (PosixFilePermission.OTHERS_READ in expected) {
             // The usual umask (022): readable by everyone, which createTempFile's 0600 was not.
@@ -84,17 +81,17 @@ class ReportWriterTest {
 
     @Test
     fun `a report key, when given, names the files instead of the title`() {
-        val byTitle = ReportWriter.writeReport(report("Orders"), tempDir.toFile()).listingHtml
-        val byKey = ReportWriter.writeReport(report("Orders"), tempDir.toFile(), reportKey = "com.example.OrderTest").listingHtml
-        assertEquals(ReportWriter.reportFileStem("Orders") + "-report.html", byTitle.name)
-        assertEquals(ReportWriter.reportFileStem("Orders", "com.example.OrderTest") + "-report.html", byKey.name)
+        val byTitle = ReportWriter.writeReport(report("Orders"), tempDir.toFile()).diagramHtml
+        val byKey = ReportWriter.writeReport(report("Orders"), tempDir.toFile(), reportKey = "com.example.OrderTest").diagramHtml
+        assertEquals(ReportWriter.reportFileStem("Orders") + "-diagram.html", byTitle.name)
+        assertEquals(ReportWriter.reportFileStem("Orders", "com.example.OrderTest") + "-diagram.html", byKey.name)
         assertNotEquals(byTitle.name, byKey.name)
     }
 
     @Test
     fun `concurrent writes of one report never leave a partial file`() {
         val big = report("Same", scenarioCount = 200)
-        val expected = ReportWriter.writeReport(big, tempDir.toFile()).listingHtml.readText()
+        val expected = ReportWriter.writeReport(big, tempDir.toFile()).reportJson.readText()
         val pool = Executors.newFixedThreadPool(8)
         val go = CountDownLatch(1)
         try {
@@ -109,7 +106,7 @@ class ReportWriterTest {
         } finally {
             pool.shutdownNow()
         }
-        assertEquals(expected, tempDir.resolve(ReportWriter.reportFileStem("Same") + "-report.html").readText())
+        assertEquals(expected, tempDir.resolve(ReportWriter.reportFileStem("Same") + "-report.json").readText())
         assertTrue(tempDir.listDirectoryEntries("*.tmp").isEmpty())
     }
 

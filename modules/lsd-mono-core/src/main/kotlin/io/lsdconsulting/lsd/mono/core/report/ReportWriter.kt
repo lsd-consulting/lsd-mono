@@ -10,18 +10,11 @@ import io.lsdconsulting.lsd.mono.core.json.JsonString
 import io.lsdconsulting.lsd.mono.core.json.JsonValue
 import io.lsdconsulting.lsd.mono.core.json.jsonString
 import io.lsdconsulting.lsd.mono.core.json.render
-import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
-import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.core.model.IndexScenario
-import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
-import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioCounts
-import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
-import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
-import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.core.model.forShell
 import io.lsdconsulting.lsd.mono.core.model.shellPayloadScript
 import io.lsdconsulting.lsd.mono.core.model.toJson
@@ -96,7 +89,6 @@ internal object ReportWriter {
         outputDir.mkdirs()
         val stem = reportFileStem(report.title, reportKey)
         val jsonName = "$stem-report.json"
-        val htmlPath = outputDir.resolve("$stem-report.html").toPath()
         val diagramName = "$stem-diagram.html"
         val payloadsName = "$stem-payloads.js"
         val shellBundle = report.forShell()
@@ -115,9 +107,8 @@ internal object ReportWriter {
         val diagramPath = outputDir.resolve(diagramName).toPath()
         writeAtomically(jsonPath, report.toJson())
         writeAtomically(diagramPath, shell)
-        writeAtomically(htmlPath, renderMinimalHtml(report, diagramName, jsonName))
         writeIndexEntry(outputDir, indexEntry(report, reportKey))
-        return ReportFiles(diagramHtml = diagramPath, listingHtml = htmlPath, reportJson = jsonPath)
+        return ReportFiles(diagramHtml = diagramPath, reportJson = jsonPath)
     }
 
     /** What the index lists for a report written with [writeReport]. */
@@ -415,107 +406,4 @@ internal object ReportWriter {
             .digest(text.toByteArray(Charsets.UTF_8))
             .take(4)
             .joinToString("") { "%02x".format(it) }
-
-    private fun renderMinimalHtml(report: ReportJson, diagramName: String, jsonName: String): String {
-        val scenariosHtml =
-            report.scenarios.joinToString("\n") { s ->
-                val factsHtml =
-                    if (s.facts.isEmpty()) {
-                        "<p><em>No facts</em></p>"
-                    } else {
-                        "<ul>" +
-                            s.facts.joinToString("") {
-                                "<li><strong>${Html.text(it.key)}</strong>: ${Html.text(it.value)}</li>"
-                            } +
-                            "</ul>"
-                    }
-                """
-                <section class="scenario ${Html.attribute(s.status)}" id="${Html.attribute(s.id)}">
-                  <h2>${Html.text(s.title)}
-                    <span class="badge">${Html.text(s.status)}</span>
-                  </h2>
-                  <div class="description">${Html.text(s.description)}</div>
-                  ${errorHtml(s)}
-                  <h3>Facts</h3>
-                  $factsHtml
-                  <h3>Sequence (${s.events.size})</h3>
-                  ${eventListHtml(s)}
-                </section>
-                """.trimIndent()
-            }
-        return """
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-              <meta charset="UTF-8"/>
-              <meta name="viewport" content="width=device-width, initial-scale=1"/>
-              <title>${Html.text(report.title)}</title>
-              <style>
-                :root { color-scheme: light dark; }
-                body { font-family: system-ui, sans-serif; margin: 0; padding: 1.5rem; line-height: 1.45; }
-                header { margin-bottom: 1.5rem; border-bottom: 1px solid #8884; padding-bottom: 1rem; }
-                .meta { color: #666; font-size: .9rem; }
-                .scenario { margin: 1.25rem 0; padding: 1rem; border-radius: 8px; border: 1px solid #8884; }
-                .badge { font-size: .75rem; padding: .15rem .45rem; border-radius: 999px; margin-left: .5rem; }
-                .success .badge { background: #bbf7d0; color: #14532d; }
-                .warn .badge { background: #fde68a; color: #713f12; }
-                .error .badge { background: #fecaca; color: #7f1d1d; }
-                .note { background: #f1f5f9; padding: .75rem 1rem; border-radius: 6px; margin-top: 1.5rem; }
-                @media (prefers-color-scheme: dark) {
-                  .note { background: #1e293b; }
-                  .success .badge { background: #14532d; color: #bbf7d0; }
-                  .warn .badge { background: #713f12; color: #fde68a; }
-                  .error .badge { background: #7f1d1d; color: #fecaca; }
-                }
-              </style>
-            </head>
-            <body>
-              <header>
-                <h1>${Html.text(report.title)}</h1>
-                <p class="meta">${Html.text(report.generator)} · ${Html.text(report.generatedAt)}</p>
-              </header>
-              $scenariosHtml
-              <div class="note">
-                <strong>Interactive diagram:</strong>
-                <a href="${Html.attribute(diagramName)}">${Html.text(diagramName)}</a>
-                renders this report (injected as <code>window.__LSD_REPORT__</code>).
-                JSON: <a href="${Html.attribute(jsonName)}">${Html.text(jsonName)}</a>.
-              </div>
-            </body>
-            </html>
-            """.trimIndent()
-    }
-
-    private fun errorHtml(scenario: ScenarioJson): String {
-        val error = scenario.error ?: return ""
-        val stackHtml =
-            error.stack?.let { "<pre>${Html.text(it)}</pre>" }.orEmpty()
-        return """
-            <h3>${Html.text(error.headline)}</h3>
-            <p>${Html.text(error.message)}</p>
-            $stackHtml
-            """.trimIndent()
-    }
-
-    private fun eventListHtml(scenario: ScenarioJson): String {
-        if (scenario.events.isEmpty()) return "<p><em>No events</em></p>"
-        val itemsHtml =
-            scenario.events.joinToString("") { event ->
-                val label =
-                    when (event) {
-                        is MessageEventJson -> "${event.from} → ${event.to}: ${event.label} (${event.type})"
-                        is NoteEventJson -> {
-                            val anchor = event.over?.let { " $it" }.orEmpty()
-                            "note ${event.placement}$anchor: ${event.text}"
-                        }
-                        is DividerEventJson -> "—— ${event.label}"
-                        is SectionEventJson -> "section: ${event.title}"
-                        is DelayEventJson -> "delay${event.label?.let { ": $it" }.orEmpty()}"
-                        is SpacerEventJson -> "spacer${event.heightPx?.let { " ${it}px" }.orEmpty()}"
-                        is LifelineEventJson -> "${event.kind} ${event.participantId}"
-                    }
-                "<li>${Html.text(label)}</li>"
-            }
-        return "<ol>$itemsHtml</ol>"
-    }
 }

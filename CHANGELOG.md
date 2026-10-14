@@ -14,7 +14,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   (summary strip, swim lanes and waterfall).
 - The report index (`index.html`) is the report app for every report in the directory: a sidebar lists
   reports (failed first) with their scenario counts, a report's data loads only when it is opened, and
-  `#report=<id>` links open a report, scenario or message directly.
+  `#report=<id>` links open a report, scenario or message directly. It replaces the per-report `-report.html`
+  listing page, which is no longer written (`ReportFiles.listingHtml` is gone).
+- The Pages site opens on the kitchen-sink report's index; `kitchen-sink.html` still opens the report alone.
 - A sequence diagram taller than the screen extends the page and scrolls with it, instead of scrolling inside its panel.
 - CI `gate` job, a single required check that passes for docs-only changes.
 - Coverage ratchet for Kover and Vitest.

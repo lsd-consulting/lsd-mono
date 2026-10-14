@@ -39,7 +39,6 @@ lsd-mono-core/
   - `*-payloads.js` — message bodies, loaded when the inspector opens
   - `*-report.js` — the same report data as a script, which the index page loads when the report is opened
   - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
-  - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
   - `index.html` from `createIndex`: the report app for every report in the directory. Reports
     are listed failed first with scenario counts; a report's `*-report.js` loads when it is opened,
     so the page stays small for large suites. `index.html#report=<stem>` opens one report, and

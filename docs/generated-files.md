@@ -20,7 +20,7 @@ notes, are not checked. Run it locally on a tree with no uncommitted changes.
 |------|----------|---------|
 | `modules/lsd-mono-core/report/dist/lsd-report.html` | `reportSingle` (`npm run build:single`), on every build | Packaged into the jar as `/lsd-mono-core/report/lsd-report.single.html`, the shell every report uses |
 | `modules/lsd-mono-core/report/dist/lsd-report-payloads.js` | `reportSingle` | The shell's built-in demo when you open `dist/lsd-report.html` with no captured report |
-| `modules/lsd-mono-core/build/pages/` (`index.html`, `kitchen-sink.html`, `kitchen-sink-payloads.js`) | `./gradlew :modules:lsd-mono-core:kitchenSinkSample` | The [Pages workflow](../.github/workflows/pages.yml) builds and publishes it on pushes to `main`. `index.html` is copied from [`docs/samples/index.html`](samples/index.html), which is source |
+| `modules/lsd-mono-core/build/pages/` (`index.html`, `kitchen-sink.html` and the kitchen-sink report's `-diagram.html`, `-report.js`, `-payloads.js`, `-report.json`) | `./gradlew :modules:lsd-mono-core:kitchenSinkSample` | The [Pages workflow](../.github/workflows/pages.yml) builds and publishes it on pushes to `main`. `index.html` is the report index that `createIndex()` writes for the kitchen-sink report |
 | `docs/perf-samples/` | `docs/perf/generate-*.mjs` | Local perf runs (gitignored) |
 
 ## Committed API dumps (verified by `check`)

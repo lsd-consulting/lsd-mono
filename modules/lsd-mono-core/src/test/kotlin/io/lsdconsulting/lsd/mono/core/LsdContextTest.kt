@@ -23,18 +23,19 @@ class LsdContextTest {
     }
 
     @Test
-    fun `completeReport writes the listing json diagram and index`() {
+    fun `completeReport writes the json, data script, diagram and index`() {
         val lsd = LsdContext()
         lsd.addFact("framework", "junit")
         lsd.completeScenario("hello world", "<p>ok</p>", Status.SUCCESS)
-        val reportPath = lsd.completeReport("Suite").listingHtml
+        val reportPath = lsd.completeReport("Suite").diagramHtml
         lsd.createIndex()
 
         val stem = ReportWriter.reportFileStem("Suite")
-        assertEquals("$stem-report.html", reportPath.fileName.toString())
+        assertEquals("$stem-diagram.html", reportPath.fileName.toString())
         assertTrue(reportPath.toFile().exists())
         assertTrue(File(tempDir.toFile(), "$stem-report.json").exists())
-        assertTrue(File(tempDir.toFile(), "$stem-diagram.html").exists())
+        assertTrue(File(tempDir.toFile(), "$stem-report.js").exists())
+        assertFalse(File(tempDir.toFile(), "$stem-report.html").exists(), "no listing page")
         assertTrue(File(tempDir.toFile(), "index.html").readText().contains("$stem-diagram.html"))
         assertFalse(File(tempDir.toFile(), "lsd-report.single.html").exists(), "no shared latest shell")
     }

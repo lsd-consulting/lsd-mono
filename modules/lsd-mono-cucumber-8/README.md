@@ -107,7 +107,7 @@ After the run finishes, open:
 build/reports/lsd/place_order-<hash>-diagram.html
 ```
 
-The file name comes from the feature file (`place_order.feature`), not from the `Feature:` title. `<hash>` is 8 hex characters from the feature's path, so two `place_order.feature` files in different folders get separate reports. That file is the report. `place_order-<hash>-report.html` is only a short listing. The plugin writes every feature's report when the run finishes, then `index.html`, which lists every report in the directory.
+The file name comes from the feature file (`place_order.feature`), not from the `Feature:` title. `<hash>` is 8 hex characters from the feature's path, so two `place_order.feature` files in different folders get separate reports. That file is the report. The plugin writes every feature's report when the run finishes, then `index.html`, which shows every report in the directory in one page, failed first.
 
 Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured).
 

@@ -71,7 +71,7 @@ class PayloadCaptureTest {
         assertTrue(json.contains("[lsd: binary, 3 bytes] base64:AP8Q"))
         assertTrue(json.contains("[lsd: truncated 200000 characters]"))
         assertTrue(json.contains(""""7": "\ufffd""""))
-        assertEquals(5, files.size, files.keys.toString())
+        assertEquals(4, files.size, files.keys.toString())
         for ((name, text) in files) {
             assertFalse(text.contains("alert(1)</script>"), "$name embeds the payload unescaped")
             assertFalse(text.contains("<!--"), "$name embeds a raw <!--")
