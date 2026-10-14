@@ -48,6 +48,8 @@ private fun SequenceEvent.source(): String = (this as? Message)?.source ?: Timin
  * 3. Structure wins: when clock order would put a reply before its call, a consume before its
  *    publish, or a child outside its parent call, the groups involved keep capture order and a
  *    `skew` warning is added.
+ * Wall clock (`wallClockMs`) is given only for a single source where every measured call has a start.
+ *
  * 4. When capture order itself is scrambled (interceptor threads, so replies arrive before their
  *    calls, or rule 3 had to give up), the structure is worked out again on a clock-sorted copy, and used when it is
  *    consistent and keeps every explicit `replyTo`/`causedBy` link in order.
@@ -330,6 +332,8 @@ private fun wallClock(
     events: List<SequenceEvent>,
     callMs: Map<String, Double>,
 ): Double? {
+    // A measured call with no start time could sit anywhere, so the span would be a guess.
+    if (callMs.keys.any { id -> events.firstOrNull { it.id == id }?.createdAt == null }) return null
     val starts = events.mapNotNull { e -> e.createdAt?.let { e.id to it } }
     if (starts.size < 2 && starts.none { callMs[it.first] != null }) return null
     val first = starts.minOfOrNull { it.second } ?: return null

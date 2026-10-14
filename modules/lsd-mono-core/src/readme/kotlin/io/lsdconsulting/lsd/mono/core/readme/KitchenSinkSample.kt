@@ -1,7 +1,11 @@
 package io.lsdconsulting.lsd.mono.core.readme
 
 import io.lsdconsulting.lsd.mono.core.CaptureBlock
+import io.lsdconsulting.lsd.mono.core.Interaction
+import io.lsdconsulting.lsd.mono.core.InteractionKind
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.Timing
+import io.lsdconsulting.lsd.mono.core.Trace
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.BI_DIRECTIONAL
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.LOST
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide
@@ -32,6 +36,11 @@ import java.time.Instant
  * and activation colours, durations, out-of-order capture sorted by
  * timestamp, and success, failure and error statuses with structured errors.
  *
+ * The first scenario shows the timing API: fractional measured durations, trace and span ids,
+ * start times with the default same-source clock ordering (two events captured out of order
+ * come back in time order, marked clock-ordered), a publish linked to its consume from another
+ * service's clock, and an interaction ingested from another library.
+ *
  * Some display names are deliberately long, one per shape, so the
  * header shows names that widen their shape, wrap onto two lines, or are cut
  * with an ellipsis (full name on hover).
@@ -58,6 +67,7 @@ fun main() {
         PARTICIPANT.called("Warehouse", colour = "#ea580c"),
     )
 
+    timedCheckout(lsd)
     happyPath(lsd)
     paymentDeclined(lsd)
     outOfStock(lsd)
@@ -293,5 +303,69 @@ private fun asyncFulfilment(lsd: LsdContext) {
                     "org.awaitility.core.ConditionTimeoutException: Condition was not fulfilled within 30 seconds.\n" +
                         "\tat com.example.shop.FulfilmentTest.deliveryIsRecorded(FulfilmentTest.kt:61)",
             ),
+    )
+}
+
+/** The timing API: measured, traced, clock-ordered and linked. Deterministic: every duration is given. */
+private fun timedCheckout(lsd: LsdContext) {
+    val t0 = Instant.parse("2026-10-14T09:00:00Z")
+
+    fun at(ms: Long) = t0.plusMillis(ms)
+    val trace = "4bf92f3577b34da6a3ce929d0e0e4736"
+    lsd.addFact("traceId", trace)
+    lsd.addFact("clock ordering", "same source (default)")
+
+    lsd.section("Measured and traced")
+    val checkout = lsd.call("Web UI", "API Gateway", "POST /checkout", timing = Timing.at(at(0)), trace = Trace(trace, "a1"))
+    val order =
+        lsd.call("API Gateway", "Order Service", "create order", timing = Timing.at(at(3)), trace = Trace(trace, "b1", "a1"))
+    val basket = lsd.call("Order Service", "Basket", "load basket", timing = Timing.at(at(6)), trace = Trace(trace, "c1", "b1"))
+    basket.reply("2 lines", timing = Timing.tookMs(17.625))
+    val stock =
+        lsd.call("Order Service", "Inventory Service", "reserve stock", timing = Timing.at(at(25)), trace = Trace(trace, "c2", "b1"))
+    val db = lsd.call("Inventory Service", "Orders DB", "upsert reservation", timing = Timing.at(at(31)), trace = Trace(trace, "d1", "c2"))
+    db.reply("1 row", timing = Timing.tookMs(32.75))
+    stock.reply("reserved", timing = Timing.tookMs(61.5))
+    val pay =
+        lsd.call("Order Service", "Payment Service", "authorise £42.00", timing = Timing.at(at(90)), trace = Trace(trace, "c3", "b1"))
+    val fraud = lsd.call("Payment Service", "Fraud Check", "score", timing = Timing.at(at(96)), trace = Trace(trace, "e1", "c3"))
+    fraud.reply("low risk", timing = Timing.tookMs(48.25))
+    val provider =
+        lsd.call("Payment Service", "Payment Provider", "POST /authorise", timing = Timing.at(at(150)), trace = Trace(trace, "e2", "c3"))
+    provider.reply("approved", timing = Timing.tookMs(402.375))
+    pay.reply("authorised", timing = Timing.tookMs(470.5))
+
+    lsd.section("Captured out of order, put back by the clock")
+    // An interceptor thread captured these late and in the wrong order. They have start times and
+    // no measured duration, so same-source clock ordering swaps them back (order = CLOCK).
+    lsd.async("Order Service", "Warehouse", "pick list", timing = Timing.at(at(575)))
+    val placed = lsd.async("Order Service", "kafka", "order.placed", timing = Timing.at(at(566)), trace = Trace(trace, "c4", "b1"))
+    order.reply("201 Created", timing = Timing.tookMs(581.25))
+    checkout.reply("201", timing = Timing.tookMs(586.0))
+
+    lsd.section("Another service's clock")
+    // The consume comes from the notification service's clock and is linked to its publish, so it is
+    // never drawn before it, whatever its timestamp says.
+    lsd.async(
+        "kafka",
+        "Notification Service",
+        "consume order.placed",
+        timing = Timing.at(at(560)).withSource("notification-service"),
+        trace = Trace(trace, "f1", "c4"),
+        causedBy = placed,
+    )
+    // Ingested from another library, which sends no ids: drawn, but not linked.
+    lsd.ingest(
+        Interaction(InteractionKind.PUBLISH, "Notification Service", "Email", "send receipt", source = "notification-service", startedAt = at(640)),
+    )
+    lsd.completeScenario(
+        "Timed checkout (timing API)",
+        """
+        Given every call is measured and carries trace and span ids
+        When two events are captured out of order on the same clock
+        Then they are put back in time order and marked clock-ordered
+        And a consume on another service's clock stays after its publish
+        """.trimIndent(),
+        Status.SUCCESS,
     )
 }

@@ -1228,3 +1228,312 @@ html {
     color: #000;
   }
 }
+
+/* Timing: summary strip, swim lanes and waterfall (timing API slice 1). */
+.timing-strip {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.timing-chip {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.timing-chip:hover {
+  border-color: var(--accent);
+}
+.timing-chip:focus-visible {
+  box-shadow: var(--focus);
+}
+.timing-chip .k {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.timing-chip .v {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+}
+.timing-chip .h {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.timing-chip.clock {
+  border-color: color-mix(in oklab, var(--warn) 55%, var(--border));
+}
+.timing h4 {
+  margin: 16px 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.timing h4 small {
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+.timing-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pill.clock,
+.tbadge.clock {
+  color: var(--warn);
+  border-color: color-mix(in oklab, var(--warn) 50%, var(--border));
+}
+.pill.warn {
+  color: var(--warn);
+}
+.tbadge {
+  font-size: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-right: 4px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.timing-stack {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  gap: 2px;
+  background: var(--surface-2);
+}
+.timing-legend {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.timing-legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  margin-right: 5px;
+}
+.timing-legend b {
+  color: var(--text);
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.timing-legend em {
+  font-style: normal;
+}
+.lane-c0 {
+  background: var(--accent);
+}
+.lane-c1 {
+  background: oklch(68% 0.13 260);
+}
+.lane-c2 {
+  background: oklch(70% 0.14 320);
+}
+.lane-c3 {
+  background: var(--warn);
+}
+.lane-c4 {
+  background: oklch(68% 0.12 200);
+}
+.lane-c5 {
+  background: var(--text-muted);
+}
+.swim-lanes,
+.waterfall {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lane {
+  display: grid;
+  grid-template-columns: minmax(90px, 30%) 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 24px;
+  font-size: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+.lane-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+}
+.lane-track,
+.wf-track {
+  position: relative;
+  height: 12px;
+  background: linear-gradient(90deg, var(--border) 1px, transparent 1px) 0 0 / 25% 100%;
+}
+.lane-bar {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 3px;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.lane-bar:hover,
+.lane-bar:focus-visible {
+  opacity: 1;
+  box-shadow: var(--focus);
+}
+.wf-axis,
+.wf-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 42%) 1fr 64px;
+  gap: 8px;
+  align-items: center;
+}
+.wf-axis .ticks {
+  position: relative;
+  height: 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.wf-axis .ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+.wf-axis .ticks span:first-child {
+  transform: none;
+}
+.wf-row {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(120px, 42%) 1fr 64px;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 3px 6px;
+  border-radius: 6px;
+  min-height: 26px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.wf-row:hover {
+  background: var(--surface-2);
+}
+.wf-row:focus-visible {
+  box-shadow: var(--focus);
+}
+.wf-row.clock {
+  box-shadow: inset 3px 0 0 var(--warn);
+}
+.wf-lab {
+  padding-left: calc(var(--d) * 10px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wf-lab .who {
+  color: var(--text-muted);
+}
+.wf-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
+  overflow: hidden;
+}
+.wf-self {
+  display: block;
+  height: 100%;
+  margin-left: auto;
+  background: var(--accent);
+}
+.wf-tick {
+  position: absolute;
+  top: 1px;
+  width: 2px;
+  height: 10px;
+  background: var(--text-muted);
+  border-radius: 1px;
+}
+.wf-dur {
+  font-family: var(--mono);
+  text-align: right;
+}
+.wf-dur .nt {
+  color: var(--text-muted);
+}
+.warnx {
+  color: var(--warn);
+  text-decoration: none;
+  font-weight: 700;
+  margin-left: 2px;
+}
+@media (max-width: 640px) {
+  .timing-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wf-row,
+  .wf-axis {
+    grid-template-columns: 1fr 56px;
+    grid-template-areas: "l d" "t t";
+    row-gap: 3px;
+  }
+  .wf-axis span:first-child,
+  .wf-axis span:last-child {
+    display: none;
+  }
+  .wf-axis .ticks {
+    grid-column: 1 / 3;
+  }
+  .wf-lab {
+    grid-area: l;
+  }
+  .wf-track {
+    grid-area: t;
+  }
+  .wf-dur {
+    grid-area: d;
+  }
+}
+@media print {
+  .timing-strip {
+    break-inside: avoid;
+  }
+}
+.wf-lab .tag {
+  font-size: 10px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+}

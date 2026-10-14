@@ -138,7 +138,7 @@ test('axe with metrics in the side panel, and Escape or Close returns focus to t
     await expect(page.locator('.scenario-body .cards h3', { hasText: 'Metrics' })).toHaveCount(0)
     const open = page.getByRole('button', { name: 'Metrics', exact: true })
     await open.click()
-    await expect(page.locator('#inspector-title')).toHaveText('Metrics')
+    await expect(page.locator('#inspector-title')).toHaveText(/metrics/i)
     await expect(page.locator('#inspector-metrics dl.kv dt')).toHaveText(['Messages'])
     await expect(page.locator('#inspector-metrics ol.insights li')).toHaveCount(1)
     await expect(page.locator('#inspector-copy')).toBeHidden()
@@ -162,7 +162,7 @@ test('print shows metrics only while the Metrics view is open, in its scenario',
   const metricsBtn = page.getByRole('button', { name: 'Metrics', exact: true })
 
   await metricsBtn.click()
-  await expect(page.locator('#inspector-title')).toHaveText('Metrics')
+  await expect(page.locator('#inspector-title')).toHaveText(/metrics/i)
   // On screen the print copy is there but not shown.
   await expect(printed).toBeHidden()
 

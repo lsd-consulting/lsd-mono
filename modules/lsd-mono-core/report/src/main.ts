@@ -14,6 +14,7 @@ import { loadExternalPayloads, payloadKey } from './lib/payloads'
 import { parseReportHash, writeReportHash, type HashRef } from './lib/report-hash'
 import { defaultScenarioId, reselect, stepSelection } from './ui/selection'
 import { placePrintMetrics, printMetricsSection } from './ui/metrics'
+import { timingPanelHtml, timingStripHtml } from './ui/timing'
 import { placePrintPanel, printComponentsSection, printMessageSection } from './ui/print-panel'
 import { renderComponentDiagram } from './lib/component-diagram'
 
@@ -577,6 +578,7 @@ function scenarioHtml(s: Scenario): string {
       <h2 id="scenario-title" tabindex="-1">${escapeHtml(s.title)}</h2>
       <span class="badge ${escapeAttr(s.status)}">${escapeHtml(s.status)}</span>
     </div>
+    ${timingStripHtml(s)}
     <div class="scenario-body">
       <div class="cards">
         <section class="card">
@@ -679,6 +681,7 @@ function openMetrics(scenario: Scenario): void {
     metrics: scenario.metrics,
     insights: scenario.insights,
     labelMaxWidth: report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH,
+    timingHtml: timingPanelHtml(scenario),
   })
   syncPrintCopies()
 }

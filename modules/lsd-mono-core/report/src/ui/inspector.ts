@@ -18,6 +18,8 @@ export interface MetricsView {
   metrics: Metric[]
   insights?: Insight[]
   labelMaxWidth: number
+  /** Timing view (summary, swim lanes, waterfall), shown above the metrics. */
+  timingHtml?: string
 }
 
 export interface InspectorOptions {
@@ -311,6 +313,9 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
         <span class="pill">${escapeHtml(message.type)}</span>
         <span class="pill">${escapeHtml(message.from)} → ${escapeHtml(message.to)}</span>
         ${message.durationMs != null ? `<span class="pill">${escapeHtml(message.durationMs)} ms</span>` : ''}
+        ${message.timing && message.timing !== 'NONE' ? `<span class="pill">${escapeHtml(message.timing.toLowerCase())}</span>` : ''}
+        ${message.order === 'CLOCK' ? '<span class="pill clock">clock-ordered</span>' : ''}
+        ${message.pairing === 'GUESSED' ? '<span class="pill">guessed pairing</span>' : ''}
         ${summaryPills(message.data)}
         <span class="pill">${escapeHtml(scenarioId)}</span>`
       pending = message.payloadId ? options.loadPayload(scenarioId, message.id) : Promise.resolve(message.data)
@@ -358,7 +363,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     openMetrics(scenarioId, view) {
       begin({ scenarioId, kind: 'metrics' })
       showJson = false
-      title.textContent = 'Metrics'
+      title.textContent = view.timingHtml ? 'Timing and metrics' : 'Metrics'
       const count = view.metrics.length
       const ranked = view.insights?.length ?? 0
       meta.innerHTML = `
@@ -366,7 +371,8 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
         ${ranked ? `<span class="pill">${ranked} ${ranked === 1 ? 'insight' : 'insights'}</span>` : ''}
         <span class="pill">${escapeHtml(view.heading)}</span>`
       showViewChrome(metricsHost)
-      metricsHost.innerHTML = metricsPanelHtml(scenarioId, view.metrics, view.insights, view.labelMaxWidth)
+      metricsHost.innerHTML =
+        (view.timingHtml ?? '') + metricsPanelHtml(scenarioId, view.metrics, view.insights, view.labelMaxWidth)
     },
     openError(error) {
       const token = begin(null)

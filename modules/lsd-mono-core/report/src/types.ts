@@ -93,7 +93,30 @@ export interface MessageEvent {
   /** Key into the payload sidecar (`scenarioId/messageId`). Absent when `data` is the whole payload. */
   payloadId?: string
   createdAt?: string
+  /** Capture order. */
+  seq?: number
+  callId?: string
+  /** On a reply: the call it answers. */
+  replyTo?: string
+  /** On a consume: the publish that caused it. */
+  causedBy?: string
+  trace?: { traceId: string; spanId?: string; parentSpanId?: string }
+  /** Clock domain. Absent means `local`. */
+  source?: string
+  startedAt?: string
+  capturedAt?: string
+  status?: string
+  timing?: TimingSource
+  pairing?: PairingSource
+  order?: OrderSource
 }
+
+export type TimingSource = 'NONE' | 'TIMESTAMPED' | 'MEASURED' | 'DERIVED'
+export type PairingSource = 'NONE' | 'GUESSED' | 'CALL_ID' | 'TRACE'
+/** `CLOCK`: moved by clock ordering (createdAt). Shown with a badge. */
+export type OrderSource = 'SEQUENCE' | 'STRUCTURE' | 'CLOCK'
+export type Accuracy = 'STRUCTURE_ONLY' | 'TIMESTAMPED' | 'MEASURED' | 'TRACED'
+export type ClockOrdering = 'OFF' | 'SAME_SOURCE' | 'ALL_SOURCES'
 
 export type DiagramEvent =
   MessageEvent | NoteEvent | DividerEvent | SectionEvent | DelayEvent | SpacerEvent | ActivateEvent
@@ -149,6 +172,16 @@ export interface Scenario {
   insights?: Insight[]
   participants: Participant[]
   events: DiagramEvent[]
+  /** Timing summary. Absent on older reports, which are treated as structure only. */
+  accuracy?: Accuracy
+  measuredCoverage?: number
+  pairingCoverage?: number
+  sources?: string[]
+  wallClockMs?: number
+  clockOrdering?: ClockOrdering
+  clockOrdered?: number
+  warnings?: string[]
+  reorderedByClock?: string[]
 }
 
 export interface Report {

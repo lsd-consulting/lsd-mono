@@ -10,6 +10,7 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import java.time.Instant
 
 /**
  * Report behind the root README's feature tour (`docs/readme/feature-tour.gif`).
@@ -92,6 +93,10 @@ private fun placeOrder(lsd: LsdContext) {
             "orderId" to "ord-1001",
             "total" to 2400,
         )
+        // Captured out of order by an interceptor thread: clock ordering (same source, the
+        // default) puts them back in time order and marks them clock-ordered.
+        "Orders" sends "Order events" label "stock.committed" at PAID_AT.plusMillis(9)
+        "Orders" sends "Order events" label "payment.captured" at PAID_AT.plusMillis(4)
         "Orders" repliesTo "Web Shop" label "201 Created" data mapOf(
             "status" to 201,
             "body" to mapOf("orderId" to "ord-1001", "eta" to "2026-10-12"),
@@ -192,3 +197,5 @@ private fun shippingUpdate(lsd: LsdContext) {
             ),
     )
 }
+
+private val PAID_AT: Instant = Instant.parse("2026-10-12T09:30:00Z")

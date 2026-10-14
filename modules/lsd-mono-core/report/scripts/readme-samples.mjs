@@ -467,12 +467,23 @@ async function recordTour(browser, tourDir, file) {
       await snap(1600)
     }
 
-    // 6. Metrics.
-    await caption('Metrics rank the slowest calls')
-    await click(page.locator('.seq-diagram').first().getByRole('button', { name: 'Metrics', exact: true }), {
-      hold: 1300,
-      settle: () => page.locator('#inspector-metrics').waitFor({ state: 'visible' }),
+    // 6. Timing: the summary strip opens swim lanes and the waterfall.
+    await caption('Timing: summary strip, swim lanes and a waterfall')
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await click(page.locator('.timing-strip .timing-chip').first(), {
+      hold: 900,
+      settle: () => page.locator('#inspector-metrics .swim-lanes').waitFor({ state: 'visible' }),
     })
+    await caption('Clock-ordered events carry a clock badge', { sameBeat: true })
+    await page
+      .locator('#inspector-metrics .waterfall .wf-row.clock')
+      .first()
+      .evaluate((el) => {
+        el.scrollIntoView({ block: 'center' })
+      })
+    const clocked = await page.locator('#inspector-metrics .waterfall .wf-row.clock').first().boundingBox()
+    if (clocked) await moveTo(clocked.x + 80, clocked.y + clocked.height / 2, 5)
+    await snap(1100)
     await page.locator('#inspector-close').click()
     await page.locator('#inspector').waitFor({ state: 'hidden' })
 
