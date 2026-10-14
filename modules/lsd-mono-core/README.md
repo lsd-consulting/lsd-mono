@@ -39,7 +39,8 @@ lsd-mono-core/
   - `*-payloads.js` — message bodies, loaded when the inspector opens
   - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
-  - `index.html` from `createIndex`, listing every report in the directory
+  - `index.html` from `createIndex`, listing every report in the directory: failed reports
+    first, scenario counts per report, a title filter, and links to each diagram
   - Files are written to a temporary file and moved into place. There are no shared
     "latest" files, so test classes, forks and modules can share one directory.
 - Timing: durations, start times, call/reply pairing and clock ordering, with an accuracy level per scenario (see [Timing](#timing))

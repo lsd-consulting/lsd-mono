@@ -13,10 +13,34 @@ import io.lsdconsulting.lsd.mono.core.json.render
  * Report JSON aligned with report `src/types.ts` (`Report` / `Scenario` / `DiagramEvent`).
  */
 internal data class ReportFile(
+    /** The page the index links to: the report's interactive diagram. */
     val filename: String,
     val title: String,
     val status: String,
+    /** Scenarios by outcome. */
+    val counts: ScenarioCounts = ScenarioCounts(),
 )
+
+/** How many of a report's scenarios passed, warned and failed. */
+internal data class ScenarioCounts(
+    val success: Int = 0,
+    val warn: Int = 0,
+    val error: Int = 0,
+) {
+    val total: Int get() = success + warn + error
+
+    operator fun plus(other: ScenarioCounts): ScenarioCounts =
+        ScenarioCounts(success + other.success, warn + other.warn, error + other.error)
+
+    companion object {
+        fun of(statuses: List<String>): ScenarioCounts =
+            ScenarioCounts(
+                success = statuses.count { it == "success" },
+                warn = statuses.count { it == "warn" },
+                error = statuses.count { it == "error" },
+            )
+    }
+}
 
 internal data class ReportOptionsJson(
     /** When false, scenario `metrics` and `insights` are empty. Default true. */

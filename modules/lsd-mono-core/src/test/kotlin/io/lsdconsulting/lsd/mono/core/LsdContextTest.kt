@@ -35,7 +35,7 @@ class LsdContextTest {
         assertTrue(reportPath.toFile().exists())
         assertTrue(File(tempDir.toFile(), "$stem-report.json").exists())
         assertTrue(File(tempDir.toFile(), "$stem-diagram.html").exists())
-        assertTrue(File(tempDir.toFile(), "index.html").readText().contains("$stem-report.html"))
+        assertTrue(File(tempDir.toFile(), "index.html").readText().contains("$stem-diagram.html"))
         assertFalse(File(tempDir.toFile(), "lsd-report.single.html").exists(), "no shared latest shell")
     }
 

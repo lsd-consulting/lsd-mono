@@ -16,6 +16,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
+import io.lsdconsulting.lsd.mono.core.model.ScenarioCounts
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportJsonMapper
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
@@ -356,9 +357,10 @@ public class LsdContext :
         synchronized(lock) {
             reportFiles.add(
                 ReportFile(
-                    filename = files.listingHtml.fileName.toString(),
+                    filename = files.diagramHtml.fileName.toString(),
                     title = report.title,
                     status = report.status,
+                    counts = ScenarioCounts.of(report.scenarios.map { it.status }),
                 ),
             )
         }

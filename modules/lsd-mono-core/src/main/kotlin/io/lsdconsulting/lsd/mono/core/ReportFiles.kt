@@ -7,9 +7,9 @@ import java.nio.file.Path
  * [LsdContext.report]. All three share a stem: the title plus a short hash of the report key.
  */
 public class ReportFiles internal constructor(
-    /** `<stem>-diagram.html`: the interactive sequence diagram. This is the page to open. */
+    /** `<stem>-diagram.html`: the interactive sequence diagram. This is the page to open, and the one `index.html` links to. */
     public val diagramHtml: Path,
-    /** `<stem>-report.html`: a short page that lists the scenarios and links to the diagram and the JSON. `index.html` links here. */
+    /** `<stem>-report.html`: a short page that lists the scenarios and links to the diagram and the JSON. */
     public val listingHtml: Path,
     /** `<stem>-report.json`: the report's data, which the diagram page also embeds. */
     public val reportJson: Path,

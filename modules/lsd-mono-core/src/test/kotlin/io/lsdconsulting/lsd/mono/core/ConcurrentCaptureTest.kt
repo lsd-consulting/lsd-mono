@@ -180,7 +180,7 @@ class ConcurrentCaptureTest {
             assertEquals(List(3) { "suite$t" }, owners)
         }
         val index = tempDir.resolve("index.html").readText()
-        assertEquals(suites, Regex("""href="OrderTest-[0-9a-f]{8}-report.html"""").findAll(index).count(), index)
+        assertEquals(suites, Regex("""href="OrderTest-[0-9a-f]{8}-diagram.html"""").findAll(index).count(), index)
     }
 
     @Test

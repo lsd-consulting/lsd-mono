@@ -188,7 +188,7 @@ Each item: legacy behaviour → why it matters → suggested LSD Mono shape → 
 | | |
 |--|--|
 | **Legacy** | Writes `lsd-index.html` via Handlebars (`HtmlIndexWriter` / `html-index.hbs`) with branded chrome. |
-| **Mono** | Plain `index.html` table. Functional but not the product shell. |
+| **Mono** | `index.html` table in the report's theme: failed reports first, scenario counts, a filter, links to each diagram. |
 | **LSD Mono** | Either a tiny report “index” mode (list of reports) or keep minimal HTML but align naming/status styling; print absolute `file://` path like legacy. |
 | **Priority** | **P1** |
 | **Test** | Unit: index lists all `ReportFile`s after two `completeReport`s. |

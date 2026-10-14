@@ -10,6 +10,7 @@ import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
+import io.lsdconsulting.lsd.mono.core.model.ScenarioCounts
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
@@ -53,6 +54,7 @@ internal object ReportWriter {
     private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report.single.html"
     private const val INDEX_DIR = ".lsd-index"
     private const val INDEX_LOCK = ".lock"
+    private const val INDEX_FORMAT = "2"
     private const val MAX_TITLE_CHARS = 80
     private val jvmIndexLock = ReentrantLock()
 
@@ -99,13 +101,21 @@ internal object ReportWriter {
         writeAtomically(jsonPath, report.toJson())
         writeAtomically(diagramPath, shell)
         writeAtomically(htmlPath, renderMinimalHtml(report, diagramName, jsonName))
-        writeIndexEntry(outputDir, ReportFile(filename = htmlPath.fileName.toString(), title = report.title, status = report.status))
+        writeIndexEntry(
+            outputDir,
+            ReportFile(
+                filename = diagramName,
+                title = report.title,
+                status = report.status,
+                counts = ScenarioCounts.of(report.scenarios.map { it.status }),
+            ),
+        )
         return ReportFiles(diagramHtml = diagramPath, listingHtml = htmlPath, reportJson = jsonPath)
     }
 
     /**
      * Write `index.html` listing [reportFiles] plus every report already recorded in
-     * [outputDir] by any writer, sorted by title. Safe to call from several threads
+     * [outputDir] by any writer: failed reports first, then by title. Safe to call from several threads
      * and processes at once.
      */
     @JvmStatic
@@ -120,47 +130,175 @@ internal object ReportWriter {
                 (readIndexEntries(outputDir) + reportFiles)
                     .associateBy { it.filename }
                     .values
-                    .sortedWith(compareBy<ReportFile> { it.title.lowercase() }.thenBy { it.filename })
+                    .sortedWith(indexOrder)
             writeAtomically(index, renderIndex(all))
         }
         return index
     }
 
-    private fun renderIndex(reportFiles: List<ReportFile>): String {
+    /** Failures first, then warnings, then the rest; by title within each. */
+    private val indexOrder: Comparator<ReportFile> =
+        compareBy<ReportFile> { STATUS_ORDER.indexOf(it.status).let { rank -> if (rank < 0) STATUS_ORDER.size else rank } }
+            .thenBy { it.title.lowercase() }
+            .thenBy { it.filename }
+
+    private val STATUS_ORDER = listOf("error", "warn", "success")
+
+    private fun statusText(status: String): String =
+        when (status) {
+            "error" -> "Failed"
+            "warn" -> "Warning"
+            "success" -> "Passed"
+            else -> status
+        }
+
+    private fun statusIcon(status: String): String =
+        when (status) {
+            "error" -> "✕"
+            "warn" -> "!"
+            "success" -> "✓"
+            else -> "·"
+        }
+
+    internal fun renderIndex(reportFiles: List<ReportFile>): String {
+        val totals = reportFiles.fold(ScenarioCounts()) { acc, rf -> acc + rf.counts }
+        val failedReports = reportFiles.count { it.status == "error" }
+        val failedOnlyStateHtml = if (failedReports == 0) " disabled" else ""
         val rowsHtml =
             reportFiles.joinToString("\n") { rf ->
+                val c = rf.counts
+                val stem = rf.filename.removeSuffix("-diagram.html").takeIf { rf.filename.endsWith("-diagram.html") }
+                val dataLinkHtml = stem?.let { """ <a class="data" href="${Html.attribute("$it-report.json")}">JSON</a>""" }.orEmpty()
+                val countsHtml =
+                    if (c.total == 0) {
+                        "<span class=\"none\">—</span>"
+                    } else {
+                        listOf("success" to c.success, "warn" to c.warn, "error" to c.error)
+                            .filter { it.second > 0 }
+                            .joinToString(
+                                " ",
+                            ) { (s, n) ->
+                                """<span class="count ${Html.attribute(
+                                    s,
+                                )}">${Html.text("${statusIcon(s)} $n ${statusText(s).lowercase()}")}</span>"""
+                            }
+                    }
                 """
-                <tr class="${Html.attribute(rf.status)}">
-                  <td><a href="${Html.attribute(rf.filename)}">${Html.text(rf.title)}</a></td>
-                  <td>${Html.text(rf.status)}</td>
+                <tr data-status="${Html.attribute(rf.status)}" data-title="${Html.attribute(rf.title.lowercase())}">
+                  <td><span class="badge ${Html.attribute(
+                    rf.status,
+                )}"><span aria-hidden="true">${Html.text(statusIcon(rf.status))}</span> ${Html.text(statusText(rf.status))}</span></td>
+                  <th scope="row"><a href="${Html.attribute(rf.filename)}">${Html.text(rf.title)}</a>$dataLinkHtml</th>
+                  <td class="num">${Html.text(c.total.toString())}</td>
+                  <td>$countsHtml</td>
                 </tr>
                 """.trimIndent()
             }
+        val summary =
+            "${reportFiles.size} report${if (reportFiles.size == 1) "" else "s"} · ${totals.total} scenario${if (totals.total == 1) "" else "s"}: " +
+                "${totals.success} passed, ${totals.warn} with warnings, ${totals.error} failed"
         return """
             <!DOCTYPE html>
-            <html lang="en">
+            <html lang="en" data-theme="dark">
             <head>
               <meta charset="UTF-8"/>
+              <meta name="viewport" content="width=device-width, initial-scale=1"/>
+              <meta name="color-scheme" content="dark light"/>
+              <script>
+                try {
+                  var t = localStorage.getItem('lsd-report-theme')
+                  if (t !== 'dark' && t !== 'light' && t !== 'contrast') {
+                    t = matchMedia('(prefers-contrast: more)').matches ? 'contrast'
+                      : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+                  }
+                  document.documentElement.setAttribute('data-theme', t)
+                } catch (e) {}
+              </script>
               <title>LSD Mono reports</title>
               <style>
-                body { font-family: system-ui, sans-serif; margin: 2rem; }
-                table { border-collapse: collapse; width: 100%; }
-                th, td { border-bottom: 1px solid #ccc; padding: .5rem; text-align: left; }
-                .success { color: #15803d; }
-                .warn { color: #a16207; }
-                .error { color: #b91c1c; }
+                :root, [data-theme="dark"] { color-scheme: dark; --bg: oklch(0.16 0.02 250); --surface: oklch(0.23 0.028 250);
+                  --border: oklch(0.35 0.03 250 / 0.7); --text: oklch(0.95 0.01 250); --muted: oklch(0.72 0.02 250);
+                  --accent: oklch(0.82 0.16 175); --success: oklch(0.72 0.17 150); --warn: oklch(0.82 0.14 85); --error: oklch(0.74 0.17 25); }
+                [data-theme="light"] { color-scheme: light; --bg: oklch(0.97 0.01 250); --surface: oklch(1 0 0);
+                  --border: oklch(0.88 0.015 250); --text: oklch(0.22 0.03 250); --muted: oklch(0.42 0.025 250);
+                  --accent: oklch(0.45 0.12 175); --success: oklch(0.46 0.13 150); --warn: oklch(0.48 0.12 80); --error: oklch(0.48 0.17 25); }
+                [data-theme="contrast"] { color-scheme: light; --bg: #fff; --surface: #fff; --border: #000; --text: #000; --muted: #000;
+                  --accent: #000; --success: #064e3b; --warn: #78350f; --error: #7f1d1d; }
+                * { box-sizing: border-box; }
+                body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5;
+                  font: 15px/1.5 "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif; }
+                main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+                h1 { font-size: 1.6rem; margin: 0 0 4px; }
+                .summary { color: var(--muted); margin: 0 0 16px; }
+                .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+                #filter { flex: 1 1 240px; min-width: 0; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
+                  background: var(--surface); color: var(--text); font: inherit; }
+                .tools label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); white-space: nowrap; }
+                a { color: var(--accent); }
+                a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+                table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+                caption { text-align: left; padding: 0 0 8px; color: var(--muted); }
+                th, td { border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+                thead th { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+                tbody th { font-weight: 600; }
+                tr:last-child > * { border-bottom: 0; }
+                .num { text-align: right; font-variant-numeric: tabular-nums; }
+                .badge { display: inline-block; white-space: nowrap; padding: 1px 10px; border-radius: 999px; border: 1px solid currentColor; font-size: .85rem; font-weight: 600; }
+                .badge.success, .count.success { color: var(--success); }
+                .badge.warn, .count.warn { color: var(--warn); }
+                .badge.error, .count.error { color: var(--error); }
+                .count { white-space: nowrap; margin-right: 8px; font-size: .9rem; }
+                .data { margin-left: 8px; font-weight: 400; font-size: .85rem; color: var(--muted); }
+                .none, .empty { color: var(--muted); }
+                [data-theme="contrast"] table, [data-theme="contrast"] .badge { border-width: 2px; }
+                @media (max-width: 560px) {
+                  main { padding: 16px 10px 32px; }
+                  thead { display: none; }
+                  table, caption, tbody, tr, th, td { display: block; width: 100%; }
+                  caption { padding: 8px 12px; }
+                  tr { border-bottom: 1px solid var(--border); padding: 8px 0; }
+                  th, td { border: 0; padding: 2px 12px; }
+                  td.num { display: none; }
+                }
               </style>
             </head>
             <body>
-              <h1>LSD Mono report index</h1>
-              <p>Generated by <code>lsd-mono-core</code>. Each report links to an interactive
-                 sequence diagram of its scenarios.</p>
-              <table>
-                <thead><tr><th>Report</th><th>Status</th></tr></thead>
-                <tbody>
-                $rowsHtml
-                </tbody>
-              </table>
+              <main>
+                <h1>LSD Mono reports</h1>
+                <p class="summary" id="summary">${Html.text(summary)}</p>
+                <div class="tools">
+                  <input type="search" id="filter" placeholder="Filter reports by title" aria-label="Filter reports by title" autocomplete="off"/>
+                  <label><input type="checkbox" id="failed-only"$failedOnlyStateHtml/> Failed only (${Html.text(failedReports.toString())})</label>
+                </div>
+                <table>
+                  <caption>Failed reports first. Each title opens that report's sequence diagrams.</caption>
+                  <thead><tr><th scope="col">Status</th><th scope="col">Report</th><th scope="col" class="num">Scenarios</th><th scope="col">Outcomes</th></tr></thead>
+                  <tbody>
+                  $rowsHtml
+                  </tbody>
+                </table>
+                <p class="empty" id="no-match" hidden>No reports match the filter.</p>
+              </main>
+              <script>
+                (function () {
+                  var filter = document.getElementById('filter')
+                  var failed = document.getElementById('failed-only')
+                  var rows = Array.prototype.slice.call(document.querySelectorAll('tbody tr'))
+                  function apply() {
+                    var q = filter.value.trim().toLowerCase()
+                    var shown = 0
+                    rows.forEach(function (row) {
+                      var ok = (!q || row.getAttribute('data-title').indexOf(q) >= 0) &&
+                        (!failed.checked || row.getAttribute('data-status') === 'error')
+                      row.hidden = !ok
+                      if (ok) shown++
+                    })
+                    document.getElementById('no-match').hidden = shown > 0
+                  }
+                  filter.addEventListener('input', apply)
+                  failed.addEventListener('change', apply)
+                })()
+              </script>
             </body>
             </html>
             """.trimIndent()
@@ -174,6 +312,10 @@ internal object ReportWriter {
                 setProperty("filename", entry.filename)
                 setProperty("title", Html.wellFormed(entry.title))
                 setProperty("status", entry.status)
+                setProperty("format", INDEX_FORMAT)
+                setProperty("success", entry.counts.success.toString())
+                setProperty("warn", entry.counts.warn.toString())
+                setProperty("error", entry.counts.error.toString())
             }
         val text = StringWriter().also { props.store(it, null) }.toString()
         val file = dir.resolve(entry.filename.removeSuffix(".html") + ".properties")
@@ -218,8 +360,17 @@ internal object ReportWriter {
     private fun parseEntry(file: File): ReportFile? {
         val props = Properties()
         runCatching { file.reader(Charsets.UTF_8).use { props.load(it) } }.getOrNull() ?: return null
+        // Entries from an older version name a page this version no longer links to.
+        if (props.getProperty("format") != INDEX_FORMAT) return null
         val filename = props.getProperty("filename") ?: return null
-        return ReportFile(filename, props.getProperty("title").orEmpty(), props.getProperty("status").orEmpty())
+
+        fun count(key: String) = props.getProperty(key)?.toIntOrNull() ?: 0
+        return ReportFile(
+            filename,
+            props.getProperty("title").orEmpty(),
+            props.getProperty("status").orEmpty(),
+            ScenarioCounts(count("success"), count("warn"), count("error")),
+        )
     }
 
     /** One index writer at a time: a lock for this JVM plus a file lock for other processes. */

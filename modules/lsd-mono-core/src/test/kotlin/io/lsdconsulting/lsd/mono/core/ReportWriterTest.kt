@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.io.path.readText
+import kotlin.io.path.writeText
 
 /** Direct tests for [ReportWriter] file naming, atomic writes, and the shared index (#25). */
 class ReportWriterTest {
@@ -139,7 +140,7 @@ class ReportWriterTest {
 
     @Test
     fun `index skips entries whose report was deleted and keeps explicit entries`() {
-        val gone = ReportWriter.writeReport(report("Gone"), tempDir.toFile()).listingHtml
+        val gone = ReportWriter.writeReport(report("Gone"), tempDir.toFile()).diagramHtml
         ReportWriter.writeReport(report("Kept"), tempDir.toFile())
         Files.delete(gone)
         val extra = ReportFile(filename = "elsewhere.html", title = "Extra", status = "warn")
@@ -156,19 +157,44 @@ class ReportWriterTest {
         assertTrue(index.contains("&lt;b&gt;bold&lt;/b&gt; &amp; co"), index)
     }
 
-    private fun report(title: String, scenarioCount: Int = 0): ReportJson =
+    @Test
+    fun `index links each report to its diagram, lists failed reports first and counts scenarios`() {
+        ReportWriter.writeReport(report("Alpha", scenarioCount = 2), tempDir.toFile())
+        ReportWriter.writeReport(report("Zulu", scenarioCount = 3, failing = 1), tempDir.toFile())
+        val index = ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText()
+        val zulu = ReportWriter.reportFileStem("Zulu")
+        assertTrue(index.contains("""<a href="$zulu-diagram.html">Zulu</a>"""), index)
+        assertTrue(index.contains("""href="$zulu-report.json""""), index)
+        assertTrue(index.indexOf("Zulu") < index.indexOf("Alpha"), "failed first")
+        assertTrue(index.contains("2 reports · 5 scenarios: 4 passed, 0 with warnings, 1 failed"), index)
+        assertTrue(index.contains("✕ 1 failed"), index)
+        assertTrue(index.contains("""name="viewport""""), index)
+        assertTrue(index.contains("lsd-report-theme"), index)
+    }
+
+    @Test
+    fun `index ignores entries written by an older version`() {
+        val dir = tempDir.resolve(".lsd-index")
+        Files.createDirectories(dir)
+        tempDir.resolve("old-report.html").writeText("old")
+        dir.resolve("old-report.properties").writeText("filename=old-report.html\ntitle=Old\nstatus=success\n")
+        val index = ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText()
+        assertFalse(index.contains("Old"), index)
+    }
+
+    private fun report(title: String, scenarioCount: Int = 0, failing: Int = 0): ReportJson =
         ReportJson(
             title = title,
             generatedAt = "2026-10-09T08:00:00Z",
             generator = "test",
-            status = "success",
+            status = if (failing > 0) "error" else "success",
             options = ReportOptionsJson(metricsEnabled = false, labelMaxWidth = 200),
             scenarios =
                 List(scenarioCount) { n ->
                     io.lsdconsulting.lsd.mono.core.model.ScenarioJson(
                         id = "s$n",
                         title = "scenario $n",
-                        status = "success",
+                        status = if (n < failing) "error" else "success",
                         description = "d".repeat(200),
                         facts = emptyList(),
                         error = null,
