@@ -38,6 +38,15 @@ async function seriousViolations(page: Page): Promise<Result[]> {
   return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
 }
 
+/** The part of the diagram on screen. The stage is as tall as the drawing; only one screen of it paints. */
+async function diagramOnScreen(page: Page) {
+  const box = await page.locator('.seq-diagram').boundingBox()
+  const viewport = page.viewportSize()
+  if (!box || !viewport) throw new Error('no diagram on screen')
+  const y = Math.max(0, box.y)
+  return { x: box.x, y, width: box.width, height: Math.min(box.y + box.height, viewport.height) - y }
+}
+
 function formatViolations(violations: Result[]): string {
   return violations
     .map((v) => {
@@ -390,7 +399,7 @@ const shortReport: Report = {
 
 // Headless Chromium hides scrollbars by default, which hides this bug, so this
 // test launches its own browser with them shown.
-test('Fit leaves no horizontal overflow when zooming in adds the vertical scrollbar', async ({
+test('Fit leaves no horizontal overflow and adds no vertical scrollbar; the stage grows instead', async ({
   playwright,
   baseURL,
 }) => {
@@ -416,12 +425,13 @@ test('Fit leaves no horizontal overflow when zooming in adds the vertical scroll
     expect(before.tall, 'the short scenario starts without a vertical scrollbar').toBe(false)
     await page.getByRole('button', { name: 'Fit to screen' }).click()
     const after = await scroll.evaluate((el: HTMLElement) => ({
-      tall: el.scrollHeight > el.clientHeight,
       bar: el.offsetWidth - el.clientWidth,
       overflowX: el.scrollWidth - el.clientWidth,
+      stage: el.closest('.seq-stage')!.getBoundingClientRect().height,
+      content: el.scrollHeight,
     }))
-    expect(after.tall, 'Fit zoomed the drawing past the stage height').toBe(true)
-    expect(after.bar, 'scrollbars take space in this browser').toBeGreaterThan(0)
+    expect(after.bar, 'no vertical scrollbar inside the diagram').toBe(0)
+    expect(after.stage, 'the stage holds the whole drawing').toBeGreaterThanOrEqual(after.content)
     expect(after.overflowX).toBeLessThanOrEqual(0)
   } finally {
     await browser.close()
@@ -636,7 +646,7 @@ test('themes and fit keep the top message label on screen', async ({ page }) => 
   for (const theme of THEMES) {
     await openFixture(page, theme)
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-    await expect(page.locator('.seq-diagram')).toHaveScreenshot(`theme-${theme}.png`)
+    await expect(page).toHaveScreenshot(`theme-${theme}.png`, { clip: await diagramOnScreen(page) })
   }
 
   await openFixture(page, 'dark')
@@ -672,7 +682,7 @@ test('themes and fit keep the top message label on screen', async ({ page }) => 
   // The whole width fits, including the frame padding: nothing to scroll sideways.
   const overflowX = await page.locator('.seq-scroll').evaluate((el) => el.scrollWidth - el.clientWidth)
   expect(overflowX).toBeLessThanOrEqual(0)
-  await expect(page.locator('.seq-diagram')).toHaveScreenshot('fit-top-label.png')
+  await expect(page).toHaveScreenshot('fit-top-label.png', { clip: await diagramOnScreen(page) })
 })
 
 /** One long display name per participant shape, next to each other. */
@@ -1404,4 +1414,51 @@ test('Auto, from the button or `d`, clears the choice and follows the OS again',
 
   const violations = await seriousViolations(page)
   expect(violations, formatViolations(violations)).toEqual([])
+})
+
+test('a tall diagram grows the page: page scroll drives the diagram, header and minimap stay, rows stay windowed', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await openFixture(page, 'dark')
+  const scroll = page.locator('.seq-scroll')
+  const start = await scroll.evaluate((el: HTMLElement) => ({
+    content: el.scrollHeight,
+    port: el.clientHeight,
+    bar: el.offsetWidth - el.clientWidth,
+    stage: el.closest('.seq-stage')!.getBoundingClientRect().height,
+    overflowY: getComputedStyle(el).overflowY,
+  }))
+  expect(start.content, 'the fixture is taller than the screen').toBeGreaterThan(start.port)
+  expect(start.overflowY).toBe('hidden')
+  expect(start.bar).toBe(0)
+  expect(start.stage).toBeGreaterThanOrEqual(start.content)
+
+  const stageTop = await page.locator('.seq-stage').evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
+  await page.evaluate((y) => window.scrollTo(0, y), stageTop + 150)
+  await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBeGreaterThan(100)
+  const mid = await page.evaluate(() => {
+    const header = document.querySelector('.seq-sticky-header')!.getBoundingClientRect()
+    const minimap = document.querySelector('.seq-minimap')!.getBoundingClientRect()
+    const topbar = document.querySelector('.topbar')!.getBoundingClientRect()
+    return {
+      headerTop: header.top,
+      headerBottom: header.bottom,
+      topbarBottom: topbar.bottom,
+      minimapTop: minimap.top,
+      painted: document.querySelectorAll('.seq-window svg').length,
+    }
+  })
+  expect(mid.headerTop, 'the participant header sticks under the top bar').toBeGreaterThanOrEqual(mid.topbarBottom - 1)
+  expect(mid.headerBottom).toBeLessThan(720)
+  expect(mid.minimapTop).toBeGreaterThanOrEqual(mid.topbarBottom - 1)
+  expect(mid.painted, 'rows are still painted in a window').toBeGreaterThan(0)
+  await page.screenshot({ path: 'test-results/tall-diagram-scrolled.png' })
+
+  // The minimap moves the page.
+  const before = await page.evaluate(() => window.scrollY)
+  await page.locator('.seq-minimap').focus()
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowDown')
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before)
+  await page.screenshot({ path: 'test-results/tall-diagram-end.png' })
 })

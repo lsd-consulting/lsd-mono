@@ -432,7 +432,9 @@ html {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow: hidden;
+  /* clip, not hidden: hidden makes the card a scroll container, and the diagram's sticky
+     scrollport would stick inside the card instead of under the top bar. */
+  overflow: clip;
   margin-bottom: 20px;
   border-left: 4px solid var(--border-strong);
   animation: rise 0.35s ease both;

@@ -23,6 +23,7 @@ import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds, prefersReducedMotion } f
 import { bindMinimap, paintMinimapDensity, syncMinimap } from './minimap-view'
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
+import { bindPageScroll, sizeStage } from './page-scroll'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './state'
 
 /** Paint only the rows inside the scrollport (plus overscan). Row units stay unscaled; zoom is display-only. */
@@ -31,6 +32,7 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   if (!id) return
   const diagram = diagramState.mounted.get(id)
   if (!diagram) return
+  sizeStage(scrollport)
   const view = diagramView(id)
   const zoom = view.zoom
   const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
@@ -356,6 +358,7 @@ export function bindDiagramScroll(root: ParentNode): void {
     syncDiagramWindow(scroll)
     observeWidth(scroll)
     scroll.addEventListener('scroll', () => syncDiagramWindow(scroll), { passive: true })
+    bindPageScroll(scroll)
     scroll.addEventListener('wheel', (ev) => onDiagramWheel(scroll, ev), { passive: false })
     diagram.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((btn) => {
       btn.addEventListener('click', () => onZoomClick(scroll, btn.dataset.zoom))
