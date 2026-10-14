@@ -68,7 +68,7 @@ Each item: legacy behaviour → why it matters → suggested LSD Mono shape → 
 | | |
 |--|--|
 | **Legacy** | Caps events per diagram (`ReportOptions.maxEventsPerDiagram`) and splits — a workaround for PlantUML SVG size / browser pain. |
-| **Shipped** | `report/src/lib/layout.ts` lays out rows in CSS pixels. `virtualRowRange` paints only the scroll window plus overscan. Sticky participant header sits inside the diagram scrollport so names stay visible. Full event list stays in JSON. |
+| **Shipped** | `report/src/lib/layout.ts` lays out rows in CSS pixels. `virtualRowRange` paints only the scroll window plus overscan. The diagram grows with the page instead of scrolling inside its own panel; page scroll drives the row window, and the sticky participant header sticks to the top of the page so names stay visible. Full event list stays in JSON. |
 | **Still open** | Density modes. Zoom and fit landed in the diagram UX slice; horizontal scroll is the pan. |
 | **Test** | `layout.test.ts` (`npm test` in `report`) — scrollTop + viewport → row range, including sticky-header inset and overscan. |
 
@@ -188,7 +188,7 @@ Each item: legacy behaviour → why it matters → suggested LSD Mono shape → 
 | | |
 |--|--|
 | **Legacy** | Writes `lsd-index.html` via Handlebars (`HtmlIndexWriter` / `html-index.hbs`) with branded chrome. |
-| **Mono** | `index.html` table in the report's theme: failed reports first, scenario counts, a filter, links to each diagram. |
+| **Mono** | `index.html` is the report app for every report in the directory: a sidebar of reports, failed first, with scenario counts; each report's data (`-report.js`) loads only when it is opened; `#report=<stem>` (with `&scenario=` or `&msg=`) links straight to a report, scenario or message. |
 | **LSD Mono** | Either a tiny report “index” mode (list of reports) or keep minimal HTML but align naming/status styling; print absolute `file://` path like legacy. |
 | **Priority** | **P1** |
 | **Test** | Unit: index lists all `ReportFile`s after two `completeReport`s. |
