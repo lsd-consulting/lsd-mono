@@ -535,7 +535,7 @@ async function recordTour(browser, tourDir, file) {
 
     // 10. Collapse the scenario list.
     await caption('Collapse the scenario list to an icon rail')
-    await click(page.locator('#btn-sidebar'), { hold: 1500 })
+    await click(page.locator('#btn-sidebar'), { hold: 900 })
 
     const ms = total()
     console.log(`feature-tour.gif ${frames.length} frames, ${(ms / 1000).toFixed(1)} s, ${beat} beats`)
