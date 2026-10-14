@@ -59,12 +59,13 @@ public class LsdScenario internal constructor(
     /** Java form of [capture]: `scenario.capture(c -> { c.message("A", "B"); c.activate("B"); })`. */
     public fun capture(block: Consumer<CaptureBlock>): Unit = capture { block.accept(this) }
 
-    override fun startCall(request: Message): PendingCall {
-        val call = PendingCall(this, request) { emit(listOf(it)) }
-        track(call)
-        emit(listOf(request))
-        return call
-    }
+    override fun startCall(request: Message): PendingCall =
+        context.guarded("call", { PendingCall.detached(this, request) }) {
+            val call = PendingCall(this, request, deliver = { emit(listOf(it)) })
+            track(call)
+            emit(listOf(request))
+            call
+        }
 
     internal fun track(call: PendingCall) {
         synchronized(lock) { waiting.add(call) }
@@ -81,7 +82,7 @@ public class LsdScenario internal constructor(
     }
 
     override fun fact(key: String, value: String) {
-        if (!add { facts.add(Fact(key, value)) }) context.warnLate(this, "fact")
+        context.guarded("fact", { }) { if (!add { facts.add(Fact(key, value)) }) context.warnLate(this, "fact") }
     }
 
     /**

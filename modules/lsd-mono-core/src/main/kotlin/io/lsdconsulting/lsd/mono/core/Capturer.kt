@@ -24,6 +24,13 @@ import java.time.Instant
  * events by it, for capture that arrives out of order (interceptors on other threads);
  * untimed events keep their capture order and come after the timed ones.
  *
+ * Capturing never throws into the application because of something going wrong inside
+ * LSD, so an interceptor can call these verbs on a request path: a failure is logged
+ * (`System.Logger`, a WARNING the first time for each kind) and the event dropped. Misusing
+ * the API still throws, because that is a mistake in the test: a [NoteSide.OVER] note with
+ * no participant, a [CaptureBlock] used after its block, and from Java a `null` for a
+ * parameter that is not nullable.
+ *
  * Only lsd-mono's own classes extend this.
  */
 @LsdDsl

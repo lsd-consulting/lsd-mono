@@ -16,15 +16,17 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * Only the first [reply] or [fail] counts; a later one is ignored with a warning. A call
  * still waiting when its scenario completes is reported in a warning, and a reply that
- * arrives after that is dropped. Thread-safe.
+ * arrives after that is dropped. Thread-safe, and never throws into the caller: a failure
+ * while capturing the reply is logged and the reply dropped.
  */
 public class PendingCall internal constructor(
     private val scenario: LsdScenario,
     private val request: Message,
     private val deliver: (Message) -> Unit,
+    detached: Boolean = false,
 ) {
     private val started = System.nanoTime()
-    private val state = AtomicReference(State.WAITING)
+    private val state = AtomicReference(if (detached) State.DETACHED else State.WAITING)
 
     /**
      * Capture the response, from the callee back to the caller. The duration is the time
@@ -36,7 +38,7 @@ public class PendingCall internal constructor(
         data: Any? = null,
         at: Instant? = null,
     ) {
-        respond(label, data, at)
+        scenario.context.guarded("reply", { }) { respond(label, data, at) }
     }
 
     /**
@@ -48,8 +50,10 @@ public class PendingCall internal constructor(
         error: Throwable,
         at: Instant? = null,
     ) {
-        val type = error.javaClass
-        respond(type.simpleName.ifEmpty { type.name }, mapOf("exception" to type.name, "message" to error.message), at)
+        scenario.context.guarded("reply", { }) {
+            val type = error.javaClass
+            respond(type.simpleName.ifEmpty { type.name }, mapOf("exception" to type.name, "message" to error.message), at)
+        }
     }
 
     private fun respond(
@@ -57,6 +61,7 @@ public class PendingCall internal constructor(
         data: Any?,
         at: Instant?,
     ) {
+        if (state.get() == State.DETACHED) return
         if (state.compareAndSet(State.WAITING, State.REPLIED)) {
             scenario.callEnded(this)
             deliver(
@@ -91,5 +96,10 @@ public class PendingCall internal constructor(
 
     override fun toString(): String = "PendingCall(${describe()}, ${state.get()})"
 
-    private enum class State { WAITING, REPLIED, ABANDONED }
+    private enum class State { WAITING, REPLIED, ABANDONED, DETACHED }
+
+    internal companion object {
+        /** Stands in for a call whose capture failed (already logged): replies to it are ignored quietly. */
+        fun detached(scenario: LsdScenario, request: Message): PendingCall = PendingCall(scenario, request, { }, detached = true)
+    }
 }

@@ -104,6 +104,10 @@ public class LsdContext : Capturer() {
     private val sequence = AtomicLong()
     private val active = ConcurrentHashMap<String, LsdScenario>()
     private val bound = ThreadBindings()
+
+    /** The kinds of capture that have failed, so each is warned about once ([guarded]). */
+    private val droppedKinds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap
+        .newKeySet()
     private val openReport = ThreadLocal<LsdReport>()
     private val openReports = HashSet<String>()
 
@@ -179,22 +183,24 @@ public class LsdContext : Capturer() {
      * `lsd.mono.propagation.allowedHosts`, by default only loopback (`localhost`,
      * `127.0.0.1`, `::1`), so a client interceptor never tags calls to third parties.
      */
-    public fun scenarioHeaderValue(host: String): String? {
-        if (!HostAllowList.fromProperties().allows(host)) return null
-        return currentScenario()?.correlationId
-    }
+    public fun scenarioHeaderValue(host: String): String? =
+        guarded("scenario header", { null }) {
+            if (!HostAllowList.fromProperties().allows(host)) return@guarded null
+            currentScenario()?.correlationId
+        }
 
     /** [scenarioHeaderValue] for the host of [uri]; null when it has none. */
-    public fun scenarioHeaderValue(uri: URI): String? = uri.host?.let(::scenarioHeaderValue)
+    public fun scenarioHeaderValue(uri: URI): String? = guarded("scenario header", { null }) { uri.host?.let(::scenarioHeaderValue) }
 
     /**
      * The running scenario whose [LsdScenario.correlationId] is [headerValue], as received in
      * the [LsdHeaders.SCENARIO] header; null when none is running (or the value is null).
      */
-    public fun findScenarioByHeader(headerValue: String?): LsdScenario? {
-        val wanted = headerValue?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        return active.values.firstOrNull { it.correlationId == wanted }
-    }
+    public fun findScenarioByHeader(headerValue: String?): LsdScenario? =
+        guarded("scenario header lookup", { null }) {
+            val wanted = headerValue?.trim()?.takeIf { it.isNotEmpty() } ?: return@guarded null
+            active.values.firstOrNull { it.correlationId == wanted }
+        }
 
     /**
      * Wrap [task] so it runs bound to the calling thread's current scenario, for
@@ -412,14 +418,15 @@ public class LsdContext : Capturer() {
 
     /** Into the current scenario: the bound one, the only running one, or the default. */
     override fun emit(events: List<SequenceEvent>) {
-        captureInto(target(), events)
+        guarded("event", { }) { captureInto(target(), events) }
     }
 
     override fun fact(key: String, value: String) {
-        target().addFact(key, value)
+        guarded("fact", { }) { target().addFact(key, value) }
     }
 
-    override fun startCall(request: Message): PendingCall = target().startCall(request)
+    override fun startCall(request: Message): PendingCall =
+        guarded("call", { PendingCall.detached(defaultScenario, request) }) { target().startCall(request) }
 
     internal fun isActive(scenario: LsdScenario): Boolean =
         scenario === defaultScenario || active[scenario.key] === scenario
@@ -434,9 +441,41 @@ public class LsdContext : Capturer() {
         dataCopied: Boolean = false,
     ) {
         if (events.isEmpty()) return
-        val bound = events.map { bind(if (dataCopied) it else copyData(it)) }
-        if (!scenario.addEvents(bound)) warnLate(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
+        guarded(if (events.size == 1) "event" else "batch of events", { }) {
+            val bound = events.map { bind(if (dataCopied) it else copyData(it)) }
+            if (!scenario.addEvents(bound)) warnLate(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
+        }
     }
+
+    /**
+     * Run [block], a capture an interceptor may make from inside the application under test.
+     * If it fails, log and return [fallback] instead of throwing into the application: the
+     * diagram is short of what failed, the request still succeeds (#49). The first failure
+     * of each [kind] is a WARNING with its stack trace, later ones DEBUG. A
+     * [VirtualMachineError] (out of memory, stack overflow) still propagates.
+     *
+     * Not used for the test DSL ([CaptureBlock] misuse, a note over nobody, scenario lifecycle),
+     * where a mistake is in the test itself and should fail it.
+     */
+    internal fun <T> guarded(
+        kind: String,
+        fallback: () -> T,
+        block: () -> T,
+    ): T =
+        try {
+            block()
+        } catch (e: VirtualMachineError) {
+            throw e
+        } catch (e: Throwable) {
+            val first = droppedKinds.add(kind)
+            logger.log(
+                if (first) System.Logger.Level.WARNING else System.Logger.Level.DEBUG,
+                "LSD: capture failed and was dropped ($kind): $e. The application carried on; the report " +
+                    "is missing it." + if (first) " Further failures of this kind are logged at DEBUG." else "",
+                e,
+            )
+            fallback()
+        }
 
     /** Copy a message's data now, so later changes by the caller do not reach the report (#27). */
     internal fun copyData(event: SequenceEvent): SequenceEvent =

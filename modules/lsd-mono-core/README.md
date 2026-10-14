@@ -217,6 +217,27 @@ PendingCall call = lsd.call("Client", "Orders", "POST /orders", body);
 call.reply("201 Created", responseBody);
 ```
 
+#### Interceptors never fail the request
+
+What an interceptor calls never throws into the application because something went wrong
+inside LSD: the capture verbs on `LsdContext` and `LsdScenario`, `call` with
+`PendingCall.reply` and `fail`, `scenarioHeaderValue` and `findScenarioByHeader`. A failure,
+such as a payload converter that throws an `Error`, is logged through `System.Logger` and the
+event is dropped, so the diagram is missing that event but the request goes on. The first
+failure of each kind (event, fact, call, reply, scenario header) is a WARNING with its stack
+trace; later ones are DEBUG. A `VirtualMachineError` such as `OutOfMemoryError` still
+propagates. A `call` that could not be captured returns a call whose replies are ignored.
+
+The test DSL stays strict, because a mistake there is in the test and should fail it:
+
+- `note(side = OVER)` with no `on` throws `IllegalArgumentException`;
+- a `capture { }` receiver used after its block throws `IllegalStateException`;
+- `beginScenario` with the key of a running scenario throws `IllegalStateException`;
+- from Java, `null` for a parameter that is not nullable throws `NullPointerException`
+  (a label from a header that may be absent needs `Objects.requireNonNullElse(value, "")`).
+
+Payload conversion has always been safe as well (see [Message data](#message-data)).
+
 ### Scenarios and reports in code
 
 Samples, `main()` programs and frameworks without an integration can scope scenarios and
