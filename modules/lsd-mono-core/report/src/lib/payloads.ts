@@ -1,5 +1,5 @@
 import type { DiagramEvent, MessageEvent, Report, Scenario } from '../types'
-import { cssEscape, jsonForScript } from './escape'
+import { cssEscape, jsonForScript } from './escape.ts'
 
 /** Keys kept on the message for the first paint. Everything else waits for the inspector. */
 const SUMMARY_KEYS = new Set(['method', 'path', 'status'])

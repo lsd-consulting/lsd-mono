@@ -197,3 +197,54 @@ Regenerate these with [`docs/perf/generate-wide.mjs`](perf/generate-wide.mjs). T
 - `mono-p100-m2000-diagram.html`
 
 Each has a sibling `*-payloads.js` next to it.
+
+## Rerun on Chromium 156 (14 Oct 2026, 19:45 BST)
+
+Same machine (Apple M3 Max), headless Chromium **156.0.8078.4**, viewport 1440×900. The sections above used Chromium 140. Mono and wide pages were regenerated into the current report shell, which now has the single-scenario view, the Timing view, the participant filter, and page-scrolling tall diagrams. Legacy pages are the unchanged fixture.
+
+Commands, run from the repository root with Node 22 and no loader:
+
+```
+cd modules/lsd-mono-core/report && npm run build:single && cd -
+node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
+node --experimental-strip-types docs/perf/generate-wide.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
+node docs/perf/measure.mjs "$PWD/docs/perf-samples"
+node docs/perf/measure-wide.mjs "$PWD/docs/perf-samples"
+```
+
+Harness changes in this run:
+
+- `payloads.ts` imports `./escape.ts`, so Node's type stripping can load it from the generators.
+- `measure.mjs` loads Playwright from the report's `node_modules`, like `measure-wide.mjs`.
+- The inspector expands the JSON by itself once the payload loads. `measure.mjs` used to click the toggle, which collapsed it again, so it now waits for `aria-expanded="true"` and the payload text.
+- A diagram taller than the window now scrolls with the page. `measure.mjs` scrolls the page to reach the mid message, and retries because closing the inspector returns focus to the previous arrow.
+
+### Mono (4 participants, 2.8 KB payload per arrow)
+
+| Size | First interactive ms | FCP ms | p95 frame ms | Longest frame ms | Long tasks | Heap after load | DOM | Search ms | Zoom ms | Popup first ms | Popup mid ms | 3 Oct (Chromium 140) |
+|------|----------------------|--------|--------------|-------------------|------------|-----------------|-----|-----------|---------|----------------|--------------|----------------------|
+| 100 | 129 | 212 | 16.8 | 83.4 | 1 (73 ms) | 3,273,836 | 373 | 5 | 39 | 39 | 30 | 118 ms, DOM 274, popups 34 / 35 |
+| 500 | 129 | — | 16.8 | 49.9 | 0 | 3,779,464 | 373 | 5 | 35 | 62 | 26 | 113 ms, DOM 274, popups 35 / 37 |
+| 2000 | 210 | 204 | 16.8 | 49.9 | 0 | 5,356,212 | 373 | 6 | 36 | 75 | 29 | 183 ms, DOM 274, popups 35 / 35 |
+
+All three pass: the header is visible, zoom and find work, `needle-N` shows `[match]`, and both arrows open with their payload. Earlier runs today put mono 2000 first interactive at 124–126 ms, so 210 ms is within run-to-run spread. The heap after load is lower than on 3 Oct (5.4 MB against 9.6 MB at 2000) because payloads are now in the sibling script. Find is faster (6 ms against 33 ms). The 100-event long task is on the first page the browser opens.
+
+Legacy, for reference: first interactive 25 / 36 / 84 ms (split) and 27 / 40 / 82 ms (one SVG) at 100 / 500 / 2000, DOM unchanged (1,378 to 23,798), one long task each, up to 243 ms at 2000.
+
+### Wide participants
+
+| Participants | Messages | First interactive ms | p95 frame ms | Long tasks | DOM | Header nodes | Popup ms | Fit zoom | 3 Oct (Chromium 140) |
+|--------------|----------|----------------------|--------------|------------|-----|--------------|----------|----------|----------------------|
+| 20 | 400 | 195 | 16.7 | 0 | 851 | 310 | 67 | 35% | 112 ms, DOM 435, header 109, popup 66 |
+| 50 | 400 | 119 | 16.7 | 1 (50 ms) | 1,472 | 770 | 82 | 25% | 95 ms, DOM 685, header 269, popup 66 |
+| 100 | 400 | 136 | 16.7 | 1 (59 ms) | 2,288 | 1,536 | 83 | 25% | 100 ms, DOM 1,101, header 535, popup 66 |
+| 100 | 2000 | 144 | 16.7 | 1 (64 ms) | 2,288 | 1,536 | 152 | 25% | 104 ms, DOM 1,101, header 535, popup 89 |
+
+Horizontal scroll, the sticky header during the vertical sweep, label overlap (0) and the Fit top label all pass. The scrollport is now 803 px tall (611 px before), because the diagram takes the window height and scrolls with the page.
+
+### Changes against the baseline
+
+- **DOM size.** Mono pages are 373 nodes (274 before). The wide header roughly triples (535 to 1,536 nodes at 100 participants) because each participant now has its own header actions for the participant filter. Message rows are still windowed: 100 participants is 2,288 nodes at both 400 and 2,000 messages.
+- **Wide popup.** The 100×2000 click takes 152 ms (89 ms before) and the 400-message clicks 67–83 ms (66 ms before). Most of the 100×2000 time is parsing the 5.6 MB sibling payload script on that click.
+- **Long tasks.** The wide pages show one 50–64 ms long task each (none before). Frame p95 stays at 16.7 ms on every page.
+- First interactive is within 20–90 ms of the 3 Oct numbers, and varies by that much between runs.

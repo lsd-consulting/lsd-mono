@@ -2,7 +2,7 @@
  * Headless Chromium timings for the large-diagram check.
  * Usage: node measure.mjs /path/to/docs/perf-samples
  */
-import { chromium } from 'playwright'
+import { chromium } from '../../modules/lsd-mono-core/report/node_modules/playwright/index.mjs'
 import { writeFileSync } from 'node:fs'
 import path from 'node:path'
 
@@ -200,18 +200,32 @@ for (const spec of pages) {
         row.matchVisible = false
       }
 
+      // A tall diagram scrolls with the page: the page owns the vertical scroll and
+      // the diagram follows it. Closing the inspector returns focus to the arrow it
+      // came from, which can scroll the page back, so retry until the row is painted.
       async function scrollUntil(messageId) {
-        await page.evaluate(({ id, size }) => {
-          const scroller = document.querySelector('.seq-scroll')
-          if (!scroller) return
-          const target = Number(id)
-          const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight)
-          const frac = target <= 1 ? 0 : Math.min(0.92, Math.max(0, (target - 8) / size))
-          scroller.scrollTop = max * frac
-        }, { id: messageId, size: spec.size })
-        await page.waitForFunction((id) => {
+        const painted = (id) => page.evaluate((id) => {
           return [...document.querySelectorAll('button.msg-open')].some((b) => b.getAttribute('data-message-id') === id)
-        }, messageId, { timeout: 5000 })
+        }, id)
+        const deadline = Date.now() + 5000
+        while (Date.now() < deadline) {
+          await page.evaluate(({ id, size }) => {
+            const stage = document.querySelector('.seq-stage')
+            if (!stage) return
+            const top = stage.getBoundingClientRect().top + window.scrollY
+            const range = Math.max(0, stage.offsetHeight - window.innerHeight)
+            const target = Number(id)
+            const frac = target <= 1 ? 0 : Math.min(0.92, Math.max(0, (target - 8) / size))
+            window.scrollTo({ top: top + range * frac, behavior: 'instant' })
+          }, { id: messageId, size: spec.size })
+          await page.waitForTimeout(100)
+          if (await painted(messageId)) return
+        }
+        const state = await page.evaluate(() => {
+          const ids = [...document.querySelectorAll('button.msg-open')].map((b) => Number(b.getAttribute('data-message-id')))
+          return { pageY: scrollY, first: Math.min(...ids), last: Math.max(...ids) }
+        })
+        throw new Error(`message ${messageId} not painted: ${JSON.stringify(state)}`)
       }
 
       async function openArrow(messageId) {
@@ -226,12 +240,14 @@ for (const spec of pages) {
         const label = await button.getAttribute('aria-label')
         const t0 = Date.now()
         await button.click()
-        await page.locator('#inspector-json').click()
+        // The inspector expands the JSON by itself once the payload loads. Clicking
+        // the toggle here would collapse it, so wait for the expanded state instead.
         await page.waitForFunction((id) => {
           const panel = document.querySelector('#inspector')
           const pre = document.querySelector('#inspector-pre')
           const text = pre ? pre.textContent || '' : ''
-          return Boolean(panel && !panel.hidden && text.includes('arrow-payload') && text.includes('"orderId": "ord_' + id + '"'))
+          const expanded = document.querySelector('#inspector-json')?.getAttribute('aria-expanded')
+          return Boolean(panel && !panel.hidden && expanded === 'true' && text.includes('arrow-payload') && text.includes('"orderId": "ord_' + id + '"'))
         }, messageId, { timeout: 5000 })
         return { ms: Date.now() - t0, label, messageId, count }
       }
