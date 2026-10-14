@@ -1,5 +1,7 @@
 # lsd-mono public API proposal (#3)
 
+> Internal design record, kept for history. The API as built is in the KDoc and `modules/lsd-mono-core/api/lsd-mono-core.api`; the risks and notes below describe the time they were written.
+
 Status: **complete**. Slices 1 to 8 are implemented (see "as built" under §6). Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: greenfield and unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
