@@ -19,6 +19,20 @@ internal data class ReportFile(
     val status: String,
     /** Scenarios by outcome. */
     val counts: ScenarioCounts = ScenarioCounts(),
+    /** File-name stem shared by the report's files. Null for an entry that is only a link. */
+    val stem: String? = null,
+    /** `<stem>-report.js`: the report's data, for the index page to load when it is opened. */
+    val dataScript: String? = null,
+    /** The report's scenarios, in report order, so the index can list them before loading the data. */
+    val scenarios: List<IndexScenario> = emptyList(),
+)
+
+/** One scenario as the index lists it. */
+internal data class IndexScenario(
+    val id: String,
+    val title: String,
+    val status: String,
+    val messages: Int,
 )
 
 /** How many of a report's scenarios passed, warned and failed. */

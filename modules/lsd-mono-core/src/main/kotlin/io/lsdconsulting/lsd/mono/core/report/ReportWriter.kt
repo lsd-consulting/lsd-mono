@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.html.Html
 import io.lsdconsulting.lsd.mono.core.json.jsonString
 import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
+import io.lsdconsulting.lsd.mono.core.model.IndexScenario
 import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
@@ -94,7 +95,10 @@ internal object ReportWriter {
         } else {
             Files.deleteIfExists(payloadsPath)
         }
-        val shell = renderShell(shellBundle.report, payloadsName.takeIf { shellBundle.payloads.isNotEmpty() })
+        val payloadsSrc = payloadsName.takeIf { shellBundle.payloads.isNotEmpty() }
+        val shell = renderShell(shellBundle.report, payloadsSrc)
+        val dataName = "$stem-report.js"
+        writeAtomically(outputDir.resolve(dataName).toPath(), reportDataScript(stem, shellBundle.report, payloadsSrc))
 
         val jsonPath = outputDir.resolve(jsonName).toPath()
         val diagramPath = outputDir.resolve(diagramName).toPath()
@@ -108,6 +112,9 @@ internal object ReportWriter {
                 title = report.title,
                 status = report.status,
                 counts = ScenarioCounts.of(report.scenarios.map { it.status }),
+                stem = stem,
+                dataScript = dataName,
+                scenarios = report.scenarios.map { IndexScenario(it.id, it.title, it.status, it.events.count { e -> e is MessageEventJson }) },
             ),
         )
         return ReportFiles(diagramHtml = diagramPath, listingHtml = htmlPath, reportJson = jsonPath)
@@ -316,6 +323,15 @@ internal object ReportWriter {
                 setProperty("success", entry.counts.success.toString())
                 setProperty("warn", entry.counts.warn.toString())
                 setProperty("error", entry.counts.error.toString())
+                entry.stem?.let { setProperty("stem", it) }
+                entry.dataScript?.let { setProperty("data", it) }
+                setProperty("scenarios", entry.scenarios.size.toString())
+                entry.scenarios.forEachIndexed { i, s ->
+                    setProperty("scenario.$i.id", s.id)
+                    setProperty("scenario.$i.title", Html.wellFormed(s.title))
+                    setProperty("scenario.$i.status", s.status)
+                    setProperty("scenario.$i.messages", s.messages.toString())
+                }
             }
         val text = StringWriter().also { props.store(it, null) }.toString()
         val file = dir.resolve(entry.filename.removeSuffix(".html") + ".properties")
@@ -370,6 +386,18 @@ internal object ReportWriter {
             props.getProperty("title").orEmpty(),
             props.getProperty("status").orEmpty(),
             ScenarioCounts(count("success"), count("warn"), count("error")),
+            stem = props.getProperty("stem"),
+            dataScript = props.getProperty("data"),
+            scenarios =
+                (0 until count("scenarios")).mapNotNull { i ->
+                    val id = props.getProperty("scenario.$i.id") ?: return@mapNotNull null
+                    IndexScenario(
+                        id = id,
+                        title = props.getProperty("scenario.$i.title").orEmpty(),
+                        status = props.getProperty("scenario.$i.status").orEmpty(),
+                        messages = props.getProperty("scenario.$i.messages")?.toIntOrNull() ?: 0,
+                    )
+                },
         )
     }
 
@@ -440,6 +468,17 @@ internal object ReportWriter {
         val marker = "<script>"
         val idx = template.indexOf(marker)
         return if (idx < 0) injection + template else template.substring(0, idx) + injection + template.substring(idx)
+    }
+
+    /**
+     * `<stem>-report.js`: a classic script that adds this report to `window.__LSD_REPORTS__`
+     * under its stem. The index page adds it with a script element when the report is opened,
+     * which works from `file://`, where fetch does not. Payloads stay in `<stem>-payloads.js`.
+     */
+    internal fun reportDataScript(stem: String, report: ReportJson, payloadsSrc: String?): String {
+        val payloads = if (payloadsSrc == null) "null" else jsonString(payloadsSrc)
+        return "(window.__LSD_REPORTS__=window.__LSD_REPORTS__||{})[${jsonString(stem)}]=" +
+            "{report:${report.toJson().trim()},payloadsSrc:$payloads};\n"
     }
 
     private fun readShellTemplate(): String {

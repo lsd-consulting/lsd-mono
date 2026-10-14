@@ -59,7 +59,7 @@ class ReportWriterTest {
         assertEquals("$stem-diagram.html", files.diagramHtml.name)
         assertEquals("$stem-report.json", files.reportJson.name)
         val names = tempDir.listDirectoryEntries().map { it.name }.toSet()
-        assertEquals(setOf("$stem-report.html", "$stem-report.json", "$stem-diagram.html", ".lsd-index"), names)
+        assertEquals(setOf("$stem-report.html", "$stem-report.json", "$stem-report.js", "$stem-diagram.html", ".lsd-index"), names)
         assertTrue(html.readText().contains("""href="$stem-report.json""""))
         assertTrue(tempDir.resolve("$stem-diagram.html").readText().contains("window.__LSD_REPORT__="))
     }
@@ -170,6 +170,23 @@ class ReportWriterTest {
         assertTrue(index.contains("✕ 1 failed"), index)
         assertTrue(index.contains("""name="viewport""""), index)
         assertTrue(index.contains("lsd-report-theme"), index)
+    }
+
+    @Test
+    fun `each report writes a data script the index can load, and its entry lists the scenarios`() {
+        ReportWriter.writeReport(report("Orders </script>", scenarioCount = 2, failing = 1), tempDir.toFile())
+        val stem = ReportWriter.reportFileStem("Orders </script>")
+        val data = tempDir.resolve("$stem-report.js").readText()
+        assertTrue(data.startsWith("(window.__LSD_REPORTS__=window.__LSD_REPORTS__||{})[\"$stem\"]={report:{"), data)
+        assertTrue(data.trimEnd().endsWith(",payloadsSrc:null};"), data)
+        assertFalse(data.contains("</script>"), "the title is escaped for a script")
+        val entry = tempDir
+            .resolve(".lsd-index")
+            .listDirectoryEntries("*.properties")
+            .single()
+            .readText()
+        listOf("stem=$stem", "data=$stem-report.js", "scenarios=2", "scenario.0.id=s0", "scenario.0.status=error", "scenario.1.title=scenario 1")
+            .forEach { assertTrue(entry.contains(it), "$it in $entry") }
     }
 
     @Test

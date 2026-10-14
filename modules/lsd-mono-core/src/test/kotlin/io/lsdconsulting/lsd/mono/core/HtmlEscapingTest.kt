@@ -87,7 +87,7 @@ class HtmlEscapingTest {
 
         val files = tempDir.listDirectoryEntries().filter { Files.isRegularFile(it) }
         assertEquals(
-            setOf("report.html", "report.json", "diagram.html", "payloads.js", "index.html"),
+            setOf("report.html", "report.json", "report.js", "diagram.html", "payloads.js", "index.html"),
             files.map { it.name.substringAfterLast('-') }.toSet(),
             files.map { it.name }.toString(),
         )

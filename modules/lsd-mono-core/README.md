@@ -37,6 +37,7 @@ lsd-mono-core/
   - `*-diagram.html` — the classpath shell (`/lsd-mono-core/report/lsd-report.single.html`) with the captured
     `ReportJson` injected (the shell falls back to sample data when opened without one)
   - `*-payloads.js` — message bodies, loaded when the inspector opens
+  - `*-report.js` — the same report data as a script, which the index page loads when the report is opened
   - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
   - `*-report.html` — minimal mono HTML listing scenarios (status, description, facts)
   - `index.html` from `createIndex`, listing every report in the directory: failed reports
