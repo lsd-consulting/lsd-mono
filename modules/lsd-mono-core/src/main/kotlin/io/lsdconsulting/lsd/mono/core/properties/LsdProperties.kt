@@ -5,9 +5,13 @@ import java.time.Instant
 import java.time.format.DateTimeParseException
 
 /**
- * The names of the properties lsd-mono reads. Set them as system properties or environment
- * variables (`LSD_MONO_REPORT_OUTPUTDIR`). The lsd-mono-core README lists each one with its
- * default and the legacy `lsd.core.*` / `lsd.junit.*` name that is still accepted.
+ * The names of the properties lsd-mono reads. Each is taken from, in order: the system
+ * property; the environment variable (`LSD_MONO_REPORT_OUTPUTDIR`); JUnit configuration
+ * parameters such as `junit-platform.properties` (with lsd-mono-junit-jupiter); an
+ * `lsd-mono.properties` file at the root of the classpath; and the default. The
+ * lsd-mono-core README lists each one with its default and the legacy `lsd.core.*` /
+ * `lsd.junit.*` name that is still accepted. Booleans accept `true/false`, `yes/no`, `on/off`
+ * and `1/0`; any other value is warned about and the default used.
  */
 public object LsdProperties {
     /** Directory reports are written to. Default `build/reports/lsd`. */
@@ -17,7 +21,7 @@ public object LsdProperties {
     public const val DETERMINISTIC_IDS: String = "lsd.mono.ids.deterministic"
 
     /** `true` leaves stack traces out of a failed scenario's error (JUnit and Cucumber). */
-    public const val HIDE_STACKTRACE: String = "lsd.mono.junit.hideStacktrace"
+    public const val HIDE_STACKTRACE: String = "lsd.mono.hideStacktrace"
 
     /** Duration insights and message-count metrics. Default `true`. */
     public const val METRICS_ENABLED: String = "lsd.mono.metrics.enabled"
@@ -100,8 +104,8 @@ public object LsdProperties {
         ?.toIntOrNull()
         ?.takeIf { it > 0 } ?: key.defaultInt()
 
-    /** `false` only when [PAYLOAD_REDACT] is explicitly `false`: redaction stays on for any other value. */
-    internal fun redactDefaults(): Boolean = !LsdKey.PAYLOAD_REDACT.value().equals("false", ignoreCase = true)
+    /** Whether the built-in secret key names are redacted ([PAYLOAD_REDACT]); an unrecognised value keeps it on. */
+    internal fun redactDefaults(): Boolean = LsdKey.PAYLOAD_REDACT.boolean()
 
     /** The extra key names in [PAYLOAD_REDACT_KEYS], trimmed, blanks dropped. */
     internal fun redactKeys(): List<String> =
@@ -121,8 +125,19 @@ public object LsdProperties {
             .map { it.trim().lowercase() }
             .filter { it.isNotEmpty() }
 
-    /** `false` only when [INHERIT_BINDING] is explicitly `false`. */
-    internal fun inheritBinding(): Boolean = !LsdKey.INHERIT_BINDING.value().equals("false", ignoreCase = true)
+    /** Whether threads inherit the starting thread's scenario ([INHERIT_BINDING]); an unrecognised value keeps it on. */
+    internal fun inheritBinding(): Boolean = LsdKey.INHERIT_BINDING.boolean()
+
+    /**
+     * Look up keys in [source] after system properties and environment variables, and before
+     * `lsd-mono.properties`. lsd-mono-junit-jupiter installs JUnit's configuration parameters
+     * here. `null` removes the source. [source] returns null for a key it does not set.
+     */
+    @InternalLsdApi
+    @JvmStatic
+    public fun useConfigurationSource(source: java.util.function.Function<String, String?>?) {
+        LsdConfig.useConfigurationSource(source?.let { s -> { key: String -> s.apply(key) } })
+    }
 
     /** Whether the Cucumber plugin starts a section at each step ([CUCUMBER_SPLIT_BY_STEPS]). */
     @InternalLsdApi

@@ -100,6 +100,15 @@ build/reports/lsd/PlaceOrderTest-<hash>-diagram.html
 
 Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured; every property is listed in the [core README](../lsd-mono-core/README.md#properties)). In this module's own tests that is `build/reports/lsd-test`.
 
+Any `lsd.mono.*` property can also go in `src/test/resources/junit-platform.properties`, next to
+your JUnit settings. JUnit configuration parameters come after system properties and
+environment variables, and before an `lsd-mono.properties` file:
+
+```properties
+lsd.mono.report.outputDir=build/reports/lsd
+lsd.mono.hideStacktrace=true
+```
+
 Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Other fields load from the companion payloads file when the panel opens. Participant types set the header shape: `ACTOR`, `DATABASE`, `QUEUE`, and so on.
 
 ## Parallel execution

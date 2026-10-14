@@ -279,16 +279,30 @@ ReportFiles files = lsd.report("Online shop", r -> {
 
 ### Properties
 
-Set these as system properties (`-Dlsd.mono.report.outputDir=out`) or as environment
-variables, in upper case with dots as underscores (`LSD_MONO_REPORT_OUTPUTDIR=out`). A
-property with a legacy name falls back to that name when the `lsd.mono.*` one is not set, to
-ease migration from lsd-core. `LsdProperties` has a constant for each name.
+Each property is read from the first of these that sets it:
+
+1. a system property: `-Dlsd.mono.report.outputDir=out`;
+2. an environment variable, in upper case with dots as underscores:
+   `LSD_MONO_REPORT_OUTPUTDIR=out`;
+3. with lsd-mono-junit-jupiter, a JUnit configuration parameter, for example in
+   `src/test/resources/junit-platform.properties`;
+4. `lsd-mono.properties` at the root of the classpath (for example in
+   `src/test/resources`), read once;
+5. the default below.
+
+A property with a legacy name falls back to that name, looked up the same way, when the
+`lsd.mono.*` one is set nowhere, to ease migration from lsd-core. `LsdProperties` has a
+constant for each name.
+
+A boolean accepts `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0`, in any case. Any other
+value is logged as a warning (once) and the default is used, so a typo never quietly turns
+a feature off.
 
 | Property | Legacy name | Default | Effect |
 | --- | --- | --- | --- |
 | `lsd.mono.report.outputDir` | `lsd.core.report.outputDir` | `build/reports/lsd` | Directory the reports are written to |
 | `lsd.mono.ids.deterministic` | `lsd.core.ids.deterministic` | `false` | `true` numbers ids 1, 2, 3… instead of random ones, for reproducible reports |
-| `lsd.mono.junit.hideStacktrace` | `lsd.junit.hideStacktrace` | `false` | `true` leaves the stack trace out of a failed scenario's error (JUnit and Cucumber) |
+| `lsd.mono.hideStacktrace` | `lsd.junit.hideStacktrace` | `false` | `true` leaves the stack trace out of a failed scenario's error (JUnit and Cucumber) |
 | `lsd.mono.metrics.enabled` | `lsd.core.metrics.enabled` | `true` | Message counts and duration insights |
 | `lsd.mono.label.maxWidth` | `lsd.core.label.maxWidth` | `200` | Width labels are cut to in summaries and the diagram. Not a positive number: the default |
 | `lsd.mono.report.generatedAt` | | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |

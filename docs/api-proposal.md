@@ -101,7 +101,7 @@ Proposed internal key table (one place):
 internal enum class LsdKey(val key: String, val legacy: String?, val default: String?) {
     OUTPUT_DIR("lsd.mono.report.outputDir", "lsd.core.report.outputDir", "build/reports/lsd"),
     DETERMINISTIC_IDS("lsd.mono.ids.deterministic", "lsd.core.ids.deterministic", "false"),
-    HIDE_STACKTRACE("lsd.mono.junit.hideStacktrace", "lsd.junit.hideStacktrace", "false"),
+    HIDE_STACKTRACE("lsd.mono.hideStacktrace", "lsd.junit.hideStacktrace", "false"),
     METRICS_ENABLED("lsd.mono.metrics.enabled", "lsd.core.metrics.enabled", "true"),
     LABEL_MAX_WIDTH("lsd.mono.label.maxWidth", "lsd.core.label.maxWidth", "200"),
     GENERATED_AT("lsd.mono.report.generatedAt", null, null),
@@ -409,11 +409,11 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 
 ### Slice 2 as built
 
-- `LsdKey` is the internal table from §2, with the four `lsd.mono.payload.*` keys added. Each row takes its key string from the matching public `LsdProperties` constant, so every name is written once. The values are read in the same order as before: system property, then environment variable, then the legacy name the same two ways, then the default.
+- `LsdKey` is the internal table from §2, with the four `lsd.mono.payload.*` keys added. Each row takes its key string from the matching public `LsdProperties` constant, so every name is written once. The values are read from the system property, the environment variable, JUnit configuration parameters (installed by `LsdExtension` through the `@InternalLsdApi` `LsdProperties.useConfigurationSource`) and `lsd-mono.properties`, in that order, then the legacy name the same way, then the default (#50).
 - **All key constants are now on `LsdProperties`**, not just Cucumber's. `PayloadSnapshot.Limits.MAX_*` became `LsdProperties.PAYLOAD_MAX_*`. `Limits`' defaults come from the table, and `Limits` itself stays public until slice 7.
 - **The generic `get` and `getBoolean` were removed, not made internal.** Once the typed readers read from `LsdKey`, nothing used them. The typed readers are internal.
-- **There's only one `@InternalLsdApi` reader, `LsdProperties.cucumberSplitBySteps()`.** `hideStacktrace()` is read inside `ScenarioError.of` in core, so JUnit uses no internal API and doesn't opt in. Only `lsd-mono-cucumber-8` opts in, with `optIn.add(...)` in its build file. The annotation's `@RequiresOptIn` is at level `ERROR`. The `abiValidation` filter uses `exclude { annotatedWith }`, which is the Kotlin 2.4 name; the Kotlin docs still show the deprecated `excluded`. Members marked `@InternalLsdApi` are left out of the dump, but the annotation class itself is listed.
-- `ScenarioError.of(headline, cause)` is `@JvmStatic`. It keeps the old note text when there is no cause or stack traces are hidden. The property is still `lsd.mono.junit.hideStacktrace` and still covers Cucumber too. Renaming it was out of scope.
+- **There are two `@InternalLsdApi` members: `LsdProperties.cucumberSplitBySteps()` and `LsdProperties.useConfigurationSource()` (#50).** `hideStacktrace()` is read inside `ScenarioError.of` in core. `lsd-mono-cucumber-8` opts in with `optIn.add(...)` in its build file; `LsdExtension` opts in with `@OptIn` on the one function that installs JUnit's configuration parameters. The annotation's `@RequiresOptIn` is at level `ERROR`. The `abiValidation` filter uses `exclude { annotatedWith }`, which is the Kotlin 2.4 name; the Kotlin docs still show the deprecated `excluded`. Members marked `@InternalLsdApi` are left out of the dump, but the annotation class itself is listed.
+- `ScenarioError.of(headline, cause)` is `@JvmStatic`. It keeps the old note text when there is no cause or stack traces are hidden. The property is now `lsd.mono.hideStacktrace` (#50), since it covers Cucumber too.
 - **Parsing quirk kept:** `lsd.mono.label.maxWidth` is not trimmed before parsing, but the payload limits are. I kept that difference so slice 2 doesn't change behaviour.
 - **One documented table:** the core README "Properties" section lists every key with its legacy name, default and effect, and the other READMEs link to it. `LsdPropertiesTest` fails if the README table and `LsdKey` differ, and it covers the legacy fallback of every key.
 

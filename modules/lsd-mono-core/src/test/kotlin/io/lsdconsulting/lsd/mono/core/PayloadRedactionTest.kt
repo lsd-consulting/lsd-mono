@@ -113,7 +113,7 @@ class PayloadRedactionTest {
         val custom = PayloadConverters(Limits(), Redaction.fromProperties())
         assertEquals(mapOf("password" to "p", "ssn" to REDACTED, "PIN" to REDACTED), custom.snapshot(mapOf("password" to "p", "ssn" to "1", "PIN" to "2")))
 
-        System.setProperty(LsdProperties.PAYLOAD_REDACT, "no") // anything but false keeps them on
+        System.setProperty(LsdProperties.PAYLOAD_REDACT, "maybe") // not a boolean: warned about, and the default (on) is kept
         assertEquals(mapOf("password" to REDACTED), PayloadConverters(Limits(), Redaction.fromProperties()).snapshot(mapOf("password" to "p")))
     }
 

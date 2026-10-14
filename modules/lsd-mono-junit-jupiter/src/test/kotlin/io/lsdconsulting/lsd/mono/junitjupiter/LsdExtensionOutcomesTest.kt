@@ -37,7 +37,7 @@ class LsdExtensionOutcomesTest {
     fun pointReportsAtTempDir() {
         System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
         System.setProperty("lsd.mono.ids.deterministic", "true")
-        System.setProperty("lsd.mono.junit.hideStacktrace", "false")
+        System.setProperty("lsd.mono.hideStacktrace", "false")
         LsdContext.instance.clear()
     }
 
@@ -45,7 +45,7 @@ class LsdExtensionOutcomesTest {
     fun restoreOutputDir() {
         System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
         System.clearProperty("lsd.mono.ids.deterministic")
-        System.clearProperty("lsd.mono.junit.hideStacktrace")
+        System.clearProperty("lsd.mono.hideStacktrace")
         LsdContext.instance.clear()
     }
 
@@ -102,6 +102,22 @@ class LsdExtensionOutcomesTest {
     }
 
     @Test
+    @OptIn(io.lsdconsulting.lsd.mono.core.InternalLsdApi::class)
+    fun `lsd keys are read from JUnit configuration parameters`() {
+        System.clearProperty("lsd.mono.hideStacktrace")
+        try {
+            execute(LsdOutcomeFixtures::class.java, mapOf("lsd.mono.hideStacktrace" to "yes"))
+        } finally {
+            io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+                .useConfigurationSource(null)
+        }
+
+        val failed = scenarioSlice(reportJson("LsdOutcomeFixtures"), "${"LsdOutcomeFixtures".deCamelCase()}: blows up with a structured failure")
+        assertTrue(failed.contains("Displaying the stacktrace was disabled"), failed)
+        assertFalse(failed.contains("at io.lsdconsulting"), failed)
+    }
+
+    @Test
     fun `a throwing @AfterEach method fails the test with its own exception`() {
         val summary = execute(LsdAfterEachThrowsFixture::class.java)
 
@@ -117,12 +133,16 @@ class LsdExtensionOutcomesTest {
         assertFalse(json.contains("InvocationTargetException"), json)
     }
 
-    private fun execute(klass: Class<*>): SummaryGeneratingListener {
+    private fun execute(
+        klass: Class<*>,
+        configuration: Map<String, String> = emptyMap(),
+    ): SummaryGeneratingListener {
         val summary = SummaryGeneratingListener()
         val request =
             LauncherDiscoveryRequestBuilder
                 .request()
                 .selectors(selectClass(klass))
+                .configurationParameters(configuration)
                 .build()
         LauncherFactory.create().execute(request, summary)
         return summary

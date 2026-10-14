@@ -4,7 +4,9 @@ import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import org.junit.jupiter.api.extension.AfterAllCallback
+import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
@@ -36,11 +38,20 @@ import java.util.regex.Pattern
  * unique id, so parallel classes do not take each other's scenarios. Work the test
  * hands to other threads should be wrapped with [LsdContext.wrap].
  * The extension keeps no state of its own.
+ *
+ * **Configuration.** Every `lsd.mono.*` property can also be set as a JUnit configuration
+ * parameter, for example in `src/test/resources/junit-platform.properties`. These come after
+ * system properties and environment variables, and before `lsd-mono.properties`.
  */
-public class LsdExtension : BeforeEachCallback, TestWatcher, AfterAllCallback, ParameterResolver {
+public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, AfterAllCallback, ParameterResolver {
     private val lsdContext: LsdContext = LsdContext.instance
 
+    override fun beforeAll(context: ExtensionContext) {
+        useConfigurationParameters(context)
+    }
+
     override fun beforeEach(context: ExtensionContext) {
+        useConfigurationParameters(context)
         lsdContext.findScenario(context.uniqueId)?.discard()
         lsdContext.beginScenario(reportKey = reportKey(context), key = context.uniqueId)
     }
@@ -101,6 +112,13 @@ public class LsdExtension : BeforeEachCallback, TestWatcher, AfterAllCallback, P
         }
         lsdContext.completeReport(context.displayName, reportKey(context))
         lsdContext.createIndex()
+    }
+
+    /** Read `lsd.mono.*` keys from this run's JUnit configuration parameters too. */
+    @OptIn(io.lsdconsulting.lsd.mono.core.InternalLsdApi::class)
+    private fun useConfigurationParameters(context: ExtensionContext) {
+        val root = context.root
+        LsdProperties.useConfigurationSource { key -> root.getConfigurationParameter(key).orElse(null) }
     }
 
     /** The test's running scenario. A disabled test never ran beforeEach, so it gets an empty one. */

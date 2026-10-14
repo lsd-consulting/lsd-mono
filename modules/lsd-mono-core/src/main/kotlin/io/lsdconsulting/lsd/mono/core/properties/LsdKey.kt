@@ -5,9 +5,9 @@ package io.lsdconsulting.lsd.mono.core.properties
  * are defined. The table in the lsd-mono-core README documents the same rows, and
  * `LsdPropertiesTest` fails when the two differ.
  *
- * A key is read from the system property, then from the environment variable of the same
- * name in upper case with dots as underscores (`LSD_MONO_REPORT_OUTPUTDIR`). When the key is
- * not set, its [legacy] name is read the same way, and only then is [default] used.
+ * A key is looked up in each source in turn (see [LsdConfig]: system property, environment
+ * variable, JUnit configuration parameters, `lsd-mono.properties`). When it is set in none,
+ * its [legacy] name is looked up the same way, and only then is [default] used.
  */
 internal enum class LsdKey(
     val key: String,
@@ -34,10 +34,32 @@ internal enum class LsdKey(
     /** The value the user set under the key or, failing that, its legacy name; else [default]. */
     fun value(): String? = explicit(key) ?: legacy?.let(::explicit) ?: default
 
-    fun boolean(): Boolean = value().toBoolean()
+    /**
+     * `true`, `yes`, `on` and `1` are true; `false`, `no`, `off` and `0` are false, in any case.
+     * Anything else is warned about once and the default is used, rather than meaning false.
+     */
+    fun boolean(): Boolean {
+        val raw = value()
+        parseBoolean(raw)?.let { return it }
+        val fallback = parseBoolean(default) ?: false
+        LsdConfig.warnOnce(key, raw.toString()) {
+            "LSD: '$raw' is not a boolean for $key, so the default ($fallback) is used. " +
+                "Use true/false, yes/no, on/off or 1/0."
+        }
+        return fallback
+    }
 
     /** The default of an integer key. */
     fun defaultInt(): Int = checkNotNull(default) { "$key has no default" }.toInt()
 
-    private fun explicit(name: String): String? = System.getProperty(name) ?: System.getenv(name.replace('.', '_').uppercase())
+    private fun explicit(name: String): String? = LsdConfig.lookup(name)
+
+    internal companion object {
+        fun parseBoolean(raw: String?): Boolean? =
+            when (raw?.trim()?.lowercase()) {
+                "true", "yes", "on", "1" -> true
+                "false", "no", "off", "0" -> false
+                else -> null
+            }
+    }
 }
