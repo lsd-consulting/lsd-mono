@@ -5,19 +5,13 @@ name: Gradle
 # The jvm-tests jobs run only the JVM tests again on newer JDKs, so 17, 21 and 25 are all covered
 # without building the report UI three times.
 # Changes that only touch what the build never reads (Markdown, docs/, which the Pages workflow
-# handles, and the README images under each module) skip this workflow. Keep both lists in step.
+# handles, and the README images under each module) skip the build jobs. The workflow itself
+# always runs, so the `gate` job always reports: require `gate` in branch protection, not the
+# build jobs (see docs/ci.md). Keep the ignored paths in `changes` and pages.yml in step.
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "modules/*/docs/**"
   pull_request:
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "modules/*/docs/**"
   workflow_dispatch:
 
 # Read the code and nothing else. No step needs to write to the repository.
@@ -30,7 +24,33 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    # Whether anything the build reads changed. Docs-only changes skip build and jvm-tests.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed=$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '(\.md$|^docs/|^modules/[^/]+/docs/)' || true)
+          echo "Build-relevant changes:"; echo "${changed:-none}"
+          if [ -n "$changed" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
+
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # Pinned, not ubuntu-latest, so the image changes in a reviewed pull request (Renovate
     # proposes new runner versions) rather than mid-rollout. See docs/ci.md.
     runs-on: ubuntu-26.04
@@ -75,6 +95,8 @@ jobs:
           retention-days: 14
 
   jvm-tests:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # The JVM tests (not the report UI, Pages or verifyGenerated) on each newer JDK. The classes
     # are still compiled for 17; -Plsd.test.jvm only changes the JDK the tests run on.
     runs-on: ubuntu-26.04
@@ -115,3 +137,18 @@ jobs:
             **/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+  gate:
+    # The one check to require. Passes when every job passed or was skipped for a docs-only change.
+    if: always()
+    needs: [changes, build, jvm-tests]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 2
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) echo "a required job ended $r"; exit 1 ;; esac
+          done

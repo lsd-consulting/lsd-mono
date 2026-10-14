@@ -30,6 +30,14 @@ both: `@typescript/native` is TypeScript 7 and provides `tsc`, and `typescript` 
 package (`@typescript/typescript6`) that ESLint loads. Drop the alias once typescript-eslint
 supports TypeScript 7.
 
+## Required check: `gate`
+
+`gradle.yml` runs on every push and pull request. A `changes` job decides whether anything the
+build reads changed (everything except Markdown, `docs/` and `modules/*/docs/`). If not, `build`
+and `jvm-tests` are skipped. The `gate` job always runs and passes only when every job passed or
+was skipped, so it is the one check to require on `main`: a docs-only pull request gets a green
+`gate` instead of waiting for a build that never starts.
+
 ## Hardening
 
 - **Permissions.** Both workflows default to `contents: read`. Only the Pages deploy job gets
