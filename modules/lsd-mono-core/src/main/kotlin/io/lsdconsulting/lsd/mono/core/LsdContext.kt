@@ -344,7 +344,7 @@ public class LsdContext : Capturer() {
      */
     @JvmOverloads
     public fun completeReport(title: String, reportKey: String? = null): ReportFiles {
-        warnStillRunning(title, reportKey)
+        completeStillRunning(title, reportKey)
         val taken =
             synchronized(lock) {
                 // Writing a report has always dropped captures that no scenario was completed for.
@@ -490,16 +490,21 @@ public class LsdContext : Capturer() {
         bound.forget(scenario)
     }
 
-    /** Scenarios for this report that were never completed are left out of it, and would attract unbound captures. */
-    private fun warnStillRunning(title: String, reportKey: String?) {
-        val running = active.values.filter { it.reportKey == reportKey }
+    /**
+     * Scenarios for this report that are still running are completed now, as [Status.WARN] with
+     * [NOT_COMPLETED_NOTE] as their description, so they appear in the report and stop attracting
+     * captures. A scenario completed concurrently by its test keeps that completion.
+     */
+    private fun completeStillRunning(title: String, reportKey: String?) {
+        val running = active.values.filter { it.reportKey == reportKey }.sortedBy { it.sequence }
         if (running.isEmpty()) return
         logger.log(
             System.Logger.Level.WARNING,
             "LSD: report '$title' is being written while ${running.size} of its scenario(s) are still running " +
-                "(keys: ${running.joinToString { "'${it.key}'" }}). They are not in the report. Complete or discard " +
-                "each scenario; until then unbound captures can be attributed to them.",
+                "(keys: ${running.joinToString { "'${it.key}'" }}). They are completed now with status WARN. " +
+                "Complete or discard each scenario before completeReport.",
         )
+        running.forEach { complete(it, it.key, NOT_COMPLETED_NOTE, Status.WARN, null) }
     }
 
     private fun dropStrayCaptures(report: String) {
@@ -736,6 +741,9 @@ public class LsdContext : Capturer() {
     /** Holds [instance]. */
     public companion object {
         private val logger = System.getLogger(LsdContext::class.java.name)
+
+        internal const val NOT_COMPLETED_NOTE: String =
+            "Scenario was not completed before the report was written. Its events up to that point are shown."
 
         /**
          * The shared context that the JUnit and Cucumber integrations use, and that

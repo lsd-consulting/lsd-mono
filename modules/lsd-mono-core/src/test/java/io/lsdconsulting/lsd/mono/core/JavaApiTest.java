@@ -190,6 +190,20 @@ class JavaApiTest {
         assertEquals(List.of("SYNCHRONOUS", "SYNCHRONOUS"), all(json, "\"type\": \"(\\w+)\""));
     }
 
+    @Test
+    void completeReportCompletesAForgottenScenarioAsWarn() throws IOException {
+        LsdContext lsd = new LsdContext();
+        LsdScenario forgotten = lsd.beginScenario("java-forgotten", "java-forgotten", false);
+        forgotten.message("Shop", "Orders", "kept");
+
+        String json = Files.readString(reportJson(lsd.completeReport("Java forgotten", "java-forgotten")));
+
+        assertTrue(!forgotten.isActive(), "the report completed it");
+        assertTrue(json.contains("\"status\": \"warn\""), json);
+        assertTrue(json.contains("Scenario was not completed before the report was written"), json);
+        assertTrue(json.contains("kept"), json);
+    }
+
     private static Path reportJson(ReportFiles files) {
         return files.getReportJson();
     }

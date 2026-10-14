@@ -322,9 +322,12 @@ that test's scenario. An inherited binding is weaker than one made on the thread
   would put captures in the wrong scenario. Use `wrap` or `bind()` for executors.
 - `lsd.mono.scenario.inheritBinding=false` turns inheritance off.
 
-`completeReport` warns, naming them, when scenarios for that report are still running: they
-are not in the report, and until they are completed or discarded they can attract unbound
-captures.
+`completeReport` completes any scenarios for that report that are still running, so a forgotten
+`complete` cannot leave one out of the report or let it attract later unbound captures. Each one
+is written with status `WARN`, its key as the title, the events captured so far, and the
+description "Scenario was not completed before the report was written", which the report shows
+under the scenario. A warning naming them is also logged. Completing such a scenario afterwards
+does nothing. Discard a scenario you do not want in the report before calling `completeReport`.
 
 The binding belongs to a thread, so it does not follow a coroutine that resumes on another
 dispatcher thread. In Kotlin coroutines use `withLsdScenario` from

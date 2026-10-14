@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Message
+import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,6 +22,7 @@ import java.util.logging.Handler
 import java.util.logging.LogRecord
 import java.util.logging.Logger
 import kotlin.concurrent.thread
+import kotlin.io.path.readText
 
 /** Carrying a scenario across threads and processes safely (#45). */
 class ScenarioPropagationTest {
@@ -157,7 +159,7 @@ class ScenarioPropagationTest {
     }
 
     @Test
-    fun `completeReport warns about scenarios of that report that are still running`() {
+    fun `completeReport completes scenarios of that report that are still running as WARN with a note`() {
         val records = ArrayList<LogRecord>()
         val handler =
             object : Handler() {
@@ -173,18 +175,38 @@ class ScenarioPropagationTest {
         logger.addHandler(handler)
         try {
             val lsd = LsdContext()
-            lsd.beginScenario(reportKey = "orders", key = "forgotten", bindCurrentThread = false)
-            lsd.beginScenario(reportKey = "payments", key = "other report", bindCurrentThread = false)
-            val done = lsd.beginScenario(reportKey = "orders", bindCurrentThread = false)
-            done.complete("done")
-            lsd.completeReport("Orders", reportKey = "orders")
+            val forgotten = lsd.beginScenario(reportKey = "orders", key = "forgotten", bindCurrentThread = false)
+            forgotten.message(from = "Shop", to = "Orders", label = "before the report")
+            val other = lsd.beginScenario(reportKey = "payments", key = "other report", bindCurrentThread = false)
+            val failed = lsd.beginScenario(reportKey = "orders", bindCurrentThread = false)
+            failed.complete("failed", status = Status.ERROR)
+
+            val files = lsd.completeReport("Orders", reportKey = "orders")
+
             val warning = records.map { it.message }.single { it.contains("still running") }
             assertTrue(warning.contains("'forgotten'"), warning)
             assertFalse(warning.contains("other report"), "scenarios of other reports are not this report's business")
+            assertFalse(forgotten.isActive, "an auto-completed scenario takes no more captures")
+            assertTrue(other.isActive)
+            assertNull(lsd.findScenario("forgotten"))
 
+            val json = files.reportJson.readText()
+            val scenarios = Regex(""""title": "(forgotten|failed)"[\s\S]*?"status": "(\w+)"""").findAll(json)
+            assertEquals(
+                mapOf("forgotten" to "warn", "failed" to "error"),
+                scenarios.associate { it.groupValues[1] to it.groupValues[2] },
+                json,
+            )
+            assertTrue(json.contains(LsdContext.NOT_COMPLETED_NOTE), json)
+            assertTrue(json.contains("before the report"), "events captured before the report are kept")
+
+            // Completing it afterwards is a no-op, not a second copy in a later report.
+            forgotten.complete("late")
             records.clear()
-            lsd.completeReport("Payments again", reportKey = "nothing-running")
+            val againFiles = lsd.completeReport("Orders again", reportKey = "orders")
             assertTrue(records.none { it.message.contains("still running") })
+            val again = againFiles.reportJson.readText()
+            assertFalse(again.contains("late"), again)
         } finally {
             logger.removeHandler(handler)
         }
