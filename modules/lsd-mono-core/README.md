@@ -345,7 +345,8 @@ after the call does not change the report. The copy is plain JSON:
 - `Optional` becomes its value or `null`, enums their name, and `java.time` values,
   `Date`, `UUID` and similar types their ISO or plain text;
 - `ByteArray` and `ByteBuffer` become text when they are UTF-8 text, otherwise
-  `[lsd: binary, N bytes] base64:...`;
+  `[lsd: binary, N bytes] base64:...`. Only the first `maxStringLength * 4` bytes are read (cut
+  on a UTF-8 character boundary), so a large upload is never decoded or encoded whole;
 - a `Throwable` becomes `{"exception": ..., "message": ...}`.
 
 Capturing never throws. Anything that cannot be copied becomes a `[lsd: ...]`

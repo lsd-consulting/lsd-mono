@@ -63,7 +63,8 @@ internal val DEFAULT_REDACTED_KEYS: List<String> =
  * - Maps become objects. Keys that are not strings use their text; a repeated key gets ` #2`.
  * - Iterables, arrays and primitive arrays become lists.
  * - `ByteArray` and `ByteBuffer` become text when they are valid UTF-8 text, otherwise
- *   `[lsd: binary, N bytes] base64:...`. A `ByteBuffer`'s position is not moved.
+ *   `[lsd: binary, N bytes] base64:...`. A `ByteBuffer`'s position is not moved. At most
+ *   `maxStringLength * 4` bytes are read, so a large body is never decoded whole.
  * - `Optional` becomes its value or null, enums their name, `java.time` values,
  *   `Date`, `UUID`, `URI`, paths and similar value types their ISO or plain text.
  * - Java records and Kotlin data classes (any class outside the JDK and Kotlin
@@ -226,8 +227,8 @@ public class PayloadConverters internal constructor(
                 is BigInteger, is BigDecimal -> return value
                 is Number -> return number(value)
                 is Enum<*> -> return value.name
-                is ByteArray -> return bytes(value)
-                is ByteBuffer -> return bytes(value.duplicate().let { b -> ByteArray(b.remaining()).also { b.get(it) } })
+                is ByteArray -> return bytes(ByteBuffer.wrap(value))
+                is ByteBuffer -> return bytes(value.duplicate())
                 is AtomicBoolean -> return value.get()
                 is Optional<*> -> return copy(value.orElse(null), depth)
                 is OptionalInt -> return if (value.isPresent) value.asInt.toLong() else null
@@ -346,13 +347,39 @@ public class PayloadConverters internal constructor(
             return value.substring(0, limits.maxStringLength) + "… [lsd: truncated ${value.length - limits.maxStringLength} characters]"
         }
 
-        private fun bytes(value: ByteArray): String {
-            utf8Text(value)?.let { return text(it) }
-            val encoded = Base64.getEncoder().encodeToString(value)
-            val kept = encoded.take(limits.maxStringLength)
-            budget -= kept.length
-            val cut = if (kept.length < encoded.length) "… [lsd: truncated]" else ""
-            return "[lsd: binary, ${value.size} bytes] base64:$kept$cut"
+        /**
+         * Reads at most [maxBytes] bytes of [buffer], so a large body is never decoded or
+         * base64-encoded whole. That is enough UTF-8 for [Limits.maxStringLength] characters.
+         */
+        private fun bytes(buffer: ByteBuffer): String {
+            val size = buffer.remaining()
+            val maxBytes = (limits.maxStringLength.toLong() * 4).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            val cut = size > maxBytes
+            val head = ByteArray(if (cut) utf8Boundary(buffer, maxBytes) else size).also { buffer.get(it) }
+            utf8Text(head)?.let { text ->
+                if (!cut) return text(text)
+                var end = text.length.coerceAtMost(limits.maxStringLength)
+                if (end in 1 until text.length && text[end - 1].isHighSurrogate()) end--
+                budget -= end
+                return text.substring(0, end) + "… [lsd: truncated, $size bytes in total]"
+            }
+            val keep = (limits.maxStringLength.toLong() * 3 / 4).toInt().coerceAtMost(head.size)
+            val encoded = Base64.getEncoder().encodeToString(head.copyOf(keep)).take(limits.maxStringLength)
+            budget -= encoded.length
+            val marker = if (keep < size) "… [lsd: truncated]" else ""
+            return "[lsd: binary, $size bytes] base64:$encoded$marker"
+        }
+
+        /**
+         * The length of [buffer]'s first [max] bytes, shortened so it does not end inside a
+         * UTF-8 character: a truncated character would make text look like binary.
+         */
+        private fun utf8Boundary(buffer: ByteBuffer, max: Int): Int {
+            val start = buffer.position()
+            var end = max
+            // Back off over up to three continuation bytes (10xxxxxx) to the start of the character at max.
+            while (end > max - 4 && end > 0 && (buffer.get(start + end).toInt() and 0xC0) == 0x80) end--
+            return end
         }
 
         private fun safeString(value: Any): String =

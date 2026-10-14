@@ -123,6 +123,30 @@ class PayloadConvertersTest {
     }
 
     @Test
+    fun `large byte arrays are cut before decoding, on a UTF-8 boundary`() {
+        val limits = Limits(maxStringLength = 1_000)
+
+        // Only the head is read: invalid UTF-8 past it would otherwise make the text look binary.
+        val text = ByteArray(50_000_000) { 'a'.code.toByte() }.also { it[it.size - 1] = 0xFF.toByte() }
+        assertEquals("a".repeat(1_000) + "… [lsd: truncated, 50000000 bytes in total]", snap(text, limits))
+
+        // 12 bytes are read for 3 characters; byte 12 is inside the fifth '€', so the cut backs off to it.
+        val euros = ("a" + "€".repeat(10)).toByteArray()
+        assertEquals("a€€… [lsd: truncated, ${euros.size} bytes in total]", snap(euros, Limits(maxStringLength = 3)))
+        assertEquals("a€€… [lsd: truncated, ${euros.size} bytes in total]", snap(ByteBuffer.wrap(euros), Limits(maxStringLength = 3)))
+
+        val binary = ByteArray(20_000_000)
+        val rendered = snap(binary, limits) as String
+        assertTrue(rendered.startsWith("[lsd: binary, 20000000 bytes] base64:AAAA"), rendered.take(80))
+        assertTrue(rendered.endsWith("… [lsd: truncated]"), rendered.takeLast(80))
+        assertTrue(rendered.length < 1_100, "length ${rendered.length}")
+
+        // A character outside the BMP is never split into half a surrogate pair.
+        val emoji = "😀".repeat(5).toByteArray()
+        assertEquals("😀… [lsd: truncated, 20 bytes in total]", snap(emoji, Limits(maxStringLength = 3)))
+    }
+
+    @Test
     fun `optionals, java time, dates, enums and plain value types`() {
         assertEquals("x", snap(Optional.of("x")))
         assertEquals(null, snap(Optional.empty<String>()))
