@@ -455,23 +455,30 @@ public class PayloadConverters internal constructor(
             return opaquePackages.any { name.startsWith(it) }
         }
 
-        private val fieldCache = java.util.concurrent.ConcurrentHashMap<Class<*>, List<Field>>()
-
-        private fun instanceFields(type: Class<*>): List<Field> =
-            fieldCache.computeIfAbsent(type) {
-                val out = ArrayList<Field>()
-                var current: Class<*>? = type
-                while (current != null && opaquePackages.none { current!!.name.startsWith(it) }) {
-                    current.declaredFields
-                        .filter { f ->
-                            !Modifier.isStatic(f.modifiers) && !Modifier.isTransient(f.modifiers) && !f.isSynthetic &&
-                                '$' !in f.name
-                        }.filter { f -> runCatching { f.trySetAccessible() }.getOrDefault(false) }
-                        .let { out.addAll(0, it) }
-                    current = current.superclass
+        /**
+         * Each class's readable instance fields, worked out once. A [ClassValue] keeps them
+         * with the class itself, so a class (and its class loader) can still be unloaded,
+         * as under hot reload; a map keyed by `Class` would keep every one reachable.
+         */
+        private val fieldCache =
+            object : ClassValue<List<Field>>() {
+                override fun computeValue(type: Class<*>): List<Field> {
+                    val out = ArrayList<Field>()
+                    var current: Class<*>? = type
+                    while (current != null && opaquePackages.none { current!!.name.startsWith(it) }) {
+                        current.declaredFields
+                            .filter { f ->
+                                !Modifier.isStatic(f.modifiers) && !Modifier.isTransient(f.modifiers) && !f.isSynthetic &&
+                                    '$' !in f.name
+                            }.filter { f -> runCatching { f.trySetAccessible() }.getOrDefault(false) }
+                            .let { out.addAll(0, it) }
+                        current = current.superclass
+                    }
+                    return out
                 }
-                out
             }
+
+        private fun instanceFields(type: Class<*>): List<Field> = fieldCache.get(type)
 
         private fun utf8Text(bytes: ByteArray): String? {
             val decoded =
