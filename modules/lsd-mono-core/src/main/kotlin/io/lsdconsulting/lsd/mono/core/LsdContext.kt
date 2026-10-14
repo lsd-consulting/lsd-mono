@@ -3,46 +3,26 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
 import io.lsdconsulting.lsd.mono.core.domain.Lifeline
-import io.lsdconsulting.lsd.mono.core.domain.LifelineAction
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Note
-import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.Participant
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantIds
 import io.lsdconsulting.lsd.mono.core.domain.Scenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
-import io.lsdconsulting.lsd.mono.core.domain.ScenarioTiming
 import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
-import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
-import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
-import io.lsdconsulting.lsd.mono.core.model.EventJson
-import io.lsdconsulting.lsd.mono.core.model.FactJson
-import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
-import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
-import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
-import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
-import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
-import io.lsdconsulting.lsd.mono.core.model.ScenarioErrorJson
-import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
-import io.lsdconsulting.lsd.mono.core.model.ScenarioTimingJson
-import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
-import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
-import io.lsdconsulting.lsd.mono.core.model.TraceJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.report.ReportJsonMapper
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
-import io.lsdconsulting.lsd.mono.core.report.capturedMetrics
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
@@ -117,7 +97,8 @@ public class LsdContext :
     private val lock = Any()
     private val completed = LinkedHashMap<String?, MutableList<Pair<Long, Scenario>>>()
     private val reportFiles: MutableList<ReportFile> = ArrayList()
-    private val participants = linkedMapOf<String, Participant>()
+    private val participants = ParticipantRegistry()
+    private val jsonMapper = ReportJsonMapper { idGenerator.next() }
 
     private val sequence = AtomicLong()
     private val active = ConcurrentHashMap<String, LsdScenario>()
@@ -146,17 +127,7 @@ public class LsdContext :
 
     /** [addParticipants] for a list. */
     public fun addParticipants(additional: List<Participant>) {
-        synchronized(lock) {
-            additional.forEach { incoming ->
-                val id =
-                    if (participants.containsKey(incoming.id) && participants[incoming.id]?.name != incoming.name) {
-                        uniqueId(incoming.id)
-                    } else {
-                        incoming.id
-                    }
-                participants[id] = incoming.copy(id = id)
-            }
-        }
+        synchronized(lock) { participants.declare(additional) }
     }
 
     /**
@@ -380,7 +351,7 @@ public class LsdContext :
                     .sortedBy { it.first }
                     .map { it.second }
             }
-        val report = buildReportJson(title, taken)
+        val report = jsonMapper.toReportJson(title, taken)
         val files = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
         synchronized(lock) {
             reportFiles.add(
@@ -529,7 +500,7 @@ public class LsdContext :
                     description = description.orEmpty(),
                     status = status,
                     facts = facts,
-                    participants = participantsFor(events),
+                    participants = participants.usedBy(events),
                     events = events,
                     error = error,
                     timing = timing,
@@ -670,160 +641,7 @@ public class LsdContext :
         }
     }
 
-    private fun resolve(ref: String): Participant = synchronized(lock) { resolveLocked(ref) }
-
-    private fun resolveLocked(ref: String): Participant {
-        participants[ref]?.let { return it }
-        participants.values.firstOrNull { it.name == ref || it.displayName == ref }?.let { return it }
-        val id = uniqueId(ParticipantIds.fromName(ref))
-        val created = Participant(name = ref, id = id)
-        participants[id] = created
-        return created
-    }
-
-    private fun uniqueId(base: String): String {
-        if (!participants.containsKey(base)) return base
-        var n = 2
-        while (participants.containsKey("$base-$n")) n++
-        return "$base-$n"
-    }
-
-    private fun participantsFor(events: List<SequenceEvent>): List<Participant> {
-        val ids = linkedSetOf<String>()
-        events.forEach { event ->
-            when (event) {
-                is Message -> {
-                    event.from?.takeIf { it.isNotBlank() }?.let(ids::add)
-                    event.to?.takeIf { it.isNotBlank() }?.let(ids::add)
-                }
-                is Note -> event.over?.let { ids.add(it) }
-                is Lifeline -> ids.add(event.participantId)
-                is Divider, is Section, is Delay, is Spacer -> Unit
-            }
-        }
-        return participants.values.filter { it.id in ids }
-    }
-
-    private fun buildReportJson(title: String, scenarios: List<Scenario>): ReportJson =
-        ReportJson(
-            title = title,
-            // UTC instant. The report page shows it in the reader's own time zone.
-            // lsd.mono.report.generatedAt fixes it, for reproducible samples.
-            generatedAt = (LsdProperties.generatedAt() ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString(),
-            generator = LsdVersion.generator,
-            status = determineOverallStatus(scenarios),
-            options = reportOptions().toJson(),
-            scenarios = scenarios.map { scenario -> scenario.toJsonModel(reportOptions()) },
-        )
-
-    private fun reportOptions(): ReportOptions = ReportOptions.fromProperties()
-
-    private fun ReportOptions.toJson(): ReportOptionsJson =
-        ReportOptionsJson(metricsEnabled = metricsEnabled, labelMaxWidth = labelMaxWidth)
-
-    private fun Scenario.toJsonModel(options: ReportOptions): ScenarioJson {
-        val captured = capturedMetrics(events, options)
-        return ScenarioJson(
-            id = idGenerator.next(),
-            title = title,
-            status = status.toReportStatus(),
-            description = description,
-            facts = facts.map { FactJson(it.key, it.value) },
-            error = error?.let { ScenarioErrorJson(it.headline, it.message, it.stack) },
-            metrics = captured.metrics,
-            insights = captured.insights,
-            participants =
-                participants.map {
-                    ParticipantJson(
-                        id = it.id,
-                        name = it.name,
-                        type = it.type.name,
-                        alias = it.displayName,
-                        colour = it.colour,
-                    )
-                },
-            events = events.map { it.toEventJson(timing) },
-            timing =
-                ScenarioTimingJson(
-                    accuracy = timing.accuracy.name,
-                    measuredCoverage = timing.measuredCoverage,
-                    pairingCoverage = timing.pairingCoverage,
-                    sources = timing.sources,
-                    wallClockMs = timing.wallClockMs,
-                    clockOrdering = timing.clockOrdering.name,
-                    clockOrdered = timing.clockOrdered,
-                    warnings = timing.warnings,
-                    reorderedByClock = timing.reorderedByClock,
-                ),
-        )
-    }
-
-    /** `capturedAt` is a wall-clock hint; reproducible reports leave it out. */
-    private val writeCapturedAt: Boolean
-        get() = LsdProperties.generatedAt() == null && !LsdProperties.deterministicIds()
-
-    private fun SequenceEvent.toEventJson(timing: ScenarioTiming): EventJson =
-        when (this) {
-            is Message ->
-                MessageEventJson(
-                    id = id,
-                    // The JSON draws a diagram-edge end as "".
-                    from = from.orEmpty(),
-                    to = to.orEmpty(),
-                    label = label,
-                    type = type.name,
-                    colour = colour?.takeIf { it.isNotBlank() },
-                    durationMs = timedMs,
-                    data = data,
-                    createdAt = createdAt?.toString(),
-                    seq = seq.takeIf { it > 0 },
-                    callId = callRef?.id,
-                    replyTo = replyTo?.id,
-                    causedBy = causedBy?.id,
-                    trace = trace?.let { TraceJson(it.traceId, it.spanId, it.parentSpanId) },
-                    source = source,
-                    capturedAt = capturedAt?.takeIf { writeCapturedAt }?.toString(),
-                    status = status,
-                    timing = timing.perEvent[id]?.timing?.name,
-                    pairing = timing.perEvent[id]?.pairing?.name,
-                    order = timing.perEvent[id]?.order?.name,
-                )
-            is Note ->
-                NoteEventJson(
-                    id = id,
-                    text = text,
-                    over = over,
-                    placement = placement.name.lowercase(),
-                    createdAt = createdAt?.toString(),
-                )
-            is Divider -> DividerEventJson(id = id, label = label, createdAt = createdAt?.toString())
-            is Section -> SectionEventJson(id = id, title = title, createdAt = createdAt?.toString())
-            is Delay -> DelayEventJson(id = id, label = label, createdAt = createdAt?.toString())
-            is Spacer -> SpacerEventJson(id = id, heightPx = heightPx, createdAt = createdAt?.toString())
-            is Lifeline ->
-                LifelineEventJson(
-                    kind = if (action == LifelineAction.ACTIVATE) "activate" else "deactivate",
-                    id = id,
-                    participantId = participantId,
-                    colour = if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null,
-                    createdAt = createdAt?.toString(),
-                )
-        }
-
-    private fun determineOverallStatus(scenarios: List<Scenario>): String =
-        scenarios
-            .map { it.status }
-            .sortedWith(
-                compareBy {
-                    when (it) {
-                        Status.ERROR -> 0
-                        Status.WARN -> 1
-                        Status.SUCCESS -> 2
-                    }
-                },
-            ).firstOrNull()
-            ?.toCssClass()
-            ?: "success"
+    private fun resolve(ref: String): Participant = synchronized(lock) { participants.resolve(ref) }
 
     /** Holds [instance]. */
     public companion object {
