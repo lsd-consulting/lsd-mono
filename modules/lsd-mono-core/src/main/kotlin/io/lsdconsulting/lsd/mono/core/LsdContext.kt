@@ -36,6 +36,7 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.capturedMetrics
 import java.io.File
+import java.net.URI
 import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -102,7 +103,7 @@ public class LsdContext : Capturer() {
 
     private val sequence = AtomicLong()
     private val active = ConcurrentHashMap<String, LsdScenario>()
-    private val bound = ThreadLocal<LsdScenario>()
+    private val bound = ThreadBindings()
     private val openReport = ThreadLocal<LsdReport>()
     private val openReports = HashSet<String>()
 
@@ -161,11 +162,39 @@ public class LsdContext : Capturer() {
         return scenario
     }
 
-    /** The scenario the calling thread is bound to, if it is still running. */
+    /**
+     * The scenario the calling thread is bound to, if it is still running. That is the one
+     * bound on this thread, or else one inherited from the thread that started it (see
+     * [LsdScenario.bind] and the README on threads; pool workers do not inherit).
+     */
     public fun currentScenario(): LsdScenario? = bound.get()?.takeIf { isActive(it) }
 
     /** A running scenario by the key it was begun with. */
     public fun findScenario(key: String): LsdScenario? = active[key]
+
+    /**
+     * The value to send in the [LsdHeaders.SCENARIO] header on a request or message to [host]:
+     * the current scenario's opaque [LsdScenario.correlationId], or null (send no header) when
+     * no scenario is current or [host] is not allowed. Allowed hosts come from
+     * `lsd.mono.propagation.allowedHosts`, by default only loopback (`localhost`,
+     * `127.0.0.1`, `::1`), so a client interceptor never tags calls to third parties.
+     */
+    public fun scenarioHeaderValue(host: String): String? {
+        if (!HostAllowList.fromProperties().allows(host)) return null
+        return currentScenario()?.correlationId
+    }
+
+    /** [scenarioHeaderValue] for the host of [uri]; null when it has none. */
+    public fun scenarioHeaderValue(uri: URI): String? = uri.host?.let(::scenarioHeaderValue)
+
+    /**
+     * The running scenario whose [LsdScenario.correlationId] is [headerValue], as received in
+     * the [LsdHeaders.SCENARIO] header; null when none is running (or the value is null).
+     */
+    public fun findScenarioByHeader(headerValue: String?): LsdScenario? {
+        val wanted = headerValue?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return active.values.firstOrNull { it.correlationId == wanted }
+    }
 
     /**
      * Wrap [task] so it runs bound to the calling thread's current scenario, for
@@ -315,6 +344,7 @@ public class LsdContext : Capturer() {
      */
     @JvmOverloads
     public fun completeReport(title: String, reportKey: String? = null): ReportFiles {
+        warnStillRunning(title, reportKey)
         val taken =
             synchronized(lock) {
                 // Writing a report has always dropped captures that no scenario was completed for.
@@ -413,9 +443,8 @@ public class LsdContext : Capturer() {
         if (event is Message && event.data != null) event.copy(data = payloads.snapshot(event.data)) else event
 
     internal fun bindThread(scenario: LsdScenario): LsdBinding {
-        val previous = bound.get()
-        bound.set(scenario)
-        return LsdBinding { if (previous == null) bound.remove() else bound.set(previous) }
+        val restore = bound.set(scenario)
+        return LsdBinding(restore)
     }
 
     internal fun complete(
@@ -432,7 +461,7 @@ public class LsdContext : Capturer() {
                 if (!active.remove(scenario.key, scenario)) return
                 scenario.close()
             }
-        if (bound.get() === scenario) bound.remove()
+        bound.forget(scenario)
         warnUnreplied(title, scenario.abandonCalls())
         val events = orderByCreatedAt(captured)
         synchronized(lock) {
@@ -458,7 +487,19 @@ public class LsdContext : Capturer() {
             return
         }
         if (active.remove(scenario.key, scenario)) scenario.close()
-        if (bound.get() === scenario) bound.remove()
+        bound.forget(scenario)
+    }
+
+    /** Scenarios for this report that were never completed are left out of it, and would attract unbound captures. */
+    private fun warnStillRunning(title: String, reportKey: String?) {
+        val running = active.values.filter { it.reportKey == reportKey }
+        if (running.isEmpty()) return
+        logger.log(
+            System.Logger.Level.WARNING,
+            "LSD: report '$title' is being written while ${running.size} of its scenario(s) are still running " +
+                "(keys: ${running.joinToString { "'${it.key}'" }}). They are not in the report. Complete or discard " +
+                "each scenario; until then unbound captures can be attributed to them.",
+        )
     }
 
     private fun dropStrayCaptures(report: String) {

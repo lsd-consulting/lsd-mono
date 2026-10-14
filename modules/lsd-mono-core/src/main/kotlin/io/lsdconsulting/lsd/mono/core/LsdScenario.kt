@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.function.Consumer
 
@@ -29,6 +30,13 @@ public class LsdScenario internal constructor(
     public val reportKey: String?,
     internal val sequence: Long,
 ) : Capturer() {
+    /**
+     * A random id for this scenario, sent in the [LsdHeaders.SCENARIO] header so another
+     * process can capture into it ([LsdContext.findScenarioByHeader]). Unlike [key], which
+     * integrations set to the test's id, it says nothing about the test.
+     */
+    public val correlationId: String = UUID.randomUUID().toString().replace("-", "")
+
     private val lock = Any()
     private val facts = ArrayList<Fact>()
     private val events = ArrayList<SequenceEvent>()

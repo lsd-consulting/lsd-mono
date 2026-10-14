@@ -230,18 +230,18 @@ class LsdConsumerInterceptor : ConsumerInterceptor<String, String> {
     }
 }
 ```
-After (the producer interceptor stamps the scenario key; the consumer routes by it):
+After (the producer interceptor stamps the scenario's opaque correlation id, for allowed hosts only (#45); the consumer routes by it):
 ```kotlin
 // producer side
 override fun onSend(r: ProducerRecord<String, String>) = r.also { rec ->
-    lsd.currentScenario()?.let { rec.headers().add(LsdHeaders.SCENARIO, it.key.toByteArray()) }
+    lsd.scenarioHeaderValue(brokerHost)?.let { rec.headers().add(LsdHeaders.SCENARIO, it.toByteArray()) }
     lsd.async("Orders", rec.topic(), "publish ${rec.key()}", data = rec.value())
 }
 // consumer side
 override fun onConsume(records: ConsumerRecords<String, String>) = records.also {
     it.forEach { r ->
         val target: Capturer = r.headers().lastHeader(LsdHeaders.SCENARIO)
-            ?.let { h -> lsd.findScenario(String(h.value())) } ?: lsd
+            ?.let { h -> lsd.findScenarioByHeader(String(h.value())) } ?: lsd
         target.async(r.topic(), "Orders", "consume ${r.key()}", data = r.value(), at = Instant.ofEpochMilli(r.timestamp()))
     }
 }

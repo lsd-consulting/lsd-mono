@@ -177,13 +177,23 @@ In a capture block, a reply that comes before the block ends keeps its place amo
 block's events.
 
 A message that crosses a queue can carry its scenario in a header. `LsdHeaders.SCENARIO`
-(`lsd-scenario`) is the name to use, for HTTP too:
+(`lsd-scenario`) is the name to use, for HTTP too. Its value is the scenario's
+`correlationId`, a random id that says nothing about the test (the scenario `key` is often
+the test's name, so it is never sent). Ask `lsd.scenarioHeaderValue(host)` for it, and add
+the header only when that is not null: it is null when no scenario is current or when the
+target host is not allowed. Only loopback hosts are allowed by default, so an interceptor
+never tags calls to a third party; allow more with `lsd.mono.propagation.allowedHosts`
+(`orders.test,*.internal.example`, or `*` for every host). The receiving side finds the
+scenario with `lsd.findScenarioByHeader(value)`.
 
 ```kotlin
-// Kafka producer interceptor
+// HTTP client interceptor
+lsd.scenarioHeaderValue(request.uri())?.let { builder.header(LsdHeaders.SCENARIO, it) }
+
+// Kafka producer interceptor (brokerHost: the host of the bootstrap server)
 override fun onSend(record: ProducerRecord<String, String>) =
     record.also { r ->
-        lsd.currentScenario()?.let { r.headers().add(LsdHeaders.SCENARIO, it.key.toByteArray()) }
+        lsd.scenarioHeaderValue(brokerHost)?.let { r.headers().add(LsdHeaders.SCENARIO, it.toByteArray()) }
         lsd.async("Orders", r.topic(), "publish ${r.key()}", data = r.value())
     }
 
@@ -192,7 +202,7 @@ override fun onConsume(records: ConsumerRecords<String, String>) =
     records.also {
         it.forEach { r ->
             val target: Capturer =
-                r.headers().lastHeader(LsdHeaders.SCENARIO)?.let { h -> lsd.findScenario(String(h.value())) } ?: lsd
+                r.headers().lastHeader(LsdHeaders.SCENARIO)?.let { h -> lsd.findScenarioByHeader(String(h.value())) } ?: lsd
             target.async(r.topic(), "Orders", "consume ${r.key()}", data = r.value(), at = Instant.ofEpochMilli(r.timestamp()))
         }
     }
@@ -268,13 +278,16 @@ ease migration from lsd-core. `LsdProperties` has a constant for each name.
 | `lsd.mono.payload.maxTotalSize` | | `1000000` | Payload limit, see [Message data](#message-data) |
 | `lsd.mono.payload.redact` | | `true` | `false` turns off the built-in secret key names, see [Redaction](#redaction) |
 | `lsd.mono.payload.redactKeys` | | unset | Comma-separated key names to redact as well, see [Redaction](#redaction) |
+| `lsd.mono.propagation.allowedHosts` | | `localhost,127.0.0.1,::1` | Hosts `scenarioHeaderValue` gives the scenario header for: names, `*.domain` or `*`. See [Interceptors](#interceptors) |
+| `lsd.mono.scenario.inheritBinding` | | `true` | `false` stops threads inheriting the scenario of the thread that started them, see [Threads](#threads-and-parallel-tests) |
 
 ### Threads and parallel tests
 
 Every `LsdContext` method is thread-safe. Unscoped calls (`capture`, `message`,
 `addFact`, `completeScenario`) go to:
 
-1. the scenario the calling thread is bound to, if any;
+1. the scenario the calling thread is bound to, if any, or else the one it inherited
+   (below);
 2. otherwise the only running scenario, if exactly one is running;
 3. otherwise the default scenario, which is how single-threaded code has always
    worked. With several scenarios running, a warning is logged once.
@@ -294,6 +307,24 @@ lsd.completeReport("OrderTest", reportKey = "com.example.OrderTest")
 `close()` throws nothing, so Java's try-with-resources needs no `catch`.
 A capture into a scenario that has already completed is dropped
 with a warning rather than being given to the next one.
+
+A thread started by a bound thread inherits its scenario, so `thread { lsd.message(...) }`
+or a virtual thread from `Executors.newVirtualThreadPerTaskExecutor()` in a test captures into
+that test's scenario. An inherited binding is weaker than one made on the thread itself:
+
+- It counts only while that scenario is running. A thread that outlives its test goes back
+  to the rules above, and the scenario is not kept in memory by it.
+- Pool and executor worker threads never use it: `ThreadPoolExecutor` (and the `Executors`
+  factories built on it), `ForkJoinPool` (the common pool, parallel streams and
+  `CompletableFuture`'s default executor), the kotlinx.coroutines dispatchers, Netty event loops
+  and Jetty's thread pool. A pool thread is created by whichever task first needs it and is then
+  reused for unrelated work, possibly from other tests running in parallel, so inheriting there
+  would put captures in the wrong scenario. Use `wrap` or `bind()` for executors.
+- `lsd.mono.scenario.inheritBinding=false` turns inheritance off.
+
+`completeReport` warns, naming them, when scenarios for that report are still running: they
+are not in the report, and until they are completed or discarded they can attract unbound
+captures.
 
 The binding belongs to a thread, so it does not follow a coroutine that resumes on another
 dispatcher thread. In Kotlin coroutines use `withLsdScenario` from

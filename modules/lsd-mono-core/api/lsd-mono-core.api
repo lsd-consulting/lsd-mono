@@ -104,6 +104,7 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public final fun createIndex ()Ljava/nio/file/Path;
 	public final fun currentScenario ()Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public final fun findScenario (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
+	public final fun findScenarioByHeader (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public static final fun getInstance ()Lio/lsdconsulting/lsd/mono/core/LsdContext;
 	public final fun getPayloads ()Lio/lsdconsulting/lsd/mono/core/PayloadConverters;
 	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Lio/lsdconsulting/lsd/mono/core/ReportFiles;
@@ -118,6 +119,8 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;ILjava/lang/Object;)V
 	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun scenarioHeaderValue (Ljava/lang/String;)Ljava/lang/String;
+	public final fun scenarioHeaderValue (Ljava/net/URI;)Ljava/lang/String;
 	public final fun wrap (Ljava/lang/Runnable;)Ljava/lang/Runnable;
 	public final fun wrap (Ljava/util/concurrent/Callable;)Ljava/util/concurrent/Callable;
 }
@@ -155,6 +158,7 @@ public final class io/lsdconsulting/lsd/mono/core/LsdScenario : io/lsdconsulting
 	public final fun complete (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Status;Lio/lsdconsulting/lsd/mono/core/domain/ScenarioError;)V
 	public static synthetic fun complete$default (Lio/lsdconsulting/lsd/mono/core/LsdScenario;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Status;Lio/lsdconsulting/lsd/mono/core/domain/ScenarioError;ILjava/lang/Object;)V
 	public final fun discard ()V
+	public final fun getCorrelationId ()Ljava/lang/String;
 	public final fun getKey ()Ljava/lang/String;
 	public final fun getReportKey ()Ljava/lang/String;
 	public final fun isActive ()Z
@@ -299,6 +303,7 @@ public final class io/lsdconsulting/lsd/mono/core/properties/LsdProperties {
 	public static final field DETERMINISTIC_IDS Ljava/lang/String;
 	public static final field GENERATED_AT Ljava/lang/String;
 	public static final field HIDE_STACKTRACE Ljava/lang/String;
+	public static final field INHERIT_BINDING Ljava/lang/String;
 	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/core/properties/LsdProperties;
 	public static final field LABEL_MAX_WIDTH Ljava/lang/String;
 	public static final field METRICS_ENABLED Ljava/lang/String;
@@ -309,5 +314,6 @@ public final class io/lsdconsulting/lsd/mono/core/properties/LsdProperties {
 	public static final field PAYLOAD_MAX_TOTAL_SIZE Ljava/lang/String;
 	public static final field PAYLOAD_REDACT Ljava/lang/String;
 	public static final field PAYLOAD_REDACT_KEYS Ljava/lang/String;
+	public static final field PROPAGATION_ALLOWED_HOSTS Ljava/lang/String;
 }
 

@@ -27,6 +27,8 @@ internal enum class LsdKey(
     PAYLOAD_MAX_TOTAL_SIZE(LsdProperties.PAYLOAD_MAX_TOTAL_SIZE, null, "1000000"),
     PAYLOAD_REDACT(LsdProperties.PAYLOAD_REDACT, null, "true"),
     PAYLOAD_REDACT_KEYS(LsdProperties.PAYLOAD_REDACT_KEYS, null, null),
+    PROPAGATION_ALLOWED_HOSTS(LsdProperties.PROPAGATION_ALLOWED_HOSTS, null, "localhost,127.0.0.1,::1"),
+    INHERIT_BINDING(LsdProperties.INHERIT_BINDING, null, "true"),
     ;
 
     /** The value the user set under the key or, failing that, its legacy name; else [default]. */

@@ -52,6 +52,19 @@ public object LsdProperties {
      */
     public const val PAYLOAD_REDACT: String = "lsd.mono.payload.redact"
 
+    /**
+     * Comma-separated hosts that may receive the scenario header (see
+     * `LsdContext.scenarioHeaderValue`). An entry is a host name or IP address, `*.example.test`
+     * for any subdomain, or `*` for every host. Default `localhost,127.0.0.1,::1`.
+     */
+    public const val PROPAGATION_ALLOWED_HOSTS: String = "lsd.mono.propagation.allowedHosts"
+
+    /**
+     * `false` stops threads from inheriting the scenario of the thread that started them.
+     * Default `true`; pool and executor threads never inherit.
+     */
+    public const val INHERIT_BINDING: String = "lsd.mono.scenario.inheritBinding"
+
     /** Comma-separated key names to redact as well as the built-in ones, for example `ssn,x-session`. */
     public const val PAYLOAD_REDACT_KEYS: String = "lsd.mono.payload.redactKeys"
 
@@ -98,6 +111,18 @@ public object LsdProperties {
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             .orEmpty()
+
+    /** The [PROPAGATION_ALLOWED_HOSTS] entries, trimmed and lower case, blanks dropped. */
+    internal fun propagationAllowedHosts(): List<String> =
+        LsdKey.PROPAGATION_ALLOWED_HOSTS
+            .value()
+            .orEmpty()
+            .split(',')
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+
+    /** `false` only when [INHERIT_BINDING] is explicitly `false`. */
+    internal fun inheritBinding(): Boolean = !LsdKey.INHERIT_BINDING.value().equals("false", ignoreCase = true)
 
     /** Whether the Cucumber plugin starts a section at each step ([CUCUMBER_SPLIT_BY_STEPS]). */
     @InternalLsdApi
