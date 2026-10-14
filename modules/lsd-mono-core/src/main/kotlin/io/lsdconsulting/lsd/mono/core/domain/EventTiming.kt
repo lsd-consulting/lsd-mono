@@ -48,14 +48,73 @@ private fun SequenceEvent.source(): String = (this as? Message)?.source ?: Timin
  * 3. Structure wins: when clock order would put a reply before its call, a consume before its
  *    publish, or a child outside its parent call, the groups involved keep capture order and a
  *    `skew` warning is added.
+ * 4. When capture order itself is scrambled (interceptor threads, so replies arrive before their
+ *    calls, or rule 3 had to give up), the structure is worked out again on a clock-sorted copy, and used when it is
+ *    consistent and keeps every explicit `replyTo`/`causedBy` link in order.
  *
- * Moved events are marked [OrderSource.CLOCK]. Clock order never changes timing, pairing or accuracy.
+ * Moved events are marked [OrderSource.CLOCK]. Clock order never changes timing or raises accuracy.
  */
 internal fun orderAndAnalyse(
     captured: List<SequenceEvent>,
     mode: ClockOrdering,
 ): Pair<List<SequenceEvent>, ScenarioTiming> {
-    val events = captured
+    val first = analyse(captured, mode)
+    if ((first.reverted || first.orphans > 0) && mode != ClockOrdering.OFF) {
+        val flat = clockSorted(captured, mode)
+        if (flat != captured) {
+            val second = analyse(flat, mode)
+            val better = second.orphans < first.orphans || (first.reverted && second.orphans == first.orphans)
+            if (!second.reverted && better && linksHold(second.ordered)) return finish(captured, second, mode)
+        }
+    }
+    return finish(captured, first, mode)
+}
+
+private class Analysis(
+    val ordered: List<SequenceEvent>,
+    val timing: Map<String, TimingSource>,
+    val pairing: Map<String, PairingSource?>,
+    val callMs: Map<String, Double>,
+    val warnings: List<String>,
+    val reverted: Boolean,
+    /** Replies with no call. */
+    val orphans: Int,
+)
+
+/** Every timed, unmeasured event of a scope sorted into that scope's slots, ignoring structure. */
+private fun clockSorted(
+    events: List<SequenceEvent>,
+    mode: ClockOrdering,
+): List<SequenceEvent> {
+    val scopes =
+        events.indices
+            .filter { i ->
+                val e = events[i]
+                val m = e as? Message
+                e.createdAt != null && m?.orderHint != false && m?.timedMs == null
+            }.groupBy { if (mode == ClockOrdering.ALL_SOURCES) "*" else events[it].source() }
+    val order = IntArray(events.size) { it }
+    scopes.values.forEach { slots ->
+        val sorted = slots.sortedWith(compareBy<Int> { events[it].createdAt }.thenBy { it })
+        slots.forEachIndexed { k, slot -> order[slot] = sorted[k] }
+    }
+    return order.map { events[it] }
+}
+
+/** Every explicit reply and consume comes after the call or publish it names. */
+private fun linksHold(events: List<SequenceEvent>): Boolean {
+    val position = HashMap<String, Int>()
+    events.forEachIndexed { i, e -> (e as? Message)?.callRef?.id?.let { position.putIfAbsent(it, i) } }
+    return events.withIndex().all { (i, e) ->
+        val m = e as? Message ?: return@all true
+        listOfNotNull(m.replyTo?.id, m.causedBy?.id).all { id -> (position[id] ?: -1) < i }
+    }
+}
+
+private fun analyse(
+    events: List<SequenceEvent>,
+    mode: ClockOrdering,
+): Analysis {
     val n = events.size
     val warnings = mutableListOf<String>()
     val replyOf = IntArray(n) { -1 }
@@ -198,29 +257,49 @@ internal fun orderAndAnalyse(
             "a consume before its publish, or a child outside its parent; capture order kept"
     }
 
-    val ordered = order.map { events[it] }
+    return Analysis(
+        ordered = order.map { events[it] },
+        timing = (0 until n).associate { events[it].id to timing[it] },
+        pairing = (0 until n).associate { events[it].id to pairing[it] },
+        callMs = (0 until n).mapNotNull { i -> callMs[i]?.let { events[i].id to it } }.toMap(),
+        warnings = warnings,
+        reverted = reverted.isNotEmpty(),
+        orphans = warnings.count { it.startsWith("reply without call") },
+    )
+}
+
+private fun finish(
+    captured: List<SequenceEvent>,
+    analysis: Analysis,
+    mode: ClockOrdering,
+): Pair<List<SequenceEvent>, ScenarioTiming> {
+    val original = HashMap<String, Int>()
+    captured.forEachIndexed { i, e -> original.putIfAbsent(e.id, i) }
+    val ordered = analysis.ordered
     val perEvent = LinkedHashMap<String, EventTiming>()
     val reorders = mutableListOf<String>()
     var clockOrdered = 0
-    order.forEachIndexed { p, orig ->
-        val e = events[orig]
+    ordered.forEachIndexed { p, e ->
+        val from = original[e.id] ?: p
+        val pairing = analysis.pairing[e.id]
         val how =
             when {
-                orig != p -> OrderSource.CLOCK.also {
+                from != p -> {
                     clockOrdered++
-                    reorders += "${seqOf(events[orig], orig)} -> ${seqOf(events[p], p)}"
+                    reorders += "${seqOf(e, from)} -> ${seqOf(captured[p], p)}"
+                    OrderSource.CLOCK
                 }
-                pairing[orig] == PairingSource.CALL_ID || pairing[orig] == PairingSource.TRACE -> OrderSource.STRUCTURE
+                pairing == PairingSource.CALL_ID || pairing == PairingSource.TRACE -> OrderSource.STRUCTURE
                 else -> OrderSource.SEQUENCE
             }
-        perEvent[e.id] = EventTiming(timing[orig], pairing[orig], how)
+        perEvent[e.id] = EventTiming(analysis.timing[e.id] ?: TimingSource.NONE, pairing, how)
     }
-
-    val calls = (0 until n).filter { events[it].isCall() }
-    val measured = calls.count { timing[it] == TimingSource.MEASURED }
-    val strongPairs = calls.count { pairing[it] == PairingSource.CALL_ID || pairing[it] == PairingSource.TRACE }
-    val anyStamp = timing.any { it == TimingSource.TIMESTAMPED || it == TimingSource.DERIVED }
-    val anyMeasured = measured > 0 || timing.any { it == TimingSource.MEASURED }
+    val calls = ordered.filter { it.isCall() }
+    val measured = calls.count { analysis.timing[it.id] == TimingSource.MEASURED }
+    val strongPairs = calls.count { analysis.pairing[it.id] == PairingSource.CALL_ID || analysis.pairing[it.id] == PairingSource.TRACE }
+    val timings = analysis.timing.values
+    val anyStamp = timings.any { it == TimingSource.TIMESTAMPED || it == TimingSource.DERIVED }
+    val anyMeasured = timings.any { it == TimingSource.MEASURED }
     val accuracy =
         when {
             anyMeasured && calls.isNotEmpty() && strongPairs == calls.size -> Accuracy.TRACED
@@ -228,17 +307,17 @@ internal fun orderAndAnalyse(
             anyStamp -> Accuracy.TIMESTAMPED
             else -> Accuracy.STRUCTURE_ONLY
         }
-    val sources = events.filterIsInstance<Message>().map { it.source() }.distinct()
+    val sources = captured.filterIsInstance<Message>().map { it.source() }.distinct()
     return ordered to
         ScenarioTiming(
             accuracy = accuracy,
             measuredCoverage = if (calls.isEmpty()) null else measured.toDouble() / calls.size,
             pairingCoverage = if (calls.isEmpty()) null else strongPairs.toDouble() / calls.size,
             sources = sources,
-            wallClockMs = if (sources.size == 1) wallClock(events, callMs) else null,
+            wallClockMs = if (sources.size == 1) wallClock(ordered, analysis.callMs) else null,
             clockOrdering = mode,
             clockOrdered = clockOrdered,
-            warnings = warnings,
+            warnings = analysis.warnings,
             reorderedByClock = reorders,
             perEvent = perEvent,
         )
@@ -249,14 +328,14 @@ private fun seqOf(e: SequenceEvent, index: Int): Long = (e as? Message)?.seq?.ta
 /** Span from the earliest `startedAt` to the latest start or end, single source only. */
 private fun wallClock(
     events: List<SequenceEvent>,
-    callMs: Array<Double?>,
+    callMs: Map<String, Double>,
 ): Double? {
-    val starts = events.mapIndexedNotNull { i, e -> e.createdAt?.let { i to it } }
+    val starts = events.mapNotNull { e -> e.createdAt?.let { e.id to it } }
     if (starts.size < 2 && starts.none { callMs[it.first] != null }) return null
     val first = starts.minOfOrNull { it.second } ?: return null
     val last =
-        starts.maxOf { (i, at) ->
-            val ms = callMs[i] ?: 0.0
+        starts.maxOf { (id, at) ->
+            val ms = callMs[id] ?: 0.0
             at.plus(Duration.ofNanos((ms * 1_000_000).toLong()))
         }
     return Duration.between(first, last).toNanos() / 1_000_000.0

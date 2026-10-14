@@ -230,6 +230,23 @@ class TimingApiTest {
     }
 
     @Test
+    fun `scrambled capture with replies before calls is rebuilt from the clock`() {
+        val events =
+            listOf(
+                msg("reply", "B", "A", MessageType.SYNCHRONOUS_RESPONSE, at = t(30)),
+                msg("call", "A", "B", at = t(10)),
+                msg("inner", "B", "C", MessageType.ASYNCHRONOUS, at = t(20)),
+            )
+        val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
+        assertEquals(listOf("call", "inner", "reply"), labels(ordered))
+        assertEquals(PairingSource.GUESSED, timing.perEvent["e1"]?.pairing)
+        assertEquals(3, timing.clockOrdered)
+        assertTrue(timing.warnings.isEmpty(), timing.warnings.toString())
+        // Off: capture order is kept as is.
+        assertEquals(listOf("reply", "call", "inner"), labels(orderAndAnalyse(events, ClockOrdering.OFF).first))
+    }
+
+    @Test
     fun `call and reply measure a fractional duration and mark it measured`() {
         val lsd = LsdContext()
         val call = lsd.call("Web", "Api", "GET /x", trace = Trace("t1", "s1"))
