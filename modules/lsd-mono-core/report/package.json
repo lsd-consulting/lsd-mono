@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "build:static": "vite build",
     "build:single": "npm run build && node --experimental-strip-types scripts/inline-single.mjs",
-    "test": "vitest run --coverage",
+    "test": "vitest run --coverage && node --experimental-strip-types scripts/coverage-ratchet.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",

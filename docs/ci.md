@@ -14,12 +14,12 @@ All of these run on `check`, so `./gradlew build` locally fails the same way CI 
 | What | Tool | Fix or look |
 |------|------|-------------|
 | Kotlin formatting and lint (modules, build scripts, build-logic) | ktlint 1.8 through Spotless (`lsd.formatting`); rules in `.editorconfig` | `./gradlew spotlessApply` |
-| Kotlin line coverage | Kover (`lsd.coverage`); each module sets `lsdCoverage { lineFloor.set(n) }` | `./gradlew koverHtmlReport`, then `build/reports/kover/html/` |
+| Kotlin line coverage | Kover (`lsd.coverage`); each module sets `lsdCoverage { lineFloor.set(n) }`; a ratchet also fails when coverage is more than 3 points above the floor, so raise it | `./gradlew koverHtmlReport`, then `build/reports/kover/html/` |
 | Kotlin HTML escaping | `HtmlEscapingGuardTest` (lsd-mono-core): only `html/Html.kt` escapes, and markup templates interpolate only escaped or markup values | The test names the file and line |
 | Report UI types, including tests and Playwright checks | `tsc` (TypeScript 7) on `tsconfig.json` and `tsconfig.test.json` | `npm run typecheck` |
 | Report UI lint | ESLint with typescript-eslint (type-checked rules) and `lsd/escaped-markup` | `npm run lint` |
 | Report UI formatting | Prettier (`.prettierrc.json`) | `npm run format` |
-| Report UI coverage | Vitest v8 coverage, thresholds in `vitest.config.ts` | `npm test`, then `modules/lsd-mono-core/build/reports/coverage/report-ui/` |
+| Report UI coverage | Vitest v8 coverage, thresholds in `vitest.config.ts`; `scripts/coverage-ratchet.mjs` fails when a metric is more than 3 points above its threshold | `npm test`, then `modules/lsd-mono-core/build/reports/coverage/report-ui/` |
 
 Coverage floors sit a little under the coverage when they were set, so they hold the line without
 failing on noise. Raise a floor when tests are added; lower one only with a reason in the commit.

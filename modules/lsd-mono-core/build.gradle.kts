@@ -8,7 +8,7 @@ plugins {
 
 // Line coverage was 73.3% when the floor was set (#30). Raise the floor as tests are added.
 lsdCoverage {
-    lineFloor.set(72)
+    lineFloor.set(81)
 }
 
 base.archivesName.set("lsd-mono-core")

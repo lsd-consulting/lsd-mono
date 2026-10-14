@@ -11,11 +11,12 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/data/**'],
-      reporter: ['text-summary', 'html'],
+      reporter: ['text-summary', 'html', 'json-summary'],
       reportsDirectory: '../build/reports/coverage/report-ui',
-      // A little under the coverage when these were set (#30): statements 77.1%, branches
-      // 65.6%, functions 84.7%, lines 80.7%. Raise them as tests are added.
-      thresholds: { statements: 76, branches: 64, functions: 83, lines: 79 },
+      // A little under the coverage when these were last raised: statements 80.7%, branches
+      // 69.3%, functions 87.9%, lines 84.5%. A ratchet: scripts/coverage-ratchet.mjs (run by
+      // `npm test`) fails when any metric rises more than 3 points above its threshold.
+      thresholds: { statements: 79, branches: 68, functions: 86, lines: 83 },
     },
   },
 })
