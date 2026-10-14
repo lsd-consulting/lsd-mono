@@ -51,6 +51,18 @@ const isCall = (m: MessageEvent) => m.type === 'SYNCHRONOUS' || m.type === 'BI_D
  * one after another inside their parent, and the timeline is marked approximate.
  */
 export function timeline(scenario: Scenario): Timeline {
+  let t = timelines.get(scenario)
+  if (!t) {
+    t = buildTimeline(scenario)
+    timelines.set(scenario, t)
+  }
+  return t
+}
+
+/** One timeline per scenario: the strip and the Timing view share it. Scenarios are not mutated after load. */
+const timelines = new WeakMap<Scenario, Timeline>()
+
+function buildTimeline(scenario: Scenario): Timeline {
   const root: Node = { kids: [], own: 0, timed: false, span: 0, self: 0, start: 0, childSum: 0 }
   const stack: Node[] = [root]
   const byCallId = new Map<string, Node>()
@@ -138,7 +150,7 @@ export function timeline(scenario: Scenario): Timeline {
     }
   }
   lay(root, 0, 0)
-  const totalMs = Math.max(scenario.wallClockMs ?? 0, ...rows.map((r) => r.startMs + r.spanMs), 0)
+  const totalMs = rows.reduce((max, r) => Math.max(max, r.startMs + r.spanMs), Math.max(scenario.wallClockMs ?? 0, 0))
   const self = new Map<string, number>()
   for (const r of rows) if (r.selfMs > 0) self.set(r.participant, (self.get(r.participant) ?? 0) + r.selfMs)
   const calls = rows.filter((r) => isCall(r.message))

@@ -11,8 +11,15 @@ const ACCURACY_LABEL: Record<Accuracy, string> = {
 
 const LANE_COLOURS = 6
 
+const participantsById = new WeakMap<Scenario, Map<string, Scenario['participants'][number]>>()
+
 function nameOf(scenario: Scenario, id: string): string {
-  const p = scenario.participants.find((item) => item.id === id)
+  let byId = participantsById.get(scenario)
+  if (!byId) {
+    byId = new Map(scenario.participants.map((p) => [p.id, p]))
+    participantsById.set(scenario, byId)
+  }
+  const p = byId.get(id)
   return p?.alias || p?.name || id || '∅'
 }
 

@@ -162,9 +162,30 @@ private fun pairCalls(events: List<SequenceEvent>): Pairs {
 
     fun unpairedCall(j: Int) = events[j].isCall() && replyOf[j] < 0
 
+    // Unpaired calls by span and by direction, latest last. Paired ones are dropped lazily.
+    val bySpan = HashMap<Pair<String, String>, ArrayList<Int>>()
+    val byDirection = HashMap<Pair<String?, String?>, ArrayList<Int>>()
+
+    fun latest(
+        calls: ArrayList<Int>?,
+        accept: (Message) -> Boolean,
+    ): Int {
+        if (calls == null) return -1
+        while (calls.isNotEmpty() && !unpairedCall(calls.last())) calls.removeAt(calls.size - 1)
+        for (k in calls.indices.reversed()) {
+            val j = calls[k]
+            if (unpairedCall(j) && accept(events[j] as Message)) return j
+        }
+        return -1
+    }
+
     for (i in 0 until n) {
         val e = events[i] as? Message ?: continue
-        if (e.isCall()) pairing[i] = PairingSource.NONE
+        if (e.isCall()) {
+            pairing[i] = PairingSource.NONE
+            e.trace?.let { t -> t.spanId?.let { bySpan.getOrPut(t.traceId to it) { ArrayList() }.add(i) } }
+            byDirection.getOrPut(e.from to e.to) { ArrayList() }.add(i)
+        }
         e.callRef?.id?.let { byCallId.putIfAbsent(it, i) }
         if (!e.isReply()) continue
         var c = -1
@@ -177,20 +198,14 @@ private fun pairCalls(events: List<SequenceEvent>): Pairs {
                 how = PairingSource.CALL_ID
             }
         }
-        val span = e.trace?.spanId
+        val trace = e.trace
+        val span = trace?.spanId
         if (c < 0 && span != null) {
-            c = (i - 1 downTo 0).firstOrNull { j ->
-                val m = events[j] as? Message
-                unpairedCall(j) && m?.trace?.spanId == span && m.trace.traceId == e.trace.traceId
-            } ?: -1
+            c = latest(bySpan[trace.traceId to span]) { true }
             if (c >= 0) how = PairingSource.TRACE
         }
         if (c < 0 && replyId == null) {
-            c = (i - 1 downTo 0).firstOrNull { j ->
-                val m = events[j] as? Message
-                m != null && unpairedCall(j) && m.from == e.to && m.to == e.from &&
-                    (e.trace == null || m.trace == null || m.trace.traceId == e.trace.traceId)
-            } ?: -1
+            c = latest(byDirection[e.to to e.from]) { m -> trace == null || m.trace == null || m.trace.traceId == trace.traceId }
             if (c >= 0) how = PairingSource.GUESSED
         }
         if (c >= 0) {
@@ -414,7 +429,8 @@ private fun wallClock(
     callMs: Map<String, Double>,
 ): Double? {
     // A measured call with no start time could sit anywhere, so the span would be a guess.
-    if (callMs.keys.any { id -> events.firstOrNull { it.id == id }?.createdAt == null }) return null
+    val stamped = events.mapNotNullTo(HashSet()) { e -> e.id.takeIf { e.createdAt != null } }
+    if (callMs.keys.any { it !in stamped }) return null
     val starts = events.mapNotNull { e -> e.createdAt?.let { e.id to it } }
     if (starts.size < 2 && starts.none { callMs[it.first] != null }) return null
     val first = starts.minOfOrNull { it.second } ?: return null

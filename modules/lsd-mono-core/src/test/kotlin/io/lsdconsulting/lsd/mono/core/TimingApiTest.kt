@@ -77,6 +77,23 @@ class TimingApiTest {
     private fun labels(events: List<SequenceEvent>) = events.map { (it as? Message)?.label ?: (it as Note).text }
 
     @Test
+    fun `pairing a long scenario of nested guessed and traced calls stays linear`() {
+        val events = mutableListOf<SequenceEvent>()
+        repeat(5_000) { k ->
+            events += msg("call $k", from = "A", to = "B", at = t(k * 10L))
+            events += msg("inner $k", from = "B", to = "C", trace = Trace("t$k", "s$k"))
+            events += msg("inner reply $k", from = "C", to = "B", type = MessageType.SYNCHRONOUS_RESPONSE, trace = Trace("t$k", "s$k"))
+        }
+        repeat(5_000) { k -> events += msg("reply $k", from = "B", to = "A", type = MessageType.SYNCHRONOUS_RESPONSE) }
+        val started = System.nanoTime()
+        val (_, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
+        assertTrue(Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(2))
+        assertTrue(timing.warnings.none { it.startsWith("reply without call") })
+        assertEquals("TRACE", timing.perEvent[events[1].id]?.pairing?.name)
+        assertEquals("GUESSED", timing.perEvent[events[0].id]?.pairing?.name)
+    }
+
+    @Test
     fun `no timing at all is a structure-only sketch in capture order`() {
         val events = listOf(msg("call"), msg("reply", "B", "A", MessageType.SYNCHRONOUS_RESPONSE), msg("event", type = MessageType.ASYNCHRONOUS))
         val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
