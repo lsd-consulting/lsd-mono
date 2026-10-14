@@ -6,7 +6,7 @@ Not a release. No tag, no publish, and no version bump in this note.
 
 Group is `io.lsdconsulting`. The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), and coroutines-integration (`lsd-mono-coroutines`).
 
-The train version is `0.0.1-SNAPSHOT`, set once on the root project. Each module inherits it. A module leaves the train only through a line in `gradle/version-overrides.properties`: `patch`, or `solo-major` with the train major it is allowed to diverge from. There is no such line today. The build fails if a module version differs from the train and no override is recorded.
+The train version is `0.0.1-SNAPSHOT`, set once on the root project. Every module inherits it (`lsd.common`). No module diverges today, so there is no override mechanism yet. When the first `patch` or `solo-major` is needed, add one: a recorded override per module, naming the train major it may diverge from, and a build check that fails when a module differs from the train without one.
 
 Nothing is published. There is no tag. `.github/workflows/gradle.yml` only runs `./gradlew build` on push to `main` and on pull requests.
 
@@ -42,7 +42,7 @@ JUnit Jupiter's major bump breaks junit-integration while the train is still `1.
 
 At the next core major, the train number wins. The solo majors are changelog history, not added into the version. The next core major here is `3.0.0`, not `2.0.0`, because the solo release already used `2.0.0`. junit-integration's next release is `3.0.0`, the same number as core and cucumber-integration. It is not `3.0.0` plus the solo major, and the `2.0.0` line is not kept.
 
-The override names the train major it may diverge from (`train-major:1` while the train is still `1.x`). When the train major moves, that line no longer matches, and the build fails until the line is removed. The module then inherits the new train version.
+The override should name the train major it may diverge from (`1` while the train is still `1.x`), so that when the train major moves the override no longer matches and the build fails until it is removed. The module then inherits the new train version.
 
 A future Cucumber 7 artifact follows the same rules: a solo major if Cucumber's major breaks it, then the next core major number. `lsd-mono-cucumber-8` stays on major 8.
 
