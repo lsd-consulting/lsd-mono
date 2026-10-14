@@ -1,9 +1,19 @@
 import type { Insight, MessageEvent, Metric } from '../types'
 import { renderComponentDiagram } from '../lib/component-diagram'
-import { edgeInteractions, typeCue, type ComponentGraph } from '../lib/component-graph'
+import type { ComponentGraph } from '../lib/component-graph'
 import { pretty } from './format'
-import { metricsPanelHtml } from './metrics'
-import { escapeHtml } from '../lib/escape'
+import {
+  componentLinkHtml,
+  componentsBodyHtml,
+  componentsMetaHtml,
+  errorMetaHtml,
+  messageMetaHtml,
+  metricsBodyHtml,
+  metricsMetaHtml,
+  metricsTitle,
+} from './inspector-views'
+
+export { summaryPills } from './inspector-views'
 
 export interface InspectorInvoker {
   scenarioId: string
@@ -179,16 +189,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     if (!graph || !list || !edge) return
     graphHost.querySelectorAll('.edge-group.is-selected').forEach((el) => el.classList.remove('is-selected'))
     group.classList.add('is-selected')
-    const name = (id: string) => graph.nodes.find((node) => node.id === id)?.name ?? id
-    const items = edgeInteractions(edge)
-      .map((item) => {
-        const cue = item.type.split(', ').map(typeCue).join(', ')
-        const times = item.count > 1 ? ` ×${item.count}` : ''
-        return `<li>${escapeHtml(item.label || '(no label)')} <span class="cue">· ${escapeHtml(cue)}${times}</span></li>`
-      })
-      .join('')
-    const total = `${edge.count} ${edge.count === 1 ? 'interaction' : 'interactions'}`
-    list.innerHTML = `<h3>${escapeHtml(name(edge.from))} → ${escapeHtml(name(edge.to))} <span class="cue">(${total})</span></h3><ol>${items}</ol>`
+    list.innerHTML = componentLinkHtml(graph, edge)
   }
 
   graphHost.addEventListener('click', (event) => {
@@ -309,15 +310,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       jsonLabel = 'JSON'
       toggle.textContent = `Show ${jsonLabel}`
       title.textContent = message.label
-      meta.innerHTML = `
-        <span class="pill">${escapeHtml(message.type)}</span>
-        <span class="pill">${escapeHtml(message.from)} → ${escapeHtml(message.to)}</span>
-        ${message.durationMs != null ? `<span class="pill">${escapeHtml(message.durationMs)} ms</span>` : ''}
-        ${message.timing && message.timing !== 'NONE' ? `<span class="pill">${escapeHtml(message.timing.toLowerCase())}</span>` : ''}
-        ${message.order === 'CLOCK' ? '<span class="pill clock">clock-ordered</span>' : ''}
-        ${message.pairing === 'GUESSED' ? '<span class="pill">guessed pairing</span>' : ''}
-        ${summaryPills(message.data)}
-        <span class="pill">${escapeHtml(scenarioId)}</span>`
+      meta.innerHTML = messageMetaHtml(scenarioId, message)
       pending = message.payloadId ? options.loadPayload(scenarioId, message.id) : Promise.resolve(message.data)
       void pending.then(
         (value) => {
@@ -340,21 +333,11 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       begin({ scenarioId, kind: 'components' })
       showJson = false
       title.textContent = 'Component diagram'
-      const nodes = graph.nodes.length
-      const links = graph.edges.length
-      meta.innerHTML = nodes
-        ? `<span class="pill">${nodes} ${nodes === 1 ? 'component' : 'components'}</span>
-        <span class="pill">${links} ${links === 1 ? 'link' : 'links'}</span>
-        <span class="pill">${escapeHtml(heading)}</span>`
-        : `<span class="pill">Nothing to draw</span>
-        <span class="pill">${escapeHtml(heading)}</span>`
+      meta.innerHTML = componentsMetaHtml(graph, heading)
       showViewChrome(graphHost)
       const drawn = renderComponentDiagram(graph, heading)
       shownGraph = graph
-      const hint = graph.edges.length
-        ? '<p class="inspector-empty">Hover over a link to see its messages, or click it to list them here.</p>'
-        : ''
-      graphHost.innerHTML = `${drawn.svg}<div class="component-links" aria-live="polite">${hint}</div>`
+      graphHost.innerHTML = componentsBodyHtml(drawn.svg, graph)
       // Widen for this view only when the drawing needs it. The saved width is untouched,
       // so the next message opens at the column the user chose.
       const fit = drawn.width + 40
@@ -363,24 +346,16 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     openMetrics(scenarioId, view) {
       begin({ scenarioId, kind: 'metrics' })
       showJson = false
-      title.textContent = view.timingHtml ? 'Timing and metrics' : 'Metrics'
-      const count = view.metrics.length
-      const ranked = view.insights?.length ?? 0
-      meta.innerHTML = `
-        <span class="pill">${count} ${count === 1 ? 'metric' : 'metrics'}</span>
-        ${ranked ? `<span class="pill">${ranked} ${ranked === 1 ? 'insight' : 'insights'}</span>` : ''}
-        <span class="pill">${escapeHtml(view.heading)}</span>`
+      title.textContent = metricsTitle(view)
+      meta.innerHTML = metricsMetaHtml(view)
       showViewChrome(metricsHost)
-      metricsHost.innerHTML =
-        (view.timingHtml ?? '') + metricsPanelHtml(scenarioId, view.metrics, view.insights, view.labelMaxWidth)
+      metricsHost.innerHTML = metricsBodyHtml(scenarioId, view)
     },
     openError(error) {
       const token = begin(null)
       jsonLabel = 'stack'
       title.textContent = error.headline
-      meta.innerHTML = `
-        <span class="pill">${escapeHtml(error.status)}</span>
-        <span class="pill">${escapeHtml(error.headline)}</span>`
+      meta.innerHTML = errorMetaHtml(error)
       lead.hidden = false
       lead.textContent = error.message
       if (error.stack) {
@@ -532,18 +507,4 @@ export function delegateMessageOpen(
   if (!found) return false
   open(found.scenarioId, found.message)
   return true
-}
-
-export function summaryPills(data: unknown): string {
-  if (!isRecord(data)) return ''
-  const pills: string[] = []
-  if (typeof data.method === 'string' && data.method) pills.push(`<span class="pill">${escapeHtml(data.method)}</span>`)
-  if (typeof data.path === 'string' && data.path) pills.push(`<span class="pill">${escapeHtml(data.path)}</span>`)
-  if ((typeof data.status === 'string' && data.status) || typeof data.status === 'number')
-    pills.push(`<span class="pill">${escapeHtml(data.status)}</span>`)
-  return pills.join('')
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
