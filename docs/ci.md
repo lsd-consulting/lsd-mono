@@ -52,9 +52,24 @@ build on either image during that window, and a failure would look like a code p
 label pinned, the image only changes in a pull request. Renovate proposes the new runner version
 there, and the build runs on it before it merges.
 
-The build needs little from the image. Java and Node come from `setup-java` and `setup-node`, and
-the JDK 21 toolchain comes from the image or from foojay. So moving to `ubuntu-26.04` should only
+The build needs little from the image. Java and Node come from `setup-java` and `setup-node`
+(JDK 17, the toolchain, plus the JDK that runs Gradle; Node from `.nvmrc`). So moving to `ubuntu-26.04` should only
 need that pull request to go green.
+
+## Java and Node versions
+
+- **Java baseline: 17**, the `jvm` version in `gradle/libs.versions.toml` and nowhere else. Kotlin
+  compiles with `jvmTarget` 17 and `-Xjdk-release=17`, Java with `--release 17`, on a JDK 17
+  toolchain. The published bytecode runs on 17 and later.
+- **Test matrix.** The `build` job runs everything on 17. The `jvm-tests` jobs rerun only the JVM
+  tests on 21 and 25 (`./gradlew test -Plsd.test.jvm=<n>`), still compiled for 17, without the report
+  UI checks, verifyGenerated or Pages. That keeps the extra cost to two short jobs.
+- **JDK discovery.** `setup-java` installs each JDK a job needs and exports `JAVA_HOME_<n>_X64`;
+  `org.gradle.java.installations.fromEnv` in `gradle.properties` points Gradle at them.
+- **Node** comes from `.nvmrc`, read by `setup-node` (`node-version-file`) and by the Gradle Node
+  lookup (`build-logic` `NodeToolchain.kt`), so the two cannot drift.
+- **Renovate** groups JDK and Node updates; a new major of either waits for approval on the
+  dependency dashboard. Raising the Java baseline is a manual change to `jvm`.
 
 ## Speed
 

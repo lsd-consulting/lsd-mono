@@ -1,10 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigestsToSemver"],
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
   "packageRules": [
     {
       "description": "One pull request for the shared JUnit catalog line. Stay on major 6; a major is a human decision.",
-      "matchManagers": ["gradle"],
+      "matchManagers": [
+        "gradle"
+      ],
       "matchPackageNames": [
         "org.junit:junit-bom",
         "org.junit.jupiter:junit-jupiter",
@@ -19,7 +24,9 @@
     },
     {
       "description": "One pull request for the shared Cucumber 8 catalog line. Stay on major 8. A Cucumber 9 line needs its own rule.",
-      "matchManagers": ["gradle"],
+      "matchManagers": [
+        "gradle"
+      ],
       "matchPackageNames": [
         "io.cucumber:cucumber-bom",
         "io.cucumber:cucumber-plugin",
@@ -33,10 +40,62 @@
     },
     {
       "description": "Stay on kotlinx.coroutines 1. lsd-mono-coroutines is built against that major; a 2.x release is a human decision.",
-      "matchManagers": ["gradle"],
-      "matchPackageNames": ["org.jetbrains.kotlinx:kotlinx-coroutines-core"],
+      "matchManagers": [
+        "gradle"
+      ],
+      "matchPackageNames": [
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core"
+      ],
       "matchCurrentVersion": "/^1\\./",
       "allowedVersions": "/^1\\./"
+    },
+    {
+      "description": "JDKs for CI (setup-java) and toolchains. A new major is a human decision: it changes which JDKs CI tests on (gradle.yml matrix) and must stay in step with the jvm baseline in gradle/libs.versions.toml, which Renovate does not manage.",
+      "matchDatasources": [
+        "java-version"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true,
+      "groupName": "Java JDK",
+      "groupSlug": "java-jdk"
+    },
+    {
+      "description": "Minor and patch JDK updates in one pull request.",
+      "matchDatasources": [
+        "java-version"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "Java JDK",
+      "groupSlug": "java-jdk"
+    },
+    {
+      "description": "Node in .nvmrc, the single source for CI (node-version-file) and the Gradle Node lookup (NodeToolchain.kt). A new major needs approval and a check that the report build still runs (engines in report/package.json).",
+      "matchDatasources": [
+        "node-version"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true,
+      "groupName": "Node",
+      "groupSlug": "node"
+    },
+    {
+      "description": "Minor and patch Node updates in one pull request.",
+      "matchDatasources": [
+        "node-version"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "Node",
+      "groupSlug": "node"
     }
   ]
 }

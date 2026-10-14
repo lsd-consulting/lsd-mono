@@ -48,8 +48,8 @@ tasks.jar {
     }
 }
 
-// Node 22 helpers (withNodeOnPath, nodeCommandLine) live in build-logic NodeToolchain.kt.
-// When a task runs, they put nvm Node 22 first for it and do not change the nvm default alias.
+// Node helpers (withNodeOnPath, nodeCommandLine) live in build-logic NodeToolchain.kt.
+// When a task runs, they put the .nvmrc Node from nvm first for it and do not change the nvm default alias.
 
 val reportDir = layout.projectDirectory.dir("report")
 val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
@@ -95,7 +95,7 @@ tasks.register<Exec>("reportTest") {
     description = "Run the report's vitest suite with coverage thresholds (npm test) on the Gradle check path."
     dependsOn(reportSingle)
     workingDir = reportDir.asFile
-    // Through sh, so npm is looked up on the task's PATH (Node 22 first), not the Gradle client's.
+    // Through sh, so npm is looked up on the task's PATH (the chosen Node first), not the Gradle client's.
     commandLine("sh", "-c", "npm test")
     withNodeOnPath()
 }
@@ -146,11 +146,6 @@ tasks.register<JavaExec>("captureReadmeReport") {
     description = "Capture the README scenario and write its report HTML."
     classpath = readmeSourceSet.runtimeClasspath
     mainClass.set("io.lsdconsulting.lsd.mono.core.readme.ReadmeSampleKt")
-    javaLauncher.set(
-        javaToolchains.launcherFor {
-            languageVersion.set(JavaLanguageVersion.of(21))
-        },
-    )
     systemProperty("lsd.mono.report.outputDir", readmeReportDir.get().asFile.absolutePath)
     // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
     val cleanDir = readmeReportDir.get().asFile
@@ -168,11 +163,6 @@ tasks.register<JavaExec>("captureFeatureTourReport") {
     description = "Capture the feature-tour scenarios and write their report HTML."
     classpath = readmeSourceSet.runtimeClasspath
     mainClass.set("io.lsdconsulting.lsd.mono.core.readme.FeatureTourSampleKt")
-    javaLauncher.set(
-        javaToolchains.launcherFor {
-            languageVersion.set(JavaLanguageVersion.of(21))
-        },
-    )
     systemProperty("lsd.mono.report.outputDir", featureTourReportDir.get().asFile.absolutePath)
     // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
     val cleanDir = featureTourReportDir.get().asFile
@@ -210,11 +200,6 @@ val captureKitchenSinkReport = tasks.register<JavaExec>("captureKitchenSinkRepor
     description = "Capture the kitchen-sink scenarios and write their report HTML."
     classpath = readmeSourceSet.runtimeClasspath
     mainClass.set("io.lsdconsulting.lsd.mono.core.readme.KitchenSinkSampleKt")
-    javaLauncher.set(
-        javaToolchains.launcherFor {
-            languageVersion.set(JavaLanguageVersion.of(21))
-        },
-    )
     systemProperty("lsd.mono.report.outputDir", kitchenSinkReportDir.get().asFile.absolutePath)
     // Report names carry a hash, so start clean: the copy below expects one *-diagram.html.
     val cleanDir = kitchenSinkReportDir.get().asFile

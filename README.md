@@ -25,7 +25,7 @@ dependencies {
 }
 ```
 
-The artifacts are `io.lsdconsulting:lsd-mono-core`, `io.lsdconsulting:lsd-mono-junit-jupiter`, `io.lsdconsulting:lsd-mono-cucumber-8`, and `io.lsdconsulting:lsd-mono-coroutines`, version `0.0.1-SNAPSHOT`. They are not published. JDK 21. Cucumber support is major 8.
+The artifacts are `io.lsdconsulting:lsd-mono-core`, `io.lsdconsulting:lsd-mono-junit-jupiter`, `io.lsdconsulting:lsd-mono-cucumber-8`, and `io.lsdconsulting:lsd-mono-coroutines`, version `0.0.1-SNAPSHOT`. They are not published. They run on Java 17 or later (compiled with `--release 17`; CI tests 17, 21 and 25). Cucumber support is major 8.
 
 ## Capture a scenario
 
@@ -96,7 +96,7 @@ Regenerate the tour, and the component diagram clip, from the current UI:
 ./gradlew :modules:lsd-mono-core:readmeSamples
 ```
 
-The task captures the tour report with `LsdContext`, then drives the packaged shell with headless Chromium and encodes `docs/readme/feature-tour.gif`. It uses Node 22 from nvm when that is installed, and it does not change the default Node alias. It is not part of `build` or `check`.
+The task captures the tour report with `LsdContext`, then drives the packaged shell with headless Chromium and encodes `docs/readme/feature-tour.gif`. It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
 
 ### Kitchen-sink sample
 
@@ -114,7 +114,7 @@ The [kitchen-sink report](https://lsd-consulting.github.io/lsd-mono/kitchen-sink
 ./gradlew build
 ```
 
-JDK 21. `:modules:lsd-mono-core:build` runs the Vite shell build (`npm ci`, then `npm run build:single`) and vitest is on `check`. Those tasks also prepend Node 22 and leave the default alias alone.
+The Java baseline is 17, set once as `jvm` in `gradle/libs.versions.toml`: the code compiles for it and the tests run on a JDK 17 toolchain (found locally or provisioned by foojay; your default JDK is not changed). `./gradlew test -Plsd.test.jvm=21` runs the tests on another JDK. `:modules:lsd-mono-core:build` runs the Vite shell build (`npm ci`, then `npm run build:single`) and vitest is on `check`. Those tasks prepend the nvm Node named in `.nvmrc` (the one CI uses) and leave the default alias alone.
 
 `check` also lints and measures coverage: ktlint for the Kotlin (`./gradlew spotlessApply` fixes formatting), Kover line-coverage floors per module, and for the report UI a type-check of the code and its tests, ESLint, Prettier and Vitest coverage thresholds. See [lint, format and coverage](docs/ci.md#lint-format-and-coverage).
 

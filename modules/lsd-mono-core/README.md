@@ -403,6 +403,6 @@ npm run dev          # http://localhost:5173/
 npm run build:single # then open report/dist/lsd-report.html in Chrome (file://)
 ```
 
-`./gradlew :modules:lsd-mono-core:build` runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). `build:single` writes `report/dist/lsd-report.html` (gitignored), and the build packages it from `build/generated/resources`; no built shell is committed. Set `lsd.mono.report.generatedAt` (an ISO-8601 instant) to fix the report's "generated at" time, as the sample tasks do for reproducible output. Needs Node 22.6 or later (`engines` in `report/package.json`). The Gradle tasks prepend nvm Node 22 when it is installed (`build-logic` `NodeToolchain.kt`) and do not change your default Node.
+`./gradlew :modules:lsd-mono-core:build` runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). `build:single` writes `report/dist/lsd-report.html` (gitignored), and the build packages it from `build/generated/resources`; no built shell is committed. Set `lsd.mono.report.generatedAt` (an ISO-8601 instant) to fix the report's "generated at" time, as the sample tasks do for reproducible output. Needs Node 22.6 or later (`engines` in `report/package.json`). The Gradle tasks prepend the nvm Node named in the repo's `.nvmrc` (CI's Node) when it is installed, else the newest nvm Node of at least 22.6 (`build-logic` `NodeToolchain.kt`), and do not change your default Node.
 
 See `report/README.md` for how to run the report UI.

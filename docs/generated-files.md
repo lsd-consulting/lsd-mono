@@ -41,7 +41,7 @@ files, so `verifyGenerated` does not need to know about them.
 
 ## Committed images (not verified in CI)
 
-| File | How to retake (macOS, Node 22 via nvm, Chromium from Playwright) |
+| File | How to retake (macOS, the `.nvmrc` Node via nvm, Chromium from Playwright) |
 |------|----------|
 | `docs/readme/feature-tour.gif`, `docs/readme/components.gif` | `./gradlew :modules:lsd-mono-core:readmeSamples` |
 | `modules/lsd-mono-junit-jupiter/docs/readme/*` | `./gradlew :modules:lsd-mono-junit-jupiter:readmeSamples` |

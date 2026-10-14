@@ -5,40 +5,70 @@ import java.io.File
 
 /*
  * The report build (Vite, Vitest, Playwright, `--experimental-strip-types`) needs Node 22.6 or
- * later. Gradle may be started from a shell whose nvm default is older, so these helpers find
- * the newest nvm-installed Node 22 and put it first on an Exec task's PATH. They never change
- * the nvm default alias, and fall back to whatever `node` is on PATH when nvm has no Node 22.
+ * later (`engines` in report/package.json). CI uses the Node major in the repo's `.nvmrc`
+ * (`node-version-file` in the workflows), so these helpers prefer the newest nvm-installed Node
+ * of that major, and otherwise the newest installed Node of at least 22.6, and put it first on
+ * an Exec task's PATH. They never change the nvm default alias, and fall back to whatever
+ * `node` is on PATH when nvm has nothing suitable.
  */
 
-private val NODE_22 = Regex("""v22\.(\d+)\.(\d+)""")
+private val NODE_VERSION = Regex("""v(\d+)\.(\d+)\.(\d+)""")
 
-/** `bin` of the newest `~/.nvm/versions/node/v22.x.y` that has both node and npm, or null. */
-fun node22BinDir(home: File = File(System.getProperty("user.home"))): File? =
-    File(home, ".nvm/versions/node")
-        .listFiles()
-        ?.filter { dir ->
-            NODE_22.matches(dir.name) &&
-                File(dir, "bin/npm").canExecute() &&
-                File(dir, "bin/node").canExecute()
-        }?.maxWithOrNull(
-            compareBy(
-                { NODE_22.matchEntire(it.name)!!.groupValues[1].toInt() },
-                { NODE_22.matchEntire(it.name)!!.groupValues[2].toInt() },
-            ),
-        )?.resolve("bin")
+/** The oldest Node the report build runs on, as in `engines` in report/package.json. */
+private val MINIMUM = Triple(22, 6, 0)
 
-/** Absolute path of that Node 22 `node`, else plain `node` from PATH. */
-fun nodeExecutable(): String =
-    node22BinDir()?.resolve("node")?.takeIf { it.canExecute() }?.absolutePath ?: "node"
+private fun File.version(): Triple<Int, Int, Int>? =
+    NODE_VERSION.matchEntire(name)?.groupValues?.let { (_, a, b, c) -> Triple(a.toInt(), b.toInt(), c.toInt()) }
+
+private fun Triple<Int, Int, Int>.atLeast(other: Triple<Int, Int, Int>): Boolean =
+    compareValuesBy(this, other, { it.first }, { it.second }, { it.third }) >= 0
 
 /**
- * Prepend the Node 22 bin dir to this task's PATH, when there is one. The lookup runs when the
- * task runs, not while Gradle configures the build, so the configuration cache does not depend
- * on what is installed under ~/.nvm or on the client's PATH.
+ * `bin` of the newest complete `~/.nvm/versions/node/vN.x.y` for [preferredMajor], else of the
+ * newest one at or above 22.6, else null.
+ */
+fun nodeBinDir(
+    preferredMajor: Int?,
+    home: File = File(System.getProperty("user.home")),
+): File? {
+    val installed =
+        File(home, ".nvm/versions/node")
+            .listFiles()
+            ?.mapNotNull { dir -> dir.version()?.let { dir to it } }
+            ?.filter { (dir, _) -> File(dir, "bin/npm").canExecute() && File(dir, "bin/node").canExecute() }
+            ?.filter { (_, version) -> version.atLeast(MINIMUM) }
+            .orEmpty()
+    val newestFirst = installed.sortedWith(
+        compareByDescending<Pair<File, Triple<Int, Int, Int>>> {
+            it.second.first
+        }.thenByDescending { it.second.second }.thenByDescending { it.second.third },
+    )
+    val pick = newestFirst.firstOrNull { it.second.first == preferredMajor } ?: newestFirst.firstOrNull()
+    return pick?.first?.resolve("bin")
+}
+
+/** The major in `.nvmrc` (`24`, `v24`, `24.1.0`), or null when the file is missing or unreadable. */
+fun nvmrcMajor(nvmrc: File): Int? =
+    nvmrc
+        .takeIf { it.isFile }
+        ?.readText()
+        ?.trim()
+        ?.removePrefix("v")
+        ?.substringBefore('.')
+        ?.toIntOrNull()
+
+/** The Node major CI uses: the `.nvmrc` at the root of this build. Read while Gradle configures. */
+private fun Exec.ciNodeMajor(): Int? = nvmrcMajor(project.rootProject.file(".nvmrc"))
+
+/**
+ * Prepend the chosen Node's bin dir to this task's PATH, when there is one. The nvm lookup runs
+ * when the task runs, not while Gradle configures the build, so the configuration cache does not
+ * depend on what is installed under ~/.nvm or on the client's PATH.
  */
 fun Exec.withNodeOnPath() {
-    doFirst("put Node 22 on PATH") {
-        val nodeBin = node22BinDir() ?: return@doFirst
+    val major = ciNodeMajor()
+    doFirst("put Node on PATH") {
+        val nodeBin = nodeBinDir(major) ?: return@doFirst
         val exec = this as Exec
         val base = exec.environment["PATH"]?.toString() ?: System.getenv("PATH").orEmpty()
         exec.environment("PATH", nodeBin.absolutePath + File.pathSeparator + base)
@@ -46,11 +76,14 @@ fun Exec.withNodeOnPath() {
 }
 
 /**
- * Run `node` with these arguments, using the Node 22 [nodeExecutable] picks when the task runs.
- * Also puts that Node first on PATH, for anything the script starts.
+ * Run `node` with these arguments, using the Node [nodeBinDir] picks when the task runs (else
+ * `node` from PATH). Also puts that Node first on PATH, for anything the script starts.
  */
 fun Exec.nodeCommandLine(vararg args: Any) {
+    val major = ciNodeMajor()
     commandLine("node", *args)
     withNodeOnPath()
-    doFirst("use Node 22") { (this as Exec).executable = nodeExecutable() }
+    doFirst("use the chosen Node") {
+        (this as Exec).executable = nodeBinDir(major)?.resolve("node")?.takeIf { it.canExecute() }?.absolutePath ?: "node"
+    }
 }

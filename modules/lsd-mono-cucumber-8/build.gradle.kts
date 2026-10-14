@@ -105,11 +105,6 @@ tasks.register<JavaExec>("captureReadmeReport") {
     classpath = readmeSourceSet.runtimeClasspath
     mainClass.set("io.lsdconsulting.lsd.mono.cucumber.readme.CucumberReadmeSampleKt")
     args(readmeFeature.asFile.absolutePath)
-    javaLauncher.set(
-        javaToolchains.launcherFor {
-            languageVersion.set(JavaLanguageVersion.of(21))
-        },
-    )
     systemProperty("lsd.mono.report.outputDir", readmeReportDir.get().asFile.absolutePath)
     // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
     val cleanDir = readmeReportDir.get().asFile

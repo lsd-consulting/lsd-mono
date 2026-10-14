@@ -1,6 +1,8 @@
 [versions]
 kotlin = "2.4.21"
-jvm = "21"
+# The Java baseline: bytecode and API level (--release), toolchain, and default test JDK.
+# CI also tests on newer JDKs (gradle.yml). See lsd.kotlin-jvm.gradle.kts.
+jvm = "17"
 junit = "6.1.3"
 cucumber = "8.0.4"
 kotlinx-coroutines = "1.11.0"
