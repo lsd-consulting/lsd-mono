@@ -1,9 +1,10 @@
-import io.lsdconsulting.lsd.mono.gradle.nodeCommandLine
 import io.lsdconsulting.lsd.mono.gradle.withNodeOnPath
 
 plugins {
     id("lsd.kotlin-jvm")
     `java-library`
+    // README, feature-tour and kitchen-sink sample tasks (readmeSamples, kitchenSinkSample).
+    id("lsd.samples")
 }
 
 // Line coverage was 73.3% when the floor was set (#30), with the readme samples counted. Without them
@@ -26,13 +27,10 @@ base.archivesName.set("lsd-mono-core")
 description =
     "LSD Mono core — greenfield report UI + thin Kotlin capture/report façade (not legacy lsd-core)"
 
-val readmeSourceSet = sourceSets.create("readme")
-
 dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
-    "readmeImplementation"(sourceSets.named("main").get().output)
 }
 
 tasks.test {
@@ -65,9 +63,6 @@ val reportDir = layout.projectDirectory.dir("report")
 val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
 // Built by `npm run build:single` into report/dist (gitignored), then packaged from there.
 val reportShell = reportDir.file("dist/lsd-report.html")
-// Sample reports (README, feature tour, kitchen sink) use this instead of the time they ran,
-// so regenerating them changes nothing unless the UI or the sample does. See gradle.properties.
-val samplesGeneratedAt = providers.gradleProperty("lsd.samples.generatedAt").get()
 
 val reportSingle = tasks.register<Exec>("reportSingle") {
     group = "build"
@@ -145,91 +140,4 @@ tasks.named<ProcessResources>("processResources") {
 
 tasks.named("check") {
     dependsOn("reportTest", "reportLint")
-}
-
-// README samples are slow and write docs/. They are not on build or check.
-val readmeReportDir = layout.buildDirectory.dir("readme-report")
-val readmeDocsDir = rootProject.layout.projectDirectory.dir("docs/readme")
-
-tasks.register<JavaExec>("captureReadmeReport") {
-    group = "documentation"
-    description = "Capture the README scenario and write its report HTML."
-    classpath = readmeSourceSet.runtimeClasspath
-    mainClass.set("io.lsdconsulting.lsd.mono.core.readme.ReadmeSampleKt")
-    systemProperty("lsd.mono.report.outputDir", readmeReportDir.get().asFile.absolutePath)
-    // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
-    val cleanDir = readmeReportDir.get().asFile
-    doFirst { cleanDir.deleteRecursively() }
-    systemProperty("lsd.mono.ids.deterministic", "true")
-    systemProperty("lsd.mono.report.generatedAt", samplesGeneratedAt)
-    outputs.dir(readmeReportDir)
-}
-
-// Feature tour: a trimmed shop report the root README's tour GIF clicks around.
-val featureTourReportDir = layout.buildDirectory.dir("feature-tour-report")
-
-tasks.register<JavaExec>("captureFeatureTourReport") {
-    group = "documentation"
-    description = "Capture the feature-tour scenarios and write their report HTML."
-    classpath = readmeSourceSet.runtimeClasspath
-    mainClass.set("io.lsdconsulting.lsd.mono.core.readme.FeatureTourSampleKt")
-    systemProperty("lsd.mono.report.outputDir", featureTourReportDir.get().asFile.absolutePath)
-    // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
-    val cleanDir = featureTourReportDir.get().asFile
-    doFirst { cleanDir.deleteRecursively() }
-    systemProperty("lsd.mono.ids.deterministic", "true")
-    systemProperty("lsd.mono.report.generatedAt", samplesGeneratedAt)
-    outputs.dir(featureTourReportDir)
-}
-
-tasks.register<Exec>("readmeSamples") {
-    group = "documentation"
-    description =
-        "Regenerate the docs/readme feature tour and component GIFs from the current report UI. Not part of build or check."
-    dependsOn("captureReadmeReport", "captureFeatureTourReport")
-    workingDir = reportDir.asFile
-    inputs.dir(readmeReportDir)
-    inputs.dir(featureTourReportDir)
-    inputs.file(reportDir.file("scripts/readme-samples.mjs"))
-    outputs.file(readmeDocsDir.file("feature-tour.gif"))
-    outputs.file(readmeDocsDir.file("components.gif"))
-    val reportOut = readmeReportDir.get().asFile.absolutePath
-    val docsOut = readmeDocsDir.asFile.absolutePath
-    val tourOut = featureTourReportDir.get().asFile.absolutePath
-    nodeCommandLine("scripts/readme-samples.mjs", reportOut, docsOut, tourOut)
-}
-
-// Kitchen-sink sample: every diagram feature in one report, for eyeballing layout.
-// It is not committed: the Pages workflow builds it with kitchenSinkSample and publishes build/pages.
-val kitchenSinkReportDir = layout.buildDirectory.dir("kitchen-sink-report")
-val pagesDir = layout.buildDirectory.dir("pages")
-
-val captureKitchenSinkReport = tasks.register<JavaExec>("captureKitchenSinkReport") {
-    group = "documentation"
-    description = "Capture the kitchen-sink scenarios and write their report HTML."
-    classpath = readmeSourceSet.runtimeClasspath
-    mainClass.set("io.lsdconsulting.lsd.mono.core.readme.KitchenSinkSampleKt")
-    systemProperty("lsd.mono.report.outputDir", kitchenSinkReportDir.get().asFile.absolutePath)
-    // Report names carry a hash, so start clean: the copy below expects one *-diagram.html.
-    val cleanDir = kitchenSinkReportDir.get().asFile
-    doFirst { cleanDir.deleteRecursively() }
-    systemProperty("lsd.mono.ids.deterministic", "true")
-    systemProperty("lsd.mono.report.generatedAt", samplesGeneratedAt)
-    outputs.dir(kitchenSinkReportDir)
-}
-
-tasks.register<Sync>("kitchenSinkSample") {
-    group = "documentation"
-    description =
-        "Build the GitHub Pages site (the kitchen-sink report and its index.html) into build/pages. Not part of build or check."
-    dependsOn(captureKitchenSinkReport)
-    // The report directory as written: index.html is the site's front page and loads each report's
-    // data script. Index entries (.lsd-index) are bookkeeping and are not published.
-    from(kitchenSinkReportDir) { exclude(".lsd-index/**") }
-    // A stable address for the kitchen-sink diagram (files carry a short hash). It loads the hashed payloads file.
-    from(kitchenSinkReportDir) {
-        include("kitchen-sink-*-diagram.html")
-        rename("""kitchen-sink-[0-9a-f]{8}-diagram\.html""", "kitchen-sink.html")
-    }
-    into(pagesDir)
 }
