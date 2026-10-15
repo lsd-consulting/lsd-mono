@@ -277,6 +277,16 @@ function renderShell(): void {
 }
 
 function bindChrome(): void {
+  bindFilters()
+  bindTopbarButtons()
+  bindSidePanel()
+  const main = document.querySelector<HTMLElement>('#main')!
+  main.addEventListener('click', onMainClick)
+  main.addEventListener('keydown', onMainKey)
+}
+
+/** Search, the status chips, and the empty state's Clear filters button. */
+function bindFilters(): void {
   const search = document.querySelector<HTMLInputElement>('#search')!
   search.addEventListener('input', () => {
     state.query = search.value
@@ -304,7 +314,10 @@ function bindChrome(): void {
       renderMain()
     })
   })
+}
 
+/** Theme, collapse-sidebar and help buttons in the top bar. */
+function bindTopbarButtons(): void {
   document.querySelector('#btn-theme')!.addEventListener('click', () => {
     paintThemeButton(toggleTheme())
   })
@@ -326,7 +339,10 @@ function bindChrome(): void {
     state.helpOpen = !state.helpOpen
     document.querySelector('#help')!.setAttribute('data-open', String(state.helpOpen))
   })
+}
 
+/** The side panel (inspector), and its Timing rows that reveal a message in the diagram. */
+function bindSidePanel(): void {
   inspector = bindInspector(document, {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onContent: () => syncPrintPanel(),
@@ -360,124 +376,132 @@ function bindChrome(): void {
     const messageId = showMsg?.dataset.showMessage
     if (scenarioId && messageId) revealMessage(scenarioId, messageId)
   })
+}
 
-  const main = document.querySelector<HTMLElement>('#main')!
-  main.addEventListener('click', (ev) => {
-    const target = ev.target as Element | null
-    if (!target || !target.closest) return
-    const jump = target.closest<HTMLButtonElement>('[data-jump-y]')
-    if (jump) {
-      const scroll = jump.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
-      if (scroll) scrollDiagramTo(scroll, Number(jump.dataset.jumpY))
-      return
-    }
-    if (
-      delegateMessageOpen(
-        ev,
-        (node) => messageFromNode(node),
-        (scenarioId, message) => {
-          const scenario = report.scenarios.find((item) => item.id === scenarioId)
-          if (scenario) openMessage(scenario, message)
-        },
-      )
-    ) {
-      return
-    }
-    const componentsBtn = target.closest<HTMLButtonElement>('[data-show-components]')
-    if (componentsBtn) {
-      const scenario = report.scenarios.find((item) => item.id === componentsBtn.dataset.showComponents)
-      if (scenario) openComponents(scenario)
-      return
-    }
-    const metricsBtn = target.closest<HTMLButtonElement>('[data-show-metrics]')
-    if (metricsBtn) {
-      const scenario = report.scenarios.find((item) => item.id === metricsBtn.dataset.showMetrics)
-      if (scenario) openMetrics(scenario)
-      return
-    }
-    const errBtn = target.closest<HTMLButtonElement>('[data-show-error]')
-    if (errBtn) {
-      const scenario = report.scenarios.find((s) => s.id === errBtn.dataset.showError)
-      if (scenario) openError(scenario)
-      return
-    }
-    const hit = target.closest<SVGGElement>('.message.has-data')
-    if (!hit) return
-    const scenario = scenarioFrom(hit)
-    const mid = hit.getAttribute('data-message-id')
-    if (!scenario || !mid) return
-    const msg = findMessage(scenario, mid)
-    if (msg) openMessage(scenario, msg)
-  })
-  main.addEventListener('keydown', (ev) => {
-    const target = ev.target as HTMLElement | null
-    if (target?.matches('[data-diagram-find]') && ev.key === 'Enter') {
-      const scenario = scenarioFrom(target)
-      const scroll = target.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
-      if (scenario && scroll) {
-        const messageId = findOpensMessage(
-          scenario.events,
-          (target as HTMLInputElement).value,
-          diagramView(scenario.id).hidden,
-        )
-        const msg = messageId ? findMessage(scenario, messageId) : undefined
-        ev.preventDefault()
-        updateSearchCurrent(scenario.id)
-        if (msg) diagramView(scenario.id).searchCurrentId = msg.id
-        syncDiagramWindow(scroll)
-        // A soft keyboard's Go / Search key sends Enter: close the keyboard so the match has the screen.
-        if (matchMedia('(pointer: coarse)').matches) target.blur()
-        if (msg) {
-          focusDiagramMessage(scroll, msg.id)
-          openMessage(scenario, msg)
-        }
-        if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
-      }
-      return
-    }
-    const scrollKey = target?.closest?.<HTMLElement>('.seq-scroll')
-    const openBtn = target?.closest?.<HTMLButtonElement>('button.msg-open')
-    if (scrollKey && (openBtn || target === scrollKey)) {
-      const scenario = scenarioFrom(scrollKey)
-      if (scenario) {
-        const view = diagramView(scenario.id)
-        const action = diagramKeyAction({
-          key: ev.key,
-          places: messagePlaces(scenario.events, view.hidden),
-          activeId: openBtn?.dataset.messageId ?? view.activeMessageId,
-          inDiagram: true,
-        })
-        if (action.type === 'move' && action.messageId) {
-          ev.preventDefault()
-          ev.stopPropagation()
-          focusDiagramMessage(scrollKey, action.messageId)
-          if (inspector?.isOpen()) {
-            const msg = findMessage(scenario, action.messageId)
-            if (msg) openMessage(scenario, msg)
-          }
-          return
-        }
-        if (action.type === 'open' && action.messageId) {
-          ev.preventDefault()
-          ev.stopPropagation()
-          const msg = findMessage(scenario, action.messageId)
-          if (msg) openMessage(scenario, msg)
-          return
-        }
-        if (openBtn) ev.stopPropagation()
-      }
-      return
-    }
-    const hit = target?.closest?.<SVGGElement>('.message.has-data')
-    if (!hit) return
-    if (ev.key !== 'Enter' && ev.key !== ' ') return
+/** Clicks in the main column: section jumps, arrows, and the Components, Metrics and error buttons. */
+function onMainClick(ev: MouseEvent): void {
+  const target = ev.target as Element | null
+  if (!target || !target.closest) return
+  const jump = target.closest<HTMLButtonElement>('[data-jump-y]')
+  if (jump) {
+    const scroll = jump.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
+    if (scroll) scrollDiagramTo(scroll, Number(jump.dataset.jumpY))
+    return
+  }
+  if (
+    delegateMessageOpen(
+      ev,
+      (node) => messageFromNode(node),
+      (scenarioId, message) => {
+        const scenario = report.scenarios.find((item) => item.id === scenarioId)
+        if (scenario) openMessage(scenario, message)
+      },
+    )
+  ) {
+    return
+  }
+  const componentsBtn = target.closest<HTMLButtonElement>('[data-show-components]')
+  if (componentsBtn) {
+    const scenario = report.scenarios.find((item) => item.id === componentsBtn.dataset.showComponents)
+    if (scenario) openComponents(scenario)
+    return
+  }
+  const metricsBtn = target.closest<HTMLButtonElement>('[data-show-metrics]')
+  if (metricsBtn) {
+    const scenario = report.scenarios.find((item) => item.id === metricsBtn.dataset.showMetrics)
+    if (scenario) openMetrics(scenario)
+    return
+  }
+  const errBtn = target.closest<HTMLButtonElement>('[data-show-error]')
+  if (errBtn) {
+    const scenario = report.scenarios.find((s) => s.id === errBtn.dataset.showError)
+    if (scenario) openError(scenario)
+    return
+  }
+  const hit = target.closest<SVGGElement>('.message.has-data')
+  if (!hit) return
+  const scenario = scenarioFrom(hit)
+  const mid = hit.getAttribute('data-message-id')
+  if (!scenario || !mid) return
+  const msg = findMessage(scenario, mid)
+  if (msg) openMessage(scenario, msg)
+}
+
+/** Keys in the main column: Enter in diagram find, diagram message navigation, and Enter on an arrow. */
+function onMainKey(ev: KeyboardEvent): void {
+  const target = ev.target as HTMLElement | null
+  if (target?.matches('[data-diagram-find]') && ev.key === 'Enter') {
+    onFindEnter(ev, target as HTMLInputElement)
+    return
+  }
+  const scrollKey = target?.closest?.<HTMLElement>('.seq-scroll')
+  const openBtn = target?.closest?.<HTMLButtonElement>('button.msg-open')
+  if (scrollKey && (openBtn || target === scrollKey)) {
+    onDiagramKey(ev, scrollKey, openBtn ?? null)
+    return
+  }
+  const hit = target?.closest?.<SVGGElement>('.message.has-data')
+  if (!hit) return
+  if (ev.key !== 'Enter' && ev.key !== ' ') return
+  ev.preventDefault()
+  const scenario = scenarioFrom(hit)
+  const mid = hit.getAttribute('data-message-id')
+  if (!scenario || !mid) return
+  const msg = findMessage(scenario, mid)
+  if (msg) openMessage(scenario, msg)
+}
+
+/** Enter in a diagram's find box: open the first match and bring it on screen. */
+function onFindEnter(ev: KeyboardEvent, target: HTMLInputElement): void {
+  const scenario = scenarioFrom(target)
+  const scroll = target.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
+  if (scenario && scroll) {
+    const messageId = findOpensMessage(scenario.events, target.value, diagramView(scenario.id).hidden)
+    const msg = messageId ? findMessage(scenario, messageId) : undefined
     ev.preventDefault()
-    const scenario = scenarioFrom(hit)
-    const mid = hit.getAttribute('data-message-id')
-    if (!scenario || !mid) return
-    const msg = findMessage(scenario, mid)
-    if (msg) openMessage(scenario, msg)
-  })
+    updateSearchCurrent(scenario.id)
+    if (msg) diagramView(scenario.id).searchCurrentId = msg.id
+    syncDiagramWindow(scroll)
+    // A soft keyboard's Go / Search key sends Enter: close the keyboard so the match has the screen.
+    if (matchMedia('(pointer: coarse)').matches) target.blur()
+    if (msg) {
+      focusDiagramMessage(scroll, msg.id)
+      openMessage(scenario, msg)
+    }
+    if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
+  }
+}
+
+/** Up, Down and Enter on a diagram or its focused arrow. */
+function onDiagramKey(ev: KeyboardEvent, scrollKey: HTMLElement, openBtn: HTMLButtonElement | null): void {
+  const scenario = scenarioFrom(scrollKey)
+  if (scenario) {
+    const view = diagramView(scenario.id)
+    const action = diagramKeyAction({
+      key: ev.key,
+      places: messagePlaces(scenario.events, view.hidden),
+      activeId: openBtn?.dataset.messageId ?? view.activeMessageId,
+      inDiagram: true,
+    })
+    if (action.type === 'move' && action.messageId) {
+      ev.preventDefault()
+      ev.stopPropagation()
+      focusDiagramMessage(scrollKey, action.messageId)
+      if (inspector?.isOpen()) {
+        const msg = findMessage(scenario, action.messageId)
+        if (msg) openMessage(scenario, msg)
+      }
+      return
+    }
+    if (action.type === 'open' && action.messageId) {
+      ev.preventDefault()
+      ev.stopPropagation()
+      const msg = findMessage(scenario, action.messageId)
+      if (msg) openMessage(scenario, msg)
+      return
+    }
+    if (openBtn) ev.stopPropagation()
+  }
 }
 
 function renderNav(): void {
