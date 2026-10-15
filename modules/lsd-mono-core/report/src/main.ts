@@ -1,13 +1,12 @@
 import './styles/app.css'
 import './styles/timing.css'
 import './styles/diagram.css'
-import type { Report, Scenario, Status } from './types'
-import { scenarioDescriptionHtml, scenarioHaystack } from './ui/scenario-summary'
+import type { Report, Status } from './types'
+import { scenarioHaystack } from './ui/scenario-summary'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from './ui/inspector'
 import { defaultReportId, loadReportData, type IndexManifest, type ReportData } from './lib/report-index'
 import { parseReportHash, type HashRef } from './lib/report-hash'
 import { defaultScenarioId, reselect, stepSelection } from './ui/selection'
-import { timingStripHtml } from './ui/timing'
 import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from './lib/diagram-a11y'
 import { scrollDiagramTo, scrollDiagramToOffset } from './lib/diagram/page-scroll'
 import { revealSearchHit, updateSearchCurrent } from './lib/diagram/search-reveal'
@@ -18,7 +17,6 @@ import {
   focusDiagramMessage,
   forgetDiagrams,
   messageOffsetY,
-  renderDiagramHtml,
   syncDiagramWindow,
 } from './lib/sequence-diagram'
 import {
@@ -39,10 +37,11 @@ import {
   sidebarToggleLabel,
   storeSidebarCollapsed,
 } from './ui/sidebar'
-import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
+import { statusLabel } from './ui/format'
 import { indexNavHtml } from './ui/index-nav'
 import { cssEscape, escapeAttr, escapeHtml } from './lib/escape'
 import { trackTopbarHeight } from './lib/topbar-height'
+import { heroHtml, scenarioHtml } from './app/scenario-card'
 import {
   scenarioFrom,
   openError,
@@ -564,21 +563,6 @@ function scrollToScenario(): void {
   else window.scrollTo({ top: 0 })
 }
 
-function heroHtml(): string {
-  const back = index
-    ? `<p class="hero-index">${escapeHtml(index.title)} · report ${index.reports.findIndex((r) => r.id === session.reportId) + 1} of ${index.reports.length}</p>`
-    : ''
-  return `
-    <div class="report-hero">
-      ${back}
-      <h1>${escapeHtml(session.report.title)}</h1>
-      <div class="meta">
-        <span>Generated ${escapeHtml(formatGeneratedAt(session.report.generatedAt))}</span>
-        <code>${escapeHtml(session.report.generator)}</code>
-      </div>
-    </div>`
-}
-
 /**
  * The main column shows the selected scenario alone. When search or the status filters
  * drop it, the next match is shown, or an empty state when nothing matches. Only a
@@ -638,40 +622,6 @@ function revealMessage(scenarioId: string, messageId: string): void {
   scroll.closest('.seq-diagram')?.scrollIntoView({ block: 'nearest' })
   scrollDiagramToOffset(scroll, Math.max(0, y * diagramView(scenarioId).zoom - 24))
   syncDiagramWindow(scroll)
-}
-
-function scenarioHtml(s: Scenario): string {
-  const labelMaxWidth = session.report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
-  const diagram = renderDiagramHtml(s, labelMaxWidth)
-  return `
-  <article class="scenario-card ${escapeAttr(s.status)}" id="card-${escapeAttr(s.id)}" data-status="${escapeAttr(s.status)}" aria-labelledby="scenario-title">
-    <div class="scenario-head">
-      <h2 id="scenario-title" tabindex="-1">${escapeHtml(s.title)}</h2>
-      <span class="badge ${escapeAttr(s.status)}">${escapeHtml(s.status)}</span>
-    </div>
-    ${timingStripHtml(s)}
-    <div class="scenario-body">
-      <div class="cards">
-        <section class="card">
-          <h3>Description</h3>
-          ${scenarioDescriptionHtml(s)}
-        </section>
-        <section class="card">
-          <h3>Key facts</h3>
-          <dl class="kv">
-            ${s.facts.map((f) => `<dt>${escapeHtml(f.key)}</dt><dd>${escapeHtml(f.value)}</dd>`).join('')}
-          </dl>
-        </section>
-      </div>
-      <section class="diagram-panel">
-        <h3>
-          Sequence diagram
-          <span class="diagram-hint">Zoom and fit · hide participants · find labels · ↑↓ between messages</span>
-        </h3>
-        ${diagram}
-      </section>
-    </div>
-  </article>`
 }
 
 /**
