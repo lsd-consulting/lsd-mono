@@ -20,7 +20,6 @@ import { cssEscape } from '../escape'
 import { DEFAULT_OVERSCAN, DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, virtualRowRange } from '../layout'
 import { bindParticipantFilter } from '../participant-filter'
 import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds, prefersReducedMotion } from '../sequence-diagram'
-import { bindMinimap, paintMinimapDensity, syncMinimap } from './minimap-view'
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, sizeStage } from './page-scroll'
@@ -91,7 +90,6 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
       btn?.focus({ preventScroll: true })
     }
   }
-  syncMinimap(scrollport)
 }
 
 /** SVG viewBox top. Includes the label drawn above the first painted row. */
@@ -135,7 +133,6 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
     const hits = classifySearchHits(diagram.scenario.events, view.query, view.hidden)
     count.textContent = searchCountLabel(hits.total, hits.hidden, view.query)
   }
-  paintMinimapDensity(scrollport)
 }
 
 function commitZoom(
@@ -382,6 +379,5 @@ export function bindDiagramScroll(root: ParentNode): void {
         if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
       }, SEARCH_REVEAL_DELAY_MS)
     })
-    bindMinimap(diagram, scroll)
   })
 }

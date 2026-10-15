@@ -47,7 +47,7 @@ lsd-mono-core/
     "latest" files, so test classes, forks and modules can share one directory.
 - Timing: durations, start times, call/reply pairing and clock ordering, with an accuracy level per scenario (see [Timing](#timing))
 - Payloads are copied when captured, with size limits and redaction of secret-looking keys (see [Message data](#message-data))
-- The report page shows one scenario at a time. Per scenario: the sequence diagram, the component diagram, timing (summary strip, swim lanes and waterfall) and metrics. A diagram taller than the screen extends the page and scrolls with it, with the toolbar, participant header and minimap kept in view. The theme follows the operating system until a fixed theme is chosen
+- The report page shows one scenario at a time. Per scenario: the sequence diagram, the component diagram, timing (summary strip, swim lanes and waterfall) and metrics. A diagram taller than the screen extends the page and scrolls with it, with the toolbar and participant header kept in view. The theme follows the operating system until a fixed theme is chosen
 
 PlantUML and Handlebars output are not supported; the report is drawn by the report UI.
 

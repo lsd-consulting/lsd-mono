@@ -268,7 +268,7 @@ test('print leaves out the scenario list and toolbars, prints nothing from a clo
 }) => {
   await openReport(page, uxFixture)
   await startPrint(page)
-  for (const chrome of ['.topbar', '.sidebar', '.seq-toolbar', '.seq-minimap', '#inspector']) {
+  for (const chrome of ['.topbar', '.sidebar', '.seq-toolbar', '#inspector']) {
     await expect(page.locator(chrome), chrome).toBeHidden()
   }
   await expect(page.locator('.print-panel')).toHaveCount(0)
@@ -888,10 +888,6 @@ const headerNames = (page: Page) =>
     .locator('.seq-header-svg .participant-box')
     .evaluateAll((els) => els.map((el) => el.getAttribute('data-participant')))
 
-/** Minimap density as pixels, to see that it repaints. */
-const minimapPixels = (page: Page) =>
-  page.locator('.seq-minimap-canvas').evaluate((el) => (el as HTMLCanvasElement).toDataURL())
-
 test('a header × appears on hover and hides that participant; the chip lists it and passes axe', async ({ page }) => {
   await openFixture(page, 'dark')
   await expect(page.locator('[data-participant-toggle]')).toHaveCount(0)
@@ -903,13 +899,11 @@ test('a header × appears on hover and hides that participant; the chip lists it
   const hovered = await seriousViolations(page)
   expect(hovered, formatViolations(hovered)).toEqual([])
 
-  const density = await minimapPixels(page)
   await page.getByRole('button', { name: 'Hide Database' }).click()
   expect(await headerNames(page)).toEqual(['client', 'api', 'bus'])
   // Messages to or from the hidden column are left out, as before.
   await expect(page.locator('.seq-window .msg-label').first()).toBeVisible()
   await expect(page.locator('.seq-window .msg-label', { hasText: 'insert' })).toHaveCount(0)
-  await expect.poll(() => minimapPixels(page)).not.toBe(density)
   const chip = page.getByRole('button', { name: '1 hidden participant' })
   await expect(chip).toHaveText('1 hidden')
   await expect(page.locator('.participant-filter-status')).toHaveText('Database hidden. 1 hidden.')
@@ -1414,7 +1408,7 @@ test('Auto, from the button or `d`, clears the choice and follows the OS again',
   expect(violations, formatViolations(violations)).toEqual([])
 })
 
-test('a tall diagram grows the page: page scroll drives the diagram, header and minimap stay, rows stay windowed', async ({
+test('a tall diagram grows the page: page scroll drives the diagram, header stays, rows stay windowed, no minimap', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
@@ -1437,26 +1431,20 @@ test('a tall diagram grows the page: page scroll drives the diagram, header and 
   await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBeGreaterThan(100)
   const mid = await page.evaluate(() => {
     const header = document.querySelector('.seq-sticky-header')!.getBoundingClientRect()
-    const minimap = document.querySelector('.seq-minimap')!.getBoundingClientRect()
     const topbar = document.querySelector('.topbar')!.getBoundingClientRect()
     return {
       headerTop: header.top,
       headerBottom: header.bottom,
       topbarBottom: topbar.bottom,
-      minimapTop: minimap.top,
       painted: document.querySelectorAll('.seq-window svg').length,
     }
   })
   expect(mid.headerTop, 'the participant header sticks under the top bar').toBeGreaterThanOrEqual(mid.topbarBottom - 1)
   expect(mid.headerBottom).toBeLessThan(720)
-  expect(mid.minimapTop).toBeGreaterThanOrEqual(mid.topbarBottom - 1)
   expect(mid.painted, 'rows are still painted in a window').toBeGreaterThan(0)
   await page.screenshot({ path: 'test-results/tall-diagram-scrolled.png' })
 
-  // The minimap moves the page.
-  const before = await page.evaluate(() => window.scrollY)
-  await page.locator('.seq-minimap').focus()
-  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowDown')
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before)
+  // The diagram has no minimap, on desktop or phone.
+  await expect(page.locator('.seq-minimap')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/tall-diagram-end.png' })
 })

@@ -1,5 +1,5 @@
 // The sequence diagram: mounting, frame and pads, the HTML shell and message focus. Shapes, rows,
-// the viewport and the minimap live in ./diagram; their state is one controller, diagramState.
+// the viewport lives in ./diagram; their state is one controller, diagramState.
 import type { ActivateEvent, DiagramEvent, MessageEvent, NoteEvent, Participant, Scenario } from '../types'
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
 import { hasComponentDiagram } from './component-graph'
@@ -41,7 +41,6 @@ import {
 } from './layout'
 import type { LayoutRow } from './layout'
 
-export { paintMinimapDensity, syncMinimap } from './diagram/minimap-view'
 export { ACTIVATION_HATCH, headerHtml, renderRowSvg } from './diagram/rows'
 export {
   type ArrowEnd,
@@ -240,7 +239,6 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
             <div class="seq-window"></div>
           </div>
         </div>
-        ${minimapMarkup()}
       </div>
     </div>`
 }
@@ -254,11 +252,6 @@ export const PRINT_MAX_UPSCALE = 1.5
 /** Upper bound for the printed width, from the unzoomed drawing width. */
 export function printWidthStyle(width: number): string {
   return `--seq-print-max:${Math.round(width * PRINT_MAX_UPSCALE)}px`
-}
-
-/** One track, one canvas, one window marker. Never one node per event. */
-export function minimapMarkup(): string {
-  return `<div class="seq-minimap" role="slider" aria-orientation="vertical" aria-label="Diagram overview" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><canvas class="seq-minimap-canvas" aria-hidden="true"></canvas><div class="seq-minimap-window" aria-hidden="true"></div></div>`
 }
 
 export function prefersReducedMotion(): boolean {

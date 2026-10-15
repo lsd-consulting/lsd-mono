@@ -25,11 +25,10 @@ afterEach(() => {
 })
 
 describe('page scroll', () => {
-  it('makes the stage as tall as the drawing and gives the minimap the scrollport height', () => {
+  it('makes the stage as tall as the drawing', () => {
     const { stage, scroll } = mount(5000, 800, 300)
     sizeStage(scroll)
     expect(stage.style.height).toBe('5000px')
-    expect(stage.style.getPropertyValue('--seq-port-h')).toBe('800px')
     expect(stage.closest<HTMLElement>('.seq-diagram')!.style.getPropertyValue('--seq-toolbar-h')).toBe('40px')
   })
 

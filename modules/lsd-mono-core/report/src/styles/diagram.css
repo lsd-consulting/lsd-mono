@@ -7,51 +7,14 @@
 }
 .seq-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 14px;
+  grid-template-columns: minmax(0, 1fr);
   /* The stage is as tall as the whole drawing (page-scroll.ts sets its height), so the page
-     scrolls through it. The scrollport and minimap stick under the top bar, at most one
+     scrolls through it. The scrollport sticks under the top bar, at most one
      screen tall, and the page position drives the scrollport's scrollTop. */
   gap: 0;
   align-items: start;
   /* Not a scroll container: the sticky scrollport sticks to the page. */
   overflow: visible;
-}
-.seq-minimap {
-  position: sticky;
-  top: calc(var(--topbar-h, 0px) + var(--seq-toolbar-h, 0px));
-  width: 14px;
-  min-height: 0;
-  height: var(--seq-port-h, 100%);
-  max-height: calc(100dvh - var(--topbar-h, 0px) - var(--seq-toolbar-h, 0px));
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-left: 1px solid var(--border);
-  border-top: 1px solid var(--border);
-  background: color-mix(in oklab, var(--surface-2) 80%, var(--surface));
-  cursor: ns-resize;
-  touch-action: none;
-  outline: none;
-}
-.seq-minimap:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--accent);
-}
-.seq-minimap-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.seq-minimap-window {
-  position: absolute;
-  left: 1px;
-  right: 1px;
-  border-radius: 3px;
-  border: 1px solid var(--accent);
-  background: color-mix(in oklab, var(--accent) 28%, transparent);
-  pointer-events: none;
-  box-sizing: border-box;
-  min-height: 6px;
 }
 .section-jump {
   display: flex;
@@ -565,9 +528,6 @@
 }
 
 @media print {
-  .seq-minimap {
-    display: none;
-  }
   .seq-stage {
     display: block;
     overflow: visible;

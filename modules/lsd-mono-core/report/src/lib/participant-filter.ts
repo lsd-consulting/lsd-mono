@@ -147,7 +147,7 @@ function round(n: number): number {
 export interface FilterHost {
   participants: () => Participant[]
   hidden: () => ReadonlySet<string>
-  /** Replace the hidden set and redraw the header, rows, chip, minimap and fit. */
+  /** Replace the hidden set and redraw the header, rows, chip and fit. */
   setHidden: (next: Set<string>) => void
 }
 

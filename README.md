@@ -2,7 +2,7 @@
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
 
-![A tour of the report: choosing a scenario from the list, zoom and Fit, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the minimap, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
+![A tour of the report: choosing a scenario from the list, zoom and Fit, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
 
 [`lsd-mono-cucumber-8` README](modules/lsd-mono-cucumber-8/README.md) covers the Cucumber 8 plugin.
 
@@ -99,7 +99,7 @@ The tour at the top clicks around a small shop report: four scenarios with every
 
 The report shows one scenario at a time, chosen from the sidebar, and the choice is kept in the URL. Each scenario has:
 
-- the sequence diagram, fitted to its panel, with zoom, Fit, find, participant hiding and a minimap. A diagram taller than the screen extends the page and scrolls with it; the toolbar and the participant header stay at the top while you scroll;
+- the sequence diagram, fitted to its panel, with zoom, Fit, find and participant hiding. A diagram taller than the screen extends the page and scrolls with it; the toolbar and the participant header stay at the top while you scroll;
 - a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are redacted when captured), the component diagram, and timing and metrics;
 - a timing summary (wall-clock, calls, slowest call, accuracy) with swim lanes and a waterfall, when the scenario has timing.
 

@@ -1,8 +1,8 @@
 // The diagram scrolls with the page. Its stage is as tall as the whole drawing, and the
 // scrollport is sticky under the top bar, at most one screen tall. The page's scroll position
 // past the top of the stage is mirrored into the scrollport's scrollTop, so windowed painting,
-// the sticky participant header, the minimap and focus keep working from scrollTop. When the
-// diagram moves its own scrollTop (minimap, focus, section jump, zoom), the page follows.
+// the sticky participant header and focus keep working from scrollTop. When the
+// diagram moves its own scrollTop (focus, section jump, zoom), the page follows.
 import { diagramState, diagramView } from './state'
 
 /** Distance between the page's position past the stage top and the scrollport's scrollTop. */
@@ -35,7 +35,6 @@ export function sizeStage(scrollport: HTMLElement): void {
   if (!stage) return
   if (!linked(scrollport)) {
     stage.style.removeProperty('height')
-    stage.style.removeProperty('--seq-port-h')
     return
   }
   const height = `${scrollport.scrollHeight + (scrollport.offsetHeight - scrollport.clientHeight)}px`
@@ -46,9 +45,6 @@ export function sizeStage(scrollport: HTMLElement): void {
   const bar = toolbar && getComputedStyle(toolbar).position === 'sticky' ? `${toolbar.offsetHeight}px` : '0px'
   if (diagram && diagram.style.getPropertyValue('--seq-toolbar-h') !== bar)
     diagram.style.setProperty('--seq-toolbar-h', bar)
-  // The minimap matches the scrollport's height.
-  const port = `${scrollport.offsetHeight}px`
-  if (stage.style.getPropertyValue('--seq-port-h') !== port) stage.style.setProperty('--seq-port-h', port)
 }
 
 /**

@@ -966,7 +966,6 @@ function onKey(e: KeyboardEvent): void {
   if (target.closest('[data-show-components]')) return
   if (target.closest('[data-show-metrics]')) return
   if (target.closest('#inspector')) return
-  if (target.closest('.seq-minimap')) return
   if (target.closest('.seq-scroll')) return
 
   if (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {

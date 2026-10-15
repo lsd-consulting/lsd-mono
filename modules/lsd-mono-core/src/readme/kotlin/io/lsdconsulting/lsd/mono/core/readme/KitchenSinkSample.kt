@@ -27,7 +27,7 @@ import java.time.Instant
  *
  * Four scenarios (happy path, payment declined, out of stock, async
  * fulfilment) across 14 lifelines cover: all six participant shapes, the
- * participant filter and minimap, sync, async, bi-directional, lost and
+ * participant filter, sync, async, bi-directional, lost and
  * response arrows, short arrows to and from the diagram edge, self-calls,
  * nested and overlapping activations on late lifelines, a lifeline that first
  * appears mid-scenario, an activation left open, short and wrapping notes
