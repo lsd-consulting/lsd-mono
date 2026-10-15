@@ -4,13 +4,7 @@ import './styles/diagram.css'
 import { sampleReport } from './data/sample-report'
 import type { MessageEvent, Report, Scenario, Status } from './types'
 import { scenarioDescriptionHtml, scenarioHaystack } from './ui/scenario-summary'
-import {
-  bindInspector,
-  delegateMessageOpen,
-  inspectorMarkup,
-  type InspectorController,
-  type InspectorInvoker,
-} from './ui/inspector'
+import { bindInspector, delegateMessageOpen, inspectorMarkup } from './ui/inspector'
 import { loadExternalPayloads, loadPayloadsFrom, payloadKey } from './lib/payloads'
 import {
   defaultReportId,
@@ -78,6 +72,7 @@ import { componentGraph } from './lib/component-graph'
 import { indexNavHtml } from './ui/index-nav'
 import { cssEscape, escapeAttr, escapeHtml } from './lib/escape'
 import { trackTopbarHeight } from './lib/topbar-height'
+import { createSession } from './ui/session'
 
 interface State {
   query: string
@@ -92,17 +87,13 @@ interface State {
 
 /** The index page's manifest. Null on a single report's page. */
 const index: IndexManifest | null = window.__LSD_REPORT__ ? null : (window.__LSD_INDEX__ ?? null)
-/** The report shown. On the index page it changes as reports are opened; empty until the first one loads. */
-let report: Report =
+/** Everything else main.ts changes as the page runs. */
+const session = createSession(
   window.__LSD_REPORT__ ??
-  (index
-    ? { title: index.title, generatedAt: index.generatedAt, generator: index.generator, scenarios: [] }
-    : sampleReport)
-/** Index page: the open report's id, and its payload script. */
-let reportId: string | null = null
-let reportPayloadsSrc: string | null = null
-/** Index page: the report being loaded, so a slower earlier load cannot replace a later choice. */
-let loadingReportId: string | null = null
+    (index
+      ? { title: index.title, generatedAt: index.generatedAt, generator: index.generator, scenarios: [] }
+      : sampleReport),
+)
 
 const state: State = {
   query: '',
@@ -119,25 +110,9 @@ const app = document.querySelector('#app')!
 function initialSelection(): string | null {
   if (index) return null
   const ref = parseReportHash(window.location.hash)
-  if (ref && report.scenarios.some((s) => s.id === ref.scenarioId)) return ref.scenarioId
-  return defaultScenarioId(report.scenarios)
+  if (ref && session.report.scenarios.some((s) => s.id === ref.scenarioId)) return ref.scenarioId
+  return defaultScenarioId(session.report.scenarios)
 }
-
-/** Scenario whose card is in the main column now. Null while the empty state shows. */
-let renderedId: string | null = null
-/** True while a selection change closes the side panel: its focus return has nowhere to go. */
-let switchingScenario = false
-/** False until the URL hash has been read, so the first render cannot overwrite a #msg= link. */
-let booted = false
-
-/** Arrow, Metrics or Component diagram button that opened the inspector. Close returns focus here. */
-let invoker: InspectorInvoker | null = null
-let inspector: InspectorController | null = null
-/** Scenario the side panel is showing, for its print copy. Errors have no invoker, so it is kept here. */
-let panelScenarioId: string | null = null
-/** Suppress hashchange while we write the hash ourselves. */
-let writingHash = false
-let stopTopbarTracking: () => void = () => {}
 
 function reportLocation(): { hash: string; replace?: (url: string) => void } {
   return {
@@ -159,10 +134,10 @@ function reportLocation(): { hash: string; replace?: (url: string) => void } {
 }
 
 function writeHash(ref: HashRef | null): void {
-  writingHash = true
-  const named = index && reportId ? { ...(ref ?? { scenarioId: '' }), reportId } : ref
+  session.writingHash = true
+  const named = index && session.reportId ? { ...(ref ?? { scenarioId: '' }), reportId: session.reportId } : ref
   writeReportHash(reportLocation(), named)
-  writingHash = false
+  session.writingHash = false
 }
 
 /** The URL names the shown scenario; an open message replaces it with #msg= (see openMessage). */
@@ -172,7 +147,7 @@ function writeScenarioHash(): void {
 
 function counts() {
   if (index) return indexTotals(index)
-  return report.scenarios.reduce(
+  return session.report.scenarios.reduce(
     (acc, s) => {
       acc[s.status]++
       return acc
@@ -184,8 +159,8 @@ function counts() {
 function filtered(): Scenario[] {
   const q = state.query.trim().toLowerCase()
   // On the index page a query that matches the report's title keeps all its scenarios.
-  const reportMatches = !q || (index !== null && report.title.toLowerCase().includes(q))
-  return report.scenarios.filter((s) => {
+  const reportMatches = !q || (index !== null && session.report.title.toLowerCase().includes(q))
+  return session.report.scenarios.filter((s) => {
     if (!state.status[s.status]) return false
     if (reportMatches) return true
     const hay = scenarioHaystack(s).toLowerCase()
@@ -269,8 +244,8 @@ function renderShell(): void {
     </div>
   `
 
-  stopTopbarTracking()
-  stopTopbarTracking = trackTopbarHeight(document.querySelector<HTMLElement>('.topbar')!)
+  session.stopTopbarTracking()
+  session.stopTopbarTracking = trackTopbarHeight(document.querySelector<HTMLElement>('.topbar')!)
   bindChrome()
   renderNav()
   renderMain()
@@ -343,26 +318,26 @@ function bindTopbarButtons(): void {
 
 /** The side panel (inspector), and its Timing rows that reveal a message in the diagram. */
 function bindSidePanel(): void {
-  inspector = bindInspector(document, {
+  session.inspector = bindInspector(document, {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onContent: () => syncPrintPanel(),
     onClose: (opened) => {
       writeScenarioHash()
-      panelScenarioId = null
+      session.panelScenarioId = null
       syncPrintCopies()
-      if (switchingScenario) {
-        invoker = null
+      if (session.switchingScenario) {
+        session.invoker = null
         return
       }
       if (opened?.kind === 'components' || opened?.kind === 'metrics') {
-        invoker = null
+        session.invoker = null
         const button = opened.kind === 'components' ? '[data-show-components]' : '[data-show-metrics]'
         document.querySelector<HTMLButtonElement>(`#card-${cssEscape(opened.scenarioId)} ${button}`)?.focus()
         return
       }
       const messageId = focusTargetAfterClose(opened?.messageId ?? null)
       const scenarioId = opened?.scenarioId
-      invoker = null
+      session.invoker = null
       if (!messageId || !scenarioId) return
       const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenarioId)} .seq-scroll`)
       if (scroll) focusDiagramMessage(scroll, messageId)
@@ -393,7 +368,7 @@ function onMainClick(ev: MouseEvent): void {
       ev,
       (node) => messageFromNode(node),
       (scenarioId, message) => {
-        const scenario = report.scenarios.find((item) => item.id === scenarioId)
+        const scenario = session.report.scenarios.find((item) => item.id === scenarioId)
         if (scenario) openMessage(scenario, message)
       },
     )
@@ -402,19 +377,19 @@ function onMainClick(ev: MouseEvent): void {
   }
   const componentsBtn = target.closest<HTMLButtonElement>('[data-show-components]')
   if (componentsBtn) {
-    const scenario = report.scenarios.find((item) => item.id === componentsBtn.dataset.showComponents)
+    const scenario = session.report.scenarios.find((item) => item.id === componentsBtn.dataset.showComponents)
     if (scenario) openComponents(scenario)
     return
   }
   const metricsBtn = target.closest<HTMLButtonElement>('[data-show-metrics]')
   if (metricsBtn) {
-    const scenario = report.scenarios.find((item) => item.id === metricsBtn.dataset.showMetrics)
+    const scenario = session.report.scenarios.find((item) => item.id === metricsBtn.dataset.showMetrics)
     if (scenario) openMetrics(scenario)
     return
   }
   const errBtn = target.closest<HTMLButtonElement>('[data-show-error]')
   if (errBtn) {
-    const scenario = report.scenarios.find((s) => s.id === errBtn.dataset.showError)
+    const scenario = session.report.scenarios.find((s) => s.id === errBtn.dataset.showError)
     if (scenario) openError(scenario)
     return
   }
@@ -487,7 +462,7 @@ function onDiagramKey(ev: KeyboardEvent, scrollKey: HTMLElement, openBtn: HTMLBu
       ev.preventDefault()
       ev.stopPropagation()
       focusDiagramMessage(scrollKey, action.messageId)
-      if (inspector?.isOpen()) {
+      if (session.inspector?.isOpen()) {
         const msg = findMessage(scenario, action.messageId)
         if (msg) openMessage(scenario, msg)
       }
@@ -516,7 +491,7 @@ function renderNav(): void {
   list.innerHTML = items
     .map((s) => {
       const msgs = s.events.filter((e) => e.kind === 'message').length
-      const number = report.scenarios.indexOf(s) + 1
+      const number = session.report.scenarios.indexOf(s) + 1
       const tooltip = state.sidebarCollapsed
         ? ` title="${escapeAttr(navItemTooltip(s.title, statusLabel(s.status), msgs))}"`
         : ''
@@ -550,11 +525,11 @@ function renderIndexNav(manifest: IndexManifest): void {
   const hadFocus = list.contains(document.activeElement)
   const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.navKey
   const matchesLoaded = (scenarioId: string, q: string) => {
-    const s = report.scenarios.find((item) => item.id === scenarioId)
+    const s = session.report.scenarios.find((item) => item.id === scenarioId)
     return s ? scenarioHaystack(s).toLowerCase().includes(q) : false
   }
   list.innerHTML = indexNavHtml(manifest, {
-    reportId,
+    reportId: session.reportId,
     selectedId: state.selectedId,
     expanded: state.expanded,
     query: state.query,
@@ -575,7 +550,7 @@ function renderIndexNav(manifest: IndexManifest): void {
     btn.addEventListener('click', () => {
       const rid = btn.dataset.report!
       const sid = btn.dataset.nav!
-      if (rid === reportId) selectScenario(sid)
+      if (rid === session.reportId) selectScenario(sid)
       else void openReport(rid, { reportId: rid, scenarioId: sid })
     })
   })
@@ -599,40 +574,43 @@ async function openReport(id: string, ref?: HashRef, scroll = true): Promise<voi
     window.location.href = entry.href
     return
   }
-  loadingReportId = id
+  session.loadingReportId = id
   state.expanded.add(id)
   const main = document.querySelector('#main')!
-  if (reportId !== id) {
+  if (session.reportId !== id) {
     main.innerHTML = `<div class="empty" role="status"><p>Loading ${escapeHtml(entry.title)}…</p></div>`
   }
   let data: ReportData
   try {
     data = await loadReportData(entry)
   } catch {
-    if (loadingReportId !== id) return
-    loadingReportId = null
+    if (session.loadingReportId !== id) return
+    session.loadingReportId = null
     main.innerHTML = `<div class="empty" role="alert"><p>Could not load ${escapeHtml(entry.title)}. Its data file, <code>${escapeHtml(entry.data)}</code>, should be next to this page.</p></div>`
     return
   }
-  if (loadingReportId !== id) return
-  loadingReportId = null
-  if (reportId !== id) {
-    if (inspector?.isOpen()) {
-      switchingScenario = true
-      inspector.close()
-      switchingScenario = false
+  if (session.loadingReportId !== id) return
+  session.loadingReportId = null
+  if (session.reportId !== id) {
+    if (session.inspector?.isOpen()) {
+      session.switchingScenario = true
+      session.inspector.close()
+      session.switchingScenario = false
     }
     forgetDiagrams()
-    report = data.report
-    reportId = id
-    reportPayloadsSrc = data.payloadsSrc
-    renderedId = null
-    document.title = `${report.title} · ${index?.title ?? 'LSD reports'}`
+    session.report = data.report
+    session.reportId = id
+    session.reportPayloadsSrc = data.payloadsSrc
+    session.renderedId = null
+    document.title = `${session.report.title} · ${index?.title ?? 'LSD reports'}`
   }
-  const wanted = ref?.scenarioId && report.scenarios.some((s) => s.id === ref.scenarioId) ? ref.scenarioId : null
+  const wanted =
+    ref?.scenarioId && session.report.scenarios.some((s) => s.id === ref.scenarioId) ? ref.scenarioId : null
   // A failed report opens at its first failure.
   state.selectedId =
-    wanted ?? report.scenarios.find((s) => s.status === 'error')?.id ?? defaultScenarioId(report.scenarios)
+    wanted ??
+    session.report.scenarios.find((s) => s.status === 'error')?.id ??
+    defaultScenarioId(session.report.scenarios)
   if (wanted) revealFiltered(wanted)
   renderNav()
   renderMain()
@@ -660,7 +638,7 @@ function selectedNavButton(): HTMLButtonElement | null {
  * The page scrolls back to the scenario's top.
  */
 function selectScenario(id: string): void {
-  if (!report.scenarios.some((s) => s.id === id)) return
+  if (!session.report.scenarios.some((s) => s.id === id)) return
   const main = document.querySelector('#main')!
   const focusInMain = main.contains(document.activeElement)
   state.selectedId = id
@@ -687,15 +665,15 @@ function scrollToScenario(): void {
 
 function heroHtml(): string {
   const back = index
-    ? `<p class="hero-index">${escapeHtml(index.title)} · report ${index.reports.findIndex((r) => r.id === reportId) + 1} of ${index.reports.length}</p>`
+    ? `<p class="hero-index">${escapeHtml(index.title)} · report ${index.reports.findIndex((r) => r.id === session.reportId) + 1} of ${index.reports.length}</p>`
     : ''
   return `
     <div class="report-hero">
       ${back}
-      <h1>${escapeHtml(report.title)}</h1>
+      <h1>${escapeHtml(session.report.title)}</h1>
       <div class="meta">
-        <span>Generated ${escapeHtml(formatGeneratedAt(report.generatedAt))}</span>
-        <code>${escapeHtml(report.generator)}</code>
+        <span>Generated ${escapeHtml(formatGeneratedAt(session.report.generatedAt))}</span>
+        <code>${escapeHtml(session.report.generator)}</code>
       </div>
     </div>`
 }
@@ -707,30 +685,33 @@ function heroHtml(): string {
  */
 function renderMain(): void {
   const main = document.querySelector('#main')!
-  if (index && !reportId) {
-    if (!loadingReportId) {
+  if (index && !session.reportId) {
+    if (!session.loadingReportId) {
       main.innerHTML = `<div class="empty" role="status"><p>${index.reports.length ? 'Choose a report.' : 'No reports have been written to this directory yet.'}</p></div>`
     }
     return
   }
   const items = filtered()
-  const next = reselect(report.scenarios, items, state.selectedId)
+  const next = reselect(session.report.scenarios, items, state.selectedId)
   if (next !== state.selectedId && next) {
     state.selectedId = next
     renderNav()
   }
   const showId = next
-  if (showId === renderedId && (showId === null ? main.querySelector('.empty') : main.querySelector('.scenario-card')))
+  if (
+    showId === session.renderedId &&
+    (showId === null ? main.querySelector('.empty') : main.querySelector('.scenario-card'))
+  )
     return
 
   // The side panel shows something from the scenario being replaced.
-  if (inspector?.isOpen() && panelScenarioId !== showId) {
-    switchingScenario = true
-    inspector.close()
-    switchingScenario = false
+  if (session.inspector?.isOpen() && session.panelScenarioId !== showId) {
+    session.switchingScenario = true
+    session.inspector.close()
+    session.switchingScenario = false
   }
-  renderedId = showId
-  const scenario = showId ? report.scenarios.find((s) => s.id === showId) : undefined
+  session.renderedId = showId
+  const scenario = showId ? session.report.scenarios.find((s) => s.id === showId) : undefined
   if (!scenario) {
     main.innerHTML = `${heroHtml()}
       <div class="empty" role="status">
@@ -741,15 +722,15 @@ function renderMain(): void {
     return
   }
   main.innerHTML = `${heroHtml()}${scenarioHtml(scenario)}`
-  if (booted && !panelScenarioId) writeScenarioHash()
+  if (session.booted && !session.panelScenarioId) writeScenarioHash()
   syncPrintCopies()
   bindDiagramScroll(main)
 }
 
 /** Scroll a scenario's diagram to a message. Shows that scenario first. */
 function revealMessage(scenarioId: string, messageId: string): void {
-  if (!report.scenarios.some((item) => item.id === scenarioId)) return
-  if (renderedId !== scenarioId) selectScenario(scenarioId)
+  if (!session.report.scenarios.some((item) => item.id === scenarioId)) return
+  if (session.renderedId !== scenarioId) selectScenario(scenarioId)
   const y = messageOffsetY(scenarioId, messageId)
   const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenarioId)} .seq-scroll`)
   if (!scroll || y == null) return
@@ -761,11 +742,11 @@ function revealMessage(scenarioId: string, messageId: string): void {
 function scenarioFrom(node: Element): Scenario | undefined {
   const card = node.closest<HTMLElement>('[id^="card-"]')
   if (!card) return
-  return report.scenarios.find((s) => s.id === card.id.slice('card-'.length))
+  return session.report.scenarios.find((s) => s.id === card.id.slice('card-'.length))
 }
 
 function scenarioHtml(s: Scenario): string {
-  const labelMaxWidth = report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
+  const labelMaxWidth = session.report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
   const diagram = renderDiagramHtml(s, labelMaxWidth)
   return `
   <article class="scenario-card ${escapeAttr(s.status)}" id="card-${escapeAttr(s.id)}" data-status="${escapeAttr(s.status)}" aria-labelledby="scenario-title">
@@ -800,11 +781,11 @@ function scenarioHtml(s: Scenario): string {
 
 function openError(scenario: Scenario): void {
   const err = scenario.error
-  if (!err || !inspector) return
-  panelScenarioId = scenario.id
-  invoker = null
+  if (!err || !session.inspector) return
+  session.panelScenarioId = scenario.id
+  session.invoker = null
   writeScenarioHash()
-  inspector.openError({
+  session.inspector.openError({
     status: scenario.status,
     headline: err.headline,
     message: err.message,
@@ -824,8 +805,10 @@ function syncPrintCopies(): void {
  * its scenario, after the sequence diagram. A closed panel prints nothing.
  */
 function syncPrintPanel(): void {
-  const view = inspector?.printView() ?? null
-  const scenario = panelScenarioId ? report.scenarios.find((item) => item.id === panelScenarioId) : undefined
+  const view = session.inspector?.printView() ?? null
+  const scenario = session.panelScenarioId
+    ? session.report.scenarios.find((item) => item.id === session.panelScenarioId)
+    : undefined
   if (!view || !scenario || view.view === 'metrics') {
     placePrintPanel(document, null)
     return
@@ -843,8 +826,8 @@ function syncPrintPanel(): void {
  * view, inside that scenario. Any other view, or a closed panel, prints none.
  */
 function syncPrintMetrics(): void {
-  const id = inspector?.isOpen() && invoker?.kind === 'metrics' ? invoker.scenarioId : null
-  const scenario = id ? report.scenarios.find((item) => item.id === id) : undefined
+  const id = session.inspector?.isOpen() && session.invoker?.kind === 'metrics' ? session.invoker.scenarioId : null
+  const scenario = id ? session.report.scenarios.find((item) => item.id === id) : undefined
   placePrintMetrics(
     document,
     scenario
@@ -857,20 +840,20 @@ function syncPrintMetrics(): void {
 }
 
 function openComponents(scenario: Scenario): void {
-  if (!inspector) return
-  panelScenarioId = scenario.id
-  invoker = { scenarioId: scenario.id, kind: 'components' }
+  if (!session.inspector) return
+  session.panelScenarioId = scenario.id
+  session.invoker = { scenarioId: scenario.id, kind: 'components' }
   writeScenarioHash()
-  inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
+  session.inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
   syncPrintCopies()
 }
 
 function openMetrics(scenario: Scenario): void {
-  if (!inspector) return
-  panelScenarioId = scenario.id
-  invoker = { scenarioId: scenario.id, kind: 'metrics' }
+  if (!session.inspector) return
+  session.panelScenarioId = scenario.id
+  session.invoker = { scenarioId: scenario.id, kind: 'metrics' }
   writeScenarioHash()
-  inspector.openMetrics(scenario.id, {
+  session.inspector.openMetrics(scenario.id, {
     heading: scenario.title,
     metrics: scenario.metrics,
     timingHtml: timingPanelHtml(scenario),
@@ -879,11 +862,11 @@ function openMetrics(scenario: Scenario): void {
 }
 
 function openMessage(scenario: Scenario, msg: MessageEvent): void {
-  if (!inspector) return
-  panelScenarioId = scenario.id
-  invoker = { scenarioId: scenario.id, messageId: msg.id }
+  if (!session.inspector) return
+  session.panelScenarioId = scenario.id
+  session.invoker = { scenarioId: scenario.id, messageId: msg.id }
   writeHash({ scenarioId: scenario.id, messageId: msg.id })
-  inspector.openMessage(scenario.id, msg)
+  session.inspector.openMessage(scenario.id, msg)
   syncPrintCopies()
 }
 
@@ -892,16 +875,17 @@ function openMessage(scenario: Scenario, msg: MessageEvent): void {
  * and open its message when it names one. Payload still loads on open.
  */
 function applyHash(): void {
-  if (writingHash) return
+  if (session.writingHash) return
   const ref = parseReportHash(window.location.hash)
   if (index) {
-    const id = ref?.reportId && indexEntry(ref.reportId) ? ref.reportId : reportId ? null : defaultReportId(index)
-    if (id && id !== reportId) {
+    const id =
+      ref?.reportId && indexEntry(ref.reportId) ? ref.reportId : session.reportId ? null : defaultReportId(index)
+    if (id && id !== session.reportId) {
       // The first report opens where the page starts; a later link scrolls to its scenario.
-      void openReport(id, ref ?? undefined, booted)
+      void openReport(id, ref ?? undefined, session.booted)
       return
     }
-    if (!ref || ref.reportId !== reportId) return
+    if (!ref || ref.reportId !== session.reportId) return
   }
   if (!ref) return
   applyRef(ref)
@@ -909,15 +893,18 @@ function applyHash(): void {
 
 /** Show the scenario a reference names in the open report, and open its message when it names one. */
 function applyRef(ref: HashRef): void {
-  const scenario = report.scenarios.find((item) => item.id === ref.scenarioId)
+  const scenario = session.report.scenarios.find((item) => item.id === ref.scenarioId)
   if (!scenario) return
   // A scenario the filters hide is shown anyway: the link asked for it.
   revealFiltered(scenario.id)
-  if (renderedId !== scenario.id) selectScenario(scenario.id)
+  if (session.renderedId !== scenario.id) selectScenario(scenario.id)
   if (!ref.messageId) return
   const msg = findMessage(scenario, ref.messageId)
   if (!msg) return
-  const already = inspector?.isOpen() && invoker?.scenarioId === ref.scenarioId && invoker?.messageId === ref.messageId
+  const already =
+    session.inspector?.isOpen() &&
+    session.invoker?.scenarioId === ref.scenarioId &&
+    session.invoker?.messageId === ref.messageId
   requestAnimationFrame(() => {
     const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenario.id)} .seq-scroll`)
     if (scroll) focusDiagramMessage(scroll, msg.id)
@@ -936,10 +923,10 @@ function messageFromNode(node: Element): { scenarioId: string; message: MessageE
 
 async function loadMessagePayload(scenarioId: string, messageId: string): Promise<unknown> {
   const map = index
-    ? reportPayloadsSrc
-      ? await loadPayloadsFrom(reportPayloadsSrc)
+    ? session.reportPayloadsSrc
+      ? await loadPayloadsFrom(session.reportPayloadsSrc)
       : {}
-    : await loadExternalPayloads(report === sampleReport)
+    : await loadExternalPayloads(session.report === sampleReport)
   const key = payloadKey(scenarioId, messageId)
   if (key in map) return map[key]
   return undefined
@@ -971,7 +958,7 @@ function onKey(e: KeyboardEvent): void {
   const typing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
   if (e.key === 'Escape') {
-    if (inspector?.isOpen()) return
+    if (session.inspector?.isOpen()) return
     if (state.helpOpen) {
       state.helpOpen = false
       document.querySelector('#help')!.setAttribute('data-open', 'false')
@@ -1014,7 +1001,7 @@ function onKey(e: KeyboardEvent): void {
   // Enter on a focused button presses that button (a list item, filters, theme…).
   // Anywhere else it goes into the shown scenario's diagram.
   if (e.key === 'Enter' && target.closest('button, a, [role="slider"]')) return
-  if (e.key === 'Enter' && renderedId) {
+  if (e.key === 'Enter' && session.renderedId) {
     e.preventDefault()
     focusSelectedDiagram()
     return
@@ -1037,7 +1024,7 @@ followOsTheme((theme) => paintThemeButton({ mode: 'auto', theme }))
 if (index) document.title = index.title
 renderShell()
 applyHash()
-booted = true
+session.booted = true
 window.addEventListener('hashchange', () => applyHash())
 window.addEventListener('keydown', onKey)
 window.addEventListener('resize', () => {
