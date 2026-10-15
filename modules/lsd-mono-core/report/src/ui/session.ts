@@ -2,7 +2,7 @@ import type { Report } from '../types'
 import type { InspectorController, InspectorInvoker } from './inspector'
 
 /**
- * The report page's mutable state, in one place (as `diagramState` is for diagrams). main.ts
+ * The report page's mutable state, in one place (as `diagramState` is for diagrams). app/context.ts
  * owns the one instance; filters and the selection are in its separate `state`.
  */
 export interface Session {

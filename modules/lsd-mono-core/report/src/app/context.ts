@@ -21,7 +21,7 @@ export interface State {
 /** The index page's manifest. Null on a single report's page. */
 export const index: IndexManifest | null = window.__LSD_REPORT__ ? null : (window.__LSD_INDEX__ ?? null)
 
-/** Everything else main.ts changes as the page runs. */
+/** Everything else the page changes as it runs. */
 export const session = createSession(
   window.__LSD_REPORT__ ??
     (index
