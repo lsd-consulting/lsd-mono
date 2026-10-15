@@ -87,7 +87,7 @@ public class PendingCall internal constructor(
                     label = label,
                     type = MessageType.SYNCHRONOUS_RESPONSE,
                     data = data,
-                    durationMs = durationMs(at),
+                    durationMs = timing?.durationMs?.let { Math.round(it) } ?: durationMs(at),
                     createdAt = at,
                     exactMs = exact,
                     derived = bothTimed,

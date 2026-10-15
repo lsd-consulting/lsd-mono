@@ -83,6 +83,7 @@ class CaptureToJsonTest {
         assertTrue(json.contains("\"key\": \"Messages\""))
         assertTrue(json.contains("\"value\": \"4\""))
         assertTrue(json.contains("\"key\": \"Captured duration\""))
+        assertTrue(json.contains("\"value\": \"12 ms\""), "only the explicit 12 ms counts")
         assertTrue(json.contains("\\u003cp\\u003eok\\u003c/p\\u003e"))
         assertFalse(json.contains("</script>"))
 

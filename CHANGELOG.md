@@ -30,6 +30,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - On desktop the component diagram and Timing and metrics panels open sized to their content: at least the message
   column's width, at most half the screen, with room for the timing lanes. Dragging still resizes them, and the
   message panel keeps the width you chose. Phones keep the full-width inline panel.
+- The Metrics view's "Captured duration" sums each message's measured duration: an explicit `took` or `Timing`
+  duration first, then call-to-reply time, then the legacy whole-ms value. It is fractional (to three places), and a
+  scenario whose durations are all given reports the same total on every run.
 - CI `gate` job, a single required check that passes for docs-only changes.
 - Coverage ratchet for Kover and Vitest.
 
