@@ -1448,3 +1448,65 @@ test('a tall diagram grows the page: page scroll drives the diagram, header stay
   await expect(page.locator('.seq-minimap')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/tall-diagram-end.png' })
 })
+
+test('the component diagram and metrics panels open sized to their content, and a phone keeps the full-width inline panel', async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openFixture(page, 'dark')
+  const panel = page.locator('#inspector')
+  const fits = (host: string) =>
+    page.evaluate((sel) => {
+      const el = document.querySelector<HTMLElement>(sel)!
+      const box = document.querySelector('#inspector')!.getBoundingClientRect()
+      return { width: box.width, overflow: el.scrollWidth - el.clientWidth }
+    }, host)
+
+  await page.locator('[data-show-components]').first().click()
+  await expect(panel).toBeVisible()
+  await expect.poll(async () => (await fits('#inspector-graph')).overflow).toBeLessThanOrEqual(1)
+  const graph = await fits('#inspector-graph')
+  expect(graph.width).toBeGreaterThanOrEqual(380)
+  expect(graph.width).toBeLessThanOrEqual(1440 * 0.5 + 1)
+  await page.screenshot({ path: 'test-results/panel-fit-components-desktop.png' })
+
+  await page.locator('[data-show-metrics]').first().click()
+  await expect(page.locator('#inspector-metrics')).toBeVisible()
+  await expect.poll(async () => (await fits('#inspector-metrics')).overflow).toBeLessThanOrEqual(1)
+  const metrics = await fits('#inspector-metrics')
+  expect(metrics.width).toBeGreaterThanOrEqual(380)
+  expect(metrics.width).toBeLessThanOrEqual(1440 * 0.5 + 1)
+  await page.screenshot({ path: 'test-results/panel-fit-metrics-desktop.png' })
+
+  // A drag still resizes after the auto-size.
+  const handle = page.locator('#inspector-resize')
+  await handle.focus()
+  await page.keyboard.press('ArrowLeft')
+  await expect.poll(async () => (await fits('#inspector-metrics')).width).toBeGreaterThan(metrics.width + 10)
+
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    reducedMotion: 'reduce',
+    colorScheme: 'dark',
+  })
+  const phone = await context.newPage()
+  await openFixture(phone, 'dark')
+  for (const [button, host] of [
+    ['[data-show-components]', '#inspector-graph'],
+    ['[data-show-metrics]', '#inspector-metrics'],
+  ] as const) {
+    await phone.locator(button).first().click()
+    await expect(phone.locator(host)).toBeVisible()
+    const box = await phone.locator('#inspector').boundingBox()
+    expect(box!.width, `${host} stays the page width on a phone`).toBeGreaterThanOrEqual(388)
+    expect(await phone.locator('#inspector').evaluate((el) => getComputedStyle(el).position)).toBe('static')
+    await phone.locator(host).scrollIntoViewIfNeeded()
+    await phone.screenshot({ path: `test-results/panel-fit-${host.slice(11)}-phone.png` })
+  }
+  await context.close()
+})

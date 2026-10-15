@@ -75,6 +75,37 @@ export function inspectorWidthLimits(viewport: number): { min: number; max: numb
   return { min: INSPECTOR_MIN_PX, max, expand }
 }
 
+/** At and below this width the panel stacks under the report at full width (app.css). */
+export const INSPECTOR_STACKED_PX = 860
+/** Room around a view's content: the panel's padding and a little air. */
+export const INSPECTOR_VIEW_GUTTER_PX = 40
+
+/**
+ * Width that fits a component diagram or metrics view whose content is [content] px wide:
+ * never narrower than the message column, and at most half the viewport so the diagram
+ * beside it keeps room. A wider drawing scrolls inside the panel, or the user drags it wider.
+ */
+export function fitViewWidth(content: number, viewport: number): number {
+  const { expand } = inspectorWidthLimits(viewport)
+  const cap = Math.max(INSPECTOR_NARROW_PX, Math.min(expand, Math.round(viewport * INSPECTOR_VIEW_MAX_SHARE)))
+  const want = Math.ceil(content) + INSPECTOR_VIEW_GUTTER_PX
+  return clampInspectorWidth(Math.min(cap, Math.max(INSPECTOR_NARROW_PX, want)), viewport)
+}
+
+/** Share of the viewport an auto-sized view may take. */
+export const INSPECTOR_VIEW_MAX_SHARE = 0.5
+/** Timing swim lanes and waterfall stretch to fit, so they ask for at least this much room. */
+export const TIMING_VIEW_MIN_PX = 480
+
+/** The natural width of [host]'s content, laid out without the panel's width limit. */
+export function naturalWidth(host: HTMLElement): number {
+  const prior = host.style.width
+  host.style.width = 'max-content'
+  const measured = Math.max(host.scrollWidth, host.getBoundingClientRect().width)
+  host.style.width = prior
+  return measured
+}
+
 export function clampInspectorWidth(px: number, viewport: number): number {
   const { min, max } = inspectorWidthLimits(viewport)
   return Math.round(Math.min(max, Math.max(min, px)))
@@ -164,6 +195,16 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     resize.setAttribute('aria-valuemin', String(limits.min))
     resize.setAttribute('aria-valuemax', String(limits.max))
     resize.setAttribute('aria-valuenow', String(width))
+  }
+
+  /**
+   * Size the panel to the open view's content. The saved width is untouched, so the next
+   * message opens at the column the user chose, and a drag still resizes from here. On a
+   * phone the panel is the page width already, so nothing changes.
+   */
+  function fitView(content: number): void {
+    if (viewport() <= INSPECTOR_STACKED_PX) return
+    applyWidth(fitViewWidth(content, viewport()))
   }
 
   function persistWidth(): void {
@@ -336,10 +377,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       const drawn = renderComponentDiagram(graph, heading)
       shownGraph = graph
       graphHost.innerHTML = componentsBodyHtml(drawn.svg, graph)
-      // Widen for this view only when the drawing needs it. The saved width is untouched,
-      // so the next message opens at the column the user chose.
-      const fit = drawn.width + 40
-      if (fit > width) applyWidth(Math.min(fit, inspectorWidthLimits(viewport()).expand))
+      fitView(drawn.width)
     },
     openMetrics(scenarioId, view) {
       begin({ scenarioId, kind: 'metrics' })
@@ -348,6 +386,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       meta.innerHTML = metricsMetaHtml(view)
       showViewChrome(metricsHost)
       metricsHost.innerHTML = metricsBodyHtml(scenarioId, view)
+      fitView(Math.max(naturalWidth(metricsHost), view.timingHtml ? TIMING_VIEW_MIN_PX : 0))
     },
     openError(error) {
       const token = begin(null)
