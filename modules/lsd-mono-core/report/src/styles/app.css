@@ -977,6 +977,11 @@ html {
   .inspector-resize {
     display: none;
   }
+  /* The panel is already the full width here, so Expand could not widen it (the width is
+     clamped to the screen) and did nothing. JSON wraps instead. */
+  #inspector-json-expand {
+    display: none;
+  }
   .sidebar {
     position: static;
     height: auto;

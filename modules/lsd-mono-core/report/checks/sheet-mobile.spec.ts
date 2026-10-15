@@ -38,6 +38,49 @@ function timedReport(): Report {
   return report
 }
 
+/** The sections fixture with one long, wide payload (call 1.2): tall and wider than a phone. */
+function payloadReport(): Report {
+  const report = timedReport()
+  const scenario = report.scenarios[0]
+  const wide = 'x'.repeat(160)
+  const data = Object.fromEntries(Array.from({ length: 80 }, (_, i) => [`field${i}`, i % 5 === 0 ? wide : i]))
+  scenario.events = scenario.events.map((e) => (e.kind === 'message' && e.id === 'm1-2' ? { ...e, data } : e))
+  return report
+}
+
+/** Elements in the panel that scroll on their own vertically, with their range. Empty is right. */
+function verticalScrollBoxes(page: Page) {
+  return page.evaluate(() =>
+    [document.querySelector('.inspector')!, ...document.querySelectorAll('.inspector *')]
+      .filter((el) => {
+        const cs = getComputedStyle(el)
+        return (
+          el.getClientRects().length > 0 && /(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1
+        )
+      })
+      .map((el) => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''} ${el.scrollHeight - el.clientHeight}px`),
+  )
+}
+
+/** The Close button sits below the top bar and inside the screen. */
+function closeInReach(page: Page) {
+  return page.evaluate(() => {
+    const close = [...document.querySelectorAll<HTMLElement>('.inspector-head button')].find((b) =>
+      /close/i.test(b.textContent ?? ''),
+    )
+    const bar = document.querySelector('.topbar')!.getBoundingClientRect()
+    if (!close) return 'no close button'
+    const r = close.getBoundingClientRect()
+    return r.top >= bar.bottom - 1 && r.bottom <= innerHeight
+      ? 'in reach'
+      : `close at ${Math.round(r.top)}, top bar ends ${Math.round(bar.bottom)}`
+  })
+}
+
+function pageWidth(page: Page) {
+  return page.evaluate(() => document.documentElement.scrollWidth - innerWidth)
+}
+
 function state(page: Page) {
   return page.evaluate(() => {
     const panel = document.querySelector<HTMLElement>('.inspector')!
@@ -94,6 +137,58 @@ for (const [phone, device] of Object.entries(PHONES)) {
         }
         const back = await state(page)
         expect(back.panelTop, 'the page scrolled back up past the panel').toBeGreaterThanOrEqual(viewport.height)
+      })
+
+      test('the component diagram: swipes on it scroll the page, a tap picks a link, Close stays in reach', async ({
+        page,
+      }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' })
+        await open(page, timedReport())
+        await expect(page.locator('.seq-svg')).toBeVisible()
+        await page.locator('[data-show-components]').first().tap()
+        const panel = page.locator('.inspector')
+        await expect(panel.locator('.component-diagram')).toBeVisible()
+        expect(await verticalScrollBoxes(page)).toEqual([])
+        expect(await pageWidth(page), 'nothing widens the page').toBeLessThanOrEqual(0)
+        const cdp = await page.context().newCDPSession(page)
+        const x = Math.round(viewport.width / 2)
+        const graph = panel.locator('#inspector-graph')
+        await graph.scrollIntoViewIfNeeded()
+        await page.evaluate(() => scrollBy(0, -150))
+        const box = (await graph.boundingBox())!
+        const before = await state(page)
+        await swipe(page, cdp, x, Math.min(box.y + box.height - 10, viewport.height - 40), Math.max(box.y + 10, 120))
+        expect((await state(page)).pageY, 'a swipe on the drawing scrolls the page').toBeGreaterThan(before.pageY + 50)
+        expect(await closeInReach(page)).toBe('in reach')
+        const edge = panel.locator('.edge-group').first()
+        await edge.scrollIntoViewIfNeeded()
+        const hit = (await edge.locator('.edge-hit').boundingBox())!
+        await page.touchscreen.tap(hit.x + hit.width / 2, hit.y + hit.height / 2)
+        await expect(panel.locator('.edge-group.is-selected')).toHaveCount(1)
+      })
+
+      test('a long, wide JSON payload: the page scrolls through it, lines wrap, no dead Expand, Close stays in reach', async ({
+        page,
+      }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' })
+        await open(page, payloadReport())
+        await expect(page.locator('.seq-svg')).toBeVisible()
+        await page.locator('.msg-open[aria-label="Open call 1.2"]').tap()
+        const panel = page.locator('.inspector')
+        const pre = panel.locator('pre').first()
+        await expect(pre).toContainText('field79')
+        // The panel is already full width: no Expand control that cannot widen it; long lines wrap.
+        await expect(panel.locator('#inspector-json-expand')).toBeHidden()
+        expect(await verticalScrollBoxes(page), 'no part of the panel is a second vertical scroll box').toEqual([])
+        expect(await pageWidth(page), 'the payload does not widen the page').toBeLessThanOrEqual(0)
+        expect(await pre.evaluate((el) => el.scrollWidth - el.clientWidth), 'long lines wrap').toBeLessThanOrEqual(0)
+        const cdp = await page.context().newCDPSession(page)
+        const x = Math.round(viewport.width / 2)
+        await pre.scrollIntoViewIfNeeded()
+        const before = await state(page)
+        await swipe(page, cdp, x, viewport.height - 60, 140)
+        expect((await state(page)).pageY, 'a swipe on the payload scrolls the page').toBeGreaterThan(before.pageY + 100)
+        expect(await closeInReach(page)).toBe('in reach')
       })
     })
   }
