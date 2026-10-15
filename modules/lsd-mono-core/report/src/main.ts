@@ -1,18 +1,13 @@
 import './styles/app.css'
 import './styles/timing.css'
 import './styles/diagram.css'
-import { sampleReport } from './data/sample-report'
-import type { MessageEvent, Report, Scenario, Status } from './types'
+import type { Report, Scenario, Status } from './types'
 import { scenarioDescriptionHtml, scenarioHaystack } from './ui/scenario-summary'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from './ui/inspector'
-import { loadExternalPayloads, loadPayloadsFrom, payloadKey } from './lib/payloads'
 import { defaultReportId, loadReportData, type IndexManifest, type ReportData } from './lib/report-index'
 import { parseReportHash, type HashRef } from './lib/report-hash'
 import { defaultScenarioId, reselect, stepSelection } from './ui/selection'
-import { placePrintMetrics, printMetricsSection } from './ui/metrics'
-import { timingPanelHtml, timingStripHtml } from './ui/timing'
-import { placePrintPanel, printComponentsSection, printMessageSection } from './ui/print-panel'
-import { renderComponentDiagram } from './lib/component-diagram'
+import { timingStripHtml } from './ui/timing'
 import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from './lib/diagram-a11y'
 import { scrollDiagramTo, scrollDiagramToOffset } from './lib/diagram/page-scroll'
 import { revealSearchHit, updateSearchCurrent } from './lib/diagram/search-reveal'
@@ -45,12 +40,22 @@ import {
   storeSidebarCollapsed,
 } from './ui/sidebar'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusLabel } from './ui/format'
-import { componentGraph } from './lib/component-graph'
 import { indexNavHtml } from './ui/index-nav'
 import { cssEscape, escapeAttr, escapeHtml } from './lib/escape'
 import { trackTopbarHeight } from './lib/topbar-height'
+import {
+  scenarioFrom,
+  openError,
+  syncPrintCopies,
+  syncPrintPanel,
+  openComponents,
+  openMetrics,
+  openMessage,
+  messageFromNode,
+  loadMessagePayload,
+} from './app/panel'
 import { counts, filtered, indexEntry } from './app/filters'
-import { writeHash, writeScenarioHash } from './app/url-hash'
+import { writeScenarioHash } from './app/url-hash'
 import { index, session, state, app } from './app/context'
 
 declare global {
@@ -635,12 +640,6 @@ function revealMessage(scenarioId: string, messageId: string): void {
   syncDiagramWindow(scroll)
 }
 
-function scenarioFrom(node: Element): Scenario | undefined {
-  const card = node.closest<HTMLElement>('[id^="card-"]')
-  if (!card) return
-  return session.report.scenarios.find((s) => s.id === card.id.slice('card-'.length))
-}
-
 function scenarioHtml(s: Scenario): string {
   const labelMaxWidth = session.report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
   const diagram = renderDiagramHtml(s, labelMaxWidth)
@@ -673,97 +672,6 @@ function scenarioHtml(s: Scenario): string {
       </section>
     </div>
   </article>`
-}
-
-function openError(scenario: Scenario): void {
-  const err = scenario.error
-  if (!err || !session.inspector) return
-  session.panelScenarioId = scenario.id
-  session.invoker = null
-  writeScenarioHash()
-  session.inspector.openError({
-    status: scenario.status,
-    headline: err.headline,
-    message: err.message,
-    stack: err.stack,
-  })
-  syncPrintCopies()
-}
-
-/** Print copies of the side panel follow what it shows. The panel itself never prints. */
-function syncPrintCopies(): void {
-  syncPrintMetrics()
-  syncPrintPanel()
-}
-
-/**
- * The message JSON, error, or component diagram open in the side panel prints in
- * its scenario, after the sequence diagram. A closed panel prints nothing.
- */
-function syncPrintPanel(): void {
-  const view = session.inspector?.printView() ?? null
-  const scenario = session.panelScenarioId
-    ? session.report.scenarios.find((item) => item.id === session.panelScenarioId)
-    : undefined
-  if (!view || !scenario || view.view === 'metrics') {
-    placePrintPanel(document, null)
-    return
-  }
-  if (view.view === 'components') {
-    const drawn = renderComponentDiagram(componentGraph(scenario), scenario.title)
-    placePrintPanel(document, { scenarioId: scenario.id, html: printComponentsSection(view, drawn.svg, drawn.width) })
-    return
-  }
-  placePrintPanel(document, { scenarioId: scenario.id, html: printMessageSection(view) })
-}
-
-/**
- * Printed metrics follow the side panel: present only while it shows the Metrics
- * view, inside that scenario. Any other view, or a closed panel, prints none.
- */
-function syncPrintMetrics(): void {
-  const id = session.inspector?.isOpen() && session.invoker?.kind === 'metrics' ? session.invoker.scenarioId : null
-  const scenario = id ? session.report.scenarios.find((item) => item.id === id) : undefined
-  placePrintMetrics(
-    document,
-    scenario
-      ? {
-          scenarioId: scenario.id,
-          html: printMetricsSection(scenario.id, scenario.metrics),
-        }
-      : null,
-  )
-}
-
-function openComponents(scenario: Scenario): void {
-  if (!session.inspector) return
-  session.panelScenarioId = scenario.id
-  session.invoker = { scenarioId: scenario.id, kind: 'components' }
-  writeScenarioHash()
-  session.inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
-  syncPrintCopies()
-}
-
-function openMetrics(scenario: Scenario): void {
-  if (!session.inspector) return
-  session.panelScenarioId = scenario.id
-  session.invoker = { scenarioId: scenario.id, kind: 'metrics' }
-  writeScenarioHash()
-  session.inspector.openMetrics(scenario.id, {
-    heading: scenario.title,
-    metrics: scenario.metrics,
-    timingHtml: timingPanelHtml(scenario),
-  })
-  syncPrintCopies()
-}
-
-function openMessage(scenario: Scenario, msg: MessageEvent): void {
-  if (!session.inspector) return
-  session.panelScenarioId = scenario.id
-  session.invoker = { scenarioId: scenario.id, messageId: msg.id }
-  writeHash({ scenarioId: scenario.id, messageId: msg.id })
-  session.inspector.openMessage(scenario.id, msg)
-  syncPrintCopies()
 }
 
 /**
@@ -806,26 +714,6 @@ function applyRef(ref: HashRef): void {
     if (scroll) focusDiagramMessage(scroll, msg.id)
     if (!already) openMessage(scenario, msg)
   })
-}
-
-function messageFromNode(node: Element): { scenarioId: string; message: MessageEvent } | null {
-  const scenario = scenarioFrom(node)
-  const messageId = node.getAttribute('data-message-id')
-  if (!scenario || !messageId) return null
-  const message = findMessage(scenario, messageId)
-  if (!message) return null
-  return { scenarioId: scenario.id, message }
-}
-
-async function loadMessagePayload(scenarioId: string, messageId: string): Promise<unknown> {
-  const map = index
-    ? session.reportPayloadsSrc
-      ? await loadPayloadsFrom(session.reportPayloadsSrc)
-      : {}
-    : await loadExternalPayloads(session.report === sampleReport)
-  const key = payloadKey(scenarioId, messageId)
-  if (key in map) return map[key]
-  return undefined
 }
 
 /** One step from `from` (the focused list item), or from the shown scenario. */
