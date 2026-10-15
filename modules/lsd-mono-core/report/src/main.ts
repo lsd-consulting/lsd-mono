@@ -6,15 +6,8 @@ import type { MessageEvent, Report, Scenario, Status } from './types'
 import { scenarioDescriptionHtml, scenarioHaystack } from './ui/scenario-summary'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from './ui/inspector'
 import { loadExternalPayloads, loadPayloadsFrom, payloadKey } from './lib/payloads'
-import {
-  defaultReportId,
-  indexTotals,
-  loadReportData,
-  type IndexManifest,
-  type IndexReport,
-  type ReportData,
-} from './lib/report-index'
-import { parseReportHash, writeReportHash, type HashRef } from './lib/report-hash'
+import { defaultReportId, loadReportData, type IndexManifest, type ReportData } from './lib/report-index'
+import { parseReportHash, type HashRef } from './lib/report-hash'
 import { defaultScenarioId, reselect, stepSelection } from './ui/selection'
 import { placePrintMetrics, printMetricsSection } from './ui/metrics'
 import { timingPanelHtml, timingStripHtml } from './ui/timing'
@@ -56,6 +49,8 @@ import { componentGraph } from './lib/component-graph'
 import { indexNavHtml } from './ui/index-nav'
 import { cssEscape, escapeAttr, escapeHtml } from './lib/escape'
 import { trackTopbarHeight } from './lib/topbar-height'
+import { counts, filtered, indexEntry } from './app/filters'
+import { writeHash, writeScenarioHash } from './app/url-hash'
 import { index, session, state, app } from './app/context'
 
 declare global {
@@ -71,64 +66,6 @@ declare global {
     /** Filled by each `<stem>-report.js` as the index page opens reports. */
     __LSD_REPORTS__?: Record<string, ReportData>
   }
-}
-
-function reportLocation(): { hash: string; replace?: (url: string) => void } {
-  return {
-    get hash() {
-      return window.location.hash
-    },
-    set hash(value: string) {
-      window.location.hash = value.startsWith('#') ? value.slice(1) : value
-    },
-    replace(url: string) {
-      try {
-        const next = url === '#' || url === '' ? `${window.location.pathname}${window.location.search}` : url
-        window.history.replaceState(null, '', next)
-      } catch {
-        window.location.hash = url.startsWith('#') ? url.slice(1) : url
-      }
-    },
-  }
-}
-
-function writeHash(ref: HashRef | null): void {
-  session.writingHash = true
-  const named = index && session.reportId ? { ...(ref ?? { scenarioId: '' }), reportId: session.reportId } : ref
-  writeReportHash(reportLocation(), named)
-  session.writingHash = false
-}
-
-/** The URL names the shown scenario; an open message replaces it with #msg= (see openMessage). */
-function writeScenarioHash(): void {
-  writeHash(state.selectedId ? { scenarioId: state.selectedId } : null)
-}
-
-function counts() {
-  if (index) return indexTotals(index)
-  return session.report.scenarios.reduce(
-    (acc, s) => {
-      acc[s.status]++
-      return acc
-    },
-    { success: 0, warn: 0, error: 0 } as Record<Status, number>,
-  )
-}
-
-function filtered(): Scenario[] {
-  const q = state.query.trim().toLowerCase()
-  // On the index page a query that matches the report's title keeps all its scenarios.
-  const reportMatches = !q || (index !== null && session.report.title.toLowerCase().includes(q))
-  return session.report.scenarios.filter((s) => {
-    if (!state.status[s.status]) return false
-    if (reportMatches) return true
-    const hay = scenarioHaystack(s).toLowerCase()
-    return hay.includes(q)
-  })
-}
-
-function indexEntry(id: string | null): IndexReport | undefined {
-  return id ? index?.reports.find((r) => r.id === id) : undefined
 }
 
 function paintThemeButton(
