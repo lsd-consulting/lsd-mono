@@ -6,9 +6,19 @@ plugins {
     `java-library`
 }
 
-// Line coverage was 73.3% when the floor was set (#30). Raise the floor as tests are added.
+// Line coverage was 73.3% when the floor was set (#30), with the readme samples counted. Without them
+// it is 97.4%. Raise the floor as tests are added.
 lsdCoverage {
-    lineFloor.set(81)
+    lineFloor.set(95)
+}
+
+// The README and kitchen-sink samples are programs that build sample reports, not library code.
+kover {
+    currentProject {
+        sources {
+            excludedSourceSets.add("readme")
+        }
+    }
 }
 
 base.archivesName.set("lsd-mono-core")
