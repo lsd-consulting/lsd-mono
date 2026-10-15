@@ -957,14 +957,22 @@ html {
   .shell.with-inspector {
     grid-template-columns: 1fr;
   }
-  .inspector {
+  /* Narrow screens: the panel sits inline below the report and is part of the page, not a
+     second scroll box. A capped, scrolling panel took the swipe (a touch gesture latches to
+     the inner scroller), so the page could not be scrolled past it. Wide content still
+     scrolls sideways inside its own block; the header sticks under the top bar so Close
+     stays in reach. */
+  .inspector,
+  .inspector.inspector-json-wide {
     position: static;
-    max-height: 50vh;
+    max-height: none;
+    overflow: visible;
+    overflow-x: clip;
     border-left: none;
     border-top: 1px solid var(--border);
   }
-  .inspector.inspector-json-wide {
-    max-height: 85vh;
+  .inspector-head {
+    top: var(--topbar-h, 0px);
   }
   .inspector-resize {
     display: none;

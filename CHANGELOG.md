@@ -21,6 +21,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - In-diagram find scrolls the first match into view as you type (debounced) and on Enter / the phone keyboard's Go,
   allowing for zoom, the sticky header and the on-screen keyboard. Matches get a theme-aware highlight, the current
   match a stronger one; the visible `[match]` text is gone (screen readers hear “search match” instead).
+- On narrow screens the side panel (inspector, Timing and metrics) sits inline below the report as part of the
+  page instead of a capped inner scroll box, so a swipe on it scrolls the page rather than getting trapped.
 - The Pages site opens on the kitchen-sink report's index; `kitchen-sink.html` still opens the report alone.
 - A sequence diagram taller than the screen extends the page and scrolls with it, instead of scrolling inside its panel.
   The section links above a diagram scroll the page to that section again, at any zoom.
