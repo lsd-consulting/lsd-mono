@@ -20,21 +20,6 @@ import { placePrintMetrics, printMetricsSection } from './ui/metrics'
 import { timingPanelHtml, timingStripHtml } from './ui/timing'
 import { placePrintPanel, printComponentsSection, printMessageSection } from './ui/print-panel'
 import { renderComponentDiagram } from './lib/component-diagram'
-
-declare global {
-  interface Window {
-    /** Set by lsd-mono-core ReportWriter before this bundle boots. Dev: assign before load to preview a capture. */
-    __LSD_REPORT__?: Report
-    /** Full message payloads, loaded when the inspector opens. Not part of the first paint. */
-    __LSD_PAYLOADS__?: Record<string, unknown>
-    /** Sibling script that assigns `__LSD_PAYLOADS__`. Relative to the report HTML. */
-    __LSD_PAYLOADS_SRC__?: string
-    /** Set on the index page instead of `__LSD_REPORT__`: every report in the directory. */
-    __LSD_INDEX__?: IndexManifest
-    /** Filled by each `<stem>-report.js` as the index page opens reports. */
-    __LSD_REPORTS__?: Record<string, ReportData>
-  }
-}
 import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from './lib/diagram-a11y'
 import { scrollDiagramTo, scrollDiagramToOffset } from './lib/diagram/page-scroll'
 import { revealSearchHit, updateSearchCurrent } from './lib/diagram/search-reveal'
@@ -61,7 +46,6 @@ import {
 } from './ui/theme'
 import {
   applySidebarCollapsed,
-  getSidebarCollapsed,
   navItemTooltip,
   sidebarToggleGlyph,
   sidebarToggleLabel,
@@ -72,46 +56,21 @@ import { componentGraph } from './lib/component-graph'
 import { indexNavHtml } from './ui/index-nav'
 import { cssEscape, escapeAttr, escapeHtml } from './lib/escape'
 import { trackTopbarHeight } from './lib/topbar-height'
-import { createSession } from './ui/session'
+import { index, session, state, app } from './app/context'
 
-interface State {
-  query: string
-  status: Record<Status, boolean>
-  /** The scenario shown in the main column (#39). Kept while filters hide it all. */
-  selectedId: string | null
-  helpOpen: boolean
-  sidebarCollapsed: boolean
-  /** Index page: reports whose scenarios are listed in the sidebar. */
-  expanded: Set<string>
-}
-
-/** The index page's manifest. Null on a single report's page. */
-const index: IndexManifest | null = window.__LSD_REPORT__ ? null : (window.__LSD_INDEX__ ?? null)
-/** Everything else main.ts changes as the page runs. */
-const session = createSession(
-  window.__LSD_REPORT__ ??
-    (index
-      ? { title: index.title, generatedAt: index.generatedAt, generator: index.generator, scenarios: [] }
-      : sampleReport),
-)
-
-const state: State = {
-  query: '',
-  status: { success: true, warn: true, error: true },
-  selectedId: initialSelection(),
-  helpOpen: false,
-  sidebarCollapsed: getSidebarCollapsed(),
-  expanded: new Set(),
-}
-
-const app = document.querySelector('#app')!
-
-/** The scenario in the URL (a link or a reload), otherwise the first in the list. */
-function initialSelection(): string | null {
-  if (index) return null
-  const ref = parseReportHash(window.location.hash)
-  if (ref && session.report.scenarios.some((s) => s.id === ref.scenarioId)) return ref.scenarioId
-  return defaultScenarioId(session.report.scenarios)
+declare global {
+  interface Window {
+    /** Set by lsd-mono-core ReportWriter before this bundle boots. Dev: assign before load to preview a capture. */
+    __LSD_REPORT__?: Report
+    /** Full message payloads, loaded when the inspector opens. Not part of the first paint. */
+    __LSD_PAYLOADS__?: Record<string, unknown>
+    /** Sibling script that assigns `__LSD_PAYLOADS__`. Relative to the report HTML. */
+    __LSD_PAYLOADS_SRC__?: string
+    /** Set on the index page instead of `__LSD_REPORT__`: every report in the directory. */
+    __LSD_INDEX__?: IndexManifest
+    /** Filled by each `<stem>-report.js` as the index page opens reports. */
+    __LSD_REPORTS__?: Record<string, ReportData>
+  }
 }
 
 function reportLocation(): { hash: string; replace?: (url: string) => void } {
