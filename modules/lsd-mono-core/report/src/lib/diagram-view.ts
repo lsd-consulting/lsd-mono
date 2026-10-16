@@ -10,6 +10,11 @@ export const DEFAULT_ZOOM = 1
  * otherwise open with oversized text. The Fit button fills the width either way.
  */
 export const AUTO_FIT_MAX_ZOOM = 1
+/**
+ * Fit (automatic or the button) never goes below this: labels stay readable and arrow
+ * targets keep their size, and a wider diagram scrolls sideways. Zoom out still reaches MIN_ZOOM.
+ */
+export const FIT_MIN_ZOOM = 0.5
 /** Button and wheel step, as a fraction of 100%. */
 const ZOOM_STEP = 0.1
 
@@ -101,7 +106,10 @@ export function fittedView(input: {
   /** Upper bound on the scale, for the automatic fit ([AUTO_FIT_MAX_ZOOM]). */
   maxScale?: number
 }): FittedView {
-  const scale = Math.min(fitToWidthScale(input.contentWidth, input.viewportWidth), input.maxScale ?? MAX_ZOOM)
+  const scale = Math.max(
+    FIT_MIN_ZOOM,
+    Math.min(fitToWidthScale(input.contentWidth, input.viewportWidth), input.maxScale ?? MAX_ZOOM),
+  )
   const headerCss = (input.headerBlock ?? HEADER_BLOCK_H) * scale
   const visibleW = input.viewportWidth > 0 ? input.viewportWidth / scale : input.contentWidth
   const bodyCss = Math.max(0, input.viewportHeight - headerCss)

@@ -25,6 +25,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - On a phone, tapping an arrow scrolls its payload JSON into view below the sticky top bar, and opening the
   component diagram or metrics scrolls the panel's heading there (smoothly, unless reduced motion is set; nothing
   moves when it is already on screen).
+- Fit (automatic and the button) stops at 50% so labels and touch targets stay usable; a wider diagram scrolls
+  sideways. Zoom out still reaches 25%.
 - Arrows with a payload show a `{}` marker after their label, with a hover title, and a one-line legend under
   the diagram toolbar explains it ("click", or "tap" on touch screens) when the scenario has payloads. Neither
   prints; both use the system text colour in high-contrast mode.

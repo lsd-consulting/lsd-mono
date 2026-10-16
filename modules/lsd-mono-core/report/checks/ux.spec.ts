@@ -769,7 +769,8 @@ test('long participant names stay inside their shapes and clear of their neighbo
 
 /** Two scenarios too wide for the panel at 100%: twelve lifelines, a chain of 30 calls. */
 function wideScenario(id: string, title: string): Scenario {
-  const participants = Array.from({ length: 12 }, (_, i): Participant => ({
+  // Wide enough to fit below 100% at 900-1300px, narrow enough to stay above the 50% Fit floor.
+  const participants = Array.from({ length: 6 }, (_, i): Participant => ({
     id: `p${i}`,
     name: `Service ${i}`,
     type: 'PARTICIPANT',
@@ -777,8 +778,8 @@ function wideScenario(id: string, title: string): Scenario {
   const events = Array.from({ length: 30 }, (_, i): MessageEvent => ({
     kind: 'message',
     id: `m${i}`,
-    from: `p${i % 12}`,
-    to: `p${(i + 5) % 12}`,
+    from: `p${i % 6}`,
+    to: `p${(i + 2) % 6}`,
     label: `call ${i}`,
     type: 'SYNCHRONOUS',
     data: { n: i },
@@ -837,6 +838,11 @@ test('a wide diagram opens fitted, refits on resize until the user zooms, then k
   await page.setViewportSize({ width: 1000, height: 800 })
   await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBeLessThan(fitted)
   expect((await zoomOf(page, 'wide-a')).overflowX).toBeLessThanOrEqual(0)
+
+  // A phone-width panel stops at the 50% floor and scrolls sideways instead.
+  await page.setViewportSize({ width: 390, height: 800 })
+  await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBe(50)
+  expect((await zoomOf(page, 'wide-a')).overflowX).toBeGreaterThan(0)
 })
 
 test('a scenario chosen from the list is fitted when it shows', async ({ page }) => {
@@ -1009,11 +1015,11 @@ test('hiding refits a diagram the user has not zoomed, and keeps a zoom they cho
   expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
   // Per scenario: the other diagram keeps all its participants.
   await page.locator('#scenario-nav [data-nav="wide-b"]').click()
-  await expect(page.locator('#card-wide-b .participant-box')).toHaveCount(12)
+  await expect(page.locator('#card-wide-b .participant-box')).toHaveCount(6)
   await expect(page.locator('#card-wide-b .hidden-chip')).toHaveCount(0)
   // Back on the first scenario, its hidden participants and its zoom are as they were.
   await page.locator('#scenario-nav [data-nav="wide-a"]').click()
-  await expect(page.locator('#card-wide-a .participant-box')).toHaveCount(7)
+  await expect(page.locator('#card-wide-a .participant-box')).toHaveCount(1)
   await expect(page.locator('#card-wide-a .hidden-chip')).toHaveText('5 hidden')
   expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
 })
