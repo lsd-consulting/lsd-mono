@@ -269,7 +269,8 @@ its own duration or its reply's, and a paired reply carries none. Each scenario 
 default (`source`) events from one source that have a start time but no measured duration are
 ordered by it, among their siblings in the same parent call; untimed events keep their place.
 `all` also compares different sources, `false` turns it off, and `Timing.orderByCreatedAt` opts
-one event in or out. Moved events are marked `order: CLOCK`, and it never raises `accuracy`. A
+one event in or out. Moved events are marked `order: CLOCK` and badged CLOCK on their arrow in the
+sequence diagram, in the waterfall and in the inspector; it never raises `accuracy`. A
 reply never moves before its call, a consume before its publish, or a child out of its parent:
 clock order that would do so is ignored, with a `skew` warning.
 

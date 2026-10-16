@@ -147,6 +147,30 @@ describe('renderRowSvg fragments', () => {
     expect(html).not.toContain('role="button"')
   })
 
+  it('badges a clock-ordered arrow in words with the waterfall title, and nothing else', () => {
+    const at = (order?: 'CLOCK' | 'SEQUENCE') =>
+      renderRowSvg(
+        rowFor({
+          kind: 'message',
+          id: 'm-c',
+          from: 'api',
+          to: 'db',
+          label: 'ping',
+          type: 'SYNCHRONOUS',
+          order,
+          durationMs: 4,
+        }),
+        400,
+        participants,
+      )
+    const html = at('CLOCK')
+    expect(html).toContain('class="msg-clock"')
+    expect(html).toMatch(/>clock<title>Placed by its timestamp \(createdAt\), not capture order<\/title>/)
+    expect(html.indexOf('msg-dur')).toBeLessThan(html.indexOf('msg-clock'))
+    expect(at('SEQUENCE')).not.toContain('msg-clock')
+    expect(at()).not.toContain('msg-clock')
+  })
+
   it('does not add an arrow button when there is no payload', () => {
     const html = renderRowSvg(
       rowFor({

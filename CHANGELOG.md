@@ -16,6 +16,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   (summary strip, swim lanes and waterfall).
 - Report JSON writes a call's duration on the call: a call carries its own `durationMs` or its reply's, and a
   paired reply carries none. The diagram label, inspector and Timing view read it from the call.
+- A clock-ordered message (`order: CLOCK`) is badged CLOCK on its arrow in the sequence diagram, matching the
+  waterfall and inspector badges. It is a word with a hover title, not colour alone, and prints in black.
 - The report index (`index.html`) is the report app for every report in the directory: a sidebar lists
   reports (failed first) with their scenario counts, a report's data loads only when it is opened, and
   `#report=<id>` links open a report, scenario or message directly. It replaces the per-report `-report.html`
