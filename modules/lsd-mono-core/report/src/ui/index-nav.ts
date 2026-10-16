@@ -85,3 +85,8 @@ function itemHtml(r: IndexReport, sc: IndexScenario, state: IndexNavState): stri
               </button>
             </li>`
 }
+
+/** The scenario list says so when the filters leave nothing, rather than going blank. */
+export function orEmptyNavHtml(html: string): string {
+  return html.trim() ? html : '<li class="nav-empty">No scenarios match.</li>'
+}

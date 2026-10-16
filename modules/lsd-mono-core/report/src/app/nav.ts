@@ -7,7 +7,7 @@ import { defaultScenarioId, stepSelection } from '../ui/selection'
 import { forgetDiagrams } from '../lib/sequence-diagram'
 import { navItemTooltip } from '../ui/sidebar'
 import { statusLabel } from '../ui/format'
-import { indexNavHtml } from '../ui/index-nav'
+import { indexNavHtml, orEmptyNavHtml } from '../ui/index-nav'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { filtered, indexEntry } from './filters'
 import { index, session, state } from './context'
@@ -22,14 +22,15 @@ export function renderNav(): void {
   // Rebuilding the list drops focus; a nav button that had it gets it back (the selected one).
   const hadFocus = list.contains(document.activeElement)
   const items = filtered()
-  list.innerHTML = items
-    .map((s) => {
-      const msgs = s.events.filter((e) => e.kind === 'message').length
-      const number = session.report.scenarios.indexOf(s) + 1
-      const tooltip = state.sidebarCollapsed
-        ? ` title="${escapeAttr(navItemTooltip(s.title, statusLabel(s.status), msgs))}"`
-        : ''
-      return `
+  list.innerHTML = orEmptyNavHtml(
+    items
+      .map((s) => {
+        const msgs = s.events.filter((e) => e.kind === 'message').length
+        const number = session.report.scenarios.indexOf(s) + 1
+        const tooltip = state.sidebarCollapsed
+          ? ` title="${escapeAttr(navItemTooltip(s.title, statusLabel(s.status), msgs))}"`
+          : ''
+        return `
       <li>
         <button type="button" data-nav="${escapeAttr(s.id)}"${state.selectedId === s.id ? ' aria-current="true"' : ''} aria-controls="main"${tooltip}>
           <span class="dot ${escapeAttr(s.status)}"></span>
@@ -40,8 +41,9 @@ export function renderNav(): void {
           </span>
         </button>
       </li>`
-    })
-    .join('')
+      })
+      .join(''),
+  )
 
   list.querySelectorAll<HTMLButtonElement>('[data-nav]').forEach((btn) => {
     btn.addEventListener('click', () => selectScenario(btn.dataset.nav!))

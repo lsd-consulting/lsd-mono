@@ -1025,7 +1025,8 @@ html {
     justify-content: center;
   }
   .sidebar-collapsed .sidebar-title,
-  .sidebar-collapsed .hist {
+  .sidebar-collapsed .hist,
+  .sidebar-collapsed .nav-empty {
     display: none;
   }
   .sidebar-collapsed .scenario-nav button {

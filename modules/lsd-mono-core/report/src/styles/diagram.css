@@ -38,6 +38,9 @@
   outline: none;
   background: var(--accent-soft);
 }
+.section-jump button:focus-visible {
+  box-shadow: var(--focus);
+}
 .seq-scroll {
   /* Its own height up to one screen. Vertical scroll comes from the page (page-scroll.ts);
      horizontal scroll stays here, for diagrams wider than the panel. */
@@ -582,9 +585,9 @@
     width: 100%;
     height: auto;
   }
-  /* Ink, not colour: the glyph still reads on a mono printer. */
+  /* "Open the payload" means nothing on paper. */
   .msg-payload {
-    fill: #000;
+    display: none;
   }
   .msg-places,
   .participant-heads,
