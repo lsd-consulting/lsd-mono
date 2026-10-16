@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.formatMs
+import io.lsdconsulting.lsd.mono.core.report.isErrorStatus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -38,6 +39,34 @@ class ScenarioMetricsTest {
             "lsd.mono.report.outputDir",
             "lsd.mono.ids.deterministic",
         ).forEach { System.clearProperty(it) }
+    }
+
+    @Test
+    fun `interaction statuses drive the error count`() {
+        val lsd = LsdContext()
+        lsd.accept(Interaction(InteractionKind.REQUEST, "api", "pay", "POST /pay", interactionId = "c1"))
+        lsd.accept(Interaction(InteractionKind.RESPONSE, "pay", "api", "503", status = "503", replyTo = "c1"))
+        lsd.accept(Interaction(InteractionKind.REQUEST, "api", "pay", "POST /pay", interactionId = "c2"))
+        lsd.accept(Interaction(InteractionKind.RESPONSE, "pay", "api", "201", status = "201 Created", replyTo = "c2"))
+        lsd.accept(Interaction(InteractionKind.CONSUME, "kafka", "mail", "receipt", status = "FAILED"))
+        lsd.completeScenario("errors", status = Status.SUCCESS)
+        lsd.message("A", "B", "untagged")
+        lsd.completeScenario("none", status = Status.SUCCESS)
+        lsd.completeReport("Errors")
+        val json = tempDir.resolve(ReportWriter.reportFileStem("Errors") + "-report.json").readText()
+        assertTrue(Regex("\"Errors\",\\s*\"value\": \"2\"").containsMatchIn(json), json)
+        assertEquals(1, Regex("\"key\": \"Errors\"").findAll(json).count(), "no statuses, no Errors metric")
+        assertTrue(json.contains("\"status\": \"503\""), json)
+    }
+
+    @Test
+    fun `an error status is a 4xx or 5xx code, or an error word with no code`() {
+        listOf("400", "404 Not Found", "503", "599", "error", "FAILED", "Timed out", "payment rejected").forEach {
+            assertTrue(isErrorStatus(it), it)
+        }
+        listOf("200", "201 Created", "302", "600", "ok", "AUTHORISED", "200 error page", "").forEach {
+            assertFalse(isErrorStatus(it), it)
+        }
     }
 
     @Test

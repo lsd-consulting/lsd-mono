@@ -6,7 +6,8 @@ import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.model.MetricJson
 
 /**
- * A scenario's metrics: its message count and, when any message has a duration, their sum.
+ * A scenario's metrics: its message count, when any message has a duration their sum, and when any
+ * message has a [Message.status] the number of those that are errors (see [isErrorStatus]).
  * Each message counts its [Message.timedMs]: an explicit `took` or [io.lsdconsulting.lsd.mono.core.Timing]
  * duration first, then the call-to-reply time, then the legacy whole-ms duration. So a scenario whose
  * durations are all given reports the same total on every run.
@@ -21,6 +22,8 @@ internal fun capturedMetrics(events: List<SequenceEvent>, options: ReportOptions
     return buildList {
         add(MetricJson("Messages", messages.size.toString()))
         if (duration > 0) add(MetricJson("Captured duration", "${formatMs(duration)} ms"))
+        val statuses = messages.mapNotNull { it.status }
+        if (statuses.isNotEmpty()) add(MetricJson("Errors", statuses.count(::isErrorStatus).toString()))
     }
 }
 
@@ -32,4 +35,20 @@ internal fun formatMs(ms: Double): String {
         .valueOf(rounded)
         .stripTrailingZeros()
         .toPlainString()
+}
+
+private val ERROR_WORDS = Regex("""\b(error|errors|fail|failed|failure|fault|timeout|timed out|exception|rejected|denied)\b""", RegexOption.IGNORE_CASE)
+private val LEADING_CODE = Regex("""^\s*(\d{3})\b""")
+
+/**
+ * Whether an interaction status is an error: an HTTP-style code 400 to 599 (`"503"`, `"404 Not Found"`),
+ * or, with no leading code, a word such as `error`, `failed` or `timeout`. The report UI uses the same rule.
+ */
+internal fun isErrorStatus(status: String): Boolean {
+    val code = LEADING_CODE
+        .find(status)
+        ?.groupValues
+        ?.get(1)
+        ?.toInt()
+    return if (code != null) code in 400..599 else ERROR_WORDS.containsMatchIn(status)
 }

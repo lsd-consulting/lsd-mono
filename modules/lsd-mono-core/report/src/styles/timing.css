@@ -72,6 +72,10 @@
 .pill.warn {
   color: var(--warn);
 }
+.pill.error {
+  color: var(--error);
+  border-color: color-mix(in oklab, var(--error) 50%, var(--border));
+}
 .tbadge {
   font-size: 10px;
   border: 1px solid var(--border);

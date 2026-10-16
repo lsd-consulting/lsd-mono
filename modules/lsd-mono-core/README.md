@@ -265,6 +265,11 @@ its own duration or its reply's, and a paired reply carries none. Each scenario 
 (`STRUCTURE_ONLY`, `TIMESTAMPED`, `MEASURED`, `TRACED`), `measuredCoverage`, `pairingCoverage`,
 `sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`.
 
+An interaction's `status` is written on its message. When any message in a scenario has one, the
+metrics add `Errors`: the number whose status is an error, either an HTTP-style code from 400 to 599
+(`"503"`, `"404 Not Found"`) or, with no leading code, a word such as `error`, `failed` or `timeout`.
+The inspector labels an error status `· error`.
+
 **Clock ordering** (`lsd.mono.timing.orderByCreatedAt`, or `LsdContext.orderByCreatedAt`): by
 default (`source`) events from one source that have a start time but no measured duration are
 ordered by it, among their siblings in the same parent call; untimed events keep their place.

@@ -413,6 +413,11 @@ private fun timedCheckout(lsd: LsdContext) {
     lsd.ingest(
         Interaction(InteractionKind.PUBLISH, "Notification Service", "Email", "send receipt", source = "notification-service", startedAt = at(640)),
     )
+    // The importer's status drives the Errors metric: the first send fails, the retry succeeds.
+    lsd.ingest(Interaction(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt", interactionId = "smtp-1"))
+    lsd.ingest(Interaction(InteractionKind.RESPONSE, "SMTP Relay", "Email", "421 try again later", status = "421", replyTo = "smtp-1"))
+    lsd.ingest(Interaction(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt (retry)", interactionId = "smtp-2"))
+    lsd.ingest(Interaction(InteractionKind.RESPONSE, "SMTP Relay", "Email", "250 queued", status = "250", replyTo = "smtp-2"))
     lsd.completeScenario(
         "Timed checkout (timing API)",
         """
@@ -420,6 +425,7 @@ private fun timedCheckout(lsd: LsdContext) {
         When two events are captured out of order on the same clock
         Then they are put back in time order and marked clock-ordered
         And a consume on another service's clock stays after its publish
+        And a failed relay status is counted in the Errors metric
         """.trimIndent(),
         Status.SUCCESS,
     )
