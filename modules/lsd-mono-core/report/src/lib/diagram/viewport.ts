@@ -3,11 +3,9 @@ import type { MessageEvent } from '../../types'
 import { focusablePlaces, messagePlaces, replacementFocus, zoomScrollBehavior } from '../diagram-a11y'
 import {
   MAX_ZOOM,
-  classifySearchHits,
   eventHiddenByColumns,
   fittedView,
   messageLabelRect,
-  searchCountLabel,
   settleFitWidth,
   stepZoom,
   unscaledViewport,
@@ -26,7 +24,8 @@ import { bindPageScroll, sizeStage } from './page-scroll'
 import {
   SEARCH_REVEAL_DELAY_MS,
   revealSearchHit,
-  searchPosition,
+  scenarioSearchState,
+  searchStateLabel,
   stepSearchCurrent,
   updateSearchCurrent,
 } from './search-reveal'
@@ -135,12 +134,9 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   const readout = root.querySelector('.zoom-readout')
   if (readout) readout.textContent = zoomLabel(zoom)
   const count = root.querySelector('.diagram-find-count')
-  const at = searchPosition(diagram.scenario.id)
-  if (count) {
-    const hits = classifySearchHits(diagram.scenario.events, view.query, view.hidden)
-    count.textContent = searchCountLabel(hits.total, hits.hidden, view.query, at.current)
-  }
-  root.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => (btn.disabled = at.count === 0))
+  const find = scenarioSearchState(diagram.scenario.id)
+  if (count) count.textContent = searchStateLabel(find, view.query)
+  root.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => (btn.disabled = find.hits.length === 0))
 }
 
 /** Step the diagram's find to its next (1) or previous (-1) match and bring it on screen. */

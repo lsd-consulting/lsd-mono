@@ -187,21 +187,6 @@ export function matchingEventIds(events: DiagramEvent[], query: string): string[
   return events.filter((event) => rowMatchesQuery(event, query)).map((event) => event.id)
 }
 
-export function classifySearchHits(
-  events: DiagramEvent[],
-  query: string,
-  hiddenIds: ReadonlySet<string>,
-): { total: number; hidden: number } {
-  let total = 0
-  let hidden = 0
-  for (const event of events) {
-    if (!rowMatchesQuery(event, query)) continue
-    total++
-    if (eventHiddenByColumns(event, hiddenIds)) hidden++
-  }
-  return { total, hidden }
-}
-
 /**
  * Live-region text. Empty query is silent. Hidden-column hits are named, not only recoloured.
  * With a current match ([current], 1-based) it reads "2 of 5", counting the matches you can step to.

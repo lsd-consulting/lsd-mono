@@ -4,14 +4,7 @@ import type { ActivateEvent, DiagramEvent, MessageEvent, NoteEvent, Participant,
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
 import { hasComponentDiagram } from './component-graph'
 import { focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
-import {
-  classifySearchHits,
-  eventHiddenByColumns,
-  searchCountLabel,
-  unscaledViewport,
-  visibleParticipants,
-  zoomLabel,
-} from './diagram-view'
+import { eventHiddenByColumns, unscaledViewport, visibleParticipants, zoomLabel } from './diagram-view'
 import { headerHtml } from './diagram/rows'
 import {
   laneIndex,
@@ -24,6 +17,7 @@ import {
   xFor,
 } from './diagram/shapes'
 import { type DiagramFrame, type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
+import { scenarioSearchState, searchStateLabel } from './diagram/search-reveal'
 import { syncDiagramWindow } from './diagram/viewport'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
 import {
@@ -187,8 +181,8 @@ function metricsControl(scenario: Scenario): string {
 }
 
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {
-  const hits = classifySearchHits(scenario.events, view.query, view.hidden)
-  const steppable = hits.total - hits.hidden > 0 ? '' : ' disabled'
+  const find = scenarioSearchState(scenario.id)
+  const steppable = find.hits.length > 0 ? '' : ' disabled'
   // The hidden-participants chip is drawn by bindParticipantFilter, and only while
   // something is hidden. The status line announces each hide and show.
   return `
@@ -204,7 +198,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
       <label class="diagram-find">
         <span class="diagram-find-label">Find</span>
         <input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
-        <span class="diagram-find-count" aria-live="polite">${escapeHtml(searchCountLabel(hits.total, hits.hidden, view.query))}</span>
+        <span class="diagram-find-count" aria-live="polite">${escapeHtml(searchStateLabel(find, view.query))}</span>
       </label>
       <div class="find-steps" role="group" aria-label="Step through matches">
         <button type="button" data-find-step="prev" aria-label="Previous match" title="Previous match (Shift+Enter)"${steppable}>↑</button>

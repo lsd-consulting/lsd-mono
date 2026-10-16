@@ -3,7 +3,6 @@ import type { DiagramEvent, Participant } from '../types'
 import { COL_GAP, LEFT_PAD, MESSAGE_LABEL_RISE, bodyHeight, diagramWidth, layoutRows } from './layout'
 import { sliceViewTop } from './sequence-diagram'
 import {
-  classifySearchHits,
   eventHiddenByColumns,
   fitToWidthScale,
   fittedView,
@@ -163,10 +162,8 @@ describe('rowMatchesQuery', () => {
     expect(rowMatchesQuery(events[0], '   ')).toBe(false)
   })
 
-  it('lists matching ids and counts hits that sit on a hidden column', () => {
+  it('lists matching ids and words the count', () => {
     expect(matchingEventIds(events, 'read')).toEqual(['m1'])
-    expect(classifySearchHits(events, 'cache', new Set(['b']))).toEqual({ total: 1, hidden: 1 })
-    expect(classifySearchHits(events, 'read', new Set(['b']))).toEqual({ total: 1, hidden: 0 })
     expect(searchCountLabel(2, 1, 'c')).toBe('2 matches, 1 on a hidden column')
     expect(searchCountLabel(1, 0, 'read')).toBe('1 match')
     expect(searchCountLabel(5, 0, 'c', 2)).toBe('2 of 5')
