@@ -66,6 +66,19 @@ export function stepIndex(count: number, current: number, step: 1 | -1): number 
   return (current + step + count) % count
 }
 
+/** Bring the Find count ("2 of 5") and the step buttons up to date with the scenario's matches. */
+export function syncFindControls(scrollport: HTMLElement): void {
+  const scenarioId = scrollport.dataset.scenarioId
+  const root = scrollport.closest<HTMLElement>('.seq-diagram')
+  if (!scenarioId || !root) return
+  const state = scenarioSearchState(scenarioId)
+  const count = root.querySelector('.diagram-find-count')
+  if (count) count.textContent = searchStateLabel(state, diagramView(scenarioId).query)
+  root
+    .querySelectorAll<HTMLButtonElement>('[data-find-step]')
+    .forEach((btn) => (btn.disabled = state.hits.length === 0))
+}
+
 /** Find-box keys that step through matches: Enter / F3 / Cmd or Ctrl+G go to the next, with Shift the previous. */
 export function findStepKey(
   ev: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'metaKey' | 'ctrlKey' | 'altKey'>,

@@ -12,6 +12,7 @@ import {
   searchStateLabel,
   stepIndex,
   stepSearchCurrent,
+  syncFindControls,
   updateSearchCurrent,
 } from './search-reveal'
 import { diagramState, diagramView, type MountedDiagram } from './state'
@@ -89,6 +90,25 @@ describe('find: stepping through matches', () => {
     expect(searchStateLabel(state, 'order')).toBe('2 of 2, 1 on a hidden column')
     diagramView('s').searchCurrentId = null
     expect(searchStateLabel(scenarioSearchState('s'), 'order')).toBe('3 matches, 1 on a hidden column')
+  })
+
+  it('writes the count and enables the step buttons from the state', () => {
+    document.body.innerHTML = `<div class="seq-diagram"><span class="diagram-find-count"></span>
+      <button data-find-step="prev" disabled></button><button data-find-step="next" disabled></button>
+      <div class="seq-scroll" data-scenario-id="s"></div></div>`
+    const scroll = document.querySelector<HTMLElement>('.seq-scroll')!
+    diagramState.mounted.set('s', { rows } as unknown as MountedDiagram)
+    diagramView('s').query = 'order'
+    updateSearchCurrent('s')
+    stepSearchCurrent('s', 1)
+    syncFindControls(scroll)
+    expect(document.querySelector('.diagram-find-count')!.textContent).toBe('2 of 3')
+    expect([...document.querySelectorAll('button')].map((b) => b.disabled)).toEqual([false, false])
+    diagramView('s').query = 'refund'
+    updateSearchCurrent('s')
+    syncFindControls(scroll)
+    expect(document.querySelector('.diagram-find-count')!.textContent).toBe('0 matches')
+    expect([...document.querySelectorAll('button')].map((b) => b.disabled)).toEqual([true, true])
   })
 
   it('moves the current match through the rows and reports N of M', () => {

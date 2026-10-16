@@ -25,8 +25,7 @@ import { bindPageScroll, sizeStage } from './page-scroll'
 import {
   SEARCH_REVEAL_DELAY_MS,
   revealSearchHit,
-  scenarioSearchState,
-  searchStateLabel,
+  syncFindControls,
   stepSearchCurrent,
   updateSearchCurrent,
 } from './search-reveal'
@@ -134,17 +133,13 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   root.style.setProperty('--seq-print-max', `${Math.round(width * PRINT_MAX_UPSCALE)}px`)
   const readout = root.querySelector('.zoom-readout')
   if (readout) readout.textContent = zoomLabel(zoom)
-  const count = root.querySelector('.diagram-find-count')
-  const find = scenarioSearchState(diagram.scenario.id)
-  if (count) count.textContent = searchStateLabel(find, view.query)
-  root.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => (btn.disabled = find.hits.length === 0))
 }
 
 /** Step the diagram's find to its next (1) or previous (-1) match and bring it on screen. */
 export function stepFind(scrollport: HTMLElement, step: 1 | -1): void {
   const scenarioId = scrollport.dataset.scenarioId
   if (!scenarioId || !stepSearchCurrent(scenarioId, step)) return
-  applyDiagramFrame(scrollport)
+  syncFindControls(scrollport)
   syncDiagramWindow(scrollport)
   if (revealSearchHit(scrollport)) syncDiagramWindow(scrollport)
 }
@@ -331,6 +326,7 @@ export function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet
     view.activeMessageId = null
   }
   applyDiagramFrame(scrollport)
+  syncFindControls(scrollport)
   if (view.autoFit) {
     // Hiding or showing a participant changes the width to fit.
     view.fittedWidth = 0
@@ -385,7 +381,7 @@ export function bindDiagramScroll(root: ParentNode): void {
     find?.addEventListener('input', () => {
       diagramView(id).query = find.value
       updateSearchCurrent(id)
-      applyDiagramFrame(scroll)
+      syncFindControls(scroll)
       syncDiagramWindow(scroll)
       // Typing on a phone has no Enter: bring the first match on screen once typing pauses.
       clearTimeout(reveal)
