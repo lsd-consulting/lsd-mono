@@ -167,6 +167,28 @@ for (const [phone, device] of Object.entries(PHONES)) {
         await expect(panel.locator('.edge-group.is-selected')).toHaveCount(1)
       })
 
+      for (const [what, opener, body] of [
+        ['component diagram', '[data-show-components]', '.component-diagram'],
+        ['metrics', '[data-show-metrics]', '#inspector-metrics'],
+      ] as const) {
+        test(`opening the ${what} scrolls its heading just below the top bar`, async ({ page }) => {
+          await page.emulateMedia({ reducedMotion: 'reduce' })
+          await open(page, timedReport())
+          await expect(page.locator('.seq-svg')).toBeVisible()
+          await page.locator(opener).first().tap()
+          await expect(page.locator('.inspector').locator(body)).toBeVisible()
+          await expect
+            .poll(() =>
+              page.evaluate(() => {
+                const bar = document.querySelector('.topbar')!.getBoundingClientRect().bottom
+                const head = document.querySelector('.inspector h2')!.getBoundingClientRect()
+                return head.top >= bar - 1 && head.bottom <= innerHeight
+              }),
+            )
+            .toBe(true)
+        })
+      }
+
       for (const reducedMotion of ['reduce', 'no-preference'] as const) {
         test(`tapping an arrow low on the screen scrolls its JSON into view below the top bar (${reducedMotion})`, async ({
           page,

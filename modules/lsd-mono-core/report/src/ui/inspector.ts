@@ -280,6 +280,11 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     options.onContent?.()
   }
 
+  /** On a phone the panel is inline below the report: bring what just opened into view. */
+  function revealOnPhone(content?: HTMLElement): void {
+    if (viewport() <= INSPECTOR_STACKED_PX) revealBelowTopbar(panel!, content)
+  }
+
   async function payloadText(): Promise<string> {
     const value = ready ? cached : await pending
     if (value === undefined) return '(no payload)'
@@ -301,7 +306,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     options.onContent?.()
     if (revealJson) {
       revealJson = false
-      if (viewport() <= INSPECTOR_STACKED_PX) revealBelowTopbar(panel!, pre)
+      revealOnPhone(pre)
     }
   }
 
@@ -386,6 +391,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       shownGraph = graph
       graphHost.innerHTML = componentsBodyHtml(drawn.svg, graph)
       fitView(drawn.width)
+      revealOnPhone()
     },
     openMetrics(scenarioId, view) {
       begin({ scenarioId, kind: 'metrics' })
@@ -395,6 +401,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       showViewChrome(metricsHost)
       metricsHost.innerHTML = metricsBodyHtml(scenarioId, view)
       fitView(Math.max(naturalWidth(metricsHost), view.timingHtml ? TIMING_VIEW_MIN_PX : 0))
+      revealOnPhone()
     },
     openError(error) {
       const token = begin(null)
@@ -468,23 +475,26 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
 const REVEAL_GAP_PX = 8
 
 /**
- * On a phone the panel sits inline below the report, so a payload can open below the screen.
- * Scroll the page so the JSON shows below the sticky top bar: from the panel's head when the
- * head and the start of the JSON fit together, else from the JSON's own row. Nothing moves
- * when the JSON already starts on screen. Smooth unless the user asks for reduced motion.
+ * On a phone the panel sits inline below the report, so what opens can land below the screen.
+ * Scroll the page so it shows below the sticky top bar. With no [content] (a component diagram
+ * or metrics view) that is the panel's heading. With [content] (a payload's JSON) it is the
+ * heading when the heading and the start of the content fit together, else the content's own
+ * row (its previous sibling). Nothing moves when it already starts on screen. Smooth unless the
+ * user asks for reduced motion.
  */
-export function revealBelowTopbar(panel: HTMLElement, pre: HTMLElement): void {
+export function revealBelowTopbar(panel: HTMLElement, content?: HTMLElement): void {
   const win = panel.ownerDocument.defaultView
   if (!win) return
   const bar = Number.parseFloat(getComputedStyle(panel.ownerDocument.documentElement).getPropertyValue('--topbar-h'))
   const top = (Number.isFinite(bar) ? bar : 0) + REVEAL_GAP_PX
   const room = win.innerHeight - top
-  const json = pre.getBoundingClientRect()
-  const show = Math.min(json.height, room / 3)
-  if (json.top >= top && json.top + show <= win.innerHeight) return
+  const target = (content ?? panel).getBoundingClientRect()
+  const show = Math.min(target.height, room / 3)
+  if (target.top >= top && target.top + show <= win.innerHeight) return
   const head = panel.getBoundingClientRect().top
-  const row = (pre.previousElementSibling as HTMLElement | null)?.getBoundingClientRect().top ?? json.top
-  const anchor = json.top + show - head <= room ? head : row
+  const row =
+    (content?.previousElementSibling as HTMLElement | null | undefined)?.getBoundingClientRect().top ?? target.top
+  const anchor = target.top + show - head <= room ? head : row
   const reduce = typeof win.matchMedia === 'function' && win.matchMedia('(prefers-reduced-motion: reduce)').matches
   win.scrollTo({ top: Math.max(0, win.scrollY + anchor - top), behavior: reduce ? 'auto' : 'smooth' })
 }

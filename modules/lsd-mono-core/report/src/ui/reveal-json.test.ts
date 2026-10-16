@@ -37,6 +37,15 @@ describe('revealBelowTopbar', () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 1000 + 900 - 108, behavior: 'smooth' })
   })
 
+  it('with no content (a component or metrics view) brings the heading under the top bar, or stays put', () => {
+    const { panel, scrollTo } = setup(900, 0, 0, 0)
+    revealBelowTopbar(panel)
+    expect(scrollTo).toHaveBeenCalledWith({ top: 1000 + 900 - 108, behavior: 'smooth' })
+    panel.getBoundingClientRect = () => ({ top: 300, height: 500, bottom: 800 }) as DOMRect
+    revealBelowTopbar(panel)
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+
   it('jumps without animation under reduced motion, and stays put when the JSON is on screen', () => {
     const { panel, pre, scrollTo } = setup(600, 680, 720, 400)
     window.matchMedia = ((q: string) => ({ matches: q.includes('reduce') })) as unknown as typeof window.matchMedia
