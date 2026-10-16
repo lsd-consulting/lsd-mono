@@ -309,7 +309,7 @@ function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
  * own button already says "Open …" to screen readers, so the glyph is hidden from them.
  */
 const PAYLOAD_MARKER =
-  '<tspan class="msg-payload" dx="6" aria-hidden="true">{ }<title>Has a payload: tap or click the arrow to open it</title></tspan>'
+  '<tspan class="msg-payload" dx="6" aria-hidden="true">{}<title>Has a payload: tap or click the arrow to open it</title></tspan>'
 
 function renderMessageRow(
   msg: MessageEvent,

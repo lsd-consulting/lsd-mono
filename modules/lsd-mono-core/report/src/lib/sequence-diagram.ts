@@ -84,7 +84,7 @@ function messageLabelWidth(msg: MessageEvent, labelMaxWidth: number): number {
   let text = truncateLabel(msg.label, labelMaxWidth)
   if (cue) text += ` [${cue}]`
   if (msg.durationMs != null) text += ` · ${msg.durationMs}ms`
-  if (messageHasPayload(msg)) text += '  { }'
+  if (messageHasPayload(msg)) text += '  {}'
   return text.length * MSG_CHAR_W
 }
 
@@ -209,6 +209,15 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
     </div>`
 }
 
+/**
+ * One line under the toolbar explaining the `{}` marker, only when an arrow has a payload.
+ * The verb follows the pointer (CSS swaps click for tap on touch). Screen only.
+ */
+function payloadLegendHtml(scenario: Scenario): string {
+  if (!scenario.events.some((e) => e.kind === 'message' && messageHasPayload(e))) return ''
+  return `<p class="payload-legend"><span class="payload-legend-key" aria-hidden="true">{}</span><span class="visually-hidden">An arrow marked with braces</span> has a payload: <span class="legend-click">click</span><span class="legend-tap">tap</span> the arrow to open it</p>`
+}
+
 /** Continuous diagram: sticky participant header, section jump list, virtualised rows. */
 export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): string {
   const diagram = mountDiagram(scenario, labelMaxWidth)
@@ -231,6 +240,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
     <div class="seq-diagram" style="${printWidthStyle(width)}">
       ${jump}
       ${toolbarHtml(scenario, view)}
+      ${payloadLegendHtml(scenario)}
       <div class="seq-stage">
         <div class="seq-scroll" data-scenario-id="${escapeAttr(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeAttr(scenario.title)}">
           <div class="seq-sticky-header" style="width:${width * zoom}px">${headerHtml(scenario, frame, view.hidden, zoom, null)}</div>

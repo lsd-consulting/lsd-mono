@@ -10,6 +10,7 @@ describe('print css', () => {
 
   it('leaves the payload markers off paper', () => {
     expect(diagramPrint).toMatch(/\.msg-payload\s*\{[^}]*display:\s*none/)
+    expect(diagramPrint).toMatch(/\.payload-legend,/)
   })
 
   it('hides the printed metrics on screen and shows them in print', () => {

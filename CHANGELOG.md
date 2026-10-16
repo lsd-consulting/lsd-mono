@@ -25,8 +25,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - On a phone, tapping an arrow scrolls its payload JSON into view below the sticky top bar, and opening the
   component diagram or metrics scrolls the panel's heading there (smoothly, unless reduced motion is set; nothing
   moves when it is already on screen).
-- Arrows with a payload show a `{ }` marker after their label, with a hover title. It prints in black and uses
-  the system text colour in high-contrast mode.
+- Arrows with a payload show a `{}` marker after their label, with a hover title, and a one-line legend under
+  the diagram toolbar explains it ("click", or "tap" on touch screens) when the scenario has payloads. Neither
+  prints; both use the system text colour in high-contrast mode.
 - The report index (`index.html`) is the report app for every report in the directory: a sidebar lists
   reports (failed first) with their scenario counts, a report's data loads only when it is opened, and
   `#report=<id>` links open a report, scenario or message directly. It replaces the per-report `-report.html`
