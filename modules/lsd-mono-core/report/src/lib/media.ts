@@ -21,6 +21,14 @@ export function isStacked(): boolean {
   return matches(`(max-width: ${STACKED_MAX_PX}px)`)
 }
 
+/** At and below this width the top bar and the diagram toolbar wrap, and only their last row sticks (app.css, diagram.css). */
+export const PHONE_MAX_PX = 560
+
+/** The phone layout. */
+export function isPhone(): boolean {
+  return matches(`(max-width: ${PHONE_MAX_PX}px)`)
+}
+
 /** A touch screen as the main pointer (a phone or tablet). */
 export function isCoarsePointer(): boolean {
   return matches('(pointer: coarse)')

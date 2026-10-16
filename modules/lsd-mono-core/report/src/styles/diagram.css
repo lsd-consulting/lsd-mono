@@ -624,9 +624,27 @@
   }
 }
 
-/* On a phone the toolbar wraps onto several rows; let it scroll away so the diagram keeps the screen. */
+/* On a phone the toolbar wraps onto several rows. Find and its step buttons go on the last
+   row, and only that row stays stuck under the top bar: the rows above it slide away with the
+   page (--seq-toolbar-lead, set by page-scroll.ts), so the diagram keeps the screen. */
 @media (max-width: 560px) {
   .seq-toolbar {
-    position: static;
+    top: calc(var(--topbar-h, 0px) - var(--seq-toolbar-lead, 0px));
+  }
+  .seq-toolbar .zoom-controls {
+    order: 1;
+  }
+  .seq-toolbar .participant-filter {
+    order: 2;
+  }
+  .seq-toolbar .panel-controls {
+    order: 3;
+  }
+  .seq-toolbar .diagram-find {
+    order: 4;
+    flex-basis: calc(100% - 110px);
+  }
+  .seq-toolbar .find-steps {
+    order: 5;
   }
 }

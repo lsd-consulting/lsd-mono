@@ -1,6 +1,6 @@
 import { devices, expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
-import { openIndex } from './diagram-pages'
+import { openIndex, sectionsReport } from './diagram-pages'
 import { uxFixture } from './ux-fixture'
 
 /**
@@ -12,7 +12,9 @@ const PHONES = {
   Pixel: devices['Pixel 7'],
 } as const
 
-const base = uxFixture.scenarios[0]
+// The fixture's description and facts, with a diagram tall enough to scroll through.
+const tall = sectionsReport(30).scenarios[0]
+const base = { ...uxFixture.scenarios[0], participants: tall.participants, events: tall.events }
 const phoneReport: Report = {
   ...uxFixture,
   scenarios: ['One', 'Two', 'Three', 'Four'].map((title, i) => ({ ...base, id: `sc${i + 1}`, title })),
@@ -83,6 +85,50 @@ for (const [phone, device] of Object.entries(PHONES)) {
       expect(Math.abs(search!.y + search!.height / 2 - (chips!.y + chips!.height / 2))).toBeLessThan(4)
       await expect(page.locator('.filters [data-filter="success"]')).toHaveAccessibleName(/^Success/)
     })
+
+    for (const which of ['report', 'index'] as const) {
+      test(`${which}: scrolling slides the top bar's first row away, search stays, the toolbar sticks below it, nothing jumps`, async ({
+        page,
+      }) => {
+        await open(page, which)
+        const measure = () =>
+          page.evaluate(() => {
+            const bar = document.querySelector<HTMLElement>('.topbar')!.getBoundingClientRect()
+            const panel = document.querySelector<HTMLElement>('.diagram-panel')!.getBoundingClientRect()
+            const search = document.querySelector<HTMLElement>('.search-wrap')!.getBoundingClientRect()
+            const brand = document.querySelector<HTMLElement>('.brand')!.getBoundingClientRect()
+            const toolbar = document.querySelector<HTMLElement>('.seq-toolbar')!.getBoundingClientRect()
+            const find = document.querySelector<HTMLElement>('.diagram-find')!.getBoundingClientRect()
+            return {
+              findTop: find.top,
+              barBottom: bar.bottom,
+              barHeight: bar.height,
+              panelDocTop: panel.top + scrollY,
+              searchTop: search.top,
+              brandBottom: brand.bottom,
+              toolbarDocTop: toolbar.top + scrollY,
+              stuck: Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')),
+            }
+          })
+        const before = await measure()
+        expect(before.barHeight).toBeGreaterThan(80) // two rows at the top of the page
+        const panelTop = before.panelDocTop
+        // Well into the diagram, past where its toolbar starts.
+        await page.evaluate((y) => scrollTo(0, y + 300), before.toolbarDocTop)
+        await page.waitForTimeout(100)
+        const after = await measure()
+        expect(after.barBottom).toBeLessThanOrEqual(64)
+        expect(Math.abs(after.barBottom - after.stuck)).toBeLessThanOrEqual(1)
+        expect(after.brandBottom).toBeLessThanOrEqual(1)
+        expect(after.searchTop).toBeGreaterThanOrEqual(0)
+        // Only the toolbar's Find row stays, just under the bar.
+        expect(after.findTop).toBeGreaterThanOrEqual(after.barBottom)
+        expect(after.findTop).toBeLessThanOrEqual(after.barBottom + 12)
+        expect(after.panelDocTop).toBe(panelTop)
+        await expect(page.locator('[data-diagram-find]')).toBeInViewport()
+        await expect(page.locator('[data-find-step="next"]')).toBeInViewport()
+      })
+    }
 
     test('index: the report list folds to the open report', async ({ page }) => {
       await open(page, 'index')

@@ -28,6 +28,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Narrow screens (860px and below) fold the scenario list (the index's report list) to the selected item under
   an "N scenarios ▾" disclosure; a typed search lists every match. On phones, search and the status chips
   share one row (the chips show their counts, and keep their names for screen readers).
+- Phones: scrolling slides the top bar's first row (brand, theme, help) away with the page, so only search and
+  the chips stay (58px instead of 134px); the diagram toolbar likewise keeps only its Find row stuck under
+  it. No class flip or animation: plain sticky offsets, so nothing jumps and reduced motion has nothing to
+  reduce. Panel and JSON reveals land below the smaller bar.
 - Fit (automatic and the button) stops at 50% so labels and touch targets stay usable; a wider diagram scrolls
   sideways. Zoom out still reaches 25%.
 - Arrows with a payload show a `{}` marker after their label, with a hover title, and a one-line legend under

@@ -543,7 +543,7 @@ test('on a phone the sticky top bar holds its search and status filters while th
   browser,
   baseURL,
 }) => {
-  // iPhone 13 size, as a touch device. The bar wraps onto three rows there. A fixed grid row
+  // iPhone 13 size, as a touch device. The bar wraps onto two rows there. A fixed grid row
   // used to clamp it to one, and the search box and chips floated over the page on scroll.
   const context = await browser.newContext({
     baseURL,
@@ -578,12 +578,18 @@ test('on a phone the sticky top bar holds its search and status filters while th
     expect(top.barBottom, 'the bar wraps onto more than one row').toBeGreaterThan(56)
     expect(top.filtersBottom).toBeLessThanOrEqual(top.barBottom + 0.5)
     expect(top.searchBottom).toBeLessThanOrEqual(top.barBottom + 0.5)
-    expect(top.topbarVar).toBe(`${Math.ceil(top.barBottom - top.barTop)}px`)
+    // While stuck only the search row shows: its first row (brand, theme, help) scrolls away.
+    const lead = await page.evaluate(
+      () => -Number.parseFloat(document.querySelector<HTMLElement>('.topbar')!.style.top),
+    )
+    expect(lead).toBeGreaterThan(0)
+    expect(top.topbarVar).toBe(`${Math.ceil(top.barBottom - top.barTop) - lead}px`)
 
     await page.evaluate(() => window.scrollBy(0, 600))
     const scrolled = await geometry()
     expect(scrolled.scrollY, 'the page scrolls').toBeGreaterThan(0)
-    expect(scrolled.barTop).toBe(0)
+    expect(scrolled.barTop).toBe(-lead)
+    expect(Math.abs(scrolled.barBottom - Number.parseFloat(scrolled.topbarVar))).toBeLessThanOrEqual(1)
     expect(scrolled.filtersBottom).toBeLessThanOrEqual(scrolled.barBottom + 0.5)
     expect(scrolled.searchBottom).toBeLessThanOrEqual(scrolled.barBottom + 0.5)
     expect(scrolled.chipOnTop, 'the Warn chip is on top and clickable').toBe(true)

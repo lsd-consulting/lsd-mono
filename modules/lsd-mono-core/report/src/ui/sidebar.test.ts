@@ -8,6 +8,7 @@ import {
   sidebarToggleGlyph,
   sidebarToggleLabel,
   storeSidebarCollapsed,
+  navFoldLabel,
 } from './sidebar'
 
 describe('sidebar collapse', () => {
@@ -56,5 +57,12 @@ describe('sidebar collapse', () => {
 
   it('gives rail items a tooltip with the scenario title and status', () => {
     expect(navItemTooltip('Happy path', 'Success', 22)).toBe('Happy path. Success · 22 messages')
+  })
+})
+
+describe('navFoldLabel', () => {
+  it('counts the list, singular for one', () => {
+    expect(navFoldLabel(5, 'scenario')).toBe('5 scenarios')
+    expect(navFoldLabel(1, 'report')).toBe('1 report')
   })
 })
