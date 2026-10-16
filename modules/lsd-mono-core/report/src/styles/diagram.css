@@ -628,6 +628,16 @@
    row, and only that row stays stuck under the top bar: the rows above it slide away with the
    page (--seq-toolbar-lead, set by page-scroll.ts), so the diagram keeps the screen. */
 @media (max-width: 560px) {
+  /* Section links: one row that scrolls sideways. */
+  .section-jump {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .section-jump button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
   .seq-toolbar {
     top: calc(var(--topbar-h, 0px) - var(--seq-toolbar-lead, 0px));
   }

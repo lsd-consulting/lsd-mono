@@ -310,3 +310,22 @@
   border-radius: 4px;
   padding: 0 4px;
 }
+
+/* Phones: the four timing chips sit on one row that scrolls sideways, not a 2×2 block. */
+@media (max-width: 560px) {
+  .timing-strip {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+  .timing-strip > li {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+  .timing-chip {
+    width: auto;
+    padding: 6px 10px;
+  }
+}

@@ -130,6 +130,26 @@ for (const [phone, device] of Object.entries(PHONES)) {
       })
     }
 
+    for (const which of ['report', 'index'] as const) {
+      test(`${which}: the diagram and its toolbar start on the first screen, before the description`, async ({
+        page,
+      }) => {
+        await open(page, which)
+        const at = await page.evaluate(() => ({
+          vh: innerHeight,
+          panel: document.querySelector('.diagram-panel')!.getBoundingClientRect().top,
+          drawing: document.querySelector('.seq-scroll')!.getBoundingClientRect().top,
+          cards: document.querySelector('.scenario-body > .cards')!.getBoundingClientRect().top,
+        }))
+        expect(at.panel).toBeLessThan(at.vh * 0.75)
+        expect(at.cards).toBeGreaterThan(at.drawing)
+        await expect(page.locator('[data-diagram-find]')).toBeInViewport()
+        // A report's drawing starts within the screen (this fixture; a long title can push it lower).
+        // The index adds its own heading, so on the shorter iPhone only the toolbar makes it.
+        if (which === 'report') expect(at.drawing).toBeLessThan(at.vh)
+      })
+    }
+
     test('index: the report list folds to the open report', async ({ page }) => {
       await open(page, 'index')
       await expect(page.locator('#btn-nav-fold')).toHaveText(/1 report\b/)

@@ -1038,7 +1038,8 @@ html {
     display: none;
   }
   /* Only while the selected item is in the list; otherwise everything shows. */
-  .nav-folded .scenario-nav:has([aria-current]) > li:not(:has([aria-current])) {
+  .nav-folded .scenario-nav:has([aria-current]) > li:not(:has([aria-current])),
+  .nav-folded .nav-group-items:has([aria-current]) > li:not(:has([aria-current])) {
     display: none;
   }
 }
@@ -1135,6 +1136,25 @@ html {
   .chip {
     padding: 4px 8px;
     min-height: 32px;
+  }
+  /* The diagram comes first on a phone; the description and key facts follow it. */
+  .scenario-body {
+    display: flex;
+    flex-direction: column;
+  }
+  .scenario-body > .cards {
+    order: 1;
+  }
+  .report-hero {
+    margin-bottom: 12px;
+  }
+  .report-hero .meta {
+    font-size: 12px;
+    gap: 4px 10px;
+  }
+  /* The toolbar's own buttons say what they do; the hint line only pushes the drawing down. */
+  .diagram-hint {
+    display: none;
   }
   .chip .chip-label {
     position: absolute;
