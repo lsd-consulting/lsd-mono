@@ -60,7 +60,7 @@ class JavaApiTest {
         lsd.message("Customer", "Api", "POST /orders", new Order("o-1"));
         lsd.message("Customer", "Api", "lost", null, MessageType.LOST);
         lsd.message("Customer", "Api", "lost again", MessageType.LOST);
-        lsd.message("Api", "Db", "late", null, MessageType.SYNCHRONOUS, 5L, "#f00", Instant.parse("2026-01-01T00:00:00Z"));
+        lsd.message("Api", "Db", "late", null, MessageType.SYNCHRONOUS, "#f00", Timing.of(Instant.parse("2026-01-01T00:00:00Z"), java.time.Duration.ofMillis(5)));
         lsd.response("Db", "Api");
         lsd.response("Db", "Api", "1 row", Map.of("rows", 1));
         lsd.async("Api", "Queue", "order.placed");
@@ -103,7 +103,7 @@ class JavaApiTest {
             all(json, "\"kind\": \"(\\w+)\""));
         assertTrue(json.contains("\"timing\": \"MEASURED\""), json);
         assertTrue(json.contains("\"order\": \"o-1\"") || Files.readString(payloads(tempDir)).contains("o-1"), json);
-        assertTrue(json.contains("\"createdAt\": \"2026-01-01T00:00:00Z\""), json);
+        assertTrue(json.contains("\"startedAt\": \"2026-01-01T00:00:00Z\""), json);
         assertTrue(json.contains("\"label\": \"IllegalStateException\""), json);
         assertEquals(2, all(json, "\"type\": \"(LOST)\"").size(), "a MessageType in the data position is the type");
     }

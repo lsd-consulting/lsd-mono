@@ -108,7 +108,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     colour = colour?.takeIf { it.isNotBlank() },
                     durationMs = timing.reportedMs(this),
                     data = data,
-                    createdAt = createdAt?.toString(),
+                    startedAt = createdAt?.toString(),
                     seq = seq.takeIf { it > 0 },
                     callId = callRef?.id,
                     replyTo = replyTo?.id,

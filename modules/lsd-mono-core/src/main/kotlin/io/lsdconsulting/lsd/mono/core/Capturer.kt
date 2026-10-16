@@ -20,13 +20,14 @@ import java.time.Instant
  * Participants are named by their name, id or display name. A name that was never passed
  * to [LsdContext.addParticipants] becomes a plain participant.
  *
- * Every verb takes an optional [Instant] `at`: when it happened (its `startedAt`). By default
- * (`lsd.mono.timing.orderByCreatedAt=source`) events from one source that have it and no measured
- * duration are ordered by it, for capture that arrives out of order (interceptors on other
- * threads); untimed events keep their capture position. A reply never moves before its call,
- * nor a child out of its parent. The message verbs also take a [Timing] (start, measured
- * fractional `durationMs`, clock source, ordering hint) and a [Trace] (trace and span ids), and
- * [ingest] takes [Interaction]s from other libraries.
+ * The message verbs take a [Timing], the one place for message timing: `startedAt` (when it
+ * happened), a measured fractional `durationMs`, the clock source and an ordering hint, plus a
+ * [Trace] (trace and span ids). [ingest] takes [Interaction]s from other libraries. Structural
+ * rows (notes, activations, sections, dividers, delays, spacers) take an optional [Instant] `at`.
+ * By default (`lsd.mono.timing.orderByCreatedAt=source`) events from one source that have a start
+ * and no measured duration are ordered by it, for capture that arrives out of order (interceptors
+ * on other threads); untimed events keep their capture position. A reply never moves before its
+ * call, nor a child out of its parent.
  *
  * Capturing never throws into the application because of something going wrong inside
  * LSD, so an interceptor can call these verbs on a request path: a failure is logged
@@ -50,9 +51,7 @@ public sealed class Capturer {
         label: String = "",
         data: Any? = null,
         type: MessageType? = MessageType.SYNCHRONOUS,
-        durationMs: Long? = null,
         colour: String? = null,
-        at: Instant? = null,
         timing: Timing? = null,
         trace: Trace? = null,
     ) {
@@ -65,8 +64,6 @@ public sealed class Capturer {
                 type = type ?: MessageType.SYNCHRONOUS,
                 colour = colour,
                 data = data,
-                durationMs = durationMs,
-                createdAt = at,
             ).withTiming(timing, trace),
         )
     }
@@ -98,7 +95,6 @@ public sealed class Capturer {
         to: String,
         label: String = "",
         data: Any? = null,
-        at: Instant? = null,
         timing: Timing? = null,
         trace: Trace? = null,
     ): PendingCall =
@@ -110,7 +106,6 @@ public sealed class Capturer {
                 label = label,
                 type = MessageType.SYNCHRONOUS,
                 data = data,
-                createdAt = at,
                 callRef = CallRef(null),
             ).withTiming(timing, trace),
         )
@@ -126,8 +121,6 @@ public sealed class Capturer {
         to: String,
         label: String = "",
         data: Any? = null,
-        durationMs: Long? = null,
-        at: Instant? = null,
         timing: Timing? = null,
         trace: Trace? = null,
         replyTo: CallRef? = null,
@@ -140,8 +133,6 @@ public sealed class Capturer {
                 label = label,
                 type = MessageType.SYNCHRONOUS_RESPONSE,
                 data = data,
-                durationMs = durationMs,
-                createdAt = at,
                 replyTo = replyTo,
             ).withTiming(timing, trace),
         )
@@ -157,7 +148,6 @@ public sealed class Capturer {
         to: String,
         label: String = "",
         data: Any? = null,
-        at: Instant? = null,
         timing: Timing? = null,
         trace: Trace? = null,
         causedBy: CallRef? = null,
@@ -171,7 +161,6 @@ public sealed class Capturer {
                 label = label,
                 type = MessageType.ASYNCHRONOUS,
                 data = data,
-                createdAt = at,
                 callRef = ref,
                 causedBy = causedBy,
             ).withTiming(timing, trace),
@@ -190,14 +179,14 @@ public sealed class Capturer {
 
     /** A short arrow into [to] from the edge of the diagram, for a caller that is not drawn. */
     @JvmOverloads
-    public fun inbound(to: String, label: String = "", at: Instant? = null) {
-        emit(Message(id = "", from = null, to = to, label = label, type = MessageType.SHORT_INBOUND, createdAt = at))
+    public fun inbound(to: String, label: String = "", timing: Timing? = null) {
+        emit(Message(id = "", from = null, to = to, label = label, type = MessageType.SHORT_INBOUND).withTiming(timing, null))
     }
 
     /** A short arrow from [from] to the edge of the diagram, for a callee that is not drawn. */
     @JvmOverloads
-    public fun outbound(from: String, label: String = "", at: Instant? = null) {
-        emit(Message(id = "", from = from, to = null, label = label, type = MessageType.SHORT_OUTBOUND, createdAt = at))
+    public fun outbound(from: String, label: String = "", timing: Timing? = null) {
+        emit(Message(id = "", from = from, to = null, label = label, type = MessageType.SHORT_OUTBOUND).withTiming(timing, null))
     }
 
     /**
@@ -298,7 +287,7 @@ public sealed class Capturer {
             type = type,
             data = payload(),
             createdAt = startedAt,
-            exactMs = durationMs?.takeIf { it > 0.0 && it.isFinite() },
+            durationMs = durationMs?.takeIf { it > 0.0 && it.isFinite() },
             source = source,
             trace = trace,
             callRef = if (opens) CallRef(interactionId) else null,
@@ -339,7 +328,7 @@ internal fun Message.withTiming(
     } else {
         copy(
             createdAt = timing?.startedAt ?: createdAt,
-            exactMs = timing?.durationMs ?: exactMs,
+            durationMs = timing?.durationMs ?: durationMs,
             source = timing?.source ?: source,
             orderHint = timing?.orderByCreatedAt ?: orderHint,
             trace = trace ?: this.trace,

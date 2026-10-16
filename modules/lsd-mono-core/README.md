@@ -88,20 +88,23 @@ captures into itself) and a capture block (below) share the same verbs, from the
 
 | Verb | Draws |
 | --- | --- |
-| `message(from, to, label, data, type, durationMs, colour, at)` | An arrow; a synchronous call unless `type` says otherwise |
-| `response(from, to, label, data, durationMs, at)` | The reply to a call |
-| `call(from, to, label, data, at)` | A call now, returning a `PendingCall`; its `reply(label, data, at)` or `fail(error)` draws the timed response later (see [Interceptors](#interceptors)) |
-| `async(from, to, label, data, at)` | An asynchronous message, such as an event on a queue |
-| `inbound(to, label, at)` / `outbound(from, label, at)` | A short arrow from or to the edge of the diagram |
+| `message(from, to, label, data, type, colour, timing, trace)` | An arrow; a synchronous call unless `type` says otherwise |
+| `response(from, to, label, data, timing, trace, replyTo)` | The reply to a call |
+| `call(from, to, label, data, timing, trace)` | A call now, returning a `PendingCall`; its `reply(label, data, timing)` or `fail(error, timing)` draws the timed response later (see [Interceptors](#interceptors)) |
+| `async(from, to, label, data, timing, trace, causedBy)` | An asynchronous message, such as an event on a queue |
+| `inbound(to, label, timing)` / `outbound(from, label, timing)` | A short arrow from or to the edge of the diagram |
 | `note(text, on, side, at)` | A note over `on`, or beside it with `side = NoteSide.LEFT` or `RIGHT`. `on` is required; pass `on = null` with `LEFT` or `RIGHT` for a note at the diagram's edge |
 | `activate(participant, colour, at)` / `deactivate(participant, at)` | An activation bar |
 | `section(title, at)`, `divider(label, at)`, `delay(label, at)`, `spacer(heightPx, at)` | Rows that structure the diagram |
 | `addFact(key, value)` | A fact shown with the scenario |
 
-Everything after the first required arguments is optional. `at` is when the event
-happened: the report orders timed events by it, for capture that arrives out of order.
-From Java, the overloads cover the common calls (`lsd.message("A", "B", "label", body)`).
-To pass `at`, pass `null` for the optional parameters before it: a `null` type means
+Everything after the first required arguments is optional. A message's timing is one
+[`Timing`](#timing): `Timing.at(instant)` (when it started), `Timing.tookMs(12.5)` or
+`Timing.took(duration)` (measured), `Timing.of(instant, duration)`, plus its clock `source`. The
+report orders timed messages by their start, for capture that arrives out of order. Structural
+rows take `at`, an `Instant`. From Java, the overloads cover the common calls
+(`lsd.message("A", "B", "label", body)`). To pass `timing`, pass `null` for the optional
+parameters before it: a `null` type means
 `MessageType.SYNCHRONOUS`. `message(from, to, label, MessageType.LOST)` sets the type, from
 Kotlin and Java alike: a type in the fourth position is never taken as `data`, and Java's
 `message(from, to, label, null)` is a plain synchronous message.
@@ -127,7 +130,8 @@ lsd.capture {
 | `"B" repliesTo "A"` | The reply to a call |
 | `"A" sends "B"` | An asynchronous message |
 
-Each arrow takes `label`, `data`, `took` (milliseconds), `colour` and `at`, in any order.
+Each arrow takes `label`, `data`, `took` (milliseconds, fractional allowed), `startedAt` (an
+`Instant`), `timing` (a whole `Timing`), `source`, `trace` and `colour`, in any order.
 The arrows exist only inside a block; every verb above works there too, including
 `message(from, to, label, MessageType.LOST)` for the other arrow types.
 
@@ -203,12 +207,12 @@ override fun onConsume(records: ConsumerRecords<String, String>) =
         it.forEach { r ->
             val target: Capturer =
                 r.headers().lastHeader(LsdHeaders.SCENARIO)?.let { h -> lsd.findScenarioByHeader(String(h.value())) } ?: lsd
-            target.async(r.topic(), "Orders", "consume ${r.key()}", data = r.value(), at = Instant.ofEpochMilli(r.timestamp()))
+            target.async(r.topic(), "Orders", "consume ${r.key()}", data = r.value(), timing = Timing.at(Instant.ofEpochMilli(r.timestamp())))
         }
     }
 ```
 
-`at` puts consumption that arrives out of order back in time order.
+`Timing.at` puts consumption that arrives out of order back in time order.
 
 From Java:
 

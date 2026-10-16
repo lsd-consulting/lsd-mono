@@ -278,7 +278,7 @@ private fun callDurations(
         val reply = pairs.replyOf[i].takeIf { it >= 0 }?.let { events[it] as Message }
         val own = m.timedMs
         val theirs = reply?.timedMs
-        if (own != null && theirs != null && reply.exactMs != null && m.exactMs != null) {
+        if (own != null && theirs != null && reply.durationMs != null && m.durationMs != null) {
             warnings += "duration on reply dropped: '${m.label}' already has one"
         }
         callMs[i] = own ?: theirs

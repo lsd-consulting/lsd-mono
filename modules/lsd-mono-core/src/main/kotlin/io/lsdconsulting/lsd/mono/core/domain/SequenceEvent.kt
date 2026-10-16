@@ -87,16 +87,14 @@ internal data class Message(
     val type: MessageType = MessageType.SYNCHRONOUS,
     val colour: String? = null,
     val data: Any? = null,
-    /** Legacy whole-ms duration, as before. Kept alongside [exactMs]. */
-    val durationMs: Long? = null,
     /** `startedAt`: the caller's `at`. */
     override val createdAt: Instant? = null,
     /** Capture order within the context, set when the event is bound. */
     val seq: Long = 0,
     /** When lsd-mono captured it. A soft hint only. */
     val capturedAt: Instant? = null,
-    /** Measured duration, fractional ms. Written as `durationMs` in the JSON. */
-    val exactMs: Double? = null,
+    /** Measured duration, fractional ms. */
+    val durationMs: Double? = null,
     /** The duration was computed from two same-source timestamps, not measured. */
     val derived: Boolean = false,
     /** Clock domain; null is `"local"`. */
@@ -113,7 +111,7 @@ internal data class Message(
     val orderHint: Boolean? = null,
 ) : SequenceEvent() {
     /** The measured or derived duration, fractional ms. */
-    val timedMs: Double? get() = exactMs ?: durationMs?.toDouble()
+    val timedMs: Double? get() = durationMs
 }
 
 /**

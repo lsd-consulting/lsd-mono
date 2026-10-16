@@ -168,7 +168,7 @@ internal data class MessageEventJson(
     val data: Any? = null,
     /** Set when [data] is only method/path/status and the rest lives in the payload sidecar. */
     val payloadId: String? = null,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
     val seq: Long? = null,
     val callId: String? = null,
     val replyTo: String? = null,
@@ -194,7 +194,6 @@ internal data class MessageEventJson(
                 if (durationMs != null) add("durationMs" to msNumber(durationMs))
                 if (data != null) add("data" to anyToJson(data))
                 if (payloadId != null) add("payloadId" to JsonString(payloadId))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
                 if (seq != null) add("seq" to JsonNumber(seq.toString()))
                 if (callId != null) add("callId" to JsonString(callId))
                 if (replyTo != null) add("replyTo" to JsonString(replyTo))
@@ -212,7 +211,7 @@ internal data class MessageEventJson(
                     )
                 }
                 if (source != null) add("source" to JsonString(source))
-                if (createdAt != null) add("startedAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
                 if (capturedAt != null) add("capturedAt" to JsonString(capturedAt))
                 if (status != null) add("status" to JsonString(status))
                 if (timing != null) add("timing" to JsonString(timing))

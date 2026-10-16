@@ -44,9 +44,9 @@ class ScenarioMetricsTest {
     @Test
     fun `a call with its own duration and a timed reply counts once`() {
         val lsd = LsdContext()
-        lsd.message("A", "B", "call", durationMs = 100)
-        lsd.response("B", "A", "reply", durationMs = 80)
-        lsd.message("A", "C", "event", type = io.lsdconsulting.lsd.mono.core.domain.MessageType.ASYNCHRONOUS, durationMs = 5)
+        lsd.message("A", "B", "call", timing = Timing.tookMs(100.0))
+        lsd.response("B", "A", "reply", timing = Timing.tookMs(80.0))
+        lsd.message("A", "C", "event", type = io.lsdconsulting.lsd.mono.core.domain.MessageType.ASYNCHRONOUS, timing = Timing.tookMs(5.0))
         lsd.completeScenario("once", "ok", Status.SUCCESS)
         lsd.completeReport("Once")
         val json = tempDir.resolve(ReportWriter.reportFileStem("Once") + "-report.json").readText()
@@ -86,8 +86,8 @@ class ScenarioMetricsTest {
         System.setProperty("lsd.mono.label.maxWidth", "12")
         val lsd = LsdContext()
         val longLabel = "abcdefghijklmnopqrstuvwxyz"
-        lsd.message("A", "B", "parent", durationMs = 100)
-        lsd.message("B", "C", longLabel, durationMs = 80)
+        lsd.message("A", "B", "parent", timing = Timing.tookMs(100.0))
+        lsd.message("B", "C", longLabel, timing = Timing.tookMs(80.0))
         lsd.response("C", "B", "ok")
         lsd.response("B", "A", "done")
         lsd.completeScenario("timed", "ok", Status.SUCCESS)
@@ -109,7 +109,7 @@ class ScenarioMetricsTest {
     fun `disabled metrics omit the counts`() {
         System.setProperty("lsd.mono.metrics.enabled", "false")
         val lsd = LsdContext()
-        lsd.message("A", "B", "ping", durationMs = 40)
+        lsd.message("A", "B", "ping", timing = Timing.tookMs(40.0))
         lsd.completeScenario("quiet", "", Status.SUCCESS)
         lsd.completeReport("No metrics")
 
@@ -149,9 +149,9 @@ class ScenarioMetricsTest {
         val t0 = Instant.parse("2026-10-14T09:00:00Z")
         val total =
             capturedDuration("derived") { lsd ->
-                val call = lsd.call("A", "B", "get", at = t0)
+                val call = lsd.call("A", "B", "get", timing = Timing.at(t0))
                 Thread.sleep(5)
-                call.reply("ok", at = t0.plusMillis(250))
+                call.reply("ok", timing = Timing.at(t0.plusMillis(250)))
             }
         assertEquals("250 ms", total)
     }

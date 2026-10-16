@@ -65,7 +65,7 @@ class TimingApiTest {
         label = label,
         type = type,
         createdAt = at,
-        exactMs = ms,
+        durationMs = ms,
         source = source,
         callRef = callRef,
         replyTo = replyTo,
@@ -358,7 +358,7 @@ class TimingApiTest {
     @Test
     fun `a timed call and reply with no duration is DERIVED, not measured`() {
         val lsd = LsdContext()
-        lsd.call("A", "B", "x", at = t(0)).reply("ok", at = t(40))
+        lsd.call("A", "B", "x", timing = Timing.at(t(0))).reply("ok", timing = Timing.at(t(40)))
         lsd.completeScenario("derived", status = Status.SUCCESS)
         val json = report(lsd, "Derived")
         assertTrue(json.contains("\"timing\": \"DERIVED\""), json)
@@ -477,8 +477,8 @@ class TimingApiTest {
         assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByCreatedAt())
         lsd.configure { it.orderByCreatedAt(ClockOrdering.OFF) }
         assertEquals(ClockOrdering.OFF, lsd.timingConfig.orderByCreatedAt())
-        lsd.message("A", "B", "late", at = t(50))
-        lsd.message("A", "B", "early", at = t(0))
+        lsd.message("A", "B", "late", timing = Timing.at(t(50)))
+        lsd.message("A", "B", "early", timing = Timing.at(t(0)))
         lsd.completeScenario("off", status = Status.SUCCESS)
         val json = report(lsd, "Configured")
         assertTrue(json.contains("\"clockOrdering\": \"OFF\""), json)

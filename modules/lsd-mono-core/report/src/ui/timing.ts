@@ -60,7 +60,7 @@ function pairingHint(scenario: Scenario): string {
 function orderBadgesHtml(order?: string, pairing?: string): string {
   return [
     order === 'CLOCK'
-      ? '<span class="tbadge clock" title="Placed by its timestamp (createdAt), not capture order">clock</span>'
+      ? '<span class="tbadge clock" title="Placed by its start time, not capture order">clock</span>'
       : '',
     pairing === 'GUESSED'
       ? '<span class="tbadge guessed" title="Reply matched by direction, not by id">guessed</span>'

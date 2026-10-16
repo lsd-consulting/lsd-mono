@@ -92,7 +92,6 @@ export interface MessageEvent {
   data?: unknown
   /** Key into the payload sidecar (`scenarioId/messageId`). Absent when `data` is the whole payload. */
   payloadId?: string
-  createdAt?: string
   /** Capture order. */
   seq?: number
   callId?: string
@@ -103,6 +102,7 @@ export interface MessageEvent {
   trace?: { traceId: string; spanId?: string; parentSpanId?: string }
   /** Clock domain. Absent means `local`. */
   source?: string
+  /** When it started, by its source's clock. */
   startedAt?: string
   capturedAt?: string
   status?: string
@@ -113,7 +113,7 @@ export interface MessageEvent {
 
 export type TimingSource = 'NONE' | 'TIMESTAMPED' | 'MEASURED' | 'DERIVED'
 export type PairingSource = 'NONE' | 'GUESSED' | 'CALL_ID' | 'TRACE'
-/** `CLOCK`: moved by clock ordering (createdAt). Shown with a badge. */
+/** `CLOCK`: moved by clock ordering (startedAt). Shown with a badge. */
 export type OrderSource = 'SEQUENCE' | 'STRUCTURE' | 'CLOCK'
 export type Accuracy = 'STRUCTURE_ONLY' | 'TIMESTAMPED' | 'MEASURED' | 'TRACED'
 export type ClockOrdering = 'OFF' | 'SAME_SOURCE' | 'ALL_SOURCES'

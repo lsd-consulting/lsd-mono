@@ -216,14 +216,14 @@ describe('noteCardMetrics', () => {
 
 describe('layoutRows event order', () => {
   it('keeps the report order: whole-second stamps, untimed sections and replies stay in place', () => {
-    const msg = (id: string, createdAt?: string): DiagramEvent => ({
+    const msg = (id: string, startedAt?: string): DiagramEvent => ({
       kind: 'message',
       id,
       from: 'a',
       to: 'b',
       label: id,
       type: 'SYNCHRONOUS',
-      ...(createdAt ? { createdAt } : {}),
+      ...(startedAt ? { startedAt } : {}),
     })
     const events: DiagramEvent[] = [
       { kind: 'section', id: 'section', title: 'Measured and traced' },

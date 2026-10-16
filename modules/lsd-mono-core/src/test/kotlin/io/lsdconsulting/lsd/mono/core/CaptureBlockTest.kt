@@ -35,7 +35,7 @@ class CaptureBlockTest {
         val viaBlock =
             scenario().apply {
                 capture {
-                    "Customer" calls "Orders" label "POST /orders" data body took 412 colour "#f00" at at
+                    "Customer" calls "Orders" label "POST /orders" data body took 412 colour "#f00" startedAt at
                     activate("Orders")
                     "Orders" sends "Events" label "order.paid"
                     note("idempotent", on = "Orders")
@@ -45,7 +45,7 @@ class CaptureBlockTest {
             }
         val viaVerbs =
             scenario().apply {
-                message("Customer", "Orders", "POST /orders", body, durationMs = 412, colour = "#f00", at = at)
+                message("Customer", "Orders", "POST /orders", body, colour = "#f00", timing = Timing(startedAt = at, durationMs = 412.0))
                 activate("Orders")
                 async("Orders", "Events", "order.paid")
                 note("idempotent", on = "Orders")

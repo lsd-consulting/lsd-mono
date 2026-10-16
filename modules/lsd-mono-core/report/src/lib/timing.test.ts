@@ -67,8 +67,8 @@ describe('timeline', () => {
     const t = timeline(
       scenario(
         [
-          msg('a', 'x', 'y', { createdAt: '2026-01-01T00:00:00Z', durationMs: 10 }),
-          msg('b', 'x', 'z', { createdAt: '2026-01-01T00:00:00.100Z', durationMs: 5 }),
+          msg('a', 'x', 'y', { startedAt: '2026-01-01T00:00:00Z', durationMs: 10 }),
+          msg('b', 'x', 'z', { startedAt: '2026-01-01T00:00:00.100Z', durationMs: 5 }),
         ],
         { sources: ['local'] },
       ),

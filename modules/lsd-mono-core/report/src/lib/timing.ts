@@ -87,7 +87,7 @@ function buildTimeline(scenario: Scenario): Timeline {
   let t0: number | undefined
   for (const e of scenario.events) {
     if (e.kind !== 'message') continue
-    const at = onClock(e) && e.createdAt ? Date.parse(e.createdAt) : undefined
+    const at = onClock(e) && e.startedAt ? Date.parse(e.startedAt) : undefined
     if (at != null && !Number.isNaN(at)) t0 = t0 == null ? at : Math.min(t0, at)
   }
   for (const e of scenario.events) {
@@ -111,7 +111,7 @@ function buildTimeline(scenario: Scenario): Timeline {
       continue
     }
     const parent = spanParent(stack, e) ?? stack[stack.length - 1]
-    const startedAt = onClock(e) && e.createdAt ? Date.parse(e.createdAt) : NaN
+    const startedAt = onClock(e) && e.startedAt ? Date.parse(e.startedAt) : NaN
     const node: Node = {
       message: e,
       parent,
@@ -187,5 +187,5 @@ export function formatMs(ms: number): string {
 /** Whether the scenario has any timing worth a Timing view. */
 export function hasTiming(scenario: Scenario): boolean {
   if (scenario.accuracy) return scenario.accuracy !== 'STRUCTURE_ONLY'
-  return scenario.events.some((e) => e.kind === 'message' && (e.durationMs != null || e.createdAt != null))
+  return scenario.events.some((e) => e.kind === 'message' && (e.durationMs != null || e.startedAt != null))
 }

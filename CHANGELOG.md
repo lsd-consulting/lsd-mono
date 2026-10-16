@@ -67,7 +67,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   column's width, at most half the screen, with room for the timing lanes. Dragging still resizes them, and the
   message panel keeps the width you chose. Phones keep the full-width inline panel.
 - The Metrics view's "Captured duration" sums each message's measured duration: an explicit `took` or `Timing`
-  duration first, then call-to-reply time, then the legacy whole-ms value. It is fractional (to three places), and a
+  duration first, then call-to-reply time. It is fractional (to three places), and a
   scenario whose durations are all given reports the same total on every run.
 - CI `gate` job, a single required check that passes for docs-only changes.
 - Coverage ratchet for Kover and Vitest.
@@ -75,3 +75,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 ### Removed
 
 - Version-override checks (`VersionAlignment`). Every module takes the root train version.
+- Legacy message timing: `at: Instant` and whole-ms `durationMs: Long` on `message`, `call`, `response`, `async`,
+  `inbound`, `outbound`, `PendingCall.reply` and `fail`, and the capture block's `at` and `took(Long)`. A message's
+  timing is now only its `Timing` (`timing = Timing.at(…)`, `Timing.tookMs(…)`, `Timing.of(…)`); arrows take
+  `startedAt`, `took` (any number) and `timing`. Structural rows keep `at`. The report JSON writes a message's start
+  as `startedAt` only (no `createdAt`), and the report UI reads it from there.

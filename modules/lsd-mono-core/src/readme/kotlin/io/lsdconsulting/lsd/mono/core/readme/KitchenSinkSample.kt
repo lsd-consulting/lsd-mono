@@ -240,18 +240,24 @@ private fun paymentDeclined(lsd: LsdContext) {
     fun at(seconds: Long) = t0.plusSeconds(seconds)
     lsd.addFact("orderId", "ord-2002")
     lsd.addFact("card", "**** 0002")
-    lsd.response("Payment Service", "Order Service", "402 declined", problem(402, "Payment declined", "Issuer declined: do_not_honour"), at = at(7))
+    lsd.response(
+        "Payment Service",
+        "Order Service",
+        "402 declined",
+        problem(402, "Payment declined", "Issuer declined: do_not_honour"),
+        timing = Timing.at(at(7)),
+    )
     lsd.message(
         "Order Service",
         "Payment Service",
         "authorise £42.00",
         req("POST", "/payments/authorise", mapOf("amount" to 4200, "card" to "**** 0002")),
-        at = at(1),
+        timing = Timing.at(at(1)),
     )
-    lsd.message("Payment Service", "Payment Provider", "authorise", mapOf("amount" to 4200, "card" to "**** 0002"), at = at(4))
-    lsd.message("Payment Service", "Fraud Check", "score transaction", req("POST", "/score", mapOf("amount" to 4200)), at = at(2))
-    lsd.response("Fraud Check", "Payment Service", "score 0.41", res(200, mapOf("score" to 0.41, "decision" to "REVIEW")), at = at(3))
-    lsd.response("Payment Provider", "Payment Service", "do_not_honour", mapOf("code" to "05", "reason" to "do_not_honour"), at = at(6))
+    lsd.message("Payment Service", "Payment Provider", "authorise", mapOf("amount" to 4200, "card" to "**** 0002"), timing = Timing.at(at(4)))
+    lsd.message("Payment Service", "Fraud Check", "score transaction", req("POST", "/score", mapOf("amount" to 4200)), timing = Timing.at(at(2)))
+    lsd.response("Fraud Check", "Payment Service", "score 0.41", res(200, mapOf("score" to 0.41, "decision" to "REVIEW")), timing = Timing.at(at(3)))
+    lsd.response("Payment Provider", "Payment Service", "do_not_honour", mapOf("code" to "05", "reason" to "do_not_honour"), timing = Timing.at(at(6)))
     lsd.activate("Payment Service", at = at(1))
     lsd.activate("Fraud Check", at = at(2))
     lsd.deactivate("Fraud Check", at = at(3))

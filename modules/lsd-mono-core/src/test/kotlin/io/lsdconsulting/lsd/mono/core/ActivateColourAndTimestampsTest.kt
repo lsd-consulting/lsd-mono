@@ -42,7 +42,7 @@ class ActivateColourAndTimestampsTest {
     }
 
     @Test
-    fun `out of order capture is sorted by createdAt before JSON`() {
+    fun `out of order capture is sorted by startedAt before JSON`() {
         val lsd = LsdContext()
         lsd.capture(
             Message(
@@ -81,8 +81,8 @@ class ActivateColourAndTimestampsTest {
         assertTrue(mid < untimed)
         assertTrue(untimed < late)
         assertTrue(json.contains("\"order\": \"CLOCK\""), json)
-        assertTrue(json.contains("\"createdAt\": \"2026-10-03T09:00:00Z\""))
-        assertTrue(json.contains("\"createdAt\": \"2026-10-03T10:00:00Z\""))
-        assertTrue(json.contains("\"createdAt\": \"2026-10-03T11:00:00Z\""))
+        assertTrue(json.contains("\"startedAt\": \"2026-10-03T09:00:00Z\""))
+        assertTrue(json.contains("\"startedAt\": \"2026-10-03T10:00:00Z\""))
+        assertTrue(json.contains("\"startedAt\": \"2026-10-03T11:00:00Z\""))
     }
 }
