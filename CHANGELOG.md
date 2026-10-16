@@ -25,6 +25,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - On a phone, tapping an arrow scrolls its payload JSON into view below the sticky top bar, and opening the
   component diagram or metrics scrolls the panel's heading there (smoothly, unless reduced motion is set; nothing
   moves when it is already on screen).
+- `Interaction.headers`: protocol headers shown beside the body in the payload (`{ headers, body }`), redacted
+  like any map key.
 - Narrow screens (860px and below) fold the scenario list (the index's report list) to the selected item under
   an "N scenarios ▾" disclosure; a typed search lists every match. On phones, search and the status chips
   share one row (the chips show their counts, and keep their names for screen readers).

@@ -31,6 +31,10 @@ public enum class InteractionKind {
  * @property replyTo a RESPONSE's request id, or a CONSUME's publish id.
  * @property durationMs measured, fractional ms. On a RESPONSE it belongs to the paired REQUEST.
  *   Zero is treated as absent (importers send 0 for "not measured").
+ * @property data the payload body.
+ * @property headers protocol headers (HTTP, Kafka record headers). When given, the payload shown is
+ *   `{ "headers": …, "body": data }`, the shape the inspector already lays out; redaction applies to
+ *   header names as to any map key (`authorization`, `cookie` by default).
  */
 public data class Interaction
     @JvmOverloads
@@ -48,6 +52,7 @@ public data class Interaction
         val durationMs: Double? = null,
         val orderByCreatedAt: Boolean? = null,
         val data: Any? = null,
+        val headers: Map<String, String>? = null,
     )
 
 /** Accepts interactions from other libraries. Thread-safe, and never throws. */

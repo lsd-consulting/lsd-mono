@@ -414,7 +414,18 @@ private fun timedCheckout(lsd: LsdContext) {
         Interaction(InteractionKind.PUBLISH, "Notification Service", "Email", "send receipt", source = "notification-service", startedAt = at(640)),
     )
     // The importer's status drives the Errors metric: the first send fails, the retry succeeds.
-    lsd.ingest(Interaction(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt", interactionId = "smtp-1"))
+    // Its headers sit beside the body in the payload.
+    lsd.ingest(
+        Interaction(
+            InteractionKind.REQUEST,
+            "Email",
+            "SMTP Relay",
+            "deliver receipt",
+            interactionId = "smtp-1",
+            data = mapOf("to" to "customer@example.test", "template" to "receipt"),
+            headers = mapOf("content-type" to "message/rfc822", "x-request-id" to "smtp-1"),
+        ),
+    )
     lsd.ingest(Interaction(InteractionKind.RESPONSE, "SMTP Relay", "Email", "421 try again later", status = "421", replyTo = "smtp-1"))
     lsd.ingest(Interaction(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt (retry)", interactionId = "smtp-2"))
     lsd.ingest(Interaction(InteractionKind.RESPONSE, "SMTP Relay", "Email", "250 queued", status = "250", replyTo = "smtp-2"))

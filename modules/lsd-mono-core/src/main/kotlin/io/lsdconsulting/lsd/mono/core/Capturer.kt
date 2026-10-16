@@ -296,7 +296,7 @@ public sealed class Capturer {
             to = to,
             label = label,
             type = type,
-            data = data,
+            data = payload(),
             createdAt = startedAt,
             exactMs = durationMs?.takeIf { it > 0.0 && it.isFinite() },
             source = source,
@@ -308,6 +308,17 @@ public sealed class Capturer {
             orderHint = orderByCreatedAt,
         )
     }
+
+    /** The body, or headers and body together when the interaction has headers. */
+    private fun Interaction.payload(): Any? =
+        if (headers.isNullOrEmpty()) {
+            data
+        } else {
+            buildMap {
+                put("headers", headers)
+                if (data != null) put("body", data)
+            }
+        }
 
     /** Record [events] in order. Ids are assigned here, from the context's generator. */
     internal abstract fun emit(events: List<SequenceEvent>)

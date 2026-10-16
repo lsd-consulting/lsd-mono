@@ -257,6 +257,9 @@ lsd.async("kafka", "billing", "consume", timing = Timing.at(t2), causedBy = plac
 lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "api", "200", replyTo = callId, durationMs = 12.5))
 ```
 
+An `Interaction`'s `headers` (HTTP or record headers) are shown with its payload as
+`{ "headers": …, "body": data }`, and are redacted like any other map key.
+
 Each message in the JSON carries `seq` (capture order), `timing` (`NONE`, `TIMESTAMPED`,
 `MEASURED`, `DERIVED`), `pairing` for calls and replies (`NONE`, `GUESSED`, `CALL_ID`, `TRACE`)
 and `order` (`SEQUENCE`, `STRUCTURE`, `CLOCK`), plus `callId`, `replyTo`, `causedBy`, `trace`,

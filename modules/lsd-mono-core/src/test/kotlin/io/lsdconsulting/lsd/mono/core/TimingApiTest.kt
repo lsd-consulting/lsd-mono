@@ -323,6 +323,22 @@ class TimingApiTest {
     }
 
     @Test
+    fun `interaction headers become the payload's headers, beside the body, and are redacted`() {
+        val lsd = LsdContext()
+        val headers = mapOf("content-type" to "application/json", "Authorization" to "Bearer secret")
+        lsd.accept(Interaction(InteractionKind.REQUEST, "web", "api", "POST /orders", data = mapOf("id" to 7), headers = headers))
+        lsd.accept(Interaction(InteractionKind.PUBLISH, "api", "kafka", "order.placed", headers = mapOf("lsd-scenario" to "abc")))
+        lsd.accept(Interaction(InteractionKind.MESSAGE, "api", "db", "plain", data = "body only"))
+        lsd.completeScenario("headers", status = Status.SUCCESS)
+        val json = report(lsd, "Headers")
+        assertTrue(json.contains("\"content-type\": \"application/json\""), json)
+        assertTrue(json.contains("\"body\": {"), json)
+        assertFalse(json.contains("Bearer secret"), "authorization is redacted")
+        assertTrue(json.contains("\"lsd-scenario\": \"abc\""), json)
+        assertTrue(json.contains("\"data\": \"body only\""), "no headers: the body as before")
+    }
+
+    @Test
     fun `ingested lsd-distributed style data is guessed and tops out at MEASURED`() {
         val lsd = LsdContext()
         lsd.accept(Interaction(InteractionKind.REQUEST, "orders", "payments", "POST /pay", trace = Trace("tid"), source = "orders", startedAt = t(0)))
