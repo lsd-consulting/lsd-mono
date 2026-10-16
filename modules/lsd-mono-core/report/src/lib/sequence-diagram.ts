@@ -75,6 +75,7 @@ export {
   bindDiagramScroll,
   setHiddenParticipants,
   sliceViewTop,
+  stepFind,
   syncDiagramWindow,
 } from './diagram/viewport'
 
@@ -187,6 +188,7 @@ function metricsControl(scenario: Scenario): string {
 
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   const hits = classifySearchHits(scenario.events, view.query, view.hidden)
+  const steppable = hits.total - hits.hidden > 0 ? '' : ' disabled'
   // The hidden-participants chip is drawn by bindParticipantFilter, and only while
   // something is hidden. The status line announces each hide and show.
   return `
@@ -204,6 +206,10 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
         <input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
         <span class="diagram-find-count" aria-live="polite">${escapeHtml(searchCountLabel(hits.total, hits.hidden, view.query))}</span>
       </label>
+      <div class="find-steps" role="group" aria-label="Step through matches">
+        <button type="button" data-find-step="prev" aria-label="Previous match" title="Previous match (Shift+Enter)"${steppable}>↑</button>
+        <button type="button" data-find-step="next" aria-label="Next match" title="Next match (Enter)"${steppable}>↓</button>
+      </div>
       <div class="panel-controls" role="group" aria-label="Open in the side panel">
         ${metricsControl(scenario)}
         ${componentsControl(scenario)}

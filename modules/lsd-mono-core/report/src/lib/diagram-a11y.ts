@@ -240,23 +240,6 @@ export function zoomScrollBehavior(prefersReducedMotion: boolean): 'auto' | 'smo
   return prefersReducedMotion ? 'auto' : 'smooth'
 }
 
-/**
- * Find is the equivalent path for an undersized arrow: Enter on a query opens
- * the first drawn match that has a payload, the same inspector as a click.
- */
-export function findOpensMessage(events: DiagramEvent[], query: string, hiddenIds: ReadonlySet<string>): string | null {
-  const q = query.trim().toLowerCase()
-  if (!q) return null
-  for (const event of events) {
-    if (event.kind !== 'message') continue
-    if (eventHiddenByColumns(event, hiddenIds)) continue
-    if (!messageHasPayload(event)) continue
-    if (!event.label.toLowerCase().includes(q)) continue
-    return event.id
-  }
-  return null
-}
-
 function roundCss(value: number): number {
   return Math.round(value * 100) / 100
 }

@@ -3,10 +3,10 @@ import { renderMain, revealMessage, focusScenarioHeading } from './main-view'
 import { renderNav } from './nav'
 import type { Status } from '../types'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspector'
-import { diagramKeyAction, findOpensMessage, focusTargetAfterClose, messagePlaces } from '../lib/diagram-a11y'
+import { diagramKeyAction, focusTargetAfterClose, messagePlaces } from '../lib/diagram-a11y'
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
-import { revealSearchHit, updateSearchCurrent } from '../lib/diagram/search-reveal'
-import { diagramView, findMessage, focusDiagramMessage, syncDiagramWindow } from '../lib/sequence-diagram'
+import { findStepKey } from '../lib/diagram/search-reveal'
+import { diagramView, findMessage, focusDiagramMessage, stepFind, syncDiagramWindow } from '../lib/sequence-diagram'
 import {
   currentMode,
   getPreferredTheme,
@@ -102,6 +102,7 @@ export function renderShell(): void {
       <strong style="color:var(--text)">Keyboard</strong><br/>
       <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> or <kbd>↓</kbd>/<kbd>↑</kbd> next/prev scenario · <kbd>Enter</kbd> go to its diagram<br/>
       In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages · <kbd>Enter</kbd> opens the side panel<br/>
+      In Find, <kbd>Enter</kbd>/<kbd>Shift</kbd>+<kbd>Enter</kbd> (or <kbd>F3</kbd>) next/previous match<br/>
       <kbd>d</kbd> theme (Auto follows the OS, dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close
     </div>
   `
@@ -264,11 +265,12 @@ export function onMainClick(ev: MouseEvent): void {
   if (msg) openMessage(scenario, msg)
 }
 
-/** Keys in the main column: Enter in diagram find, diagram message navigation, and Enter on an arrow. */
+/** Keys in the main column: stepping in diagram find, diagram message navigation, and Enter on an arrow. */
 export function onMainKey(ev: KeyboardEvent): void {
   const target = ev.target as HTMLElement | null
-  if (target?.matches('[data-diagram-find]') && ev.key === 'Enter') {
-    onFindEnter(ev, target as HTMLInputElement)
+  const step = target?.matches('[data-diagram-find]') ? findStepKey(ev) : null
+  if (step) {
+    onFindKey(ev, target as HTMLInputElement, step)
     return
   }
   const scrollKey = target?.closest?.<HTMLElement>('.seq-scroll')
@@ -288,25 +290,14 @@ export function onMainKey(ev: KeyboardEvent): void {
   if (msg) openMessage(scenario, msg)
 }
 
-/** Enter in a diagram's find box: open the first match and bring it on screen. */
-export function onFindEnter(ev: KeyboardEvent, target: HTMLInputElement): void {
-  const scenario = scenarioFrom(target)
+/** A step key in a diagram's find box: go to the next or previous match, wrapping, and bring it on screen. */
+export function onFindKey(ev: KeyboardEvent, target: HTMLInputElement, step: 1 | -1): void {
   const scroll = target.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
-  if (scenario && scroll) {
-    const messageId = findOpensMessage(scenario.events, target.value, diagramView(scenario.id).hidden)
-    const msg = messageId ? findMessage(scenario, messageId) : undefined
-    ev.preventDefault()
-    updateSearchCurrent(scenario.id)
-    if (msg) diagramView(scenario.id).searchCurrentId = msg.id
-    syncDiagramWindow(scroll)
-    // A soft keyboard's Go / Search key sends Enter: close the keyboard so the match has the screen.
-    if (matchMedia('(pointer: coarse)').matches) target.blur()
-    if (msg) {
-      focusDiagramMessage(scroll, msg.id)
-      openMessage(scenario, msg)
-    }
-    if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
-  }
+  if (!scroll) return
+  ev.preventDefault()
+  // A soft keyboard's Go / Search key sends Enter: close the keyboard so the match has the screen.
+  if (ev.key === 'Enter' && matchMedia('(pointer: coarse)').matches) target.blur()
+  stepFind(scroll, step)
 }
 
 /** Up, Down and Enter on a diagram or its focused arrow. */

@@ -23,7 +23,13 @@ import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds, prefersReducedMotion } f
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, sizeStage } from './page-scroll'
-import { SEARCH_REVEAL_DELAY_MS, revealSearchHit, updateSearchCurrent } from './search-reveal'
+import {
+  SEARCH_REVEAL_DELAY_MS,
+  revealSearchHit,
+  searchPosition,
+  stepSearchCurrent,
+  updateSearchCurrent,
+} from './search-reveal'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './state'
 
 /** Paint only the rows inside the scrollport (plus overscan). Row units stay unscaled; zoom is display-only. */
@@ -129,10 +135,21 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   const readout = root.querySelector('.zoom-readout')
   if (readout) readout.textContent = zoomLabel(zoom)
   const count = root.querySelector('.diagram-find-count')
+  const at = searchPosition(diagram.scenario.id)
   if (count) {
     const hits = classifySearchHits(diagram.scenario.events, view.query, view.hidden)
-    count.textContent = searchCountLabel(hits.total, hits.hidden, view.query)
+    count.textContent = searchCountLabel(hits.total, hits.hidden, view.query, at.current)
   }
+  root.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => (btn.disabled = at.count === 0))
+}
+
+/** Step the diagram's find to its next (1) or previous (-1) match and bring it on screen. */
+export function stepFind(scrollport: HTMLElement, step: 1 | -1): void {
+  const scenarioId = scrollport.dataset.scenarioId
+  if (!scenarioId || !stepSearchCurrent(scenarioId, step)) return
+  applyDiagramFrame(scrollport)
+  syncDiagramWindow(scrollport)
+  if (revealSearchHit(scrollport)) syncDiagramWindow(scrollport)
 }
 
 function commitZoom(
@@ -378,6 +395,12 @@ export function bindDiagramScroll(root: ParentNode): void {
       reveal = setTimeout(() => {
         if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
       }, SEARCH_REVEAL_DELAY_MS)
+    })
+    diagram.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        clearTimeout(reveal)
+        stepFind(scroll, btn.dataset.findStep === 'prev' ? -1 : 1)
+      })
     })
   })
 }

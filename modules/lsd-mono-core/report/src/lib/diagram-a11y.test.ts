@@ -6,7 +6,6 @@ import {
   MIN_HIT_CSS,
   circleClearsCenter,
   diagramKeyAction,
-  findOpensMessage,
   focusScrollTop,
   focusTargetAfterClose,
   hitBoxContains,
@@ -152,7 +151,7 @@ describe('focus scroll keeps the top label', () => {
   })
 })
 
-describe('reduced motion and find', () => {
+describe('reduced motion and payload places', () => {
   it('jumps Zoom and Fit when reduced motion is requested', () => {
     expect(zoomScrollBehavior(true)).toBe('auto')
     expect(zoomScrollBehavior(false)).toBe('smooth')
@@ -163,14 +162,5 @@ describe('reduced motion and find', () => {
       { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS', payloadId: 's/m' },
     ]
     expect(messagePlaces(deferred, new Set())[0].focusable).toBe(true)
-    expect(findOpensMessage(deferred, 'place', new Set())).toBe('m')
-  })
-
-  it('Find opens the same payload message as Enter', () => {
-    const id = findOpensMessage(events, 'charge', new Set())
-    expect(id).toBe('m3')
-    const places = messagePlaces(events, new Set())
-    expect(diagramKeyAction({ key: 'Enter', places, activeId: id, inDiagram: true }).messageId).toBe(id)
-    expect(findOpensMessage(events, 'ack', new Set())).toBeNull()
   })
 })

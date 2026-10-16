@@ -298,6 +298,7 @@
   padding-block: 6px;
 }
 .zoom-controls,
+.find-steps,
 .diagram-find {
   display: flex;
   flex-wrap: wrap;
@@ -530,6 +531,19 @@
 }
 .search-current .note-text {
   fill: var(--find-hit-text);
+}
+/* High contrast: the current match takes the system highlight, so it stays distinct from other matches. */
+@media (forced-colors: active) {
+  .search-current .msg-label,
+  .search-current .msg-label tspan,
+  .search-current .note-text {
+    fill: HighlightText;
+    stroke: Highlight;
+  }
+  .search-current .msg-path,
+  .search-current .note-card {
+    stroke: Highlight;
+  }
 }
 
 /* Zoom scales the drawing. It does not reflow the sequence into one column. */

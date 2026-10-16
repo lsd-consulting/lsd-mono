@@ -32,6 +32,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - In-diagram find scrolls the first match into view as you type (debounced) and on Enter / the phone keyboard's Go,
   allowing for zoom, the sticky header and the on-screen keyboard. Matches get a theme-aware highlight, the current
   match a stronger one; the visible `[match]` text is gone (screen readers hear “search match” instead).
+- Find steps through its matches: Enter / F3 / Cmd or Ctrl+G for the next, with Shift for the previous, or the
+  ↑ ↓ buttons beside the box, wrapping around. The count reads “2 of 11” (announced politely), and the current
+  match is brought on screen at any zoom, below the sticky header. Enter no longer opens the first match's payload;
+  tap or click the arrow, or move to it with the arrow keys.
 - On narrow screens the side panel (inspector, Timing and metrics) sits inline below the report as part of the
   page instead of a capped inner scroll box, so a swipe on it scrolls the page rather than getting trapped.
   The JSON Expand button is hidden there, since the panel is already full width and it could not widen it.

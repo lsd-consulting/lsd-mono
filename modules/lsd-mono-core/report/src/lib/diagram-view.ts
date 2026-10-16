@@ -202,11 +202,14 @@ export function classifySearchHits(
   return { total, hidden }
 }
 
-/** Live-region text. Empty query is silent. Hidden-column hits are named, not only recoloured. */
-export function searchCountLabel(total: number, hidden: number, query: string): string {
+/**
+ * Live-region text. Empty query is silent. Hidden-column hits are named, not only recoloured.
+ * With a current match ([current], 1-based) it reads "2 of 5", counting the matches you can step to.
+ */
+export function searchCountLabel(total: number, hidden: number, query: string, current = 0): string {
   if (!query.trim()) return ''
   const noun = total === 1 ? 'match' : 'matches'
-  const base = `${total} ${noun}`
+  const base = current > 0 ? `${current} of ${total - hidden}` : `${total} ${noun}`
   if (hidden > 0) return `${base}, ${hidden} on a hidden column`
   return base
 }

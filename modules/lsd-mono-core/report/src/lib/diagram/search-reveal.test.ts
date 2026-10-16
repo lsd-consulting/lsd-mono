@@ -2,7 +2,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LayoutRow } from '../layout'
 import type { DiagramEvent } from '../../types'
-import { extentOnScreen, firstSearchHit, revealSearchHit, rowExtent, updateSearchCurrent } from './search-reveal'
+import {
+  extentOnScreen,
+  findStepKey,
+  firstSearchHit,
+  revealSearchHit,
+  rowExtent,
+  searchPosition,
+  stepIndex,
+  stepSearchCurrent,
+  updateSearchCurrent,
+} from './search-reveal'
 import { diagramState, diagramView, type MountedDiagram } from './state'
 
 function row(event: DiagramEvent, y: number, height = 40): LayoutRow {
@@ -33,6 +43,48 @@ afterEach(() => {
   diagramState.mounted.clear()
   diagramState.views.clear()
   vi.restoreAllMocks()
+})
+
+describe('find: stepping through matches', () => {
+  it('steps forward and back, wrapping around, and starts at an end when there is no current match', () => {
+    expect([0, 1, 2].map((i) => stepIndex(3, i, 1))).toEqual([1, 2, 0])
+    expect([0, 1, 2].map((i) => stepIndex(3, i, -1))).toEqual([2, 0, 1])
+    expect(stepIndex(3, -1, 1)).toBe(0)
+    expect(stepIndex(3, -1, -1)).toBe(2)
+    expect(stepIndex(0, -1, 1)).toBe(-1)
+    expect(stepIndex(1, 0, 1)).toBe(0)
+  })
+
+  it('steps on Enter, F3 and Cmd/Ctrl+G, backwards with Shift, and ignores other keys', () => {
+    const key = (key: string, mods: Partial<KeyboardEvent> = {}) =>
+      findStepKey({ key, shiftKey: false, metaKey: false, ctrlKey: false, altKey: false, ...mods })
+    expect(key('Enter')).toBe(1)
+    expect(key('Enter', { shiftKey: true })).toBe(-1)
+    expect(key('F3')).toBe(1)
+    expect(key('F3', { shiftKey: true })).toBe(-1)
+    expect(key('g', { metaKey: true })).toBe(1)
+    expect(key('G', { ctrlKey: true, shiftKey: true })).toBe(-1)
+    expect(key('g')).toBeNull()
+    expect(key('g', { ctrlKey: true, altKey: true })).toBeNull()
+    expect(key('a')).toBeNull()
+  })
+
+  it('moves the current match through the rows and reports N of M', () => {
+    mount(100)
+    diagramView('s').query = 'order'
+    updateSearchCurrent('s')
+    expect(searchPosition('s')).toEqual({ current: 1, count: 3 })
+    expect(stepSearchCurrent('s', 1)?.event.id).toBe('n1')
+    expect(stepSearchCurrent('s', 1)?.event.id).toBe('m2')
+    expect(searchPosition('s')).toEqual({ current: 3, count: 3 })
+    expect(stepSearchCurrent('s', 1)?.event.id).toBe('m1')
+    expect(stepSearchCurrent('s', -1)?.event.id).toBe('m2')
+    diagramView('s').hidden = new Set(['a'])
+    expect(searchPosition('s')).toEqual({ current: 2, count: 2 })
+    diagramView('s').query = 'refund'
+    expect(stepSearchCurrent('s', 1)).toBeNull()
+    expect(searchPosition('s')).toEqual({ current: 0, count: 0 })
+  })
 })
 
 describe('find: the current match', () => {
