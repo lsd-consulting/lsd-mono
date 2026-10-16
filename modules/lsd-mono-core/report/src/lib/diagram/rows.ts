@@ -1,7 +1,15 @@
 // Sequence diagram rows: header, the painted window, and one SVG row per event.
 import type { MessageEvent, Participant, Scenario } from '../../types'
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../../ui/format'
-import { focusableNeighbors, messageHasPayload, messageHitBox, messagePlaces, tabindexFor } from '../diagram-a11y'
+import {
+  TOUCH_HIT_CSS,
+  focusableNeighbors,
+  messageHasPayload,
+  messageHitBox,
+  messagePlaces,
+  tabindexFor,
+} from '../diagram-a11y'
+import { isCoarsePointer } from '../media'
 import { eventHiddenByColumns, messageLabelRect, rowMatchesQuery, visibleParticipants } from '../diagram-view'
 import { escapeAttr, escapeHtml } from '../escape'
 import {
@@ -151,6 +159,7 @@ export function windowSvg(
     neighbors: focusableNeighbors(rows, view.hidden),
     activations: spans,
     frame,
+    minHit: isCoarsePointer() ? TOUCH_HIT_CSS : undefined,
   }
   const buttons: string[] = []
   const body = slice
@@ -426,6 +435,7 @@ function messageOpenButton(
     viewTop,
     prevArrowY: neighbor?.prevArrowY,
     nextArrowY: neighbor?.nextArrowY,
+    minSize: paint.minHit,
   })
   const places = paint.places ?? [{ id: msg.id, posinset: 1, setsize: 1, focusable: true }]
   const place = places.find((item) => item.id === msg.id) ?? places[0]

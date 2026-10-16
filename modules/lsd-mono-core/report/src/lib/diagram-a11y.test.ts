@@ -4,6 +4,7 @@ import { MESSAGE_LABEL_RISE, ROW_H, TOP_LABEL_PAD, layoutRows } from './layout'
 import { messageLabelRect } from './diagram-view'
 import {
   MIN_HIT_CSS,
+  TOUCH_HIT_CSS,
   circleClearsCenter,
   diagramKeyAction,
   focusScrollTop,
@@ -106,6 +107,32 @@ describe('arrow hit box', () => {
     expect(hitBoxContains(box, (72 + 212) / 2, arrowY)).toBe(true)
     expect(hitBoxContains(box, (72 + 212) / 2, nextY)).toBe(false)
     expect(box.top + box.height).toBeLessThanOrEqual((arrowY + nextY) / 2)
+  })
+
+  it('grows to 44px on touch where the rows allow, and still stops at the neighbours', () => {
+    const arrowY = 200
+    const label = { x: 10, y: arrowY - MESSAGE_LABEL_RISE, width: 8, height: MESSAGE_LABEL_RISE }
+    const roomy = messageHitBox({
+      label,
+      zoom: 1,
+      viewTop: 0,
+      prevArrowY: 100,
+      nextArrowY: 300,
+      minSize: TOUCH_HIT_CSS,
+    })
+    expect(roomy.width).toBeGreaterThanOrEqual(TOUCH_HIT_CSS)
+    expect(roomy.height).toBeGreaterThanOrEqual(TOUCH_HIT_CSS)
+    const tight = messageHitBox({
+      label,
+      zoom: 1,
+      viewTop: 0,
+      prevArrowY: 180,
+      nextArrowY: 220,
+      minSize: TOUCH_HIT_CSS,
+    })
+    expect(tight.top).toBeGreaterThanOrEqual(190)
+    expect(tight.top + tight.height).toBeLessThanOrEqual(210)
+    expect(tight.width).toBeGreaterThanOrEqual(TOUCH_HIT_CSS)
   })
 
   it('keeps a short row on the spacing exception instead of swallowing the neighbour', () => {
