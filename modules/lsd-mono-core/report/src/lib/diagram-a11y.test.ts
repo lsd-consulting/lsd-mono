@@ -14,7 +14,6 @@ import {
   replacementFocus,
   scrollPaddingTop,
   tabindexFor,
-  zoomScrollBehavior,
 } from './diagram-a11y'
 
 const events: DiagramEvent[] = [
@@ -152,11 +151,6 @@ describe('focus scroll keeps the top label', () => {
 })
 
 describe('reduced motion and payload places', () => {
-  it('jumps Zoom and Fit when reduced motion is requested', () => {
-    expect(zoomScrollBehavior(true)).toBe('auto')
-    expect(zoomScrollBehavior(false)).toBe('smooth')
-  })
-
   it('treats a deferred payload id as focusable when the body is not on the message', () => {
     const deferred: DiagramEvent[] = [
       { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS', payloadId: 's/m' },

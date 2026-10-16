@@ -232,14 +232,6 @@ export function focusScrollTop(arrowY: number, zoom: number): number {
   return Math.max(0, roundCss((arrowY - MESSAGE_LABEL_RISE) * scale))
 }
 
-/**
- * Zoom and Fit animate the scroll when motion is allowed, and jump when it is not.
- * The scale is still a scale: columns are not restacked for text size.
- */
-export function zoomScrollBehavior(prefersReducedMotion: boolean): 'auto' | 'smooth' {
-  return prefersReducedMotion ? 'auto' : 'smooth'
-}
-
 function roundCss(value: number): number {
   return Math.round(value * 100) / 100
 }

@@ -1,5 +1,6 @@
 import type { MessageEvent, Metric } from '../types'
 import { renderComponentDiagram } from '../lib/component-diagram'
+import { STACKED_MAX_PX, scrollBehavior } from '../lib/media'
 import type { ComponentGraph } from '../lib/component-graph'
 import { pretty } from './format'
 import {
@@ -75,8 +76,6 @@ export function inspectorWidthLimits(viewport: number): { min: number; max: numb
   return { min: INSPECTOR_MIN_PX, max, expand }
 }
 
-/** At and below this width the panel stacks under the report at full width (app.css). */
-export const INSPECTOR_STACKED_PX = 860
 /** Room around a view's content: the panel's padding and a little air. */
 export const INSPECTOR_VIEW_GUTTER_PX = 40
 
@@ -205,7 +204,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
    * phone the panel is the page width already, so nothing changes.
    */
   function fitView(content: number): void {
-    if (viewport() <= INSPECTOR_STACKED_PX) return
+    if (viewport() <= STACKED_MAX_PX) return
     applyWidth(fitViewWidth(content, viewport()))
   }
 
@@ -282,7 +281,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
 
   /** On a phone the panel is inline below the report: bring what just opened into view. */
   function revealOnPhone(content?: HTMLElement): void {
-    if (viewport() <= INSPECTOR_STACKED_PX) revealBelowTopbar(panel!, content)
+    if (viewport() <= STACKED_MAX_PX) revealBelowTopbar(panel!, content)
   }
 
   async function payloadText(): Promise<string> {
@@ -495,8 +494,7 @@ export function revealBelowTopbar(panel: HTMLElement, content?: HTMLElement): vo
   const row =
     (content?.previousElementSibling as HTMLElement | null | undefined)?.getBoundingClientRect().top ?? target.top
   const anchor = target.top + show - head <= room ? head : row
-  const reduce = typeof win.matchMedia === 'function' && win.matchMedia('(prefers-reduced-motion: reduce)').matches
-  win.scrollTo({ top: Math.max(0, win.scrollY + anchor - top), behavior: reduce ? 'auto' : 'smooth' })
+  win.scrollTo({ top: Math.max(0, win.scrollY + anchor - top), behavior: scrollBehavior() })
 }
 
 function readWidth(doc: Document): number {

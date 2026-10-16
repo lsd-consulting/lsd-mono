@@ -1,5 +1,6 @@
 // The main column: the selected scenario's card, or the empty state, and bringing a scenario or message into view.
 import { renderNav, selectScenario } from './nav'
+import { isStacked } from '../lib/media'
 import { reselect } from '../ui/selection'
 import { scrollDiagramToOffset } from '../lib/diagram/page-scroll'
 import { bindDiagramScroll, diagramView, messageOffsetY, syncDiagramWindow } from '../lib/sequence-diagram'
@@ -20,7 +21,7 @@ export function focusScenarioHeading(): void {
 export function scrollToScenario(): void {
   const card = document.querySelector<HTMLElement>('#main .scenario-card')
   if (!card) return
-  if (matchMedia('(max-width: 860px)').matches) card.scrollIntoView({ block: 'start' })
+  if (isStacked()) card.scrollIntoView({ block: 'start' })
   else window.scrollTo({ top: 0 })
 }
 

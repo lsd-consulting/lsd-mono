@@ -255,10 +255,6 @@ export function printWidthStyle(width: number): string {
   return `--seq-print-max:${Math.round(width * PRINT_MAX_UPSCALE)}px`
 }
 
-export function prefersReducedMotion(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
 export function paintedMessageIds(slice: LayoutRow[], hiddenIds: ReadonlySet<string>): Set<string> {
   const ids = new Set<string>()
   for (const row of slice) {

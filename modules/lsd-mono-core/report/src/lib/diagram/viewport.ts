@@ -1,6 +1,6 @@
 // The diagram viewport: windowed painting, zoom, fit, width observation and scroll binding.
 import type { MessageEvent } from '../../types'
-import { focusablePlaces, messagePlaces, replacementFocus, zoomScrollBehavior } from '../diagram-a11y'
+import { focusablePlaces, messagePlaces, replacementFocus } from '../diagram-a11y'
 import {
   MAX_ZOOM,
   eventHiddenByColumns,
@@ -17,7 +17,8 @@ import type { FittedView, Rect } from '../diagram-view'
 import { cssEscape } from '../escape'
 import { DEFAULT_OVERSCAN, DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, virtualRowRange } from '../layout'
 import { bindParticipantFilter } from '../participant-filter'
-import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds, prefersReducedMotion } from '../sequence-diagram'
+import { scrollBehavior } from '../media'
+import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds } from '../sequence-diagram'
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, sizeStage } from './page-scroll'
@@ -199,7 +200,7 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
         top: Math.max(0, fitted.originY) * fitted.scale,
         left: Math.max(0, fitted.originX) * fitted.scale,
       },
-      zoomScrollBehavior(prefersReducedMotion()),
+      scrollBehavior(),
     )
     view.fittedWidth = scrollport.clientWidth
     return
@@ -207,7 +208,7 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
   if (action !== 'in' && action !== 'out') return
   const next = stepZoom(view.zoom, action === 'in' ? 1 : -1)
   view.autoFit = false
-  commitZoom(scrollport, next, undefined, zoomScrollBehavior(prefersReducedMotion()))
+  commitZoom(scrollport, next, undefined, scrollBehavior())
 }
 
 /**

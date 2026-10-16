@@ -1,5 +1,6 @@
 // The page shell (top bar, sidebar, main column, side panel) and its event listeners.
 import { renderMain, revealMessage, focusScenarioHeading } from './main-view'
+import { isCoarsePointer } from '../lib/media'
 import { renderNav } from './nav'
 import type { Status } from '../types'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspector'
@@ -296,7 +297,7 @@ export function onFindKey(ev: KeyboardEvent, target: HTMLInputElement, step: 1 |
   if (!scroll) return
   ev.preventDefault()
   // A soft keyboard's Go / Search key sends Enter: close the keyboard so the match has the screen.
-  if (ev.key === 'Enter' && matchMedia('(pointer: coarse)').matches) target.blur()
+  if (ev.key === 'Enter' && isCoarsePointer()) target.blur()
   stepFind(scroll, step)
 }
 
