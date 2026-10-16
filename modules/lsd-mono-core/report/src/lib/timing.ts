@@ -13,6 +13,10 @@ export interface TimelineRow {
   timed: boolean
   /** Children took longer than the call's own measured duration. */
   overrun: boolean
+  /** The call's own measured duration, ms. */
+  ownMs: number
+  /** Total time of the calls inside it, ms. */
+  childMs: number
   /** The participant the time is spent in: the callee. */
   participant: string
 }
@@ -133,6 +137,8 @@ function buildTimeline(scenario: Scenario): Timeline {
         selfMs: n.self,
         timed: n.timed || n.span > 0,
         overrun: n.timed && n.childSum > n.own,
+        ownMs: n.own,
+        childMs: n.childSum,
         participant: n.message.to || n.message.from,
       })
     }

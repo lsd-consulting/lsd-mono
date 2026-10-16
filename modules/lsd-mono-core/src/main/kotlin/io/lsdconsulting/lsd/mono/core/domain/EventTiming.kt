@@ -353,6 +353,29 @@ private fun clockOrder(
     return order to reverted.sumOf { groups[it]?.size ?: 0 }
 }
 
+/** Durations closer than this are taken as equal (rounding in the caller's clock). */
+private const val LONGER_EPSILON_MS = 0.001
+
+/**
+ * A call that took longer than the call it runs inside: the measurements disagree (clocks on
+ * different hosts, a duration taken at the wrong point, or a call that outlived its parent).
+ */
+private fun longerThanParent(
+    events: List<SequenceEvent>,
+    durations: CallDurations,
+    parent: IntArray,
+): List<String> =
+    events.indices.mapNotNull { i ->
+        val own = durations.callMs[i] ?: return@mapNotNull null
+        val p = parent[i].takeIf { it >= 0 } ?: return@mapNotNull null
+        val outer = durations.callMs[p] ?: return@mapNotNull null
+        if (own <= outer + LONGER_EPSILON_MS) return@mapNotNull null
+        "longer than parent: '${(events[i] as Message).label}' took ${formatMs(own)} ms, " +
+            "more than '${(events[p] as Message).label}' (${formatMs(outer)} ms) that it runs inside"
+    }
+
+private fun formatMs(ms: Double): String = if (ms == Math.floor(ms)) ms.toLong().toString() else "%.3f".format(java.util.Locale.ROOT, ms).trimEnd('0')
+
 private fun analyse(
     events: List<SequenceEvent>,
     mode: ClockOrdering,
@@ -360,8 +383,9 @@ private fun analyse(
     val pairs = pairCalls(events)
     val durations = callDurations(events, pairs)
     val timing = timingSources(events, pairs, durations)
-    val (order, undone) = clockOrder(events, mode, pairs, durations, parentCalls(pairs))
-    val warnings = pairs.warnings + durations.warnings
+    val parent = parentCalls(pairs)
+    val (order, undone) = clockOrder(events, mode, pairs, durations, parent)
+    val warnings = pairs.warnings + durations.warnings + longerThanParent(events, durations, parent)
     val skew =
         if (undone > 0) {
             listOf(

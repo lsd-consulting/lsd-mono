@@ -152,16 +152,13 @@ function rowHtml(scenario: Scenario, r: Timeline['rows'][number], total: number,
     r.spanMs > 0
       ? `<span class="wf-bar" style="left:${pct(r.startMs, total)};width:${pct(r.spanMs, total)}"><span class="wf-self" style="width:${((100 * r.selfMs) / r.spanMs).toFixed(2)}%"></span></span>`
       : `<span class="wf-tick" style="left:${pct(r.startMs, total)}"></span>`
-  const dur =
-    r.spanMs > 0
-      ? `${escapeHtml(formatMs(r.spanMs))}${r.overrun ? '<abbr class="warnx" title="Children exceed this call\'s own duration">!</abbr>' : ''}`
-      : '<span class="nt">—</span>'
+  const dur = r.spanMs > 0 ? `${escapeHtml(formatMs(r.spanMs))}` : '<span class="nt">—</span>'
   const async =
     m.type === 'ASYNCHRONOUS' || m.type === 'LOST'
       ? ` <span class="tag">${escapeHtml(m.type.toLowerCase())}</span>`
       : ''
   return `<li><button type="button" class="wf-row${m.order === 'CLOCK' ? ' clock' : ''}" style="--d:${r.depth}" data-show-message="${escapeAttr(m.id)}" data-scenario-id="${escapeAttr(id)}">
-    <span class="wf-lab">${orderBadgesHtml(m.order, m.pairing)}<span class="who">${who}</span> ${escapeHtml(m.label)}${async}</span>
+    <span class="wf-lab">${orderBadgesHtml(m.order, m.pairing)}<span class="who">${who}</span> ${escapeHtml(m.label)}${async}${r.overrun ? `<span class="warnx" title="${escapeAttr(`The calls inside took ${formatMs(r.childMs)}, longer than this call's measured ${formatMs(r.ownMs)}: the measurements disagree`)}">${escapeHtml(`Calls inside took longer: ${formatMs(r.childMs)} > ${formatMs(r.ownMs)}`)}</span>` : ''}</span>
     <span class="wf-track">${bar}</span>
     <span class="wf-dur">${dur}</span>
   </button></li>`

@@ -323,6 +323,22 @@ class TimingApiTest {
     }
 
     @Test
+    fun `a call that took longer than the call it runs inside is a warning`() {
+        val lsd = LsdContext()
+        val outer = lsd.call("web", "api", "POST /orders", timing = Timing.tookMs(100.0))
+        lsd.call("api", "payments", "authorise", timing = Timing.tookMs(250.5)).reply("ok")
+        lsd.call("api", "db", "insert", timing = Timing.tookMs(20.0)).reply("1 row")
+        outer.reply("201")
+        lsd.completeScenario("longer", status = Status.SUCCESS)
+        val json = report(lsd, "Longer")
+        assertTrue(
+            json.contains("longer than parent: 'authorise' took 250.5 ms, more than 'POST /orders' (100 ms) that it runs inside"),
+            json,
+        )
+        assertFalse(json.contains("'insert' took"), "a shorter child is fine")
+    }
+
+    @Test
     fun `interaction headers become the payload's headers, beside the body, and are redacted`() {
         val lsd = LsdContext()
         val headers = mapOf("content-type" to "application/json", "Authorization" to "Bearer secret")

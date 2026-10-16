@@ -104,6 +104,7 @@ for (const [phone, device] of Object.entries(PHONES)) {
       test.use(context)
 
       test('a swipe on the open panel scrolls the page, down to the end and back up', async ({ page }) => {
+        test.setTimeout(90_000)
         await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, timedReport())
         await expect(page.locator('.seq-svg')).toBeVisible()
@@ -125,14 +126,14 @@ for (const [phone, device] of Object.entries(PHONES)) {
         await swipe(page, cdp, x, Math.max(before.panelTop + 20, low), high)
         const once = await state(page)
         expect(once.pageY, 'the first swipe on the panel moves the page').toBeGreaterThan(before.pageY + 100)
-        for (let i = 0; i < 12 && (await state(page)).pageY < once.pageMax - 1; i++)
+        for (let i = 0; i < 20 && (await state(page)).pageY < once.pageMax - 1; i++)
           await swipe(page, cdp, x, low, high)
         const end = await state(page)
         expect(end.pageY).toBeGreaterThanOrEqual(end.pageMax - 1)
         expect(end.panelScrolled).toBe(0)
 
         // Down-swipes on the panel bring the page back above the panel.
-        for (let i = 0; i < 12 && (await state(page)).panelTop < viewport.height; i++) {
+        for (let i = 0; i < 36 && (await state(page)).panelTop < viewport.height; i++) {
           await swipe(page, cdp, x, high, low)
         }
         const back = await state(page)

@@ -105,6 +105,20 @@ describe('timing view', () => {
     expect(panel).toContain('data-show-message="inner"')
   })
 
+  it('says in words when the calls inside take longer than the call', () => {
+    const over = scenario([
+      msg('outer', 'web', 'api', { callId: 'c1', durationMs: 10 }),
+      msg('inner', 'api', 'db', { callId: 'c2', durationMs: 25 }),
+      msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2' }),
+      msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
+    ])
+    const panel = timingPanelHtml(over)
+    expect(panel).toContain('Calls inside took longer: 25 ms &gt; 10 ms')
+    expect(panel).toContain('longer than this call&#39;s measured 10 ms')
+    expect(panel).not.toContain('>!<')
+    expect(panel.match(/class="warnx"/g)).toHaveLength(1)
+  })
+
   it('escapes labels and participant names', () => {
     const html = timingPanelHtml(
       scenario([msg('<script>', '<img x>', 'y', { durationMs: 1 })], { accuracy: 'MEASURED' }),
