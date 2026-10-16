@@ -28,6 +28,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - `Interaction.headers`: protocol headers shown beside the body in the payload (`{ headers, body }`), redacted
   like any map key.
 - A call that took longer than the call it runs inside is a report warning ("longer than parent"), and the Timing waterfall says in words when calls inside take longer than a call's measured time (it used to show only "!"): "Calls inside took longer: 25 ms > 10 ms", full sentence on hover.
+- Calls nest by `parentSpanId`: a call goes under the open call whose span its trace names (same trace), so concurrent calls captured interleaved nest under the right parent, in the report analysis and the Timing view.
 - Narrow screens (860px and below) fold the scenario list (the index's report list) to the selected item under
   an "N scenarios ▾" disclosure; a typed search lists every match. On phones, search and the status chips
   share one row (the chips show their counts, and keep their names for screen readers).

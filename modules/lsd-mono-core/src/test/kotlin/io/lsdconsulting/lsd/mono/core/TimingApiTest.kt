@@ -323,6 +323,33 @@ class TimingApiTest {
     }
 
     @Test
+    fun `parentSpanId nests a call under its own parent when concurrent calls interleave`() {
+        val lsd = LsdContext()
+        val a = lsd.call("api", "orders", "A", timing = Timing.tookMs(300.0), trace = Trace("t", "a"))
+        val b = lsd.call("api", "stock", "B", timing = Timing.tookMs(50.0), trace = Trace("t", "b"))
+        lsd
+            .call("orders", "db", "child of A", timing = Timing.tookMs(100.0), trace = Trace("t", "c", parentSpanId = "a"))
+            .reply("rows")
+        a.reply("ok")
+        b.reply("ok")
+        lsd.completeScenario("spans", status = Status.SUCCESS)
+        val json = report(lsd, "Spans")
+        assertFalse(json.contains("longer than parent"), "the child is inside A (300 ms), not B (50 ms): $json")
+    }
+
+    @Test
+    fun `without parentSpanId the innermost open call is the parent`() {
+        val lsd = LsdContext()
+        val a = lsd.call("api", "orders", "A", timing = Timing.tookMs(300.0))
+        val b = lsd.call("api", "stock", "B", timing = Timing.tookMs(50.0))
+        lsd.call("orders", "db", "child", timing = Timing.tookMs(100.0)).reply("rows")
+        a.reply("ok")
+        b.reply("ok")
+        lsd.completeScenario("stack", status = Status.SUCCESS)
+        assertTrue(report(lsd, "Stack").contains("longer than parent: 'child' took 100 ms, more than 'B'"))
+    }
+
+    @Test
     fun `a call that took longer than the call it runs inside is a warning`() {
         val lsd = LsdContext()
         val outer = lsd.call("web", "api", "POST /orders", timing = Timing.tookMs(100.0))

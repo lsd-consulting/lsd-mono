@@ -284,8 +284,15 @@ private fun timingSources(
         }
     }
 
-/** Parent call of each event: the innermost paired call open at its position. A reply shares its call's parent. */
-private fun parentCalls(pairs: Pairs): IntArray {
+/**
+ * Parent call of each event: the open paired call whose span is the event's `parentSpanId` (same
+ * trace), else the innermost paired call open at its position. A reply shares its call's parent.
+ * The span link wins, so concurrent calls captured interleaved still nest under the right call.
+ */
+private fun parentCalls(
+    events: List<SequenceEvent>,
+    pairs: Pairs,
+): IntArray {
     val n = pairs.callOf.size
     val parent = IntArray(n) { -1 }
     val open = ArrayList<Int>()
@@ -296,7 +303,12 @@ private fun parentCalls(pairs: Pairs): IntArray {
             open.remove(c)
             continue
         }
-        parent[i] = open.lastOrNull() ?: -1
+        val t = (events[i] as? Message)?.trace
+        val bySpan =
+            t?.parentSpanId?.let { ps ->
+                open.lastOrNull { j -> (events[j] as Message).trace?.let { it.traceId == t.traceId && it.spanId == ps } == true }
+            }
+        parent[i] = bySpan ?: open.lastOrNull() ?: -1
         if (pairs.replyOf[i] >= 0) open.add(i)
     }
     return parent
@@ -383,7 +395,7 @@ private fun analyse(
     val pairs = pairCalls(events)
     val durations = callDurations(events, pairs)
     val timing = timingSources(events, pairs, durations)
-    val parent = parentCalls(pairs)
+    val parent = parentCalls(events, pairs)
     val (order, undone) = clockOrder(events, mode, pairs, durations, parent)
     val warnings = pairs.warnings + durations.warnings + longerThanParent(events, durations, parent)
     val skew =

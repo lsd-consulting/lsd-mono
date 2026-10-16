@@ -46,10 +46,21 @@ interface Node {
   childSum: number
 }
 
+/** The open call whose span is [e]'s `parentSpanId` in the same trace: concurrent calls captured interleaved still nest right. */
+function spanParent(stack: Node[], e: MessageEvent): Node | undefined {
+  const t = e.trace
+  if (!t?.parentSpanId) return undefined
+  for (let k = stack.length - 1; k > 0; k--) {
+    const p = stack[k].message?.trace
+    if (p && p.traceId === t.traceId && p.spanId === t.parentSpanId) return stack[k]
+  }
+  return undefined
+}
+
 const isCall = (m: MessageEvent) => m.type === 'SYNCHRONOUS' || m.type === 'BI_DIRECTIONAL'
 
 /**
- * Builds the call tree and lays it on a time axis. Replies pair by `replyTo`, else by direction
+ * Builds the call tree and lays it on a time axis. A call nests under the open call its `parentSpanId` names, else the innermost open call. Replies pair by `replyTo`, else by direction
  * (the innermost open call the other way). A call's duration is its `durationMs`: the report
  * writes a paired reply's duration on its call. Starts come from `startedAt` within a single source; otherwise children are packed
  * one after another inside their parent, and the timeline is marked approximate.
@@ -99,7 +110,7 @@ function buildTimeline(scenario: Scenario): Timeline {
       }
       continue
     }
-    const parent = stack[stack.length - 1]
+    const parent = spanParent(stack, e) ?? stack[stack.length - 1]
     const startedAt = onClock(e) && e.createdAt ? Date.parse(e.createdAt) : NaN
     const node: Node = {
       message: e,

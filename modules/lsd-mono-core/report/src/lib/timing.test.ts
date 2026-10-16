@@ -78,6 +78,28 @@ describe('timeline', () => {
     expect(t.approximate).toBe(false)
   })
 
+  it('nests a call under the open call its parentSpanId names', () => {
+    const t = timeline(
+      scenario([
+        msg('A', 'api', 'orders', { callId: 'a', durationMs: 300, trace: { traceId: 't', spanId: 'a' } }),
+        msg('B', 'api', 'stock', { callId: 'b', durationMs: 50, trace: { traceId: 't', spanId: 'b' } }),
+        msg('child', 'orders', 'db', {
+          callId: 'c',
+          durationMs: 100,
+          trace: { traceId: 't', spanId: 'c', parentSpanId: 'a' },
+        }),
+        msg('child-reply', 'db', 'orders', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c' }),
+        msg('A-reply', 'orders', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'a' }),
+        msg('B-reply', 'stock', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'b' }),
+      ]),
+    )
+    const row = (id: string) => t.rows.find((r) => r.message.id === id)!
+    expect(row('child').depth).toBe(row('A').depth + 1)
+    expect(row('B').overrun).toBe(false)
+    // B has no parentSpanId, so it nests by position: A's self time is 300 - 50 - 100.
+    expect(row('A').selfMs).toBe(150)
+  })
+
   it('formats fractional milliseconds', () => {
     expect(formatMs(2.25)).toBe('2.3 ms')
     expect(formatMs(652.25)).toBe('652 ms')
