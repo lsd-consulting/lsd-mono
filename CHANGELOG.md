@@ -14,6 +14,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   (there is no separate ranked Bottlenecks list, and report JSON has no `insights`).
 - Timing API (slice 1): accuracy, call pairing, clock ordering with structural guards, and the Timing view
   (summary strip, swim lanes and waterfall).
+- The Metrics view's captured duration counts each call once, the same duration the JSON shows on the call, so a
+  call with its own duration and a timed reply is no longer counted twice.
 - Report JSON writes a call's duration on the call: a call carries its own `durationMs` or its reply's, and a
   paired reply carries none. The diagram label, inspector and Timing view read it from the call.
 - An interaction's `status` drives an `Errors` metric (4xx/5xx codes or error words such as `failed`), and the

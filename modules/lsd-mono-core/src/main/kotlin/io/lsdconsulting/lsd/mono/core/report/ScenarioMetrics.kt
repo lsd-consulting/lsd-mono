@@ -2,23 +2,29 @@ package io.lsdconsulting.lsd.mono.core.report
 
 import io.lsdconsulting.lsd.mono.core.ReportOptions
 import io.lsdconsulting.lsd.mono.core.domain.Message
+import io.lsdconsulting.lsd.mono.core.domain.ScenarioTiming
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.model.MetricJson
 
 /**
  * A scenario's metrics: its message count, when any message has a duration their sum, and when any
  * message has a [Message.status] the number of those that are errors (see [isErrorStatus]).
- * Each message counts its [Message.timedMs]: an explicit `took` or [io.lsdconsulting.lsd.mono.core.Timing]
- * duration first, then the call-to-reply time, then the legacy whole-ms duration. So a scenario whose
- * durations are all given reports the same total on every run.
+ * The duration is what the report shows ([ScenarioTiming.reportedMs]): each call once (its own duration
+ * or its reply's), plus messages that are not part of a call and reply. So a call with a duration and a
+ * timed reply is not counted twice, and a scenario whose durations are all given reports the same total
+ * on every run.
  * Slow calls are shown by the Timing view (summary strip, swim lanes and waterfall), not here.
  *
  * Empty when [ReportOptions.metricsEnabled] is false.
  */
-internal fun capturedMetrics(events: List<SequenceEvent>, options: ReportOptions): List<MetricJson> {
+internal fun capturedMetrics(
+    events: List<SequenceEvent>,
+    timing: ScenarioTiming,
+    options: ReportOptions,
+): List<MetricJson> {
     if (!options.metricsEnabled) return emptyList()
     val messages = events.filterIsInstance<Message>()
-    val duration = messages.mapNotNull { it.timedMs }.sum()
+    val duration = messages.mapNotNull(timing::reportedMs).sum()
     return buildList {
         add(MetricJson("Messages", messages.size.toString()))
         if (duration > 0) add(MetricJson("Captured duration", "${formatMs(duration)} ms"))

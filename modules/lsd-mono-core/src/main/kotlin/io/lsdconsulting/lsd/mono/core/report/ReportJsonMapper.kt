@@ -63,7 +63,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
         description = description,
         facts = facts.map { FactJson(it.key, it.value) },
         error = error?.let { ScenarioErrorJson(it.headline, it.message, it.stack) },
-        metrics = capturedMetrics(events, options),
+        metrics = capturedMetrics(events, timing, options),
         participants =
             participants.map {
                 ParticipantJson(
@@ -104,13 +104,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     label = label,
                     type = type.name,
                     colour = colour?.takeIf { it.isNotBlank() },
-                    // A call carries its own duration or its reply's; a paired reply carries none.
-                    durationMs =
-                        when (id) {
-                            in timing.callMs -> timing.callMs[id]
-                            in timing.pairedReplies -> null
-                            else -> timedMs
-                        },
+                    durationMs = timing.reportedMs(this),
                     data = data,
                     createdAt = createdAt?.toString(),
                     seq = seq.takeIf { it > 0 },

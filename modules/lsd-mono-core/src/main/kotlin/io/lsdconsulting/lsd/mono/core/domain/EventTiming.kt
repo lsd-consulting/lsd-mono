@@ -32,7 +32,18 @@ internal data class ScenarioTiming(
     val callMs: Map<String, Double> = emptyMap(),
     /** Replies paired with a call. Their duration belongs to the call, so the JSON leaves it off them. */
     val pairedReplies: Set<String> = emptySet(),
-)
+) {
+    /**
+     * The duration the report shows for [message]: a call's own or its reply's, none on a paired
+     * reply, else the message's own. The JSON and the metrics both use it, so a call counts once.
+     */
+    fun reportedMs(message: Message): Double? =
+        when (message.id) {
+            in callMs -> callMs[message.id]
+            in pairedReplies -> null
+            else -> message.timedMs
+        }
+}
 
 private fun SequenceEvent.isCall() = this is Message && type == MessageType.SYNCHRONOUS
 

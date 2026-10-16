@@ -42,6 +42,18 @@ class ScenarioMetricsTest {
     }
 
     @Test
+    fun `a call with its own duration and a timed reply counts once`() {
+        val lsd = LsdContext()
+        lsd.message("A", "B", "call", durationMs = 100)
+        lsd.response("B", "A", "reply", durationMs = 80)
+        lsd.message("A", "C", "event", type = io.lsdconsulting.lsd.mono.core.domain.MessageType.ASYNCHRONOUS, durationMs = 5)
+        lsd.completeScenario("once", "ok", Status.SUCCESS)
+        lsd.completeReport("Once")
+        val json = tempDir.resolve(ReportWriter.reportFileStem("Once") + "-report.json").readText()
+        assertTrue(json.contains("\"value\": \"105 ms\""), json)
+    }
+
+    @Test
     fun `interaction statuses drive the error count`() {
         val lsd = LsdContext()
         lsd.accept(Interaction(InteractionKind.REQUEST, "api", "pay", "POST /pay", interactionId = "c1"))
