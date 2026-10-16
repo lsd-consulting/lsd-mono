@@ -653,6 +653,15 @@
   .seq-toolbar .diagram-find {
     order: 4;
     flex-basis: calc(100% - 110px);
+    flex-wrap: nowrap;
+  }
+  /* The field names itself (placeholder and aria-label); the word only took a line. */
+  .seq-toolbar .diagram-find-label {
+    display: none;
+  }
+  .seq-toolbar .diagram-find input {
+    min-width: 0;
+    flex: 1 1 auto;
   }
   .seq-toolbar .find-steps {
     order: 5;

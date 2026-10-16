@@ -1112,8 +1112,10 @@ html {
 }
 
 @media (max-width: 560px) {
-  /* Still sticky, with search and filters inside: the bar wraps onto three short rows. */
+  /* Still sticky, with search and filters inside: the bar wraps onto two rows. Opaque, because
+     the toolbar rows that scroll away pass under it. */
   .topbar {
+    background: var(--bg-elevated);
     flex-wrap: wrap;
     height: auto;
     padding: 8px 12px;
