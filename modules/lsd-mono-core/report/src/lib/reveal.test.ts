@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { revealBelowTopbar } from './inspector'
+import { revealBelowTopbar } from './reveal'
 
 function setup(panelTop: number, rowTop: number, preTop: number, preHeight: number) {
   document.body.innerHTML = '<aside><div class="json-row"></div><pre></pre></aside>'
