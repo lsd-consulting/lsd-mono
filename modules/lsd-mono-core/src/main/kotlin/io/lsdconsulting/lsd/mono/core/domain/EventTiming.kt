@@ -62,7 +62,8 @@ private fun SequenceEvent.source(): String = (this as? Message)?.source ?: Timin
  *    Untimed events keep their slots. A per-message hint opts in (same source) or out.
  * 3. Structure wins: when clock order would put a reply before its call, a consume before its
  *    publish, or a child outside its parent call, the groups involved keep capture order and a
- *    `skew` warning is added.
+ *    `skew` warning is added. Under [ClockOrdering.ALL_SOURCES] a group first falls back to
+ *    ordering within each source, and the warning names the source pair whose clocks disagree.
  * Wall clock (`wallClockMs`) is given only for a single source where every measured call has a start.
  *
  * 4. When capture order itself is scrambled (interceptor threads, so replies arrive before their
@@ -181,6 +182,7 @@ private fun pairCalls(events: List<SequenceEvent>): Pairs {
     // Unpaired calls by span and by direction, latest last. Paired ones are dropped lazily.
     val bySpan = HashMap<Pair<String, String>, ArrayList<Int>>()
     val byDirection = HashMap<Pair<String?, String?>, ArrayList<Int>>()
+    val seenSpan = HashMap<Pair<String, String>, Int>()
 
     fun latest(
         calls: ArrayList<Int>?,
@@ -199,7 +201,16 @@ private fun pairCalls(events: List<SequenceEvent>): Pairs {
         val e = events[i] as? Message ?: continue
         if (e.isCall()) {
             pairing[i] = PairingSource.NONE
-            e.trace?.let { t -> t.spanId?.let { bySpan.getOrPut(t.traceId to it) { ArrayList() }.add(i) } }
+            e.trace?.let { t ->
+                t.spanId?.let { span ->
+                    val same = bySpan.getOrPut(t.traceId to span) { ArrayList() }
+                    seenSpan[t.traceId to span]?.let { first ->
+                        warnings += "duplicate span: '${(events[first] as Message).label}' and '${e.label}' share span $span " +
+                            "in trace ${t.traceId}; their replies pair with the latest open one"
+                    } ?: seenSpan.put(t.traceId to span, i)
+                    same.add(i)
+                }
+            }
             byDirection.getOrPut(e.from to e.to) { ArrayList() }.add(i)
         }
         e.callRef?.id?.let { byCallId.putIfAbsent(it, i) }
@@ -325,7 +336,7 @@ private fun clockOrder(
     pairs: Pairs,
     durations: CallDurations,
     parent: IntArray,
-): Pair<IntArray, Int> {
+): ClockOrder {
     val n = events.size
 
     fun groupOf(i: Int): String? {
@@ -335,9 +346,10 @@ private fun clockOrder(
         return "${parent[i]}|${clockScope(events[i], mode)}"
     }
     val groupKeys = Array(n) { groupOf(it) }
-    val groups = (0 until n).filter { groupKeys[it] != null }.groupBy { groupKeys[it]!! }
+    val groups = (0 until n).filter { groupKeys[it] != null }.groupBy { groupKeys[it]!! }.toMutableMap()
     val order = IntArray(n) { it }
     groups.values.forEach { sortIntoSlots(events, it, order) }
+    val split = mutableSetOf<Pair<String, String>>()
 
     val reverted = mutableSetOf<String>()
     var rounds = groups.size + 1
@@ -359,11 +371,36 @@ private fun clockOrder(
             }
         }
         if (bad.isEmpty()) break
-        bad.forEach { g -> groups[g]?.forEach { order[it] = it } }
-        reverted += bad
+        for (g in bad) {
+            val members = groups[g] ?: continue
+            members.forEach { order[it] = it }
+            if (!g.endsWith("|*")) {
+                reverted += g
+                continue
+            }
+            // ALL_SOURCES: the sources disagree, so fall back to ordering within each source.
+            groups.remove(g)
+            val bySource = members.groupBy { events[it].source() }
+            bySource.forEach { (source, idx) ->
+                val key = g.removeSuffix("*") + source
+                idx.forEach { groupKeys[it] = key }
+                groups[key] = idx
+                sortIntoSlots(events, idx, order)
+            }
+            val names = bySource.keys.sorted()
+            for (a in names.indices) for (b in a + 1 until names.size) split += names[a] to names[b]
+        }
+        rounds = maxOf(rounds, groups.size + 1 - reverted.size)
     }
-    return order to reverted.sumOf { groups[it]?.size ?: 0 }
+    return ClockOrder(order, reverted.sumOf { groups[it]?.size ?: 0 }, split)
 }
+
+/** The clock order, the events whose groups kept capture order, and the source pairs ordered apart. */
+private class ClockOrder(
+    val order: IntArray,
+    val undone: Int,
+    val splitPairs: Set<Pair<String, String>>,
+)
 
 /** Durations closer than this are taken as equal (rounding in the caller's clock). */
 private const val LONGER_EPSILON_MS = 0.001
@@ -396,7 +433,9 @@ private fun analyse(
     val durations = callDurations(events, pairs)
     val timing = timingSources(events, pairs, durations)
     val parent = parentCalls(events, pairs)
-    val (order, undone) = clockOrder(events, mode, pairs, durations, parent)
+    val clock = clockOrder(events, mode, pairs, durations, parent)
+    val order = clock.order
+    val undone = clock.undone
     val warnings = pairs.warnings + durations.warnings + longerThanParent(events, durations, parent)
     val skew =
         if (undone > 0) {
@@ -406,7 +445,10 @@ private fun analyse(
             )
         } else {
             emptyList()
-        }
+        } +
+            clock.splitPairs.map { (a, b) ->
+                "skew: clocks of $a and $b disagree with the structure, so their events are clock-ordered within each source only"
+            }
     return Analysis(
         ordered = order.map { events[it] },
         timing = events.indices.associate { events[it].id to timing[it] },

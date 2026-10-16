@@ -192,6 +192,41 @@ class TimingApiTest {
     }
 
     @Test
+    fun `ALL_SOURCES falls back to each source when two clocks disagree with the structure`() {
+        val p = CallRef("p")
+        val events =
+            listOf(
+                msg("late", at = t(20), source = "orders", type = MessageType.ASYNCHRONOUS),
+                msg("publish", at = t(10), source = "orders", type = MessageType.ASYNCHRONOUS, callRef = p),
+                msg("other", at = t(8), source = "billing", type = MessageType.ASYNCHRONOUS),
+                msg("consume", at = t(5), source = "billing", type = MessageType.ASYNCHRONOUS, causedBy = p),
+            )
+        val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.ALL_SOURCES)
+        assertEquals(listOf("publish", "late", "consume", "other"), labels(ordered))
+        assertEquals(
+            listOf("skew: clocks of billing and orders disagree with the structure, so their events are clock-ordered within each source only"),
+            timing.warnings,
+        )
+    }
+
+    @Test
+    fun `two calls with the same span are a warning`() {
+        val events =
+            listOf(
+                msg("first", trace = Trace("t", "s")),
+                msg("second", trace = Trace("t", "s")),
+                msg("r2", from = "B", to = "A", type = MessageType.SYNCHRONOUS_RESPONSE, trace = Trace("t", "s")),
+                msg("r1", from = "B", to = "A", type = MessageType.SYNCHRONOUS_RESPONSE, trace = Trace("t", "s")),
+                msg("other trace", trace = Trace("u", "s")),
+            )
+        val (_, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
+        assertEquals(
+            listOf("duplicate span: 'first' and 'second' share span s in trace t; their replies pair with the latest open one"),
+            timing.warnings,
+        )
+    }
+
+    @Test
     fun `OFF keeps capture order, and hints opt in or out`() {
         val events = listOf(msg("b", at = t(5), type = MessageType.ASYNCHRONOUS), msg("a", at = t(1), type = MessageType.ASYNCHRONOUS))
         assertEquals(listOf("b", "a"), labels(orderAndAnalyse(events, ClockOrdering.OFF).first))
