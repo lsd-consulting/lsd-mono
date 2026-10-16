@@ -46,7 +46,7 @@ import java.util.function.Consumer
  *
  * **Activate colour:** optional on [activate]; omitted from JSON when absent.
  * **Timing:** see `domain/EventTiming.kt`. [completeScenario] pairs calls and replies, works out
- * each scenario's accuracy and applies clock ordering ([orderByCreatedAt]) before the scenario
+ * each scenario's accuracy and applies clock ordering ([TimingConfig.orderByCreatedAt]) before the scenario
  * is stored, so layout and JSON see the same order.
  *
  * **Threads:** every method is thread-safe. Each running scenario has its own
@@ -65,12 +65,15 @@ import java.util.function.Consumer
 public class LsdContext :
     Capturer(),
     InteractionSink {
+    /** Timing settings for scenarios completed from now on; change them with [configure]. */
+    public val timingConfig: TimingConfig = TimingConfig()
+
     /**
-     * Clock ordering for scenarios completed from now on. `null` (the default) reads
-     * `lsd.mono.timing.orderByCreatedAt`, which defaults to [ClockOrdering.SAME_SOURCE].
+     * Change [timingConfig], from Kotlin or Java alike, and return this context:
+     * `lsd.configure { it.orderByCreatedAt(ClockOrdering.ALL_SOURCES) }` or
+     * `lsd.configure(t -> t.orderByCreatedAt(ClockOrdering.OFF))`.
      */
-    @Volatile
-    public var orderByCreatedAt: ClockOrdering? = null
+    public fun configure(settings: Consumer<TimingConfig>): LsdContext = apply { settings.accept(timingConfig) }
 
     /** Same as [ingest]. */
     override fun accept(interaction: Interaction): Unit = ingest(interaction)
@@ -461,7 +464,7 @@ public class LsdContext :
             }
         scenarios.forget(scenario)
         warnUnreplied(title, scenario.abandonCalls())
-        val (events, timing) = orderAndAnalyse(captured, orderByCreatedAt ?: LsdProperties.clockOrdering())
+        val (events, timing) = orderAndAnalyse(captured, timingConfig.effectiveOrderByCreatedAt())
         synchronized(lock) {
             val stored =
                 Scenario(

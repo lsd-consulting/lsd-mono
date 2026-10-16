@@ -20,6 +20,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   waterfall and inspector badges. It is a word with a hover title, not colour alone, and prints in black.
 - An interaction's `status` drives an `Errors` metric (4xx/5xx codes or error words such as `failed`), and the
   inspector labels an error status in words.
+- `LsdContext.configure(Consumer<TimingConfig>)` sets the clock ordering (`orderByCreatedAt(mode)`) the same way
+  from Java and Kotlin. It replaces the `LsdContext.orderByCreatedAt` property.
 - The report index (`index.html`) is the report app for every report in the directory: a sidebar lists
   reports (failed first) with their scenario counts, a report's data loads only when it is opened, and
   `#report=<id>` links open a report, scenario or message directly. It replaces the per-report `-report.html`

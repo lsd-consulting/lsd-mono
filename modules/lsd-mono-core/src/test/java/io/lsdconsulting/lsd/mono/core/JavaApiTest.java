@@ -109,6 +109,21 @@ class JavaApiTest {
     }
 
     @Test
+    void timingIsConfiguredFromJavaWithALambda() throws Exception {
+        LsdContext lsd = new LsdContext();
+        assertSame(lsd, lsd.configure(t -> t.orderByCreatedAt(ClockOrdering.OFF)));
+        assertEquals(ClockOrdering.OFF, lsd.getTimingConfig().orderByCreatedAt());
+        lsd.message("A", "B", "ping");
+        lsd.completeScenario("java-timing");
+        String json = Files.readString(reportJson(lsd.completeReport("Java timing")));
+        assertTrue(json.contains("\"clockOrdering\": \"OFF\""), json);
+
+        lsd.configure(t -> t.orderByCreatedAt(null));
+        assertEquals(null, lsd.getTimingConfig().orderByCreatedAt());
+        assertEquals(ClockOrdering.SAME_SOURCE, lsd.getTimingConfig().effectiveOrderByCreatedAt());
+    }
+
+    @Test
     void scenariosStaticsAndErrorsCanBeUsedFromJava() throws Exception {
         LsdContext lsd = new LsdContext();
         LsdScenario scenario = lsd.beginScenario("java-report");

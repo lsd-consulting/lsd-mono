@@ -338,6 +338,25 @@ class TimingApiTest {
     }
 
     @Test
+    fun `configure sets the clock ordering, and null falls back to the config key`() {
+        val lsd = LsdContext()
+        assertEquals(ClockOrdering.SAME_SOURCE, lsd.timingConfig.effectiveOrderByCreatedAt())
+        System.setProperty(LsdProperties.TIMING_ORDER_BY_CREATED_AT, "all")
+        assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByCreatedAt())
+        lsd.configure { it.orderByCreatedAt(ClockOrdering.OFF) }
+        assertEquals(ClockOrdering.OFF, lsd.timingConfig.orderByCreatedAt())
+        lsd.message("A", "B", "late", at = t(50))
+        lsd.message("A", "B", "early", at = t(0))
+        lsd.completeScenario("off", status = Status.SUCCESS)
+        val json = report(lsd, "Configured")
+        assertTrue(json.contains("\"clockOrdering\": \"OFF\""), json)
+        assertTrue(json.indexOf("\"late\"") < json.indexOf("\"early\""), "OFF keeps capture order")
+        lsd.configure { it.orderByCreatedAt(null) }
+        assertNull(lsd.timingConfig.orderByCreatedAt())
+        assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByCreatedAt())
+    }
+
+    @Test
     fun `config key picks the clock ordering, default same source`() {
         assertEquals(ClockOrdering.SAME_SOURCE, LsdProperties.clockOrdering())
         mapOf(

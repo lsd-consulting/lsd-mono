@@ -204,13 +204,14 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Status;)V
 	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Status;Lio/lsdconsulting/lsd/mono/core/domain/ScenarioError;)V
 	public static synthetic fun completeScenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/core/domain/Status;Lio/lsdconsulting/lsd/mono/core/domain/ScenarioError;ILjava/lang/Object;)V
+	public final fun configure (Ljava/util/function/Consumer;)Lio/lsdconsulting/lsd/mono/core/LsdContext;
 	public final fun createIndex ()Ljava/nio/file/Path;
 	public final fun currentScenario ()Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public final fun findScenario (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public final fun findScenarioByHeader (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/LsdScenario;
 	public static final fun getInstance ()Lio/lsdconsulting/lsd/mono/core/LsdContext;
-	public final fun getOrderByCreatedAt ()Lio/lsdconsulting/lsd/mono/core/ClockOrdering;
 	public final fun getPayloads ()Lio/lsdconsulting/lsd/mono/core/PayloadConverters;
+	public final fun getTimingConfig ()Lio/lsdconsulting/lsd/mono/core/TimingConfig;
 	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Lio/lsdconsulting/lsd/mono/core/ReportFiles;
 	public final synthetic fun report (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lio/lsdconsulting/lsd/mono/core/ReportFiles;
 	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
@@ -225,7 +226,6 @@ public final class io/lsdconsulting/lsd/mono/core/LsdContext : io/lsdconsulting/
 	public static synthetic fun scenario$default (Lio/lsdconsulting/lsd/mono/core/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Object;
 	public final fun scenarioHeaderValue (Ljava/lang/String;)Ljava/lang/String;
 	public final fun scenarioHeaderValue (Ljava/net/URI;)Ljava/lang/String;
-	public final fun setOrderByCreatedAt (Lio/lsdconsulting/lsd/mono/core/ClockOrdering;)V
 	public final fun wrap (Ljava/lang/Runnable;)Ljava/lang/Runnable;
 	public final fun wrap (Ljava/util/concurrent/Callable;)Ljava/util/concurrent/Callable;
 }
@@ -366,6 +366,12 @@ public final class io/lsdconsulting/lsd/mono/core/Timing$Companion {
 	public final fun of (Ljava/time/Instant;Ljava/time/Duration;)Lio/lsdconsulting/lsd/mono/core/Timing;
 	public final fun took (Ljava/time/Duration;)Lio/lsdconsulting/lsd/mono/core/Timing;
 	public final fun tookMs (D)Lio/lsdconsulting/lsd/mono/core/Timing;
+}
+
+public final class io/lsdconsulting/lsd/mono/core/TimingConfig {
+	public final fun effectiveOrderByCreatedAt ()Lio/lsdconsulting/lsd/mono/core/ClockOrdering;
+	public final fun orderByCreatedAt ()Lio/lsdconsulting/lsd/mono/core/ClockOrdering;
+	public final fun orderByCreatedAt (Lio/lsdconsulting/lsd/mono/core/ClockOrdering;)Lio/lsdconsulting/lsd/mono/core/TimingConfig;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/TimingSource : java/lang/Enum {

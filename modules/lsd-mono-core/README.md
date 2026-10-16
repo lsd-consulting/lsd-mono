@@ -270,7 +270,8 @@ metrics add `Errors`: the number whose status is an error, either an HTTP-style 
 (`"503"`, `"404 Not Found"`) or, with no leading code, a word such as `error`, `failed` or `timeout`.
 The inspector labels an error status `· error`.
 
-**Clock ordering** (`lsd.mono.timing.orderByCreatedAt`, or `LsdContext.orderByCreatedAt`): by
+**Clock ordering** (`lsd.mono.timing.orderByCreatedAt`, or `lsd.configure { it.orderByCreatedAt(mode) }`,
+`lsd.configure(t -> t.orderByCreatedAt(mode))` from Java): by
 default (`source`) events from one source that have a start time but no measured duration are
 ordered by it, among their siblings in the same parent call; untimed events keep their place.
 `all` also compares different sources, `false` turns it off, and `Timing.orderByCreatedAt` opts
@@ -363,7 +364,7 @@ Settings made in code rather than by property:
 
 | Setting | Effect |
 | --- | --- |
-| `LsdContext.orderByCreatedAt` | Clock ordering for scenarios completed from now on; `null` reads `lsd.mono.timing.orderByCreatedAt` |
+| `LsdContext.configure(Consumer<TimingConfig>)` | `TimingConfig.orderByCreatedAt(mode)`: clock ordering for scenarios completed from now on; `null` reads `lsd.mono.timing.orderByCreatedAt`. Chains the same from Java and Kotlin |
 | `Timing.orderByCreatedAt` | Opts one event in or out of clock ordering |
 | `LsdContext.payloads` | Payload converters and redaction rules (see [Message data](#message-data)); `clear()` re-reads the payload properties |
 
