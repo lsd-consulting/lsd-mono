@@ -14,6 +14,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   (there is no separate ranked Bottlenecks list, and report JSON has no `insights`).
 - Timing API (slice 1): accuracy, call pairing, clock ordering with structural guards, and the Timing view
   (summary strip, swim lanes and waterfall).
+- Report JSON writes a call's duration on the call: a call carries its own `durationMs` or its reply's, and a
+  paired reply carries none. The diagram label, inspector and Timing view read it from the call.
 - The report index (`index.html`) is the report app for every report in the directory: a sidebar lists
   reports (failed first) with their scenario counts, a report's data loads only when it is opened, and
   `#report=<id>` links open a report, scenario or message directly. It replaces the per-report `-report.html`

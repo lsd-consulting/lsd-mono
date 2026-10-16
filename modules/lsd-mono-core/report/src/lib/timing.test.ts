@@ -27,17 +27,27 @@ const scenario = (events: MessageEvent[], extra: Partial<Scenario> = {}): Scenar
 
 const nested = scenario(
   [
-    msg('outer', 'web', 'api', { callId: 'c1' }),
-    msg('inner', 'api', 'db', { callId: 'c2' }),
-    msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2', durationMs: 20 }),
+    msg('outer', 'web', 'api', { callId: 'c1', durationMs: 50.5 }),
+    msg('inner', 'api', 'db', { callId: 'c2', durationMs: 20 }),
+    msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2' }),
     msg('event', 'api', 'kafka', { type: 'ASYNCHRONOUS', order: 'CLOCK' }),
-    msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1', durationMs: 50.5 }),
+    msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
   ],
   { accuracy: 'TRACED', clockOrdered: 1, pairingCoverage: 1 },
 )
 
 describe('timeline', () => {
-  it('nests calls, moves reply durations onto calls and splits self time', () => {
+  it('ignores a duration on a reply: the report writes it on the call', () => {
+    const t = timeline(
+      scenario([
+        msg('call', 'a', 'b', { callId: 'c' }),
+        msg('reply', 'b', 'a', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c', durationMs: 9 }),
+      ]),
+    )
+    expect(t.rows.map((r) => [r.message.id, r.spanMs])).toEqual([['call', 0]])
+  })
+
+  it('nests calls, reads durations from the calls and splits self time', () => {
     const t = timeline(nested)
     expect(t.rows.map((r) => [r.message.id, r.depth, r.spanMs])).toEqual([
       ['outer', 0, 50.5],

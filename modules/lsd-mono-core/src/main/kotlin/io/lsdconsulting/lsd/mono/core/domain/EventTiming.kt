@@ -28,6 +28,10 @@ internal data class ScenarioTiming(
     val warnings: List<String> = emptyList(),
     val reorderedByClock: List<String> = emptyList(),
     val perEvent: Map<String, EventTiming> = emptyMap(),
+    /** Each call's duration, its own or its reply's, by call id. The JSON writes it on the call. */
+    val callMs: Map<String, Double> = emptyMap(),
+    /** Replies paired with a call. Their duration belongs to the call, so the JSON leaves it off them. */
+    val pairedReplies: Set<String> = emptySet(),
 )
 
 private fun SequenceEvent.isCall() = this is Message && type == MessageType.SYNCHRONOUS
@@ -77,6 +81,7 @@ private class Analysis(
     val timing: Map<String, TimingSource>,
     val pairing: Map<String, PairingSource?>,
     val callMs: Map<String, Double>,
+    val pairedReplies: Set<String>,
     val warnings: List<String>,
     val reverted: Boolean,
     /** Replies with no call. */
@@ -360,6 +365,7 @@ private fun analyse(
         timing = events.indices.associate { events[it].id to timing[it] },
         pairing = events.indices.associate { events[it].id to pairs.pairing[it] },
         callMs = events.indices.mapNotNull { i -> durations.callMs[i]?.let { events[i].id to it } }.toMap(),
+        pairedReplies = events.indices.filter { pairs.callOf[it] >= 0 }.mapTo(HashSet()) { events[it].id },
         warnings = warnings + skew,
         reverted = undone > 0,
         orphans = pairs.warnings.count { it.startsWith("reply without call") },
@@ -418,6 +424,8 @@ private fun finish(
             warnings = analysis.warnings,
             reorderedByClock = reorders,
             perEvent = perEvent,
+            callMs = analysis.callMs,
+            pairedReplies = analysis.pairedReplies,
         )
 }
 

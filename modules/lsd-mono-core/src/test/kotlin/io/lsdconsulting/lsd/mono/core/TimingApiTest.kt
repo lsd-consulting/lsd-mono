@@ -309,6 +309,20 @@ class TimingApiTest {
     }
 
     @Test
+    fun `the call carries its reply's duration and the paired reply carries none`() {
+        val lsd = LsdContext()
+        lsd.accept(Interaction(InteractionKind.REQUEST, "orders", "payments", "POST /pay", interactionId = "c1"))
+        lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "orders", "201", replyTo = "c1", durationMs = 30.5))
+        lsd.accept(Interaction(InteractionKind.PUBLISH, "orders", "kafka", "paid", durationMs = 2.0))
+        lsd.completeScenario("moved", status = Status.SUCCESS)
+        val json = report(lsd, "Moved")
+        val events = Regex("\\{[^{}]*\"label\": \"([^\"]+)\"[^{}]*\\}").findAll(json).associate { it.groupValues[1] to it.value }
+        assertTrue(events.getValue("POST /pay").contains("\"durationMs\": 30.5"), json)
+        assertFalse(events.getValue("201").contains("durationMs"), json)
+        assertTrue(events.getValue("paid").contains("\"durationMs\": 2"), "an unpaired message keeps its own")
+    }
+
+    @Test
     fun `ingested lsd-distributed style data is guessed and tops out at MEASURED`() {
         val lsd = LsdContext()
         lsd.accept(Interaction(InteractionKind.REQUEST, "orders", "payments", "POST /pay", trace = Trace("tid"), source = "orders", startedAt = t(0)))

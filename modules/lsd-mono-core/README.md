@@ -260,7 +260,8 @@ lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "api", "200", reply
 Each message in the JSON carries `seq` (capture order), `timing` (`NONE`, `TIMESTAMPED`,
 `MEASURED`, `DERIVED`), `pairing` for calls and replies (`NONE`, `GUESSED`, `CALL_ID`, `TRACE`)
 and `order` (`SEQUENCE`, `STRUCTURE`, `CLOCK`), plus `callId`, `replyTo`, `causedBy`, `trace`,
-`source` and `startedAt` when known. `durationMs` is fractional. Each scenario carries `accuracy`
+`source` and `startedAt` when known. `durationMs` is fractional and sits on the call: a call carries
+its own duration or its reply's, and a paired reply carries none. Each scenario carries `accuracy`
 (`STRUCTURE_ONLY`, `TIMESTAMPED`, `MEASURED`, `TRACED`), `measuredCoverage`, `pairingCoverage`,
 `sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`.
 

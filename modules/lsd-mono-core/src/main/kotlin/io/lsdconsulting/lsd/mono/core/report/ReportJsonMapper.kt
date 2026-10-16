@@ -104,7 +104,13 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     label = label,
                     type = type.name,
                     colour = colour?.takeIf { it.isNotBlank() },
-                    durationMs = timedMs,
+                    // A call carries its own duration or its reply's; a paired reply carries none.
+                    durationMs =
+                        when (id) {
+                            in timing.callMs -> timing.callMs[id]
+                            in timing.pairedReplies -> null
+                            else -> timedMs
+                        },
                     data = data,
                     createdAt = createdAt?.toString(),
                     seq = seq.takeIf { it > 0 },

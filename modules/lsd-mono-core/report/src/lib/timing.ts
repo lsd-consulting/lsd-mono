@@ -46,8 +46,8 @@ const isCall = (m: MessageEvent) => m.type === 'SYNCHRONOUS' || m.type === 'BI_D
 
 /**
  * Builds the call tree and lays it on a time axis. Replies pair by `replyTo`, else by direction
- * (the innermost open call the other way). A call's duration is its own `durationMs` or its
- * reply's. Starts come from `startedAt` within a single source; otherwise children are packed
+ * (the innermost open call the other way). A call's duration is its `durationMs`: the report
+ * writes a paired reply's duration on its call. Starts come from `startedAt` within a single source; otherwise children are packed
  * one after another inside their parent, and the timeline is marked approximate.
  */
 export function timeline(scenario: Scenario): Timeline {
@@ -90,10 +90,6 @@ function buildTimeline(scenario: Scenario): Timeline {
       }
       if (node) {
         node.reply = e
-        if (!node.timed && e.durationMs != null) {
-          node.own = e.durationMs
-          node.timed = true
-        }
         const at = stack.indexOf(node)
         if (at > 0) stack.splice(at)
       }
