@@ -164,6 +164,8 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   let ready = false
   let jsonLabel = 'JSON'
   let showJson = false
+  /** Set when an arrow opens: on a phone its JSON is scrolled into view once it shows. */
+  let revealJson = false
   let width = readWidth(doc)
 
   function shell(): HTMLElement | null {
@@ -297,6 +299,10 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     toggle.setAttribute('aria-expanded', 'true')
     toggle.textContent = `Hide ${jsonLabel}`
     options.onContent?.()
+    if (revealJson) {
+      revealJson = false
+      if (viewport() <= INSPECTOR_STACKED_PX) revealBelowTopbar(panel!, pre)
+    }
   }
 
   function close(): void {
@@ -317,6 +323,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     ready = false
     cached = undefined
     showJson = true
+    revealJson = false
     pre.hidden = true
     pre.textContent = ''
     toggle.hidden = false
@@ -347,6 +354,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     openMessage(scenarioId, message) {
       const token = begin({ scenarioId, messageId: message.id, kind: 'message' })
       jsonLabel = 'JSON'
+      revealJson = true
       toggle.textContent = `Show ${jsonLabel}`
       title.textContent = message.label
       meta.innerHTML = messageMetaHtml(scenarioId, message)
@@ -454,6 +462,31 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   }
   doc.addEventListener('keydown', onEscape)
   return controller
+}
+
+/** Air between the sticky top bar and what is scrolled under it. */
+const REVEAL_GAP_PX = 8
+
+/**
+ * On a phone the panel sits inline below the report, so a payload can open below the screen.
+ * Scroll the page so the JSON shows below the sticky top bar: from the panel's head when the
+ * head and the start of the JSON fit together, else from the JSON's own row. Nothing moves
+ * when the JSON already starts on screen. Smooth unless the user asks for reduced motion.
+ */
+export function revealBelowTopbar(panel: HTMLElement, pre: HTMLElement): void {
+  const win = panel.ownerDocument.defaultView
+  if (!win) return
+  const bar = Number.parseFloat(getComputedStyle(panel.ownerDocument.documentElement).getPropertyValue('--topbar-h'))
+  const top = (Number.isFinite(bar) ? bar : 0) + REVEAL_GAP_PX
+  const room = win.innerHeight - top
+  const json = pre.getBoundingClientRect()
+  const show = Math.min(json.height, room / 3)
+  if (json.top >= top && json.top + show <= win.innerHeight) return
+  const head = panel.getBoundingClientRect().top
+  const row = (pre.previousElementSibling as HTMLElement | null)?.getBoundingClientRect().top ?? json.top
+  const anchor = json.top + show - head <= room ? head : row
+  const reduce = typeof win.matchMedia === 'function' && win.matchMedia('(prefers-reduced-motion: reduce)').matches
+  win.scrollTo({ top: Math.max(0, win.scrollY + anchor - top), behavior: reduce ? 'auto' : 'smooth' })
 }
 
 function readWidth(doc: Document): number {
