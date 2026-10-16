@@ -183,6 +183,19 @@
   font-size: 10px;
   font-family: var(--mono);
 }
+/* A payload to open: braces in the accent colour, bold enough to read at small zoom. */
+.msg-payload {
+  fill: var(--accent);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+@media (forced-colors: active) {
+  .msg-payload,
+  .msg-clock {
+    fill: CanvasText;
+  }
+}
 /* Matches the waterfall's .tbadge.clock: small uppercase text in the warn colour. */
 .msg-clock {
   fill: var(--warn);
@@ -565,7 +578,8 @@
     height: auto;
   }
   /* Ink, not colour: the word still reads on a mono printer. */
-  .msg-clock {
+  .msg-clock,
+  .msg-payload {
     fill: #000;
   }
   .msg-places,

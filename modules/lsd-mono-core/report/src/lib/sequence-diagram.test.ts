@@ -147,6 +147,28 @@ describe('renderRowSvg fragments', () => {
     expect(html).not.toContain('role="button"')
   })
 
+  it('marks an arrow with a payload with braces and a title, before any clock badge', () => {
+    const row = (data?: unknown) =>
+      renderRowSvg(
+        rowFor({
+          kind: 'message',
+          id: 'm-p',
+          from: 'api',
+          to: 'db',
+          label: 'ping',
+          type: 'SYNCHRONOUS',
+          order: 'CLOCK',
+          data,
+        }),
+        400,
+        participants,
+      )
+    const html = row({ id: 1 })
+    expect(html).toContain('<tspan class="msg-payload" dx="6" aria-hidden="true">{ }<title>Has a payload')
+    expect(html.indexOf('msg-payload')).toBeLessThan(html.indexOf('msg-clock'))
+    expect(row()).not.toContain('msg-payload')
+  })
+
   it('badges a clock-ordered arrow in words with the waterfall title, and nothing else', () => {
     const at = (order?: 'CLOCK' | 'SEQUENCE') =>
       renderRowSvg(

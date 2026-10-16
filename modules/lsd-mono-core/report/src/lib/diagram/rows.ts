@@ -296,6 +296,13 @@ function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
 }
 
 /** Same word and title as the waterfall's clock badge; the text says it, so colour is only a cue. */
+/**
+ * Marks an arrow that has a payload to open. A glyph with a title for sighted users; the arrow's
+ * own button already says "Open …" to screen readers, so the glyph is hidden from them.
+ */
+const PAYLOAD_MARKER =
+  '<tspan class="msg-payload" dx="6" aria-hidden="true">{ }<title>Has a payload: tap or click the arrow to open it</title></tspan>'
+
 const CLOCK_BADGE =
   '<tspan class="msg-clock" dx="6">clock<title>Placed by its timestamp (createdAt), not capture order</title></tspan>'
 
@@ -326,6 +333,7 @@ function renderMessageRow(
   const hasData = messageHasPayload(msg)
   const dur = msg.durationMs != null ? `<tspan class="msg-dur"> · ${escapeHtml(msg.durationMs)}ms</tspan>` : ''
   const clock = msg.order === 'CLOCK' ? CLOCK_BADGE : ''
+  const payload = hasData ? PAYLOAD_MARKER : ''
   const cue = spec.typeCue ? `<tspan class="msg-type-cue"> [${escapeHtml(spec.typeCue)}]</tspan>` : ''
   const current = match && paint.searchCurrentId === msg.id
   const hitClass = match ? ` search-hit${current ? ' search-current' : ''}` : ''
@@ -348,7 +356,7 @@ function renderMessageRow(
     return `
     <g class="message message-short${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
-      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${clock}</text>
+      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}${clock}</text>
       ${hasData ? `<circle class="msg-hit" cx="${hitX}" cy="0" r="16"/>` : ''}
     </g>`
   }
@@ -377,7 +385,7 @@ function renderMessageRow(
     return `
     <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <path class="msg-path" d="M${out} 0 C${bend} 0, ${bend} ${SELF_RETURN_DY}, ${back} ${SELF_RETURN_DY}" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-      <text class="msg-label" x="${bend + 8}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${clock}</text>
+      <text class="msg-label" x="${bend + 8}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}${clock}</text>
       ${hasData ? `<circle class="msg-hit" cx="${bend - 8}" cy="11" r="14"/>` : ''}
     </g>`
   }
@@ -388,7 +396,7 @@ function renderMessageRow(
   return `
   <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
     <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${clock}</text>
+    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}${clock}</text>
     ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
   </g>`
 }
