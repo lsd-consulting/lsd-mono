@@ -151,25 +151,6 @@ export interface ActivationSpan {
 }
 
 /**
- * When any event has `createdAt`, order by that ISO instant before layout.
- * Untimed events keep capture order and sort after timed ones. No timestamps → identity.
- */
-export function sortEventsByCreatedAt(events: DiagramEvent[]): DiagramEvent[] {
-  if (!events.some((event) => event.createdAt)) return events
-  return events
-    .map((event, index) => ({ event, index }))
-    .sort((a, b) => {
-      const ta = a.event.createdAt
-      const tb = b.event.createdAt
-      if (ta && tb && ta !== tb) return ta < tb ? -1 : 1
-      if (ta && !tb) return -1
-      if (!ta && tb) return 1
-      return a.index - b.index
-    })
-    .map((item) => item.event)
-}
-
-/**
  * How far this event paints above its row origin.
  * Message labels use MESSAGE_LABEL_RISE (baseline plus glyph). Notes are
  * centred on row.y, so half the card sticks up. Dividers and delays do not
@@ -252,13 +233,14 @@ function paintedBottom(row: LayoutRow): number | null {
 }
 
 /**
- * Rows stacked from y = 0. Sections are ordinary rows — they do not reset y or activations.
+ * Rows stacked from y = 0, in the order the report gives them. Sections are ordinary rows — they do not reset y or activations.
  * A note is centred on its row's y, so half the card rises into the row above.
  * When that would cover the arrow or note above (a tall note after a self-call),
  * the note moves down until its top edge clears it.
  */
 export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
-  const ordered = sortEventsByCreatedAt(events)
+  // The library already orders events (clock order with structural guards); never re-sort here.
+  const ordered = events
   const rows: LayoutRow[] = []
   let y = TOP_LABEL_PAD
   let lastDrawn: LayoutRow | undefined
