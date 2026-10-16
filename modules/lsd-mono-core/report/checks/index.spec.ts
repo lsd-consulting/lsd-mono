@@ -88,6 +88,8 @@ for (const theme of ['dark', 'light', 'contrast']) {
 
 test('index: choosing another report loads it and names it in the URL', async ({ page }) => {
   const loaded = await openIndex(page, 'dark')
+  // The default 860px viewport is the narrow layout: the list is folded to the open report.
+  await page.locator('#btn-nav-fold').click()
   await page.locator('.nav-group-head[data-group="checkout"]').click()
   await page.locator('[data-report="checkout"][data-nav]').first().click()
   await expect(page.locator('.hero-index')).toContainText('report 2 of 2')

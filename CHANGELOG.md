@@ -25,6 +25,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - On a phone, tapping an arrow scrolls its payload JSON into view below the sticky top bar, and opening the
   component diagram or metrics scrolls the panel's heading there (smoothly, unless reduced motion is set; nothing
   moves when it is already on screen).
+- Narrow screens (860px and below) fold the scenario list (the index's report list) to the selected item under
+  an "N scenarios ▾" disclosure; a typed search lists every match. On phones, search and the status chips
+  share one row (the chips show their counts, and keep their names for screen readers).
 - Fit (automatic and the button) stops at 50% so labels and touch targets stay usable; a wider diagram scrolls
   sideways. Zoom out still reaches 25%.
 - Arrows with a payload show a `{}` marker after their label, with a hover title, and a one-line legend under

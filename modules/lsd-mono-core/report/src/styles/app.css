@@ -1003,9 +1003,42 @@ html {
   }
 }
 
-/* Narrow layout stacks the list above the report; there is nothing to collapse. */
+/* Narrow layout stacks the list above the report; there is nothing to collapse. Instead
+   the list folds to the selected item under an "N scenarios ▾" disclosure. */
+.nav-fold {
+  display: none;
+}
 @media (max-width: 860px) {
-  .sidebar-toggle {
+  .sidebar-toggle,
+  .sidebar-head .sidebar-title {
+    display: none;
+  }
+  .sidebar {
+    padding: 10px 12px 12px;
+  }
+  .nav-fold:not([hidden]) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .nav-fold:focus-visible {
+    outline: none;
+    box-shadow: var(--focus);
+  }
+  .nav-folded .hist {
+    display: none;
+  }
+  /* Only while the selected item is in the list; otherwise everything shows. */
+  .nav-folded .scenario-nav:has([aria-current]) > li:not(:has([aria-current])) {
     display: none;
   }
 }
@@ -1085,13 +1118,31 @@ html {
     padding: 8px 12px;
     gap: 6px 8px;
   }
+  /* Search and the status chips share one row; the chips show their count, and the
+     status word stays for screen readers. */
   .search-wrap {
     max-width: none;
     order: 3;
-    flex: 1 1 100%;
+    /* Too wide for the first row, so search and the chips wrap together onto the second. */
+    flex: 1 1 calc(100% - 160px);
+    min-width: 0;
   }
   .filters {
     order: 4;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .chip {
+    padding: 4px 8px;
+    min-height: 32px;
+  }
+  .chip .chip-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 

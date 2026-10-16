@@ -5,7 +5,8 @@ import { loadReportData, type IndexManifest, type ReportData } from '../lib/repo
 import { type HashRef } from '../lib/report-hash'
 import { defaultScenarioId, stepSelection } from '../ui/selection'
 import { forgetDiagrams } from '../lib/sequence-diagram'
-import { navItemTooltip } from '../ui/sidebar'
+import { navFoldLabel, navItemTooltip } from '../ui/sidebar'
+import { isStacked } from '../lib/media'
 import { statusLabel } from '../ui/format'
 import { indexNavHtml, orEmptyNavHtml } from '../ui/index-nav'
 import { escapeAttr, escapeHtml } from '../lib/escape'
@@ -14,6 +15,7 @@ import { index, session, state } from './context'
 import { focusScenarioHeading, renderMain, scrollToScenario } from './main-view'
 import { applyRef } from './routing'
 export function renderNav(): void {
+  paintNavFold()
   if (index) {
     renderIndexNav(index)
     return
@@ -46,9 +48,34 @@ export function renderNav(): void {
   )
 
   list.querySelectorAll<HTMLButtonElement>('[data-nav]').forEach((btn) => {
-    btn.addEventListener('click', () => selectScenario(btn.dataset.nav!))
+    btn.addEventListener('click', () => {
+      foldAfterChoosing()
+      selectScenario(btn.dataset.nav!)
+    })
   })
   if (hadFocus) selectedNavButton()?.focus()
+}
+
+/**
+ * Narrow screens show only the selected item and an "N scenarios ▾" disclosure (CSS hides the
+ * rest while the sidebar has nav-folded). A typed search lists every match instead.
+ */
+function paintNavFold(): void {
+  const sidebar = document.querySelector('#sidebar')
+  const toggle = document.querySelector<HTMLButtonElement>('#btn-nav-fold')
+  if (!sidebar || !toggle) return
+  const open = state.navOpen || state.query.trim() !== ''
+  sidebar.classList.toggle('nav-folded', !open)
+  toggle.setAttribute('aria-expanded', String(open))
+  toggle.hidden = state.query.trim() !== ''
+  const count = index ? index.reports.length : session.report.scenarios.length
+  toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(count, index ? 'report' : 'scenario')
+  toggle.querySelector('.nav-fold-glyph')!.textContent = open ? '▴' : '▾'
+}
+
+/** Choosing an item on a narrow screen folds the list back to it. */
+function foldAfterChoosing(): void {
+  if (isStacked()) state.navOpen = false
 }
 
 /**
@@ -84,6 +111,7 @@ function renderIndexNav(manifest: IndexManifest): void {
   })
   list.querySelectorAll<HTMLButtonElement>('[data-nav]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      foldAfterChoosing()
       const rid = btn.dataset.report!
       const sid = btn.dataset.nav!
       if (rid === session.reportId) selectScenario(sid)

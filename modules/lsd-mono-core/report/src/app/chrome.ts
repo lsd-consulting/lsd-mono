@@ -71,7 +71,7 @@ export function renderShell(): void {
           .map(
             (s) => `
           <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}">
-            ${escapeHtml(statusLabel(s))} <span class="count">${c[s]}</span>
+            <span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
           </button>`,
           )
           .join('')}
@@ -84,6 +84,7 @@ export function renderShell(): void {
     <div class="shell${state.sidebarCollapsed ? ' sidebar-collapsed' : ''}">
       <aside class="sidebar" id="sidebar" aria-label="${index ? 'Reports' : 'Scenarios'}">
         <div class="sidebar-head">
+          <button type="button" class="nav-fold" id="btn-nav-fold" aria-controls="scenario-nav" aria-expanded="false"><span class="nav-fold-text"></span> <span class="nav-fold-glyph" aria-hidden="true">▾</span></button>
           <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : `Scenarios · ${total}`}</p>
           <button type="button" class="icon-btn sidebar-toggle" id="btn-sidebar" aria-controls="sidebar"
             aria-expanded="${!state.sidebarCollapsed}" aria-label="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}"
@@ -172,6 +173,11 @@ function bindTopbarButtons(): void {
     renderNav()
     // Diagrams draw only the rows in view; the width just changed.
     document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((scrollport) => syncDiagramWindow(scrollport))
+  })
+
+  document.querySelector('#btn-nav-fold')!.addEventListener('click', () => {
+    state.navOpen = !state.navOpen
+    renderNav()
   })
 
   document.querySelector('#btn-help')!.addEventListener('click', () => {

@@ -16,6 +16,8 @@ export interface State {
   sidebarCollapsed: boolean
   /** Index page: reports whose scenarios are listed in the sidebar. */
   expanded: Set<string>
+  /** Narrow screens: the list is open past the selected item. Not remembered across reloads. */
+  navOpen: boolean
 }
 
 /** The index page's manifest. Null on a single report's page. */
@@ -36,6 +38,7 @@ export const state: State = {
   helpOpen: false,
   sidebarCollapsed: getSidebarCollapsed(),
   expanded: new Set(),
+  navOpen: false,
 }
 
 export const app = document.querySelector('#app')!
