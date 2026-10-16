@@ -147,7 +147,7 @@ describe('renderRowSvg fragments', () => {
     expect(html).not.toContain('role="button"')
   })
 
-  it('marks an arrow with a payload with braces and a title, before any clock badge', () => {
+  it('marks an arrow with a payload with braces and a title', () => {
     const row = (data?: unknown) =>
       renderRowSvg(
         rowFor({
@@ -165,32 +165,8 @@ describe('renderRowSvg fragments', () => {
       )
     const html = row({ id: 1 })
     expect(html).toContain('<tspan class="msg-payload" dx="6" aria-hidden="true">{ }<title>Has a payload')
-    expect(html.indexOf('msg-payload')).toBeLessThan(html.indexOf('msg-clock'))
+    expect(html).not.toContain('msg-clock')
     expect(row()).not.toContain('msg-payload')
-  })
-
-  it('badges a clock-ordered arrow in words with the waterfall title, and nothing else', () => {
-    const at = (order?: 'CLOCK' | 'SEQUENCE') =>
-      renderRowSvg(
-        rowFor({
-          kind: 'message',
-          id: 'm-c',
-          from: 'api',
-          to: 'db',
-          label: 'ping',
-          type: 'SYNCHRONOUS',
-          order,
-          durationMs: 4,
-        }),
-        400,
-        participants,
-      )
-    const html = at('CLOCK')
-    expect(html).toContain('class="msg-clock"')
-    expect(html).toMatch(/>clock<title>Placed by its timestamp \(createdAt\), not capture order<\/title>/)
-    expect(html.indexOf('msg-dur')).toBeLessThan(html.indexOf('msg-clock'))
-    expect(at('SEQUENCE')).not.toContain('msg-clock')
-    expect(at()).not.toContain('msg-clock')
   })
 
   it('does not add an arrow button when there is no payload', () => {

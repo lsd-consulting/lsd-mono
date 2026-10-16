@@ -92,7 +92,6 @@ function messageLabelWidth(msg: MessageEvent, labelMaxWidth: number): number {
   if (cue) text += ` [${cue}]`
   if (msg.durationMs != null) text += ` · ${msg.durationMs}ms`
   if (messageHasPayload(msg)) text += '  { }'
-  if (msg.order === 'CLOCK') text += '  clock'
   return text.length * MSG_CHAR_W
 }
 

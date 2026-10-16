@@ -16,8 +16,6 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   (summary strip, swim lanes and waterfall).
 - Report JSON writes a call's duration on the call: a call carries its own `durationMs` or its reply's, and a
   paired reply carries none. The diagram label, inspector and Timing view read it from the call.
-- A clock-ordered message (`order: CLOCK`) is badged CLOCK on its arrow in the sequence diagram, matching the
-  waterfall and inspector badges. It is a word with a hover title, not colour alone, and prints in black.
 - An interaction's `status` drives an `Errors` metric (4xx/5xx codes or error words such as `failed`), and the
   inspector labels an error status in words.
 - `LsdContext.configure(Consumer<TimingConfig>)` sets the clock ordering (`orderByCreatedAt(mode)`) the same way

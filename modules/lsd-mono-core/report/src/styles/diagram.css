@@ -191,18 +191,9 @@
   font-weight: 700;
 }
 @media (forced-colors: active) {
-  .msg-payload,
-  .msg-clock {
+  .msg-payload {
     fill: CanvasText;
   }
-}
-/* Matches the waterfall's .tbadge.clock: small uppercase text in the warn colour. */
-.msg-clock {
-  fill: var(--warn);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .note-card {
@@ -577,8 +568,7 @@
     width: 100%;
     height: auto;
   }
-  /* Ink, not colour: the word still reads on a mono printer. */
-  .msg-clock,
+  /* Ink, not colour: the glyph still reads on a mono printer. */
   .msg-payload {
     fill: #000;
   }
