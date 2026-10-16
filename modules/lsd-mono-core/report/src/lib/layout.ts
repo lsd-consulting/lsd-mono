@@ -46,7 +46,7 @@ export const ROW_H = {
 
 /** Fixed note card width — short notes still look like notes. */
 export const NOTE_CARD_W = 140
-export const NOTE_PAD_X = 10
+const NOTE_PAD_X = 10
 export const NOTE_PAD_Y = 3
 export const NOTE_LINE_H = 12
 /**
@@ -55,7 +55,7 @@ export const NOTE_LINE_H = 12
  */
 export const NOTE_ROW_GAP = 12
 /** Approx advance width for `.note-text` (10.5px, weight 600). */
-export const NOTE_CHAR_W = 6
+const NOTE_CHAR_W = 6
 export const NOTE_CARD_MIN_H = 28
 
 /**
@@ -116,9 +116,9 @@ export const EDGE_INSET = 16
 export const EDGE_MARGIN = 8
 /** Approx advance width for `.msg-label` (11.5px, weight 550), used to size the frame. */
 export const MSG_CHAR_W = 6.6
-export const DEFAULT_SPACER_H = ROW_H.spacer
-export const MIN_SPACER_H = 12
-export const MAX_SPACER_H = 240
+const DEFAULT_SPACER_H = ROW_H.spacer
+const MIN_SPACER_H = 12
+const MAX_SPACER_H = 240
 
 export interface LayoutRow {
   index: number
@@ -175,7 +175,7 @@ export function sortEventsByCreatedAt(events: DiagramEvent[]): DiagramEvent[] {
  * centred on row.y, so half the card sticks up. Dividers and delays do not
  * rise past SECTION_AFTER_PAD.
  */
-export function contentRise(event: DiagramEvent): number {
+function contentRise(event: DiagramEvent): number {
   switch (event.kind) {
     case 'message':
       return MESSAGE_LABEL_RISE
@@ -192,7 +192,7 @@ export function contentRise(event: DiagramEvent): number {
  * Activate/deactivate rows have no height, so the caller passes the next
  * event that actually paints.
  */
-export function sectionRowHeight(next: DiagramEvent | undefined): number {
+function sectionRowHeight(next: DiagramEvent | undefined): number {
   const bandBottom = SECTION_BAND_Y + SECTION_BAND_H
   let pad = SECTION_AFTER_PAD
   if (next) pad = Math.max(pad, contentRise(next) + SECTION_LABEL_GAP)
@@ -234,7 +234,7 @@ function nextDrawnEvent(events: DiagramEvent[], after: number): DiagramEvent | u
 }
 
 /** Gap between a note card's top edge and the lowest point of the arrow or note above it. */
-export const NOTE_CLEARANCE = 6
+const NOTE_CLEARANCE = 6
 
 /**
  * Lowest point a drawn row paints below its y. A self-call loop comes back

@@ -115,7 +115,7 @@ export function renderShell(): void {
   renderMain()
 }
 
-export function bindChrome(): void {
+function bindChrome(): void {
   bindFilters()
   bindTopbarButtons()
   bindSidePanel()
@@ -125,7 +125,7 @@ export function bindChrome(): void {
 }
 
 /** Search, the status chips, and the empty state's Clear filters button. */
-export function bindFilters(): void {
+function bindFilters(): void {
   const search = document.querySelector<HTMLInputElement>('#search')!
   search.addEventListener('input', () => {
     state.query = search.value
@@ -156,7 +156,7 @@ export function bindFilters(): void {
 }
 
 /** Theme, collapse-sidebar and help buttons in the top bar. */
-export function bindTopbarButtons(): void {
+function bindTopbarButtons(): void {
   document.querySelector('#btn-theme')!.addEventListener('click', () => {
     paintThemeButton(toggleTheme())
   })
@@ -181,7 +181,7 @@ export function bindTopbarButtons(): void {
 }
 
 /** The side panel (inspector), and its Timing rows that reveal a message in the diagram. */
-export function bindSidePanel(): void {
+function bindSidePanel(): void {
   session.inspector = bindInspector(document, {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onContent: () => syncPrintPanel(),
@@ -218,7 +218,7 @@ export function bindSidePanel(): void {
 }
 
 /** Clicks in the main column: section jumps, arrows, and the Components, Metrics and error buttons. */
-export function onMainClick(ev: MouseEvent): void {
+function onMainClick(ev: MouseEvent): void {
   const target = ev.target as Element | null
   if (!target || !target.closest) return
   const jump = target.closest<HTMLButtonElement>('[data-jump-y]')
@@ -267,7 +267,7 @@ export function onMainClick(ev: MouseEvent): void {
 }
 
 /** Keys in the main column: stepping in diagram find, diagram message navigation, and Enter on an arrow. */
-export function onMainKey(ev: KeyboardEvent): void {
+function onMainKey(ev: KeyboardEvent): void {
   const target = ev.target as HTMLElement | null
   const step = target?.matches('[data-diagram-find]') ? findStepKey(ev) : null
   if (step) {
@@ -292,7 +292,7 @@ export function onMainKey(ev: KeyboardEvent): void {
 }
 
 /** A step key in a diagram's find box: go to the next or previous match, wrapping, and bring it on screen. */
-export function onFindKey(ev: KeyboardEvent, target: HTMLInputElement, step: 1 | -1): void {
+function onFindKey(ev: KeyboardEvent, target: HTMLInputElement, step: 1 | -1): void {
   const scroll = target.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
   if (!scroll) return
   ev.preventDefault()
@@ -302,7 +302,7 @@ export function onFindKey(ev: KeyboardEvent, target: HTMLInputElement, step: 1 |
 }
 
 /** Up, Down and Enter on a diagram or its focused arrow. */
-export function onDiagramKey(ev: KeyboardEvent, scrollKey: HTMLElement, openBtn: HTMLButtonElement | null): void {
+function onDiagramKey(ev: KeyboardEvent, scrollKey: HTMLElement, openBtn: HTMLButtonElement | null): void {
   const scenario = scenarioFrom(scrollKey)
   if (scenario) {
     const view = diagramView(scenario.id)

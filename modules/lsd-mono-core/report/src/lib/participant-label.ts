@@ -28,8 +28,6 @@ export const ELLIPSIS = '…'
 
 /** Widest a name line may be before it wraps, in header units (CSS px at zoom 1). */
 export const NAME_MAX_W = 160
-export const NAME_MAX_LINES = 2
-export const NAME_LINE_H = 12
 
 export interface FittedName {
   /** One or two lines as drawn. The last ends in an ellipsis when the name was cut. */

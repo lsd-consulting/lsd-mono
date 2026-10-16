@@ -2,7 +2,7 @@
 import { writeReportHash, type HashRef } from '../lib/report-hash'
 import { index, session, state } from './context'
 
-export function reportLocation(): { hash: string; replace?: (url: string) => void } {
+function reportLocation(): { hash: string; replace?: (url: string) => void } {
   return {
     get hash() {
       return window.location.hash

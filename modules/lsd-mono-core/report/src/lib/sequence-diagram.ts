@@ -1,6 +1,6 @@
 // The sequence diagram: mounting, frame and pads, the HTML shell and message focus. Shapes, rows,
 // the viewport lives in ./diagram; their state is one controller, diagramState.
-import type { ActivateEvent, DiagramEvent, MessageEvent, NoteEvent, Participant, Scenario } from '../types'
+import type { DiagramEvent, MessageEvent, Participant, Scenario } from '../types'
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
 import { hasComponentDiagram } from './component-graph'
 import { focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
@@ -35,7 +35,7 @@ import {
 } from './layout'
 import type { LayoutRow } from './layout'
 
-export { ACTIVATION_HATCH, headerHtml, renderRowSvg } from './diagram/rows'
+export { headerHtml, renderRowSvg } from './diagram/rows'
 export {
   type ArrowEnd,
   LANE_GAP,
@@ -45,7 +45,6 @@ export {
   type ParticipantTypeLabel,
   activationBarSvg,
   arrowMarker,
-  arrowMarkerId,
   laneCentres,
   laneIndex,
   messageArrowSpec,
@@ -53,7 +52,6 @@ export {
   participantHead,
   participantHeadFor,
   participantLabelSvg,
-  shortLabelAnchor,
   shortMessageEndpoints,
 } from './diagram/shapes'
 export {
@@ -154,7 +152,7 @@ export function diagramPads(
   }
 }
 
-export function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): MountedDiagram {
+function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): MountedDiagram {
   const rows = layoutRows(scenario.events)
   const diagram: MountedDiagram = {
     scenario,
@@ -251,7 +249,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
 export const PRINT_MAX_UPSCALE = 1.5
 
 /** Upper bound for the printed width, from the unzoomed drawing width. */
-export function printWidthStyle(width: number): string {
+function printWidthStyle(width: number): string {
   return `--seq-print-max:${Math.round(width * PRINT_MAX_UPSCALE)}px`
 }
 
@@ -308,12 +306,4 @@ export function messageOffsetY(scenarioId: string, messageId: string): number | 
 
 export function findMessage(scenario: Scenario, messageId: string): MessageEvent | undefined {
   return scenario.events.find((e): e is MessageEvent => e.kind === 'message' && e.id === messageId)
-}
-
-export function findNote(scenario: Scenario, noteId: string): NoteEvent | undefined {
-  return scenario.events.find((e): e is NoteEvent => e.kind === 'note' && e.id === noteId)
-}
-
-export function isActivate(e: DiagramEvent): e is ActivateEvent {
-  return e.kind === 'activate' || e.kind === 'deactivate'
 }

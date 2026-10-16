@@ -38,7 +38,7 @@ import { type DiagramFrame, type DiagramView, EMPTY_PAINT, type MountedDiagram, 
 import { messageEndpoints } from './viewport'
 
 /** Diagonal hatch so a coloured activation is not colour-only (colour blindness). */
-export const ACTIVATION_HATCH =
+const ACTIVATION_HATCH =
   '<pattern id="act-tint-hatch" patternUnits="userSpaceOnUse" width="6" height="6"><path d="M0 6 L6 0" fill="none" stroke="#111" stroke-width="1.2"/></pattern>'
 
 /** "hide:<id>" or "more:<id>": which header button holds the roving tab stop. */

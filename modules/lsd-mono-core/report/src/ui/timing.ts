@@ -57,7 +57,7 @@ function pairingHint(scenario: Scenario): string {
 }
 
 /** Badges for one message: clock-ordered, guessed pairing. */
-export function orderBadgesHtml(order?: string, pairing?: string): string {
+function orderBadgesHtml(order?: string, pairing?: string): string {
   return [
     order === 'CLOCK'
       ? '<span class="tbadge clock" title="Placed by its timestamp (createdAt), not capture order">clock</span>'

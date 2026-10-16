@@ -24,7 +24,7 @@ const NARRATIVE_TAG = /&lt;(\/?)(p|br|mark|strong|em|b|i|code)(\s*\/?)&gt;/g
  * fields: message is escaped text, stack is not inlined (the shell opens it
  * in the inspector).
  */
-export function narrativeHtml(description: string): string {
+function narrativeHtml(description: string): string {
   if (description.includes('<mark')) return escapeHtml(description).replace(NARRATIVE_TAG, '<$1$2$3>')
   return escapeHtml(description)
     .replace(STEP_KEYWORD, '<mark>$1</mark>')

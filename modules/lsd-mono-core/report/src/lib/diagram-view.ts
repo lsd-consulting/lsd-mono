@@ -1,7 +1,7 @@
 import type { DiagramEvent, MessageEvent, NoteEvent, Participant } from '../types'
 import { HEADER_BLOCK_H, MESSAGE_LABEL_RISE } from './layout'
 
-export const MIN_ZOOM = 0.25
+const MIN_ZOOM = 0.25
 export const MAX_ZOOM = 2.5
 export const DEFAULT_ZOOM = 1
 /**
@@ -11,7 +11,7 @@ export const DEFAULT_ZOOM = 1
  */
 export const AUTO_FIT_MAX_ZOOM = 1
 /** Button and wheel step, as a fraction of 100%. */
-export const ZOOM_STEP = 0.1
+const ZOOM_STEP = 0.1
 
 export interface ZoomViewport {
   scrollTop: number
@@ -19,7 +19,7 @@ export interface ZoomViewport {
   headerHeight: number
 }
 
-export function clampZoom(scale: number): number {
+function clampZoom(scale: number): number {
   if (!Number.isFinite(scale)) return DEFAULT_ZOOM
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale))
 }
@@ -154,7 +154,7 @@ export function visibleColumnIds(participants: Participant[], hiddenIds: Readonl
  * participants stays (those columns reflow). A message that names a hidden
  * participant is omitted rather than pointed at the wrong lifeline.
  */
-export function messageNeedsHiddenColumn(msg: MessageEvent, hiddenIds: ReadonlySet<string>): boolean {
+function messageNeedsHiddenColumn(msg: MessageEvent, hiddenIds: ReadonlySet<string>): boolean {
   if (hiddenIds.size === 0) return false
   if (msg.type === 'SHORT_INBOUND') return Boolean(msg.to) && hiddenIds.has(msg.to)
   if (msg.type === 'SHORT_OUTBOUND') return Boolean(msg.from) && hiddenIds.has(msg.from)
@@ -162,7 +162,7 @@ export function messageNeedsHiddenColumn(msg: MessageEvent, hiddenIds: ReadonlyS
 }
 
 /** Anchored notes leave with their participant. Unanchored notes stay. */
-export function noteNeedsHiddenColumn(note: NoteEvent, hiddenIds: ReadonlySet<string>): boolean {
+function noteNeedsHiddenColumn(note: NoteEvent, hiddenIds: ReadonlySet<string>): boolean {
   if (hiddenIds.size === 0 || !note.over) return false
   return hiddenIds.has(note.over)
 }

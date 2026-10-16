@@ -265,7 +265,7 @@ export function arrowMarker(id: string, colour: string, end: ArrowEnd): string {
  * `var(--accent)` was producing `url(#mk_filled_var(--accent))`, which the
  * browser drops, so only hex tips (sync responses) painted.
  */
-export function arrowMarkerId(end: ArrowEnd, colour: string): string {
+function arrowMarkerId(end: ArrowEnd, colour: string): string {
   const safe = colour.replace(/[^A-Za-z0-9_-]/g, '')
   return `mk_${end}_${safe || 'colour'}`
 }

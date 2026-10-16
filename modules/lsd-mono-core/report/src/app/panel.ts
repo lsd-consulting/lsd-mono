@@ -62,7 +62,7 @@ export function syncPrintPanel(): void {
  * Printed metrics follow the side panel: present only while it shows the Metrics
  * view, inside that scenario. Any other view, or a closed panel, prints none.
  */
-export function syncPrintMetrics(): void {
+function syncPrintMetrics(): void {
   const id = session.inspector?.isOpen() && session.invoker?.kind === 'metrics' ? session.invoker.scenarioId : null
   const scenario = id ? session.report.scenarios.find((item) => item.id === id) : undefined
   placePrintMetrics(

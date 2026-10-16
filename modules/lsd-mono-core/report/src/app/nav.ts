@@ -54,7 +54,7 @@ export function renderNav(): void {
  * when it is expanded (the open report always is) or while a search is typed. Choosing a
  * scenario in another report loads that report.
  */
-export function renderIndexNav(manifest: IndexManifest): void {
+function renderIndexNav(manifest: IndexManifest): void {
   const list = document.querySelector('#scenario-nav')!
   const hadFocus = list.contains(document.activeElement)
   const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.navKey
@@ -162,7 +162,7 @@ export function revealFiltered(scenarioId: string): void {
   document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
 }
 
-export function selectedNavButton(): HTMLButtonElement | null {
+function selectedNavButton(): HTMLButtonElement | null {
   return document.querySelector<HTMLButtonElement>('#scenario-nav [aria-current="true"]')
 }
 

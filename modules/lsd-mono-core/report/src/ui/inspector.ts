@@ -93,7 +93,7 @@ export function fitViewWidth(content: number, viewport: number): number {
 }
 
 /** Share of the viewport an auto-sized view may take. */
-export const INSPECTOR_VIEW_MAX_SHARE = 0.5
+const INSPECTOR_VIEW_MAX_SHARE = 0.5
 /** Timing swim lanes and waterfall stretch to fit, so they ask for at least this much room. */
 export const TIMING_VIEW_MIN_PX = 480
 
