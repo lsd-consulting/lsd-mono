@@ -166,6 +166,8 @@ export interface Scenario {
   clockOrdered?: number
   warnings?: string[]
   reorderedByClock?: string[]
+  /** Accuracy per participant pair, present only when the pairs differ. */
+  pairAccuracy?: { from: string; to: string; accuracy: Accuracy }[]
 }
 
 export interface Report {

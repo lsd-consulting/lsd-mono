@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Note
+import io.lsdconsulting.lsd.mono.core.domain.PairAccuracy
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
@@ -207,6 +208,43 @@ class TimingApiTest {
             listOf("skew: clocks of billing and orders disagree with the structure, so their events are clock-ordered within each source only"),
             timing.warnings,
         )
+    }
+
+    @Test
+    fun `accuracy per participant pair, given when the pairs differ`() {
+        val c = CallRef("c")
+        val events =
+            listOf(
+                msg("call", callRef = c, ms = 12.0),
+                msg("reply", from = "B", to = "A", type = MessageType.SYNCHRONOUS_RESPONSE, replyTo = c),
+                msg("event", from = "B", to = "C", type = MessageType.ASYNCHRONOUS, at = t(5)),
+                msg("guess", from = "C", to = "D"),
+                msg("guess reply", from = "D", to = "C", type = MessageType.SYNCHRONOUS_RESPONSE),
+            )
+        val (_, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
+        assertEquals(Accuracy.MEASURED, timing.accuracy)
+        assertEquals(
+            listOf(
+                PairAccuracy("A", "B", Accuracy.TRACED),
+                PairAccuracy("B", "C", Accuracy.TIMESTAMPED),
+                PairAccuracy("C", "D", Accuracy.STRUCTURE_ONLY),
+            ),
+            timing.pairAccuracy,
+        )
+        val same = orderAndAnalyse(events.take(2), ClockOrdering.SAME_SOURCE).second
+        assertEquals(emptyList<PairAccuracy>(), same.pairAccuracy, "one pair, nothing to compare")
+    }
+
+    @Test
+    fun `pair accuracy is written to the report json`() {
+        val lsd = LsdContext()
+        lsd.call("web", "api", "GET", timing = Timing.tookMs(5.0)).reply("ok")
+        lsd.message("api", "bus", "event")
+        lsd.completeScenario("pairs", status = Status.SUCCESS)
+        val json = report(lsd, "Pairs")
+        assertTrue(json.contains("\"pairAccuracy\""), json)
+        val compact = json.replace(Regex("\\s"), "")
+        assertTrue(compact.contains("{\"from\":\"api\",\"to\":\"bus\",\"accuracy\":\"STRUCTURE_ONLY\"}"), json)
     }
 
     @Test

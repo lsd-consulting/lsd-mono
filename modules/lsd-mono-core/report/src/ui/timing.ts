@@ -101,6 +101,7 @@ export function timingPanelHtml(scenario: Scenario): string {
   ].join('')
   return `<section class="timing" aria-label="Timing">
     <div class="timing-notes">${notesHtml}</div>
+    ${pairAccuracyHtml(scenario)}
     <h4>Time by participant <small>self time, ${escapeHtml(formatMs(t.totalMs))} total</small></h4>
     <div class="timing-stack" role="img" aria-label="Time by participant">${stack}</div>
     <ul class="timing-legend">${legend}</ul>
@@ -110,6 +111,20 @@ export function timingPanelHtml(scenario: Scenario): string {
     ${axisHtml(T)}
     <ol class="waterfall">${t.rows.map((r) => rowHtml(scenario, r, T, id)).join('')}</ol>
   </section>`
+}
+
+/** Which participant pairs are traced, measured, timestamped or structure only, when they differ. */
+function pairAccuracyHtml(scenario: Scenario): string {
+  const pairs = scenario.pairAccuracy ?? []
+  if (!pairs.length) return ''
+  const items = pairs
+    .map(
+      (p) =>
+        `<li><span class="who">${escapeHtml(nameOf(scenario, p.from))} → ${escapeHtml(nameOf(scenario, p.to))}</span> <b class="acc-${escapeAttr(p.accuracy.toLowerCase())}">${escapeHtml(ACCURACY_LABEL[p.accuracy] ?? p.accuracy)}</b></li>`,
+    )
+    .join('')
+  return `<h4>Accuracy by pair <small>the scenario is only as accurate as its weakest pair</small></h4>
+    <ul class="pair-accuracy">${items}</ul>`
 }
 
 function axisHtml(total: number): string {

@@ -266,7 +266,9 @@ and `order` (`SEQUENCE`, `STRUCTURE`, `CLOCK`), plus `callId`, `replyTo`, `cause
 `source` and `startedAt` when known. `durationMs` is fractional and sits on the call: a call carries
 its own duration or its reply's, and a paired reply carries none. Each scenario carries `accuracy`
 (`STRUCTURE_ONLY`, `TIMESTAMPED`, `MEASURED`, `TRACED`), `measuredCoverage`, `pairingCoverage`,
-`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`.
+`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`. When
+participant pairs differ, `pairAccuracy` lists `{ from, to, accuracy }` per pair (a reply counts with
+its call), and the Timing view shows it as "Accuracy by pair".
 
 An interaction's `status` is written on its message. When any message in a scenario has one, the
 metrics add `Errors`: the number whose status is an error, either an HTTP-style code from 400 to 599

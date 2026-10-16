@@ -16,6 +16,13 @@ internal data class EventTiming(
     val order: OrderSource,
 )
 
+/** The accuracy of the messages from [from] to [to] (replies count with their call). */
+internal data class PairAccuracy(
+    val from: String,
+    val to: String,
+    val accuracy: Accuracy,
+)
+
 /** A scenario's timing summary. See the timing API notes, §2 and §4a. */
 internal data class ScenarioTiming(
     val accuracy: Accuracy = Accuracy.STRUCTURE_ONLY,
@@ -32,6 +39,8 @@ internal data class ScenarioTiming(
     val callMs: Map<String, Double> = emptyMap(),
     /** Replies paired with a call. Their duration belongs to the call, so the JSON leaves it off them. */
     val pairedReplies: Set<String> = emptySet(),
+    /** Accuracy per participant pair, given only when the pairs differ. */
+    val pairAccuracy: List<PairAccuracy> = emptyList(),
 ) {
     /**
      * The duration the report shows for [message]: a call's own or its reply's, none on a paired
@@ -489,17 +498,16 @@ private fun finish(
     }
     val calls = ordered.filter { it.isCall() }
     val measured = calls.count { analysis.timing[it.id] == TimingSource.MEASURED }
-    val strongPairs = calls.count { analysis.pairing[it.id] == PairingSource.CALL_ID || analysis.pairing[it.id] == PairingSource.TRACE }
-    val timings = analysis.timing.values
-    val anyStamp = timings.any { it == TimingSource.TIMESTAMPED || it == TimingSource.DERIVED }
-    val anyMeasured = timings.any { it == TimingSource.MEASURED }
-    val accuracy =
-        when {
-            anyMeasured && calls.isNotEmpty() && strongPairs == calls.size -> Accuracy.TRACED
-            anyMeasured -> Accuracy.MEASURED
-            anyStamp -> Accuracy.TIMESTAMPED
-            else -> Accuracy.STRUCTURE_ONLY
-        }
+    val strongPairs = calls.count { analysis.strongPair(it) }
+    val accuracy = accuracyOf(ordered, analysis)
+    val pairAccuracy =
+        ordered
+            .filterIsInstance<Message>()
+            .filter { it.id !in analysis.pairedReplies }
+            .groupBy { it.from to it.to }
+            .map { (pair, messages) -> PairAccuracy(pair.first.orEmpty(), pair.second.orEmpty(), accuracyOf(messages, analysis)) }
+            .takeIf { list -> list.map { it.accuracy }.distinct().size > 1 }
+            .orEmpty()
     val sources = captured.filterIsInstance<Message>().map { it.source() }.distinct()
     return ordered to
         ScenarioTiming(
@@ -515,7 +523,26 @@ private fun finish(
             perEvent = perEvent,
             callMs = analysis.callMs,
             pairedReplies = analysis.pairedReplies,
+            pairAccuracy = pairAccuracy,
         )
+}
+
+private fun Analysis.strongPair(e: SequenceEvent) = pairing[e.id] == PairingSource.CALL_ID || pairing[e.id] == PairingSource.TRACE
+
+/** TRACED when something is measured and every call is paired by id or trace, then MEASURED, TIMESTAMPED, STRUCTURE_ONLY. */
+private fun accuracyOf(
+    events: List<SequenceEvent>,
+    analysis: Analysis,
+): Accuracy {
+    val calls = events.filter { it.isCall() }
+    val timings = events.map { analysis.timing[it.id] ?: TimingSource.NONE }
+    val anyMeasured = timings.any { it == TimingSource.MEASURED }
+    return when {
+        anyMeasured && calls.isNotEmpty() && calls.all { analysis.strongPair(it) } -> Accuracy.TRACED
+        anyMeasured -> Accuracy.MEASURED
+        timings.any { it == TimingSource.TIMESTAMPED || it == TimingSource.DERIVED } -> Accuracy.TIMESTAMPED
+        else -> Accuracy.STRUCTURE_ONLY
+    }
 }
 
 private fun seqOf(e: SequenceEvent, index: Int): Long = (e as? Message)?.seq?.takeIf { it > 0 } ?: (index + 1).toLong()

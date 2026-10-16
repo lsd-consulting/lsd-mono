@@ -141,6 +141,20 @@ describe('timing view', () => {
     expect(panel.match(/class="warnx"/g)).toHaveLength(1)
   })
 
+  it('lists accuracy by pair when the report gives it', () => {
+    expect(timingPanelHtml(nested)).not.toContain('Accuracy by pair')
+    const panel = timingPanelHtml({
+      ...nested,
+      pairAccuracy: [
+        { from: 'web', to: 'api', accuracy: 'TRACED' },
+        { from: 'api', to: 'kafka', accuracy: 'STRUCTURE_ONLY' },
+      ],
+    })
+    expect(panel).toContain('Accuracy by pair')
+    expect(panel).toContain('web → api</span> <b class="acc-traced">traced</b>')
+    expect(panel).toContain('api → kafka</span> <b class="acc-structure_only">structure only</b>')
+  })
+
   it('escapes labels and participant names', () => {
     const html = timingPanelHtml(
       scenario([msg('<script>', '<img x>', 'y', { durationMs: 1 })], { accuracy: 'MEASURED' }),

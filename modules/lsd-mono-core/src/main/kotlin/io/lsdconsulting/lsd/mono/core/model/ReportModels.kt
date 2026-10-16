@@ -107,6 +107,14 @@ internal data class ScenarioTimingJson(
     val clockOrdered: Int,
     val warnings: List<String>,
     val reorderedByClock: List<String>,
+    val pairAccuracy: List<PairAccuracyJson> = emptyList(),
+)
+
+/** Accuracy of the messages between two participants. */
+internal data class PairAccuracyJson(
+    val from: String,
+    val to: String,
+    val accuracy: String,
 )
 
 /** Trace ids on a message. */
@@ -354,6 +362,16 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
                 if (timing.warnings.isNotEmpty()) add("warnings" to JsonArray(timing.warnings.map(::JsonString)))
                 if (timing.reorderedByClock.isNotEmpty()) {
                     add("reorderedByClock" to JsonArray(timing.reorderedByClock.map(::JsonString)))
+                }
+                if (timing.pairAccuracy.isNotEmpty()) {
+                    add(
+                        "pairAccuracy" to
+                            JsonArray(
+                                timing.pairAccuracy.map {
+                                    obj(listOf("from" to JsonString(it.from), "to" to JsonString(it.to), "accuracy" to JsonString(it.accuracy)))
+                                },
+                            ),
+                    )
                 }
             }
         },

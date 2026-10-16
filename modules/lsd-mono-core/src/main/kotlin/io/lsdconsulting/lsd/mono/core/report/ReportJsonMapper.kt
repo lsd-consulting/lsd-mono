@@ -21,6 +21,7 @@ import io.lsdconsulting.lsd.mono.core.model.FactJson
 import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
+import io.lsdconsulting.lsd.mono.core.model.PairAccuracyJson
 import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
@@ -86,6 +87,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                 clockOrdered = timing.clockOrdered,
                 warnings = timing.warnings,
                 reorderedByClock = timing.reorderedByClock,
+                pairAccuracy = timing.pairAccuracy.map { PairAccuracyJson(it.from, it.to, it.accuracy.name) },
             ),
     )
 
