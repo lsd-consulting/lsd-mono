@@ -143,3 +143,36 @@ test('print shows the open component diagram whole, at page width, after the seq
   await expect(page.locator('.print-panel')).toHaveCount(0)
   await endPrint(page)
 })
+
+test('the {} payload marker and its legend show on screen, not in print, and use CanvasText in forced colours', async ({
+  page,
+}) => {
+  await openReport(page, uxFixture)
+  const marker = page.locator('.msg-payload').first()
+  const legend = page.locator('.payload-legend')
+  await expect(marker).toBeVisible()
+  await expect(legend).toBeVisible()
+
+  await startPrint(page)
+  await expect(page.locator('.seq-window .msg-label').first()).toBeVisible()
+  await expect(page.locator('.msg-payload')).not.toHaveCount(0)
+  for (const hidden of await page.locator('.msg-payload').all()) await expect(hidden).toBeHidden()
+  await expect(legend).toBeHidden()
+  await endPrint(page)
+
+  await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' })
+  const colours = await page.evaluate(() => {
+    const probe = document.createElement('span')
+    probe.style.color = 'CanvasText'
+    document.body.append(probe)
+    const canvasText = getComputedStyle(probe).color
+    probe.remove()
+    return {
+      canvasText,
+      marker: getComputedStyle(document.querySelector('.msg-payload')!).fill,
+      key: getComputedStyle(document.querySelector('.payload-legend-key')!).color,
+    }
+  })
+  expect(colours.marker).toBe(colours.canvasText)
+  expect(colours.key).toBe(colours.canvasText)
+})

@@ -1,5 +1,7 @@
-import { expect, test } from '@playwright/test'
-import { THEMES, openFixture, seriousViolations, formatViolations } from './ux-helpers'
+import { devices, expect, test, type Page } from '@playwright/test'
+import type { MessageEvent, Report } from '../src/types'
+import { uxFixture } from './ux-fixture'
+import { THEMES, openFixture, openReport, seriousViolations, formatViolations } from './ux-helpers'
 
 // Side panel: axe with each view open, focus return, component links, metrics and fit-to-content sizing.
 
@@ -224,4 +226,63 @@ test('the component diagram and metrics panels open sized to their content, and 
     await phone.screenshot({ path: `test-results/panel-fit-${host.slice(11)}-phone.png` })
   }
   await context.close()
+})
+
+/**
+ * The fixture with timing: "charge 3" runs inside "place order" (parentId) and took longer than
+ * it, and two participant pairs have different accuracy, so the Timing view shows the
+ * "Calls inside took longer" warning and the "Accuracy by pair" list.
+ */
+const timedFixture: Report = {
+  ...uxFixture,
+  scenarios: uxFixture.scenarios.map((scenario) => ({
+    ...scenario,
+    accuracy: 'TIMESTAMPED',
+    pairAccuracy: [
+      { from: 'client', to: 'api', accuracy: 'MEASURED' },
+      { from: 'api', to: 'db', accuracy: 'TIMESTAMPED' },
+    ],
+    events: scenario.events.map((event) => {
+      if (event.kind !== 'message') return event
+      if (event.id === 'm0') return { ...event, durationMs: 10 }
+      if (event.id === 'm3') return { ...event, durationMs: 30, parentId: 'm0' } satisfies MessageEvent
+      return event
+    }),
+  })),
+}
+
+async function openTiming(page: Page): Promise<void> {
+  await page.locator('.timing-chip').first().click()
+  await expect(page.locator('#inspector .timing')).toBeVisible()
+}
+
+test('the Timing view shows Accuracy by pair and the longer-than-parent warning, and passes axe', async ({ page }) => {
+  await openReport(page, timedFixture)
+  await openTiming(page)
+  await expect(page.locator('#inspector h4', { hasText: 'Accuracy by pair' })).toBeVisible()
+  await expect(page.locator('#inspector .pair-accuracy li')).toHaveText([
+    /Client → Api\s+measured/,
+    /Api → Database\s+timestamped/,
+  ])
+  const warning = page.locator('#inspector .waterfall .warnx')
+  await expect(warning).toHaveCount(1)
+  await expect(warning).toHaveText('Calls inside took longer: 30 ms > 10 ms')
+  const violations = await seriousViolations(page)
+  expect(violations, formatViolations(violations)).toEqual([])
+})
+
+test.describe('on a phone', () => {
+  const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices['iPhone 13']
+  test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
+
+  test('the Timing view shows Accuracy by pair and the warning inline, and passes axe', async ({ page }) => {
+    await openReport(page, timedFixture)
+    await openTiming(page)
+    await page.locator('#inspector .pair-accuracy').scrollIntoViewIfNeeded()
+    await expect(page.locator('#inspector .pair-accuracy li')).toHaveCount(2)
+    await page.locator('#inspector .waterfall .warnx').scrollIntoViewIfNeeded()
+    await expect(page.locator('#inspector .waterfall .warnx')).toBeVisible()
+    const violations = await seriousViolations(page)
+    expect(violations, formatViolations(violations)).toEqual([])
+  })
 })
