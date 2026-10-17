@@ -35,10 +35,15 @@ function modeName(mode: ThemeMode, shown?: Theme): string {
 
 /**
  * Names the current mode (with the theme Auto resolved to) and the next one,
- * e.g. "Theme: Auto (dark). Switch to dark". Not a colour-only control.
+ * e.g. "A. Theme: Auto (dark). Switch to dark". Not a colour-only control.
+ * A glyph that is text ("A", "HC") leads the name, so the visible label is part of
+ * the accessible name (WCAG 2.5.3, axe label-content-name-mismatch); a symbol glyph
+ * (☀ ☾) is not text and would only be read out as its character name.
  */
 export function themeButtonLabel(mode: ThemeMode, shown: Theme): string {
-  return `Theme: ${modeName(mode, shown)}. Switch to ${modeName(nextMode(mode))}`
+  const glyph = themeGlyph(mode)
+  const visible = /[A-Za-z]/.test(glyph) ? `${glyph}. ` : ''
+  return `${visible}Theme: ${modeName(mode, shown)}. Switch to ${modeName(nextMode(mode))}`
 }
 
 export interface OsPreference {

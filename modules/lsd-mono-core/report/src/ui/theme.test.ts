@@ -16,6 +16,7 @@ import {
   themeButtonLabel,
   themeGlyph,
   toggleTheme,
+  type ThemeMode,
 } from './theme'
 
 /** A fake OS: flip `light` / `moreContrast` and fire change events like a browser does. */
@@ -69,10 +70,20 @@ describe('theme cycle', () => {
   it('names the mode in text, not colour alone, with the theme Auto resolved to', () => {
     expect(themeGlyph('auto')).toBe('A')
     expect(themeGlyph('contrast')).toBe('HC')
-    expect(themeButtonLabel('auto', 'dark')).toBe('Theme: Auto (dark). Switch to dark')
-    expect(themeButtonLabel('auto', 'contrast')).toBe('Theme: Auto (high contrast). Switch to dark')
+    expect(themeButtonLabel('auto', 'dark')).toBe('A. Theme: Auto (dark). Switch to dark')
+    expect(themeButtonLabel('auto', 'contrast')).toBe('A. Theme: Auto (high contrast). Switch to dark')
+    expect(themeButtonLabel('dark', 'dark')).toBe('Theme: dark. Switch to light')
     expect(themeButtonLabel('light', 'light')).toBe('Theme: light. Switch to high contrast')
-    expect(themeButtonLabel('contrast', 'contrast')).toBe('Theme: high contrast. Switch to Auto (follow the OS)')
+    expect(themeButtonLabel('contrast', 'contrast')).toBe('HC. Theme: high contrast. Switch to Auto (follow the OS)')
+  })
+
+  it('starts the accessible name with the visible text when the glyph is text', () => {
+    const modes: ThemeMode[] = ['auto', 'dark', 'light', 'contrast']
+    for (const mode of modes) {
+      const glyph = themeGlyph(mode)
+      const label = themeButtonLabel(mode, mode === 'auto' ? 'dark' : mode)
+      expect(label.startsWith(glyph), `${mode}: ${label}`).toBe(/[A-Za-z]/.test(glyph))
+    }
   })
 })
 
