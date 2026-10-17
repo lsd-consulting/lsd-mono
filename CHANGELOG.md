@@ -41,9 +41,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   the chips stay (58px instead of 134px); the diagram toolbar likewise keeps only its Find row stuck under
   it. No class flip or animation: plain sticky offsets, so nothing jumps and reduced motion has nothing to
   reduce. Panel and JSON reveals land below the smaller bar.
-- Phones: the diagram comes before the description and key facts, the timing chips and the section links
-  each sit on one row that scrolls sideways, and the diagram hint line is left out, so the diagram starts on
-  the first screen.
+- Phones: the timing chips and the section links each sit on one row that scrolls sideways, and the diagram
+  hint line is left out, so the diagram starts higher. The description (with why a scenario did not pass) and
+  key facts come before the diagram, as on wider screens.
 - Fit (automatic and the button) stops at 50% so labels and touch targets stay usable; a wider diagram scrolls
   sideways. Zoom out still reaches 25%.
 - Arrows with a payload show a `{}` marker after their label, with a hover title, and a one-line legend under

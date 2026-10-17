@@ -2,6 +2,7 @@ import { devices, expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
 import { openIndex, sectionsReport } from './diagram-pages'
 import { uxFixture } from './ux-fixture'
+import { pendingReport, scenarioPartTops } from './ux-helpers'
 
 /**
  * The phone layout: the scenario list folds to the selected item under an "N scenarios"
@@ -27,12 +28,12 @@ const shownNavItems = (page: Page) =>
       els.filter((el) => (el as HTMLElement).offsetParent !== null).map((el) => el.textContent?.trim().split('\n')[0]),
     )
 
-async function open(page: Page, which: 'report' | 'index', hash = ''): Promise<void> {
+async function open(page: Page, which: 'report' | 'index', hash = '', report: Report = phoneReport): Promise<void> {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   if (which === 'report') {
     await page.addInitScript((r) => {
       window.__LSD_REPORT__ = r
-    }, phoneReport)
+    }, report)
     await page.goto(`/${hash}`)
   } else {
     // The index fixture lists one report with one scenario, id "sections".
@@ -130,25 +131,14 @@ for (const [phone, device] of Object.entries(PHONES)) {
       })
     }
 
-    for (const which of ['report', 'index'] as const) {
-      test(`${which}: the diagram and its toolbar start on the first screen, before the description`, async ({
-        page,
-      }) => {
-        await open(page, which)
-        const at = await page.evaluate(() => ({
-          vh: innerHeight,
-          panel: document.querySelector('.diagram-panel')!.getBoundingClientRect().top,
-          drawing: document.querySelector('.seq-scroll')!.getBoundingClientRect().top,
-          cards: document.querySelector('.scenario-body > .cards')!.getBoundingClientRect().top,
-        }))
-        expect(at.panel).toBeLessThan(at.vh * 0.75)
-        expect(at.cards).toBeGreaterThan(at.drawing)
-        await expect(page.locator('[data-diagram-find]')).toBeInViewport()
-        // A report's drawing starts within the screen (this fixture; a long title can push it lower).
-        // The index adds its own heading, so on the shorter iPhone only the toolbar makes it.
-        if (which === 'report') expect(at.drawing).toBeLessThan(at.vh)
-      })
-    }
+    // Same reading order as on a desktop: what the scenario is and why it ended, then its diagram.
+    test('the description, its reason and the key facts come before the diagram', async ({ page }) => {
+      await open(page, 'report', '', pendingReport)
+      const at = await scenarioPartTops(page)
+      expect(at.description).toBeLessThan(at.error)
+      expect(at.error).toBeLessThan(at.facts)
+      expect(at.facts).toBeLessThan(at.diagram)
+    })
 
     test('index: the report list folds to the open report', async ({ page }) => {
       await open(page, 'index')

@@ -186,14 +186,6 @@
     padding: 4px 8px;
     min-height: 32px;
   }
-  /* The diagram comes first on a phone; the description and key facts follow it. */
-  .scenario-body {
-    display: flex;
-    flex-direction: column;
-  }
-  .scenario-body > .cards {
-    order: 1;
-  }
   .report-hero {
     margin-bottom: 12px;
   }

@@ -139,3 +139,36 @@ export const threeScenarios: Report = {
     { ...uxFixture.scenarios[0], id: 'stock', title: 'Low stock warning', status: 'warn' },
   ],
 }
+
+/** The shown scenario's warning with a reason: what the reading-order checks look at. */
+export const pendingReport: Report = {
+  ...uxFixture,
+  scenarios: [
+    {
+      ...uxFixture.scenarios[0],
+      status: 'warn',
+      error: { headline: 'Pending', message: 'refunds come later\nStep: When the refund is not written yet' },
+    },
+  ],
+}
+
+/**
+ * The top edge of each part of the shown scenario, in reading order: its description card, the
+ * error panel inside it, its key facts card, and its diagram panel.
+ */
+export async function scenarioPartTops(
+  page: Page,
+): Promise<{ description: number; error: number; facts: number; diagram: number }> {
+  return page
+    .locator('.scenario-card:visible')
+    .first()
+    .evaluate((card) => {
+      const top = (selector: string) => card.querySelector(selector)!.getBoundingClientRect().top
+      return {
+        description: top('.scenario-body > .cards > .card:first-child'),
+        error: top('.error-panel'),
+        facts: top('.scenario-body > .cards > .card:nth-child(2)'),
+        diagram: top('.scenario-body > .diagram-panel'),
+      }
+    })
+}

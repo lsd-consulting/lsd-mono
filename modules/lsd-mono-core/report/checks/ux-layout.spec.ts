@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
-import { THEMES, openFixture, seriousViolations, formatViolations } from './ux-helpers'
+import { THEMES, openFixture, pendingReport, scenarioPartTops, seriousViolations, formatViolations } from './ux-helpers'
 
 // Layout: Fit, column widths, the collapsed rail and the phone top bar.
 
@@ -156,6 +156,26 @@ test('axe on the collapsed scenario list in every theme', async ({ page }) => {
     expect(violations, `${theme}\n${formatViolations(violations)}`).toEqual([])
   }
 })
+
+for (const [layout, width] of [
+  ['desktop', 1280],
+  ['tablet', 768],
+] as const) {
+  test(`${layout}: the description and its reason come before the diagram, with the key facts beside or under them`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript((report) => {
+      window.__LSD_REPORT__ = report
+    }, pendingReport)
+    await page.goto('/')
+    await expect(page.locator('.seq-svg')).toBeVisible()
+    const at = await scenarioPartTops(page)
+    expect(at.description).toBeLessThan(at.error)
+    expect(at.facts).toBeGreaterThanOrEqual(at.description)
+    expect(Math.max(at.error, at.facts)).toBeLessThan(at.diagram)
+  })
+}
 
 test('the narrow layout has no sidebar toggle', async ({ page }) => {
   await openFixture(page, 'dark')
