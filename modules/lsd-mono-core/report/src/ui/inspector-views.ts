@@ -84,7 +84,7 @@ function statusPill(status: string | undefined): string {
 }
 
 /** Request summary pills; a payload status that repeats the interaction status is left out. */
-export function summaryPills(data: unknown, status?: string): string {
+function summaryPills(data: unknown, status?: string): string {
   if (!isRecord(data)) return ''
   const pills: string[] = []
   if (typeof data.method === 'string' && data.method) pills.push(`<span class="pill">${escapeHtml(data.method)}</span>`)

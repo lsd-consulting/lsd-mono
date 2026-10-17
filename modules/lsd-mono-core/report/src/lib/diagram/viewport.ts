@@ -103,7 +103,7 @@ export function sliceViewTop(firstRowY: number): number {
 }
 
 /** Resize the sticky header and body to the current zoom and visible columns. */
-export function applyDiagramFrame(scrollport: HTMLElement): void {
+function applyDiagramFrame(scrollport: HTMLElement): void {
   const id = scrollport.dataset.scenarioId
   if (!id) return
   const diagram = diagramState.mounted.get(id)
@@ -315,7 +315,7 @@ export function messageEndpoints(
 }
 
 /** Replace a diagram's hidden participants, then redraw, refit and repaint. */
-export function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string>): void {
+function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string>): void {
   const id = scrollport.dataset.scenarioId
   if (!id) return
   const view = diagramView(id)

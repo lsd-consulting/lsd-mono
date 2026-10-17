@@ -22,8 +22,6 @@ import {
   metricsTitle,
 } from './inspector-views'
 
-export { summaryPills } from './inspector-views'
-
 export interface InspectorInvoker {
   scenarioId: string
   /** Set for a message. Absent when the panel is showing the component diagram or metrics. */

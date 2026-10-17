@@ -1,13 +1,15 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page } from '@playwright/test'
-import type { Result } from 'axe-core'
 import type { MessageEvent, Participant, Report, Scenario } from '../src/types'
 import { uxFixture } from './ux-fixture'
 
 // Shared by the ux-*.spec.ts files.
 
+/** One axe violation, typed from @axe-core/playwright so axe-core need not be a direct dependency. */
+type Result = Awaited<ReturnType<AxeBuilder['analyze']>>['violations'][number]
+
 /**
- * Tags axe-core 4.13 actually ships for WCAG A/AA.
+ * Tags axe-core 4.14 actually ships for WCAG A/AA.
  * wcag22aa covers only the 2.2 rules this axe build implements. There is no
  * wcag22a tag. A green run is not a WCAG 2.2 conformance claim.
  */
@@ -85,7 +87,7 @@ export async function endPrint(page: Page): Promise<void> {
 }
 
 /** Two scenarios too wide for the panel at 100%: twelve lifelines, a chain of 30 calls. */
-export function wideScenario(id: string, title: string): Scenario {
+function wideScenario(id: string, title: string): Scenario {
   // Wide enough to fit below 100% at 900-1300px, narrow enough to stay above the 50% Fit floor.
   const participants = Array.from({ length: 6 }, (_, i): Participant => ({
     id: `p${i}`,
@@ -103,7 +105,7 @@ export function wideScenario(id: string, title: string): Scenario {
   }))
   return { ...uxFixture.scenarios[0], id, title, participants, events }
 }
-export const wideReport: Report = {
+const wideReport: Report = {
   ...uxFixture,
   scenarios: [wideScenario('wide-a', 'Wide A'), wideScenario('wide-b', 'Wide B')],
 }

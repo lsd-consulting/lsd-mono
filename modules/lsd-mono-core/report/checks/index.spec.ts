@@ -2,10 +2,10 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import type { IndexManifest } from '../src/lib/report-index'
 import type { Report } from '../src/types'
+import { AXE_TAGS } from './ux-helpers'
 import { uxFixture } from './ux-fixture'
 
 /** The index page: the report shell with a manifest, each report's data loaded when it opens. */
-const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
 const failing: Report = {
   ...uxFixture,
@@ -72,7 +72,7 @@ async function openIndex(page: Page, theme: string, hash = ''): Promise<string[]
 }
 
 async function serious(page: Page): Promise<string[]> {
-  const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()
+  const results = await new AxeBuilder({ page }).withTags([...AXE_TAGS]).analyze()
   return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)
 }
 

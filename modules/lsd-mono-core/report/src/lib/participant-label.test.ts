@@ -3,12 +3,10 @@ import { describe, expect, it } from 'vitest'
 import type { Participant, ParticipantType, Scenario } from '../types'
 import { COL_GAP, HEADER_BLOCK_H, LEFT_PAD } from './layout'
 import { ELLIPSIS, NAME_MAX_W, fitName, nameWidth } from './participant-label'
+import { LANE_GAP, laneCentres, participantHead } from './diagram/shapes'
 import {
-  LANE_GAP,
   bindDiagramScroll,
   diagramPads,
-  laneCentres,
-  participantHead,
   participantHeadFor,
   participantLabelSvg,
   renderDiagramHtml,

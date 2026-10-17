@@ -19,10 +19,9 @@ import {
   messageArrowSpec,
   noteLayout,
   participantHead,
-  renderDiagramHtml,
-  renderRowSvg,
   shortMessageEndpoints,
-} from './sequence-diagram'
+} from './diagram/shapes'
+import { renderDiagramHtml, renderRowSvg } from './sequence-diagram'
 import type { DiagramEvent, Participant, Scenario } from '../types'
 
 const participants: Participant[] = [

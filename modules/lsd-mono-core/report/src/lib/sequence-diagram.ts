@@ -35,41 +35,11 @@ import {
 } from './layout'
 import type { LayoutRow } from './layout'
 
-export { headerHtml, renderRowSvg } from './diagram/rows'
-export {
-  type ArrowEnd,
-  LANE_GAP,
-  type MessageArrowSpec,
-  type NoteLayout,
-  type ParticipantHead,
-  type ParticipantTypeLabel,
-  activationBarSvg,
-  arrowMarker,
-  laneCentres,
-  laneIndex,
-  messageArrowSpec,
-  noteLayout,
-  participantHead,
-  participantHeadFor,
-  participantLabelSvg,
-  shortMessageEndpoints,
-} from './diagram/shapes'
-export {
-  type DiagramFrame,
-  type DiagramView,
-  type MountedDiagram,
-  type RowPaint,
-  diagramView,
-  forgetDiagrams,
-} from './diagram/state'
-export {
-  applyDiagramFrame,
-  bindDiagramScroll,
-  setHiddenParticipants,
-  sliceViewTop,
-  stepFind,
-  syncDiagramWindow,
-} from './diagram/viewport'
+// The diagram's API for the app and tests; the modules in ./diagram import each other directly.
+export { renderRowSvg } from './diagram/rows'
+export { participantHeadFor, participantLabelSvg } from './diagram/shapes'
+export { diagramView, forgetDiagrams } from './diagram/state'
+export { bindDiagramScroll, sliceViewTop, stepFind, syncDiagramWindow } from './diagram/viewport'
 
 export function frameOf(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): DiagramFrame {
   const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
