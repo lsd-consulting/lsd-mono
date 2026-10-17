@@ -41,6 +41,10 @@ internal data class ScenarioTiming(
     val pairedReplies: Set<String> = emptySet(),
     /** Accuracy per participant pair, given only when the pairs differ. */
     val pairAccuracy: List<PairAccuracy> = emptyList(),
+    /** The call each message runs inside, by event id: span link first, else the innermost open call. Replies are left out. */
+    val parentOf: Map<String, String> = emptyMap(),
+    /** The call each paired reply answers, by event id. */
+    val replyOf: Map<String, String> = emptyMap(),
 ) {
     /**
      * The duration the report shows for [message]: a call's own or its reply's, none on a paired
@@ -107,6 +111,8 @@ private class Analysis(
     val reverted: Boolean,
     /** Replies with no call. */
     val orphans: Int,
+    val parentOf: Map<String, String>,
+    val replyOf: Map<String, String>,
 )
 
 /**
@@ -467,6 +473,11 @@ private fun analyse(
         warnings = warnings + skew,
         reverted = undone > 0,
         orphans = pairs.warnings.count { it.startsWith("reply without call") },
+        parentOf =
+            events.indices
+                .filter { events[it] is Message && pairs.callOf[it] < 0 && parent[it] >= 0 }
+                .associate { events[it].id to events[parent[it]].id },
+        replyOf = events.indices.filter { pairs.callOf[it] >= 0 }.associate { events[it].id to events[pairs.callOf[it]].id },
     )
 }
 
@@ -524,6 +535,8 @@ private fun finish(
             callMs = analysis.callMs,
             pairedReplies = analysis.pairedReplies,
             pairAccuracy = pairAccuracy,
+            parentOf = analysis.parentOf,
+            replyOf = analysis.replyOf,
         )
 }
 

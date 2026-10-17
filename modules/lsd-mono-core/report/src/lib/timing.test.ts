@@ -28,10 +28,10 @@ const scenario = (events: MessageEvent[], extra: Partial<Scenario> = {}): Scenar
 const nested = scenario(
   [
     msg('outer', 'web', 'api', { callId: 'c1', durationMs: 50.5 }),
-    msg('inner', 'api', 'db', { callId: 'c2', durationMs: 20 }),
-    msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2' }),
-    msg('event', 'api', 'kafka', { type: 'ASYNCHRONOUS', order: 'CLOCK' }),
-    msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
+    msg('inner', 'api', 'db', { callId: 'c2', durationMs: 20, parentId: 'outer' }),
+    msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2', replyOf: 'inner' }),
+    msg('event', 'api', 'kafka', { type: 'ASYNCHRONOUS', order: 'CLOCK', parentId: 'outer' }),
+    msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1', replyOf: 'outer' }),
   ],
   { accuracy: 'TRACED', clockOrdered: 1, pairingCoverage: 1 },
 )
@@ -78,26 +78,18 @@ describe('timeline', () => {
     expect(t.approximate).toBe(false)
   })
 
-  it('nests a call under the open call its parentSpanId names', () => {
+  it('nests by parentId, not by position', () => {
     const t = timeline(
       scenario([
-        msg('A', 'api', 'orders', { callId: 'a', durationMs: 300, trace: { traceId: 't', spanId: 'a' } }),
-        msg('B', 'api', 'stock', { callId: 'b', durationMs: 50, trace: { traceId: 't', spanId: 'b' } }),
-        msg('child', 'orders', 'db', {
-          callId: 'c',
-          durationMs: 100,
-          trace: { traceId: 't', spanId: 'c', parentSpanId: 'a' },
-        }),
-        msg('child-reply', 'db', 'orders', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c' }),
-        msg('A-reply', 'orders', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'a' }),
-        msg('B-reply', 'stock', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'b' }),
+        msg('A', 'api', 'orders', { durationMs: 300 }),
+        msg('B', 'api', 'stock', { durationMs: 50 }),
+        msg('child', 'orders', 'db', { durationMs: 100, parentId: 'A' }),
       ]),
     )
     const row = (id: string) => t.rows.find((r) => r.message.id === id)!
-    expect(row('child').depth).toBe(row('A').depth + 1)
-    expect(row('B').overrun).toBe(false)
-    // B has no parentSpanId, so it nests by position: A's self time is 300 - 50 - 100.
-    expect(row('A').selfMs).toBe(150)
+    expect(row('B').depth).toBe(0)
+    expect(row('child').depth).toBe(1)
+    expect(row('A').selfMs).toBe(200)
   })
 
   it('formats fractional milliseconds', () => {
@@ -130,7 +122,7 @@ describe('timing view', () => {
   it('says in words when the calls inside take longer than the call', () => {
     const over = scenario([
       msg('outer', 'web', 'api', { callId: 'c1', durationMs: 10 }),
-      msg('inner', 'api', 'db', { callId: 'c2', durationMs: 25 }),
+      msg('inner', 'api', 'db', { callId: 'c2', durationMs: 25, parentId: 'outer' }),
       msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2' }),
       msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
     ])

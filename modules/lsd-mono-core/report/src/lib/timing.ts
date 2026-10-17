@@ -46,22 +46,12 @@ interface Node {
   childSum: number
 }
 
-/** The open call whose span is [e]'s `parentSpanId` in the same trace: concurrent calls captured interleaved still nest right. */
-function spanParent(stack: Node[], e: MessageEvent): Node | undefined {
-  const t = e.trace
-  if (!t?.parentSpanId) return undefined
-  for (let k = stack.length - 1; k > 0; k--) {
-    const p = stack[k].message?.trace
-    if (p && p.traceId === t.traceId && p.spanId === t.parentSpanId) return stack[k]
-  }
-  return undefined
-}
-
 const isCall = (m: MessageEvent) => m.type === 'SYNCHRONOUS' || m.type === 'BI_DIRECTIONAL'
 
 /**
- * Builds the call tree and lays it on a time axis. A call nests under the open call its `parentSpanId` names, else the innermost open call. Replies pair by `replyTo`, else by direction
- * (the innermost open call the other way). A call's duration is its `durationMs`: the report
+ * Lays the report's call tree on a time axis. The tree comes from the report: each message's
+ * `parentId` (the call it runs inside) and each paired reply's `replyOf`, worked out once in the
+ * library (ids, spans, clock ordering). A call's duration is its `durationMs`: the report
  * writes a paired reply's duration on its call. Starts come from `startedAt` within a single source; otherwise children are packed
  * one after another inside their parent, and the timeline is marked approximate.
  */
@@ -79,8 +69,7 @@ const timelines = new WeakMap<Scenario, Timeline>()
 
 function buildTimeline(scenario: Scenario): Timeline {
   const root: Node = { kids: [], own: 0, timed: false, span: 0, self: 0, start: 0, childSum: 0 }
-  const stack: Node[] = [root]
-  const byCallId = new Map<string, Node>()
+  const nodes = new Map<string, Node>()
   // Start offsets only within one clock: the scenario's first source.
   const clock = scenario.sources?.[0] ?? 'local'
   const onClock = (e: MessageEvent) => (e.source ?? 'local') === clock
@@ -93,24 +82,11 @@ function buildTimeline(scenario: Scenario): Timeline {
   for (const e of scenario.events) {
     if (e.kind !== 'message') continue
     if (e.type === 'SYNCHRONOUS_RESPONSE') {
-      let node = e.replyTo ? byCallId.get(e.replyTo) : undefined
-      if (!node) {
-        for (let k = stack.length - 1; k > 0; k--) {
-          const m = stack[k].message
-          if (m && m.from === e.to && m.to === e.from) {
-            node = stack[k]
-            break
-          }
-        }
-      }
-      if (node) {
-        node.reply = e
-        const at = stack.indexOf(node)
-        if (at > 0) stack.splice(at)
-      }
+      const call = e.replyOf ? nodes.get(e.replyOf) : undefined
+      if (call) call.reply = e
       continue
     }
-    const parent = spanParent(stack, e) ?? stack[stack.length - 1]
+    const parent = (e.parentId && nodes.get(e.parentId)) || root
     const startedAt = onClock(e) && e.startedAt ? Date.parse(e.startedAt) : NaN
     const node: Node = {
       message: e,
@@ -125,8 +101,7 @@ function buildTimeline(scenario: Scenario): Timeline {
       childSum: 0,
     }
     parent.kids.push(node)
-    if (e.callId) byCallId.set(e.callId, node)
-    if (isCall(e) && e.from !== e.to) stack.push(node)
+    nodes.set(e.id, node)
   }
   const measure = (n: Node): number => {
     n.childSum = n.kids.reduce((sum, k) => sum + measure(k), 0)

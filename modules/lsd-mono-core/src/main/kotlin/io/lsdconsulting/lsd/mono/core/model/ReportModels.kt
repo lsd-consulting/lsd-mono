@@ -180,6 +180,10 @@ internal data class MessageEventJson(
     val timing: String? = null,
     val pairing: String? = null,
     val order: String? = null,
+    /** Id of the call this message runs inside. */
+    val parentId: String? = null,
+    /** On a paired reply: id of the call it answers. */
+    val replyOf: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -217,6 +221,8 @@ internal data class MessageEventJson(
                 if (timing != null) add("timing" to JsonString(timing))
                 if (pairing != null) add("pairing" to JsonString(pairing))
                 if (order != null) add("order" to JsonString(order))
+                if (parentId != null) add("parentId" to JsonString(parentId))
+                if (replyOf != null) add("replyOf" to JsonString(replyOf))
             },
         )
 }

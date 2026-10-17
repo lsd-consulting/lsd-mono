@@ -109,6 +109,10 @@ export interface MessageEvent {
   timing?: TimingSource
   pairing?: PairingSource
   order?: OrderSource
+  /** Id of the call this message runs inside, as the library nested it (span link, else innermost open call). */
+  parentId?: string
+  /** On a paired reply: id of the call it answers. */
+  replyOf?: string
 }
 
 export type TimingSource = 'NONE' | 'TIMESTAMPED' | 'MEASURED' | 'DERIVED'

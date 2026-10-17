@@ -1,0 +1,382 @@
+{
+  "title": "Timing tree",
+  "generatedAt": "SCRUBBED",
+  "generator": "SCRUBBED",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200
+  },
+  "scenarios": [
+    {
+      "id": "15",
+      "title": "span nesting",
+      "status": "success",
+      "description": "",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "6"
+        },
+        {
+          "key": "Captured duration",
+          "value": "450 ms"
+        }
+      ],
+      "participants": [
+        {
+          "id": "api",
+          "name": "api",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "orders",
+          "name": "orders",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "stock",
+          "name": "stock",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "db",
+          "name": "db",
+          "type": "PARTICIPANT"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "1",
+          "from": "api",
+          "to": "orders",
+          "label": "A",
+          "type": "SYNCHRONOUS",
+          "durationMs": 300,
+          "seq": 1,
+          "trace": {
+            "traceId": "t",
+            "spanId": "a"
+          },
+          "timing": "MEASURED",
+          "pairing": "TRACE",
+          "order": "STRUCTURE"
+        },
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "api",
+          "to": "stock",
+          "label": "B",
+          "type": "SYNCHRONOUS",
+          "durationMs": 50,
+          "seq": 2,
+          "trace": {
+            "traceId": "t",
+            "spanId": "b"
+          },
+          "timing": "MEASURED",
+          "pairing": "TRACE",
+          "order": "STRUCTURE",
+          "parentId": "1"
+        },
+        {
+          "kind": "message",
+          "id": "3",
+          "from": "orders",
+          "to": "db",
+          "label": "child of A",
+          "type": "SYNCHRONOUS",
+          "durationMs": 100,
+          "seq": 3,
+          "trace": {
+            "traceId": "t",
+            "spanId": "c",
+            "parentSpanId": "a"
+          },
+          "timing": "MEASURED",
+          "pairing": "TRACE",
+          "order": "STRUCTURE",
+          "parentId": "1"
+        },
+        {
+          "kind": "message",
+          "id": "4",
+          "from": "db",
+          "to": "orders",
+          "label": "rows",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 4,
+          "trace": {
+            "traceId": "t",
+            "spanId": "c"
+          },
+          "timing": "NONE",
+          "pairing": "TRACE",
+          "order": "STRUCTURE",
+          "replyOf": "3"
+        },
+        {
+          "kind": "message",
+          "id": "5",
+          "from": "orders",
+          "to": "api",
+          "label": "A ok",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 5,
+          "trace": {
+            "traceId": "t",
+            "spanId": "a"
+          },
+          "timing": "NONE",
+          "pairing": "TRACE",
+          "order": "STRUCTURE",
+          "replyOf": "1"
+        },
+        {
+          "kind": "message",
+          "id": "6",
+          "from": "stock",
+          "to": "api",
+          "label": "B ok",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 6,
+          "trace": {
+            "traceId": "t",
+            "spanId": "b"
+          },
+          "timing": "NONE",
+          "pairing": "TRACE",
+          "order": "STRUCTURE",
+          "replyOf": "2"
+        }
+      ],
+      "accuracy": "TRACED",
+      "measuredCoverage": 1,
+      "pairingCoverage": 1,
+      "sources": [
+        "local"
+      ],
+      "clockOrdering": "ALL_SOURCES",
+      "clockOrdered": 0
+    },
+    {
+      "id": "16",
+      "title": "duplicate span",
+      "status": "success",
+      "description": "",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "4"
+        },
+        {
+          "key": "Captured duration",
+          "value": "50 ms"
+        }
+      ],
+      "participants": [
+        {
+          "id": "api",
+          "name": "api",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "web",
+          "name": "web",
+          "type": "PARTICIPANT"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "7",
+          "from": "web",
+          "to": "api",
+          "label": "first",
+          "type": "SYNCHRONOUS",
+          "durationMs": 40,
+          "seq": 7,
+          "trace": {
+            "traceId": "u",
+            "spanId": "s"
+          },
+          "timing": "MEASURED",
+          "pairing": "TRACE",
+          "order": "STRUCTURE"
+        },
+        {
+          "kind": "message",
+          "id": "8",
+          "from": "web",
+          "to": "api",
+          "label": "second",
+          "type": "SYNCHRONOUS",
+          "durationMs": 10,
+          "seq": 8,
+          "trace": {
+            "traceId": "u",
+            "spanId": "s"
+          },
+          "timing": "MEASURED",
+          "pairing": "TRACE",
+          "order": "STRUCTURE",
+          "parentId": "7"
+        },
+        {
+          "kind": "message",
+          "id": "9",
+          "from": "api",
+          "to": "web",
+          "label": "reply 2",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 9,
+          "trace": {
+            "traceId": "u",
+            "spanId": "s"
+          },
+          "timing": "NONE",
+          "pairing": "TRACE",
+          "order": "STRUCTURE",
+          "replyOf": "8"
+        },
+        {
+          "kind": "message",
+          "id": "10",
+          "from": "api",
+          "to": "web",
+          "label": "reply 1",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 10,
+          "trace": {
+            "traceId": "u",
+            "spanId": "s"
+          },
+          "timing": "NONE",
+          "pairing": "TRACE",
+          "order": "STRUCTURE",
+          "replyOf": "7"
+        }
+      ],
+      "accuracy": "TRACED",
+      "measuredCoverage": 1,
+      "pairingCoverage": 1,
+      "sources": [
+        "local"
+      ],
+      "clockOrdering": "ALL_SOURCES",
+      "clockOrdered": 0,
+      "warnings": [
+        "duplicate span: 'first' and 'second' share span s in trace u; their replies pair with the latest open one"
+      ]
+    },
+    {
+      "id": "17",
+      "title": "all sources fallback",
+      "status": "success",
+      "description": "",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "4"
+        }
+      ],
+      "participants": [
+        {
+          "id": "orders",
+          "name": "orders",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "bus",
+          "name": "bus",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "billing",
+          "name": "billing",
+          "type": "PARTICIPANT"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "12",
+          "from": "orders",
+          "to": "bus",
+          "label": "publish",
+          "type": "ASYNCHRONOUS",
+          "seq": 12,
+          "callId": "12",
+          "source": "orders",
+          "startedAt": "2026-01-01T00:00:00.010Z",
+          "timing": "TIMESTAMPED",
+          "order": "CLOCK"
+        },
+        {
+          "kind": "message",
+          "id": "11",
+          "from": "orders",
+          "to": "bus",
+          "label": "late",
+          "type": "ASYNCHRONOUS",
+          "seq": 11,
+          "callId": "11",
+          "source": "orders",
+          "startedAt": "2026-01-01T00:00:00.020Z",
+          "timing": "TIMESTAMPED",
+          "order": "CLOCK"
+        },
+        {
+          "kind": "message",
+          "id": "14",
+          "from": "bus",
+          "to": "billing",
+          "label": "consume",
+          "type": "ASYNCHRONOUS",
+          "seq": 14,
+          "callId": "14",
+          "causedBy": "12",
+          "source": "billing",
+          "startedAt": "2026-01-01T00:00:00.005Z",
+          "timing": "TIMESTAMPED",
+          "order": "CLOCK"
+        },
+        {
+          "kind": "message",
+          "id": "13",
+          "from": "bus",
+          "to": "billing",
+          "label": "other",
+          "type": "ASYNCHRONOUS",
+          "seq": 13,
+          "callId": "13",
+          "source": "billing",
+          "startedAt": "2026-01-01T00:00:00.008Z",
+          "timing": "TIMESTAMPED",
+          "order": "CLOCK"
+        }
+      ],
+      "accuracy": "TIMESTAMPED",
+      "sources": [
+        "orders",
+        "billing"
+      ],
+      "clockOrdering": "ALL_SOURCES",
+      "clockOrdered": 4,
+      "warnings": [
+        "skew: clocks of billing and orders disagree with the structure, so their events are clock-ordered within each source only"
+      ],
+      "reorderedByClock": [
+        "12 -\u003e 11",
+        "11 -\u003e 12",
+        "14 -\u003e 13",
+        "13 -\u003e 14"
+      ]
+    }
+  ]
+}

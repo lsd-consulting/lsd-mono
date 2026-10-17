@@ -120,6 +120,8 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     timing = timing.perEvent[id]?.timing?.name,
                     pairing = timing.perEvent[id]?.pairing?.name,
                     order = timing.perEvent[id]?.order?.name,
+                    parentId = timing.parentOf[id],
+                    replyOf = timing.replyOf[id],
                 )
             is Note ->
                 NoteEventJson(

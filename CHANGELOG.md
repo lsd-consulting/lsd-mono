@@ -31,6 +31,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Calls nest by `parentSpanId`: a call goes under the open call whose span its trace names (same trace), so concurrent calls captured interleaved nest under the right parent, in the report analysis and the Timing view.
 - `ALL_SOURCES` clock ordering falls back to ordering within each source when two sources' clocks disagree with the structure (a `skew` warning names the pair), instead of dropping clock order for the whole group. Calls that share a span id in one trace are a `duplicate span` warning.
 - Accuracy per participant pair: `pairAccuracy` in the report JSON when pairs differ, shown as "Accuracy by pair" in the Timing view.
+- Report JSON: `parentId` (the call a message runs inside) and `replyOf` (the call a paired reply answers) on each message. The Timing view builds its tree from them instead of pairing and nesting again, so it always matches the library (span nesting, duplicate spans, the `ALL_SOURCES` fallback).
 - Narrow screens (860px and below) fold the scenario list (the index's report list) to the selected item under
   an "N scenarios ▾" disclosure; a typed search lists every match. On phones, search and the status chips
   share one row (the chips show their counts, and keep their names for screen readers).
