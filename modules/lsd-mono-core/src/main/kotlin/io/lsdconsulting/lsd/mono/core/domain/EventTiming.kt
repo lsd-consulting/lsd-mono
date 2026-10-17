@@ -4,7 +4,6 @@ import io.lsdconsulting.lsd.mono.core.Accuracy
 import io.lsdconsulting.lsd.mono.core.ClockOrdering
 import io.lsdconsulting.lsd.mono.core.OrderSource
 import io.lsdconsulting.lsd.mono.core.PairingSource
-import io.lsdconsulting.lsd.mono.core.Timing
 import io.lsdconsulting.lsd.mono.core.TimingSource
 import java.time.Duration
 
@@ -78,12 +77,6 @@ internal data class ScenarioTiming(
         }
 }
 
-private fun SequenceEvent.isCall() = this is Message && type == MessageType.SYNCHRONOUS
-
-private fun SequenceEvent.isReply() = this is Message && type == MessageType.SYNCHRONOUS_RESPONSE
-
-private fun SequenceEvent.source(): String = (this as? Message)?.source ?: Timing.LOCAL
-
 /**
  * Pairs calls with replies, works out each message's timing and the scenario's accuracy, and
  * orders [captured] (capture order) for the report:
@@ -135,159 +128,8 @@ private class Analysis(
     val replyOf: Map<String, String>,
 )
 
-/**
- * Whether clock ordering may move [e]: it has a `startedAt`, is not [measured] (a measured call,
- * or the reply of one), is not opted out, and ordering is on or the event opts in.
- */
-private fun clockEligible(
-    e: SequenceEvent,
-    mode: ClockOrdering,
-    measured: Boolean,
-): Boolean {
-    if (e.startedAt == null || measured) return false
-    val hint = (e as? Message)?.orderHint
-    if (hint == false) return false
-    return mode != ClockOrdering.OFF || hint == true
-}
-
-/** The clock domain [e] is compared in: its source, or every source under [ClockOrdering.ALL_SOURCES]. */
-private fun clockScope(
-    e: SequenceEvent,
-    mode: ClockOrdering,
-): String = if (mode == ClockOrdering.ALL_SOURCES && (e as? Message)?.orderHint != true) "*" else e.source()
-
-/** Sort the events at [slots] by `(startedAt, capture position)` back into the same slots of [order]. */
-private fun sortIntoSlots(
-    events: List<SequenceEvent>,
-    slots: List<Int>,
-    order: IntArray,
-) {
-    val sorted = slots.sortedWith(compareBy<Int> { events[it].startedAt }.thenBy { it })
-    slots.forEachIndexed { k, slot -> order[slot] = sorted[k] }
-}
-
-/** Every timed, unmeasured event of a scope sorted into that scope's slots, ignoring structure. */
-private fun clockSorted(
-    events: List<SequenceEvent>,
-    mode: ClockOrdering,
-): List<SequenceEvent> {
-    val order = IntArray(events.size) { it }
-    events.indices
-        .filter { clockEligible(events[it], mode, measured = (events[it] as? Message)?.timedMs != null) }
-        .groupBy { clockScope(events[it], mode) }
-        .values
-        .forEach { sortIntoSlots(events, it, order) }
-    return order.map { events[it] }
-}
-
-/** Every explicit reply and consume comes after the call or publish it names. */
-private fun linksHold(events: List<SequenceEvent>): Boolean {
-    val position = HashMap<String, Int>()
-    events.forEachIndexed { i, e -> (e as? Message)?.callRef?.id?.let { position.putIfAbsent(it, i) } }
-    return events.withIndex().all { (i, e) ->
-        val m = e as? Message ?: return@all true
-        listOfNotNull(m.replyTo?.id, m.causedBy?.id).all { id -> (position[id] ?: -1) < i }
-    }
-}
-
-/** Calls paired with replies, by index into the events. */
-private class Pairs(
-    /** For a call, the index of its reply, else -1. */
-    val replyOf: IntArray,
-    /** For a reply, the index of its call, else -1. */
-    val callOf: IntArray,
-    /** Calls and replies only. */
-    val pairing: Array<PairingSource?>,
-    /** Call or publish id to the index of the event that carries it. */
-    val byCallId: Map<String, Int>,
-    val warnings: List<TimingWarning>,
-)
-
-/** Pair each reply with a call: by `replyTo`, else by span id, else guessed by direction. */
-private fun pairCalls(events: List<SequenceEvent>): Pairs {
-    val n = events.size
-    val warnings = mutableListOf<TimingWarning>()
-    val replyOf = IntArray(n) { -1 }
-    val callOf = IntArray(n) { -1 }
-    val pairing = arrayOfNulls<PairingSource>(n)
-    val byCallId = HashMap<String, Int>()
-
-    fun unpairedCall(j: Int) = events[j].isCall() && replyOf[j] < 0
-
-    // Unpaired calls by span and by direction, latest last. Paired ones are dropped lazily.
-    val bySpan = HashMap<Pair<String, String>, ArrayList<Int>>()
-    val byDirection = HashMap<Pair<String?, String?>, ArrayList<Int>>()
-    val seenSpan = HashMap<Pair<String, String>, Int>()
-
-    fun latest(
-        calls: ArrayList<Int>?,
-        accept: (Message) -> Boolean,
-    ): Int {
-        if (calls == null) return -1
-        while (calls.isNotEmpty() && !unpairedCall(calls.last())) calls.removeAt(calls.size - 1)
-        for (k in calls.indices.reversed()) {
-            val j = calls[k]
-            if (unpairedCall(j) && accept(events[j] as Message)) return j
-        }
-        return -1
-    }
-
-    for (i in 0 until n) {
-        val e = events[i] as? Message ?: continue
-        if (e.isCall()) {
-            pairing[i] = PairingSource.NONE
-            e.trace?.let { t ->
-                t.spanId?.let { span ->
-                    val same = bySpan.getOrPut(t.traceId to span) { ArrayList() }
-                    seenSpan[t.traceId to span]?.let { first ->
-                        warnings += TimingWarning(
-                            WarningKind.DUPLICATE_SPAN,
-                            "'${(events[first] as Message).label}' and '${e.label}' share span $span " +
-                                "in trace ${t.traceId}; their replies pair with the latest open one",
-                        )
-                    } ?: seenSpan.put(t.traceId to span, i)
-                    same.add(i)
-                }
-            }
-            byDirection.getOrPut(e.from to e.to) { ArrayList() }.add(i)
-        }
-        e.callRef?.id?.let { byCallId.putIfAbsent(it, i) }
-        if (!e.isReply()) continue
-        var c = -1
-        var how = PairingSource.NONE
-        val replyId = e.replyTo?.id
-        if (replyId != null) {
-            val j = byCallId[replyId]
-            if (j != null && j < i && unpairedCall(j)) {
-                c = j
-                how = PairingSource.CALL_ID
-            }
-        }
-        val trace = e.trace
-        val span = trace?.spanId
-        if (c < 0 && span != null) {
-            c = latest(bySpan[trace.traceId to span]) { true }
-            if (c >= 0) how = PairingSource.TRACE
-        }
-        if (c < 0 && replyId == null) {
-            c = latest(byDirection[e.to to e.from]) { m -> trace == null || m.trace == null || m.trace.traceId == trace.traceId }
-            if (c >= 0) how = PairingSource.GUESSED
-        }
-        if (c >= 0) {
-            replyOf[c] = i
-            callOf[i] = c
-            pairing[c] = how
-            pairing[i] = how
-        } else {
-            pairing[i] = PairingSource.NONE
-            warnings += TimingWarning(WarningKind.REPLY_WITHOUT_CALL, "'${e.label}' (${e.from} to ${e.to})")
-        }
-    }
-    return Pairs(replyOf, callOf, pairing, byCallId, warnings)
-}
-
 /** Each call's duration: its own, else its reply's. [derived] marks durations computed from timestamps. */
-private class CallDurations(
+internal class CallDurations(
     val callMs: Array<Double?>,
     val derived: BooleanArray,
     val warnings: List<TimingWarning>,
@@ -332,113 +174,6 @@ private fun timingSources(
             else -> TimingSource.NONE
         }
     }
-
-/**
- * Parent call of each event: the open paired call whose span is the event's `parentSpanId` (same
- * trace), else the innermost paired call open at its position. A reply shares its call's parent.
- * The span link wins, so concurrent calls captured interleaved still nest under the right call.
- */
-private fun parentCalls(
-    events: List<SequenceEvent>,
-    pairs: Pairs,
-): IntArray {
-    val n = pairs.callOf.size
-    val parent = IntArray(n) { -1 }
-    val open = ArrayList<Int>()
-    for (i in 0 until n) {
-        val c = pairs.callOf[i]
-        if (c >= 0) {
-            parent[i] = parent[c]
-            open.remove(c)
-            continue
-        }
-        val t = (events[i] as? Message)?.trace
-        val bySpan =
-            t?.parentSpanId?.let { ps ->
-                open.lastOrNull { j -> (events[j] as Message).trace?.let { it.traceId == t.traceId && it.spanId == ps } == true }
-            }
-        parent[i] = bySpan ?: open.lastOrNull() ?: -1
-        if (pairs.replyOf[i] >= 0) open.add(i)
-    }
-    return parent
-}
-
-/**
- * Clock-order each group (parent call and scope) into its own slots, then undo any group whose
- * moves break structure: a reply before its call, a consume before its publish, or a child
- * outside its parent. Returns the order and the number of events in groups that were undone.
- */
-private fun clockOrder(
-    events: List<SequenceEvent>,
-    mode: ClockOrdering,
-    pairs: Pairs,
-    durations: CallDurations,
-    parent: IntArray,
-): ClockOrder {
-    val n = events.size
-
-    fun groupOf(i: Int): String? {
-        val call = if (events[i].isCall()) i else pairs.callOf[i]
-        val measured = call >= 0 && durations.callMs[call] != null
-        if (!clockEligible(events[i], mode, measured)) return null
-        return "${parent[i]}|${clockScope(events[i], mode)}"
-    }
-    val groupKeys = Array(n) { groupOf(it) }
-    val groups = (0 until n).filter { groupKeys[it] != null }.groupBy { groupKeys[it]!! }.toMutableMap()
-    val order = IntArray(n) { it }
-    groups.values.forEach { sortIntoSlots(events, it, order) }
-    val split = mutableSetOf<Pair<String, String>>()
-
-    val reverted = mutableSetOf<String>()
-    var rounds = groups.size + 1
-    while (rounds-- > 0) {
-        val pos = IntArray(n)
-        order.forEachIndexed { p, orig -> pos[orig] = p }
-        val bad = mutableSetOf<String>()
-
-        fun flag(vararg idx: Int) = idx.filter { it >= 0 }.mapNotNullTo(bad) { groupKeys[it]?.takeIf { g -> g !in reverted } }
-        for (i in 0 until n) {
-            val c = pairs.callOf[i]
-            if (c >= 0 && pos[i] < pos[c]) flag(i, c)
-            val pub = (events[i] as? Message)?.causedBy?.id?.let { pairs.byCallId[it] }
-            if (pub != null && pos[i] < pos[pub]) flag(i, pub)
-            val p = parent[i]
-            if (p >= 0) {
-                val r = pairs.replyOf[p]
-                if (pos[i] < pos[p] || (r >= 0 && pos[i] > pos[r])) flag(i, p, r)
-            }
-        }
-        if (bad.isEmpty()) break
-        for (g in bad) {
-            val members = groups[g] ?: continue
-            members.forEach { order[it] = it }
-            if (!g.endsWith("|*")) {
-                reverted += g
-                continue
-            }
-            // ALL_SOURCES: the sources disagree, so fall back to ordering within each source.
-            groups.remove(g)
-            val bySource = members.groupBy { events[it].source() }
-            bySource.forEach { (source, idx) ->
-                val key = g.removeSuffix("*") + source
-                idx.forEach { groupKeys[it] = key }
-                groups[key] = idx
-                sortIntoSlots(events, idx, order)
-            }
-            val names = bySource.keys.sorted()
-            for (a in names.indices) for (b in a + 1 until names.size) split += names[a] to names[b]
-        }
-        rounds = maxOf(rounds, groups.size + 1 - reverted.size)
-    }
-    return ClockOrder(order, reverted.sumOf { groups[it]?.size ?: 0 }, split)
-}
-
-/** The clock order, the events whose groups kept capture order, and the source pairs ordered apart. */
-private class ClockOrder(
-    val order: IntArray,
-    val undone: Int,
-    val splitPairs: Set<Pair<String, String>>,
-)
 
 /** Durations closer than this are taken as equal (rounding in the caller's clock). */
 private const val LONGER_EPSILON_MS = 0.001
