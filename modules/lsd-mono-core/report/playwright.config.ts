@@ -6,6 +6,12 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  // The @screenshot tests compare against macOS baselines; Linux renders fonts differently, so CI
+  // leaves them out. Everything else runs in both places. See docs/ci.md.
+  grepInvert: process.env.CI ? /@screenshot/ : undefined,
+  // CI keeps a trace and the HTML report of a failure for the uploaded artifact; locally the
+  // list output is enough.
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   snapshotPathTemplate: '{testDir}/snapshots/{arg}{ext}',
   expect: {
     toHaveScreenshot: {
@@ -21,6 +27,7 @@ export default defineConfig({
     deviceScaleFactor: 1,
     reducedMotion: 'reduce',
     colorScheme: 'dark',
+    trace: process.env.CI ? 'retain-on-failure' : 'off',
   },
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4179 --strictPort',

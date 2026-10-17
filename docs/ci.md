@@ -4,7 +4,7 @@ Two workflows run on GitHub-hosted runners.
 
 | Workflow | Runs on | Does |
 |----------|---------|------|
-| [Gradle](../.github/workflows/gradle.yml) | Pushes to `main`, pull requests, manual dispatch. Skipped when a change only touches Markdown, `docs/` or `modules/*/docs/` | `./gradlew build verifyGenerated`: compile, JVM tests, build-logic tests, the report shell build and Vitest, plus the [lint, format and coverage](#lint-format-and-coverage) checks. It then checks the build left no changed or new files ([generated files](generated-files.md)). Test reports are uploaded when it fails |
+| [Gradle](../.github/workflows/gradle.yml) | Pushes to `main`, pull requests, manual dispatch. Skipped when a change only touches Markdown, `docs/` or `modules/*/docs/` | `./gradlew build verifyGenerated`: compile, JVM tests, build-logic tests, the report shell build and Vitest, plus the [lint, format and coverage](#lint-format-and-coverage) checks. It then checks the build left no changed or new files ([generated files](generated-files.md)). Test reports are uploaded when it fails. In parallel, `check-ux` runs the report UI's [Playwright checks](#report-ui-checks-checkux) when the report UI changed |
 | [Pages](../.github/workflows/pages.yml) | Pushes to `main` that touch the report or the build, and manual dispatch | Builds the example report site (report index plus report) with `kitchenSinkSample` and deploys it to GitHub Pages |
 
 ## Lint, format and coverage
@@ -30,11 +30,35 @@ both: `@typescript/native` is TypeScript 7 and provides `tsc`, and `typescript` 
 package (`@typescript/typescript6`) that ESLint loads. Drop the alias once typescript-eslint
 supports TypeScript 7.
 
+## Report UI checks (`check:ux`)
+
+The `check-ux` job runs `npm run check:ux` in `modules/lsd-mono-core/report`: the Playwright checks
+in `checks/` (layout, keyboard, axe, print and forced colours, themes, phone layouts) in headless
+Chromium against the Vite dev server on port 4179. It needs no Gradle build, so it runs alongside
+`build` and `jvm-tests`, and only when the report UI, `.nvmrc` or `gradle.yml` changed.
+
+- **Chromium only.** The job installs Chromium's headless shell (`--only-shell`), the only browser
+  the checks launch. `~/.cache/ms-playwright` is cached under a key holding the `@playwright/test`
+  version from `package-lock.json`, so a Playwright update downloads the matching build once.
+  The system libraries come from `playwright install-deps` on every run, because apt packages are
+  not cached. This is used rather than the `mcr.microsoft.com/playwright` image: the image is
+  well over a gigabyte with every browser in it, and its tag would be one more version to keep in
+  step with the lockfile.
+- **Screenshot tests stay local.** The tests tagged `@screenshot` in `checks/ux-diagram.spec.ts`
+  (each theme, and the fitted diagram: four baselines in `checks/snapshots/`) compare pixels
+  with baselines taken on macOS. Linux draws fonts differently, so `playwright.config.ts` leaves
+  them out (`grepInvert`) when `CI` is set, which GitHub Actions does. Locally they run as usual;
+  `CI=1 npm run check:ux` runs the CI set. Keep layout assertions in untagged tests so CI checks them.
+- **On failure** the job uploads the HTML report (`playwright-report/`) and the traces of the
+  failed tests (`test-results/`) as the `playwright-report` artifact. Open a trace with
+  `npx playwright show-trace <trace.zip>`.
+
 ## Required check: `gate`
 
 `gradle.yml` runs on every push and pull request. A `changes` job decides whether anything the
 build reads changed (everything except Markdown, `docs/` and `modules/*/docs/`). If not, `build`
-and `jvm-tests` are skipped. The `gate` job always runs and passes only when every job passed or
+and `jvm-tests` are skipped. It also decides whether the report UI changed; if not, `check-ux` is
+skipped. The `gate` job always runs and passes only when every job passed or
 was skipped, so it is the one check to require on `main`: a docs-only pull request gets a green
 `gate` instead of waiting for a build that never starts.
 
@@ -47,7 +71,7 @@ was skipped, so it is the one check to require on `main`: a docs-only pull reque
   comment up to date, and pins any new action it finds.
 - **Wrapper validation.** `gradle/actions/setup-gradle` checks `gradle-wrapper.jar` against
   Gradle's published checksums before anything runs.
-- **Timeouts.** 20 minutes for the build and 15 for Pages. A healthy run takes a few minutes, so
+- **Timeouts.** 20 minutes for the build, 15 for `check-ux` and for Pages. A healthy run takes a few minutes, so
   these limits only catch a hung job.
 - **Concurrency.** A new push to a pull request cancels that pull request's running build. Runs on
   `main` always finish, and Pages deploys one at a time.

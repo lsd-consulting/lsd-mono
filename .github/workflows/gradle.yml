@@ -3,7 +3,8 @@ name: Gradle
 # Builds and tests everything on the Java baseline (17, `jvm` in gradle/libs.versions.toml), then
 # checks the build left no changed or new files (verifyGenerated, see docs/generated-files.md).
 # The jvm-tests jobs run only the JVM tests again on newer JDKs, so 17, 21 and 25 are all covered
-# without building the report UI three times.
+# without building the report UI three times. check-ux runs the report UI's Playwright checks
+# (npm run check:ux) in parallel with them, only when the report UI or this workflow changed.
 # Changes that only touch what the build never reads (Markdown, docs/, which the Pages workflow
 # handles, and the README images under each module) skip the build jobs. The workflow itself
 # always runs, so the `gate` job always reports: require `gate` in branch protection, not the
@@ -25,11 +26,13 @@ concurrency:
 
 jobs:
   changes:
-    # Whether anything the build reads changed. Docs-only changes skip build and jvm-tests.
+    # Whether anything the build reads changed (code), and whether that includes the report UI
+    # (report). Docs-only changes skip build and jvm-tests; check-ux also needs report.
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      report: ${{ steps.diff.outputs.report }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,11 +45,17 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+            { echo "code=true"; echo "report=true"; } >> "$GITHUB_OUTPUT"; exit 0
           fi
           changed=$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '(\.md$|^docs/|^modules/[^/]+/docs/)' || true)
           echo "Build-relevant changes:"; echo "${changed:-none}"
           if [ -n "$changed" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
+          # The report UI, the Node version it runs on, or this workflow.
+          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-core/report/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
+            echo "report=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "report=false" >> "$GITHUB_OUTPUT"
+          fi
 
   build:
     needs: changes
@@ -138,10 +147,64 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  check-ux:
+    needs: changes
+    if: needs.changes.outputs.report == 'true'
+    # The report UI's Playwright checks (layout, keyboard, axe, print, themes) in headless Chromium
+    # against the Vite dev server. The @screenshot tests compare with macOS baselines, so
+    # playwright.config.ts leaves them out when CI is set (GitHub sets it). See docs/ci.md.
+    name: check:ux (report UI)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: modules/lsd-mono-core/report
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: modules/lsd-mono-core/report/package-lock.json
+      - run: npm ci
+      # The browser build belongs to the Playwright version, so the lockfile's version keys the cache.
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Chromium
+        id: browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
+      # Headless only, so the headless shell is all the checks launch. The system libraries are
+      # not cached (apt), so install them on a cache hit too.
+      - name: Install Chromium and its system libraries
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Install Chromium's system libraries
+        if: steps.browsers.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: check:ux
+        run: npm run check:ux
+      - name: Upload the Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            modules/lsd-mono-core/report/playwright-report/
+            modules/lsd-mono-core/report/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   gate:
-    # The one check to require. Passes when every job passed or was skipped for a docs-only change.
+    # The one check to require. Passes when every job passed or was skipped (a docs-only change,
+    # or check-ux when the report UI did not change).
     if: always()
-    needs: [changes, build, jvm-tests]
+    needs: [changes, build, jvm-tests, check-ux]
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:

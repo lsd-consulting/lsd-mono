@@ -46,13 +46,11 @@ test('note cards are opaque and their text keeps AA contrast in every theme', as
   }
 })
 
-test('themes and fit keep the top message label on screen', async ({ page }) => {
-  for (const theme of THEMES) {
-    await openFixture(page, theme)
-    await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-    await expect(page).toHaveScreenshot(`theme-${theme}.png`, { clip: await diagramOnScreen(page) })
-  }
-
+/**
+ * Zoom in twice, scroll to the bottom, then Fit: the state the fit checks below look at. The fit
+ * should bring the whole width and the top message label back into view.
+ */
+async function zoomScrollThenFit(page: Page): Promise<void> {
   await openFixture(page, 'dark')
   const zoomIn = page.getByRole('button', { name: 'Zoom in' })
   await zoomIn.click()
@@ -61,7 +59,26 @@ test('themes and fit keep the top message label on screen', async ({ page }) => 
     el.scrollTop = el.scrollHeight
   })
   await page.getByRole('button', { name: 'Fit to screen' }).click()
+}
 
+// Pixel comparisons against the macOS baselines in checks/snapshots. Font rendering differs on
+// Linux, so CI leaves out tests tagged @screenshot (grepInvert in playwright.config.ts); they run
+// locally. Keep layout assertions out of them so CI still checks the layout.
+test('each theme draws the diagram as in its baseline', { tag: '@screenshot' }, async ({ page }) => {
+  for (const theme of THEMES) {
+    await openFixture(page, theme)
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+    await expect(page).toHaveScreenshot(`theme-${theme}.png`, { clip: await diagramOnScreen(page) })
+  }
+})
+
+test('the fitted diagram draws as in its baseline', { tag: '@screenshot' }, async ({ page }) => {
+  await zoomScrollThenFit(page)
+  await expect(page).toHaveScreenshot('fit-top-label.png', { clip: await diagramOnScreen(page) })
+})
+
+test('fit keeps the top message label on screen and the whole width in view', async ({ page }) => {
+  await zoomScrollThenFit(page)
   const placed = await page.evaluate(() => {
     const label = document.querySelector('.msg-label')
     const scroll = document.querySelector('.seq-scroll')
@@ -86,7 +103,6 @@ test('themes and fit keep the top message label on screen', async ({ page }) => 
   // The whole width fits, including the frame padding: nothing to scroll sideways.
   const overflowX = await page.locator('.seq-scroll').evaluate((el) => el.scrollWidth - el.clientWidth)
   expect(overflowX).toBeLessThanOrEqual(0)
-  await expect(page).toHaveScreenshot('fit-top-label.png', { clip: await diagramOnScreen(page) })
 })
 
 /** One long display name per participant shape, next to each other. */
