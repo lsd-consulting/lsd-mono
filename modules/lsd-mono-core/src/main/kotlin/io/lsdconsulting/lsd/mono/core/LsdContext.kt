@@ -7,7 +7,6 @@ import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
-import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportJsonMapper
@@ -84,10 +83,9 @@ public class LsdContext :
     internal val outputDirectory: File
         get() = File(LsdProperties.outputDirectory())
 
-    /** Guards report-level state: participants, completed scenarios, report files. */
+    /** Guards report-level state: participants, scenarios and [reports]. Reentrant, as `synchronized` is. */
     private val lock = Any()
-    private val completed = LinkedHashMap<String?, MutableList<Pair<Long, Scenario>>>()
-    private val reportFiles: MutableList<ReportFile> = ArrayList()
+    private val reports = CompletedReports(lock)
     private val participants = ParticipantRegistry()
     private val jsonMapper = ReportJsonMapper { idGenerator.next() }
 
@@ -98,7 +96,6 @@ public class LsdContext :
     private val droppedKinds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap
         .newKeySet()
     private val openReport = ThreadLocal<LsdReport>()
-    private val openReports = HashSet<String>()
 
     private val defaultScenario get() = scenarios.defaultScenario
 
@@ -261,7 +258,7 @@ public class LsdContext :
         title: String,
         block: LsdReport.() -> Unit,
     ): ReportFiles {
-        val report = LsdReport(this, title, openReportKey(title))
+        val report = LsdReport(this, title, reports.open(title))
         val previous = openReport.get()
         openReport.set(report)
         val failure =
@@ -281,7 +278,7 @@ public class LsdContext :
                 failure.addSuppressed(e)
                 null
             } finally {
-                synchronized(lock) { openReports.remove(report.key) }
+                reports.close(report.key)
             }
         if (failure != null) throw failure
         return checkNotNull(path)
@@ -322,17 +319,11 @@ public class LsdContext :
                 // Writing a report has always dropped captures that no scenario was completed for.
                 // Keep that when nothing is running, but say so.
                 if (reportKey == null || scenarios.isEmpty()) dropStrayCaptures(title)
-                completed
-                    .remove(reportKey)
-                    .orEmpty()
-                    .sortedBy { it.first }
-                    .map { it.second }
+                reports.take(reportKey)
             }
         val report = jsonMapper.toReportJson(title, taken)
         val files = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
-        synchronized(lock) {
-            reportFiles.add(ReportWriter.indexEntry(report, reportKey))
-        }
+        reports.written(ReportWriter.indexEntry(report, reportKey))
         return files
     }
 
@@ -340,7 +331,7 @@ public class LsdContext :
      * Write `index.html` listing every report in the output directory, including
      * reports written by other test JVMs (Gradle forks) or modules sharing it.
      */
-    public fun createIndex(): Path = ReportWriter.writeIndex(synchronized(lock) { reportFiles.toList() }, outputDirectory)
+    public fun createIndex(): Path = ReportWriter.writeIndex(reports.writtenSoFar(), outputDirectory)
 
     /**
      * Forget everything: participants, running and completed scenarios, the default scenario's
@@ -354,8 +345,7 @@ public class LsdContext :
             binder.reset()
             payloads.limits = PayloadConverters.Limits.fromProperties()
             payloads.redaction = PayloadConverters.Redaction.fromProperties()
-            completed.clear()
-            reportFiles.clear()
+            reports.clear()
             participants.clear()
             scenarios.clear()
         }
@@ -463,7 +453,7 @@ public class LsdContext :
                     timing = timing,
                 )
             val order = if (scenario === defaultScenario) scenarios.nextOrder() else scenario.sequence
-            completed.getOrPut(scenario.reportKey) { ArrayList() }.add(order to stored)
+            reports.add(scenario.reportKey, order, stored)
         }
     }
 
@@ -494,17 +484,6 @@ public class LsdContext :
         val (facts, events) = defaultScenario.drain()
         if (facts.isNotEmpty() || events.isNotEmpty()) CaptureLog.strayCaptures(report, events.size, facts.size)
     }
-
-    /**
-     * The key of a new [report] block: its title, so its file name is the same on every run,
-     * with a number added while another open block has the same title.
-     */
-    private fun openReportKey(title: String): String =
-        synchronized(lock) {
-            generateSequence(1) { it + 1 }
-                .map { if (it == 1) title else "$title #$it" }
-                .first { openReports.add(it) }
-        }
 
     /** Where an unscoped call goes: the bound scenario, the only running one, or the default. */
     private fun target(): LsdScenario = scenarios.target()
