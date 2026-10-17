@@ -274,7 +274,8 @@
   white-space: normal;
   margin-left: 2px;
 }
-@media (max-width: 640px) {
+/* Phones (PHONE_MAX_PX): the waterfall row stacks its bar under the label. */
+@media (max-width: 560px) {
   .timing-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

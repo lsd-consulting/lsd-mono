@@ -1,4 +1,7 @@
-// The media conditions the report reacts to in code, in one place. The CSS uses the same breakpoint.
+// The media conditions the report reacts to, in one place. The CSS uses only these two widths:
+//   STACKED_MAX_PX (860, and 861 as its min-width counterpart): the side panel stacks under the report.
+//   PHONE_MAX_PX (560): the phone layout (top bar, toolbar, chips, waterfall rows).
+// styles/breakpoints.test.ts fails on any other width in an @media rule.
 
 /** At and below this width the side panel stacks under the report at full width (app.css). */
 export const STACKED_MAX_PX = 860
