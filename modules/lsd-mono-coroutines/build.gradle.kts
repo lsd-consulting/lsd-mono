@@ -8,8 +8,6 @@ lsdCoverage {
     lineFloor.set(98)
 }
 
-base.archivesName.set("lsd-mono-coroutines")
-
 description = "LSD Mono coroutines integration — keeps a scenario bound while a coroutine hops threads"
 
 // This module is built against kotlinx.coroutines 1. The exact version is the catalog's
@@ -39,13 +37,4 @@ dependencies {
 
 tasks.test {
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
-}
-
-tasks.jar {
-    manifest {
-        attributes(
-            "Implementation-Title" to "lsd-mono-coroutines",
-            "Implementation-Version" to project.version,
-        )
-    }
 }

@@ -1,4 +1,5 @@
 import io.lsdconsulting.lsd.mono.gradle.nodeCommandLine
+import io.lsdconsulting.lsd.mono.gradle.writesSampleReport
 
 // Sample reports for lsd-mono-core: the README report, the feature tour its GIF clicks around, and
 // the example report the Pages workflow publishes. They are programs in the `readme` source
@@ -15,10 +16,6 @@ dependencies {
 
 val reportDir = layout.projectDirectory.dir("report")
 
-// Sample reports use this instead of the time they ran, so regenerating them changes nothing
-// unless the UI or the sample does. See gradle.properties.
-val samplesGeneratedAt = providers.gradleProperty("lsd.samples.generatedAt").get()
-
 /** Run [mainClass] from the readme source set, writing a deterministic report into [outDir]. */
 fun registerCapture(
     name: String,
@@ -27,17 +24,10 @@ fun registerCapture(
     outDir: Provider<Directory>,
 ): TaskProvider<JavaExec> =
     tasks.register<JavaExec>(name) {
-        group = "documentation"
         description = "Capture the $what and write the report HTML."
         classpath = readmeSourceSet.runtimeClasspath
         this.mainClass.set("io.lsdconsulting.lsd.mono.core.readme.$mainClass")
-        systemProperty("lsd.mono.report.outputDir", outDir.get().asFile.absolutePath)
-        // Report names carry a hash, so start clean: the scripts and copies expect one *-diagram.html.
-        val cleanDir = outDir.get().asFile
-        doFirst { cleanDir.deleteRecursively() }
-        systemProperty("lsd.mono.ids.deterministic", "true")
-        systemProperty("lsd.mono.report.generatedAt", samplesGeneratedAt)
-        outputs.dir(outDir)
+        writesSampleReport(outDir)
     }
 
 val readmeReportDir = layout.buildDirectory.dir("readme-report")

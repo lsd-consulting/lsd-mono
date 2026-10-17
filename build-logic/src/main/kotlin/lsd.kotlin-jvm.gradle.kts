@@ -34,6 +34,16 @@ java {
     withSourcesJar()
 }
 
+// Jars are named after the project (the default archivesName) and say so in their manifest.
+tasks.named<Jar>("jar") {
+    manifest {
+        attributes(
+            "Implementation-Title" to project.name,
+            "Implementation-Version" to project.version,
+        )
+    }
+}
+
 tasks.withType<JavaCompile>().configureEach {
     options.release.set(baseline)
 }

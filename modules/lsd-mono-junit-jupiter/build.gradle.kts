@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.nodeCommandLine
+import io.lsdconsulting.lsd.mono.gradle.registerIntegrationReadmeSamples
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -9,8 +9,6 @@ plugins {
 lsdCoverage {
     lineFloor.set(70)
 }
-
-base.archivesName.set("lsd-mono-junit-jupiter")
 
 description = "LSD Mono JUnit Jupiter 6 integration — extension for living sequence diagram reports"
 
@@ -39,54 +37,9 @@ tasks.test {
     systemProperty("lsd.core.report.outputDir", "build/reports/lsd-test")
 }
 
-tasks.jar {
-    manifest {
-        attributes(
-            "Implementation-Title" to "lsd-mono-junit-jupiter",
-            "Implementation-Version" to project.version,
-        )
-    }
-}
-
-// Node 22 helpers live in build-logic NodeToolchain.kt (shared with lsd-mono-core).
-
-// README samples are slow and write docs/. They are not on build or check.
-val readmeReportDir = layout.buildDirectory.dir("readme-report")
-val readmeDocsDir = layout.projectDirectory.dir("docs/readme")
-val coreProject = project(":modules:lsd-mono-core")
-val coreReportDir = coreProject.layout.projectDirectory.dir("report")
-
-tasks.register<JavaExec>("captureReadmeReport") {
-    group = "documentation"
-    description =
-        "Capture the JUnit README scenario and write its report HTML (same titles LsdExtension would use)."
-    // Shell must be on the core classpath for ReportWriter.
-    dependsOn(coreProject.tasks.named("copyReportShell"))
-    dependsOn(coreProject.tasks.named("classes"))
-    classpath = readmeSourceSet.runtimeClasspath
-    mainClass.set("io.lsdconsulting.lsd.mono.junitjupiter.readme.JunitReadmeSampleKt")
-    systemProperty("lsd.mono.report.outputDir", readmeReportDir.get().asFile.absolutePath)
-    // Report names carry a hash, so start clean: the README scripts expect one *-diagram.html.
-    val cleanDir = readmeReportDir.get().asFile
-    doFirst { cleanDir.deleteRecursively() }
-    systemProperty("lsd.mono.ids.deterministic", "true")
-    systemProperty("lsd.mono.report.generatedAt", providers.gradleProperty("lsd.samples.generatedAt").get())
-    outputs.dir(readmeReportDir)
-}
-
-tasks.register<Exec>("readmeSamples") {
-    group = "documentation"
-    description =
-        "Regenerate docs/readme PNG and GIF samples from the current report UI. Not part of build or check."
-    dependsOn("captureReadmeReport")
-    // Reuse the core report's Playwright screenshot script and node_modules.
-    workingDir = coreReportDir.asFile
-    inputs.dir(readmeReportDir)
-    inputs.file(coreReportDir.file("scripts/readme-samples.mjs"))
-    outputs.file(readmeDocsDir.file("diagram.png"))
-    outputs.file(readmeDocsDir.file("inspector.png"))
-    outputs.file(readmeDocsDir.file("zoom.gif"))
-    val reportOut = readmeReportDir.get().asFile.absolutePath
-    val docsOut = readmeDocsDir.asFile.absolutePath
-    nodeCommandLine("scripts/readme-samples.mjs", reportOut, docsOut)
-}
+// README samples (captureReadmeReport, readmeSamples). Same titles LsdExtension would use.
+registerIntegrationReadmeSamples(
+    readmeSourceSet,
+    "io.lsdconsulting.lsd.mono.junitjupiter.readme.JunitReadmeSampleKt",
+    "Capture the JUnit README scenario",
+)

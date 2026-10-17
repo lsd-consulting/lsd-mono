@@ -22,8 +22,6 @@ kover {
     }
 }
 
-base.archivesName.set("lsd-mono-core")
-
 description =
     "LSD Mono core — greenfield report UI + thin Kotlin capture/report façade (not legacy lsd-core)"
 
@@ -45,15 +43,6 @@ tasks.test {
         .withPropertyName("guardedSources")
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
     systemProperty("lsd.mono.test.projectVersion", project.version.toString())
-}
-
-tasks.jar {
-    manifest {
-        attributes(
-            "Implementation-Title" to "lsd-mono-core",
-            "Implementation-Version" to project.version,
-        )
-    }
 }
 
 // Node helpers (withNodeOnPath, nodeCommandLine) live in build-logic NodeToolchain.kt.
