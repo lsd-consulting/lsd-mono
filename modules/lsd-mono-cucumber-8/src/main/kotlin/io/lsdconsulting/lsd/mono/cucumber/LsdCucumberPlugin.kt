@@ -4,12 +4,16 @@ import io.cucumber.plugin.ConcurrentEventListener
 import io.cucumber.plugin.event.EventPublisher
 import io.cucumber.plugin.event.Node
 import io.cucumber.plugin.event.PickleStepTestStep
+import io.cucumber.plugin.event.Result
+import io.cucumber.plugin.event.SnippetsSuggestedEvent
 import io.cucumber.plugin.event.TestCase
 import io.cucumber.plugin.event.TestCaseFinished
 import io.cucumber.plugin.event.TestCaseStarted
 import io.cucumber.plugin.event.TestRunFinished
 import io.cucumber.plugin.event.TestRunStarted
 import io.cucumber.plugin.event.TestSourceParsed
+import io.cucumber.plugin.event.TestStep
+import io.cucumber.plugin.event.TestStepFinished
 import io.cucumber.plugin.event.TestStepStarted
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
@@ -19,6 +23,7 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import io.cucumber.plugin.event.Status as CucumberStatus
@@ -30,6 +35,9 @@ import io.cucumber.plugin.event.Status as CucumberStatus
  * Uses first-party [LsdContext] from `lsd-mono-core`, not Maven lsd-core.
  * [LsdContext.section] is used when `lsd.mono.cucumber.splitBySteps=true` instead of
  * a PlantUML new page. This plugin does not generate PlantUML.
+ *
+ * A pending, undefined, ambiguous or skipped scenario is a warning with a [ScenarioError] that
+ * says why (the reason and the step), so the report shows it under the description.
  *
  * **Parallel execution.** Safe with `cucumber.execution.parallel.enabled=true` (or
  * `--threads`). Cucumber delivers a scenario's events on the thread that runs it, so
@@ -51,6 +59,15 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     /** Fallback numbering when a row was not in a parsed source (start order). */
     private val outlineCounts = ConcurrentHashMap<String, Int>()
 
+    /**
+     * The result of each step (hooks included) of each running test case, by test case id, in the
+     * order they finished. A test case's events arrive on one thread, so the inner map is plain.
+     */
+    private val stepResults = ConcurrentHashMap<UUID, MutableMap<UUID, Result>>()
+
+    /** `uri:line` of each undefined step to the step definitions Cucumber suggests for it. */
+    private val snippets = ConcurrentHashMap<String, List<String>>()
+
     /** Set on Cucumber's thread; read on the threads that run steps. */
     @Volatile
     private var splitByStep: Boolean = false
@@ -61,6 +78,8 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
         publisher.registerHandlerFor(TestSourceParsed::class.java, ::onTestSourceParsed)
         publisher.registerHandlerFor(TestCaseStarted::class.java, ::onTestCaseStarted)
         publisher.registerHandlerFor(TestStepStarted::class.java, ::onTestStepStarted)
+        publisher.registerHandlerFor(TestStepFinished::class.java, ::onTestStepFinished)
+        publisher.registerHandlerFor(SnippetsSuggestedEvent::class.java, ::onSnippetsSuggested)
         publisher.registerHandlerFor(TestCaseFinished::class.java, ::onTestCaseFinished)
         publisher.registerHandlerFor(TestRunFinished::class.java) { onTestRunFinished() }
     }
@@ -69,6 +88,8 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
         features.clear()
         exampleNumbers.clear()
         outlineCounts.clear()
+        stepResults.clear()
+        snippets.clear()
     }
 
     private fun onTestSourceParsed(event: TestSourceParsed) {
@@ -89,6 +110,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     private fun onTestCaseStarted(event: TestCaseStarted) {
         // A retried test case starts again under the same id: only its last attempt is reported.
         lsd.findScenario(event.testCase.scenarioKey())?.discard()
+        stepResults.remove(event.testCase.id)
         begin(event.testCase, bindCurrentThread = true)
     }
 
@@ -101,20 +123,27 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
 
     private fun onTestStepStarted(event: TestStepStarted) {
         val step = event.testStep
-        if (splitByStep && step is PickleStepTestStep) {
-            lsd
-                .findScenario(event.testCase.scenarioKey())
-                ?.section("${step.step.keyword}${step.step.text}".trim())
-        }
+        if (splitByStep && step is PickleStepTestStep) lsd.findScenario(event.testCase.scenarioKey())?.section(step.line())
+    }
+
+    private fun onTestStepFinished(event: TestStepFinished) {
+        stepResults.computeIfAbsent(event.testCase.id) { LinkedHashMap() }[event.testStep.id] = event.result
+    }
+
+    private fun onSnippetsSuggested(event: SnippetsSuggestedEvent) {
+        snippets["${event.uri}:${event.stepLocation.line}"] = event.suggestion.snippets
     }
 
     private fun onTestCaseFinished(event: TestCaseFinished) {
         val testCase = event.testCase
         val scenario = lsd.findScenario(testCase.scenarioKey()) ?: begin(testCase, bindCurrentThread = false)
+        val results = stepResults.remove(testCase.id).orEmpty()
+        // Each step on its own line; one that did not pass says how it ended, e.g. "(skipped)".
         val description =
-            testCase.testSteps
-                .filterIsInstance<PickleStepTestStep>()
-                .joinToString(separator = "\n") { step -> "${step.step.keyword.trim()} ${step.step.text}".trim() }
+            testCase.testSteps.filterIsInstance<PickleStepTestStep>().joinToString(separator = "\n") { step ->
+                val ended = results[step.id]?.status?.takeIf { it != CucumberStatus.PASSED }
+                if (ended == null) step.line() else "${step.line()} (${ended.name.lowercase()})"
+            }
         val result = event.result
         val status =
             when (result.status) {
@@ -122,9 +151,32 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
                 CucumberStatus.FAILED -> Status.ERROR
                 else -> Status.WARN
             }
-        val error =
-            result.error?.takeIf { result.status == CucumberStatus.FAILED }?.let { ScenarioError.of("Failed", it) }
-        scenario.complete(testCase.scenarioTitle(), description, status, error)
+        // The step (or hook) that gave the test case its result is the one to explain.
+        val cause = testCase.testSteps.firstOrNull { results[it.id]?.status == result.status }
+        scenario.complete(testCase.scenarioTitle(), description, status, reason(testCase, result, cause))
+    }
+
+    /**
+     * Why a scenario did not pass, shown under its description: the failure with its stack, or
+     * for a pending, undefined, ambiguous or skipped step the reason and the step. Null when it passed.
+     */
+    private fun reason(testCase: TestCase, result: Result, cause: TestStep?): ScenarioError? {
+        val message = result.error?.message?.takeIf { it.isNotBlank() }
+        val step = cause?.let { "Step: ${it.line()}" }
+
+        fun lines(vararg parts: String?) = parts.filterNotNull().joinToString("\n").ifEmpty { "No reason given" }
+        return when (result.status) {
+            CucumberStatus.FAILED -> result.error?.let { ScenarioError.of("Failed", it) }
+            CucumberStatus.PENDING -> ScenarioError("Pending", lines(message, step))
+            CucumberStatus.SKIPPED -> ScenarioError("Skipped", lines(message, step))
+            CucumberStatus.AMBIGUOUS -> ScenarioError("Ambiguous step", lines(message, step))
+            CucumberStatus.UNDEFINED -> {
+                val suggested = (cause as? PickleStepTestStep)?.let { snippets["${testCase.uri}:${it.step.line}"] }.orEmpty()
+                val hint = suggested.takeIf { it.isNotEmpty() }?.joinToString("\n", prefix = "\nImplement it with:\n")
+                ScenarioError("Undefined step", lines((cause as? PickleStepTestStep)?.line(), hint))
+            }
+            else -> null
+        }
     }
 
     private fun onTestRunFinished() {
@@ -135,6 +187,10 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     }
 
     private fun TestCase.scenarioKey(): String = "cucumber:$id"
+
+    /** A step as written, `When the card is declined`, or a hook by its code location. */
+    private fun TestStep.line(): String =
+        if (this is PickleStepTestStep) "${step.keyword.trim()} ${step.text}".trim() else "Hook $codeLocation"
 
     private fun TestCase.scenarioTitle(): String {
         if (keyword.contains("outline", ignoreCase = true)) {

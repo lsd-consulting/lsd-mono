@@ -95,7 +95,16 @@ Feature: Place an order
     Then the order is stored and confirmed
 ```
 
-A passed scenario is stored as a success. The scenario title is the Cucumber scenario name (`places an order`). A scenario outline example is suffixed ` #1`, ` #2`, and so on, numbered by the row's position in the feature file across all its `Examples` tables, so the numbers do not depend on run order. The description is the step lines as plain text. A failed scenario is stored with status error and a structured error (headline, message, stack). Anything that is not passed and not failed (skipped, pending, undefined) is a warning.
+A passed scenario is stored as a success. The scenario title is the Cucumber scenario name (`places an order`). A scenario outline example is suffixed ` #1`, ` #2`, and so on, numbered by the row's position in the feature file across all its `Examples` tables, so the numbers do not depend on run order. The description is the step lines as plain text; a step that did not pass ends with how it ended, such as `(failed)` or `(skipped)`. A failed scenario is stored with status error and a structured error (headline, message, stack). A pending, undefined, ambiguous or skipped scenario is a warning, and the report says why under its description:
+
+| Result | Headline | Message |
+|--------|----------|---------|
+| Pending | `Pending` | The `PendingException` message, then `Step: <the step>` |
+| Undefined | `Undefined step` | The step, then the step definition Cucumber suggests |
+| Ambiguous | `Ambiguous step` | Cucumber's list of matching definitions, then the step |
+| Skipped | `Skipped` | The reason (an assumption's message), then the step |
+
+These carry no stack trace; a failure keeps its stack behind **Show stack trace**.
 
 Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step (every property is listed in the [core README](../lsd-mono-core/README.md#configuration-reference)). That stays in the same diagram. It is not a new page.
 

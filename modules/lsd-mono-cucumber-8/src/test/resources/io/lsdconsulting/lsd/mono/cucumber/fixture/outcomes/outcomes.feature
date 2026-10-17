@@ -21,6 +21,11 @@ Feature: Step outcomes
     Given the shop is open
     When the payment provider is offline
 
+  Scenario: ambiguous
+    Given the shop is open
+    When a coupon SAVE10 applies
+    Then the basket is checked out
+
   @audited
   Scenario: hooked
     Given the shop is open

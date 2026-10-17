@@ -65,6 +65,20 @@ describe('scenarioDescriptionHtml', () => {
     expect(html).not.toContain('&lt;mark&gt;')
   })
 
+  it('shows why a warning scenario did not pass, keeping its line breaks for the panel to wrap', () => {
+    const html = scenarioDescriptionHtml(
+      scenario({
+        status: 'warn',
+        description: 'Given the shop is open\nWhen the refund is not written yet (pending)',
+        error: { headline: 'Pending', message: 'refunds come later\nStep: When the refund is not written yet' },
+      }),
+    )
+    expect(html).toContain('<p class="error-headline">Pending</p>')
+    expect(html).toContain('<p class="error-message">refunds come later\nStep: When the refund is not written yet</p>')
+    expect(html).toContain('<mark>When</mark> the refund is not written yet (pending)')
+    expect(html).not.toContain('data-show-error')
+  })
+
   it('omits the stack button when there is no stack', () => {
     const html = scenarioDescriptionHtml(scenario({ error: { headline: 'Failed', message: 'nope' } }))
     expect(html).toContain('nope')

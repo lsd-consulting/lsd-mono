@@ -38,16 +38,14 @@ class LsdCucumberPluginOutcomesTest {
 
     private fun runOutcomes(): Map<String, String> {
         val summary = runFeatures("outcomes/outcomes.feature")
-        // fails and undefined fail the JUnit test, skipped aborts it, pending fails it too.
-        assertEquals(6, summary.testsFoundCount.toInt())
+        assertEquals(7, summary.testsFoundCount.toInt())
         return scenariosByTitle(reportJson(tempDir, "outcomes"))
     }
 
     @Test
-    fun `each Cucumber result becomes a scenario status, with the error only for a failure`() {
-        val scenarios = runOutcomes()
+    fun `each Cucumber result becomes a scenario status`() {
+        val statuses = runOutcomes().mapValues { (_, json) -> Regex(""""status": "(\w+)"""").find(json)!!.groupValues[1] }
 
-        val statuses = scenarios.mapValues { (_, json) -> Regex(""""status": "(\w+)"""").find(json)!!.groupValues[1] }
         assertEquals(
             mapOf(
                 "passes" to "success",
@@ -55,25 +53,60 @@ class LsdCucumberPluginOutcomesTest {
                 "pending" to "warn",
                 "undefined" to "warn",
                 "skipped" to "warn",
+                "ambiguous" to "warn",
                 "hooked" to "success",
             ),
             statuses,
         )
-        val fails = scenarios.getValue("fails")
-        assertTrue(fails.contains(""""headline": "Failed""""), fails)
-        assertTrue(fails.contains(""""message": "card declined""""), fails)
-        scenarios.filterKeys { it != "fails" }.forEach { (title, json) ->
-            assertFalse(json.contains(""""error":"""), "$title has no error")
+    }
+
+    @Test
+    fun `a scenario that did not pass says why under its description`() {
+        val errors = runOutcomes().mapValues { (_, json) -> errorOf(json) }
+
+        assertEquals(null, errors["passes"])
+        assertEquals(null, errors["hooked"])
+        assertEquals("Failed", errors.getValue("fails")!!.first)
+        assertTrue(errors.getValue("fails")!!.second.startsWith("card declined"))
+        assertEquals("Pending" to "refunds come later\\nStep: When the refund is not written yet", errors["pending"])
+        assertEquals("Skipped" to "payment provider offline\\nStep: When the payment provider is offline", errors["skipped"])
+        val (ambiguous, ambiguity) = errors.getValue("ambiguous")!!
+        assertEquals("Ambiguous step", ambiguous)
+        assertTrue(ambiguity.contains("matches more than one step definition"), ambiguity)
+        assertTrue(ambiguity.endsWith("\\nStep: When a coupon SAVE10 applies"), ambiguity)
+    }
+
+    @Test
+    fun `an undefined step is named, with the step definition Cucumber suggests`() {
+        val (headline, message) = errorOf(runOutcomes().getValue("undefined"))!!
+
+        assertEquals("Undefined step", headline)
+        assertTrue(message.startsWith("""When nobody wrote this step\n\nImplement it with:\nWhen(\"nobody wrote this step\""""), message)
+    }
+
+    @Test
+    fun `only a failure keeps its stack trace`() {
+        val scenarios = runOutcomes()
+
+        assertTrue(scenarios.getValue("fails").contains(""""stack": "java.lang.IllegalStateException: card declined"""))
+        listOf("pending", "undefined", "skipped", "ambiguous").forEach { title ->
+            assertFalse(scenarios.getValue(title).contains(""""stack":"""), "$title has no stack")
         }
     }
 
     @Test
-    fun `the description lists every step, including the ones a failure skipped`() {
-        val fails = runOutcomes().getValue("fails")
+    fun `the description lists every step and marks the ones that did not pass`() {
+        val scenarios = runOutcomes()
 
         assertTrue(
-            fails.contains(""""description": "Given the shop is open\nWhen the card is declined\nThen the basket is checked out""""),
-            fails,
+            scenarios.getValue("fails").contains(
+                """"description": "Given the shop is open\nWhen the card is declined (failed)\nThen the basket is checked out (skipped)"""",
+            ),
+            scenarios.getValue("fails"),
+        )
+        assertTrue(
+            scenarios.getValue("passes").contains(""""description": "Given the shop is open\nThen the basket is checked out""""),
+            scenarios.getValue("passes"),
         )
     }
 
@@ -96,10 +129,6 @@ class LsdCucumberPluginOutcomesTest {
 
         val hooked = runOutcomes().getValue("hooked")
 
-        val events = Regex(""""kind": "(\w+)",\s*"id": "\d+",\s*(?:"title"|"from": "\w+",\s*"to": "\w+",\s*"label"): "([^"]+)"""")
-            .findAll(hooked)
-            .map { "${it.groupValues[1]} ${it.groupValues[2]}" }
-            .toList()
         assertEquals(
             listOf(
                 "message audit opened",
@@ -109,7 +138,7 @@ class LsdCucumberPluginOutcomesTest {
                 "message check out",
                 "message audit closed",
             ),
-            events,
+            eventsOf(hooked),
         )
     }
 
@@ -121,4 +150,17 @@ class LsdCucumberPluginOutcomesTest {
         assertTrue(index.exists())
         assertTrue(index.readText().contains("outcomes-"), "index links the outcomes report")
     }
+
+    /** The scenario's error as (headline, message), JSON escapes left in; null when it has none. */
+    private fun errorOf(json: String): Pair<String, String>? =
+        Regex(""""error": \{\s*"headline": "([^"]*)",\s*"message": "((?:[^"\\]|\\.)*)"""")
+            .find(json)
+            ?.let { it.groupValues[1] to it.groupValues[2] }
+
+    /** The scenario's events in order: `section <title>` or `message <label>`. */
+    private fun eventsOf(json: String): List<String> =
+        Regex(""""kind": "(\w+)",\s*"id": "\d+",\s*(?:"title"|"from": "\w+",\s*"to": "\w+",\s*"label"): "([^"]+)"""")
+            .findAll(json)
+            .map { "${it.groupValues[1]} ${it.groupValues[2]}" }
+            .toList()
 }

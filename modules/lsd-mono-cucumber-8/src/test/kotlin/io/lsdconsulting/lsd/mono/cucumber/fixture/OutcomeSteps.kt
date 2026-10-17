@@ -19,5 +19,8 @@ class OutcomeSteps : En {
         When("the card is declined") { throw IllegalStateException("card declined") }
         When("the refund is not written yet") { throw PendingException("refunds come later") }
         When("the payment provider is offline") { throw TestAbortedException("payment provider offline") }
+        // Both match "a coupon SAVE10 applies", so that step is ambiguous.
+        When("a coupon {word} applies") { _: String -> }
+        When("a coupon SAVE10 applies") { }
     }
 }
