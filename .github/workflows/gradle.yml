@@ -9,6 +9,7 @@ name: Gradle
 # handles, and the README images under each module) skip the build jobs. The workflow itself
 # always runs, so the `gate` job always reports: require `gate` in branch protection, not the
 # build jobs (see docs/ci.md). Keep the ignored paths in `changes` and pages.yml in step.
+# `commits` checks conventional commit messages, and is part of gate.
 on:
   push:
     branches: [main]
@@ -56,6 +57,44 @@ jobs:
           else
             echo "report=false" >> "$GITHUB_OUTPUT"
           fi
+
+  commits:
+    # Conventional commit messages (tools/release/commitlint.config.mjs): semantic-release reads
+    # them to decide each release (docs/releasing.md). Checks each commit a push adds and, on a
+    # pull request, its commits and its title (the message a squash merge uses).
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: tools/release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: tools/release/package-lock.json
+      - run: npm ci
+      - name: Check commit messages
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            echo "Pull request title: $TITLE"
+            printf '%s\n' "$TITLE" | npx commitlint
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "No earlier commit to compare with: checking $HEAD only."
+            git log -1 --format=%B "$HEAD" | npx commitlint
+            exit 0
+          fi
+          npx commitlint --from "$BASE" --to "$HEAD" --verbose
 
   build:
     needs: changes
@@ -204,7 +243,7 @@ jobs:
     # The one check to require. Passes when every job passed or was skipped (a docs-only change,
     # or check-ux when the report UI did not change).
     if: always()
-    needs: [changes, build, jvm-tests, check-ux]
+    needs: [changes, commits, build, jvm-tests, check-ux]
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
@@ -215,3 +254,4 @@ jobs:
           for r in $RESULTS; do
             case "$r" in success|skipped) ;; *) echo "a required job ended $r"; exit 1 ;; esac
           done
+

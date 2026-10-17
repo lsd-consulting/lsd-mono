@@ -2,6 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
+    ":semanticCommits",
     "helpers:pinGitHubActionDigestsToSemver"
   ],
   "packageRules": [
@@ -96,6 +97,16 @@
       ],
       "groupName": "Node",
       "groupSlug": "node"
+    },
+    {
+      "description": "Release notes: @semantic-release/release-notes-generator 14 renders with conventional-changelog-writer 8, which the conventionalcommits preset supports only up to major 9. Move both together.",
+      "matchFileNames": [
+        "tools/release/package.json"
+      ],
+      "matchPackageNames": [
+        "conventional-changelog-conventionalcommits"
+      ],
+      "allowedVersions": "<10"
     }
   ]
 }
