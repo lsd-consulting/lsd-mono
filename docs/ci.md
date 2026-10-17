@@ -34,7 +34,9 @@ supports TypeScript 7.
 
 The `check-ux` job runs `npm run check:ux` in `modules/lsd-mono-core/report`: the Playwright checks
 in `checks/` (layout, keyboard, axe, print and forced colours, themes, phone layouts) in headless
-Chromium against the Vite dev server on port 4179. It needs no Gradle build, so it runs alongside
+Chromium against the Vite dev server on port 4179, plus `checks/offline.spec.ts`, which opens the
+single-file report that `check:ux` builds first and fails on any network request other than the
+usage ping. It needs no Gradle build, so it runs alongside
 `build` and `jvm-tests`, and only when the report UI, `.nvmrc` or `gradle.yml` changed.
 
 - **Chromium only.** The job installs Chromium's headless shell (`--only-shell`), the only browser

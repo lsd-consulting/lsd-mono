@@ -53,8 +53,6 @@ async function openIndex(page: Page, theme: string, hash = ''): Promise<string[]
     },
     { index: manifest, themeName: theme },
   )
-  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
   for (const [id, report] of [
     ['orders', failing],
     ['checkout', passing],

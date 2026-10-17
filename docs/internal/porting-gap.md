@@ -207,7 +207,7 @@ Each item: legacy behaviour → why it matters → suggested LSD Mono shape → 
 | | |
 |--|--|
 | **Legacy** | `devMode` inlines local JS vs CDN (`templates/partials/javascript.hbs`). |
-| **Mono** | Self-contained single HTML shell — largely solves offline. |
+| **Mono** | Self-contained single HTML shell with embedded fonts: no network request except the optional usage ping. |
 | **LSD Mono** | Keep single-file as default; optional multi-file dist for debugging. |
 | **Priority** | **P2** |
 | **Test** | Build check that packaged shell contains `__LSD_REPORT__` hook. |

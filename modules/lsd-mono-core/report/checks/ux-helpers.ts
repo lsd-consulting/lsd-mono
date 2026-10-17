@@ -25,8 +25,6 @@ export async function openFixture(page: Page, theme: (typeof THEMES)[number]): P
     },
     { report: uxFixture, themeName: theme },
   )
-  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
   // Context reducedMotion is set in the config, but this Chromium build does not
   // apply it unless emulateMedia runs on the page. The entrance animation otherwise
   // sits near opacity 0 and axe reports false contrast.
@@ -68,8 +66,6 @@ export async function openReport(page: Page, report: Report): Promise<void> {
     window.__LSD_REPORT__ = value
     localStorage.setItem('lsd-report-theme', 'light')
   }, report)
-  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
   await expect(page.locator('.seq-svg')).toBeVisible()

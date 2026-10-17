@@ -31,7 +31,7 @@ cd modules/lsd-mono-core/report
 npm run check:ux
 ```
 
-Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` is not on the Gradle build; CI runs it in its own job, without the `@screenshot` tests, whose baselines are macOS screenshots that Linux renders differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%, and never below 50% (a wider diagram scrolls sideways; Out still goes to 25%). It refits when the panel width changes until you zoom in or out; Fit fills the width and turns refitting back on. Sections are `kind: "section"` rows with a jump list. A diagram taller than the screen extends the page: the stage is as tall as the drawing, the toolbar and participant header stay in view, and the page scroll drives the windowed painting (`src/lib/diagram/page-scroll.ts`). Horizontal scrolling stays inside the panel.
+Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` builds the single-file report first (`checks/offline.spec.ts` opens it from `file://`), then runs the checks. It is not on the Gradle build; CI runs it in its own job, without the `@screenshot` tests, whose baselines are macOS screenshots that Linux renders differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%, and never below 50% (a wider diagram scrolls sideways; Out still goes to 25%). It refits when the panel width changes until you zoom in or out; Fit fills the width and turns refitting back on. Sections are `kind: "section"` rows with a jump list. A diagram taller than the screen extends the page: the stage is as tall as the drawing, the toolbar and participant header stay in view, and the page scroll drives the windowed painting (`src/lib/diagram/page-scroll.ts`). Horizontal scrolling stays inside the panel.
 
 ## Open the demo
 
@@ -85,7 +85,7 @@ Gradle produces the same shell without a manual npm build:
 | Colour | **OKLCH tokens** + dark/light/high contrast | Until you choose, follows the OS live: `prefers-color-scheme` picks dark or light, and `prefers-contrast: more` picks high contrast. A head script sets it before first paint, so there is no flash. `d` or the theme button cycles Auto → dark → light → high contrast. A fixed choice is persisted as `lsd-report-theme` and wins over the OS; Auto clears it and resumes following the OS. The button names the mode, e.g. "A. Theme: Auto (dark)"; a text glyph (A, HC) leads the name so it matches what is shown. Print uses a light page. |
 | Inspector | **Side panel** | Keeps the diagram active; lazy payloads, copy, focus return, and `#msg=` deep links |
 | Usage ping | `src/lib/usage-ping.ts` | A release build's page requests one version-pinned jsDelivr file per event (`report-open`, `metrics-open`, `components-open`, `source-*`), once per page load, never awaited. Off when the report's `usagePing` option is not `true`, for snapshot versions, and on the dev server (checks opt in with `?lsd-usage-ping-check`). See the root README's "Usage ping" |
-| Typography | Geist → system-ui fallback | Product feel when online; readable offline via system fonts |
+| Typography | Inter and JetBrains Mono, embedded | Latin variable fonts from `@fontsource-variable` (SIL Open Font License 1.1), inlined into the single-file report by `src/styles/fonts.css`, so it looks the same offline. About 115 KB of the file. Other scripts fall back to system fonts |
 | State | One scenario at a time, in the URL hash | The sidebar chooses the scenario; only it is drawn. `#scenario=<id>` (or `#msg=<id>/<message>`) survives a reload or a shared link. Search, status filters and per-diagram views stay in memory |
 
 The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG output from that engine.
@@ -101,7 +101,7 @@ The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG o
 | Search | Scenario title filter | Title + description + facts, plus in-diagram message/note find |
 | Theme | Light-only GitHub-ish tokens | Auto follows the OS (dark, light, more contrast); a fixed choice persists until you pick Auto again |
 | Mobile | Improved in the shell refresh | Sidebar collapses to grid; toolbar wraps; diagram scrolls horizontally |
-| Offline chrome | CDN d3 / hljs / mark.js unless assets are embedded | No diagram CDN; fonts optional |
+| Offline chrome | CDN d3 / hljs / mark.js unless assets are embedded | No network at all: script, styles and fonts are in the file. The only request is the optional usage ping (`checks/offline.spec.ts`) |
 | Accessibility | Partial | Focus rings, `aria-pressed` / `aria-current`, one tab stop with message navigation, real position metadata, reduced-motion, and axe checks |
 
 Not supported by design: PlantUML sprite includes and skinparam colours. Still open: a compact density mode. Sections, short arrows, notes, delays, spacers, clickable arrows, the in-page component diagram, and the major accessibility checks are shipped.

@@ -30,8 +30,6 @@ for (const [pageName, open] of Object.entries(PAGES)) {
     ] as const) {
       test(`section jump: ${pageName} page, ${sizeName}, ${drawing} drawing`, async ({ page }) => {
         await page.setViewportSize(viewport)
-        await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-        await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
         await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, sectionsReport(perSection))
         await expect(page.locator('.seq-svg')).toBeVisible()
@@ -63,8 +61,6 @@ for (const [pageName, open] of Object.entries(PAGES)) {
         page,
       }) => {
         await page.setViewportSize(viewport)
-        await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-        await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
         await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, sectionsReport(perSection))
         await expect(page.locator('.seq-svg')).toBeVisible()

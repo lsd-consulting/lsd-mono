@@ -136,8 +136,6 @@ test('long participant names stay inside their shapes and clear of their neighbo
   await page.addInitScript((report) => {
     window.__LSD_REPORT__ = report
   }, longNamesReport)
-  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
   await expect(page.locator('.seq-header-svg')).toBeVisible()

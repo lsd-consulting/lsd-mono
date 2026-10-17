@@ -209,7 +209,11 @@ describe('pre-paint script in index.html', () => {
   it('sits in the head, before any stylesheet, and is not the module script', () => {
     const head = html.slice(0, html.indexOf('</head>'))
     expect(head).toContain('<script data-theme-boot>')
-    expect(head.indexOf('data-theme-boot')).toBeLessThan(head.indexOf('stylesheet'))
+    const boot = head.indexOf('data-theme-boot')
+    // The styles come with the module script (bundled, fonts included); a stylesheet link, if one is added, must follow.
+    const stylesheet = head.indexOf('stylesheet')
+    expect(stylesheet === -1 || boot < stylesheet).toBe(true)
+    expect(html.indexOf('<script type="module"')).toBeGreaterThan(boot)
   })
 
   it.each([

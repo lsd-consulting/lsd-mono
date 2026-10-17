@@ -35,8 +35,6 @@ async function open(page: Page, data: Report, path = OPT_IN, failWith = 'blocked
   await page.addInitScript((r) => {
     window.__LSD_REPORT__ = r
   }, data)
-  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
   await page.route('https://cdn.jsdelivr.net/**', (route) => {
     opened.pings.push(route.request())
     return route.abort(failWith)
@@ -126,8 +124,6 @@ test('usage ping: the index page pings on open and counts each opened report sou
   await page.addInitScript((m) => {
     window.__LSD_INDEX__ = m
   }, manifest)
-  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
   await page.route('https://cdn.jsdelivr.net/**', (route) => {
     pings.push(route.request().url().replace(CDN, ''))
     return route.abort()

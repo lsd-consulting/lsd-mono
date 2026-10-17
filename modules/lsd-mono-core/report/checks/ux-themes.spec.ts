@@ -9,8 +9,6 @@ async function openOs(page: Page, colorScheme: 'dark' | 'light', contrast: 'more
   await page.addInitScript((report) => {
     window.__LSD_REPORT__ = report
   }, threeScenarios)
-  await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
-  await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
   await page.emulateMedia({ reducedMotion: 'reduce', colorScheme, contrast })
 }
 
