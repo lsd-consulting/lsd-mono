@@ -1,0 +1,266 @@
+/* ——— Inspector (side panel, not a modal) ——— */
+.inspector {
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  position: sticky;
+  top: var(--topbar-h);
+  align-self: start;
+  max-height: calc(100dvh - var(--topbar-h));
+  overflow: auto;
+  min-width: 0;
+}
+/* Inner edge of the side column. Drag left to widen. */
+.inspector-resize {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  margin-left: -6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 3;
+}
+.inspector-resize:hover,
+.inspector-resize:focus-visible {
+  background: color-mix(in oklab, var(--accent) 45%, transparent);
+}
+.inspector-resize:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.inspector:focus {
+  outline: none;
+}
+.inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.inspector-head h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+.inspector-head .icon-btn {
+  width: auto;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.inspector-body {
+  padding: 16px;
+}
+.panel-controls {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.components-open:disabled,
+.metrics-open:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+#inspector-metrics {
+  margin-top: 4px;
+}
+/* Print-only copy of the open Metrics view, placed in its scenario (see main.ts). */
+.print-metrics {
+  display: none;
+  margin: 0 0 16px;
+}
+/* Print-only copy of the open message, error or component diagram view, placed in
+   its scenario after the sequence diagram (see print-panel.ts). */
+.print-panel {
+  display: none;
+  margin: 16px 0 0;
+}
+.inspector-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+#inspector-graph {
+  overflow-x: auto;
+  margin-top: 4px;
+}
+.component-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  color: var(--text-muted);
+  font-family: var(--font);
+}
+.component-diagram .edge {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.component-diagram .edge-async {
+  stroke-dasharray: 6 4;
+}
+/* Wide, invisible stroke so a thin link is easy to hover and click. */
+.component-diagram .edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+}
+.component-diagram .edge-group {
+  cursor: pointer;
+  outline: none;
+}
+.component-diagram .edge-group:hover,
+.component-diagram .edge-group:focus-visible,
+.component-diagram .edge-group.is-selected {
+  color: var(--accent-strong);
+}
+.component-diagram .edge-group:focus-visible .edge-hit {
+  stroke: var(--accent-soft);
+}
+.component-diagram .edge-badge rect {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+.component-diagram .edge-badge text {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.component-links {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.component-links h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.component-links ol {
+  margin: 0;
+  padding-left: 22px;
+}
+.component-links li {
+  margin: 2px 0;
+  overflow-wrap: anywhere;
+}
+.component-links .cue {
+  color: var(--text-muted);
+}
+.component-diagram .marker-fill {
+  fill: currentColor;
+  stroke: none;
+}
+.component-diagram .marker-open {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+.component-diagram .empty {
+  fill: var(--text-muted);
+  font-size: 13px;
+}
+
+#inspector-lead {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.json-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+#inspector-json,
+#inspector-json-expand {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+#inspector-json:focus-visible,
+#inspector-json-expand:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+/* Wider than the narrow column: stop wrapping so the payload can be read. Not a modal. */
+.inspector.inspector-json-wide pre {
+  white-space: pre;
+  word-break: normal;
+  overflow: auto;
+  max-height: min(72vh, 760px);
+}
+.inspector-body pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pill {
+  font-size: 11px;
+  font-family: var(--mono);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border: 1px solid transparent;
+}
+
+.help-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  color: var(--text-muted);
+  z-index: 50;
+  max-width: 280px;
+  display: none;
+}
+.help-toast[data-open="true"] {
+  display: block;
+  animation: rise 0.25s ease;
+}
+.help-toast kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  background: var(--surface-2);
+}
