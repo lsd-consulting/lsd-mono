@@ -55,14 +55,12 @@ PlantUML and Handlebars output are not supported; the report is drawn by the rep
 
 Each scenario's diagram toolbar has a **Component diagram** button. Clicking it draws that scenario's components and the calls between them in the side panel. The report builds the diagram in the browser from the messages it already has, so there is nothing to switch on in the build and no extra file.
 
-![Clicking Component diagram and the diagram opening in the side panel](../../docs/readme/components.gif)
+The [feature tour](../../README.md) opens it, and so can you in the [live example report](https://lsd-consulting.github.io/lsd-mono/example-report.html).
 
 - Every participant on a sync, async, bi-directional, or lost message is a component, drawn with its participant type (actor, database, queue, and so on). Responses and short arrows add no edges.
 - Links carry no captions, so a busy pair of components stays readable. Sync links are solid and async links are dashed, and the head shows the direction. Repeated calls between the same two components share one link with a small count badge.
 - Hover over a link to see its messages in its tooltip, for example `Orders to Orders DB, 3 interactions:` then `load basket · sync` on the next line. Click a link, or focus it and press Enter, to list them under the drawing.
 - Callers sit above the components they call. Escape or Close puts focus back on the button.
-
-`./gradlew :modules:lsd-mono-core:readmeSamples` regenerates the GIF with the other README samples.
 
 ## Kotlin API
 

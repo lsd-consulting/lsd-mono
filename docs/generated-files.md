@@ -43,9 +43,9 @@ files, so `verifyGenerated` does not need to know about them.
 
 | File | How to retake (macOS, the `.nvmrc` Node via nvm, Chromium from Playwright) |
 |------|----------|
-| `docs/readme/feature-tour.gif`, `docs/readme/components.gif` | `./gradlew :modules:lsd-mono-core:readmeSamples` |
-| `modules/lsd-mono-junit-jupiter/docs/readme/*` | `./gradlew :modules:lsd-mono-junit-jupiter:readmeSamples` |
-| `modules/lsd-mono-cucumber-8/docs/readme/*` | `./gradlew :modules:lsd-mono-cucumber-8:readmeSamples` |
+| `docs/readme/feature-tour.gif` | `./gradlew :modules:lsd-mono-core:readmeSamples` |
+| `modules/lsd-mono-junit-jupiter/docs/readme/diagram.png` | `./gradlew :modules:lsd-mono-junit-jupiter:readmeSamples` |
+| `modules/lsd-mono-cucumber-8/docs/readme/diagram.png` | `./gradlew :modules:lsd-mono-cucumber-8:readmeSamples` |
 | All of the above | `./gradlew readmeSamples` |
 | `modules/lsd-mono-core/report/checks/snapshots/*.png` (check:ux baselines) | In `modules/lsd-mono-core/report`, with port 4179 free: `npm run check:ux -- --update-snapshots`. Review the changed PNGs before you commit them |
 | `docs/perf-results.md`, `docs/perf-screenshots/*.png` | A dated, hand-written measurement record. Redo it by hand when you re-measure (see `docs/perf`) |

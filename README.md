@@ -107,7 +107,7 @@ The report shows one scenario at a time, chosen from the sidebar, and the choice
 
 The theme follows the operating system (dark, light, or more contrast) until you choose one with the theme button or `d`.
 
-Regenerate the tour, and the component diagram clip, from the current UI:
+Regenerate the tour from the current UI:
 
 ```bash
 ./gradlew :modules:lsd-mono-core:readmeSamples
