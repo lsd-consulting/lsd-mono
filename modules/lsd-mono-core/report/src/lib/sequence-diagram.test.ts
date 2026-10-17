@@ -670,7 +670,7 @@ describe('component diagram button', () => {
     )
     const toolbar = html.slice(html.indexOf('class="seq-toolbar"'), html.indexOf('class="seq-stage"'))
     expect(toolbar).toContain('data-show-components="comp"')
-    expect(toolbar).toContain('>Component diagram</button>')
+    expect(toolbar).toContain('<span>Component diagram</span></button>')
     expect(toolbar).not.toMatch(/data-show-components="comp"[^>]*disabled/)
   })
 

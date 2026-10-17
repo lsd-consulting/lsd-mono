@@ -647,8 +647,14 @@
   .seq-toolbar .participant-filter {
     order: 2;
   }
+  /* Its own row, the two buttons sharing it: easy to find and to hit. */
   .seq-toolbar .panel-controls {
     order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .seq-toolbar .panel-btn {
+    flex: 1 1 auto;
   }
   .seq-toolbar .diagram-find {
     order: 4;

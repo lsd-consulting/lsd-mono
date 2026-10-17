@@ -35,12 +35,32 @@ function toolbarOf(html: string): string {
 describe('metrics button', () => {
   it('sits next to the component diagram button and names the scenario it opens', () => {
     const toolbar = toolbarOf(renderDiagramHtml(scenario()))
-    expect(toolbar).toMatch(/data-show-metrics="pay"[^>]*>Metrics<\/button>\s*<button[^>]*data-show-components="pay"/)
+    expect(toolbar).toMatch(
+      /data-show-metrics="pay"[^>]*>(?:(?!<\/button>).)*<span>Metrics<\/span><\/button>\s*<button[^>]*data-show-components="pay"/s,
+    )
     expect(toolbar).not.toMatch(/data-show-metrics="pay"[^>]*disabled/)
   })
 
   it('is disabled when there are no metrics', () => {
     expect(toolbarOf(renderDiagramHtml(scenario({ metrics: [] })))).toMatch(/data-show-metrics="pay"[^>]*disabled/)
+  })
+})
+
+describe('side panel buttons', () => {
+  it('say they open the side panel, closed until the app marks one open, named by their text alone', () => {
+    const host = document.createElement('div')
+    host.innerHTML = renderDiagramHtml(scenario())
+    for (const [selector, text] of [
+      ['[data-show-metrics]', 'Metrics'],
+      ['[data-show-components]', 'Component diagram'],
+    ] as const) {
+      const button = host.querySelector<HTMLButtonElement>(`.panel-controls ${selector}`)!
+      expect(button.getAttribute('aria-controls')).toBe('inspector')
+      expect(button.getAttribute('aria-expanded')).toBe('false')
+      expect(button.textContent?.trim()).toBe(text)
+      expect(button.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+      expect(button.hasAttribute('aria-label')).toBe(false)
+    }
   })
 })
 

@@ -112,6 +112,53 @@ test('axe with metrics in the side panel, and Escape or Close returns focus to t
   await expect(open).toBeFocused()
 })
 
+test('Metrics and Component diagram show which view is open, and pressing the open one closes it', async ({ page }) => {
+  await openFixture(page, 'light')
+  const metrics = page.getByRole('button', { name: 'Metrics', exact: true })
+  const components = page.getByRole('button', { name: 'Component diagram', exact: true })
+  for (const button of [metrics, components]) {
+    await expect(button).toHaveAttribute('aria-controls', 'inspector')
+    await expect(button).toHaveAttribute('aria-expanded', 'false')
+  }
+  const restBackground = await metrics.evaluate((el) => getComputedStyle(el).backgroundColor)
+
+  await metrics.click()
+  await expect(metrics).toHaveAttribute('aria-expanded', 'true')
+  await expect(components).toHaveAttribute('aria-expanded', 'false')
+  expect(await metrics.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(restBackground)
+
+  await components.click()
+  await expect(page.locator('#inspector-title')).toHaveText('Component diagram')
+  await expect(metrics).toHaveAttribute('aria-expanded', 'false')
+  await expect(components).toHaveAttribute('aria-expanded', 'true')
+
+  // An arrow's payload replaces the view: neither button is pressed.
+  await page.locator('button.msg-open').first().click()
+  await expect(components).toHaveAttribute('aria-expanded', 'false')
+
+  await components.click()
+  await expect(components).toHaveAttribute('aria-expanded', 'true')
+  await components.click()
+  await expect(page.locator('#inspector')).toBeHidden()
+  await expect(components).toHaveAttribute('aria-expanded', 'false')
+  await expect(components).toBeFocused()
+
+  await metrics.click()
+  await page.keyboard.press('Escape')
+  await expect(metrics).toHaveAttribute('aria-expanded', 'false')
+})
+
+test('in forced colours the button of the open view takes the system highlight', async ({ page }) => {
+  await openFixture(page, 'light')
+  await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' })
+  const metrics = page.getByRole('button', { name: 'Metrics', exact: true })
+  const components = page.getByRole('button', { name: 'Component diagram', exact: true })
+  await metrics.click()
+  await expect(metrics).toHaveAttribute('aria-expanded', 'true')
+  const background = (el: Element) => getComputedStyle(el).backgroundColor
+  expect(await metrics.evaluate(background)).not.toBe(await components.evaluate(background))
+})
+
 test('print shows metrics only while the Metrics view is open, in its scenario', async ({ page }) => {
   await openFixture(page, 'light')
   const printed = page.locator('#card-ux .print-metrics')

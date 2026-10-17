@@ -6,7 +6,7 @@ import { scrollDiagramToOffset } from '../lib/diagram/page-scroll'
 import { bindDiagramScroll, diagramView, messageOffsetY, syncDiagramWindow } from '../lib/sequence-diagram'
 import { cssEscape } from '../lib/escape'
 import { heroHtml, scenarioHtml } from './scenario-card'
-import { syncPrintCopies } from './panel'
+import { syncWithPanel } from './panel'
 import { filtered } from './filters'
 import { writeScenarioHash } from './url-hash'
 import { index, session, state } from './context'
@@ -65,12 +65,12 @@ export function renderMain(): void {
         <p>No scenarios match your search and status filters.</p>
         <button type="button" class="text-btn" data-clear-filters>Clear filters</button>
       </div>`
-    syncPrintCopies()
+    syncWithPanel()
     return
   }
   main.innerHTML = `${heroHtml()}${scenarioHtml(scenario)}`
   if (session.booted && !session.panelScenarioId) writeScenarioHash()
-  syncPrintCopies()
+  syncWithPanel()
   bindDiagramScroll(main)
 }
 

@@ -135,17 +135,52 @@ function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDT
   return diagram
 }
 
+/** Bar chart, drawn in currentColor. Decorative: the button's text is its name. */
+const METRICS_ICON_SVG =
+  '<svg class="panel-btn-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M2.5 13.5h11M4.5 11V8M8 11V4M11.5 11V6.5"/></svg>'
+
+/** Three linked nodes, drawn in currentColor. Decorative: the button's text is its name. */
+const COMPONENTS_ICON_SVG =
+  '<svg class="panel-btn-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M5.6 5.2 7 9.6M10.4 5.2 9 9.6M6 3.5h4"/><circle cx="4" cy="3.5" r="2"/><circle cx="12" cy="3.5" r="2"/><circle cx="8" cy="12" r="2"/></svg>'
+
+interface PanelButton {
+  kind: 'metrics' | 'components'
+  scenarioId: string
+  iconSvg: string
+  text: string
+  /** Why the button is disabled, or null when it is enabled. */
+  disabledReason: string | null
+}
+
+/**
+ * A toolbar button that opens a view in the side panel. aria-expanded says whether that
+ * view is open for this scenario; the app keeps it in step with the panel.
+ */
+function panelButtonHtml(button: PanelButton): string {
+  const disabledHtml = button.disabledReason === null ? '' : ` disabled title="${escapeAttr(button.disabledReason)}"`
+  return `<button type="button" class="panel-btn ${button.kind}-open" data-show-${button.kind}="${escapeAttr(button.scenarioId)}" aria-controls="inspector" aria-expanded="false"${disabledHtml}>${button.iconSvg}<span>${escapeHtml(button.text)}</span></button>`
+}
+
 /** Opens the component diagram for this scenario in the inspector. Disabled when no message links two components. */
 function componentsControl(scenario: Scenario): string {
-  const drawable = hasComponentDiagram(scenario)
-  const off = drawable ? '' : ' disabled title="No messages between components"'
-  return `<button type="button" class="components-open" data-show-components="${escapeAttr(scenario.id)}"${off}>Component diagram</button>`
+  return panelButtonHtml({
+    kind: 'components',
+    scenarioId: scenario.id,
+    iconSvg: COMPONENTS_ICON_SVG,
+    text: 'Component diagram',
+    disabledReason: hasComponentDiagram(scenario) ? null : 'No messages between components',
+  })
 }
 
 /** Opens this scenario's metrics in the inspector. Disabled when there are none (metrics off or nothing timed). */
 function metricsControl(scenario: Scenario): string {
-  const off = scenario.metrics.length > 0 ? '' : ' disabled title="No metrics for this scenario"'
-  return `<button type="button" class="metrics-open" data-show-metrics="${escapeAttr(scenario.id)}"${off}>Metrics</button>`
+  return panelButtonHtml({
+    kind: 'metrics',
+    scenarioId: scenario.id,
+    iconSvg: METRICS_ICON_SVG,
+    text: 'Metrics',
+    disabledReason: scenario.metrics.length > 0 ? null : 'No metrics for this scenario',
+  })
 }
 
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {

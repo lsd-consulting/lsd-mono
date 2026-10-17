@@ -25,7 +25,7 @@ import { trackTopbarHeight } from '../lib/topbar-height'
 import {
   scenarioFrom,
   openError,
-  syncPrintCopies,
+  syncWithPanel,
   syncPrintPanel,
   openComponents,
   openMetrics,
@@ -192,7 +192,7 @@ function bindSidePanel(): void {
     onClose: (opened) => {
       writeScenarioHash()
       session.panelScenarioId = null
-      syncPrintCopies()
+      syncWithPanel()
       if (session.switchingScenario) {
         session.invoker = null
         return
@@ -241,6 +241,13 @@ function onMainClick(ev: MouseEvent): void {
       },
     )
   ) {
+    return
+  }
+  // Metrics or Component diagram while its view is open: close it, like any expanded control.
+  const expandedBtn = target.closest<HTMLButtonElement>('.panel-btn[aria-expanded="true"]')
+  if (expandedBtn) {
+    session.inspector?.close()
+    expandedBtn.focus()
     return
   }
   const componentsBtn = target.closest<HTMLButtonElement>('[data-show-components]')

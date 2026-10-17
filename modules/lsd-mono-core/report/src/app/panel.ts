@@ -28,13 +28,28 @@ export function openError(scenario: Scenario): void {
     message: err.message,
     stack: err.stack,
   })
-  syncPrintCopies()
+  syncWithPanel()
 }
 
-/** Print copies of the side panel follow what it shows. The panel itself never prints. */
-export function syncPrintCopies(): void {
+/**
+ * Everything that follows what the side panel shows: its print copies (the panel itself
+ * never prints) and the pressed state of the toolbar's Metrics and Component diagram buttons.
+ */
+export function syncWithPanel(): void {
   syncPrintMetrics()
   syncPrintPanel()
+  syncPanelButtons()
+}
+
+/** aria-expanded on the toolbar's Metrics and Component diagram buttons: true while that view is open for that scenario. */
+function syncPanelButtons(): void {
+  const open = session.inspector?.isOpen() ? session.invoker : null
+  for (const button of document.querySelectorAll<HTMLButtonElement>('.panel-controls .panel-btn')) {
+    const kind = button.dataset.showMetrics !== undefined ? 'metrics' : 'components'
+    const scenarioId = button.dataset.showMetrics ?? button.dataset.showComponents
+    const expanded = open?.kind === kind && open.scenarioId === scenarioId
+    button.setAttribute('aria-expanded', String(expanded))
+  }
 }
 
 /**
@@ -82,7 +97,7 @@ export function openComponents(scenario: Scenario): void {
   session.invoker = { scenarioId: scenario.id, kind: 'components' }
   writeScenarioHash()
   session.inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
-  syncPrintCopies()
+  syncWithPanel()
 }
 
 export function openMetrics(scenario: Scenario): void {
@@ -95,7 +110,7 @@ export function openMetrics(scenario: Scenario): void {
     metrics: scenario.metrics,
     timingHtml: timingPanelHtml(scenario),
   })
-  syncPrintCopies()
+  syncWithPanel()
 }
 
 export function openMessage(scenario: Scenario, msg: MessageEvent): void {
@@ -104,7 +119,7 @@ export function openMessage(scenario: Scenario, msg: MessageEvent): void {
   session.invoker = { scenarioId: scenario.id, messageId: msg.id }
   writeHash({ scenarioId: scenario.id, messageId: msg.id })
   session.inspector.openMessage(scenario.id, msg)
-  syncPrintCopies()
+  syncWithPanel()
 }
 
 export function messageFromNode(node: Element): { scenarioId: string; message: MessageEvent } | null {

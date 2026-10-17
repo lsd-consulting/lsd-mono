@@ -62,15 +62,79 @@
 .inspector-body {
   padding: 16px;
 }
+/* Metrics and Component diagram: the toolbar's way into the side panel. Set apart from
+   zoom and find (pushed right, accent tint, icon) and pressed while their view is open. */
 .panel-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-left: auto;
 }
-.components-open:disabled,
-.metrics-open:disabled {
+.seq-toolbar .panel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-inline: 10px;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.panel-btn-icon {
+  flex: none;
+  fill: none;
+  stroke: var(--accent-strong);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.seq-toolbar .panel-btn:hover:not(:disabled) {
+  border-color: var(--accent-strong);
+}
+.seq-toolbar .panel-btn[aria-expanded="true"] {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--bg);
+}
+.panel-btn[aria-expanded="true"] .panel-btn-icon {
+  stroke: currentColor;
+}
+.seq-toolbar .panel-btn:disabled {
+  border-color: var(--border);
+  background: var(--surface);
   opacity: 0.45;
   cursor: not-allowed;
+}
+.panel-btn:disabled .panel-btn-icon {
+  stroke: currentColor;
+}
+/* High contrast: a heavier edge, drawn inside so the toolbar keeps its height. */
+[data-theme="contrast"] .seq-toolbar .panel-btn:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+/* Touch: a full 44px target. */
+@media (pointer: coarse) {
+  .seq-toolbar .panel-btn {
+    min-height: 44px;
+  }
+}
+/* Windows high contrast: system colours, and the open view takes the highlight. */
+@media (forced-colors: active) {
+  .seq-toolbar .panel-btn {
+    border-color: ButtonText;
+  }
+  .panel-btn-icon {
+    stroke: currentColor;
+  }
+  .seq-toolbar .panel-btn[aria-expanded="true"] {
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+  .seq-toolbar .panel-btn:disabled {
+    border-color: GrayText;
+    color: GrayText;
+  }
 }
 #inspector-metrics {
   margin-top: 4px;

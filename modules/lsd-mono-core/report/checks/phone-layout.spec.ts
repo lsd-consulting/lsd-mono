@@ -69,6 +69,25 @@ for (const [phone, device] of Object.entries(PHONES)) {
       expect(await shownNavItems(page)).toHaveLength(1)
     })
 
+    test('Metrics and Component diagram share a toolbar row inside the card, as 44px touch targets', async ({
+      page,
+    }) => {
+      await open(page, 'report')
+      const toolbar = page.locator('.seq-toolbar')
+      const bar = (await toolbar.boundingBox())!
+      expect(await toolbar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0)
+      const boxes = []
+      for (const name of ['Metrics', 'Component diagram']) {
+        const button = toolbar.getByRole('button', { name, exact: true })
+        const box = (await button.boundingBox())!
+        expect(box.height, name).toBeGreaterThanOrEqual(44)
+        expect(box.x, name).toBeGreaterThanOrEqual(bar.x)
+        expect(box.x + box.width, name).toBeLessThanOrEqual(bar.x + bar.width + 0.5)
+        boxes.push(box)
+      }
+      expect(Math.abs(boxes[0].y - boxes[1].y)).toBeLessThan(1)
+    })
+
     test('a deep link selects its scenario in the folded list, and a search lists every match', async ({ page }) => {
       await open(page, 'report', '#scenario=sc4')
       await expect(page.locator('#scenario-title')).toHaveText('Four')
