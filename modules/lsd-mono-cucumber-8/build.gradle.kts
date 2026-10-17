@@ -6,9 +6,9 @@ plugins {
 }
 
 // Line coverage was 50.4% when the floor was set (#30), with the readme sample counted. Without it
-// (lsd.coverage leaves the readme source set out) it is 85.5%.
+// (lsd.coverage leaves the readme source set out), and with the outcome and event tests (#53), it is 100%.
 lsdCoverage {
-    lineFloor.set(83)
+    lineFloor.set(97)
 }
 
 description = "LSD Mono Cucumber 8 integration — plugin for living sequence diagram reports"

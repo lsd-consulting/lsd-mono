@@ -8,13 +8,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.junit.platform.engine.discovery.DiscoverySelectors.selectClasspathResource
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
-import org.junit.platform.launcher.core.LauncherFactory
-import org.junit.platform.launcher.listeners.SummaryGeneratingListener
 import java.nio.file.Path
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.readText
 
 /**
  * Runs a feature through Cucumber 8 with [LsdCucumberPlugin] and checks the
@@ -42,20 +36,12 @@ class LsdCucumberPluginTest {
 
     @Test
     fun `scenario captured through the plugin lands in ReportJson`() {
-        val summary = SummaryGeneratingListener()
-        val request = LauncherDiscoveryRequestBuilder
-            .request()
-            .selectors(selectClasspathResource("io/lsdconsulting/lsd/mono/cucumber/fixture/place_order.feature"))
-            .configurationParameter("cucumber.glue", "io.lsdconsulting.lsd.mono.cucumber.fixture")
-            .configurationParameter("cucumber.plugin", "io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin")
-            .configurationParameter("cucumber.publish.enabled", "false")
-            .build()
-        LauncherFactory.create().execute(request, summary)
+        val summary = runFeatures("place_order.feature")
 
-        assertEquals(0, summary.summary.testsFailedCount.toInt(), summary.summary.failures.toString())
-        assertTrue(summary.summary.testsSucceededCount >= 1)
+        assertEquals(0, summary.testsFailedCount.toInt(), summary.failures.toString())
+        assertTrue(summary.testsSucceededCount >= 1)
 
-        val json = tempDir.listDirectoryEntries("place_order-*-report.json").single().readText()
+        val json = reportJson(tempDir, "place_order")
         assertTrue(json.contains(""""title": "places an order""""), json)
         assertTrue(json.contains("When the customer places an order for socks"), json)
         assertTrue(json.contains(""""label": "POST /orders""""), json)

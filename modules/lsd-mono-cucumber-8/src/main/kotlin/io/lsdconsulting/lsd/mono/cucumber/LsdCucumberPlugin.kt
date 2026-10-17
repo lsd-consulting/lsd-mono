@@ -12,6 +12,7 @@ import io.cucumber.plugin.event.TestRunStarted
 import io.cucumber.plugin.event.TestSourceParsed
 import io.cucumber.plugin.event.TestStepStarted
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
@@ -86,11 +87,16 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     }
 
     private fun onTestCaseStarted(event: TestCaseStarted) {
-        val testCase = event.testCase
-        val featureKey = testCase.featureKey()
-        features.computeIfAbsent(featureKey) { testCase.featureTitle() to featureOrder.incrementAndGet() }
-        lsd.findScenario(testCase.scenarioKey())?.discard()
-        lsd.beginScenario(reportKey = featureKey, key = testCase.scenarioKey())
+        // A retried test case starts again under the same id: only its last attempt is reported.
+        lsd.findScenario(event.testCase.scenarioKey())?.discard()
+        begin(event.testCase, bindCurrentThread = true)
+    }
+
+    /** Begin [testCase]'s scenario in its feature's report, noting the feature for the end of the run. */
+    private fun begin(testCase: TestCase, bindCurrentThread: Boolean): LsdScenario {
+        val key = featureKey(testCase.uri)
+        features.computeIfAbsent(key) { featureTitle(testCase.uri, testCase.name) to featureOrder.incrementAndGet() }
+        return lsd.beginScenario(reportKey = key, key = testCase.scenarioKey(), bindCurrentThread = bindCurrentThread)
     }
 
     private fun onTestStepStarted(event: TestStepStarted) {
@@ -104,9 +110,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
 
     private fun onTestCaseFinished(event: TestCaseFinished) {
         val testCase = event.testCase
-        val scenario =
-            lsd.findScenario(testCase.scenarioKey())
-                ?: lsd.beginScenario(reportKey = testCase.featureKey(), key = testCase.scenarioKey(), bindCurrentThread = false)
+        val scenario = lsd.findScenario(testCase.scenarioKey()) ?: begin(testCase, bindCurrentThread = false)
         val description =
             testCase.testSteps
                 .filterIsInstance<PickleStepTestStep>()
@@ -132,15 +136,6 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
 
     private fun TestCase.scenarioKey(): String = "cucumber:$id"
 
-    /** Stable across machines: a file URI under the working directory becomes a relative path. */
-    private fun TestCase.featureKey(): String {
-        val uri = uri
-        if (uri.scheme != "file") return uri.toString()
-        val path = runCatching { Paths.get(uri) }.getOrNull() ?: return uri.toString()
-        val cwd: Path = Paths.get("").toAbsolutePath()
-        return if (path.startsWith(cwd)) cwd.relativize(path).toString().replace('\\', '/') else uri.toString()
-    }
-
     private fun TestCase.scenarioTitle(): String {
         if (keyword.contains("outline", ignoreCase = true)) {
             val number =
@@ -150,10 +145,21 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
         }
         return name
     }
+}
 
-    private fun TestCase.featureTitle(): String {
-        val text = uri.toString().substringBefore('?').substringBefore('#')
-        val file = text.substringAfterLast('/').substringAfterLast(':')
-        return file.removeSuffix(".feature").ifBlank { name }
-    }
+/**
+ * The report key of the feature at [uri], stable across machines: a file under [cwd] becomes its
+ * relative path. Any other URI (`classpath:`, a file elsewhere) is kept as it is.
+ */
+internal fun featureKey(uri: URI, cwd: Path = Paths.get("").toAbsolutePath()): String {
+    if (uri.scheme != "file") return uri.toString()
+    val path = runCatching { Paths.get(uri) }.getOrNull() ?: return uri.toString()
+    return if (path.startsWith(cwd)) cwd.relativize(path).toString().replace('\\', '/') else uri.toString()
+}
+
+/** The report title of the feature at [uri]: its file name without `.feature`, else [fallback]. */
+internal fun featureTitle(uri: URI, fallback: String): String {
+    val text = uri.toString().substringBefore('?').substringBefore('#')
+    val file = text.substringAfterLast('/').substringAfterLast(':')
+    return file.removeSuffix(".feature").ifBlank { fallback }
 }
