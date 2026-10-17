@@ -1,7 +1,7 @@
 import io.lsdconsulting.lsd.mono.gradle.nodeCommandLine
 
 // Sample reports for lsd-mono-core: the README report, the feature tour its GIF clicks around, and
-// the kitchen-sink report the Pages workflow publishes. They are programs in the `readme` source
+// the example report the Pages workflow publishes. They are programs in the `readme` source
 // set. Slow, and they write docs/ or build/pages, so none of these tasks is on build or check.
 plugins {
     java
@@ -42,16 +42,17 @@ fun registerCapture(
 
 val readmeReportDir = layout.buildDirectory.dir("readme-report")
 val featureTourReportDir = layout.buildDirectory.dir("feature-tour-report")
-val kitchenSinkReportDir = layout.buildDirectory.dir("kitchen-sink-report")
+val exampleReportDir = layout.buildDirectory.dir("example-report")
 val readmeDocsDir = rootProject.layout.projectDirectory.dir("docs/readme")
 val pagesDir = layout.buildDirectory.dir("pages")
 
 registerCapture("captureReadmeReport", "README scenario", "ReadmeSampleKt", readmeReportDir)
 // Feature tour: a trimmed shop report the root README's tour GIF clicks around.
 registerCapture("captureFeatureTourReport", "feature-tour scenarios", "FeatureTourSampleKt", featureTourReportDir)
-// Kitchen sink: every diagram feature in one report, for eyeballing layout. Not committed.
+// Example report (the kitchen sink): every diagram feature in one report, for eyeballing layout.
+// Published on Pages as example-report.html. Not committed.
 val captureKitchenSinkReport =
-    registerCapture("captureKitchenSinkReport", "kitchen-sink scenarios", "KitchenSinkSampleKt", kitchenSinkReportDir)
+    registerCapture("captureKitchenSinkReport", "example report scenarios", "KitchenSinkSampleKt", exampleReportDir)
 
 tasks.register<Exec>("readmeSamples") {
     group = "documentation"
@@ -73,15 +74,15 @@ tasks.register<Exec>("readmeSamples") {
 tasks.register<Sync>("kitchenSinkSample") {
     group = "documentation"
     description =
-        "Build the GitHub Pages site (the kitchen-sink report and its index.html) into build/pages. Not part of build or check."
+        "Build the GitHub Pages site (the example report and its index.html) into build/pages. Not part of build or check."
     dependsOn(captureKitchenSinkReport)
     // The report directory as written: index.html is the site's front page and loads each report's
     // data script. Index entries (.lsd-index) are bookkeeping and are not published.
-    from(kitchenSinkReportDir) { exclude(".lsd-index/**") }
-    // A stable address for the kitchen-sink diagram (files carry a short hash). It loads the hashed payloads file.
-    from(kitchenSinkReportDir) {
-        include("kitchen-sink-*-diagram.html")
-        rename("""kitchen-sink-[0-9a-f]{8}-diagram\.html""", "kitchen-sink.html")
+    from(exampleReportDir) { exclude(".lsd-index/**") }
+    // A stable address for the example report's diagram (files carry a short hash). It loads the hashed payloads file.
+    from(exampleReportDir) {
+        include("Example-report-*-diagram.html")
+        rename("""Example-report-[0-9a-f]{8}-diagram\.html""", "example-report.html")
     }
     into(pagesDir)
 }

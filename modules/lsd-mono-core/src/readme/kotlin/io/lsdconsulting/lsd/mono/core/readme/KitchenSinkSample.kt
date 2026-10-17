@@ -20,10 +20,10 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 import java.time.Instant
 
 /**
- * Kitchen-sink report: an online shop order flow that uses every diagram
- * feature, so layout problems are easy to eyeball. Regenerate with
+ * The example report (a kitchen sink, hence the name): an online shop order flow that uses every
+ * diagram feature, so layout problems are easy to eyeball. Regenerate with
  * `./gradlew :modules:lsd-mono-core:kitchenSinkSample`, which builds the Pages site
- * (`build/pages/kitchen-sink.html` and its payload script). The Pages workflow publishes it.
+ * (`build/pages/example-report.html` and its payload script). The Pages workflow publishes it.
  *
  * Four scenarios (happy path, payment declined, out of stock, async
  * fulfilment) across 14 lifelines cover: all six participant shapes, the
@@ -73,7 +73,7 @@ fun main() {
     outOfStock(lsd)
     asyncFulfilment(lsd)
 
-    val files = lsd.completeReport("kitchen-sink")
+    val files = lsd.completeReport("Example report")
     lsd.createIndex()
     println(files.diagramHtml)
 }

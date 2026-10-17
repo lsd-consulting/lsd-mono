@@ -25,7 +25,7 @@ In `modules/lsd-mono-core/report`: `npm run typecheck`, `npm run lint`, `npm tes
   thresholds fail the build when coverage drops below them, and also when coverage is more than 3
   points above them. Raise the floor when you add tests.
 - **Formatting.** `./gradlew spotlessApply` for Kotlin, `npm run format` for the report UI.
-- **Generated files** (samples, GIFs, the kitchen sink) are listed in
+- **Generated files** (samples, GIFs, the example report) are listed in
   [docs/generated-files.md](docs/generated-files.md) with the task that makes each one.
 
 ## Pull requests
