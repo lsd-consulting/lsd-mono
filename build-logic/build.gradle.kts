@@ -12,6 +12,7 @@ dependencies {
     implementation(libs.kotlin.gradle.plugin)
     implementation(libs.spotless.gradle.plugin)
     implementation(libs.kover.gradle.plugin)
+    implementation(libs.dokka.gradle.plugin)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

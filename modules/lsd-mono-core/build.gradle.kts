@@ -14,7 +14,7 @@ lsdCoverage {
 }
 
 description =
-    "LSD Mono core — greenfield report UI + thin Kotlin capture/report façade (not legacy lsd-core)"
+    "Living sequence diagrams: capture the interactions in your tests and write an interactive HTML report"
 
 dependencies {
     testImplementation(platform(libs.junit.bom))

@@ -9,10 +9,15 @@ kotlinx-coroutines = "1.11.0"
 spotless = "8.10.4"
 ktlint = "1.8.0"
 kover = "0.9.11"
+# Javadoc jars for Maven Central (Dokka's javadoc format), as lsd-core does.
+dokka = "2.2.0"
+# Publishes to Maven Central through the Central Portal's OSSRH staging API, as lsd-core does.
+nexus-publish = "2.0.0"
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 spotless-gradle-plugin = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 kover-gradle-plugin = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version.ref = "kover" }
+dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
 # Not a dependency: Spotless downloads this ktlint version (lsd.formatting reads the version),
 # and listing it here lets Renovate propose updates.
 ktlint-cli = { module = "com.pinterest.ktlint:ktlint-cli", version.ref = "ktlint" }
@@ -37,3 +42,4 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }

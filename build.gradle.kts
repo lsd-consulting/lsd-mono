@@ -4,6 +4,7 @@ plugins {
     // Root is a thin aggregator; convention plugins live in build-logic.
     base
     id("lsd.formatting")
+    alias(libs.plugins.nexus.publish)
 }
 
 // The Maven Central namespace lsd-consulting already publishes lsd-core under. Packages stay
@@ -27,6 +28,19 @@ version =
                     .takeIf { describe.result.get().exitValue == 0 }
             }.getOrNull(),
     )
+
+// Maven Central, through the Central Portal's OSSRH staging API (what lsd-core uses). Credentials
+// are a Central Portal user token, from ORG_GRADLE_PROJECT_sonatypeUsername and
+// ORG_GRADLE_PROJECT_sonatypePassword. Publish, close and release in one Gradle run: the staging
+// API expects every call from the same IP (docs/releasing.md).
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+        }
+    }
+}
 
 // Prints the version a build here would publish; the release workflow checks it.
 tasks.register("printVersion") {

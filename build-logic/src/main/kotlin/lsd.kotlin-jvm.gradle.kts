@@ -6,6 +6,7 @@ plugins {
     id("lsd.major-line")
     id("lsd.formatting")
     id("lsd.coverage")
+    id("lsd.publishing")
 }
 
 extensions.configure<MajorLines>("majorLines") {
