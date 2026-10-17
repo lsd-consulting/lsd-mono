@@ -53,6 +53,7 @@ tasks.register<Exec>("readmeSamples") {
     inputs.dir(readmeReportDir)
     inputs.dir(featureTourReportDir)
     inputs.file(reportDir.file("scripts/readme-samples.mjs"))
+    inputs.dir(reportDir.dir("scripts/readme"))
     outputs.file(readmeDocsDir.file("feature-tour.gif"))
     outputs.file(readmeDocsDir.file("components.gif"))
     val reportOut = readmeReportDir.get().asFile.absolutePath

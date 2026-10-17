@@ -64,6 +64,7 @@ fun Project.registerIntegrationReadmeSamples(
         workingDir = coreReportDir.asFile
         inputs.dir(reportDir)
         inputs.file(coreReportDir.file("scripts/readme-samples.mjs"))
+        inputs.dir(coreReportDir.dir("scripts/readme"))
         listOf("diagram.png", "inspector.png", "zoom.gif").forEach { outputs.file(docsDir.file(it)) }
         nodeCommandLine("scripts/readme-samples.mjs", reportDir.get().asFile.absolutePath, docsDir.asFile.absolutePath)
     }
