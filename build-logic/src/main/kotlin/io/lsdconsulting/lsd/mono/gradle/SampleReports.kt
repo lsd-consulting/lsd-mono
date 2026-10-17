@@ -33,9 +33,8 @@ fun JavaExec.writesSampleReport(outDir: Provider<Directory>) {
 
 /**
  * The README sample tasks of an integration module (JUnit, Cucumber): `captureReadmeReport` runs
- * [mainClass] from [readme] into `build/readme-report`, and `readmeSamples` turns that report into
- * the module's `docs/readme` diagram, inspector and zoom images with the core report's
- * `scripts/readme-samples.mjs`.
+ * [mainClass] from [readme] into `build/readme-report`, and `readmeSamples` screenshots that report
+ * into the module's `docs/readme/diagram.png` with the core report's `scripts/readme-samples.mjs`.
  */
 fun Project.registerIntegrationReadmeSamples(
     readme: SourceSet,
@@ -44,7 +43,7 @@ fun Project.registerIntegrationReadmeSamples(
     configure: JavaExec.() -> Unit = {},
 ): TaskProvider<Exec> {
     val reportDir = layout.buildDirectory.dir("readme-report")
-    val docsDir = layout.projectDirectory.dir("docs/readme")
+    val png = layout.projectDirectory.file("docs/readme/diagram.png")
     val core = project(":modules:lsd-mono-core")
     val coreReportDir = core.layout.projectDirectory.dir("report")
     val capture =
@@ -59,13 +58,14 @@ fun Project.registerIntegrationReadmeSamples(
         }
     return tasks.register<Exec>("readmeSamples") {
         group = "documentation"
-        description = "Regenerate docs/readme PNG and GIF samples from the current report UI. Not part of build or check."
+        description = "Regenerate docs/readme/diagram.png from the current report UI. Not part of build or check."
         dependsOn(capture)
         workingDir = coreReportDir.asFile
         inputs.dir(reportDir)
         inputs.file(coreReportDir.file("scripts/readme-samples.mjs"))
         inputs.dir(coreReportDir.dir("scripts/readme"))
-        listOf("diagram.png", "inspector.png", "zoom.gif").forEach { outputs.file(docsDir.file(it)) }
-        nodeCommandLine("scripts/readme-samples.mjs", reportDir.get().asFile.absolutePath, docsDir.asFile.absolutePath)
+        outputs.file(png)
+        val report = reportDir.get().asFile.absolutePath
+        nodeCommandLine("scripts/readme-samples.mjs", "diagram", report, png.asFile.absolutePath)
     }
 }

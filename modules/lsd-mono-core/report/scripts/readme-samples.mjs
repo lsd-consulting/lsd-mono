@@ -1,40 +1,25 @@
 /**
- * Screenshot the README scenario from the report shell captureReadmeReport wrote.
+ * The README images, taken from the report shell with headless Chromium (the Playwright check:ux
+ * uses). GIFs are encoded in-process: Playwright's ffmpeg build cannot write GIF.
  *
- * Usage: node scripts/readme-samples.mjs <report-dir> <docs-readme-dir> [feature-tour-report-dir]
- * Headless Chromium via the Playwright already used by check:ux.
- * GIFs are encoded in-process. Playwright's ffmpeg build cannot write GIF.
+ * Usage:
+ *   node scripts/readme-samples.mjs diagram <report-dir> <out.png>   a module README's diagram
+ *   node scripts/readme-samples.mjs tour <report-dir> <out.gif>      the root README's feature tour
  *
- * Module READMEs get diagram.png, inspector.png and zoom.gif. The root README gets
- * feature-tour.gif (from the feature-tour report) and components.gif instead.
+ * <report-dir> holds the one *-diagram.html its capture task wrote.
  */
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { decodePng, encodeTour, writeGif } from './readme/gif.mjs'
+import { encodeTour } from './readme/gif.mjs'
 import { serve } from './readme/static-server.mjs'
 
-const reportDir = path.resolve(process.argv[2] ?? '')
-const outDir = path.resolve(process.argv[3] ?? '')
-const tourDir = process.argv[4] ? path.resolve(process.argv[4]) : null
-/** The root README gets the feature tour and components.gif. Module samples keep the stills and zoom.gif. */
-const coreMotion =
-  path.basename(outDir) === 'readme' &&
-  path.basename(path.dirname(outDir)) === 'docs' &&
-  !outDir.includes(`${path.sep}modules${path.sep}`)
-if (!process.argv[2] || !process.argv[3]) {
-  console.error('usage: node scripts/readme-samples.mjs <report-dir> <docs-readme-dir> [feature-tour-report-dir]')
+const [mode, reportArg, outArg] = process.argv.slice(2)
+if (!['diagram', 'tour'].includes(mode) || !reportArg || !outArg) {
+  console.error('usage: node scripts/readme-samples.mjs diagram|tour <report-dir> <out-file>')
   process.exit(1)
 }
-if (coreMotion && !tourDir) {
-  console.error('the root README samples need the feature-tour report dir as the third argument')
-  process.exit(1)
-}
-
-const diagrams = readdirSync(reportDir).filter((name) => name.endsWith('-diagram.html'))
-if (diagrams.length !== 1) {
-  console.error(`expected one *-diagram.html in ${reportDir}, found ${diagrams.join(', ') || 'none'}`)
-  process.exit(1)
-}
+const reportDir = path.resolve(reportArg)
+const outFile = path.resolve(outArg)
 
 /**
  * feature-tour.gif: one pass around a small shop report, with a drawn pointer, a click ring,
@@ -43,604 +28,379 @@ if (diagrams.length !== 1) {
 const TOUR_W = 1360
 const TOUR_H = 800
 
-async function recordTour(browser, tourDir, file) {
-  const tourDiagrams = readdirSync(tourDir).filter((name) => name.endsWith('-diagram.html'))
-  if (tourDiagrams.length !== 1) throw new Error(`expected one *-diagram.html in ${tourDir}`)
-  const tourServer = await serve(tourDir)
-  const tourAddress = tourServer.address()
-  const tourPort = typeof tourAddress === 'object' && tourAddress ? tourAddress.port : 0
-  const context = await browser.newContext({
-    viewport: { width: TOUR_W, height: TOUR_H },
-    deviceScaleFactor: 1,
-    colorScheme: 'light',
-    reducedMotion: 'reduce',
-  })
+/** Open the report in [dir] in a fresh context, run [use] on the page, then close everything. */
+async function withReportPage(browser, dir, contextOptions, storage, use) {
+  const diagrams = readdirSync(dir).filter((name) => name.endsWith('-diagram.html'))
+  if (diagrams.length !== 1) {
+    throw new Error(`expected one *-diagram.html in ${dir}, found ${diagrams.join(', ') || 'none'}`)
+  }
+  const server = await serve(dir)
+  const address = server.address()
+  const port = typeof address === 'object' && address ? address.port : 0
+  const context = await browser.newContext({ deviceScaleFactor: 1, reducedMotion: 'reduce', ...contextOptions })
   try {
     const page = await context.newPage()
-    await page.addInitScript(() => {
-      localStorage.setItem('lsd-report-theme', 'light')
-      localStorage.removeItem('lsd-report-sidebar')
-      sessionStorage.removeItem('lsd-report-inspector-width')
-    })
+    await page.addInitScript((items) => {
+      for (const [store, key, value] of items) {
+        const target = store === 'session' ? sessionStorage : localStorage
+        if (value == null) target.removeItem(key)
+        else target.setItem(key, value)
+      }
+    }, storage)
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto(`http://127.0.0.1:${tourPort}/${encodeURIComponent(tourDiagrams[0])}`, { waitUntil: 'load' })
+    await page.goto(`http://127.0.0.1:${port}/${encodeURIComponent(diagrams[0])}`, { waitUntil: 'load' })
     await page.locator('.seq-svg').first().waitFor()
     await page.locator('.msg-label').first().waitFor()
     await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]))
-
-    // Overlays: headless Chromium paints no cursor, so the pointer, click ring and caption are drawn.
-    await page.addStyleTag({
-      content: `
-        #tour-pointer{position:fixed;left:0;top:0;width:26px;height:26px;z-index:10002;pointer-events:none;transform:translate(-3px,-2px)}
-        #tour-ring{position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:3px solid #f97316;background:rgba(249,115,22,.22);z-index:10001;pointer-events:none;display:none}
-        #tour-caption{position:fixed;left:24px;bottom:22px;z-index:10000;pointer-events:none;
-          background:rgba(15,23,42,.92);color:#fff;font:600 19px/1.3 Inter,system-ui,sans-serif;padding:10px 20px;border-radius:12px;
-          box-shadow:0 6px 24px rgba(0,0,0,.25);white-space:nowrap}
-        #tour-caption:empty{display:none}
-        #tour-step{display:inline-block;min-width:26px;margin-right:10px;padding:1px 8px;border-radius:999px;background:#f97316;color:#fff;font-size:15px;text-align:center}
-      `,
-    })
-    await page.evaluate(() => {
-      const pointer = document.createElement('div')
-      pointer.id = 'tour-pointer'
-      pointer.innerHTML =
-        '<svg viewBox="0 0 22 22" width="26" height="26"><path d="M2 2 L2 18 L7 13.5 L10.5 20.5 L13.5 19 L10 12 L16.5 12 Z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/></svg>'
-      const ring = document.createElement('div')
-      ring.id = 'tour-ring'
-      const caption = document.createElement('div')
-      caption.id = 'tour-caption'
-      document.documentElement.append(ring, pointer, caption)
-    })
-
-    const frames = []
-    let at = { x: TOUR_W * 0.55, y: TOUR_H * 0.45 }
-    /** Add a frame shown for `delay` ms. An unchanged picture only lengthens the last frame. */
-    async function snap(delay) {
-      const png = await page.screenshot({ animations: 'disabled', caret: 'hide', type: 'png' })
-      const last = frames[frames.length - 1]
-      if (last && last.png.equals(png)) {
-        last.delay += delay
-        return
-      }
-      frames.push({ png, delay })
-    }
-    const total = () => frames.reduce((sum, frame) => sum + frame.delay, 0)
-    async function placePointer(x, y) {
-      at = { x, y }
-      await page.evaluate(
-        ([px, py]) => {
-          const pointer = document.querySelector('#tour-pointer')
-          pointer.style.left = `${px}px`
-          pointer.style.top = `${py}px`
-        },
-        [x, y],
-      )
-    }
-    async function moveTo(x, y, steps = 7) {
-      const from = at
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps
-        const ease = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
-        await placePointer(from.x + (x - from.x) * ease, from.y + (y - from.y) * ease)
-        await snap(45)
-      }
-    }
-    async function centre(locator) {
-      await locator.scrollIntoViewIfNeeded()
-      const box = await locator.boundingBox()
-      if (!box) throw new Error('feature tour target has no box')
-      return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-    }
-    async function ring(show) {
-      await page.evaluate(
-        ([visible, px, py]) => {
-          const el = document.querySelector('#tour-ring')
-          el.style.display = visible ? 'block' : 'none'
-          el.style.left = `${px}px`
-          el.style.top = `${py}px`
-        },
-        [show, at.x, at.y],
-      )
-    }
-    /** Point at a control, show the click ring, then really click it. */
-    async function click(locator, { hold = 500, settle } = {}) {
-      const target = await centre(locator)
-      await moveTo(target.x, target.y)
-      await ring(true)
-      await snap(140)
-      await locator.click()
-      if (settle) await settle()
-      await page.waitForTimeout(120)
-      await snap(160)
-      await ring(false)
-      await snap(hold)
-    }
-    let beat = 0
-    async function caption(text, { sameBeat = false } = {}) {
-      if (!sameBeat) beat++
-      await page.evaluate(
-        ([n, words]) => {
-          const el = document.querySelector('#tour-caption')
-          el.innerHTML = ''
-          if (!words) return
-          const step = document.createElement('span')
-          step.id = 'tour-step'
-          step.textContent = String(n)
-          el.append(step, document.createTextNode(words))
-        },
-        [beat, text],
-      )
-    }
-
-    const diagram = page.locator('.seq-diagram').first()
-    const scroll = diagram.locator('.seq-scroll')
-    const button = (name, exact = false) => diagram.getByRole('button', { name, exact })
-
-    // 1. Overview: the list down the side, one scenario at a time (the first one first).
-    await placePointer(at.x, at.y)
-    await caption('Every scenario in the list; the first one opens first')
-    await snap(900)
-    await moveTo(130, 330, 6)
-    await snap(500)
-    await caption('Choose a scenario to see it on its own', { sameBeat: true })
-    await click(page.locator('#scenario-nav [data-nav]').filter({ hasText: 'Shipping update' }), {
-      hold: 900,
-      settle: () => page.locator('.scenario-card h2', { hasText: 'Shipping update' }).waitFor(),
-    })
-    await click(page.locator('#scenario-nav [data-nav]').filter({ hasText: 'Place an order and pay by card' }), {
-      hold: 600,
-      settle: () => page.locator('.scenario-card h2', { hasText: 'Place an order and pay by card' }).waitFor(),
-    })
-
-    // 2. Zoom.
-    await caption('Zoom in and out, or Fit the diagram to the panel')
-    await page.evaluate(() => {
-      const toolbar = document.querySelector('.seq-diagram .seq-toolbar')
-      const top = toolbar.getBoundingClientRect().top + window.scrollY - 70
-      window.scrollTo(0, Math.max(0, top))
-    })
-    await placePointer(at.x, Math.min(at.y, 300))
-    await snap(500)
-    await click(button('Zoom in'), { hold: 300 })
-    await click(button('Zoom in'), { hold: 400 })
-    await click(button('Zoom out'), { hold: 300 })
-    await click(button('Fit to screen'), { hold: 800 })
-
-    // 3. Find.
-    await caption('Find messages and notes in the diagram')
-    const find = diagram.locator('[data-diagram-find]')
-    await click(find, { hold: 200 })
-    for (const chunk of ['au', 'th', 'or', 'ise']) {
-      await page.keyboard.type(chunk)
-      await page.waitForTimeout(150)
-      await snap(130)
-    }
-    await snap(500)
-    // Scroll the diagram down to the match, a step at a time.
-    const arrow = page.getByRole('button', { name: 'Open authorise £24.00' })
-    for (let i = 0; i < 16; i++) {
-      const view = await scroll.boundingBox()
-      const hit = (await arrow.count()) ? await arrow.boundingBox() : null
-      if (view && hit && hit.y > view.y + 90 && hit.y + hit.height < view.y + view.height * 0.7) break
-      await scroll.evaluate((el) => {
-        el.scrollTop += 70
-      })
-      await page.waitForTimeout(60)
-      await snap(60)
-    }
-    await snap(1100)
-
-    // 4. Open an arrow's JSON, then drag the panel wider.
-    await caption('Click an arrow to open its JSON, and drag the panel wider')
-    await click(arrow, {
-      hold: 900,
-      settle: () => page.locator('#inspector-pre').waitFor({ state: 'visible' }),
-    })
-    const handle = page.locator('#inspector-resize')
-    const grip = await handle.boundingBox()
-    if (!grip) throw new Error('inspector resize handle has no box')
-    const gx = grip.x + grip.width / 2
-    const gy = grip.y + Math.min(260, grip.height / 2)
-    await moveTo(gx, gy)
-    await page.mouse.move(gx, gy)
-    await page.mouse.down()
-    await ring(true)
-    await snap(120)
-    for (let i = 1; i <= 6; i++) {
-      const x = gx - (220 * i) / 6
-      await page.mouse.move(x, gy)
-      await placePointer(x, gy)
-      await ring(true)
-      await snap(70)
-    }
-    await page.mouse.up()
-    await ring(false)
-    await snap(1000)
-
-    // 5. Component diagram, and a link's messages.
-    await caption('See the scenario as a component diagram')
-    await click(page.locator('[data-show-components]').first(), {
-      hold: 1100,
-      settle: () => page.locator('#inspector-graph svg.component-diagram').waitFor(),
-    })
-    const link = page.locator('#inspector-graph').getByRole('button', { name: 'Orders to Orders DB, 3 interactions' })
-    await caption('Click a link to list the messages behind it', { sameBeat: true })
-    const linkBox = await link.locator('.edge-badge').boundingBox()
-    if (linkBox) {
-      await moveTo(linkBox.x + linkBox.width / 2, linkBox.y + linkBox.height / 2)
-      await ring(true)
-      await snap(140)
-      await link.focus()
-      await page.keyboard.press('Enter')
-      await page.evaluate(() => document.activeElement?.blur())
-      await snap(160)
-      await ring(false)
-      // The list sits under the drawing; bring it into the panel's view.
-      await page.locator('#inspector-graph .component-links').evaluate((el) => {
-        el.scrollIntoView({ block: 'end' })
-      })
-      const listed = await page.locator('#inspector-graph .component-links h3').boundingBox()
-      if (listed) await moveTo(listed.x + 60, listed.y - 20, 5)
-      await snap(1600)
-    }
-
-    // 6. Timing: the summary strip opens swim lanes and the waterfall.
-    await caption('Timing: summary strip, swim lanes and a waterfall')
-    await page.evaluate(() => window.scrollTo(0, 0))
-    await click(page.locator('.timing-strip .timing-chip').first(), {
-      hold: 900,
-      settle: () => page.locator('#inspector-metrics .swim-lanes').waitFor({ state: 'visible' }),
-    })
-    await caption('Clock-ordered events carry a clock badge', { sameBeat: true })
-    await page
-      .locator('#inspector-metrics .waterfall .wf-row.clock')
-      .first()
-      .evaluate((el) => {
-        el.scrollIntoView({ block: 'center' })
-      })
-    const clocked = await page.locator('#inspector-metrics .waterfall .wf-row.clock').first().boundingBox()
-    if (clocked) await moveTo(clocked.x + 80, clocked.y + clocked.height / 2, 5)
-    await snap(1100)
-    await page.locator('#inspector-close').click()
-    await page.locator('#inspector').waitFor({ state: 'hidden' })
-
-    await find.fill('')
-    await page.waitForTimeout(150)
-
-    // 7. Hide a participant.
-    await caption('Hover a participant and press × to hide it')
-    const hideX = button('Hide Order events', true)
-    const head = hideX.locator('xpath=ancestor::div[@data-participant-head][1]')
-    const headAt = await centre(head)
-    await moveTo(headAt.x, headAt.y)
-    await page.mouse.move(headAt.x, headAt.y)
-    await snap(700)
-    await click(hideX, { hold: 900 })
-    // The chip lists what is hidden, with Show and Show all.
-    await click(diagram.locator('.hidden-chip'), { hold: 1300 })
-    await page.keyboard.press('Escape')
-    await snap(200)
-
-    // 8. Themes: light, high contrast, then Auto (follows the OS, light here).
-    await caption('Light and high-contrast themes, or Auto to follow the OS')
-    await page.evaluate(() => window.scrollTo(0, 0))
-    await snap(200)
-    await click(page.locator('#btn-theme'), { hold: 800 })
-    await click(page.locator('#btn-theme'), { hold: 1100 })
-
-    // 10. Collapse the scenario list.
-    await caption('Collapse the scenario list to an icon rail')
-    await click(page.locator('#btn-sidebar'), { hold: 900 })
-
-    const ms = total()
-    console.log(`feature-tour.gif ${frames.length} frames, ${(ms / 1000).toFixed(1)} s, ${beat} beats`)
-    if (ms < 15000 || ms > 35000) throw new Error(`feature tour runs ${ms} ms, expected 15-35 s`)
-    encodeTour(frames, file, TOUR_W, TOUR_H)
+    await use(page)
   } finally {
     await context.close()
-    await new Promise((resolve) => tourServer.close(resolve))
+    await new Promise((resolve) => server.close(resolve))
   }
+}
+
+async function recordTour(page, file) {
+  // Overlays: headless Chromium paints no cursor, so the pointer, click ring and caption are drawn.
+  await page.addStyleTag({
+    content: `
+      #tour-pointer{position:fixed;left:0;top:0;width:26px;height:26px;z-index:10002;pointer-events:none;transform:translate(-3px,-2px)}
+      #tour-ring{position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:3px solid #f97316;background:rgba(249,115,22,.22);z-index:10001;pointer-events:none;display:none}
+      #tour-caption{position:fixed;left:24px;bottom:22px;z-index:10000;pointer-events:none;
+        background:rgba(15,23,42,.92);color:#fff;font:600 19px/1.3 Inter,system-ui,sans-serif;padding:10px 20px;border-radius:12px;
+        box-shadow:0 6px 24px rgba(0,0,0,.25);white-space:nowrap}
+      #tour-caption:empty{display:none}
+      #tour-step{display:inline-block;min-width:26px;margin-right:10px;padding:1px 8px;border-radius:999px;background:#f97316;color:#fff;font-size:15px;text-align:center}
+    `,
+  })
+  await page.evaluate(() => {
+    const pointer = document.createElement('div')
+    pointer.id = 'tour-pointer'
+    pointer.innerHTML =
+      '<svg viewBox="0 0 22 22" width="26" height="26"><path d="M2 2 L2 18 L7 13.5 L10.5 20.5 L13.5 19 L10 12 L16.5 12 Z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/></svg>'
+    const ring = document.createElement('div')
+    ring.id = 'tour-ring'
+    const caption = document.createElement('div')
+    caption.id = 'tour-caption'
+    document.documentElement.append(ring, pointer, caption)
+  })
+
+  const frames = []
+  let at = { x: TOUR_W * 0.55, y: TOUR_H * 0.45 }
+  /** Add a frame shown for `delay` ms. An unchanged picture only lengthens the last frame. */
+  async function snap(delay) {
+    const png = await page.screenshot({ animations: 'disabled', caret: 'hide', type: 'png' })
+    const last = frames[frames.length - 1]
+    if (last && last.png.equals(png)) {
+      last.delay += delay
+      return
+    }
+    frames.push({ png, delay })
+  }
+  const total = () => frames.reduce((sum, frame) => sum + frame.delay, 0)
+  async function placePointer(x, y) {
+    at = { x, y }
+    await page.evaluate(
+      ([px, py]) => {
+        const pointer = document.querySelector('#tour-pointer')
+        pointer.style.left = `${px}px`
+        pointer.style.top = `${py}px`
+      },
+      [x, y],
+    )
+  }
+  async function moveTo(x, y, steps = 7) {
+    const from = at
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps
+      const ease = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
+      await placePointer(from.x + (x - from.x) * ease, from.y + (y - from.y) * ease)
+      await snap(45)
+    }
+  }
+  async function centre(locator) {
+    await locator.scrollIntoViewIfNeeded()
+    const box = await locator.boundingBox()
+    if (!box) throw new Error('feature tour target has no box')
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  }
+  async function ring(show) {
+    await page.evaluate(
+      ([visible, px, py]) => {
+        const el = document.querySelector('#tour-ring')
+        el.style.display = visible ? 'block' : 'none'
+        el.style.left = `${px}px`
+        el.style.top = `${py}px`
+      },
+      [show, at.x, at.y],
+    )
+  }
+  /** Point at a control, show the click ring, then really click it. */
+  async function click(locator, { hold = 500, settle } = {}) {
+    const target = await centre(locator)
+    await moveTo(target.x, target.y)
+    await ring(true)
+    await snap(140)
+    await locator.click()
+    if (settle) await settle()
+    await page.waitForTimeout(120)
+    await snap(160)
+    await ring(false)
+    await snap(hold)
+  }
+  let beat = 0
+  async function caption(text, { sameBeat = false } = {}) {
+    if (!sameBeat) beat++
+    await page.evaluate(
+      ([n, words]) => {
+        const el = document.querySelector('#tour-caption')
+        el.innerHTML = ''
+        if (!words) return
+        const step = document.createElement('span')
+        step.id = 'tour-step'
+        step.textContent = String(n)
+        el.append(step, document.createTextNode(words))
+      },
+      [beat, text],
+    )
+  }
+
+  const diagram = page.locator('.seq-diagram').first()
+  const scroll = diagram.locator('.seq-scroll')
+  const button = (name, exact = false) => diagram.getByRole('button', { name, exact })
+
+  // 1. Overview: the list down the side, one scenario at a time (the first one first).
+  await placePointer(at.x, at.y)
+  await caption('Every scenario in the list; the first one opens first')
+  await snap(900)
+  await moveTo(130, 330, 6)
+  await snap(500)
+  await caption('Choose a scenario to see it on its own', { sameBeat: true })
+  await click(page.locator('#scenario-nav [data-nav]').filter({ hasText: 'Shipping update' }), {
+    hold: 900,
+    settle: () => page.locator('.scenario-card h2', { hasText: 'Shipping update' }).waitFor(),
+  })
+  await click(page.locator('#scenario-nav [data-nav]').filter({ hasText: 'Place an order and pay by card' }), {
+    hold: 600,
+    settle: () => page.locator('.scenario-card h2', { hasText: 'Place an order and pay by card' }).waitFor(),
+  })
+
+  // 2. Zoom.
+  await caption('Zoom in and out, or Fit the diagram to the panel')
+  await page.evaluate(() => {
+    const toolbar = document.querySelector('.seq-diagram .seq-toolbar')
+    const top = toolbar.getBoundingClientRect().top + window.scrollY - 70
+    window.scrollTo(0, Math.max(0, top))
+  })
+  await placePointer(at.x, Math.min(at.y, 300))
+  await snap(500)
+  await click(button('Zoom in'), { hold: 300 })
+  await click(button('Zoom in'), { hold: 400 })
+  await click(button('Zoom out'), { hold: 300 })
+  await click(button('Fit to screen'), { hold: 800 })
+
+  // 3. Find.
+  await caption('Find messages and notes in the diagram')
+  const find = diagram.locator('[data-diagram-find]')
+  await click(find, { hold: 200 })
+  for (const chunk of ['au', 'th', 'or', 'ise']) {
+    await page.keyboard.type(chunk)
+    await page.waitForTimeout(150)
+    await snap(130)
+  }
+  await snap(500)
+  // Scroll the diagram down to the match, a step at a time.
+  const arrow = page.getByRole('button', { name: 'Open authorise £24.00' })
+  for (let i = 0; i < 16; i++) {
+    const view = await scroll.boundingBox()
+    const hit = (await arrow.count()) ? await arrow.boundingBox() : null
+    if (view && hit && hit.y > view.y + 90 && hit.y + hit.height < view.y + view.height * 0.7) break
+    await scroll.evaluate((el) => {
+      el.scrollTop += 70
+    })
+    await page.waitForTimeout(60)
+    await snap(60)
+  }
+  await snap(1100)
+
+  // 4. Open an arrow's JSON, then drag the panel wider.
+  await caption('Click an arrow to open its JSON, and drag the panel wider')
+  await click(arrow, {
+    hold: 900,
+    settle: () => page.locator('#inspector-pre').waitFor({ state: 'visible' }),
+  })
+  const handle = page.locator('#inspector-resize')
+  const grip = await handle.boundingBox()
+  if (!grip) throw new Error('inspector resize handle has no box')
+  const gx = grip.x + grip.width / 2
+  const gy = grip.y + Math.min(260, grip.height / 2)
+  await moveTo(gx, gy)
+  await page.mouse.move(gx, gy)
+  await page.mouse.down()
+  await ring(true)
+  await snap(120)
+  for (let i = 1; i <= 6; i++) {
+    const x = gx - (220 * i) / 6
+    await page.mouse.move(x, gy)
+    await placePointer(x, gy)
+    await ring(true)
+    await snap(70)
+  }
+  await page.mouse.up()
+  await ring(false)
+  await snap(1000)
+
+  // 5. Component diagram, and a link's messages.
+  await caption('See the scenario as a component diagram')
+  await click(page.locator('[data-show-components]').first(), {
+    hold: 1100,
+    settle: () => page.locator('#inspector-graph svg.component-diagram').waitFor(),
+  })
+  const link = page.locator('#inspector-graph').getByRole('button', { name: 'Orders to Orders DB, 3 interactions' })
+  await caption('Click a link to list the messages behind it', { sameBeat: true })
+  const linkBox = await link.locator('.edge-badge').boundingBox()
+  if (linkBox) {
+    await moveTo(linkBox.x + linkBox.width / 2, linkBox.y + linkBox.height / 2)
+    await ring(true)
+    await snap(140)
+    await link.focus()
+    await page.keyboard.press('Enter')
+    await page.evaluate(() => document.activeElement?.blur())
+    await snap(160)
+    await ring(false)
+    // The list sits under the drawing; bring it into the panel's view.
+    await page.locator('#inspector-graph .component-links').evaluate((el) => {
+      el.scrollIntoView({ block: 'end' })
+    })
+    const listed = await page.locator('#inspector-graph .component-links h3').boundingBox()
+    if (listed) await moveTo(listed.x + 60, listed.y - 20, 5)
+    await snap(1600)
+  }
+
+  // 6. Timing: the summary strip opens swim lanes and the waterfall.
+  await caption('Timing: summary strip, swim lanes and a waterfall')
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await click(page.locator('.timing-strip .timing-chip').first(), {
+    hold: 900,
+    settle: () => page.locator('#inspector-metrics .swim-lanes').waitFor({ state: 'visible' }),
+  })
+  await caption('Clock-ordered events carry a clock badge', { sameBeat: true })
+  await page
+    .locator('#inspector-metrics .waterfall .wf-row.clock')
+    .first()
+    .evaluate((el) => {
+      el.scrollIntoView({ block: 'center' })
+    })
+  const clocked = await page.locator('#inspector-metrics .waterfall .wf-row.clock').first().boundingBox()
+  if (clocked) await moveTo(clocked.x + 80, clocked.y + clocked.height / 2, 5)
+  await snap(1100)
+  await page.locator('#inspector-close').click()
+  await page.locator('#inspector').waitFor({ state: 'hidden' })
+
+  await find.fill('')
+  await page.waitForTimeout(150)
+
+  // 7. Hide a participant.
+  await caption('Hover a participant and press × to hide it')
+  const hideX = button('Hide Order events', true)
+  const head = hideX.locator('xpath=ancestor::div[@data-participant-head][1]')
+  const headAt = await centre(head)
+  await moveTo(headAt.x, headAt.y)
+  await page.mouse.move(headAt.x, headAt.y)
+  await snap(700)
+  await click(hideX, { hold: 900 })
+  // The chip lists what is hidden, with Show and Show all.
+  await click(diagram.locator('.hidden-chip'), { hold: 1300 })
+  await page.keyboard.press('Escape')
+  await snap(200)
+
+  // 8. Themes: light, high contrast, then Auto (follows the OS, light here).
+  await caption('Light and high-contrast themes, or Auto to follow the OS')
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await snap(200)
+  await click(page.locator('#btn-theme'), { hold: 800 })
+  await click(page.locator('#btn-theme'), { hold: 1100 })
+
+  // 10. Collapse the scenario list.
+  await caption('Collapse the scenario list to an icon rail')
+  await click(page.locator('#btn-sidebar'), { hold: 900 })
+
+  const ms = total()
+  console.log(`feature-tour.gif ${frames.length} frames, ${(ms / 1000).toFixed(1)} s, ${beat} beats`)
+  if (ms < 15000 || ms > 35000) throw new Error(`feature tour runs ${ms} ms, expected 15-35 s`)
+  encodeTour(frames, file, TOUR_W, TOUR_H)
+}
+
+/**
+ * diagram.png: the scenario card and its diagram, dark theme, the scenario list folded to its
+ * icon rail so the diagram gets the width. Fit, then zoomed back to about normal label size.
+ */
+async function shootDiagram(page, file) {
+  const zoomOut = page.locator('.seq-diagram').getByRole('button', { name: 'Zoom out' })
+  await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
+  // The readout settles after the next frame; read it only then. Fit can land as high as 250%.
+  await page.waitForTimeout(150)
+  for (let i = 0; i < 16; i++) {
+    const pct = Number.parseInt((await page.locator('.zoom-readout').innerText()).trim(), 10)
+    if (!Number.isFinite(pct) || pct <= 140) break
+    await zoomOut.click()
+    await page.waitForTimeout(150)
+  }
+  await page.locator('.seq-scroll').evaluate((el) => {
+    el.scrollTop = 0
+  })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  // Grow the viewport so the description card and the whole diagram stay in frame.
+  const needed = await page.evaluate(() => {
+    const diagram = document.querySelector('.seq-diagram')
+    return Math.ceil((diagram?.getBoundingClientRect().bottom ?? 0) + 32)
+  })
+  const viewport = page.viewportSize()
+  const height = Math.min(Math.max(viewport.height, needed), 2400)
+  if (height !== viewport.height) await page.setViewportSize({ width: viewport.width, height })
+  // From the top of the page, so the top bar and the icon rail frame the scenario.
+  const clip = await page.evaluate(() => {
+    const d = document.querySelector('.seq-diagram').getBoundingClientRect()
+    const scroll = document.querySelector('.seq-scroll')
+    const s = scroll.getBoundingClientRect()
+    const bottom = Math.max(d.bottom, s.top + Math.min(scroll.scrollHeight, s.height))
+    return { x: 0, y: 0, width: window.innerWidth, height: Math.min(Math.ceil(bottom + 20), window.innerHeight) }
+  })
+  if (clip.width < 200 || clip.height < 160) throw new Error(`diagram clip is too small: ${clip.width}x${clip.height}`)
+  writeFileSync(file, await page.screenshot({ clip, animations: 'disabled', caret: 'hide', type: 'png' }))
+  console.log(`diagram.png ${clip.width}x${clip.height}`)
 }
 
 const { chromium } = await import('@playwright/test')
-
-const server = await serve(reportDir)
-const address = server.address()
-const port = typeof address === 'object' && address ? address.port : 0
-const pageUrl = `http://127.0.0.1:${port}/${encodeURIComponent(diagrams[0])}`
-
-mkdirSync(outDir, { recursive: true })
-
+mkdirSync(path.dirname(outFile), { recursive: true })
 const browser = await chromium.launch({ headless: true })
 try {
-  const context = await browser.newContext({
-    viewport: { width: 1680, height: 900 },
-    deviceScaleFactor: 1,
-    colorScheme: 'dark',
-    reducedMotion: 'reduce',
-  })
-  const page = await context.newPage()
-  await page.addInitScript((rail) => {
-    localStorage.setItem('lsd-report-theme', 'dark')
-    sessionStorage.setItem('lsd-report-inspector-width', '440')
-    // Module stills show the scenario list as its icon rail, so the diagram gets the width.
-    if (rail) localStorage.setItem('lsd-report-sidebar', 'collapsed')
-    else localStorage.removeItem('lsd-report-sidebar')
-  }, !coreMotion)
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto(pageUrl, { waitUntil: 'load' })
-  await page.locator('.seq-svg').waitFor()
-  await page.locator('.msg-label').first().waitFor()
-  await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]))
-
-  async function placeScenario() {
-    await page.evaluate(() => {
-      window.scrollTo(0, 0)
-    })
-  }
-
-  /** Grow the viewport so the description card and the diagram both stay in frame. */
-  async function fitScenarioViewport() {
-    const needed = await page.evaluate(() => {
-      const card = document.querySelector('.scenario-card')
-      const diagram = document.querySelector('.seq-diagram')
-      const inspector = document.querySelector('#inspector-pre')
-      const cardTop = card?.getBoundingClientRect().top ?? 0
-      const diagramBottom = diagram?.getBoundingClientRect().bottom ?? 0
-      const inspectorBottom =
-        inspector && getComputedStyle(inspector).display !== 'none' ? inspector.getBoundingClientRect().bottom : 0
-      return Math.ceil(Math.max(diagramBottom, inspectorBottom, cardTop) + 32)
-    })
-    const viewport = page.viewportSize()
-    const height = Math.min(Math.max(viewport.height, needed), 2400)
-    if (height !== viewport.height) {
-      await page.setViewportSize({ width: viewport.width, height })
-    }
-  }
-
-  async function scenarioClip() {
-    await placeScenario()
-    await fitScenarioViewport()
-    const clip = await page.evaluate(() => {
-      const diagram = document.querySelector('.seq-diagram')
-      const scroll = document.querySelector('.seq-scroll')
-      const d = diagram.getBoundingClientRect()
-      const s = scroll.getBoundingClientRect()
-      // From the top of the page, so the top bar and the icon rail frame the scenario.
-      const y = 0
-      const bottom = Math.max(d.bottom, s.top + Math.min(scroll.scrollHeight, s.height))
-      const height = Math.ceil(bottom - y + 20)
-      return {
-        x: 0,
-        y,
-        width: window.innerWidth,
-        height: Math.min(height, window.innerHeight - y),
-      }
-    })
-    if (clip.width < 200 || clip.height < 160) {
-      throw new Error(`diagram clip is too small: ${clip.width}x${clip.height}`)
-    }
-    return clip
-  }
-
-  const scroll = page.locator('.seq-scroll')
-  if (!coreMotion) {
-    const zoomIn = page.locator('.seq-diagram').getByRole('button', { name: 'Zoom in' })
-    const zoomOut = page.locator('.seq-diagram').getByRole('button', { name: 'Zoom out' })
-    /** Fit, then step out until labels are near their normal size. Fit alone blows a small diagram up past 200%. */
-    async function fitThenEase(maxPct = 140) {
-      await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
-      // The readout settles after the next frame; read it only then.
-      await page.waitForTimeout(150)
-      // Steps are 10 points, and Fit can land as high as 250%.
-      for (let i = 0; i < 16; i++) {
-        const pct = Number.parseInt((await page.locator('.zoom-readout').innerText()).trim(), 10)
-        if (!Number.isFinite(pct) || pct <= maxPct) break
-        await zoomOut.click()
-        await page.waitForTimeout(150)
-      }
-    }
-    await fitThenEase()
-    await scroll.evaluate((el) => {
-      el.scrollTop = 0
-    })
-
-    const clip = await scenarioClip()
-    const shot = () => page.screenshot({ clip, animations: 'disabled', caret: 'hide', type: 'png' })
-    writeFileSync(path.join(outDir, 'diagram.png'), await shot())
-
-    const frames = []
-    async function hold(n) {
-      const buffer = await shot()
-      const decoded = decodePng(buffer)
-      for (let i = 0; i < n; i++) frames.push(decoded)
-    }
-
-    await hold(5)
-    // Zoom until there is a visible scroll, not just a few pixels: the full-width column
-    // fits a short diagram at a large zoom.
-    for (let i = 0; i < 10; i++) {
-      const overflows = await scroll.evaluate((el) => el.scrollHeight > el.clientHeight + 120)
-      if (overflows) break
-      await zoomIn.click()
-      await hold(2)
-    }
-    const maxScroll = await scroll.evaluate((el) => Math.max(0, el.scrollHeight - el.clientHeight))
-    const steps = 8
-    for (let i = 0; i <= steps; i++) {
-      const top = Math.round((maxScroll * i) / steps)
-      await scroll.evaluate((el, value) => {
-        el.scrollTop = value
-      }, top)
-      await hold(1)
-    }
-    await hold(4)
-    console.log(`captured ${frames.length} frames, clip ${clip.width}x${clip.height}`)
-
-    for (let i = 0; i < 6; i++) await zoomOut.click()
-    await scroll.evaluate((el) => {
-      el.scrollTop = 0
-    })
-    const open = page.getByRole('button', { name: 'Open POST /orders' })
-    await open.waitFor()
-    await open.click()
-    await page.locator('#inspector-pre').waitFor({ state: 'visible' })
-    await page.waitForFunction(() => {
-      const pre = document.querySelector('#inspector-pre')
-      return !!pre && (pre.textContent ?? '').includes('SOCK-1')
-    })
-    await fitThenEase()
-    await scroll.evaluate((el) => {
-      el.scrollTop = 0
-    })
-    await placeScenario()
-    await fitScenarioViewport()
-    const inspectorClip = await page.evaluate(() => {
-      const pre = document.querySelector('#inspector-pre')?.getBoundingClientRect()
-      const diagram = document.querySelector('.seq-diagram')?.getBoundingClientRect()
-      // From the top of the page, so the side panel's title and Close are in the picture.
-      const top = 0
-      const bottom = Math.max(pre?.bottom ?? 0, diagram?.bottom ?? 0)
-      return {
-        x: 0,
-        y: top,
-        width: window.innerWidth,
-        height: Math.min(window.innerHeight - top, Math.max(420, Math.ceil(bottom - top + 20))),
-      }
-    })
-    writeFileSync(
-      path.join(outDir, 'inspector.png'),
-      await page.screenshot({ clip: inspectorClip, animations: 'disabled', caret: 'hide', type: 'png' }),
+  if (mode === 'tour') {
+    const storage = [
+      ['local', 'lsd-report-theme', 'light'],
+      ['local', 'lsd-report-sidebar', null],
+      ['session', 'lsd-report-inspector-width', null],
+    ]
+    await withReportPage(
+      browser,
+      reportDir,
+      { viewport: { width: TOUR_W, height: TOUR_H }, colorScheme: 'light' },
+      storage,
+      (page) => recordTour(page, outFile),
     )
-    writeGif(frames, path.join(outDir, 'zoom.gif'))
+  } else {
+    const storage = [
+      ['local', 'lsd-report-theme', 'dark'],
+      ['local', 'lsd-report-sidebar', 'collapsed'],
+    ]
+    await withReportPage(
+      browser,
+      reportDir,
+      { viewport: { width: 1680, height: 900 }, colorScheme: 'dark' },
+      storage,
+      (page) => shootDiagram(page, outFile),
+    )
   }
-
-  if (coreMotion) {
-    // components.gif: a pointer moves to the Component diagram button, presses it, and the
-    // diagram appears in the inspector. Fresh page at a narrower width so the text survives
-    // the 760px GIF scale. Headless Chromium paints no cursor, so the pointer is an overlay.
-    await page.setViewportSize({ width: 1280, height: 900 })
-    await page.reload({ waitUntil: 'load' })
-    await page.locator('.seq-svg').waitFor()
-    await page.locator('.msg-label').first().waitFor()
-    await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]))
-    await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
-    // Zoom out under Fit so the whole small diagram shows under the toolbar, as it did when
-    // this clip ran after the zoom stills.
-    for (let i = 0; i < 8; i++) {
-      const pct = Number.parseInt((await page.locator('.zoom-readout').innerText()).trim(), 10)
-      if (!Number.isFinite(pct) || pct <= 75) break
-      await page.locator('.seq-diagram').getByRole('button', { name: 'Zoom out' }).click()
-    }
-    await scroll.evaluate((el) => {
-      el.scrollTop = 0
-    })
-    await placeScenario()
-    const button = page.locator('.seq-diagram').getByRole('button', { name: 'Component diagram' })
-    await button.waitFor()
-
-    // Open once to size the clip for both states, then close again.
-    await button.click()
-    await page.locator('#inspector-graph svg.component-diagram').waitFor()
-    await page.waitForTimeout(250)
-    // Lowest point worth keeping once open: the drawing, and the button after the column reflows.
-    const openBottom = await page.evaluate(() => {
-      const graph = document.querySelector('#inspector-graph')?.getBoundingClientRect()
-      const again = document.querySelector('[data-show-components]')?.getBoundingClientRect()
-      return Math.max(graph?.bottom ?? 0, again?.bottom ?? 0)
-    })
-    await page.keyboard.press('Escape')
-    await page.locator('#inspector').waitFor({ state: 'hidden' })
-    await page.waitForTimeout(250)
-    await fitScenarioViewport()
-    const componentsClip = await page.evaluate((openBottomY) => {
-      const main = document.querySelector('#main')?.getBoundingClientRect()
-      const top = document.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0
-      const button = document.querySelector('[data-show-components]')?.getBoundingClientRect()
-      const bottom = Math.max(openBottomY, button?.bottom ?? 0) + 140
-      const x = Math.max(0, Math.floor(main?.left ?? 0))
-      return {
-        x,
-        y: Math.floor(top),
-        width: window.innerWidth - x,
-        height: Math.min(window.innerHeight - Math.floor(top), Math.ceil(bottom - top)),
-      }
-    }, openBottom)
-
-    await page.evaluate(() => {
-      const pointer = document.createElement('div')
-      pointer.id = 'readme-pointer'
-      pointer.style.cssText =
-        'position:fixed;left:0;top:0;width:22px;height:22px;z-index:9999;pointer-events:none;transform:translate(-2px,-2px)'
-      pointer.innerHTML =
-        '<svg viewBox="0 0 22 22" width="22" height="22"><path d="M2 2 L2 18 L7 13.5 L10.5 20.5 L13.5 19 L10 12 L16.5 12 Z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/></svg>'
-      document.body.append(pointer)
-    })
-    const movePointer = (x, y) =>
-      page.evaluate(
-        ([px, py]) => {
-          const pointer = document.querySelector('#readme-pointer')
-          pointer.style.left = `${px}px`
-          pointer.style.top = `${py}px`
-        },
-        [x, y],
-      )
-
-    const componentFrames = []
-    async function holdComponents(n) {
-      const decoded = decodePng(
-        await page.screenshot({ clip: componentsClip, animations: 'disabled', caret: 'hide', type: 'png' }),
-      )
-      for (let i = 0; i < n; i++) componentFrames.push(decoded)
-    }
-
-    const target = await button.boundingBox()
-    if (!target) throw new Error('Component diagram button has no box')
-    const endX = target.x + target.width / 2
-    const endY = target.y + target.height / 2
-    const startX = componentsClip.x + componentsClip.width * 0.42
-    const startY = componentsClip.y + componentsClip.height * 0.72
-    await movePointer(startX, startY)
-    await holdComponents(4)
-    const steps = 7
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps
-      const ease = 1 - (1 - t) * (1 - t)
-      await movePointer(startX + (endX - startX) * ease, startY + (endY - startY) * ease)
-      await holdComponents(1)
-    }
-    await button.hover()
-    await holdComponents(2)
-    // Pressed look for one frame, then the real click.
-    await button.evaluate((el) => {
-      el.style.transform = 'scale(0.95)'
-      el.style.background = 'var(--surface-2)'
-    })
-    await holdComponents(1)
-    await button.evaluate((el) => {
-      el.style.transform = ''
-      el.style.background = ''
-    })
-    await button.click()
-    await page.locator('#inspector-graph svg.component-diagram').waitFor()
-    await page.evaluate(() => document.querySelector('#readme-pointer')?.remove())
-    await page.waitForTimeout(250)
-    await holdComponents(20)
-    writeGif(componentFrames, path.join(outDir, 'components.gif'), { smooth: true, colours: 128 })
-    console.log(`components.gif ${componentFrames.length} frames`)
-  }
-
-  if (tourDir) await recordTour(browser, tourDir, path.join(outDir, 'feature-tour.gif'))
 } finally {
   await browser.close()
-  await new Promise((resolve) => server.close(resolve))
 }
-
-if (coreMotion) {
-  console.log(path.join(outDir, 'components.gif'))
-} else {
-  console.log(path.join(outDir, 'diagram.png'))
-  console.log(path.join(outDir, 'inspector.png'))
-  console.log(path.join(outDir, 'zoom.gif'))
-}
-if (tourDir) console.log(path.join(outDir, 'feature-tour.gif'))
+console.log(outFile)

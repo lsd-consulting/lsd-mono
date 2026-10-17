@@ -1,9 +1,9 @@
 import io.lsdconsulting.lsd.mono.gradle.nodeCommandLine
 import io.lsdconsulting.lsd.mono.gradle.writesSampleReport
 
-// Sample reports for lsd-mono-core: the README report, the feature tour its GIF clicks around, and
-// the example report the Pages workflow publishes. They are programs in the `readme` source
-// set. Slow, and they write docs/ or build/pages, so none of these tasks is on build or check.
+// Sample reports for lsd-mono-core: the feature tour the root README's GIF clicks around, and the
+// example report the Pages workflow publishes. They are programs in the `readme` source set.
+// Slow, and they write docs/ or build/pages, so none of these tasks is on build or check.
 plugins {
     java
 }
@@ -30,13 +30,11 @@ fun registerCapture(
         writesSampleReport(outDir)
     }
 
-val readmeReportDir = layout.buildDirectory.dir("readme-report")
 val featureTourReportDir = layout.buildDirectory.dir("feature-tour-report")
 val exampleReportDir = layout.buildDirectory.dir("example-report")
 val readmeDocsDir = rootProject.layout.projectDirectory.dir("docs/readme")
 val pagesDir = layout.buildDirectory.dir("pages")
 
-registerCapture("captureReadmeReport", "README scenario", "ReadmeSampleKt", readmeReportDir)
 // Feature tour: a trimmed shop report the root README's tour GIF clicks around.
 registerCapture("captureFeatureTourReport", "feature-tour scenarios", "FeatureTourSampleKt", featureTourReportDir)
 // Example report (the kitchen sink): every diagram feature in one report, for eyeballing layout.
@@ -46,20 +44,16 @@ val captureKitchenSinkReport =
 
 tasks.register<Exec>("readmeSamples") {
     group = "documentation"
-    description =
-        "Regenerate the docs/readme feature tour and component GIFs from the current report UI. Not part of build or check."
-    dependsOn("captureReadmeReport", "captureFeatureTourReport")
+    description = "Regenerate docs/readme/feature-tour.gif from the current report UI. Not part of build or check."
+    dependsOn("captureFeatureTourReport")
     workingDir = reportDir.asFile
-    inputs.dir(readmeReportDir)
     inputs.dir(featureTourReportDir)
     inputs.file(reportDir.file("scripts/readme-samples.mjs"))
     inputs.dir(reportDir.dir("scripts/readme"))
-    outputs.file(readmeDocsDir.file("feature-tour.gif"))
-    outputs.file(readmeDocsDir.file("components.gif"))
-    val reportOut = readmeReportDir.get().asFile.absolutePath
-    val docsOut = readmeDocsDir.asFile.absolutePath
-    val tourOut = featureTourReportDir.get().asFile.absolutePath
-    nodeCommandLine("scripts/readme-samples.mjs", reportOut, docsOut, tourOut)
+    val gif = readmeDocsDir.file("feature-tour.gif")
+    outputs.file(gif)
+    val tourReport = featureTourReportDir.get().asFile.absolutePath
+    nodeCommandLine("scripts/readme-samples.mjs", "tour", tourReport, gif.asFile.absolutePath)
 }
 
 tasks.register<Sync>("kitchenSinkSample") {

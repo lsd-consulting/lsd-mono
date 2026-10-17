@@ -3,7 +3,7 @@ import io.lsdconsulting.lsd.mono.gradle.withNodeOnPath
 plugins {
     id("lsd.kotlin-jvm")
     `java-library`
-    // README, feature-tour and example report (kitchen-sink) sample tasks (readmeSamples, kitchenSinkSample).
+    // Feature-tour and example report (kitchen-sink) sample tasks (readmeSamples, kitchenSinkSample).
     id("lsd.samples")
 }
 
