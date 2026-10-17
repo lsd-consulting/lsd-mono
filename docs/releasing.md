@@ -48,11 +48,14 @@ Renovate writes `fix(deps): …` for runtime dependency updates (a patch release
    the next push tries again.
 
 The GitHub release carries the generated notes. `CHANGELOG.md` stays hand-written: after a release, move its
-`Unreleased` entries under the new version in a `docs:` commit.
+`Unreleased` entries under the new version in a `docs:` commit, and set the version in the root README's
+"Getting started" snippets (`lsdMonoVersion` and `lsd-mono.version`) to the new release in the same commit.
 
 The artifacts show on Maven Central (`repo1.maven.org`) a few minutes to half an hour after the job.
 
 ## One-off setup before the first release
+
+Done for 0.1.0 (17 October 2026); kept for reference.
 
 1. **Baseline tag.** semantic-release starts at `1.0.0` when there is no tag. Tag the last commit before the
    publishing work as `v0.0.0`, so the first `feat` after it releases `0.1.0`:

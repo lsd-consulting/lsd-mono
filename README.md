@@ -32,7 +32,7 @@ The artifacts are on Maven Central under `io.github.lsd-consulting`, all four on
 Gradle (Kotlin DSL), with the integrations you use:
 
 ```kotlin
-val lsdMonoVersion = "0.1.0"
+val lsdMonoVersion = "0.2.0"
 
 dependencies {
     testImplementation("io.github.lsd-consulting:lsd-mono-core:$lsdMonoVersion")
@@ -46,7 +46,7 @@ Maven:
 
 ```xml
 <properties>
-    <lsd-mono.version>0.1.0</lsd-mono.version>
+    <lsd-mono.version>0.2.0</lsd-mono.version>
 </properties>
 
 <dependencies>
