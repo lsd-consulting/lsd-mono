@@ -4,6 +4,7 @@ import { focusSelectedDiagram } from './main-view'
 import { moveSelection, focusedNavId } from './nav'
 import { toggleTheme } from '../ui/theme'
 import { session, state } from './context'
+import { pageAction } from './key-bindings'
 
 export function onKey(e: KeyboardEvent): void {
   const target = e.target as HTMLElement
@@ -31,41 +32,35 @@ export function onKey(e: KeyboardEvent): void {
   if (target.closest('#inspector')) return
   if (target.closest('.seq-scroll')) return
 
-  if (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
-    e.preventDefault()
-    document.querySelector<HTMLInputElement>('#search')?.focus()
-    return
-  }
   // j/k anywhere outside a text box; arrows only on the list, the page or the scenario
   // heading, so they keep their own meaning in the diagram toolbar and its popovers.
-  // On the list, focus follows the selection.
-  const arrows = target === document.body || target.closest('#scenario-nav') || target.matches('#scenario-title')
-  if (e.key === 'j' || (e.key === 'ArrowDown' && arrows)) {
-    e.preventDefault()
-    moveSelection(1, focusedNavId(target))
-    return
-  }
-  if (e.key === 'k' || (e.key === 'ArrowUp' && arrows)) {
-    e.preventDefault()
-    moveSelection(-1, focusedNavId(target))
-    return
-  }
-  // Enter on a focused button presses that button (a list item, filters, theme…).
-  // Anywhere else it goes into the shown scenario's diagram.
-  if (e.key === 'Enter' && target.closest('button, a, [role="slider"]')) return
-  if (e.key === 'Enter' && session.renderedId) {
-    e.preventDefault()
-    focusSelectedDiagram()
-    return
-  }
-  if (e.key === 'd') {
-    e.preventDefault()
-    paintThemeButton(toggleTheme())
-    return
-  }
-  if (e.key === '?') {
-    e.preventDefault()
-    state.helpOpen = !state.helpOpen
-    document.querySelector('#help')!.setAttribute('data-open', String(state.helpOpen))
+  // On the list, focus follows the selection. Enter on a focused button presses that
+  // button (a list item, filters, theme…); anywhere else it goes into the shown diagram.
+  const action = pageAction(e, {
+    arrows: Boolean(target === document.body || target.closest('#scenario-nav') || target.matches('#scenario-title')),
+    onControl: Boolean(target.closest('button, a, [role="slider"]')),
+    hasScenario: Boolean(session.renderedId),
+  })
+  if (!action || action === 'close') return
+  e.preventDefault()
+  switch (action) {
+    case 'search':
+      document.querySelector<HTMLInputElement>('#search')?.focus()
+      return
+    case 'next':
+      moveSelection(1, focusedNavId(target))
+      return
+    case 'prev':
+      moveSelection(-1, focusedNavId(target))
+      return
+    case 'diagram':
+      focusSelectedDiagram()
+      return
+    case 'theme':
+      paintThemeButton(toggleTheme())
+      return
+    case 'help':
+      state.helpOpen = !state.helpOpen
+      document.querySelector('#help')!.setAttribute('data-open', String(state.helpOpen))
   }
 }

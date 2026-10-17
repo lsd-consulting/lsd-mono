@@ -3,6 +3,7 @@ import { renderMain, revealMessage, focusScenarioHeading } from './main-view'
 import { isCoarsePointer } from '../lib/media'
 import { renderNav } from './nav'
 import type { Status } from '../types'
+import { keyHelpHtml } from './key-bindings'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspector'
 import { diagramKeyAction, focusTargetAfterClose, messagePlaces } from '../lib/diagram-a11y'
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
@@ -102,10 +103,7 @@ export function renderShell(): void {
     </div>
     <div class="help-toast" id="help" data-open="false" role="note">
       <strong style="color:var(--text)">Keyboard</strong><br/>
-      <kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> or <kbd>↓</kbd>/<kbd>↑</kbd> next/prev scenario · <kbd>Enter</kbd> go to its diagram<br/>
-      In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages · <kbd>Enter</kbd> opens the side panel<br/>
-      In Find, <kbd>Enter</kbd>/<kbd>Shift</kbd>+<kbd>Enter</kbd> (or <kbd>F3</kbd>) next/previous match<br/>
-      <kbd>d</kbd> theme (Auto follows the OS, dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close
+      ${keyHelpHtml()}
     </div>
   `
 
