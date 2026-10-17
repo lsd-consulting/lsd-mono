@@ -71,12 +71,7 @@ internal class ScenarioRegistry(
         if (running.size == 1) return running.single()
         if (running.size > 1 && !warnedAmbiguous) {
             warnedAmbiguous = true
-            logger.log(
-                System.Logger.Level.WARNING,
-                "LSD: captured on thread '${Thread.currentThread().name}', which is not bound to a scenario, " +
-                    "while ${running.size} scenarios are running in parallel. It cannot be attributed and goes to " +
-                    "the default scenario. Use LsdScenario.bind() or LsdContext.wrap() on threads you start.",
-            )
+            CaptureLog.unattributed(running.size)
         }
         return defaultScenario
     }
@@ -92,9 +87,4 @@ internal class ScenarioRegistry(
 
     /** Unbind the calling thread. */
     fun unbindCurrentThread() = bound.remove()
-
-    private companion object {
-        /** The context's logger name, so log configuration for LsdContext still covers it. */
-        private val logger = System.getLogger(LsdContext::class.java.name)
-    }
 }

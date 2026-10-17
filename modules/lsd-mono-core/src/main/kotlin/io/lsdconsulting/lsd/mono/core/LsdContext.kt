@@ -1,17 +1,10 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.domain.Delay
-import io.lsdconsulting.lsd.mono.core.domain.Divider
-import io.lsdconsulting.lsd.mono.core.domain.Lifeline
 import io.lsdconsulting.lsd.mono.core.domain.Message
-import io.lsdconsulting.lsd.mono.core.domain.MessageType
-import io.lsdconsulting.lsd.mono.core.domain.Note
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import io.lsdconsulting.lsd.mono.core.domain.Scenario
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
-import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
-import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
@@ -22,10 +15,8 @@ import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.Callable
-import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Consumer
 
 /**
@@ -40,8 +31,8 @@ import java.util.function.Consumer
  * **Sections** (`section`) replace PlantUML `newpage`: they stay in the same
  * event stream and do not drop lifeline activations.
  *
- * **Metrics:** message count and summed `durationMs`. Slow calls show in the
- * Timing view. Gated by [ReportOptions.metricsEnabled] (default on).
+ * **Metrics:** message count and captured duration (each call's `took` or `Timing`
+ * duration, else call-to-reply time, counted once). Slow calls show in the Timing view. Gated by [ReportOptions.metricsEnabled] (default on).
  * Labels in the shell truncate to [ReportOptions.labelMaxWidth].
  *
  * **Activate colour:** optional on [activate]; omitted from JSON when absent.
@@ -408,7 +399,7 @@ public class LsdContext :
         if (events.isEmpty()) return
         guarded(if (events.size == 1) "event" else "batch of events", { }) {
             val bound = events.map { binder.bind(if (dataCopied) it else copyData(it)) }
-            if (!scenario.addEvents(bound)) warnLate(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
+            if (!scenario.addEvents(bound)) CaptureLog.late(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
         }
     }
 
@@ -432,13 +423,7 @@ public class LsdContext :
         } catch (e: VirtualMachineError) {
             throw e
         } catch (e: Throwable) {
-            val first = droppedKinds.add(kind)
-            logger.log(
-                if (first) System.Logger.Level.WARNING else System.Logger.Level.DEBUG,
-                "LSD: capture failed and was dropped ($kind): $e. The application carried on; the report " +
-                    "is missing it." + if (first) " Further failures of this kind are logged at DEBUG." else "",
-                e,
-            )
+            CaptureLog.dropped(kind, e, first = droppedKinds.add(kind))
             fallback()
         }
 
@@ -463,7 +448,7 @@ public class LsdContext :
                 scenario.close()
             }
         scenarios.forget(scenario)
-        warnUnreplied(title, scenario.abandonCalls())
+        CaptureLog.unreplied(title, scenario.abandonCalls())
         val (events, timing) = orderAndAnalyse(captured, timingConfig.effectiveOrderByStartedAt())
         synchronized(lock) {
             val stored =
@@ -500,48 +485,14 @@ public class LsdContext :
     private fun completeStillRunning(title: String, reportKey: String?) {
         val running = scenarios.running(reportKey)
         if (running.isEmpty()) return
-        logger.log(
-            System.Logger.Level.WARNING,
-            "LSD: report '$title' is being written while ${running.size} of its scenario(s) are still running " +
-                "(keys: ${running.joinToString { "'${it.key}'" }}). They are completed now with status WARN. " +
-                "Complete or discard each scenario before completeReport.",
-        )
+        CaptureLog.stillRunning(title, running)
         running.forEach { complete(it, it.key, NOT_COMPLETED_NOTE, Status.WARN, null) }
     }
 
     private fun dropStrayCaptures(report: String) {
         defaultScenario.abandonCalls()
         val (facts, events) = defaultScenario.drain()
-        if (facts.isEmpty() && events.isEmpty()) return
-        logger.log(
-            System.Logger.Level.WARNING,
-            "LSD: report '$report' dropped ${events.size} event(s) and ${facts.size} fact(s) captured outside " +
-                "any scenario. Capture inside a test, or call completeScenario before completeReport.",
-        )
-    }
-
-    private fun warnUnreplied(title: String, calls: List<PendingCall>) {
-        if (calls.isEmpty()) return
-        logger.log(
-            System.Logger.Level.WARNING,
-            "LSD: scenario '$title' completed with ${calls.size} call(s) still waiting for a reply: " +
-                calls.joinToString { it.describe() } + ". Reply before the test ends; a later reply is dropped.",
-        )
-    }
-
-    internal fun warnDoubleReply(call: String) {
-        logger.log(
-            System.Logger.Level.WARNING,
-            "LSD: ignored a second reply to the call $call. Only the first reply or fail counts.",
-        )
-    }
-
-    internal fun warnLate(scenario: LsdScenario, what: String) {
-        logger.log(
-            System.Logger.Level.WARNING,
-            "LSD: dropped a $what captured after scenario '${scenario.key}' finished. " +
-                "Capture before the test ends, or wait for background work first.",
-        )
+        if (facts.isNotEmpty() || events.isNotEmpty()) CaptureLog.strayCaptures(report, events.size, facts.size)
     }
 
     /**
@@ -562,8 +513,6 @@ public class LsdContext :
 
     /** Holds [instance]. */
     public companion object {
-        private val logger = System.getLogger(LsdContext::class.java.name)
-
         internal const val NOT_COMPLETED_NOTE: String =
             "Scenario was not completed before the report was written. Its events up to that point are shown."
 

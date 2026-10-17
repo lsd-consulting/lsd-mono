@@ -95,9 +95,9 @@ public class PendingCall internal constructor(
                 ),
             )
         } else if (state.get() == State.ABANDONED) {
-            scenario.context.warnLate(scenario, "reply to ${describe()}")
+            CaptureLog.late(scenario, "reply to ${describe()}")
         } else {
-            scenario.context.warnDoubleReply(describe())
+            CaptureLog.doubleReply(describe())
         }
     }
 

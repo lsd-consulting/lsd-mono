@@ -82,7 +82,7 @@ public class LsdScenario internal constructor(
     }
 
     override fun fact(key: String, value: String) {
-        context.guarded("fact", { }) { if (!add { facts.add(Fact(key, value)) }) context.warnLate(this, "fact") }
+        context.guarded("fact", { }) { if (!add { facts.add(Fact(key, value)) }) CaptureLog.late(this, "fact") }
     }
 
     /**
