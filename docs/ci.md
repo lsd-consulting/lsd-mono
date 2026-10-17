@@ -78,15 +78,16 @@ was skipped, so it is the one check to require on `main`: a docs-only pull reque
 
 ## Runner image
 
-Both jobs run on `ubuntu-24.04`, not `ubuntu-latest`. GitHub moves `ubuntu-latest` to Ubuntu 26.04
-gradually between 19 October and 19 November 2026. On the floating label, an unchanged commit could
-build on either image during that window, and a failure would look like a code problem. With the
-label pinned, the image only changes in a pull request. Renovate proposes the new runner version
-there, and the build runs on it before it merges.
+Every job in both workflows runs on `ubuntu-26.04`, not `ubuntu-latest`. GitHub moves
+`ubuntu-latest` to Ubuntu 26.04 gradually between 19 October and 19 November 2026. On the floating
+label, an unchanged commit could build on either image during that window, and a failure would look
+like a code problem. With the label pinned, the image only changes in a pull request. Renovate
+proposes the next runner version there, and the build runs on it before it merges.
 
 The build needs little from the image. Java and Node come from `setup-java` and `setup-node`
-(JDK 17, the toolchain, plus the JDK that runs Gradle; Node from `.nvmrc`). So moving to `ubuntu-26.04` should only
-need that pull request to go green.
+(JDK 17, the toolchain, plus the JDK that runs Gradle; Node from `.nvmrc`). `check-ux` also installs
+Chromium's system libraries with `playwright install-deps`, so the Playwright version must support
+the image (1.64 is the first to support Ubuntu 26.04).
 
 ## Java and Node versions
 
