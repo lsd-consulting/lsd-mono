@@ -8,9 +8,9 @@ Group is `io.github.lsd-consulting`, the Maven Central namespace lsd-core is pub
 
 The train version is set once on the root project, from git (`TrainVersion.kt` in build-logic): `-Plsd.version=X.Y.Z` if given, else `X.Y.Z` on a commit tagged `vX.Y.Z`, else a snapshot of the next patch after the latest `v` tag (`0.0.1-SNAPSHOT` before the first tag, or in a shallow checkout without tags). `./gradlew -q printVersion` shows it. The report's `generator` field and the jar manifest follow it. Every module inherits it (`lsd.common`). No module diverges today, so there is no override mechanism yet. When the first `patch` or `solo-major` is needed, add one: a recorded override per module, naming the train major it may diverge from, and a build check that fails when a module differs from the train without one.
 
-Nothing is published. There is no tag. `.github/workflows/gradle.yml` only runs `./gradlew build` on push to `main` and on pull requests.
+Releases go to Maven Central with semantic-release from conventional commits, after `gate` on `main` ([releasing.md](releasing.md)). Nothing is published yet: the first release waits for the `v0.0.0` baseline tag and the `RELEASE_ENABLED` variable.
 
-`gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`, kotlinx.coroutines `1.11.0`). It is not the version of these libraries. There is no release plugin.
+`gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`, kotlinx.coroutines `1.11.0`). It is not the version of these libraries.
 
 Renovate is the root `renovate.json`. It reads that shared catalog. JUnit and Cucumber updates are separate pull requests, each capped at the current major, and kotlinx.coroutines is capped at major 1. A future Cucumber 9 module would be another catalog line plus another rule.
 
@@ -52,8 +52,9 @@ The library version is not the JUnit or Cucumber version it was built with. Cons
 
 ## Still open
 
-- [ ] **Publishing.** Maven Central or GitHub Packages, under these artifact ids so they do not clash with legacy `lsd-core`, `lsd-cucumber`, and `lsd-junit-jupiter`. Not configured. Do not depend on published `lsd-core`.
-- [ ] **Tag workflow.** None yet. Keep it separate from `gradle.yml`. Do not publish until it exists.
+- [x] **Publishing.** Maven Central, under these artifact ids so they do not clash with legacy `lsd-core`, `lsd-cucumber`, and `lsd-junit-jupiter` ([releasing.md](releasing.md)). Do not depend on published `lsd-core`.
+- [x] **Release workflow.** `release.yml`, called from `gradle.yml` after `gate`.
+- [ ] **Single-artifact releases.** The train releases all four together. A patch of one artifact alone needs per-module versions, which semantic-release does not do here.
 - [ ] **Cucumber 7 artifact.** Still a product question. `cucumber-groovy` has no 8.x. Do not loosen the 8 pin.
 - [ ] **CI matrix and versions file.** Not set up. Renovate is not wired to cut the single-artifact patch.
 

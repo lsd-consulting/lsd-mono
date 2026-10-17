@@ -21,6 +21,10 @@ In `modules/lsd-mono-core/report`: `npm run typecheck`, `npm run lint`, `npm tes
   `modules/lsd-mono-core/api/lsd-mono-core.api`: run `./gradlew updateKotlinAbi` and commit the dump
   with the change, so it is reviewed.
 - **No deprecation shims.** Nothing is published yet; change the API instead of keeping an old form.
+- **Conventional commits.** `feat: …`, `fix: …`, `docs: …`, `build: …`, `ci: …`, `chore: …`, `refactor: …`,
+  `test: …` (lower case, no full stop). semantic-release turns them into releases; while the version is 0.x a
+  breaking change (`!` or a `BREAKING CHANGE:` footer) gives a minor. CI checks every commit and pull request title.
+  See [docs/releasing.md](docs/releasing.md).
 - **Coverage only goes up.** Each module's floor (`lsdCoverage { lineFloor }`) and the Vitest
   thresholds fail the build when coverage drops below them, and also when coverage is more than 3
   points above them. Raise the floor when you add tests.
@@ -31,4 +35,5 @@ In `modules/lsd-mono-core/report`: `npm run typecheck`, `npm run lint`, `npm tes
 ## Pull requests
 
 Keep each pull request to one change, with tests. CI's `gate` check must pass; it waits for the
-build and the JVM test matrix, and passes on its own for documentation-only changes.
+commit-message check, the build and the JVM test matrix, and passes without a build for documentation-only changes.
+The pull request title is the squash-merge message, so it must be a conventional commit too.

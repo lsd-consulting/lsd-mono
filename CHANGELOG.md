@@ -8,6 +8,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Maven Central coordinates `io.github.lsd-consulting:lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`
+  and `lsd-mono-coroutines`, each with sources and javadoc jars. Releases are `0.y.z` until v1, cut by semantic-release
+  from conventional commits ([docs/releasing.md](docs/releasing.md)).
 - Core capture and report API (`lsd-mono-core`), with JUnit Jupiter, Cucumber 8 and coroutines integrations.
 - Interactive report UI: sequence diagram, component diagram, inspector, timing and metrics. The Metrics view lists the
   message count and captured duration; slow calls show in the Timing view's summary strip, swim lanes and waterfall

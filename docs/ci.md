@@ -58,14 +58,17 @@ Chromium against the Vite dev server on port 4179. It needs no Gradle build, so 
 `gradle.yml` runs on every push and pull request. A `changes` job decides whether anything the
 build reads changed (everything except Markdown, `docs/` and `modules/*/docs/`). If not, `build`
 and `jvm-tests` are skipped. It also decides whether the report UI changed; if not, `check-ux` is
-skipped. The `gate` job always runs and passes only when every job passed or
+skipped. A `commits` job checks that every pushed commit, and a pull request's title, is a conventional commit (commitlint,
+`tools/release/commitlint.config.mjs`; see [releasing.md](releasing.md)). The `gate` job always runs and passes only when every job passed or
 was skipped, so it is the one check to require on `main`: a docs-only pull request gets a green
 `gate` instead of waiting for a build that never starts.
 
 ## Hardening
 
 - **Permissions.** Both workflows default to `contents: read`. Only the Pages deploy job gets
-  `pages: write` and `id-token: write`. Checkout does not keep the token (`persist-credentials: false`).
+  `pages: write` and `id-token: write`, and only the release job `contents: write` (to push the tag and write the
+  GitHub release). The release job reads the Gradle cache but never writes it, and runs Gradle without the
+  configuration cache, so the signing key is not stored anywhere. Checkout does not keep the token (`persist-credentials: false`).
 - **Pinned actions.** Every action is pinned to a full commit SHA, with its version in a comment.
   Renovate (`helpers:pinGitHubActionDigestsToSemver` in `renovate.json`) keeps the SHA and the
   comment up to date, and pins any new action it finds.
