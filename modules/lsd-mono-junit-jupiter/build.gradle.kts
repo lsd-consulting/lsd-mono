@@ -5,9 +5,10 @@ plugins {
     `java-library`
 }
 
-// Line coverage was 71.7% when the floor was set (#30). Raise the floor as tests are added.
+// Line coverage was 71.7% when the floor was set (#30), with the readme sample counted. Without it
+// (lsd.coverage leaves the readme source set out) it is 100%.
 lsdCoverage {
-    lineFloor.set(70)
+    lineFloor.set(97)
 }
 
 description = "LSD Mono JUnit Jupiter 6 integration — extension for living sequence diagram reports"

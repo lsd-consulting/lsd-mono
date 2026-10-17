@@ -6,6 +6,8 @@ import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
 // `lsdCoverage { lineFloor.set(n) }`, a little under its current line coverage. The floor is a
 // ratchet: koverVerify also fails when coverage rises more than ratchetMargin points above it
 // (reported as a breached maximum), so a module that gains tests must raise its floor too.
+// The `readme` source set, where a module has one, holds programs that build the README and
+// example reports, not library code, so it is not counted.
 plugins {
     id("org.jetbrains.kotlinx.kover")
 }
@@ -16,6 +18,11 @@ coverage.lineFloor.convention(0)
 val ratchetMargin = 3
 
 kover {
+    currentProject {
+        sources {
+            excludedSourceSets.add("readme")
+        }
+    }
     reports {
         verify {
             rule("line coverage") {

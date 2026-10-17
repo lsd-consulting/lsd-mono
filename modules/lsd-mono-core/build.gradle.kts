@@ -13,15 +13,6 @@ lsdCoverage {
     lineFloor.set(95)
 }
 
-// The README and kitchen-sink samples are programs that build sample reports, not library code.
-kover {
-    currentProject {
-        sources {
-            excludedSourceSets.add("readme")
-        }
-    }
-}
-
 description =
     "LSD Mono core — greenfield report UI + thin Kotlin capture/report façade (not legacy lsd-core)"
 
