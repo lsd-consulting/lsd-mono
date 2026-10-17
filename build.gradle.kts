@@ -1,3 +1,5 @@
+import io.lsdconsulting.lsd.mono.gradle.trainVersion
+
 plugins {
     // Root is a thin aggregator; convention plugins live in build-logic.
     base
@@ -7,7 +9,32 @@ plugins {
 // The Maven Central namespace lsd-consulting already publishes lsd-core under. Packages stay
 // io.lsdconsulting.lsd.mono; only the Maven group differs.
 group = "io.github.lsd-consulting"
-version = "0.0.1-SNAPSHOT"
+// The train version: -Plsd.version, else the `vX.Y.Z` tag on this commit, else a snapshot of the
+// next patch (TrainVersion.kt, docs/releasing.md). git failing (no tags, no git) means a snapshot.
+version =
+    trainVersion(
+        explicit = providers.gradleProperty("lsd.version").orNull,
+        describe =
+            runCatching {
+                val describe =
+                    providers.exec {
+                        commandLine("git", "describe", "--tags", "--match", "v[0-9]*", "--long")
+                        workingDir = rootDir
+                        isIgnoreExitValue = true
+                    }
+                describe.standardOutput.asText
+                    .get()
+                    .takeIf { describe.result.get().exitValue == 0 }
+            }.getOrNull(),
+    )
+
+// Prints the version a build here would publish; the release workflow checks it.
+tasks.register("printVersion") {
+    group = "help"
+    description = "Prints the train version."
+    val shown = version.toString()
+    doLast { println(shown) }
+}
 
 // Picks up every subproject that registers readmeSamples, including ones added later.
 tasks.register("readmeSamples") {

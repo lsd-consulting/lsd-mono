@@ -6,7 +6,7 @@ Not a release. No tag, no publish, and no version bump in this note.
 
 Group is `io.github.lsd-consulting`, the Maven Central namespace lsd-core is published under (packages stay `io.lsdconsulting.lsd.mono`). The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), and coroutines-integration (`lsd-mono-coroutines`).
 
-The train version is `0.0.1-SNAPSHOT`, set once on the root project. Every module inherits it (`lsd.common`). No module diverges today, so there is no override mechanism yet. When the first `patch` or `solo-major` is needed, add one: a recorded override per module, naming the train major it may diverge from, and a build check that fails when a module differs from the train without one.
+The train version is set once on the root project, from git (`TrainVersion.kt` in build-logic): `-Plsd.version=X.Y.Z` if given, else `X.Y.Z` on a commit tagged `vX.Y.Z`, else a snapshot of the next patch after the latest `v` tag (`0.0.1-SNAPSHOT` before the first tag, or in a shallow checkout without tags). `./gradlew -q printVersion` shows it. The report's `generator` field and the jar manifest follow it. Every module inherits it (`lsd.common`). No module diverges today, so there is no override mechanism yet. When the first `patch` or `solo-major` is needed, add one: a recorded override per module, naming the train major it may diverge from, and a build check that fails when a module differs from the train without one.
 
 Nothing is published. There is no tag. `.github/workflows/gradle.yml` only runs `./gradlew build` on push to `main` and on pull requests.
 
@@ -20,7 +20,7 @@ junit-integration, cucumber-integration and coroutines-integration depend on cor
 
 One shared version across core, junit-integration, cucumber-integration, and coroutines-integration is the compatibility promise. Matching numbers mean those artifacts were released together and are meant to be used together.
 
-Stay on `0.0.1-SNAPSHOT` until a real release. [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): while the version is `0.y.z`, the API is not stable. A released version is immutable. Maven Central will not take a version that ends in `-SNAPSHOT`.
+Releases are `0.y.z` until the API is ready for v1 (see [releasing.md](releasing.md)). [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): while the version is `0.y.z`, the API is not stable. A released version is immutable. Maven Central will not take a version that ends in `-SNAPSHOT`.
 
 ### One artifact, patch only
 
