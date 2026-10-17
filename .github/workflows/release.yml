@@ -1,0 +1,135 @@
+name: Release
+
+# Releases lsd-mono to Maven Central from conventional commits (docs/releasing.md).
+#
+# gradle.yml calls this after `gate` passes on a push to main, when the repository variable
+# RELEASE_ENABLED is "true". semantic-release (tools/release/.releaserc.json) reads the commits
+# since the last v tag: fix or perf gives a patch, feat a minor. While the major is 0 a breaking
+# change also gives a minor (the releaseRules there); docs, build, ci, chore, test, refactor and
+# style give nothing. The order is publish first, then tag: a dry run works out the version, Gradle
+# publishes that version, and only then does semantic-release tag vX.Y.Z and write the GitHub
+# release. A failed publish leaves no tag; a failed tag after a publish is retagged by hand.
+#
+# Run it by hand (workflow_dispatch) with an existing tag to publish that tag again, when its
+# publish step failed after the tag was made.
+on:
+  workflow_call:
+    secrets:
+      SONATYPE_USERNAME:
+        required: true
+      SONATYPE_PASSWORD:
+        required: true
+      SIGNING_KEY:
+        required: true
+      SIGNING_PASSWORD:
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish to Maven Central again, such as v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# One release at a time, and never cancel one halfway through publishing.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    permissions:
+      # semantic-release pushes the tag and writes the GitHub release.
+      contents: write
+    steps:
+      - name: Check the tag to publish again
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$TAG" =~ ^v0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "::error::$TAG is not a v0.y.z tag"; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.sha }}
+          persist-credentials: false
+          # semantic-release reads every tag and the commits since the last one.
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            tools/release/package-lock.json
+            modules/lsd-mono-core/report/package-lock.json
+      - name: Install semantic-release
+        if: github.event_name != 'workflow_dispatch'
+        working-directory: tools/release
+        run: npm ci
+      - name: Work out the next version
+        id: next
+        working-directory: tools/release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            version="${TAG#v}"
+          else
+            npx semantic-release --dry-run | tee "$RUNNER_TEMP/dry-run.log"
+            version=$(sed -n 's/.*The next release version is \([0-9A-Za-z.+-]*\).*/\1/p' "$RUNNER_TEMP/dry-run.log" | tail -1)
+          fi
+          if [ -z "$version" ]; then
+            echo "No release: nothing since the last tag calls for one."
+            exit 0
+          fi
+          # 0.x until v1 is a decision, not a side effect: without a v0.0.0 baseline tag
+          # semantic-release starts at 1.0.0. Remove this check when switching to v1.
+          case "$version" in
+            0.*) ;;
+            *) echo "::error::Next version is $version. Releases stay on 0.x until v1 (docs/releasing.md)."; exit 1 ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: steps.next.outputs.version
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+      # Reads the Gradle cache main's builds wrote; a job holding release secrets writes none.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        if: steps.next.outputs.version
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Publish to Maven Central
+        if: steps.next.outputs.version
+        env:
+          VERSION: ${{ steps.next.outputs.version }}
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
+        # Publish, close and release in one run: the staging API expects every call from one IP.
+        # No configuration cache, so the signing key is never written to it.
+        run: |
+          for name in ORG_GRADLE_PROJECT_sonatypeUsername ORG_GRADLE_PROJECT_sonatypePassword ORG_GRADLE_PROJECT_signingKey ORG_GRADLE_PROJECT_signingPassword; do
+            [ -n "${!name}" ] || { echo "::error::$name is empty: check the organisation secrets"; exit 1; }
+          done
+          built=$(./gradlew -q printVersion -Plsd.version="$VERSION" --no-configuration-cache)
+          [ "$built" = "$VERSION" ] || { echo "::error::Gradle would publish $built, not $VERSION"; exit 1; }
+          ./gradlew publishToSonatype closeAndReleaseStagingRepositories -Plsd.version="$VERSION" --no-configuration-cache
+      - name: Tag and write the GitHub release
+        if: steps.next.outputs.version && github.event_name != 'workflow_dispatch'
+        working-directory: tools/release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.next.outputs.version }}
+        run: |
+          npx semantic-release
+          git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null || { echo "::error::v$VERSION was published but not tagged: tag it by hand"; exit 1; }

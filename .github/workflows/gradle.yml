@@ -9,7 +9,8 @@ name: Gradle
 # handles, and the README images under each module) skip the build jobs. The workflow itself
 # always runs, so the `gate` job always reports: require `gate` in branch protection, not the
 # build jobs (see docs/ci.md). Keep the ignored paths in `changes` and pages.yml in step.
-# `commits` checks conventional commit messages, and is part of gate.
+# `commits` checks conventional commit messages, and is part of gate. After gate passes on a push
+# to main, `release` (release.yml) releases to Maven Central when RELEASE_ENABLED is set.
 on:
   push:
     branches: [main]
@@ -255,3 +256,17 @@ jobs:
             case "$r" in success|skipped) ;; *) echo "a required job ended $r"; exit 1 ;; esac
           done
 
+  release:
+    # Releases to Maven Central after gate passes on a push to main (release.yml, docs/releasing.md).
+    # Off until the repository variable RELEASE_ENABLED is "true". Not part of gate: a release
+    # failure does not mark the commit red.
+    needs: gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.gate.result == 'success' && vars.RELEASE_ENABLED == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    secrets:
+      SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+      SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+      SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
