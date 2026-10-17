@@ -510,5 +510,6 @@ public final class io/lsdconsulting/lsd/mono/core/properties/LsdProperties {
 	public static final field PAYLOAD_REDACT_KEYS Ljava/lang/String;
 	public static final field PROPAGATION_ALLOWED_HOSTS Ljava/lang/String;
 	public static final field TIMING_ORDER_BY_STARTED_AT Ljava/lang/String;
+	public static final field USAGE_PING Ljava/lang/String;
 }
 

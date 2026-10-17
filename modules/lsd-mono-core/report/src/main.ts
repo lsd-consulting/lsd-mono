@@ -9,6 +9,7 @@ import { type IndexManifest, type ReportData } from './lib/report-index'
 import { syncDiagramWindow } from './lib/sequence-diagram'
 import { applyTheme, followOsTheme, getPreferredTheme } from './ui/theme'
 import { index, session } from './app/context'
+import { pingSource, usage } from './lib/usage-ping'
 
 declare global {
   interface Window {
@@ -32,6 +33,10 @@ if (index) document.title = index.title
 renderShell()
 applyHash()
 session.booted = true
+// After first render. A page with neither a report nor an index (the built-in demo) never pings.
+usage.configure(window.__LSD_REPORT__ ?? index)
+usage.ping('report-open')
+if (window.__LSD_REPORT__) pingSource(window.__LSD_REPORT__)
 window.addEventListener('hashchange', () => applyHash())
 window.addEventListener('keydown', onKey)
 window.addEventListener('resize', () => {

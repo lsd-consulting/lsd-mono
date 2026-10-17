@@ -188,7 +188,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
 
     private fun onTestRunFinished() {
         val ordered = features.entries.sortedBy { it.value.second }
-        ordered.forEach { (key, value) -> lsd.completeReport(value.first, key) }
+        ordered.forEach { (key, value) -> lsd.completeReport(value.first, key, source = "cucumber") }
         if (ordered.isNotEmpty()) lsd.createIndex()
         reset()
     }

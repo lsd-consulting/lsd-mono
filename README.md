@@ -2,6 +2,7 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-core)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-core)
 [![Build](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml/badge.svg?branch=main)](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml)
+[![jsDelivr hits](https://data.jsdelivr.com/v1/package/gh/lsd-consulting/lsd-mono/badge)](https://www.jsdelivr.com/package/gh/lsd-consulting/lsd-mono)
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
 
@@ -147,6 +148,21 @@ Every setting is a `lsd.mono.*` property, read from a system property, an enviro
 (`LSD_MONO_REPORT_OUTPUTDIR`), a JUnit configuration parameter, or `lsd-mono.properties` on the
 classpath, in that order. The [configuration reference](modules/lsd-mono-core/README.md#configuration-reference)
 lists each one with its default; a test keeps that table in step with the code.
+
+## Usage ping
+
+A report written by a release of lsd-mono (not a `-SNAPSHOT` build) counts towards jsDelivr's public hit count, the number on the jsDelivr badge above. When the report opens, the page requests one tiny file from jsDelivr, pinned to the version that wrote the report:
+
+```text
+https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@<version>/ping/<event>.txt
+```
+
+- **Events.** `report-open` when a report or the index page opens. `source-junit`, `source-cucumber` or `source-api` for the integration that wrote the report. `metrics-open` and `components-open` when the Metrics view or the component diagram is opened. Each event is one file under [`ping/`](ping) and is requested at most once per page load.
+- **What is sent.** Only the request: the version and the event, in the path. There is no query string, cookie or referrer, and no report title, scenario data or ids. Like any request, it shows jsDelivr your IP address and browser User-Agent ([jsDelivr's privacy policy](https://www.jsdelivr.com/terms/privacy-policy)). We only read jsDelivr's public totals per file and version.
+- **The report doesn't depend on it.** The request is never awaited and a failure is ignored, so a report opened offline, from `file://`, or behind a proxy or Content-Security-Policy that blocks jsDelivr works and looks the same.
+- **Turn it off** with `lsd.mono.report.usagePing=false`, set like any other [property](#configuration) (for example `LSD_MONO_REPORT_USAGEPING=false`). The setting is written into the report, and `false` means the page makes no request at all.
+
+Snapshot builds, the report UI's dev server and checks, and the sample reports this repository publishes never ping.
 
 ## What the report looks like
 

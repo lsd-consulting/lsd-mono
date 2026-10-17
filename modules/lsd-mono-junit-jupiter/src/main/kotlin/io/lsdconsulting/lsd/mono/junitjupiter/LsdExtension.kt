@@ -105,11 +105,12 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
         lsdContext.findScenario(extensionContext.uniqueId)
             ?: throw ParameterResolutionException("No LSD scenario is running for '${extensionContext.displayName}'.")
 
+    @OptIn(io.lsdconsulting.lsd.mono.core.InternalLsdApi::class)
     override fun afterAll(context: ExtensionContext) {
         if (isNested(context)) {
             return
         }
-        lsdContext.completeReport(context.displayName, reportKey(context))
+        lsdContext.completeReport(context.displayName, reportKey(context), source = "junit")
         lsdContext.createIndex()
     }
 

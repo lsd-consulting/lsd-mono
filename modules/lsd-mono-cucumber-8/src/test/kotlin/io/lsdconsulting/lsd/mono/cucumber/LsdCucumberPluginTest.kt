@@ -47,5 +47,6 @@ class LsdCucumberPluginTest {
         assertTrue(json.contains(""""label": "POST /orders""""), json)
         assertTrue(json.contains(""""status": "success""""), json)
         assertFalse(json.contains("PlantUML"), json)
+        assertTrue(json.contains(""""source": "cucumber""""), "the usage ping counts the Cucumber plugin")
     }
 }

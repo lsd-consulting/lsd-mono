@@ -62,7 +62,22 @@ internal data class ReportOptionsJson(
     val metricsEnabled: Boolean = true,
     /** Character width used to truncate labels in the shell and in metric summaries. */
     val labelMaxWidth: Int = 200,
+    /** Whether the page may send the usage ping. The page also requires a release `generator`. */
+    val usagePing: Boolean = true,
+    /** The integration that wrote the report: one of [ReportSource.ALL]. */
+    val source: String = ReportSource.API,
 )
+
+/** Which integration wrote a report, counted by the usage ping as `source-<name>`. */
+internal object ReportSource {
+    const val JUNIT: String = "junit"
+    const val CUCUMBER: String = "cucumber"
+    const val API: String = "api"
+    val ALL: List<String> = listOf(JUNIT, CUCUMBER, API)
+
+    /** [name] when it is a known source, else [API]. */
+    fun of(name: String?): String = name?.takeIf { it in ALL } ?: API
+}
 
 internal data class ReportJson(
     val title: String,
@@ -401,6 +416,8 @@ private fun ReportOptionsJson.toJsonValue(): JsonValue =
         listOf(
             "metricsEnabled" to JsonBool(metricsEnabled),
             "labelMaxWidth" to JsonNumber(labelMaxWidth.toString()),
+            "usagePing" to JsonBool(usagePing),
+            "source" to JsonString(source),
         ),
     )
 

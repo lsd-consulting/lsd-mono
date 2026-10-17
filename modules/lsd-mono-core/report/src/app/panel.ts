@@ -1,4 +1,5 @@
 // The side panel's views (message, error, component diagram, metrics), their payloads, and their print copies.
+import { usage } from '../lib/usage-ping'
 import { sampleReport } from '../data/sample-report'
 import type { MessageEvent, Scenario } from '../types'
 import { loadExternalPayloads, loadPayloadsFrom, payloadKey } from '../lib/payloads'
@@ -98,6 +99,7 @@ export function openComponents(scenario: Scenario): void {
   writeScenarioHash()
   session.inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
   syncWithPanel()
+  usage.ping('components-open')
 }
 
 export function openMetrics(scenario: Scenario): void {
@@ -111,6 +113,7 @@ export function openMetrics(scenario: Scenario): void {
     timingHtml: timingPanelHtml(scenario),
   })
   syncWithPanel()
+  usage.ping('metrics-open')
 }
 
 export function openMessage(scenario: Scenario, msg: MessageEvent): void {

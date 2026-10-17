@@ -1,4 +1,5 @@
 // The sidebar: the scenario list or the index page's report list, selection, and opening a report.
+import { pingSource } from '../lib/usage-ping'
 import type { Status } from '../types'
 import { scenarioHaystack } from '../ui/scenario-summary'
 import { loadReportData, type IndexManifest, type ReportData } from '../lib/report-index'
@@ -155,6 +156,7 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
   }
   if (session.loadingReportId !== id) return
   session.loadingReportId = null
+  pingSource(data.report)
   if (session.reportId !== id) {
     if (session.inspector?.isOpen()) {
       session.switchingScenario = true

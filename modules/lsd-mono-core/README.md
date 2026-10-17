@@ -365,6 +365,7 @@ a feature off.
 | `lsd.mono.metrics.enabled` | `lsd.core.metrics.enabled` | `true` | Message count and captured duration in the Metrics view |
 | `lsd.mono.label.maxWidth` | `lsd.core.label.maxWidth` | `200` | Width labels are cut to in summaries and the diagram. Not a positive number: the default |
 | `lsd.mono.report.generatedAt` | | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |
+| `lsd.mono.report.usagePing` | | `true` | `false` stops the report page requesting the usage ping file from jsDelivr when it is opened, see [Usage ping](../../README.md#usage-ping) |
 | `lsd.mono.cucumber.splitBySteps` | | `false` | `true` makes the Cucumber plugin start a section at each step |
 | `lsd.mono.payload.maxDepth` | | `32` | Payload limit, see [Message data](#message-data) |
 | `lsd.mono.payload.maxStringLength` | | `100000` | Payload limit, see [Message data](#message-data) |

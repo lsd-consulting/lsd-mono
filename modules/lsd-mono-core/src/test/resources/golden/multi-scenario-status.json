@@ -5,7 +5,9 @@
   "status": "error",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200
+    "labelMaxWidth": 200,
+    "usagePing": true,
+    "source": "api"
   },
   "scenarios": [
     {

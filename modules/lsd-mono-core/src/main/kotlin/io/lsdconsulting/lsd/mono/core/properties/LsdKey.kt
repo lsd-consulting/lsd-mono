@@ -20,6 +20,7 @@ internal enum class LsdKey(
     METRICS_ENABLED(LsdProperties.METRICS_ENABLED, "lsd.core.metrics.enabled", "true"),
     LABEL_MAX_WIDTH(LsdProperties.LABEL_MAX_WIDTH, "lsd.core.label.maxWidth", "200"),
     GENERATED_AT(LsdProperties.GENERATED_AT, null, null),
+    USAGE_PING(LsdProperties.USAGE_PING, null, "true"),
     CUCUMBER_SPLIT_BY_STEPS(LsdProperties.CUCUMBER_SPLIT_BY_STEPS, null, "false"),
     PAYLOAD_MAX_DEPTH(LsdProperties.PAYLOAD_MAX_DEPTH, null, "32"),
     PAYLOAD_MAX_STRING_LENGTH(LsdProperties.PAYLOAD_MAX_STRING_LENGTH, null, "100000"),

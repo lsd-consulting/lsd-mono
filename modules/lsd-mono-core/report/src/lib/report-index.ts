@@ -11,6 +11,8 @@ export interface IndexManifest {
   title: string
   generatedAt: string
   generator: string
+  /** `usagePing` as for a report (src/lib/usage-ping.ts). Missing on older indexes, which never ping. */
+  options?: { usagePing?: boolean }
   /** Failed reports first, then warnings, then the rest; by title within each. */
   reports: IndexReport[]
 }

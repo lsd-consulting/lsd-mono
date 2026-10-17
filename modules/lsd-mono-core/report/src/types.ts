@@ -149,6 +149,13 @@ export interface ReportOptions {
   metricsEnabled: boolean
   /** Character budget for diagram labels and metric summaries. Default 200. */
   labelMaxWidth: number
+  /**
+   * `lsd.mono.report.usagePing`: true lets a release build's page request jsDelivr's ping files
+   * (src/lib/usage-ping.ts). Missing on older reports, which never ping.
+   */
+  usagePing?: boolean
+  /** The integration that wrote the report: `junit`, `cucumber` or `api`. Missing on older reports. */
+  source?: string
 }
 
 export interface ScenarioError {

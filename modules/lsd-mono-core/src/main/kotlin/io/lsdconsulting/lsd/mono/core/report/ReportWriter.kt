@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.LsdVersion
 import io.lsdconsulting.lsd.mono.core.ReportFiles
 import io.lsdconsulting.lsd.mono.core.html.Html
 import io.lsdconsulting.lsd.mono.core.json.JsonArray
+import io.lsdconsulting.lsd.mono.core.json.JsonBool
 import io.lsdconsulting.lsd.mono.core.json.JsonNumber
 import io.lsdconsulting.lsd.mono.core.json.JsonObject
 import io.lsdconsulting.lsd.mono.core.json.JsonString
@@ -168,6 +169,7 @@ internal object ReportWriter {
                     "title" to JsonString(INDEX_TITLE),
                     "generatedAt" to JsonString((LsdProperties.generatedAt() ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString()),
                     "generator" to JsonString(LsdVersion.generator),
+                    "options" to JsonObject(listOf("usagePing" to JsonBool(LsdProperties.usagePing()))),
                     "reports" to JsonArray(reportFiles.map(::manifestEntry)),
                 ),
             )

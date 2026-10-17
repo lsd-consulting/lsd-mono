@@ -11,3 +11,7 @@ Please do not open a public issue. Include what is affected, how to reproduce it
 
 lsd-mono is a test-time library. Reports it writes can contain captured request and response
 payloads; `lsd.mono.payload.*` sets limits and redaction. Issues in that redaction are in scope.
+
+A report written by a release requests one small file from jsDelivr when it is opened, to count
+usage. It sends no report content, and `lsd.mono.report.usagePing=false` turns it off. See
+[Usage ping](README.md#usage-ping).

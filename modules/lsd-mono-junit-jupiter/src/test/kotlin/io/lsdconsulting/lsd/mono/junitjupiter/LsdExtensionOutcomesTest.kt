@@ -59,6 +59,7 @@ class LsdExtensionOutcomesTest {
         assertEquals(1, summary.summary.testsSkippedCount.toInt())
 
         val json = reportJson("LsdOutcomeFixtures")
+        assertTrue(json.contains(""""source": "junit""""), "the usage ping counts the JUnit extension")
         val prefix = "LsdOutcomeFixtures".deCamelCase()
 
         val passed = scenarioSlice(json, "$prefix: records a passing scenario")

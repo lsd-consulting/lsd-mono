@@ -8,6 +8,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Usage ping: a report written by a release requests one tiny version-pinned file from jsDelivr
+  (`ping/<event>.txt`) at most once per event per page load, for `report-open`, `metrics-open`,
+  `components-open` and the integration that wrote it (`source-junit`, `source-cucumber`, `source-api`). It sends no
+  report content, never affects the page, and is off for snapshot builds. `lsd.mono.report.usagePing=false` turns it
+  off; report options now carry `usagePing` and `source`. See [Usage ping](README.md#usage-ping).
 - Maven Central coordinates `io.github.lsd-consulting:lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`
   and `lsd-mono-coroutines`, each with sources and javadoc jars. Releases are `0.y.z` until v1, cut by semantic-release
   from conventional commits ([docs/releasing.md](docs/releasing.md)).

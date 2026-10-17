@@ -17,6 +17,8 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 internal data class ReportOptions(
     val metricsEnabled: Boolean = true,
     val labelMaxWidth: Int = DEFAULT_LABEL_MAX_WIDTH,
+    /** `lsd.mono.report.usagePing`, default on. The page also needs a release version to ping. */
+    val usagePing: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_LABEL_MAX_WIDTH = 200
@@ -26,6 +28,7 @@ internal data class ReportOptions(
             ReportOptions(
                 metricsEnabled = LsdProperties.metricsEnabled(),
                 labelMaxWidth = LsdProperties.labelMaxWidth(),
+                usagePing = LsdProperties.usagePing(),
             )
     }
 }

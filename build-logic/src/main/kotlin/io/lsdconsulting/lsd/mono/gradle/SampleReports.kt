@@ -18,8 +18,9 @@ import org.gradle.kotlin.dsl.register
 /**
  * Run this sample so it writes a deterministic report into [outDir]: ids are deterministic and the
  * "generated at" instant is `lsd.samples.generatedAt` (gradle.properties), so regenerating changes
- * nothing unless the UI or the sample does. [outDir] is emptied first, because report names carry
- * a hash and the scripts and copies that follow expect one `*-diagram.html`.
+ * nothing unless the UI or the sample does. The usage ping is off. [outDir] is emptied first,
+ * because report names carry a hash and the scripts and copies that follow expect one
+ * `*-diagram.html`.
  */
 fun JavaExec.writesSampleReport(outDir: Provider<Directory>) {
     group = "documentation"
@@ -27,6 +28,9 @@ fun JavaExec.writesSampleReport(outDir: Provider<Directory>) {
     systemProperty("lsd.mono.report.outputDir", dir.absolutePath)
     systemProperty("lsd.mono.ids.deterministic", "true")
     systemProperty("lsd.mono.report.generatedAt", project.providers.gradleProperty("lsd.samples.generatedAt").get())
+    // The Pages site and README captures are ours, so they never count towards the usage ping,
+    // even when built from a release tag.
+    systemProperty("lsd.mono.report.usagePing", "false")
     doFirst { dir.deleteRecursively() }
     outputs.dir(outDir)
 }

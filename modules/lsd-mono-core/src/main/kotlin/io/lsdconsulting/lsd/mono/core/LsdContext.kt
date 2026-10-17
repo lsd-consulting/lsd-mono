@@ -8,6 +8,7 @@ import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
+import io.lsdconsulting.lsd.mono.core.model.ReportSource
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportJsonMapper
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
@@ -312,7 +313,16 @@ public class LsdContext :
      * @return the files written; open [ReportFiles.diagramHtml].
      */
     @JvmOverloads
-    public fun completeReport(title: String, reportKey: String? = null): ReportFiles {
+    public fun completeReport(title: String, reportKey: String? = null): ReportFiles = writeReport(title, reportKey, ReportSource.API)
+
+    /**
+     * [completeReport] for a test integration: [source] (`junit` or `cucumber`) is recorded in the
+     * report's options, and the usage ping counts it once when the report is opened.
+     */
+    @InternalLsdApi
+    public fun completeReport(title: String, reportKey: String?, source: String): ReportFiles = writeReport(title, reportKey, source)
+
+    private fun writeReport(title: String, reportKey: String?, source: String): ReportFiles {
         completeStillRunning(title, reportKey)
         val taken =
             synchronized(lock) {
@@ -321,7 +331,7 @@ public class LsdContext :
                 if (reportKey == null || scenarios.isEmpty()) dropStrayCaptures(title)
                 reports.take(reportKey)
             }
-        val report = jsonMapper.toReportJson(title, taken)
+        val report = jsonMapper.toReportJson(title, taken, source)
         val files = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
         reports.written(ReportWriter.indexEntry(report, reportKey))
         return files

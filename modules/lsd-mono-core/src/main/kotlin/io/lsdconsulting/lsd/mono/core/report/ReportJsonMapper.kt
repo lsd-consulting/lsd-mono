@@ -25,6 +25,7 @@ import io.lsdconsulting.lsd.mono.core.model.PairAccuracyJson
 import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
+import io.lsdconsulting.lsd.mono.core.model.ReportSource
 import io.lsdconsulting.lsd.mono.core.model.ScenarioErrorJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.core.model.ScenarioTimingJson
@@ -41,7 +42,7 @@ import java.time.temporal.ChronoUnit
  * id. Report options are read once per report.
  */
 internal class ReportJsonMapper(private val nextId: () -> String) {
-    fun toReportJson(title: String, scenarios: List<Scenario>): ReportJson {
+    fun toReportJson(title: String, scenarios: List<Scenario>, source: String = ReportSource.API): ReportJson {
         val options = ReportOptions.fromProperties()
         return ReportJson(
             title = title,
@@ -50,13 +51,18 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
             generatedAt = (LsdProperties.generatedAt() ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString(),
             generator = LsdVersion.generator,
             status = determineOverallStatus(scenarios),
-            options = options.toJson(),
+            options = options.toJson(source),
             scenarios = scenarios.map { scenario -> scenario.toJsonModel(options) },
         )
     }
 
-    private fun ReportOptions.toJson(): ReportOptionsJson =
-        ReportOptionsJson(metricsEnabled = metricsEnabled, labelMaxWidth = labelMaxWidth)
+    private fun ReportOptions.toJson(source: String): ReportOptionsJson =
+        ReportOptionsJson(
+            metricsEnabled = metricsEnabled,
+            labelMaxWidth = labelMaxWidth,
+            usagePing = usagePing,
+            source = ReportSource.of(source),
+        )
 
     private fun Scenario.toJsonModel(options: ReportOptions): ScenarioJson = ScenarioJson(
         id = nextId(),

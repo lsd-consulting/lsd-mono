@@ -41,6 +41,13 @@ public object LsdProperties {
      */
     public const val GENERATED_AT: String = "lsd.mono.report.generatedAt"
 
+    /**
+     * `false` stops the report page requesting jsDelivr's usage ping files when it is opened
+     * (see "Usage ping" in the root README). Default `true`; written into the report, so it
+     * decides at open time. Snapshot builds never ping.
+     */
+    public const val USAGE_PING: String = "lsd.mono.report.usagePing"
+
     /** `true` makes the Cucumber plugin start a section at each step. */
     public const val CUCUMBER_SPLIT_BY_STEPS: String = "lsd.mono.cucumber.splitBySteps"
 
@@ -85,6 +92,9 @@ public object LsdProperties {
     internal fun hideStacktrace(): Boolean = LsdKey.HIDE_STACKTRACE.boolean()
 
     internal fun metricsEnabled(): Boolean = LsdKey.METRICS_ENABLED.boolean()
+
+    /** Whether reports let their page send the usage ping ([USAGE_PING]); an unrecognised value keeps it on. */
+    internal fun usagePing(): Boolean = LsdKey.USAGE_PING.boolean()
 
     internal fun clockOrdering(): io.lsdconsulting.lsd.mono.core.ClockOrdering {
         val raw = LsdKey.TIMING_ORDER_BY_STARTED_AT.value()
