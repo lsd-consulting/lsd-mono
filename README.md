@@ -1,5 +1,8 @@
 # LSD Mono
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-core)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-core)
+[![Build](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml/badge.svg?branch=main)](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml)
+
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
 
 ![A tour of the report: choosing a scenario from the list, zoom and Fit, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
@@ -14,9 +17,59 @@ LSD Mono records a scenario as a sequence of messages and writes an interactive 
 
 The source is at https://github.com/lsd-consulting/lsd-mono.
 
-## Depend on it
+## Getting started
 
-From another project in this build:
+The artifacts are on Maven Central under `io.github.lsd-consulting`, all four on one version. Releases are automatic, so the version below may be behind: the Maven Central badge above shows the latest. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
+
+| Artifact | Use it for |
+| --- | --- |
+| `lsd-mono-core` | The capture API (`LsdContext`) and the HTML report. Always needed. |
+| `lsd-mono-junit-jupiter` | A scenario per JUnit Jupiter 6 test ([README](modules/lsd-mono-junit-jupiter/README.md)). |
+| `lsd-mono-cucumber-8` | A scenario per Cucumber 8 scenario ([README](modules/lsd-mono-cucumber-8/README.md)). |
+| `lsd-mono-coroutines` | Captures from coroutines that change threads, with kotlinx.coroutines 1 ([README](modules/lsd-mono-coroutines/README.md)). |
+
+Gradle (Kotlin DSL), with the integrations you use:
+
+```kotlin
+val lsdMonoVersion = "0.1.0"
+
+dependencies {
+    testImplementation("io.github.lsd-consulting:lsd-mono-core:$lsdMonoVersion")
+    testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:$lsdMonoVersion")
+    testImplementation("io.github.lsd-consulting:lsd-mono-cucumber-8:$lsdMonoVersion")
+    testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:$lsdMonoVersion")
+}
+```
+
+Maven:
+
+```xml
+<properties>
+    <lsd-mono.version>0.1.0</lsd-mono.version>
+</properties>
+
+<dependencies>
+    <dependency>
+        <groupId>io.github.lsd-consulting</groupId>
+        <artifactId>lsd-mono-core</artifactId>
+        <version>${lsd-mono.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>io.github.lsd-consulting</groupId>
+        <artifactId>lsd-mono-junit-jupiter</artifactId>
+        <version>${lsd-mono.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <!-- lsd-mono-cucumber-8 and lsd-mono-coroutines the same way -->
+</dependencies>
+```
+
+Each integration brings in `lsd-mono-core`; listing core as well keeps the API you call directly declared. You still bring the test runtime: a JUnit Jupiter engine for `lsd-mono-junit-jupiter`, and Cucumber 8 (`cucumber-java8` and `cucumber-junit-platform-engine`) for `lsd-mono-cucumber-8`. The module READMEs show the setup for each.
+
+### From this repository
+
+Another project in this build depends on the modules directly:
 
 ```kotlin
 dependencies {
@@ -27,7 +80,7 @@ dependencies {
 }
 ```
 
-The artifacts are `io.github.lsd-consulting:lsd-mono-core`, `io.github.lsd-consulting:lsd-mono-junit-jupiter`, `io.github.lsd-consulting:lsd-mono-cucumber-8`, and `io.github.lsd-consulting:lsd-mono-coroutines`, not published yet; releases will go to Maven Central as `0.y.z` until v1 ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later (compiled with `--release 17`; CI tests 17, 21 and 25). Cucumber support is major 8.
+They are compiled with `--release 17`, and CI tests on Java 17, 21 and 25. Cucumber support is major 8.
 
 ## Capture a scenario
 

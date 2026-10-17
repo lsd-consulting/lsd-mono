@@ -5,6 +5,8 @@ produces the report JSON and the interactive HTML report. The report UI lives in
 (Vite, TypeScript and a custom SVG diagram). The JUnit, Cucumber and coroutines integrations
 depend on this module only.
 
+Depend on `io.github.lsd-consulting:lsd-mono-core` from Maven Central; [Getting started](../../README.md#getting-started) in the root README has the Gradle and Maven snippets and the latest version.
+
 ## What this is / is not
 
 | | |

@@ -6,11 +6,11 @@ It replaces the earlier published `lsd-junit5` and `lsd-junit-jupiter` libraries
 
 ## Depend on it
 
-From another project in this repo:
-
 ```kotlin
-testImplementation(project(":modules:lsd-mono-junit-jupiter"))
+testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:<version>")
 ```
+
+The version is on the [Maven Central badge](../../README.md#getting-started) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-junit-jupiter"))`.
 
 That pulls in `lsd-mono-core` and the Jupiter API. You still need a Jupiter engine on the test runtime classpath (the `junit-jupiter` bundle is enough).
 
