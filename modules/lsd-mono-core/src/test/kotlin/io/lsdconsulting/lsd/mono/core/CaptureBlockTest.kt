@@ -29,6 +29,27 @@ class CaptureBlockTest {
     private fun LsdScenario.labels(): List<String> = events().map { (it as Message).label }
 
     @Test
+    fun `timing replaces what was set before it, and later setters add to it`() {
+        val at = Instant.parse("2026-01-01T00:00:00Z")
+        val messages =
+            scenario()
+                .apply {
+                    capture {
+                        "A" calls "B" label "replaced" took 5 timing Timing(startedAt = at, source = "orders")
+                        "A" calls "B" label "added" timing Timing(startedAt = at) took 7 source "billing"
+                    }
+                }.events()
+                .map { it as Message }
+        val (replaced, added) = messages
+        assertEquals(null, replaced.durationMs, "timing replaced the earlier took")
+        assertEquals(at, replaced.startedAt)
+        assertEquals("orders", replaced.source)
+        assertEquals(7.0, added.durationMs)
+        assertEquals(at, added.startedAt)
+        assertEquals("billing", added.source)
+    }
+
+    @Test
     fun `a block captures the same events as the verbs`() {
         val body = mapOf("sku" to "SOCK-1")
         val at = Instant.parse("2026-01-01T00:00:00Z")

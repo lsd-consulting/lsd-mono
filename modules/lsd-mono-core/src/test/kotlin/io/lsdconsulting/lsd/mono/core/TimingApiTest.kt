@@ -193,6 +193,32 @@ class TimingApiTest {
     }
 
     @Test
+    fun `three sources, SAME_SOURCE sorts within each and ALL_SOURCES across all of them`() {
+        val events =
+            listOf(
+                msg("orders late", at = t(30), source = "orders", type = MessageType.ASYNCHRONOUS),
+                msg("billing", at = t(10), source = "billing", type = MessageType.ASYNCHRONOUS),
+                msg("stock", at = t(20), source = "stock", type = MessageType.ASYNCHRONOUS),
+                msg("orders early", at = t(25), source = "orders", type = MessageType.ASYNCHRONOUS),
+            )
+        assertEquals(
+            listOf("orders early", "billing", "stock", "orders late"),
+            labels(orderAndAnalyse(events, ClockOrdering.SAME_SOURCE).first),
+            "orders keeps its two slots; the other sources stay where they were captured",
+        )
+        val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.ALL_SOURCES)
+        assertEquals(listOf("billing", "stock", "orders early", "orders late"), labels(ordered))
+        assertEquals(setOf("orders", "billing", "stock"), timing.sources.toSet())
+        assertEquals(emptyList<String>(), timing.warnings.map { it.text })
+        assertNull(timing.wallClockMs, "wall clock is single-source only")
+        assertEquals(
+            listOf("orders late", "billing", "stock", "orders early"),
+            labels(orderAndAnalyse(events, ClockOrdering.OFF).first),
+            "OFF keeps capture order",
+        )
+    }
+
+    @Test
     fun `ALL_SOURCES falls back to each source when two clocks disagree with the structure`() {
         val p = CallRef("p")
         val events =

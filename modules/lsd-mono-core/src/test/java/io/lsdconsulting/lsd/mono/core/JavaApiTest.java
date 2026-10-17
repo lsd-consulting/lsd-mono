@@ -206,6 +206,36 @@ class JavaApiTest {
     }
 
     @Test
+    void interactionsWithStatusAndHeadersCanBeBuiltFromJava() throws IOException {
+        LsdContext lsd = new LsdContext();
+        lsd.accept(new Interaction(InteractionKind.REQUEST, "Web", "Api", "POST /orders", null, "c1"));
+        lsd.accept(new Interaction(InteractionKind.RESPONSE, "Api", "Web", "Created", "201", null, "c1"));
+        lsd.accept(new Interaction(
+                InteractionKind.PUBLISH,
+                "Api",
+                "Kafka",
+                "order.placed",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Map.of("id", 7),
+                Map.of("content-type", "application/json", "Authorization", "Bearer secret")));
+        lsd.completeScenario("java-interactions");
+
+        String json = Files.readString(reportJson(lsd.completeReport("Java interactions")));
+
+        assertTrue(json.contains("\"status\": \"201\""), json);
+        assertTrue(json.contains("\"content-type\": \"application/json\""), json);
+        assertTrue(json.contains("\"body\": {"), json);
+        assertTrue(!json.contains("Bearer secret"), "authorization is redacted");
+    }
+
+    @Test
     void completeReportCompletesAForgottenScenarioAsWarn() throws IOException {
         LsdContext lsd = new LsdContext();
         LsdScenario forgotten = lsd.beginScenario("java-forgotten", "java-forgotten", false);
