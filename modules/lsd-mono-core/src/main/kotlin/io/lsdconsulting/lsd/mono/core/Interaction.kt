@@ -50,7 +50,7 @@ public data class Interaction
         val source: String? = null,
         val startedAt: Instant? = null,
         val durationMs: Double? = null,
-        val orderByCreatedAt: Boolean? = null,
+        val orderByStartedAt: Boolean? = null,
         val data: Any? = null,
         val headers: Map<String, String>? = null,
     )

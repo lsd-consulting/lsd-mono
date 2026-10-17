@@ -141,7 +141,7 @@ public final class io/lsdconsulting/lsd/mono/core/Interaction {
 	public final fun getInteractionId ()Ljava/lang/String;
 	public final fun getKind ()Lio/lsdconsulting/lsd/mono/core/InteractionKind;
 	public final fun getLabel ()Ljava/lang/String;
-	public final fun getOrderByCreatedAt ()Ljava/lang/Boolean;
+	public final fun getOrderByStartedAt ()Ljava/lang/Boolean;
 	public final fun getReplyTo ()Ljava/lang/String;
 	public final fun getSource ()Ljava/lang/String;
 	public final fun getStartedAt ()Ljava/time/Instant;
@@ -343,7 +343,7 @@ public final class io/lsdconsulting/lsd/mono/core/Timing {
 	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/core/Timing;Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/String;Ljava/lang/Boolean;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/core/Timing;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDurationMs ()Ljava/lang/Double;
-	public final fun getOrderByCreatedAt ()Ljava/lang/Boolean;
+	public final fun getOrderByStartedAt ()Ljava/lang/Boolean;
 	public final fun getSource ()Ljava/lang/String;
 	public final fun getStartedAt ()Ljava/time/Instant;
 	public fun hashCode ()I
@@ -352,7 +352,7 @@ public final class io/lsdconsulting/lsd/mono/core/Timing {
 	public fun toString ()Ljava/lang/String;
 	public static final fun took (Ljava/time/Duration;)Lio/lsdconsulting/lsd/mono/core/Timing;
 	public static final fun tookMs (D)Lio/lsdconsulting/lsd/mono/core/Timing;
-	public final fun withOrderByCreatedAt (Ljava/lang/Boolean;)Lio/lsdconsulting/lsd/mono/core/Timing;
+	public final fun withOrderByStartedAt (Ljava/lang/Boolean;)Lio/lsdconsulting/lsd/mono/core/Timing;
 	public final fun withSource (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/core/Timing;
 }
 
@@ -365,9 +365,9 @@ public final class io/lsdconsulting/lsd/mono/core/Timing$Companion {
 }
 
 public final class io/lsdconsulting/lsd/mono/core/TimingConfig {
-	public final fun effectiveOrderByCreatedAt ()Lio/lsdconsulting/lsd/mono/core/ClockOrdering;
-	public final fun orderByCreatedAt ()Lio/lsdconsulting/lsd/mono/core/ClockOrdering;
-	public final fun orderByCreatedAt (Lio/lsdconsulting/lsd/mono/core/ClockOrdering;)Lio/lsdconsulting/lsd/mono/core/TimingConfig;
+	public final fun effectiveOrderByStartedAt ()Lio/lsdconsulting/lsd/mono/core/ClockOrdering;
+	public final fun orderByStartedAt ()Lio/lsdconsulting/lsd/mono/core/ClockOrdering;
+	public final fun orderByStartedAt (Lio/lsdconsulting/lsd/mono/core/ClockOrdering;)Lio/lsdconsulting/lsd/mono/core/TimingConfig;
 }
 
 public final class io/lsdconsulting/lsd/mono/core/TimingSource : java/lang/Enum {

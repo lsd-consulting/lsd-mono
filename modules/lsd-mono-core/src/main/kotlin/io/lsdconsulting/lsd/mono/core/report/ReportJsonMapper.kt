@@ -109,7 +109,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     colour = colour?.takeIf { it.isNotBlank() },
                     durationMs = timing.reportedMs(this),
                     data = data,
-                    startedAt = createdAt?.toString(),
+                    startedAt = startedAt?.toString(),
                     seq = seq.takeIf { it > 0 },
                     callId = callRef?.id,
                     replyTo = replyTo?.id,
@@ -130,19 +130,19 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     text = text,
                     over = over,
                     placement = placement.name.lowercase(),
-                    createdAt = createdAt?.toString(),
+                    startedAt = startedAt?.toString(),
                 )
-            is Divider -> DividerEventJson(id = id, label = label, createdAt = createdAt?.toString())
-            is Section -> SectionEventJson(id = id, title = title, createdAt = createdAt?.toString())
-            is Delay -> DelayEventJson(id = id, label = label, createdAt = createdAt?.toString())
-            is Spacer -> SpacerEventJson(id = id, heightPx = heightPx, createdAt = createdAt?.toString())
+            is Divider -> DividerEventJson(id = id, label = label, startedAt = startedAt?.toString())
+            is Section -> SectionEventJson(id = id, title = title, startedAt = startedAt?.toString())
+            is Delay -> DelayEventJson(id = id, label = label, startedAt = startedAt?.toString())
+            is Spacer -> SpacerEventJson(id = id, heightPx = heightPx, startedAt = startedAt?.toString())
             is Lifeline ->
                 LifelineEventJson(
                     kind = if (action == LifelineAction.ACTIVATE) "activate" else "deactivate",
                     id = id,
                     participantId = participantId,
                     colour = if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null,
-                    createdAt = createdAt?.toString(),
+                    startedAt = startedAt?.toString(),
                 )
         }
 

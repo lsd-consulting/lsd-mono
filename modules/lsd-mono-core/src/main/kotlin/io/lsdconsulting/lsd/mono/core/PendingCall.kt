@@ -72,7 +72,7 @@ public class PendingCall internal constructor(
         if (state.compareAndSet(State.WAITING, State.REPLIED)) {
             val elapsedMs = (System.nanoTime() - started) / 1_000_000.0
             scenario.callEnded(this)
-            val sent = request.createdAt
+            val sent = request.startedAt
             val bothTimed = sent != null && at != null && timing?.durationMs == null
             val exact =
                 timing?.durationMs
@@ -85,13 +85,13 @@ public class PendingCall internal constructor(
                     label = label,
                     type = MessageType.SYNCHRONOUS_RESPONSE,
                     data = data,
-                    createdAt = at,
+                    startedAt = at,
                     durationMs = exact,
                     derived = bothTimed,
                     source = timing?.source ?: request.source,
                     trace = request.trace,
                     replyTo = ref,
-                    orderHint = timing?.orderByCreatedAt,
+                    orderHint = timing?.orderByStartedAt,
                 ),
             )
         } else if (state.get() == State.ABANDONED) {

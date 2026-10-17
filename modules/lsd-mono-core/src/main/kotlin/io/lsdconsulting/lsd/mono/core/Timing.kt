@@ -24,21 +24,21 @@ public data class Trace
  * @property durationMs a measured duration, fractional milliseconds. It belongs to the call: on a
  *   reply it is moved to the call it answers.
  * @property source the clock domain (service or JVM id). `null` means `"local"`.
- * @property orderByCreatedAt per-interaction hint for clock ordering: `true` opts in (same source
+ * @property orderByStartedAt per-interaction hint for clock ordering: `true` opts in (same source
  *   only) even when the report option is [ClockOrdering.OFF], `false` opts out, `null` inherits.
  */
 public data class Timing(
     val startedAt: Instant? = null,
     val durationMs: Double? = null,
     val source: String? = null,
-    val orderByCreatedAt: Boolean? = null,
+    val orderByStartedAt: Boolean? = null,
 ) {
     init {
         require(durationMs == null || (durationMs >= 0.0 && durationMs.isFinite())) { "durationMs must be finite and >= 0: $durationMs" }
     }
 
-    /** A copy with [orderByCreatedAt] set; the Java form of `copy(orderByCreatedAt = …)`. */
-    public fun withOrderByCreatedAt(hint: Boolean?): Timing = copy(orderByCreatedAt = hint)
+    /** A copy with [orderByStartedAt] set; the Java form of `copy(orderByStartedAt = …)`. */
+    public fun withOrderByStartedAt(hint: Boolean?): Timing = copy(orderByStartedAt = hint)
 
     /** A copy in clock domain [source]. */
     public fun withSource(source: String?): Timing = copy(source = source)
@@ -118,8 +118,8 @@ public enum class Accuracy {
 }
 
 /**
- * Whether events with no measured duration may be reordered by their `createdAt` (`startedAt`).
- * Config key `lsd.mono.timing.orderByCreatedAt`: `false`, `source` (default, also `true`) or `all`.
+ * Whether events with no measured duration may be reordered by their `startedAt`.
+ * Config key `lsd.mono.timing.orderByStartedAt`: `false`, `source` (default, also `true`) or `all`.
  */
 public enum class ClockOrdering {
     /** Timestamps are advisory; order is capture order and structure only. */

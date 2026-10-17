@@ -50,14 +50,14 @@ class ActivateColourAndTimestampsTest {
                 from = "A",
                 to = "B",
                 label = "late",
-                createdAt = Instant.parse("2026-10-03T11:00:00Z"),
+                startedAt = Instant.parse("2026-10-03T11:00:00Z"),
             ),
             Message(
                 id = "early",
                 from = "A",
                 to = "B",
                 label = "early",
-                createdAt = Instant.parse("2026-10-03T09:00:00Z"),
+                startedAt = Instant.parse("2026-10-03T09:00:00Z"),
             ),
             Message(id = "untimed", from = "A", to = "B", label = "untimed"),
             Message(
@@ -65,7 +65,7 @@ class ActivateColourAndTimestampsTest {
                 from = "A",
                 to = "B",
                 label = "mid",
-                createdAt = Instant.parse("2026-10-03T10:00:00Z"),
+                startedAt = Instant.parse("2026-10-03T10:00:00Z"),
             ),
         )
         lsd.completeScenario("reordered", status = Status.SUCCESS)

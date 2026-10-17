@@ -64,7 +64,7 @@ class TimingApiTest {
         to = to,
         label = label,
         type = type,
-        createdAt = at,
+        startedAt = at,
         durationMs = ms,
         source = source,
         callRef = callRef,
@@ -476,20 +476,20 @@ class TimingApiTest {
     @Test
     fun `configure sets the clock ordering, and null falls back to the config key`() {
         val lsd = LsdContext()
-        assertEquals(ClockOrdering.SAME_SOURCE, lsd.timingConfig.effectiveOrderByCreatedAt())
+        assertEquals(ClockOrdering.SAME_SOURCE, lsd.timingConfig.effectiveOrderByStartedAt())
         System.setProperty(LsdProperties.TIMING_ORDER_BY_CREATED_AT, "all")
-        assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByCreatedAt())
-        lsd.configure { it.orderByCreatedAt(ClockOrdering.OFF) }
-        assertEquals(ClockOrdering.OFF, lsd.timingConfig.orderByCreatedAt())
+        assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByStartedAt())
+        lsd.configure { it.orderByStartedAt(ClockOrdering.OFF) }
+        assertEquals(ClockOrdering.OFF, lsd.timingConfig.orderByStartedAt())
         lsd.message("A", "B", "late", timing = Timing.at(t(50)))
         lsd.message("A", "B", "early", timing = Timing.at(t(0)))
         lsd.completeScenario("off", status = Status.SUCCESS)
         val json = report(lsd, "Configured")
         assertTrue(json.contains("\"clockOrdering\": \"OFF\""), json)
         assertTrue(json.indexOf("\"late\"") < json.indexOf("\"early\""), "OFF keeps capture order")
-        lsd.configure { it.orderByCreatedAt(null) }
-        assertNull(lsd.timingConfig.orderByCreatedAt())
-        assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByCreatedAt())
+        lsd.configure { it.orderByStartedAt(null) }
+        assertNull(lsd.timingConfig.orderByStartedAt())
+        assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByStartedAt())
     }
 
     @Test
@@ -510,7 +510,7 @@ class TimingApiTest {
     @Test
     fun `timing factories keep fractional milliseconds and reject negatives`() {
         assertEquals(1.5, Timing.took(Duration.ofNanos(1_500_000)).durationMs)
-        assertEquals(true, Timing.none().withOrderByCreatedAt(true).orderByCreatedAt)
+        assertEquals(true, Timing.none().withOrderByStartedAt(true).orderByStartedAt)
         assertThrows<IllegalArgumentException> { Timing.tookMs(-1.0) }
     }
 

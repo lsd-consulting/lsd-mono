@@ -27,10 +27,10 @@ public object LsdProperties {
     public const val METRICS_ENABLED: String = "lsd.mono.metrics.enabled"
 
     /**
-     * Clock ordering of events that have a `createdAt` but no measured duration: `false` (off),
+     * Clock ordering of events that have a `startedAt` but no measured duration: `false` (off),
      * `source` (default; same source only, also `true`) or `all` (across sources).
      */
-    public const val TIMING_ORDER_BY_CREATED_AT: String = "lsd.mono.timing.orderByCreatedAt"
+    public const val TIMING_ORDER_BY_CREATED_AT: String = "lsd.mono.timing.orderByStartedAt"
 
     /** Width summaries and the diagram truncate labels to. Default 200. */
     public const val LABEL_MAX_WIDTH: String = "lsd.mono.label.maxWidth"

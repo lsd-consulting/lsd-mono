@@ -283,11 +283,11 @@ metrics add `Errors`: the number whose status is an error, either an HTTP-style 
 (`"503"`, `"404 Not Found"`) or, with no leading code, a word such as `error`, `failed` or `timeout`.
 The inspector labels an error status `· error`.
 
-**Clock ordering** (`lsd.mono.timing.orderByCreatedAt`, or `lsd.configure { it.orderByCreatedAt(mode) }`,
-`lsd.configure(t -> t.orderByCreatedAt(mode))` from Java): by
+**Clock ordering** (`lsd.mono.timing.orderByStartedAt`, or `lsd.configure { it.orderByStartedAt(mode) }`,
+`lsd.configure(t -> t.orderByStartedAt(mode))` from Java): by
 default (`source`) events from one source that have a start time but no measured duration are
 ordered by it, among their siblings in the same parent call; untimed events keep their place.
-`all` also compares different sources, `false` turns it off, and `Timing.orderByCreatedAt` opts
+`all` also compares different sources, `false` turns it off, and `Timing.orderByStartedAt` opts
 one event in or out. Moved events are marked `order: CLOCK` and badged CLOCK in the waterfall and
 the inspector; it never raises `accuracy`. A
 reply never moves before its call, a consume before its publish, or a child out of its parent:
@@ -371,14 +371,14 @@ a feature off.
 | `lsd.mono.payload.redactKeys` | | unset | Comma-separated key names to redact as well, see [Redaction](#redaction) |
 | `lsd.mono.propagation.allowedHosts` | | `localhost,127.0.0.1,::1` | Hosts `scenarioHeaderValue` gives the scenario header for: names, `*.domain` or `*`. See [Interceptors](#interceptors) |
 | `lsd.mono.scenario.inheritBinding` | | `true` | `false` stops threads inheriting the scenario of the thread that started them, see [Threads](#threads-and-parallel-tests) |
-| `lsd.mono.timing.orderByCreatedAt` | | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
+| `lsd.mono.timing.orderByStartedAt` | | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
 
 Settings made in code rather than by property:
 
 | Setting | Effect |
 | --- | --- |
-| `LsdContext.configure(Consumer<TimingConfig>)` | `TimingConfig.orderByCreatedAt(mode)`: clock ordering for scenarios completed from now on; `null` reads `lsd.mono.timing.orderByCreatedAt`. Chains the same from Java and Kotlin |
-| `Timing.orderByCreatedAt` | Opts one event in or out of clock ordering |
+| `LsdContext.configure(Consumer<TimingConfig>)` | `TimingConfig.orderByStartedAt(mode)`: clock ordering for scenarios completed from now on; `null` reads `lsd.mono.timing.orderByStartedAt`. Chains the same from Java and Kotlin |
+| `Timing.orderByStartedAt` | Opts one event in or out of clock ordering |
 | `LsdContext.payloads` | Payload converters and redaction rules (see [Message data](#message-data)); `clear()` re-reads the payload properties |
 
 The report page remembers a few choices in the reader's browser, not in the report: the theme

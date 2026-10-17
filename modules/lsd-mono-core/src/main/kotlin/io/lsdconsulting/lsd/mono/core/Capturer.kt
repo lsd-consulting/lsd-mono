@@ -24,7 +24,7 @@ import java.time.Instant
  * happened), a measured fractional `durationMs`, the clock source and an ordering hint, plus a
  * [Trace] (trace and span ids). [ingest] takes [Interaction]s from other libraries. Structural
  * rows (notes, activations, sections, dividers, delays, spacers) take an optional [Instant] `at`.
- * By default (`lsd.mono.timing.orderByCreatedAt=source`) events from one source that have a start
+ * By default (`lsd.mono.timing.orderByStartedAt=source`) events from one source that have a start
  * and no measured duration are ordered by it, for capture that arrives out of order (interceptors
  * on other threads); untimed events keep their capture position. A reply never moves before its
  * call, nor a child out of its parent.
@@ -205,7 +205,7 @@ public sealed class Capturer {
         at: Instant? = null,
     ) {
         require(side != NoteSide.OVER || !on.isNullOrBlank()) { "A note over a participant needs the participant: pass on" }
-        emit(Note(id = "", text = text, over = on, placement = side, createdAt = at))
+        emit(Note(id = "", text = text, over = on, placement = side, startedAt = at))
     }
 
     /** Start an activation bar on [participant], optionally in [colour] (for example `#c026d3`). */
@@ -217,7 +217,7 @@ public sealed class Capturer {
                 participantId = participant,
                 action = LifelineAction.ACTIVATE,
                 colour = colour?.takeIf { it.isNotBlank() },
-                createdAt = at,
+                startedAt = at,
             ),
         )
     }
@@ -225,31 +225,31 @@ public sealed class Capturer {
     /** End the innermost activation bar on [participant]. */
     @JvmOverloads
     public fun deactivate(participant: String, at: Instant? = null) {
-        emit(Lifeline(id = "", participantId = participant, action = LifelineAction.DEACTIVATE, createdAt = at))
+        emit(Lifeline(id = "", participantId = participant, action = LifelineAction.DEACTIVATE, startedAt = at))
     }
 
     /** A titled section. The diagram continues and activations stay open across it. */
     @JvmOverloads
     public fun section(title: String, at: Instant? = null) {
-        emit(Section(id = "", title = title, createdAt = at))
+        emit(Section(id = "", title = title, startedAt = at))
     }
 
     /** A labelled divider line across the diagram. */
     @JvmOverloads
     public fun divider(label: String, at: Instant? = null) {
-        emit(Divider(id = "", label = label, createdAt = at))
+        emit(Divider(id = "", label = label, startedAt = at))
     }
 
     /** A gap that stands for time passing, optionally labelled. */
     @JvmOverloads
     public fun delay(label: String? = null, at: Instant? = null) {
-        emit(Delay(id = "", label = label, createdAt = at))
+        emit(Delay(id = "", label = label, startedAt = at))
     }
 
     /** Extra vertical space, [heightPx] high or the report's default. */
     @JvmOverloads
     public fun spacer(heightPx: Int? = null, at: Instant? = null) {
-        emit(Spacer(id = "", heightPx = heightPx, createdAt = at))
+        emit(Spacer(id = "", heightPx = heightPx, startedAt = at))
     }
 
     /** A key/value fact shown with the scenario. */
@@ -286,7 +286,7 @@ public sealed class Capturer {
             label = label,
             type = type,
             data = payload(),
-            createdAt = startedAt,
+            startedAt = startedAt,
             durationMs = durationMs?.takeIf { it > 0.0 && it.isFinite() },
             source = source,
             trace = trace,
@@ -294,7 +294,7 @@ public sealed class Capturer {
             replyTo = if (kind == InteractionKind.RESPONSE) replyTo?.let(CallRef::of) else null,
             causedBy = if (kind == InteractionKind.CONSUME) replyTo?.let(CallRef::of) else null,
             status = status,
-            orderHint = orderByCreatedAt,
+            orderHint = orderByStartedAt,
         )
     }
 
@@ -327,10 +327,10 @@ internal fun Message.withTiming(
         this
     } else {
         copy(
-            createdAt = timing?.startedAt ?: createdAt,
+            startedAt = timing?.startedAt ?: startedAt,
             durationMs = timing?.durationMs ?: durationMs,
             source = timing?.source ?: source,
-            orderHint = timing?.orderByCreatedAt ?: orderHint,
+            orderHint = timing?.orderByStartedAt ?: orderHint,
             trace = trace ?: this.trace,
         )
     }

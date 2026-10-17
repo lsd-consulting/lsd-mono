@@ -239,7 +239,7 @@ internal data class NoteEventJson(
     /** Anchor participant. Required for placement `over`; optional for left/right. */
     val over: String? = null,
     val placement: String = "over",
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -249,7 +249,7 @@ internal data class NoteEventJson(
                 add("text" to JsonString(text))
                 if (over != null) add("over" to JsonString(over))
                 add("placement" to JsonString(placement))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -257,7 +257,7 @@ internal data class NoteEventJson(
 internal data class DelayEventJson(
     val id: String,
     val label: String? = null,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -265,7 +265,7 @@ internal data class DelayEventJson(
                 add("kind" to JsonString("delay"))
                 add("id" to JsonString(id))
                 if (label != null) add("label" to JsonString(label))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -273,7 +273,7 @@ internal data class DelayEventJson(
 internal data class SpacerEventJson(
     val id: String,
     val heightPx: Int? = null,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -281,7 +281,7 @@ internal data class SpacerEventJson(
                 add("kind" to JsonString("spacer"))
                 add("id" to JsonString(id))
                 if (heightPx != null) add("heightPx" to JsonNumber(heightPx.toString()))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -289,7 +289,7 @@ internal data class SpacerEventJson(
 internal data class DividerEventJson(
     val id: String,
     val label: String,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -297,7 +297,7 @@ internal data class DividerEventJson(
                 add("kind" to JsonString("divider"))
                 add("id" to JsonString(id))
                 add("label" to JsonString(label))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -305,7 +305,7 @@ internal data class DividerEventJson(
 internal data class SectionEventJson(
     val id: String,
     val title: String,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -313,7 +313,7 @@ internal data class SectionEventJson(
                 add("kind" to JsonString("section"))
                 add("id" to JsonString(id))
                 add("title" to JsonString(title))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -324,7 +324,7 @@ internal data class LifelineEventJson(
     val participantId: String,
     /** Present only on activate, and only when the caller set a colour. */
     val colour: String? = null,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -333,7 +333,7 @@ internal data class LifelineEventJson(
                 add("id" to JsonString(id))
                 add("participantId" to JsonString(participantId))
                 if (colour != null) add("colour" to JsonString(colour))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }

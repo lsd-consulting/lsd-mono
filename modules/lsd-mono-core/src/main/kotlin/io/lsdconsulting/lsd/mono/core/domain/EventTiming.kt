@@ -89,8 +89,8 @@ private fun SequenceEvent.source(): String = (this as? Message)?.source ?: Timin
  * orders [captured] (capture order) for the report:
  *
  * 1. Capture order is the base.
- * 2. Under [mode] (default [ClockOrdering.SAME_SOURCE]) events with a `createdAt` and no measured
- *    duration are sorted by `(createdAt, capture order)` among the slots their group occupies, a
+ * 2. Under [mode] (default [ClockOrdering.SAME_SOURCE]) events with a `startedAt` and no measured
+ *    duration are sorted by `(startedAt, capture order)` among the slots their group occupies, a
  *    group being one parent call and one source (or every source for [ClockOrdering.ALL_SOURCES]).
  *    Untimed events keep their slots. A per-message hint opts in (same source) or out.
  * 3. Structure wins: when clock order would put a reply before its call, a consume before its
@@ -136,7 +136,7 @@ private class Analysis(
 )
 
 /**
- * Whether clock ordering may move [e]: it has a `createdAt`, is not [measured] (a measured call,
+ * Whether clock ordering may move [e]: it has a `startedAt`, is not [measured] (a measured call,
  * or the reply of one), is not opted out, and ordering is on or the event opts in.
  */
 private fun clockEligible(
@@ -144,7 +144,7 @@ private fun clockEligible(
     mode: ClockOrdering,
     measured: Boolean,
 ): Boolean {
-    if (e.createdAt == null || measured) return false
+    if (e.startedAt == null || measured) return false
     val hint = (e as? Message)?.orderHint
     if (hint == false) return false
     return mode != ClockOrdering.OFF || hint == true
@@ -156,13 +156,13 @@ private fun clockScope(
     mode: ClockOrdering,
 ): String = if (mode == ClockOrdering.ALL_SOURCES && (e as? Message)?.orderHint != true) "*" else e.source()
 
-/** Sort the events at [slots] by `(createdAt, capture position)` back into the same slots of [order]. */
+/** Sort the events at [slots] by `(startedAt, capture position)` back into the same slots of [order]. */
 private fun sortIntoSlots(
     events: List<SequenceEvent>,
     slots: List<Int>,
     order: IntArray,
 ) {
-    val sorted = slots.sortedWith(compareBy<Int> { events[it].createdAt }.thenBy { it })
+    val sorted = slots.sortedWith(compareBy<Int> { events[it].startedAt }.thenBy { it })
     slots.forEachIndexed { k, slot -> order[slot] = sorted[k] }
 }
 
@@ -325,10 +325,10 @@ private fun timingSources(
         val e = events[i]
         val m = e as? Message
         when {
-            m == null -> if (e.createdAt != null) TimingSource.TIMESTAMPED else TimingSource.NONE
+            m == null -> if (e.startedAt != null) TimingSource.TIMESTAMPED else TimingSource.NONE
             m.isCall() && durations.callMs[i] != null -> if (durations.derived[i]) TimingSource.DERIVED else TimingSource.MEASURED
             pairs.callOf[i] < 0 && !m.isCall() && m.timedMs != null -> if (m.derived) TimingSource.DERIVED else TimingSource.MEASURED
-            m.createdAt != null -> TimingSource.TIMESTAMPED
+            m.startedAt != null -> TimingSource.TIMESTAMPED
             else -> TimingSource.NONE
         }
     }
@@ -598,9 +598,9 @@ private fun wallClock(
     callMs: Map<String, Double>,
 ): Double? {
     // A measured call with no start time could sit anywhere, so the span would be a guess.
-    val stamped = events.mapNotNullTo(HashSet()) { e -> e.id.takeIf { e.createdAt != null } }
+    val stamped = events.mapNotNullTo(HashSet()) { e -> e.id.takeIf { e.startedAt != null } }
     if (callMs.keys.any { it !in stamped }) return null
-    val starts = events.mapNotNull { e -> e.createdAt?.let { e.id to it } }
+    val starts = events.mapNotNull { e -> e.startedAt?.let { e.id to it } }
     if (starts.size < 2 && starts.none { callMs[it.first] != null }) return null
     val first = starts.minOfOrNull { it.second } ?: return null
     val last =

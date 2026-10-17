@@ -39,7 +39,7 @@ class TimingTreeGoldenTest {
 
     @Test
     fun `span nesting, duplicate spans and the ALL_SOURCES fallback`() {
-        val lsd = LsdContext().configure { it.orderByCreatedAt(ClockOrdering.ALL_SOURCES) }
+        val lsd = LsdContext().configure { it.orderByStartedAt(ClockOrdering.ALL_SOURCES) }
         val sync = MessageType.SYNCHRONOUS
 
         // Concurrent calls captured interleaved: the child names A as its parent span.
