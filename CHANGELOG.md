@@ -8,6 +8,11 @@ this file is written by hand.
 
 ## [Unreleased]
 
+### Fixed
+
+- The report header shows when it was generated in the reader's own time zone with its real abbreviation (for example
+  `1 Jan 2026, 12:00 GMT`). It used to always convert to London time and label it `BST`, even in winter.
+
 ## [0.2.0] - 2026-10-17
 
 ### Added
