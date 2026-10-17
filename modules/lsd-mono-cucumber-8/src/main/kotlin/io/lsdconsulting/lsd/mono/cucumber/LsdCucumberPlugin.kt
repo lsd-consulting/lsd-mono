@@ -104,7 +104,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
             }
             return
         }
-        if (node is Node.Container<*>) node.elements().forEach { child -> numberExamples(uri, child as Node) }
+        if (node is Node.Container<*>) node.elements().forEach { child -> numberExamples(uri, child) }
     }
 
     private fun onTestCaseStarted(event: TestCaseStarted) {

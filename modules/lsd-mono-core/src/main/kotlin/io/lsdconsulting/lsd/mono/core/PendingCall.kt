@@ -73,7 +73,7 @@ public class PendingCall internal constructor(
             val elapsedMs = (System.nanoTime() - started) / 1_000_000.0
             scenario.callEnded(this)
             val sent = request.startedAt
-            val bothTimed = sent != null && at != null && timing?.durationMs == null
+            val bothTimed = sent != null && at != null && timing.durationMs == null
             val exact =
                 timing?.durationMs
                     ?: if (bothTimed) Duration.between(sent, at).toNanos().coerceAtLeast(0) / 1_000_000.0 else elapsedMs

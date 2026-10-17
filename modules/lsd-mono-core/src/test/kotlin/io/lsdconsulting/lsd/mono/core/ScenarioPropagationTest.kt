@@ -117,8 +117,6 @@ class ScenarioPropagationTest {
         assertTrue(third.labels().isEmpty())
     }
 
-    private fun LsdContext.discard(scenario: LsdScenario) = scenario.discard()
-
     @Test
     fun `a binding made on the child thread wins over the inherited one`() {
         val lsd = LsdContext()

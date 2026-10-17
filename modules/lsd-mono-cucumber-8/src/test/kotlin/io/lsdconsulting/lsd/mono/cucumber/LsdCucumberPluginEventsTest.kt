@@ -59,7 +59,7 @@ class LsdCucumberPluginEventsTest {
         publisher.publish(TestCaseStarted(Instant.now(), testCase))
         lsd.message("Customer", "Shop", "second attempt")
         publisher.finish(testCase, Status.PASSED)
-        publisher.publish(TestRunFinished(Instant.now()))
+        publisher.publish(runFinished())
 
         val json = reportJson(tempDir, "shop")
         assertEquals(listOf("second attempt"), labels(json))
@@ -69,7 +69,7 @@ class LsdCucumberPluginEventsTest {
     fun `a finish with no start still reports the scenario`() {
         val testCase = FakeTestCase("checkout")
         publisher.finish(testCase, Status.FAILED, IllegalStateException("boom"))
-        publisher.publish(TestRunFinished(Instant.now()))
+        publisher.publish(runFinished())
 
         val scenario = scenariosByTitle(reportJson(tempDir, "shop")).getValue("checkout")
         assertEquals(""""status": "error"""", Regex(""""status": "\w+"""").find(scenario)!!.value)
@@ -82,14 +82,14 @@ class LsdCucumberPluginEventsTest {
             publisher.publish(TestCaseStarted(Instant.now(), row))
             publisher.finish(row, Status.PASSED)
         }
-        publisher.publish(TestRunFinished(Instant.now()))
+        publisher.publish(runFinished())
 
         assertEquals(setOf("pays #1", "pays #2"), scenariosByTitle(reportJson(tempDir, "shop")).keys)
     }
 
     @Test
     fun `a run with no scenarios writes no report and no index`() {
-        publisher.publish(TestRunFinished(Instant.now()))
+        publisher.publish(runFinished())
 
         assertFalse(tempDir.resolve("index.html").exists())
     }
@@ -146,4 +146,7 @@ class LsdCucumberPluginEventsTest {
 
         override fun getId(): UUID = id
     }
+
+    /** The run's end, passed. The one-argument constructor is deprecated. */
+    private fun runFinished() = TestRunFinished(Instant.now(), Result(Status.PASSED, Duration.ZERO, null))
 }

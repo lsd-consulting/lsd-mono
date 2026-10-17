@@ -261,7 +261,7 @@ class PayloadConvertersTest {
         assertTrue(first === snapshot.snapshot(first))
         @Suppress("UNCHECKED_CAST")
         val list = (first as Map<String, Any?>)["a"] as List<Any?>
-        assertFalse(list is MutableList<*> && runCatching { (list as MutableList<Any?>).add(2) }.isSuccess)
+        assertFalse(list is MutableList<*> && runCatching { list.clear() }.isSuccess)
     }
 
     companion object {

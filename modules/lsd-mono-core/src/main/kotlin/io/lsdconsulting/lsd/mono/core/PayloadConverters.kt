@@ -402,7 +402,7 @@ public class PayloadConverters internal constructor(
     private fun converterFor(value: Any): Function<Any, out Any?>? {
         if (converters.isEmpty()) return null
         val match = converters.firstOrNull { it.type.isInstance(value) } ?: return null
-        return (match as Converter<Any>).convert as Function<Any, out Any?>
+        return (match as Converter<Any>).convert
     }
 
     /** Read-only map produced by a snapshot. Snapshots are not copied again. */
@@ -465,7 +465,7 @@ public class PayloadConverters internal constructor(
                 override fun computeValue(type: Class<*>): List<Field> {
                     val out = ArrayList<Field>()
                     var current: Class<*>? = type
-                    while (current != null && opaquePackages.none { current!!.name.startsWith(it) }) {
+                    while (current != null && opaquePackages.none { current.name.startsWith(it) }) {
                         current.declaredFields
                             .filter { f ->
                                 !Modifier.isStatic(f.modifiers) && !Modifier.isTransient(f.modifiers) && !f.isSynthetic &&
