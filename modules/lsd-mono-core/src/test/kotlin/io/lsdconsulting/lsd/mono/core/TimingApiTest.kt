@@ -6,6 +6,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Note
 import io.lsdconsulting.lsd.mono.core.domain.PairAccuracy
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.domain.WarningKind
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
@@ -231,30 +232,109 @@ class TimingApiTest {
         val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.ALL_SOURCES)
         assertEquals(listOf("publish", "late", "consume", "other"), labels(ordered))
         assertEquals(
-            listOf("skew: clocks of billing and orders disagree with the structure, so their events are clock-ordered within each source only"),
+            listOf("skew: clocks of billing and orders disagree with the structure, so their events keep their captured interleaving"),
             timing.warnings.map { it.text },
         )
     }
 
     @Test
-    fun `three sources where one pair disagrees fall back together, and every pair ordered apart is named`() {
+    fun `three sources where one pair disagrees, only that pair is kept apart`() {
         val p = CallRef("p")
         val events =
             listOf(
                 msg("stock late", at = t(40), source = "stock", type = MessageType.ASYNCHRONOUS),
                 msg("publish", at = t(10), source = "orders", type = MessageType.ASYNCHRONOUS, callRef = p),
                 msg("consume", at = t(5), source = "billing", type = MessageType.ASYNCHRONOUS, causedBy = p),
-                msg("stock early", at = t(1), source = "stock", type = MessageType.ASYNCHRONOUS),
+                msg("stock early", at = t(7), source = "stock", type = MessageType.ASYNCHRONOUS),
+                msg("billing later", at = t(20), source = "billing", type = MessageType.ASYNCHRONOUS),
             )
         val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.ALL_SOURCES)
-        assertEquals(listOf("stock early", "publish", "consume", "stock late"), labels(ordered), "stock is sorted within its own slots")
-        val apart = { a: String, b: String ->
-            "skew: clocks of $a and $b disagree with the structure, so their events are clock-ordered within each source only"
-        }
         assertEquals(
-            listOf(apart("billing", "orders"), apart("billing", "stock"), apart("orders", "stock")),
+            listOf("stock early", "publish", "consume", "billing later", "stock late"),
+            labels(ordered),
+            "orders and billing keep their captured interleaving; stock is still clock-ordered against both",
+        )
+        assertEquals(
+            listOf("skew: clocks of billing and orders disagree with the structure, so their events keep their captured interleaving"),
             timing.warnings.map { it.text },
-            "the whole group falls back, so stock is no longer compared with the others either",
+            "only the pair that disagrees is named",
+        )
+    }
+
+    @Test
+    fun `ALL_SOURCES never breaks structure, on random scenarios`() {
+        val rng = kotlin.random.Random(51)
+        val sources = listOf("orders", "billing", "stock")
+        var keptApart = 0
+        repeat(400) { case ->
+            val events = mutableListOf<Message>()
+            val open = ArrayDeque<CallRef>()
+            val published = mutableListOf<CallRef>()
+            var refs = 0
+
+            fun at() = if (rng.nextInt(5) == 0) null else t(rng.nextLong(0, 50))
+
+            fun src() = sources[rng.nextInt(sources.size)]
+
+            fun reply(ref: CallRef) =
+                msg("reply", from = "B", to = "A", type = MessageType.SYNCHRONOUS_RESPONSE, at = at(), source = src(), replyTo = ref)
+
+            fun async(
+                label: String,
+                callRef: CallRef? = null,
+                causedBy: CallRef? = null,
+            ) = msg(label, type = MessageType.ASYNCHRONOUS, at = at(), source = src(), callRef = callRef, causedBy = causedBy)
+            repeat(10) {
+                when (rng.nextInt(5)) {
+                    0 ->
+                        if (open.size < 2) {
+                            val ref = CallRef("c${refs++}").also(open::addLast)
+                            events += msg("call", at = at(), source = src(), callRef = ref)
+                        }
+                    1 -> open.removeLastOrNull()?.let { events += reply(it) }
+                    2 -> events += async("publish", callRef = CallRef("p${refs++}").also(published::add))
+                    3 -> published.randomOrNull(rng)?.let { events += async("consume", causedBy = it) }
+                    else -> events += async("event")
+                }
+            }
+            while (open.isNotEmpty()) events += reply(open.removeLast())
+            val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.ALL_SOURCES)
+            val pos = ordered.withIndex().associate { (i, e) -> e.id to i }
+            val replyOfCall = timing.replyOf.entries.associate { (reply, call) -> call to reply }
+            // Explicit links always hold, and the tree the report draws matches the order it lists.
+            assertTrue(
+                io.lsdconsulting.lsd.mono.core.domain
+                    .linksHold(ordered),
+                "case $case: $ordered",
+            )
+            timing.parentOf.forEach { (child, parent) ->
+                assertTrue(pos.getValue(child) > pos.getValue(parent), "case $case: $child after its call $parent")
+                replyOfCall[parent]?.let { assertTrue(pos.getValue(child) < pos.getValue(it), "case $case: $child before the reply $it") }
+            }
+            timing.replyOf.forEach { (reply, call) -> assertTrue(pos.getValue(reply) > pos.getValue(call), "case $case: $reply after $call") }
+            if (timing.warnings.any { it.text.startsWith("skew: clocks of") }) keptApart++
+        }
+        assertTrue(keptApart > 0, "some cases keep a source pair apart")
+    }
+
+    @Test
+    fun `ALL_SOURCES keeps capture order when a break has no source pair to blame`() {
+        val p = CallRef("p")
+        val events =
+            listOf(
+                msg("publish", at = t(10), source = "orders", type = MessageType.ASYNCHRONOUS, callRef = p),
+                msg("consume", at = t(5), source = "orders", type = MessageType.ASYNCHRONOUS, causedBy = p),
+                msg("billing", at = t(1), source = "billing", type = MessageType.ASYNCHRONOUS),
+            )
+        val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.ALL_SOURCES)
+        assertEquals(listOf("publish", "consume", "billing"), labels(ordered), "structure wins")
+        assertEquals(listOf(WarningKind.SKEW), timing.warnings.map { it.kind })
+        assertTrue(
+            timing.warnings
+                .single()
+                .text
+                .startsWith("skew: clock order ignored for 3 events"),
+            timing.warnings.toString(),
         )
     }
 

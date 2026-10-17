@@ -58,9 +58,48 @@ internal fun linksHold(events: List<SequenceEvent>): Boolean {
 }
 
 /**
+ * Clock-order [slots] like [sortIntoSlots], except that events of two sources named in [apart]
+ * keep the interleaving their slots had: the k-th event of a source (by its own clock) takes
+ * that source's k-th slot's place relative to the other source's events. Every other pair of
+ * sources, and each source within itself, is still ordered by clock.
+ */
+internal fun sortIntoSlotsApart(
+    events: List<SequenceEvent>,
+    slots: List<Int>,
+    apart: Set<Pair<String, String>>,
+    order: IntArray,
+) {
+    if (apart.isEmpty()) return sortIntoSlots(events, slots, order)
+    val byClock = compareBy<Int> { events[it].startedAt }.thenBy { it }
+    val sources = slots.groupBy { events[it].source() }
+    // Per source: its slots in capture order, and its events in clock order. Event k is anchored at slot k.
+    val anchors = sources.mapValues { (_, idx) -> idx.sorted() }
+    val queues = sources.mapValues { (_, idx) -> idx.sortedWith(byClock) }
+    val next = sources.keys.associateWithTo(HashMap()) { 0 }
+
+    fun apart(a: String, b: String) = (if (a < b) a to b else b to a) in apart
+
+    fun anchor(source: String): Int = anchors.getValue(source)[next.getValue(source)]
+    val placed = ArrayList<Int>(slots.size)
+    while (placed.size < slots.size) {
+        val live = next.filter { (source, k) -> k < queues.getValue(source).size }.keys
+        // A source's head may go next unless a source kept apart from it has a head anchored earlier.
+        // The head anchored earliest always may, so something is always placed.
+        val ready = live.filter { s -> live.none { r -> r != s && apart(s, r) && anchor(r) < anchor(s) } }
+        val source = ready.minWith(compareBy(byClock) { s: String -> queues.getValue(s)[next.getValue(s)] })
+        placed += queues.getValue(source)[next.getValue(source)]
+        next[source] = next.getValue(source) + 1
+    }
+    slots.sorted().forEachIndexed { k, slot -> order[slot] = placed[k] }
+}
+
+/**
  * Clock-order each group (parent call and scope) into its own slots, then undo any group whose
  * moves break structure: a reply before its call, a consume before its publish, or a child
- * outside its parent. Returns the order and the number of events in groups that were undone.
+ * outside its parent. Under [ClockOrdering.ALL_SOURCES] a group whose break involves events of
+ * two sources first keeps just that pair apart ([sortIntoSlotsApart]) and tries again; a group
+ * still broken with no new pair to blame keeps capture order. Returns the order, the number of
+ * events in groups that were undone, and the source pairs kept apart.
  */
 internal fun clockOrder(
     events: List<SequenceEvent>,
@@ -78,19 +117,24 @@ internal fun clockOrder(
         return "${parent[i]}|${clockScope(events[i], mode)}"
     }
     val groupKeys = Array(n) { groupOf(it) }
-    val groups = (0 until n).filter { groupKeys[it] != null }.groupBy { groupKeys[it]!! }.toMutableMap()
+    val groups = (0 until n).filter { groupKeys[it] != null }.groupBy { groupKeys[it]!! }
     val order = IntArray(n) { it }
     groups.values.forEach { sortIntoSlots(events, it, order) }
-    val split = mutableSetOf<Pair<String, String>>()
+    val apart = HashMap<String, MutableSet<Pair<String, String>>>()
 
     val reverted = mutableSetOf<String>()
-    var rounds = groups.size + 1
-    while (rounds-- > 0) {
+    while (true) {
         val pos = IntArray(n)
         order.forEachIndexed { p, orig -> pos[orig] = p }
-        val bad = mutableSetOf<String>()
+        // Group -> the events of each break it is part of.
+        val bad = LinkedHashMap<String, MutableList<List<Int>>>()
 
-        fun flag(vararg idx: Int) = idx.filter { it >= 0 }.mapNotNullTo(bad) { groupKeys[it]?.takeIf { g -> g !in reverted } }
+        fun flag(vararg idx: Int) {
+            val involved = idx.filter { it >= 0 }
+            involved.mapNotNullTo(LinkedHashSet()) { groupKeys[it]?.takeIf { g -> g !in reverted } }.forEach {
+                bad.getOrPut(it) { mutableListOf() } += involved
+            }
+        }
         for (i in 0 until n) {
             val c = pairs.callOf[i]
             if (c >= 0 && pos[i] < pos[c]) flag(i, c)
@@ -103,28 +147,34 @@ internal fun clockOrder(
             }
         }
         if (bad.isEmpty()) break
-        for (g in bad) {
-            val members = groups[g] ?: continue
-            members.forEach { order[it] = it }
-            if (!g.endsWith("|*")) {
+        for ((g, breaks) in bad) {
+            val members = groups.getValue(g)
+            val kept = apart.getOrPut(g) { mutableSetOf() }
+            val blamed =
+                if (g.endsWith("|*")) {
+                    breaks
+                        .flatMap { involved ->
+                            val sources = involved
+                                .filter { groupKeys[it] == g }
+                                .map { events[it].source() }
+                                .distinct()
+                                .sorted()
+                            sources.indices.flatMap { a -> (a + 1 until sources.size).map { b -> sources[a] to sources[b] } }
+                        }.filterTo(LinkedHashSet()) { it !in kept }
+                } else {
+                    emptySet()
+                }
+            if (blamed.isEmpty()) {
+                members.forEach { order[it] = it }
                 reverted += g
-                continue
+            } else {
+                kept += blamed
+                sortIntoSlotsApart(events, members, kept, order)
             }
-            // ALL_SOURCES: the sources disagree, so fall back to ordering within each source.
-            groups.remove(g)
-            val bySource = members.groupBy { events[it].source() }
-            bySource.forEach { (source, idx) ->
-                val key = g.removeSuffix("*") + source
-                idx.forEach { groupKeys[it] = key }
-                groups[key] = idx
-                sortIntoSlots(events, idx, order)
-            }
-            val names = bySource.keys.sorted()
-            for (a in names.indices) for (b in a + 1 until names.size) split += names[a] to names[b]
         }
-        rounds = maxOf(rounds, groups.size + 1 - reverted.size)
     }
-    return ClockOrder(order, reverted.sumOf { groups[it]?.size ?: 0 }, split)
+    val split = apart.filterKeys { it !in reverted }.values.flatMapTo(sortedSetOf(compareBy({ it.first }, { it.second }))) { it }
+    return ClockOrder(order, reverted.sumOf { groups.getValue(it).size }, split)
 }
 
 /** The clock order, the events whose groups kept capture order, and the source pairs ordered apart. */

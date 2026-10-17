@@ -291,7 +291,10 @@ ordered by it, among their siblings in the same parent call; untimed events keep
 one event in or out. Moved events are marked `order: CLOCK` and badged CLOCK in the waterfall and
 the inspector; it never raises `accuracy`. A
 reply never moves before its call, a consume before its publish, or a child out of its parent:
-clock order that would do so is ignored, with a `skew` warning.
+clock order that would do so is ignored, with a `skew` warning. Under `all`, when two sources'
+clocks disagree with the structure, only that pair is kept apart: their events keep their captured
+interleaving (each still ordered by its own clock), other sources stay clock-ordered against them,
+and the warning names that pair. A break no source pair explains keeps capture order for the group.
 
 ### Scenarios and reports in code
 

@@ -26,7 +26,7 @@ describe('timeline follows the library tree', () => {
     expect(s.warnings?.map((w) => w.kind)).toEqual(['DUPLICATE_SPAN'])
   })
 
-  it('keeps the library order for the ALL_SOURCES per-source fallback', () => {
+  it('keeps the library order when ALL_SOURCES keeps a disagreeing pair apart', () => {
     const s = scenario('all sources fallback')
     const order = s.events.filter((e): e is MessageEvent => e.kind === 'message').map((e) => e.label)
     expect(order).toEqual(['publish', 'late', 'consume', 'other'])

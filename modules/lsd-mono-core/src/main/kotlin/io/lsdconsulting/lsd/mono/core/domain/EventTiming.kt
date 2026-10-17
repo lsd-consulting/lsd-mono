@@ -88,9 +88,10 @@ internal data class ScenarioTiming(
  *    Untimed events keep their slots. A per-message hint opts in (same source) or out.
  * 3. Structure wins: when clock order would put a reply before its call, a consume before its
  *    publish, or a child outside its parent call, the groups involved keep capture order and a
- *    `skew` warning is added. Under [ClockOrdering.ALL_SOURCES] a group first falls back to
- *    ordering within each source, and a warning names each source pair it now orders apart:
- *    every pair in that group, not only the two whose clocks disagree.
+ *    `skew` warning is added. Under [ClockOrdering.ALL_SOURCES] a group first keeps apart only
+ *    the source pair whose clocks disagree: their events keep their captured interleaving (each
+ *    source still clock-ordered within itself), every other source stays clock-ordered against
+ *    them, and a warning names that pair. A break no pair explains keeps capture order.
  * Wall clock (`wallClockMs`) is given only for a single source where every measured call has a start.
  *
  * 4. When capture order itself is scrambled (interceptor threads, so replies arrive before their
@@ -227,7 +228,7 @@ private fun analyse(
             clock.splitPairs.map { (a, b) ->
                 TimingWarning(
                     WarningKind.SKEW,
-                    "clocks of $a and $b disagree with the structure, so their events are clock-ordered within each source only",
+                    "clocks of $a and $b disagree with the structure, so their events keep their captured interleaving",
                 )
             }
     return Analysis(

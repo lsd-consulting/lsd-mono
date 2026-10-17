@@ -17,7 +17,7 @@ import kotlin.io.path.writeText
 
 /**
  * The call tree the library works out (`parentId`, `replyOf`, event order) for span nesting,
- * duplicate spans and the `ALL_SOURCES` per-source fallback, locked as a golden. The report UI's
+ * duplicate spans and the `ALL_SOURCES` fallback for a source pair that disagrees, locked as a golden. The report UI's
  * vitest (`report/src/lib/timing-tree.test.ts`) reads the same file, so the Timing view is shown
  * to follow the library's tree rather than work out its own.
  */

@@ -374,7 +374,7 @@
       "warnings": [
         {
           "kind": "SKEW",
-          "message": "clocks of billing and orders disagree with the structure, so their events are clock-ordered within each source only"
+          "message": "clocks of billing and orders disagree with the structure, so their events keep their captured interleaving"
         }
       ],
       "reorderedByClock": [
