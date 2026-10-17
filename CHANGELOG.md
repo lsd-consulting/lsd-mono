@@ -2,7 +2,9 @@
 
 All notable changes to lsd-mono. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) as described in
-[docs/versioning-notes.md](docs/versioning-notes.md). Nothing has been released yet.
+[docs/versioning-notes.md](docs/versioning-notes.md). Releases are `0.y.z` until v1 ([docs/releasing.md](docs/releasing.md)).
+Each [GitHub release](https://github.com/lsd-consulting/lsd-mono/releases) also has notes generated from its commits;
+this file is written by hand.
 
 ## [Unreleased]
 
@@ -13,6 +15,19 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   `components-open` and the integration that wrote it (`source-junit`, `source-cucumber`, `source-api`). It sends no
   report content, never affects the page, and is off for snapshot builds. `lsd.mono.report.usagePing=false` turns it
   off; report options now carry `usagePing` and `source`. See [Usage ping](README.md#usage-ping).
+
+### Fixed
+
+- The report no longer loads Inter and JetBrains Mono from Google Fonts: the Latin variable fonts (SIL Open Font
+  License 1.1) are embedded in the single-file report, so it makes no network request (except the optional usage
+  ping) and looks the same offline. The report file grows by about 115 KB.
+
+## [0.1.0] - 2026-10-17
+
+The first release on Maven Central.
+
+### Added
+
 - Maven Central coordinates `io.github.lsd-consulting:lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`
   and `lsd-mono-coroutines`, each with sources and javadoc jars. Releases are `0.y.z` until v1, cut by semantic-release
   from conventional commits ([docs/releasing.md](docs/releasing.md)).
@@ -91,3 +106,6 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   timing is now only its `Timing` (`timing = Timing.at(…)`, `Timing.tookMs(…)`, `Timing.of(…)`); arrows take
   `startedAt`, `took` (any number) and `timing`. Structural rows keep `at`. The report JSON writes a message's start
   as `startedAt` only (no `createdAt`), and the report UI reads it from there.
+
+[Unreleased]: https://github.com/lsd-consulting/lsd-mono/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/lsd-consulting/lsd-mono/releases/tag/v0.1.0

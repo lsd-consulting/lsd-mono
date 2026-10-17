@@ -2,7 +2,13 @@
 
 ## Supported versions
 
-lsd-mono has not been released. Fixes go to `main`.
+| Version | Supported |
+| --- | --- |
+| Latest `0.y.z` release | Yes |
+| Older `0.y.z` releases | No: upgrade to the latest |
+
+Until v1, fixes go to `main` and ship in the next `0.y.z` release, which is cut automatically
+([docs/releasing.md](docs/releasing.md)). There are no backports.
 
 ## Reporting a vulnerability
 
