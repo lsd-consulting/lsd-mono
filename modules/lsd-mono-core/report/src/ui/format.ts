@@ -13,17 +13,25 @@ export function pretty(data: unknown): string {
   }
 }
 
-export function formatGeneratedAt(iso: string): string {
+/**
+ * When the report was written, in the reader's own time zone, named: "1 Jan 2026, 12:00 GMT".
+ * [timeZone] is for tests; the page passes none. Not a valid instant: the text as written.
+ */
+export function formatGeneratedAt(iso: string, timeZone?: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
   try {
-    const d = new Date(iso)
-    return (
-      d.toLocaleString('en-GB', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-        timeZone: 'Europe/London',
-      }) + ' BST'
-    )
+    return d.toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short',
+      timeZone,
+    })
   } catch {
+    // An unknown time zone name.
     return iso
   }
 }
