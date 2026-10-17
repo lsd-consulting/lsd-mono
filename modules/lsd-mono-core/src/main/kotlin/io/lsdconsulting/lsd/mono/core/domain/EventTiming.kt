@@ -464,8 +464,6 @@ private fun longerThanParent(
         )
     }
 
-private fun formatMs(ms: Double): String = if (ms == Math.floor(ms)) ms.toLong().toString() else "%.3f".format(java.util.Locale.ROOT, ms).trimEnd('0')
-
 private fun analyse(
     events: List<SequenceEvent>,
     mode: ClockOrdering,

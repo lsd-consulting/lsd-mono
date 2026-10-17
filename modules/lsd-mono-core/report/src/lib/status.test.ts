@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { MessageEvent } from '../types'
 import { messageMetaHtml } from '../ui/inspector-views'
@@ -5,10 +7,15 @@ import { isErrorStatus } from './status'
 
 describe('isErrorStatus', () => {
   it('matches the Errors metric: 4xx and 5xx codes, or an error word with no code', () => {
-    for (const s of ['400', '404 Not Found', '503', '599', 'error', 'FAILED', 'Timed out', 'payment rejected'])
-      expect(isErrorStatus(s), s).toBe(true)
-    for (const s of ['200', '201 Created', '302', '600', 'ok', 'AUTHORISED', '200 error page', ''])
-      expect(isErrorStatus(s), s).toBe(false)
+    // Shared with the library's ScenarioMetricsTest, so the two rules cannot drift.
+    const vectors = JSON.parse(
+      readFileSync(join(process.cwd(), '../src/test/resources/status-vectors.json'), 'utf8'),
+    ) as {
+      error: string[]
+      notError: string[]
+    }
+    for (const s of vectors.error) expect(isErrorStatus(s), s).toBe(true)
+    for (const s of vectors.notError) expect(isErrorStatus(s), s).toBe(false)
   })
 })
 

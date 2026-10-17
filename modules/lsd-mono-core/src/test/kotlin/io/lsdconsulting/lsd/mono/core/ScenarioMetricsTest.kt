@@ -1,8 +1,8 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.domain.formatMs
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
-import io.lsdconsulting.lsd.mono.core.report.formatMs
 import io.lsdconsulting.lsd.mono.core.report.isErrorStatus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -73,12 +73,19 @@ class ScenarioMetricsTest {
 
     @Test
     fun `an error status is a 4xx or 5xx code, or an error word with no code`() {
-        listOf("400", "404 Not Found", "503", "599", "error", "FAILED", "Timed out", "payment rejected").forEach {
-            assertTrue(isErrorStatus(it), it)
-        }
-        listOf("200", "201 Created", "302", "600", "ok", "AUTHORISED", "200 error page", "").forEach {
-            assertFalse(isErrorStatus(it), it)
-        }
+        // Shared with the report UI's status.test.ts.
+        val vectors = javaClass.getResource("/status-vectors.json")!!.readText()
+
+        fun list(key: String) =
+            Regex(""""$key":\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)
+                .find(vectors)!!
+                .groupValues[1]
+                .let { Regex(""""((?:[^"\\]|\\.)*)"""").findAll(it).map { m -> m.groupValues[1] }.toList() }
+        val errors = list("error")
+        val fine = list("notError")
+        assertTrue(errors.size > 5 && fine.size > 5, vectors)
+        errors.forEach { assertTrue(isErrorStatus(it), it) }
+        fine.forEach { assertFalse(isErrorStatus(it), it) }
     }
 
     @Test
@@ -176,5 +183,7 @@ class ScenarioMetricsTest {
         assertEquals("17.625", formatMs(17.625))
         assertEquals("0.333", formatMs(1.0 / 3))
         assertEquals("2", formatMs(1.9999999))
+        assertEquals("100", formatMs(100.0))
+        assertEquals("0.001", formatMs(0.0005))
     }
 }

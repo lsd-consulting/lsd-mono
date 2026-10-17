@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.ReportOptions
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioTiming
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
+import io.lsdconsulting.lsd.mono.core.domain.formatMs
 import io.lsdconsulting.lsd.mono.core.model.MetricJson
 
 /**
@@ -31,16 +32,6 @@ internal fun capturedMetrics(
         val statuses = messages.mapNotNull { it.status }
         if (statuses.isNotEmpty()) add(MetricJson("Errors", statuses.count(::isErrorStatus).toString()))
     }
-}
-
-/** Whole milliseconds as `42`, fractions to at most three places as `17.625`. */
-internal fun formatMs(ms: Double): String {
-    val rounded = Math.round(ms * 1000) / 1000.0
-    if (rounded == Math.rint(rounded)) return rounded.toLong().toString()
-    return java.math.BigDecimal
-        .valueOf(rounded)
-        .stripTrailingZeros()
-        .toPlainString()
 }
 
 private val ERROR_WORDS = Regex("""\b(error|errors|fail|failed|failure|fault|timeout|timed out|exception|rejected|denied)\b""", RegexOption.IGNORE_CASE)

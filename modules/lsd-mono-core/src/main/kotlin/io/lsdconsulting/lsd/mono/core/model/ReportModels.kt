@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core.model
 
+import io.lsdconsulting.lsd.mono.core.domain.formatMs
 import io.lsdconsulting.lsd.mono.core.json.JsonArray
 import io.lsdconsulting.lsd.mono.core.json.JsonBool
 import io.lsdconsulting.lsd.mono.core.json.JsonNumber
@@ -130,15 +131,8 @@ internal data class TraceJson(
     val parentSpanId: String?,
 )
 
-/** Fractional milliseconds, to the microsecond, without trailing zeros. */
-internal fun msNumber(ms: Double): JsonNumber =
-    JsonNumber(
-        java.math.BigDecimal
-            .valueOf(ms)
-            .setScale(3, java.math.RoundingMode.HALF_UP)
-            .stripTrailingZeros()
-            .toPlainString(),
-    )
+/** Fractional milliseconds, to the microsecond, without trailing zeros ([formatMs]). */
+internal fun msNumber(ms: Double): JsonNumber = JsonNumber(formatMs(ms))
 
 internal data class FactJson(
     val key: String,
