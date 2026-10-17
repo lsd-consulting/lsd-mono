@@ -46,7 +46,7 @@ export const ROW_H = {
 
 /** Fixed note card width — short notes still look like notes. */
 export const NOTE_CARD_W = 140
-export const NOTE_PAD_X = 10
+const NOTE_PAD_X = 10
 export const NOTE_PAD_Y = 3
 export const NOTE_LINE_H = 12
 /**
@@ -55,7 +55,7 @@ export const NOTE_LINE_H = 12
  */
 export const NOTE_ROW_GAP = 12
 /** Approx advance width for `.note-text` (10.5px, weight 600). */
-export const NOTE_CHAR_W = 6
+const NOTE_CHAR_W = 6
 export const NOTE_CARD_MIN_H = 28
 
 /**
@@ -116,9 +116,9 @@ export const EDGE_INSET = 16
 export const EDGE_MARGIN = 8
 /** Approx advance width for `.msg-label` (11.5px, weight 550), used to size the frame. */
 export const MSG_CHAR_W = 6.6
-export const DEFAULT_SPACER_H = ROW_H.spacer
-export const MIN_SPACER_H = 12
-export const MAX_SPACER_H = 240
+const DEFAULT_SPACER_H = ROW_H.spacer
+const MIN_SPACER_H = 12
+const MAX_SPACER_H = 240
 
 export interface LayoutRow {
   index: number
@@ -151,31 +151,12 @@ export interface ActivationSpan {
 }
 
 /**
- * When any event has `createdAt`, order by that ISO instant before layout.
- * Untimed events keep capture order and sort after timed ones. No timestamps → identity.
- */
-export function sortEventsByCreatedAt(events: DiagramEvent[]): DiagramEvent[] {
-  if (!events.some((event) => event.createdAt)) return events
-  return events
-    .map((event, index) => ({ event, index }))
-    .sort((a, b) => {
-      const ta = a.event.createdAt
-      const tb = b.event.createdAt
-      if (ta && tb && ta !== tb) return ta < tb ? -1 : 1
-      if (ta && !tb) return -1
-      if (!ta && tb) return 1
-      return a.index - b.index
-    })
-    .map((item) => item.event)
-}
-
-/**
  * How far this event paints above its row origin.
  * Message labels use MESSAGE_LABEL_RISE (baseline plus glyph). Notes are
  * centred on row.y, so half the card sticks up. Dividers and delays do not
  * rise past SECTION_AFTER_PAD.
  */
-export function contentRise(event: DiagramEvent): number {
+function contentRise(event: DiagramEvent): number {
   switch (event.kind) {
     case 'message':
       return MESSAGE_LABEL_RISE
@@ -192,7 +173,7 @@ export function contentRise(event: DiagramEvent): number {
  * Activate/deactivate rows have no height, so the caller passes the next
  * event that actually paints.
  */
-export function sectionRowHeight(next: DiagramEvent | undefined): number {
+function sectionRowHeight(next: DiagramEvent | undefined): number {
   const bandBottom = SECTION_BAND_Y + SECTION_BAND_H
   let pad = SECTION_AFTER_PAD
   if (next) pad = Math.max(pad, contentRise(next) + SECTION_LABEL_GAP)
@@ -234,7 +215,7 @@ function nextDrawnEvent(events: DiagramEvent[], after: number): DiagramEvent | u
 }
 
 /** Gap between a note card's top edge and the lowest point of the arrow or note above it. */
-export const NOTE_CLEARANCE = 6
+const NOTE_CLEARANCE = 6
 
 /**
  * Lowest point a drawn row paints below its y. A self-call loop comes back
@@ -252,13 +233,14 @@ function paintedBottom(row: LayoutRow): number | null {
 }
 
 /**
- * Rows stacked from y = 0. Sections are ordinary rows — they do not reset y or activations.
+ * Rows stacked from y = 0, in the order the report gives them. Sections are ordinary rows — they do not reset y or activations.
  * A note is centred on its row's y, so half the card rises into the row above.
  * When that would cover the arrow or note above (a tall note after a self-call),
  * the note moves down until its top edge clears it.
  */
 export function layoutRows(events: DiagramEvent[]): LayoutRow[] {
-  const ordered = sortEventsByCreatedAt(events)
+  // The library already orders events (clock order with structural guards); never re-sort here.
+  const ordered = events
   const rows: LayoutRow[] = []
   let y = TOP_LABEL_PAD
   let lastDrawn: LayoutRow | undefined

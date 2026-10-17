@@ -38,6 +38,9 @@
   outline: none;
   background: var(--accent-soft);
 }
+.section-jump button:focus-visible {
+  box-shadow: var(--focus);
+}
 .seq-scroll {
   /* Its own height up to one screen. Vertical scroll comes from the page (page-scroll.ts);
      horizontal scroll stays here, for diagrams wider than the panel. */
@@ -183,6 +186,45 @@
   font-size: 10px;
   font-family: var(--mono);
 }
+/* A payload to open: braces in the accent colour, bold enough to read at small zoom. */
+.msg-payload {
+  fill: var(--accent);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+/* Explains the marker, under the toolbar. */
+.payload-legend {
+  margin: 0;
+  padding: 2px 12px 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.payload-legend-key {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-weight: 700;
+  margin-right: 2px;
+}
+.legend-tap {
+  display: none;
+}
+@media (pointer: coarse) {
+  .legend-click {
+    display: none;
+  }
+  .legend-tap {
+    display: inline;
+  }
+}
+@media (forced-colors: active) {
+  .payload-legend-key {
+    color: CanvasText;
+  }
+  .msg-payload {
+    fill: CanvasText;
+  }
+}
 
 .note-card {
   fill: var(--note-bg);
@@ -286,6 +328,7 @@
   padding-block: 6px;
 }
 .zoom-controls,
+.find-steps,
 .diagram-find {
   display: flex;
   flex-wrap: wrap;
@@ -519,6 +562,19 @@
 .search-current .note-text {
   fill: var(--find-hit-text);
 }
+/* High contrast: the current match takes the system highlight, so it stays distinct from other matches. */
+@media (forced-colors: active) {
+  .search-current .msg-label,
+  .search-current .msg-label tspan,
+  .search-current .note-text {
+    fill: HighlightText;
+    stroke: Highlight;
+  }
+  .search-current .msg-path,
+  .search-current .note-card {
+    stroke: Highlight;
+  }
+}
 
 /* Zoom scales the drawing. It does not reflow the sequence into one column. */
 @media (prefers-reduced-motion: reduce) {
@@ -556,6 +612,11 @@
     width: 100%;
     height: auto;
   }
+  /* "Open the payload" means nothing on paper. */
+  .payload-legend,
+  .msg-payload {
+    display: none;
+  }
   .msg-places,
   .participant-heads,
   .participant-menu {
@@ -563,9 +624,46 @@
   }
 }
 
-/* On a phone the toolbar wraps onto several rows; let it scroll away so the diagram keeps the screen. */
+/* On a phone the toolbar wraps onto several rows. Find and its step buttons go on the last
+   row, and only that row stays stuck under the top bar: the rows above it slide away with the
+   page (--seq-toolbar-lead, set by page-scroll.ts), so the diagram keeps the screen. */
 @media (max-width: 560px) {
+  /* Section links: one row that scrolls sideways. */
+  .section-jump {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .section-jump button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
   .seq-toolbar {
-    position: static;
+    top: calc(var(--topbar-h, 0px) - var(--seq-toolbar-lead, 0px));
+  }
+  .seq-toolbar .zoom-controls {
+    order: 1;
+  }
+  .seq-toolbar .participant-filter {
+    order: 2;
+  }
+  .seq-toolbar .panel-controls {
+    order: 3;
+  }
+  .seq-toolbar .diagram-find {
+    order: 4;
+    flex-basis: calc(100% - 110px);
+    flex-wrap: nowrap;
+  }
+  /* The field names itself (placeholder and aria-label); the word only took a line. */
+  .seq-toolbar .diagram-find-label {
+    display: none;
+  }
+  .seq-toolbar .diagram-find input {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .seq-toolbar .find-steps {
+    order: 5;
   }
 }

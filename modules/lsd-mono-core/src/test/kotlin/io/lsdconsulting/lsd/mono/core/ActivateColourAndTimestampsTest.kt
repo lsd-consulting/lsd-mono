@@ -42,7 +42,7 @@ class ActivateColourAndTimestampsTest {
     }
 
     @Test
-    fun `out of order capture is sorted by createdAt before JSON`() {
+    fun `out of order capture is sorted by startedAt before JSON`() {
         val lsd = LsdContext()
         lsd.capture(
             Message(
@@ -50,14 +50,14 @@ class ActivateColourAndTimestampsTest {
                 from = "A",
                 to = "B",
                 label = "late",
-                createdAt = Instant.parse("2026-10-03T11:00:00Z"),
+                startedAt = Instant.parse("2026-10-03T11:00:00Z"),
             ),
             Message(
                 id = "early",
                 from = "A",
                 to = "B",
                 label = "early",
-                createdAt = Instant.parse("2026-10-03T09:00:00Z"),
+                startedAt = Instant.parse("2026-10-03T09:00:00Z"),
             ),
             Message(id = "untimed", from = "A", to = "B", label = "untimed"),
             Message(
@@ -65,7 +65,7 @@ class ActivateColourAndTimestampsTest {
                 from = "A",
                 to = "B",
                 label = "mid",
-                createdAt = Instant.parse("2026-10-03T10:00:00Z"),
+                startedAt = Instant.parse("2026-10-03T10:00:00Z"),
             ),
         )
         lsd.completeScenario("reordered", status = Status.SUCCESS)
@@ -81,8 +81,8 @@ class ActivateColourAndTimestampsTest {
         assertTrue(mid < untimed)
         assertTrue(untimed < late)
         assertTrue(json.contains("\"order\": \"CLOCK\""), json)
-        assertTrue(json.contains("\"createdAt\": \"2026-10-03T09:00:00Z\""))
-        assertTrue(json.contains("\"createdAt\": \"2026-10-03T10:00:00Z\""))
-        assertTrue(json.contains("\"createdAt\": \"2026-10-03T11:00:00Z\""))
+        assertTrue(json.contains("\"startedAt\": \"2026-10-03T09:00:00Z\""))
+        assertTrue(json.contains("\"startedAt\": \"2026-10-03T10:00:00Z\""))
+        assertTrue(json.contains("\"startedAt\": \"2026-10-03T11:00:00Z\""))
     }
 }

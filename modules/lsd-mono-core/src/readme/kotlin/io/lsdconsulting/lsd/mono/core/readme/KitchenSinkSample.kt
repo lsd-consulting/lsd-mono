@@ -233,25 +233,31 @@ private fun happyPath(lsd: LsdContext) {
     )
 }
 
-/** Captured out of order (as interceptors on different threads would); createdAt restores the sequence. */
+/** Captured out of order (as interceptors on different threads would); startedAt restores the sequence. */
 private fun paymentDeclined(lsd: LsdContext) {
     val t0 = Instant.parse("2026-10-08T09:00:00Z")
 
     fun at(seconds: Long) = t0.plusSeconds(seconds)
     lsd.addFact("orderId", "ord-2002")
     lsd.addFact("card", "**** 0002")
-    lsd.response("Payment Service", "Order Service", "402 declined", problem(402, "Payment declined", "Issuer declined: do_not_honour"), at = at(7))
+    lsd.response(
+        "Payment Service",
+        "Order Service",
+        "402 declined",
+        problem(402, "Payment declined", "Issuer declined: do_not_honour"),
+        timing = Timing.at(at(7)),
+    )
     lsd.message(
         "Order Service",
         "Payment Service",
         "authorise £42.00",
         req("POST", "/payments/authorise", mapOf("amount" to 4200, "card" to "**** 0002")),
-        at = at(1),
+        timing = Timing.at(at(1)),
     )
-    lsd.message("Payment Service", "Payment Provider", "authorise", mapOf("amount" to 4200, "card" to "**** 0002"), at = at(4))
-    lsd.message("Payment Service", "Fraud Check", "score transaction", req("POST", "/score", mapOf("amount" to 4200)), at = at(2))
-    lsd.response("Fraud Check", "Payment Service", "score 0.41", res(200, mapOf("score" to 0.41, "decision" to "REVIEW")), at = at(3))
-    lsd.response("Payment Provider", "Payment Service", "do_not_honour", mapOf("code" to "05", "reason" to "do_not_honour"), at = at(6))
+    lsd.message("Payment Service", "Payment Provider", "authorise", mapOf("amount" to 4200, "card" to "**** 0002"), timing = Timing.at(at(4)))
+    lsd.message("Payment Service", "Fraud Check", "score transaction", req("POST", "/score", mapOf("amount" to 4200)), timing = Timing.at(at(2)))
+    lsd.response("Fraud Check", "Payment Service", "score 0.41", res(200, mapOf("score" to 0.41, "decision" to "REVIEW")), timing = Timing.at(at(3)))
+    lsd.response("Payment Provider", "Payment Service", "do_not_honour", mapOf("code" to "05", "reason" to "do_not_honour"), timing = Timing.at(at(6)))
     lsd.activate("Payment Service", at = at(1))
     lsd.activate("Fraud Check", at = at(2))
     lsd.deactivate("Fraud Check", at = at(3))
@@ -413,6 +419,22 @@ private fun timedCheckout(lsd: LsdContext) {
     lsd.ingest(
         Interaction(InteractionKind.PUBLISH, "Notification Service", "Email", "send receipt", source = "notification-service", startedAt = at(640)),
     )
+    // The importer's status drives the Errors metric: the first send fails, the retry succeeds.
+    // Its headers sit beside the body in the payload.
+    lsd.ingest(
+        Interaction(
+            InteractionKind.REQUEST,
+            "Email",
+            "SMTP Relay",
+            "deliver receipt",
+            interactionId = "smtp-1",
+            data = mapOf("to" to "customer@example.test", "template" to "receipt"),
+            headers = mapOf("content-type" to "message/rfc822", "x-request-id" to "smtp-1"),
+        ),
+    )
+    lsd.ingest(Interaction(InteractionKind.RESPONSE, "SMTP Relay", "Email", "421 try again later", status = "421", replyTo = "smtp-1"))
+    lsd.ingest(Interaction(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt (retry)", interactionId = "smtp-2"))
+    lsd.ingest(Interaction(InteractionKind.RESPONSE, "SMTP Relay", "Email", "250 queued", status = "250", replyTo = "smtp-2"))
     lsd.completeScenario(
         "Timed checkout (timing API)",
         """
@@ -420,6 +442,7 @@ private fun timedCheckout(lsd: LsdContext) {
         When two events are captured out of order on the same clock
         Then they are put back in time order and marked clock-ordered
         And a consume on another service's clock stays after its publish
+        And a failed relay status is counted in the Errors metric
         """.trimIndent(),
         Status.SUCCESS,
     )

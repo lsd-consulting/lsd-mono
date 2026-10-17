@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs'
+import { readAppCss } from './read-css.test-util'
 import { describe, expect, it } from 'vitest'
 
-const css = readFileSync(new URL('./app.css', import.meta.url), 'utf8')
+const css = readAppCss()
 
 /** Body of the first rule whose selector is exactly `selector`. */
 function rule(selector: string): string {

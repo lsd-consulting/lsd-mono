@@ -3,7 +3,6 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import java.time.Duration
-import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -36,17 +35,16 @@ public class PendingCall internal constructor(
 
     /**
      * Capture the response, from the callee back to the caller. The duration is the time
-     * since [Capturer.call] (measured), or the time between the two `at`s when both were given
-     * (derived), unless [timing] gives a measured duration.
+     * since [Capturer.call] (measured), or the time between the call's and the reply's
+     * `startedAt` when both were given (derived), unless [timing] gives a measured duration.
      */
     @JvmOverloads
     public fun reply(
         label: String = "",
         data: Any? = null,
-        at: Instant? = null,
         timing: Timing? = null,
     ) {
-        scenario.context.guarded("reply", { }) { respond(label, data, timing?.startedAt ?: at, timing) }
+        scenario.context.guarded("reply", { }) { respond(label, data, timing) }
     }
 
     /**
@@ -56,25 +54,25 @@ public class PendingCall internal constructor(
     @JvmOverloads
     public fun fail(
         error: Throwable,
-        at: Instant? = null,
+        timing: Timing? = null,
     ) {
         scenario.context.guarded("reply", { }) {
             val type = error.javaClass
-            respond(type.simpleName.ifEmpty { type.name }, mapOf("exception" to type.name, "message" to error.message), at, null)
+            respond(type.simpleName.ifEmpty { type.name }, mapOf("exception" to type.name, "message" to error.message), timing)
         }
     }
 
     private fun respond(
         label: String,
         data: Any?,
-        at: Instant?,
         timing: Timing?,
     ) {
+        val at = timing?.startedAt
         if (state.get() == State.DETACHED) return
         if (state.compareAndSet(State.WAITING, State.REPLIED)) {
             val elapsedMs = (System.nanoTime() - started) / 1_000_000.0
             scenario.callEnded(this)
-            val sent = request.createdAt
+            val sent = request.startedAt
             val bothTimed = sent != null && at != null && timing?.durationMs == null
             val exact =
                 timing?.durationMs
@@ -87,14 +85,13 @@ public class PendingCall internal constructor(
                     label = label,
                     type = MessageType.SYNCHRONOUS_RESPONSE,
                     data = data,
-                    durationMs = timing?.durationMs?.let { Math.round(it) } ?: durationMs(at),
-                    createdAt = at,
-                    exactMs = exact,
+                    startedAt = at,
+                    durationMs = exact,
                     derived = bothTimed,
                     source = timing?.source ?: request.source,
                     trace = request.trace,
                     replyTo = ref,
-                    orderHint = timing?.orderByCreatedAt,
+                    orderHint = timing?.orderByStartedAt,
                 ),
             )
         } else if (state.get() == State.ABANDONED) {
@@ -102,12 +99,6 @@ public class PendingCall internal constructor(
         } else {
             scenario.context.warnDoubleReply(describe())
         }
-    }
-
-    private fun durationMs(at: Instant?): Long {
-        val sent = request.createdAt
-        if (sent != null && at != null) return Duration.between(sent, at).toMillis().coerceAtLeast(0)
-        return (System.nanoTime() - started) / 1_000_000
     }
 
     /** Give up waiting, because the scenario completed. False if it was already replied to. */

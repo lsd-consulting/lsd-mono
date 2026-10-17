@@ -1,13 +1,11 @@
 // The diagram viewport: windowed painting, zoom, fit, width observation and scroll binding.
 import type { MessageEvent } from '../../types'
-import { focusablePlaces, messagePlaces, replacementFocus, zoomScrollBehavior } from '../diagram-a11y'
+import { focusablePlaces, messagePlaces, replacementFocus } from '../diagram-a11y'
 import {
   MAX_ZOOM,
-  classifySearchHits,
   eventHiddenByColumns,
   fittedView,
   messageLabelRect,
-  searchCountLabel,
   settleFitWidth,
   stepZoom,
   unscaledViewport,
@@ -19,11 +17,18 @@ import type { FittedView, Rect } from '../diagram-view'
 import { cssEscape } from '../escape'
 import { DEFAULT_OVERSCAN, DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, virtualRowRange } from '../layout'
 import { bindParticipantFilter } from '../participant-filter'
-import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds, prefersReducedMotion } from '../sequence-diagram'
+import { scrollBehavior } from '../media'
+import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds } from '../sequence-diagram'
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, sizeStage } from './page-scroll'
-import { SEARCH_REVEAL_DELAY_MS, revealSearchHit, updateSearchCurrent } from './search-reveal'
+import {
+  SEARCH_REVEAL_DELAY_MS,
+  revealSearchHit,
+  syncFindControls,
+  stepSearchCurrent,
+  updateSearchCurrent,
+} from './search-reveal'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './state'
 
 /** Paint only the rows inside the scrollport (plus overscan). Row units stay unscaled; zoom is display-only. */
@@ -128,11 +133,15 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   root.style.setProperty('--seq-print-max', `${Math.round(width * PRINT_MAX_UPSCALE)}px`)
   const readout = root.querySelector('.zoom-readout')
   if (readout) readout.textContent = zoomLabel(zoom)
-  const count = root.querySelector('.diagram-find-count')
-  if (count) {
-    const hits = classifySearchHits(diagram.scenario.events, view.query, view.hidden)
-    count.textContent = searchCountLabel(hits.total, hits.hidden, view.query)
-  }
+}
+
+/** Step the diagram's find to its next (1) or previous (-1) match and bring it on screen. */
+export function stepFind(scrollport: HTMLElement, step: 1 | -1): void {
+  const scenarioId = scrollport.dataset.scenarioId
+  if (!scenarioId || !stepSearchCurrent(scenarioId, step)) return
+  syncFindControls(scrollport)
+  syncDiagramWindow(scrollport)
+  if (revealSearchHit(scrollport)) syncDiagramWindow(scrollport)
 }
 
 function commitZoom(
@@ -186,7 +195,7 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
         top: Math.max(0, fitted.originY) * fitted.scale,
         left: Math.max(0, fitted.originX) * fitted.scale,
       },
-      zoomScrollBehavior(prefersReducedMotion()),
+      scrollBehavior(),
     )
     view.fittedWidth = scrollport.clientWidth
     return
@@ -194,7 +203,7 @@ function onZoomClick(scrollport: HTMLElement, action: string | undefined): void 
   if (action !== 'in' && action !== 'out') return
   const next = stepZoom(view.zoom, action === 'in' ? 1 : -1)
   view.autoFit = false
-  commitZoom(scrollport, next, undefined, zoomScrollBehavior(prefersReducedMotion()))
+  commitZoom(scrollport, next, undefined, scrollBehavior())
 }
 
 /**
@@ -317,6 +326,7 @@ export function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet
     view.activeMessageId = null
   }
   applyDiagramFrame(scrollport)
+  syncFindControls(scrollport)
   if (view.autoFit) {
     // Hiding or showing a participant changes the width to fit.
     view.fittedWidth = 0
@@ -371,13 +381,19 @@ export function bindDiagramScroll(root: ParentNode): void {
     find?.addEventListener('input', () => {
       diagramView(id).query = find.value
       updateSearchCurrent(id)
-      applyDiagramFrame(scroll)
+      syncFindControls(scroll)
       syncDiagramWindow(scroll)
       // Typing on a phone has no Enter: bring the first match on screen once typing pauses.
       clearTimeout(reveal)
       reveal = setTimeout(() => {
         if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
       }, SEARCH_REVEAL_DELAY_MS)
+    })
+    diagram.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        clearTimeout(reveal)
+        stepFind(scroll, btn.dataset.findStep === 'prev' ? -1 : 1)
+      })
     })
   })
 }

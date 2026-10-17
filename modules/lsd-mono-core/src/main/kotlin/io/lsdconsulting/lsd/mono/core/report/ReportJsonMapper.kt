@@ -21,6 +21,7 @@ import io.lsdconsulting.lsd.mono.core.model.FactJson
 import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
+import io.lsdconsulting.lsd.mono.core.model.PairAccuracyJson
 import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
@@ -30,6 +31,7 @@ import io.lsdconsulting.lsd.mono.core.model.ScenarioTimingJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.core.model.TraceJson
+import io.lsdconsulting.lsd.mono.core.model.WarningJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -63,7 +65,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
         description = description,
         facts = facts.map { FactJson(it.key, it.value) },
         error = error?.let { ScenarioErrorJson(it.headline, it.message, it.stack) },
-        metrics = capturedMetrics(events, options),
+        metrics = capturedMetrics(events, timing, options),
         participants =
             participants.map {
                 ParticipantJson(
@@ -84,8 +86,9 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                 wallClockMs = timing.wallClockMs,
                 clockOrdering = timing.clockOrdering.name,
                 clockOrdered = timing.clockOrdered,
-                warnings = timing.warnings,
+                warnings = timing.warnings.map { WarningJson(it.kind.name, it.message) },
                 reorderedByClock = timing.reorderedByClock,
+                pairAccuracy = timing.pairAccuracy.map { PairAccuracyJson(it.from, it.to, it.accuracy.name) },
             ),
     )
 
@@ -104,9 +107,9 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     label = label,
                     type = type.name,
                     colour = colour?.takeIf { it.isNotBlank() },
-                    durationMs = timedMs,
+                    durationMs = timing.reportedMs(this),
                     data = data,
-                    createdAt = createdAt?.toString(),
+                    startedAt = startedAt?.toString(),
                     seq = seq.takeIf { it > 0 },
                     callId = callRef?.id,
                     replyTo = replyTo?.id,
@@ -118,6 +121,8 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     timing = timing.perEvent[id]?.timing?.name,
                     pairing = timing.perEvent[id]?.pairing?.name,
                     order = timing.perEvent[id]?.order?.name,
+                    parentId = timing.parentOf[id],
+                    replyOf = timing.replyOf[id],
                 )
             is Note ->
                 NoteEventJson(
@@ -125,19 +130,19 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     text = text,
                     over = over,
                     placement = placement.name.lowercase(),
-                    createdAt = createdAt?.toString(),
+                    startedAt = startedAt?.toString(),
                 )
-            is Divider -> DividerEventJson(id = id, label = label, createdAt = createdAt?.toString())
-            is Section -> SectionEventJson(id = id, title = title, createdAt = createdAt?.toString())
-            is Delay -> DelayEventJson(id = id, label = label, createdAt = createdAt?.toString())
-            is Spacer -> SpacerEventJson(id = id, heightPx = heightPx, createdAt = createdAt?.toString())
+            is Divider -> DividerEventJson(id = id, label = label, startedAt = startedAt?.toString())
+            is Section -> SectionEventJson(id = id, title = title, startedAt = startedAt?.toString())
+            is Delay -> DelayEventJson(id = id, label = label, startedAt = startedAt?.toString())
+            is Spacer -> SpacerEventJson(id = id, heightPx = heightPx, startedAt = startedAt?.toString())
             is Lifeline ->
                 LifelineEventJson(
                     kind = if (action == LifelineAction.ACTIVATE) "activate" else "deactivate",
                     id = id,
                     participantId = participantId,
                     colour = if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null,
-                    createdAt = createdAt?.toString(),
+                    startedAt = startedAt?.toString(),
                 )
         }
 

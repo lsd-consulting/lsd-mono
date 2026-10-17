@@ -167,6 +167,52 @@ for (const [phone, device] of Object.entries(PHONES)) {
         await expect(panel.locator('.edge-group.is-selected')).toHaveCount(1)
       })
 
+      for (const [what, opener, body] of [
+        ['component diagram', '[data-show-components]', '.component-diagram'],
+        ['metrics', '[data-show-metrics]', '#inspector-metrics'],
+      ] as const) {
+        test(`opening the ${what} scrolls its heading just below the top bar`, async ({ page }) => {
+          await page.emulateMedia({ reducedMotion: 'reduce' })
+          await open(page, timedReport())
+          await expect(page.locator('.seq-svg')).toBeVisible()
+          await page.locator(opener).first().tap()
+          await expect(page.locator('.inspector').locator(body)).toBeVisible()
+          await expect
+            .poll(() =>
+              page.evaluate(() => {
+                const bar = document.querySelector('.topbar')!.getBoundingClientRect().bottom
+                const head = document.querySelector('.inspector h2')!.getBoundingClientRect()
+                return head.top >= bar - 1 && head.bottom <= innerHeight
+              }),
+            )
+            .toBe(true)
+        })
+      }
+
+      for (const reducedMotion of ['reduce', 'no-preference'] as const) {
+        test(`tapping an arrow low on the screen scrolls its JSON into view below the top bar (${reducedMotion})`, async ({
+          page,
+        }) => {
+          await page.emulateMedia({ reducedMotion })
+          await open(page, payloadReport())
+          await expect(page.locator('.seq-svg')).toBeVisible()
+          const arrow = page.locator('.msg-open[aria-label="Open call 1.2"]')
+          await expect(page.locator('.msg-payload')).not.toHaveCount(0)
+          await arrow.tap()
+          const pre = page.locator('.inspector pre').first()
+          await expect(pre).toContainText('field0')
+          await expect
+            .poll(() =>
+              pre.evaluate((el) => {
+                const bar = document.querySelector('.topbar')!.getBoundingClientRect().bottom
+                const top = el.getBoundingClientRect().top
+                return top >= bar - 1 && top + 60 <= innerHeight
+              }),
+            )
+            .toBe(true)
+        })
+      }
+
       test('a long, wide JSON payload: the page scrolls through it, lines wrap, no dead Expand, Close stays in reach', async ({
         page,
       }) => {

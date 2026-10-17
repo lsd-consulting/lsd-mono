@@ -3,7 +3,7 @@ import { participantHeadFor, participantLabelSvg } from './sequence-diagram'
 import { escapeAttr, escapeHtml } from './escape'
 
 /** Horizontal room per node. The participant shape is about 100 wide; the rest is for the name. */
-export const SLOT_W = 150
+const SLOT_W = 150
 /** Shape plus a name underneath, in header units (the same shapes as the sequence header). */
 const NODE_H = 56
 const GAP_X = 36

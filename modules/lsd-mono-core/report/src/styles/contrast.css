@@ -1,0 +1,50 @@
+/* High contrast: status keeps its word, plus a shape so hue is not the only cue. */
+[data-theme="contrast"] .chip,
+[data-theme="contrast"] .badge {
+  border-width: 2px;
+  border-color: #000;
+  color: #000;
+  background: #fff;
+}
+[data-theme="contrast"] .chip.success,
+[data-theme="contrast"] .badge.success {
+  border-style: solid;
+}
+[data-theme="contrast"] .chip.warn,
+[data-theme="contrast"] .badge.warn {
+  border-style: dashed;
+}
+[data-theme="contrast"] .chip.error,
+[data-theme="contrast"] .badge.error {
+  border-style: double;
+  border-width: 3px;
+}
+[data-theme="contrast"] .dot {
+  box-shadow: none;
+  background: #000;
+}
+[data-theme="contrast"] .dot.success {
+  border-radius: 50%;
+}
+[data-theme="contrast"] .dot.warn {
+  border-radius: 0;
+}
+[data-theme="contrast"] .dot.error {
+  border-radius: 0;
+  outline: 2px solid #000;
+  outline-offset: 1px;
+}
+[data-theme="contrast"] .hist .s {
+  background: repeating-linear-gradient(90deg, #000 0 2px, #fff 2px 5px);
+}
+[data-theme="contrast"] .hist .w {
+  background: repeating-linear-gradient(45deg, #000 0 2px, #fff 2px 6px);
+}
+[data-theme="contrast"] .hist .e {
+  background: #000;
+}
+#btn-theme {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}

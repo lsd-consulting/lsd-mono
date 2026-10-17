@@ -1,7 +1,7 @@
 import type { DiagramEvent, MessageEvent, NoteEvent, Participant } from '../types'
 import { HEADER_BLOCK_H, MESSAGE_LABEL_RISE } from './layout'
 
-export const MIN_ZOOM = 0.25
+const MIN_ZOOM = 0.25
 export const MAX_ZOOM = 2.5
 export const DEFAULT_ZOOM = 1
 /**
@@ -10,8 +10,13 @@ export const DEFAULT_ZOOM = 1
  * otherwise open with oversized text. The Fit button fills the width either way.
  */
 export const AUTO_FIT_MAX_ZOOM = 1
+/**
+ * Fit (automatic or the button) never goes below this: labels stay readable and arrow
+ * targets keep their size, and a wider diagram scrolls sideways. Zoom out still reaches MIN_ZOOM.
+ */
+export const FIT_MIN_ZOOM = 0.5
 /** Button and wheel step, as a fraction of 100%. */
-export const ZOOM_STEP = 0.1
+const ZOOM_STEP = 0.1
 
 export interface ZoomViewport {
   scrollTop: number
@@ -19,7 +24,7 @@ export interface ZoomViewport {
   headerHeight: number
 }
 
-export function clampZoom(scale: number): number {
+function clampZoom(scale: number): number {
   if (!Number.isFinite(scale)) return DEFAULT_ZOOM
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale))
 }
@@ -101,7 +106,10 @@ export function fittedView(input: {
   /** Upper bound on the scale, for the automatic fit ([AUTO_FIT_MAX_ZOOM]). */
   maxScale?: number
 }): FittedView {
-  const scale = Math.min(fitToWidthScale(input.contentWidth, input.viewportWidth), input.maxScale ?? MAX_ZOOM)
+  const scale = Math.max(
+    FIT_MIN_ZOOM,
+    Math.min(fitToWidthScale(input.contentWidth, input.viewportWidth), input.maxScale ?? MAX_ZOOM),
+  )
   const headerCss = (input.headerBlock ?? HEADER_BLOCK_H) * scale
   const visibleW = input.viewportWidth > 0 ? input.viewportWidth / scale : input.contentWidth
   const bodyCss = Math.max(0, input.viewportHeight - headerCss)
@@ -154,7 +162,7 @@ export function visibleColumnIds(participants: Participant[], hiddenIds: Readonl
  * participants stays (those columns reflow). A message that names a hidden
  * participant is omitted rather than pointed at the wrong lifeline.
  */
-export function messageNeedsHiddenColumn(msg: MessageEvent, hiddenIds: ReadonlySet<string>): boolean {
+function messageNeedsHiddenColumn(msg: MessageEvent, hiddenIds: ReadonlySet<string>): boolean {
   if (hiddenIds.size === 0) return false
   if (msg.type === 'SHORT_INBOUND') return Boolean(msg.to) && hiddenIds.has(msg.to)
   if (msg.type === 'SHORT_OUTBOUND') return Boolean(msg.from) && hiddenIds.has(msg.from)
@@ -162,7 +170,7 @@ export function messageNeedsHiddenColumn(msg: MessageEvent, hiddenIds: ReadonlyS
 }
 
 /** Anchored notes leave with their participant. Unanchored notes stay. */
-export function noteNeedsHiddenColumn(note: NoteEvent, hiddenIds: ReadonlySet<string>): boolean {
+function noteNeedsHiddenColumn(note: NoteEvent, hiddenIds: ReadonlySet<string>): boolean {
   if (hiddenIds.size === 0 || !note.over) return false
   return hiddenIds.has(note.over)
 }
@@ -187,26 +195,14 @@ export function matchingEventIds(events: DiagramEvent[], query: string): string[
   return events.filter((event) => rowMatchesQuery(event, query)).map((event) => event.id)
 }
 
-export function classifySearchHits(
-  events: DiagramEvent[],
-  query: string,
-  hiddenIds: ReadonlySet<string>,
-): { total: number; hidden: number } {
-  let total = 0
-  let hidden = 0
-  for (const event of events) {
-    if (!rowMatchesQuery(event, query)) continue
-    total++
-    if (eventHiddenByColumns(event, hiddenIds)) hidden++
-  }
-  return { total, hidden }
-}
-
-/** Live-region text. Empty query is silent. Hidden-column hits are named, not only recoloured. */
-export function searchCountLabel(total: number, hidden: number, query: string): string {
+/**
+ * Live-region text. Empty query is silent. Hidden-column hits are named, not only recoloured.
+ * With a current match ([current], 1-based) it reads "2 of 5", counting the matches you can step to.
+ */
+export function searchCountLabel(total: number, hidden: number, query: string, current = 0): string {
   if (!query.trim()) return ''
   const noun = total === 1 ? 'match' : 'matches'
-  const base = `${total} ${noun}`
+  const base = current > 0 ? `${current} of ${total - hidden}` : `${total} ${noun}`
   if (hidden > 0) return `${base}, ${hidden} on a hidden column`
   return base
 }

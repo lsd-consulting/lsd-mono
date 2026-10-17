@@ -20,7 +20,7 @@ export interface SplitReport {
  * Messages with no payload are unchanged. A payload that is only those three
  * fields stays on the message, because there is nothing further to load.
  */
-export function splitReportPayloads(report: Report): SplitReport {
+function splitReportPayloads(report: Report): SplitReport {
   const payloads: Record<string, unknown> = {}
   const scenarios = report.scenarios.map((scenario) => splitScenario(scenario, payloads))
   return { report: { ...report, scenarios }, payloads }

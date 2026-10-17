@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AUTO_FIT_MAX_ZOOM, MAX_ZOOM, fittedView } from './diagram-view'
+import { AUTO_FIT_MAX_ZOOM, FIT_MIN_ZOOM, MAX_ZOOM, fittedView } from './diagram-view'
 import { diagramView } from './sequence-diagram'
 
 const label = { x: 10, y: 40, width: 80, height: 14 }
@@ -36,5 +36,14 @@ describe('automatic fit', () => {
     expect(view.autoFit).toBe(true)
     expect(view.fitLimit).toBe(AUTO_FIT_MAX_ZOOM)
     expect(view.fittedWidth).toBe(0)
+  })
+
+  it('stops Fit at a readable minimum and scrolls sideways to keep the top label on screen', () => {
+    const wide = { x: 3000, y: 20, width: 200, height: 20 }
+    const fit = fittedView({ contentWidth: 4000, viewportWidth: 390, viewportHeight: 600, mustInclude: wide })
+    expect(fit.scale).toBe(FIT_MIN_ZOOM)
+    expect(fit.visible.width).toBeCloseTo(780)
+    expect(fit.originX).toBeGreaterThan(0)
+    expect(wide.x + wide.width).toBeLessThanOrEqual(fit.originX + fit.visible.width + 0.01)
   })
 })

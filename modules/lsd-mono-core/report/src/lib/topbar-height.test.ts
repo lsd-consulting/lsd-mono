@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { trackTopbarHeight } from './topbar-height'
+import { stickyLead, trackTopbarHeight } from './topbar-height'
 
 /** A ResizeObserver stand-in the test can fire by hand. */
 function fakeObserver() {
@@ -66,5 +66,12 @@ describe('trackTopbarHeight', () => {
     const { bar } = barOfHeight(90)
     trackTopbarHeight(bar, root, undefined)()
     expect(root.style.getPropertyValue('--topbar-h')).toBe('90px')
+  })
+})
+
+describe('stickyLead', () => {
+  it('lets a phone bar scroll its first row away and keeps a wide one whole', () => {
+    expect(stickyLead(0, 58)).toBe(50) // search on the second row
+    expect(stickyLead(0, 10)).toBe(0) // search on the first row
   })
 })

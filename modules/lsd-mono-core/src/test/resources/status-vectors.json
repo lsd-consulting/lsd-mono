@@ -1,0 +1,5 @@
+{
+  "_comment": "The interaction error rule, shared by ScenarioMetricsTest (Kotlin) and status.test.ts (report UI) so the two cannot drift.",
+  "error": ["400", "404 Not Found", "503", "599", "  502 Bad Gateway", "error", "FAILED", "Timed out", "timeout", "payment rejected", "access denied", "fault", "NullPointerException thrown: exception"],
+  "notError": ["200", "201 Created", "302", "399", "600", "4040", "ok", "AUTHORISED", "200 error page", "", "errorless", "faulty"]
+}
