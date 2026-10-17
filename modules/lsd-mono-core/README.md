@@ -47,7 +47,7 @@ lsd-mono-core/
     "latest" files, so test classes, forks and modules can share one directory.
 - Timing: durations, start times, call/reply pairing and clock ordering, with an accuracy level per scenario (see [Timing](#timing))
 - Payloads are copied when captured, with size limits and redaction of secret-looking keys (see [Message data](#message-data))
-- The report page shows one scenario at a time. Per scenario: the sequence diagram, the component diagram, timing (summary strip, swim lanes and waterfall) and metrics. A diagram taller than the screen extends the page and scrolls with it, with the toolbar, participant header and minimap kept in view. The theme follows the operating system until a fixed theme is chosen
+- The report page shows one scenario at a time. Per scenario: the sequence diagram, the component diagram, timing (summary strip, swim lanes and waterfall) and metrics. A diagram taller than the screen extends the page and scrolls with it, with the toolbar and participant header kept in view. The theme follows the operating system until a fixed theme is chosen
 
 PlantUML and Handlebars output are not supported; the report is drawn by the report UI.
 
@@ -88,20 +88,23 @@ captures into itself) and a capture block (below) share the same verbs, from the
 
 | Verb | Draws |
 | --- | --- |
-| `message(from, to, label, data, type, durationMs, colour, at)` | An arrow; a synchronous call unless `type` says otherwise |
-| `response(from, to, label, data, durationMs, at)` | The reply to a call |
-| `call(from, to, label, data, at)` | A call now, returning a `PendingCall`; its `reply(label, data, at)` or `fail(error)` draws the timed response later (see [Interceptors](#interceptors)) |
-| `async(from, to, label, data, at)` | An asynchronous message, such as an event on a queue |
-| `inbound(to, label, at)` / `outbound(from, label, at)` | A short arrow from or to the edge of the diagram |
+| `message(from, to, label, data, type, colour, timing, trace)` | An arrow; a synchronous call unless `type` says otherwise |
+| `response(from, to, label, data, timing, trace, replyTo)` | The reply to a call |
+| `call(from, to, label, data, timing, trace)` | A call now, returning a `PendingCall`; its `reply(label, data, timing)` or `fail(error, timing)` draws the timed response later (see [Interceptors](#interceptors)) |
+| `async(from, to, label, data, timing, trace, causedBy)` | An asynchronous message, such as an event on a queue |
+| `inbound(to, label, timing)` / `outbound(from, label, timing)` | A short arrow from or to the edge of the diagram |
 | `note(text, on, side, at)` | A note over `on`, or beside it with `side = NoteSide.LEFT` or `RIGHT`. `on` is required; pass `on = null` with `LEFT` or `RIGHT` for a note at the diagram's edge |
 | `activate(participant, colour, at)` / `deactivate(participant, at)` | An activation bar |
 | `section(title, at)`, `divider(label, at)`, `delay(label, at)`, `spacer(heightPx, at)` | Rows that structure the diagram |
 | `addFact(key, value)` | A fact shown with the scenario |
 
-Everything after the first required arguments is optional. `at` is when the event
-happened: the report orders timed events by it, for capture that arrives out of order.
-From Java, the overloads cover the common calls (`lsd.message("A", "B", "label", body)`).
-To pass `at`, pass `null` for the optional parameters before it: a `null` type means
+Everything after the first required arguments is optional. A message's timing is one
+[`Timing`](#timing): `Timing.at(instant)` (when it started), `Timing.tookMs(12.5)` or
+`Timing.took(duration)` (measured), `Timing.of(instant, duration)`, plus its clock `source`. The
+report orders timed messages by their start, for capture that arrives out of order. Structural
+rows take `at`, an `Instant`. From Java, the overloads cover the common calls
+(`lsd.message("A", "B", "label", body)`). To pass `timing`, pass `null` for the optional
+parameters before it: a `null` type means
 `MessageType.SYNCHRONOUS`. `message(from, to, label, MessageType.LOST)` sets the type, from
 Kotlin and Java alike: a type in the fourth position is never taken as `data`, and Java's
 `message(from, to, label, null)` is a plain synchronous message.
@@ -127,7 +130,8 @@ lsd.capture {
 | `"B" repliesTo "A"` | The reply to a call |
 | `"A" sends "B"` | An asynchronous message |
 
-Each arrow takes `label`, `data`, `took` (milliseconds), `colour` and `at`, in any order.
+Each arrow takes `label`, `data`, `took` (milliseconds, fractional allowed), `startedAt` (an
+`Instant`), `timing` (a whole `Timing`), `source`, `trace` and `colour`, in any order.
 The arrows exist only inside a block; every verb above works there too, including
 `message(from, to, label, MessageType.LOST)` for the other arrow types.
 
@@ -203,12 +207,12 @@ override fun onConsume(records: ConsumerRecords<String, String>) =
         it.forEach { r ->
             val target: Capturer =
                 r.headers().lastHeader(LsdHeaders.SCENARIO)?.let { h -> lsd.findScenarioByHeader(String(h.value())) } ?: lsd
-            target.async(r.topic(), "Orders", "consume ${r.key()}", data = r.value(), at = Instant.ofEpochMilli(r.timestamp()))
+            target.async(r.topic(), "Orders", "consume ${r.key()}", data = r.value(), timing = Timing.at(Instant.ofEpochMilli(r.timestamp())))
         }
     }
 ```
 
-`at` puts consumption that arrives out of order back in time order.
+`Timing.at` puts consumption that arrives out of order back in time order.
 
 From Java:
 
@@ -257,20 +261,40 @@ lsd.async("kafka", "billing", "consume", timing = Timing.at(t2), causedBy = plac
 lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "api", "200", replyTo = callId, durationMs = 12.5))
 ```
 
+An `Interaction`'s `headers` (HTTP or record headers) are shown with its payload as
+`{ "headers": …, "body": data }`, and are redacted like any other map key.
+
 Each message in the JSON carries `seq` (capture order), `timing` (`NONE`, `TIMESTAMPED`,
 `MEASURED`, `DERIVED`), `pairing` for calls and replies (`NONE`, `GUESSED`, `CALL_ID`, `TRACE`)
 and `order` (`SEQUENCE`, `STRUCTURE`, `CLOCK`), plus `callId`, `replyTo`, `causedBy`, `trace`,
-`source` and `startedAt` when known. `durationMs` is fractional. Each scenario carries `accuracy`
+`source` and `startedAt` when known. `parentId` names the call a message runs inside (its
+`parentSpanId`, else the innermost open call) and `replyOf` the call a paired reply answers: the
+Timing view draws its tree from these, so it always matches the library's pairing. `durationMs` is fractional and sits on the call: a call carries
+its own duration or its reply's, and a paired reply carries none. Each scenario carries `accuracy`
 (`STRUCTURE_ONLY`, `TIMESTAMPED`, `MEASURED`, `TRACED`), `measuredCoverage`, `pairingCoverage`,
-`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`.
+`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`, each
+`{ kind, message }` with `kind` one of `REPLY_WITHOUT_CALL`, `DURATION_ON_REPLY_DROPPED`,
+`LONGER_THAN_PARENT`, `DUPLICATE_SPAN` or `SKEW`. When
+participant pairs differ, `pairAccuracy` lists `{ from, to, accuracy }` per pair (a reply counts with
+its call), and the Timing view shows it as "Accuracy by pair".
 
-**Clock ordering** (`lsd.mono.timing.orderByCreatedAt`, or `LsdContext.orderByCreatedAt`): by
+An interaction's `status` is written on its message. When any message in a scenario has one, the
+metrics add `Errors`: the number whose status is an error, either an HTTP-style code from 400 to 599
+(`"503"`, `"404 Not Found"`) or, with no leading code, a word such as `error`, `failed` or `timeout`.
+The inspector labels an error status `· error`.
+
+**Clock ordering** (`lsd.mono.timing.orderByStartedAt`, or `lsd.configure { it.orderByStartedAt(mode) }`,
+`lsd.configure(t -> t.orderByStartedAt(mode))` from Java): by
 default (`source`) events from one source that have a start time but no measured duration are
 ordered by it, among their siblings in the same parent call; untimed events keep their place.
-`all` also compares different sources, `false` turns it off, and `Timing.orderByCreatedAt` opts
-one event in or out. Moved events are marked `order: CLOCK`, and it never raises `accuracy`. A
+`all` also compares different sources, `false` turns it off, and `Timing.orderByStartedAt` opts
+one event in or out. Moved events are marked `order: CLOCK` and badged CLOCK in the waterfall and
+the inspector; it never raises `accuracy`. A
 reply never moves before its call, a consume before its publish, or a child out of its parent:
-clock order that would do so is ignored, with a `skew` warning.
+clock order that would do so is ignored, with a `skew` warning. Under `all`, when two sources'
+clocks disagree with the structure, only that pair is kept apart: their events keep their captured
+interleaving (each still ordered by its own clock), other sources stay clock-ordered against them,
+and the warning names that pair. A break no source pair explains keeps capture order for the group.
 
 ### Scenarios and reports in code
 
@@ -350,14 +374,14 @@ a feature off.
 | `lsd.mono.payload.redactKeys` | | unset | Comma-separated key names to redact as well, see [Redaction](#redaction) |
 | `lsd.mono.propagation.allowedHosts` | | `localhost,127.0.0.1,::1` | Hosts `scenarioHeaderValue` gives the scenario header for: names, `*.domain` or `*`. See [Interceptors](#interceptors) |
 | `lsd.mono.scenario.inheritBinding` | | `true` | `false` stops threads inheriting the scenario of the thread that started them, see [Threads](#threads-and-parallel-tests) |
-| `lsd.mono.timing.orderByCreatedAt` | | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
+| `lsd.mono.timing.orderByStartedAt` | | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
 
 Settings made in code rather than by property:
 
 | Setting | Effect |
 | --- | --- |
-| `LsdContext.orderByCreatedAt` | Clock ordering for scenarios completed from now on; `null` reads `lsd.mono.timing.orderByCreatedAt` |
-| `Timing.orderByCreatedAt` | Opts one event in or out of clock ordering |
+| `LsdContext.configure(Consumer<TimingConfig>)` | `TimingConfig.orderByStartedAt(mode)`: clock ordering for scenarios completed from now on; `null` reads `lsd.mono.timing.orderByStartedAt`. Chains the same from Java and Kotlin |
+| `Timing.orderByStartedAt` | Opts one event in or out of clock ordering |
 | `LsdContext.payloads` | Payload converters and redaction rules (see [Message data](#message-data)); `clear()` re-reads the payload properties |
 
 The report page remembers a few choices in the reader's browser, not in the report: the theme

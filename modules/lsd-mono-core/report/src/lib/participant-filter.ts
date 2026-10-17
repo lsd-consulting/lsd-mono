@@ -27,7 +27,7 @@ export interface HeadSlot {
 /** Drawn width of the Hide and More pill (two 24 px buttons, gap, padding, border). */
 export const PILL_W = 54
 
-export function participantName(p: Participant): string {
+function participantName(p: Participant): string {
   return p.alias ?? p.name
 }
 
@@ -41,7 +41,7 @@ export function allBut(participants: Participant[], keep: string): Set<string> {
   return new Set(participants.filter((p) => p.id !== keep).map((p) => p.id))
 }
 
-export function hiddenChipText(count: number): string {
+function hiddenChipText(count: number): string {
   return `${count} hidden`
 }
 
@@ -147,7 +147,7 @@ function round(n: number): number {
 export interface FilterHost {
   participants: () => Participant[]
   hidden: () => ReadonlySet<string>
-  /** Replace the hidden set and redraw the header, rows, chip, minimap and fit. */
+  /** Replace the hidden set and redraw the header, rows, chip and fit. */
   setHidden: (next: Set<string>) => void
 }
 

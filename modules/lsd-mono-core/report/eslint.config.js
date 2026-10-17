@@ -46,7 +46,7 @@ export default defineConfig(
   },
   {
     files: ['src/**/*.ts'],
-    ignores: ['src/**/*.test.ts'],
+    ignores: ['src/**/*.test.ts', 'src/**/*.test-util.ts'],
     plugins: { lsd },
     rules: {
       'lsd/escaped-markup': 'error',
@@ -58,7 +58,7 @@ export default defineConfig(
     rules: { 'no-restricted-syntax': 'off' },
   },
   {
-    files: ['*.config.ts', 'checks/**/*.ts', 'src/**/*.test.ts'],
+    files: ['*.config.ts', 'checks/**/*.ts', 'src/**/*.test.ts', 'src/**/*.test-util.ts'],
     languageOptions: { globals: { ...globals.node } },
   },
   {

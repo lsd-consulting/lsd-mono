@@ -60,9 +60,9 @@ class PendingCallTest {
     fun `with both timestamps the duration is the time between them`() {
         val sent = Instant.parse("2026-01-01T00:00:00Z")
         val scenario = LsdContext().beginScenario(bindCurrentThread = false)
-        scenario.call("Client", "Orders", "GET /orders/1", at = sent).reply("200", at = sent.plusMillis(150))
+        scenario.call("Client", "Orders", "GET /orders/1", timing = Timing.at(sent)).reply("200", timing = Timing.at(sent.plusMillis(150)))
 
-        assertEquals(150L, scenario.messages().last().durationMs)
+        assertEquals(150.0, scenario.messages().last().durationMs)
     }
 
     @Test

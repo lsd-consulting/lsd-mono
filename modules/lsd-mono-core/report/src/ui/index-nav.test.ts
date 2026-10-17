@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
 import type { IndexManifest, IndexReport } from '../lib/report-index'
-import { indexNavHtml, outcomeSummary, type IndexNavState } from './index-nav'
+import { indexNavHtml, orEmptyNavHtml, outcomeSummary, type IndexNavState } from './index-nav'
 
 const failed: IndexReport = {
   id: 'checkout',
@@ -103,5 +103,12 @@ describe('index sidebar', () => {
   it('summarises outcomes failures first', () => {
     expect(outcomeSummary({ success: 2, warn: 1, error: 3 })).toBe('3 error · 1 warn · 2 success')
     expect(outcomeSummary({ success: 0, warn: 0, error: 0 })).toBe('')
+  })
+})
+
+describe('orEmptyNavHtml', () => {
+  it('says No scenarios match for an empty list and leaves a filled one alone', () => {
+    expect(orEmptyNavHtml('  ')).toContain('No scenarios match.')
+    expect(orEmptyNavHtml('<li>x</li>')).toBe('<li>x</li>')
   })
 })

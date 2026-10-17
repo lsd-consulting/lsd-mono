@@ -1,7 +1,15 @@
 // Sequence diagram rows: header, the painted window, and one SVG row per event.
 import type { MessageEvent, Participant, Scenario } from '../../types'
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../../ui/format'
-import { focusableNeighbors, messageHasPayload, messageHitBox, messagePlaces, tabindexFor } from '../diagram-a11y'
+import {
+  TOUCH_HIT_CSS,
+  focusableNeighbors,
+  messageHasPayload,
+  messageHitBox,
+  messagePlaces,
+  tabindexFor,
+} from '../diagram-a11y'
+import { isCoarsePointer } from '../media'
 import { eventHiddenByColumns, messageLabelRect, rowMatchesQuery, visibleParticipants } from '../diagram-view'
 import { escapeAttr, escapeHtml } from '../escape'
 import {
@@ -38,7 +46,7 @@ import { type DiagramFrame, type DiagramView, EMPTY_PAINT, type MountedDiagram, 
 import { messageEndpoints } from './viewport'
 
 /** Diagonal hatch so a coloured activation is not colour-only (colour blindness). */
-export const ACTIVATION_HATCH =
+const ACTIVATION_HATCH =
   '<pattern id="act-tint-hatch" patternUnits="userSpaceOnUse" width="6" height="6"><path d="M0 6 L6 0" fill="none" stroke="#111" stroke-width="1.2"/></pattern>'
 
 /** "hide:<id>" or "more:<id>": which header button holds the roving tab stop. */
@@ -151,6 +159,7 @@ export function windowSvg(
     neighbors: focusableNeighbors(rows, view.hidden),
     activations: spans,
     frame,
+    minHit: isCoarsePointer() ? TOUCH_HIT_CSS : undefined,
   }
   const buttons: string[] = []
   const body = slice
@@ -295,6 +304,13 @@ function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
   return `<title>${full}</title>${shown}`
 }
 
+/**
+ * Marks an arrow that has a payload to open. A glyph with a title for sighted users; the arrow's
+ * own button already says "Open …" to screen readers, so the glyph is hidden from them.
+ */
+const PAYLOAD_MARKER =
+  '<tspan class="msg-payload" dx="6" aria-hidden="true">{}<title>Has a payload: tap or click the arrow to open it</title></tspan>'
+
 function renderMessageRow(
   msg: MessageEvent,
   y: number,
@@ -321,6 +337,7 @@ function renderMessageRow(
   const markerStart = startId ? `marker-start="url(#${escapeAttr(startId)})"` : ''
   const hasData = messageHasPayload(msg)
   const dur = msg.durationMs != null ? `<tspan class="msg-dur"> · ${escapeHtml(msg.durationMs)}ms</tspan>` : ''
+  const payload = hasData ? PAYLOAD_MARKER : ''
   const cue = spec.typeCue ? `<tspan class="msg-type-cue"> [${escapeHtml(spec.typeCue)}]</tspan>` : ''
   const current = match && paint.searchCurrentId === msg.id
   const hitClass = match ? ` search-hit${current ? ' search-current' : ''}` : ''
@@ -343,7 +360,7 @@ function renderMessageRow(
     return `
     <g class="message message-short${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
-      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
+      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
       ${hasData ? `<circle class="msg-hit" cx="${hitX}" cy="0" r="16"/>` : ''}
     </g>`
   }
@@ -372,7 +389,7 @@ function renderMessageRow(
     return `
     <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
       <path class="msg-path" d="M${out} 0 C${bend} 0, ${bend} ${SELF_RETURN_DY}, ${back} ${SELF_RETURN_DY}" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-      <text class="msg-label" x="${bend + 8}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
+      <text class="msg-label" x="${bend + 8}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
       ${hasData ? `<circle class="msg-hit" cx="${bend - 8}" cy="11" r="14"/>` : ''}
     </g>`
   }
@@ -383,7 +400,7 @@ function renderMessageRow(
   return `
   <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})">
     <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}</text>
+    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
     ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
   </g>`
 }
@@ -418,6 +435,7 @@ function messageOpenButton(
     viewTop,
     prevArrowY: neighbor?.prevArrowY,
     nextArrowY: neighbor?.nextArrowY,
+    minSize: paint.minHit,
   })
   const places = paint.places ?? [{ id: msg.id, posinset: 1, setsize: 1, focusable: true }]
   const place = places.find((item) => item.id === msg.id) ?? places[0]

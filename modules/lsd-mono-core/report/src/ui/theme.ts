@@ -8,7 +8,7 @@ const ORDER: ThemeMode[] = ['auto', 'dark', 'light', 'contrast']
 const LIGHT = '(prefers-color-scheme: light)'
 const MORE_CONTRAST = '(prefers-contrast: more)'
 
-export function isTheme(value: string | null): value is Theme {
+function isTheme(value: string | null): value is Theme {
   return value === 'dark' || value === 'light' || value === 'contrast'
 }
 
@@ -24,7 +24,7 @@ export function themeGlyph(mode: ThemeMode): string {
   return mode === 'dark' ? '☀' : '☾'
 }
 
-export function themeName(theme: Theme): string {
+function themeName(theme: Theme): string {
   return theme === 'contrast' ? 'high contrast' : theme
 }
 

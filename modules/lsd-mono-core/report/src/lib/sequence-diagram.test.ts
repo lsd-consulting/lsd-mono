@@ -147,6 +147,28 @@ describe('renderRowSvg fragments', () => {
     expect(html).not.toContain('role="button"')
   })
 
+  it('marks an arrow with a payload with braces and a title', () => {
+    const row = (data?: unknown) =>
+      renderRowSvg(
+        rowFor({
+          kind: 'message',
+          id: 'm-p',
+          from: 'api',
+          to: 'db',
+          label: 'ping',
+          type: 'SYNCHRONOUS',
+          order: 'CLOCK',
+          data,
+        }),
+        400,
+        participants,
+      )
+    const html = row({ id: 1 })
+    expect(html).toContain('<tspan class="msg-payload" dx="6" aria-hidden="true">{}<title>Has a payload')
+    expect(html).not.toContain('msg-clock')
+    expect(row()).not.toContain('msg-payload')
+  })
+
   it('does not add an arrow button when there is no payload', () => {
     const html = renderRowSvg(
       rowFor({
@@ -632,6 +654,16 @@ describe('component diagram button', () => {
       events,
     }
   }
+
+  it('explains the {} marker under the toolbar only when an arrow has a payload', () => {
+    const plain = { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' } as const
+    expect(renderDiagramHtml(scenarioWith([plain]))).not.toContain('payload-legend')
+    const html = renderDiagramHtml(scenarioWith([{ ...plain, data: { body: '{}' } }]))
+    const legend = html.slice(html.indexOf('class="payload-legend"'), html.indexOf('class="seq-stage"'))
+    expect(legend).toContain('aria-hidden="true">{}</span>')
+    expect(legend).toContain('An arrow marked with braces</span> has a payload')
+    expect(legend).toContain('<span class="legend-tap">tap</span>')
+  })
 
   it('sits in the diagram toolbar and names the scenario it opens', () => {
     const html = renderDiagramHtml(

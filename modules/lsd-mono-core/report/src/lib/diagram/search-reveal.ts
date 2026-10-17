@@ -1,9 +1,10 @@
-// Find in the diagram: the first match is the current one. It is brought on screen as the user
+// Find in the diagram: the first match is the current one, and Next / Previous (Enter, Shift+Enter,
+// F3, Cmd/Ctrl+G, or the toolbar buttons) step through the rest, wrapping around. It is brought on screen as the user
 // types (after a short pause, so each keystroke does not jump the page) and on Enter / the soft
 // keyboard's Go or Search key. The diagram scrolls with the page, so this moves the page, at the
 // current zoom, below the top bar, the toolbar when it sticks, and the sticky participant header,
 // and above the on-screen keyboard (visualViewport).
-import { eventHiddenByColumns, rowMatchesQuery } from '../diagram-view'
+import { eventHiddenByColumns, rowMatchesQuery, searchCountLabel } from '../diagram-view'
 import { MESSAGE_LABEL_RISE, type LayoutRow } from '../layout'
 import { scrollDiagramToOffset } from './page-scroll'
 import { diagramState, diagramView } from './state'
@@ -14,14 +15,85 @@ export const SEARCH_REVEAL_DELAY_MS = 250
 /** Room left above a match when it is brought to the top of the diagram. */
 const MARGIN_PX = 8
 
-/** The first row that matches the query, in drawing order, skipping rows on hidden columns. */
-export function firstSearchHit(
+/** Find's matches over the drawn rows: the one source for the count, "N of M" and stepping. */
+export interface SearchState {
+  /** Matching rows you can step to, in drawing order (not on a hidden column). */
+  hits: LayoutRow[]
+  /** Index of the current match in [hits], or -1. */
+  current: number
+  /** Matching rows on a hidden column: counted, but not stepped to. */
+  hidden: number
+}
+
+/** Find's matches among [rows] for [query], with [currentId]'s place among them. */
+export function searchState(
   rows: readonly LayoutRow[],
   query: string,
-  hidden: ReadonlySet<string>,
-): LayoutRow | null {
-  if (!query.trim()) return null
-  return rows.find((row) => rowMatchesQuery(row.event, query) && !eventHiddenByColumns(row.event, hidden)) ?? null
+  hiddenIds: ReadonlySet<string>,
+  currentId: string | null = null,
+): SearchState {
+  const hits: LayoutRow[] = []
+  let hidden = 0
+  if (query.trim()) {
+    for (const row of rows) {
+      if (!rowMatchesQuery(row.event, query)) continue
+      if (eventHiddenByColumns(row.event, hiddenIds)) hidden++
+      else hits.push(row)
+    }
+  }
+  return { hits, current: hits.findIndex((r) => r.event.id === currentId), hidden }
+}
+
+/** The scenario's Find state, from its mounted rows and view. */
+export function scenarioSearchState(scenarioId: string): SearchState {
+  const view = diagramView(scenarioId)
+  const rows = diagramState.mounted.get(scenarioId)?.rows ?? []
+  return searchState(rows, view.query, view.hidden, view.searchCurrentId ?? null)
+}
+
+/** The live-region text for [state]: "2 of 5", or "5 matches" with no current match. */
+export function searchStateLabel(state: SearchState, query: string): string {
+  return searchCountLabel(state.hits.length + state.hidden, state.hidden, query, state.current + 1)
+}
+
+/**
+ * The match after (step 1) or before (step -1) [current] among [count], wrapping around. With no
+ * current match (-1) Next goes to the first and Previous to the last. -1 when nothing matches.
+ */
+export function stepIndex(count: number, current: number, step: 1 | -1): number {
+  if (count <= 0) return -1
+  if (current < 0) return step > 0 ? 0 : count - 1
+  return (current + step + count) % count
+}
+
+/** Bring the Find count ("2 of 5") and the step buttons up to date with the scenario's matches. */
+export function syncFindControls(scrollport: HTMLElement): void {
+  const scenarioId = scrollport.dataset.scenarioId
+  const root = scrollport.closest<HTMLElement>('.seq-diagram')
+  if (!scenarioId || !root) return
+  const state = scenarioSearchState(scenarioId)
+  const count = root.querySelector('.diagram-find-count')
+  if (count) count.textContent = searchStateLabel(state, diagramView(scenarioId).query)
+  root
+    .querySelectorAll<HTMLButtonElement>('[data-find-step]')
+    .forEach((btn) => (btn.disabled = state.hits.length === 0))
+}
+
+/** Find-box keys that step through matches: Enter / F3 / Cmd or Ctrl+G go to the next, with Shift the previous. */
+export function findStepKey(
+  ev: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'metaKey' | 'ctrlKey' | 'altKey'>,
+): 1 | -1 | null {
+  const g = (ev.metaKey || ev.ctrlKey) && !ev.altKey && ev.key.toLowerCase() === 'g'
+  if (ev.key !== 'Enter' && ev.key !== 'F3' && !g) return null
+  return ev.shiftKey ? -1 : 1
+}
+
+/** Make the next (1) or previous (-1) match current. Returns it, or null when nothing matches. */
+export function stepSearchCurrent(scenarioId: string, step: 1 | -1): LayoutRow | null {
+  const state = scenarioSearchState(scenarioId)
+  const row = state.hits[stepIndex(state.hits.length, state.current, step)] ?? null
+  diagramView(scenarioId).searchCurrentId = row?.event.id ?? null
+  return row
 }
 
 /** Top and bottom of what a row draws, in drawing pixels below the header: a label rises above its arrow, a note card is centred on its row. */
@@ -34,7 +106,7 @@ export function rowExtent(row: LayoutRow): { top: number; bottom: number } {
 export function updateSearchCurrent(scenarioId: string): LayoutRow | null {
   const view = diagramView(scenarioId)
   const diagram = diagramState.mounted.get(scenarioId)
-  const row = diagram ? firstSearchHit(diagram.rows, view.query, view.hidden) : null
+  const row = diagram ? (searchState(diagram.rows, view.query, view.hidden).hits[0] ?? null) : null
   view.searchCurrentId = row?.event.id ?? null
   return row
 }

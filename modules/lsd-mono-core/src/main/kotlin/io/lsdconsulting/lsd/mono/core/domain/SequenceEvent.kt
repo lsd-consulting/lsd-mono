@@ -18,7 +18,7 @@ import java.time.Instant
  * Internal: callers capture through the [io.lsdconsulting.lsd.mono.core.Capturer] verbs, and
  * the context gives every event its id when it is captured.
  *
- * Optional [createdAt] is the caller's `startedAt` (the verbs' `at`). With clock ordering on
+ * Optional [startedAt] is when the event started (a message's `Timing.startedAt`, a structural row's `at`). With clock ordering on
  * (the default, same source only) events that have it and no measured duration are reordered
  * by it among their siblings; events without it keep their capture position. See `EventOrder.kt`.
  *
@@ -26,7 +26,7 @@ import java.time.Instant
  */
 internal sealed class SequenceEvent {
     abstract val id: String
-    abstract val createdAt: Instant?
+    abstract val startedAt: Instant?
 }
 
 /**
@@ -87,16 +87,14 @@ internal data class Message(
     val type: MessageType = MessageType.SYNCHRONOUS,
     val colour: String? = null,
     val data: Any? = null,
-    /** Legacy whole-ms duration, as before. Kept alongside [exactMs]. */
-    val durationMs: Long? = null,
-    /** `startedAt`: the caller's `at`. */
-    override val createdAt: Instant? = null,
+    /** When it started: the caller's `Timing.startedAt`. */
+    override val startedAt: Instant? = null,
     /** Capture order within the context, set when the event is bound. */
     val seq: Long = 0,
     /** When lsd-mono captured it. A soft hint only. */
     val capturedAt: Instant? = null,
-    /** Measured duration, fractional ms. Written as `durationMs` in the JSON. */
-    val exactMs: Double? = null,
+    /** Measured duration, fractional ms. */
+    val durationMs: Double? = null,
     /** The duration was computed from two same-source timestamps, not measured. */
     val derived: Boolean = false,
     /** Clock domain; null is `"local"`. */
@@ -113,7 +111,7 @@ internal data class Message(
     val orderHint: Boolean? = null,
 ) : SequenceEvent() {
     /** The measured or derived duration, fractional ms. */
-    val timedMs: Double? get() = exactMs ?: durationMs?.toDouble()
+    val timedMs: Double? get() = durationMs
 }
 
 /**
@@ -125,34 +123,34 @@ internal data class Note(
     val text: String,
     val over: String? = null,
     val placement: NoteSide = NoteSide.OVER,
-    override val createdAt: Instant? = null,
+    override val startedAt: Instant? = null,
 ) : SequenceEvent()
 
 internal data class Divider(
     override val id: String,
     val label: String,
-    override val createdAt: Instant? = null,
+    override val startedAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Titled break in a continuous diagram. Does not split the SVG or drop activations. */
 internal data class Section(
     override val id: String,
     val title: String,
-    override val createdAt: Instant? = null,
+    override val startedAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Time-delay ellipsis row (`...label...` in PlantUML). */
 internal data class Delay(
     override val id: String,
     val label: String? = null,
-    override val createdAt: Instant? = null,
+    override val startedAt: Instant? = null,
 ) : SequenceEvent()
 
 /** Vertical spacer (`|||` / sized `||N||` in PlantUML). [heightPx] defaults in the UI. */
 internal data class Spacer(
     override val id: String,
     val heightPx: Int? = null,
-    override val createdAt: Instant? = null,
+    override val startedAt: Instant? = null,
 ) : SequenceEvent()
 
 internal enum class LifelineAction { ACTIVATE, DEACTIVATE }
@@ -163,5 +161,5 @@ internal data class Lifeline(
     val action: LifelineAction = LifelineAction.ACTIVATE,
     /** Optional emphasis on an activation bar. Ignored for deactivate. Absent means the default bar. */
     val colour: String? = null,
-    override val createdAt: Instant? = null,
+    override val startedAt: Instant? = null,
 ) : SequenceEvent()

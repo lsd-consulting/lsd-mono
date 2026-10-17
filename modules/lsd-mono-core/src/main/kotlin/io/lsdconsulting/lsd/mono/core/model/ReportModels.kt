@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core.model
 
+import io.lsdconsulting.lsd.mono.core.domain.formatMs
 import io.lsdconsulting.lsd.mono.core.json.JsonArray
 import io.lsdconsulting.lsd.mono.core.json.JsonBool
 import io.lsdconsulting.lsd.mono.core.json.JsonNumber
@@ -105,8 +106,22 @@ internal data class ScenarioTimingJson(
     val wallClockMs: Double?,
     val clockOrdering: String,
     val clockOrdered: Int,
-    val warnings: List<String>,
+    val warnings: List<WarningJson>,
     val reorderedByClock: List<String>,
+    val pairAccuracy: List<PairAccuracyJson> = emptyList(),
+)
+
+/** A timing warning: `kind` (for example `LONGER_THAN_PARENT`) and its sentence. */
+internal data class WarningJson(
+    val kind: String,
+    val message: String,
+)
+
+/** Accuracy of the messages between two participants. */
+internal data class PairAccuracyJson(
+    val from: String,
+    val to: String,
+    val accuracy: String,
 )
 
 /** Trace ids on a message. */
@@ -116,15 +131,8 @@ internal data class TraceJson(
     val parentSpanId: String?,
 )
 
-/** Fractional milliseconds, to the microsecond, without trailing zeros. */
-internal fun msNumber(ms: Double): JsonNumber =
-    JsonNumber(
-        java.math.BigDecimal
-            .valueOf(ms)
-            .setScale(3, java.math.RoundingMode.HALF_UP)
-            .stripTrailingZeros()
-            .toPlainString(),
-    )
+/** Fractional milliseconds, to the microsecond, without trailing zeros ([formatMs]). */
+internal fun msNumber(ms: Double): JsonNumber = JsonNumber(formatMs(ms))
 
 internal data class FactJson(
     val key: String,
@@ -160,7 +168,7 @@ internal data class MessageEventJson(
     val data: Any? = null,
     /** Set when [data] is only method/path/status and the rest lives in the payload sidecar. */
     val payloadId: String? = null,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
     val seq: Long? = null,
     val callId: String? = null,
     val replyTo: String? = null,
@@ -172,6 +180,10 @@ internal data class MessageEventJson(
     val timing: String? = null,
     val pairing: String? = null,
     val order: String? = null,
+    /** Id of the call this message runs inside. */
+    val parentId: String? = null,
+    /** On a paired reply: id of the call it answers. */
+    val replyOf: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -186,7 +198,6 @@ internal data class MessageEventJson(
                 if (durationMs != null) add("durationMs" to msNumber(durationMs))
                 if (data != null) add("data" to anyToJson(data))
                 if (payloadId != null) add("payloadId" to JsonString(payloadId))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
                 if (seq != null) add("seq" to JsonNumber(seq.toString()))
                 if (callId != null) add("callId" to JsonString(callId))
                 if (replyTo != null) add("replyTo" to JsonString(replyTo))
@@ -204,12 +215,14 @@ internal data class MessageEventJson(
                     )
                 }
                 if (source != null) add("source" to JsonString(source))
-                if (createdAt != null) add("startedAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
                 if (capturedAt != null) add("capturedAt" to JsonString(capturedAt))
                 if (status != null) add("status" to JsonString(status))
                 if (timing != null) add("timing" to JsonString(timing))
                 if (pairing != null) add("pairing" to JsonString(pairing))
                 if (order != null) add("order" to JsonString(order))
+                if (parentId != null) add("parentId" to JsonString(parentId))
+                if (replyOf != null) add("replyOf" to JsonString(replyOf))
             },
         )
 }
@@ -220,7 +233,7 @@ internal data class NoteEventJson(
     /** Anchor participant. Required for placement `over`; optional for left/right. */
     val over: String? = null,
     val placement: String = "over",
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -230,7 +243,7 @@ internal data class NoteEventJson(
                 add("text" to JsonString(text))
                 if (over != null) add("over" to JsonString(over))
                 add("placement" to JsonString(placement))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -238,7 +251,7 @@ internal data class NoteEventJson(
 internal data class DelayEventJson(
     val id: String,
     val label: String? = null,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -246,7 +259,7 @@ internal data class DelayEventJson(
                 add("kind" to JsonString("delay"))
                 add("id" to JsonString(id))
                 if (label != null) add("label" to JsonString(label))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -254,7 +267,7 @@ internal data class DelayEventJson(
 internal data class SpacerEventJson(
     val id: String,
     val heightPx: Int? = null,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -262,7 +275,7 @@ internal data class SpacerEventJson(
                 add("kind" to JsonString("spacer"))
                 add("id" to JsonString(id))
                 if (heightPx != null) add("heightPx" to JsonNumber(heightPx.toString()))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -270,7 +283,7 @@ internal data class SpacerEventJson(
 internal data class DividerEventJson(
     val id: String,
     val label: String,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -278,7 +291,7 @@ internal data class DividerEventJson(
                 add("kind" to JsonString("divider"))
                 add("id" to JsonString(id))
                 add("label" to JsonString(label))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -286,7 +299,7 @@ internal data class DividerEventJson(
 internal data class SectionEventJson(
     val id: String,
     val title: String,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -294,7 +307,7 @@ internal data class SectionEventJson(
                 add("kind" to JsonString("section"))
                 add("id" to JsonString(id))
                 add("title" to JsonString(title))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -305,7 +318,7 @@ internal data class LifelineEventJson(
     val participantId: String,
     /** Present only on activate, and only when the caller set a colour. */
     val colour: String? = null,
-    val createdAt: String? = null,
+    val startedAt: String? = null,
 ) : EventJson() {
     internal override fun toJsonValue(): JsonValue =
         obj(
@@ -314,7 +327,7 @@ internal data class LifelineEventJson(
                 add("id" to JsonString(id))
                 add("participantId" to JsonString(participantId))
                 if (colour != null) add("colour" to JsonString(colour))
-                if (createdAt != null) add("createdAt" to JsonString(createdAt))
+                if (startedAt != null) add("startedAt" to JsonString(startedAt))
             },
         )
 }
@@ -351,9 +364,24 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
                 if (timing.wallClockMs != null) add("wallClockMs" to msNumber(timing.wallClockMs))
                 add("clockOrdering" to JsonString(timing.clockOrdering))
                 add("clockOrdered" to JsonNumber(timing.clockOrdered.toString()))
-                if (timing.warnings.isNotEmpty()) add("warnings" to JsonArray(timing.warnings.map(::JsonString)))
+                if (timing.warnings.isNotEmpty()) {
+                    add(
+                        "warnings" to
+                            JsonArray(timing.warnings.map { obj(listOf("kind" to JsonString(it.kind), "message" to JsonString(it.message))) }),
+                    )
+                }
                 if (timing.reorderedByClock.isNotEmpty()) {
                     add("reorderedByClock" to JsonArray(timing.reorderedByClock.map(::JsonString)))
+                }
+                if (timing.pairAccuracy.isNotEmpty()) {
+                    add(
+                        "pairAccuracy" to
+                            JsonArray(
+                                timing.pairAccuracy.map {
+                                    obj(listOf("from" to JsonString(it.from), "to" to JsonString(it.to), "accuracy" to JsonString(it.accuracy)))
+                                },
+                            ),
+                    )
                 }
             }
         },

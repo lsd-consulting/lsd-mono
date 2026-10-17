@@ -17,7 +17,6 @@ import {
   eventRowHeight,
   layoutRows,
   noteCardMetrics,
-  sortEventsByCreatedAt,
   virtualRowRange,
   wrapNoteLines,
 } from './layout'
@@ -215,48 +214,35 @@ describe('noteCardMetrics', () => {
   })
 })
 
-describe('sortEventsByCreatedAt', () => {
-  it('sorts out-of-order timestamps and leaves untimed events last', () => {
+describe('layoutRows event order', () => {
+  it('keeps the report order: whole-second stamps, untimed sections and replies stay in place', () => {
+    const msg = (id: string, startedAt?: string): DiagramEvent => ({
+      kind: 'message',
+      id,
+      from: 'a',
+      to: 'b',
+      label: id,
+      type: 'SYNCHRONOUS',
+      ...(startedAt ? { startedAt } : {}),
+    })
     const events: DiagramEvent[] = [
-      {
-        kind: 'message',
-        id: 'late',
-        from: 'a',
-        to: 'b',
-        label: 'late',
-        type: 'SYNCHRONOUS',
-        createdAt: '2026-10-03T11:00:00Z',
-      },
-      {
-        kind: 'message',
-        id: 'early',
-        from: 'a',
-        to: 'b',
-        label: 'early',
-        type: 'SYNCHRONOUS',
-        createdAt: '2026-10-03T09:00:00Z',
-      },
-      { kind: 'divider', id: 'plain', label: 'untimed' },
-      {
-        kind: 'message',
-        id: 'mid',
-        from: 'a',
-        to: 'b',
-        label: 'mid',
-        type: 'SYNCHRONOUS',
-        createdAt: '2026-10-03T10:00:00Z',
-      },
+      { kind: 'section', id: 'section', title: 'Measured and traced' },
+      msg('root', '2026-10-03T09:00:00Z'),
+      msg('child', '2026-10-03T09:00:00.003Z'),
+      msg('child-reply'),
+      msg('root-reply'),
+      { kind: 'divider', id: 'divider', label: 'untimed' },
+      msg('later', '2026-10-03T09:00:01.5Z'),
     ]
-    expect(sortEventsByCreatedAt(events).map((e) => e.id)).toEqual(['early', 'mid', 'late', 'plain'])
-    expect(layoutRows(events).map((r) => r.event.id)).toEqual(['early', 'mid', 'late', 'plain'])
-  })
-
-  it('keeps capture order when no event has createdAt', () => {
-    const events: DiagramEvent[] = [
-      { kind: 'activate', id: 'a', participantId: 'api' },
-      { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' },
-    ]
-    expect(sortEventsByCreatedAt(events)).toBe(events)
+    expect(layoutRows(events).map((r) => r.event.id)).toEqual([
+      'section',
+      'root',
+      'child',
+      'child-reply',
+      'root-reply',
+      'divider',
+      'later',
+    ])
   })
 })
 

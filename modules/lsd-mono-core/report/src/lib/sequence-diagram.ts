@@ -1,17 +1,10 @@
 // The sequence diagram: mounting, frame and pads, the HTML shell and message focus. Shapes, rows,
-// the viewport and the minimap live in ./diagram; their state is one controller, diagramState.
-import type { ActivateEvent, DiagramEvent, MessageEvent, NoteEvent, Participant, Scenario } from '../types'
+// the viewport lives in ./diagram; their state is one controller, diagramState.
+import type { DiagramEvent, MessageEvent, Participant, Scenario } from '../types'
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
 import { hasComponentDiagram } from './component-graph'
 import { focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
-import {
-  classifySearchHits,
-  eventHiddenByColumns,
-  searchCountLabel,
-  unscaledViewport,
-  visibleParticipants,
-  zoomLabel,
-} from './diagram-view'
+import { eventHiddenByColumns, unscaledViewport, visibleParticipants, zoomLabel } from './diagram-view'
 import { headerHtml } from './diagram/rows'
 import {
   laneIndex,
@@ -24,6 +17,7 @@ import {
   xFor,
 } from './diagram/shapes'
 import { type DiagramFrame, type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
+import { scenarioSearchState, searchStateLabel } from './diagram/search-reveal'
 import { syncDiagramWindow } from './diagram/viewport'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
 import {
@@ -41,8 +35,7 @@ import {
 } from './layout'
 import type { LayoutRow } from './layout'
 
-export { paintMinimapDensity, syncMinimap } from './diagram/minimap-view'
-export { ACTIVATION_HATCH, headerHtml, renderRowSvg } from './diagram/rows'
+export { headerHtml, renderRowSvg } from './diagram/rows'
 export {
   type ArrowEnd,
   LANE_GAP,
@@ -52,7 +45,6 @@ export {
   type ParticipantTypeLabel,
   activationBarSvg,
   arrowMarker,
-  arrowMarkerId,
   laneCentres,
   laneIndex,
   messageArrowSpec,
@@ -60,7 +52,6 @@ export {
   participantHead,
   participantHeadFor,
   participantLabelSvg,
-  shortLabelAnchor,
   shortMessageEndpoints,
 } from './diagram/shapes'
 export {
@@ -76,6 +67,7 @@ export {
   bindDiagramScroll,
   setHiddenParticipants,
   sliceViewTop,
+  stepFind,
   syncDiagramWindow,
 } from './diagram/viewport'
 
@@ -92,6 +84,7 @@ function messageLabelWidth(msg: MessageEvent, labelMaxWidth: number): number {
   let text = truncateLabel(msg.label, labelMaxWidth)
   if (cue) text += ` [${cue}]`
   if (msg.durationMs != null) text += ` · ${msg.durationMs}ms`
+  if (messageHasPayload(msg)) text += '  {}'
   return text.length * MSG_CHAR_W
 }
 
@@ -159,7 +152,7 @@ export function diagramPads(
   }
 }
 
-export function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): MountedDiagram {
+function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): MountedDiagram {
   const rows = layoutRows(scenario.events)
   const diagram: MountedDiagram = {
     scenario,
@@ -186,7 +179,8 @@ function metricsControl(scenario: Scenario): string {
 }
 
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {
-  const hits = classifySearchHits(scenario.events, view.query, view.hidden)
+  const find = scenarioSearchState(scenario.id)
+  const steppable = find.hits.length > 0 ? '' : ' disabled'
   // The hidden-participants chip is drawn by bindParticipantFilter, and only while
   // something is hidden. The status line announces each hide and show.
   return `
@@ -202,13 +196,26 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
       <label class="diagram-find">
         <span class="diagram-find-label">Find</span>
         <input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
-        <span class="diagram-find-count" aria-live="polite">${escapeHtml(searchCountLabel(hits.total, hits.hidden, view.query))}</span>
+        <span class="diagram-find-count" aria-live="polite">${escapeHtml(searchStateLabel(find, view.query))}</span>
       </label>
+      <div class="find-steps" role="group" aria-label="Step through matches">
+        <button type="button" data-find-step="prev" aria-label="Previous match" title="Previous match (Shift+Enter)"${steppable}>↑</button>
+        <button type="button" data-find-step="next" aria-label="Next match" title="Next match (Enter)"${steppable}>↓</button>
+      </div>
       <div class="panel-controls" role="group" aria-label="Open in the side panel">
         ${metricsControl(scenario)}
         ${componentsControl(scenario)}
       </div>
     </div>`
+}
+
+/**
+ * One line under the toolbar explaining the `{}` marker, only when an arrow has a payload.
+ * The verb follows the pointer (CSS swaps click for tap on touch). Screen only.
+ */
+function payloadLegendHtml(scenario: Scenario): string {
+  if (!scenario.events.some((e) => e.kind === 'message' && messageHasPayload(e))) return ''
+  return `<p class="payload-legend"><span class="payload-legend-key" aria-hidden="true">{}</span><span class="visually-hidden">An arrow marked with braces</span> has a payload: <span class="legend-click">click</span><span class="legend-tap">tap</span> the arrow to open it</p>`
 }
 
 /** Continuous diagram: sticky participant header, section jump list, virtualised rows. */
@@ -233,6 +240,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
     <div class="seq-diagram" style="${printWidthStyle(width)}">
       ${jump}
       ${toolbarHtml(scenario, view)}
+      ${payloadLegendHtml(scenario)}
       <div class="seq-stage">
         <div class="seq-scroll" data-scenario-id="${escapeAttr(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeAttr(scenario.title)}">
           <div class="seq-sticky-header" style="width:${width * zoom}px">${headerHtml(scenario, frame, view.hidden, zoom, null)}</div>
@@ -240,7 +248,6 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
             <div class="seq-window"></div>
           </div>
         </div>
-        ${minimapMarkup()}
       </div>
     </div>`
 }
@@ -252,17 +259,8 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
 export const PRINT_MAX_UPSCALE = 1.5
 
 /** Upper bound for the printed width, from the unzoomed drawing width. */
-export function printWidthStyle(width: number): string {
+function printWidthStyle(width: number): string {
   return `--seq-print-max:${Math.round(width * PRINT_MAX_UPSCALE)}px`
-}
-
-/** One track, one canvas, one window marker. Never one node per event. */
-export function minimapMarkup(): string {
-  return `<div class="seq-minimap" role="slider" aria-orientation="vertical" aria-label="Diagram overview" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><canvas class="seq-minimap-canvas" aria-hidden="true"></canvas><div class="seq-minimap-window" aria-hidden="true"></div></div>`
-}
-
-export function prefersReducedMotion(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 export function paintedMessageIds(slice: LayoutRow[], hiddenIds: ReadonlySet<string>): Set<string> {
@@ -318,12 +316,4 @@ export function messageOffsetY(scenarioId: string, messageId: string): number | 
 
 export function findMessage(scenario: Scenario, messageId: string): MessageEvent | undefined {
   return scenario.events.find((e): e is MessageEvent => e.kind === 'message' && e.id === messageId)
-}
-
-export function findNote(scenario: Scenario, noteId: string): NoteEvent | undefined {
-  return scenario.events.find((e): e is NoteEvent => e.kind === 'note' && e.id === noteId)
-}
-
-export function isActivate(e: DiagramEvent): e is ActivateEvent {
-  return e.kind === 'activate' || e.kind === 'deactivate'
 }

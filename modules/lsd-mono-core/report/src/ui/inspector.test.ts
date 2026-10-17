@@ -4,16 +4,14 @@ import type { MessageEvent, MessageType, Report } from '../types'
 import { sampleReport } from '../data/sample-report'
 import { shellParts } from '../lib/payloads'
 import { componentGraph } from '../lib/component-graph'
+import { bindInspector, delegateMessageOpen, inspectorMarkup } from './inspector'
 import {
   INSPECTOR_MIN_PX,
   INSPECTOR_NARROW_PX,
   INSPECTOR_WIDTH_KEY,
-  bindInspector,
   clampInspectorWidth,
-  delegateMessageOpen,
-  inspectorMarkup,
   inspectorWidthLimits,
-} from './inspector'
+} from './inspector-width'
 
 const bodyMarker = 'arrow-payload-SOCK'
 

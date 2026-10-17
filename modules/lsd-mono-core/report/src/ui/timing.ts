@@ -1,12 +1,20 @@
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { formatMs, hasTiming, timeline, type Timeline } from '../lib/timing'
-import type { Accuracy, Scenario } from '../types'
+import type { Accuracy, Scenario, WarningKind } from '../types'
 
 const ACCURACY_LABEL: Record<Accuracy, string> = {
   STRUCTURE_ONLY: 'structure only',
   TIMESTAMPED: 'timestamped',
   MEASURED: 'measured',
   TRACED: 'traced',
+}
+
+const WARNING_LABEL: Record<WarningKind, string> = {
+  REPLY_WITHOUT_CALL: 'reply without call',
+  DURATION_ON_REPLY_DROPPED: 'duration on reply dropped',
+  LONGER_THAN_PARENT: 'longer than parent',
+  DUPLICATE_SPAN: 'duplicate span',
+  SKEW: 'skew',
 }
 
 const LANE_COLOURS = 6
@@ -57,10 +65,10 @@ function pairingHint(scenario: Scenario): string {
 }
 
 /** Badges for one message: clock-ordered, guessed pairing. */
-export function orderBadgesHtml(order?: string, pairing?: string): string {
+function orderBadgesHtml(order?: string, pairing?: string): string {
   return [
     order === 'CLOCK'
-      ? '<span class="tbadge clock" title="Placed by its timestamp (createdAt), not capture order">clock</span>'
+      ? '<span class="tbadge clock" title="Placed by its start time, not capture order">clock</span>'
       : '',
     pairing === 'GUESSED'
       ? '<span class="tbadge guessed" title="Reply matched by direction, not by id">guessed</span>'
@@ -96,11 +104,13 @@ export function timingPanelHtml(scenario: Scenario): string {
     t.approximate ? '<span class="pill">approximate start times</span>' : '',
     scenario.clockOrdered ? `<span class="pill clock">${scenario.clockOrdered} clock-ordered</span>` : '',
     ...(scenario.warnings ?? []).map(
-      (w) => `<span class="pill warn" title="${escapeAttr(w)}">${escapeHtml(w.split(':')[0])}</span>`,
+      (w) =>
+        `<span class="pill warn" title="${escapeAttr(`${WARNING_LABEL[w.kind] ?? w.kind}: ${w.message}`)}">${escapeHtml(WARNING_LABEL[w.kind] ?? w.kind)}</span>`,
     ),
   ].join('')
   return `<section class="timing" aria-label="Timing">
     <div class="timing-notes">${notesHtml}</div>
+    ${pairAccuracyHtml(scenario)}
     <h4>Time by participant <small>self time, ${escapeHtml(formatMs(t.totalMs))} total</small></h4>
     <div class="timing-stack" role="img" aria-label="Time by participant">${stack}</div>
     <ul class="timing-legend">${legend}</ul>
@@ -110,6 +120,20 @@ export function timingPanelHtml(scenario: Scenario): string {
     ${axisHtml(T)}
     <ol class="waterfall">${t.rows.map((r) => rowHtml(scenario, r, T, id)).join('')}</ol>
   </section>`
+}
+
+/** Which participant pairs are traced, measured, timestamped or structure only, when they differ. */
+function pairAccuracyHtml(scenario: Scenario): string {
+  const pairs = scenario.pairAccuracy ?? []
+  if (!pairs.length) return ''
+  const items = pairs
+    .map(
+      (p) =>
+        `<li><span class="who">${escapeHtml(nameOf(scenario, p.from))} → ${escapeHtml(nameOf(scenario, p.to))}</span> <b class="acc-${escapeAttr(p.accuracy.toLowerCase())}">${escapeHtml(ACCURACY_LABEL[p.accuracy] ?? p.accuracy)}</b></li>`,
+    )
+    .join('')
+  return `<h4>Accuracy by pair <small>the scenario is only as accurate as its weakest pair</small></h4>
+    <ul class="pair-accuracy">${items}</ul>`
 }
 
 function axisHtml(total: number): string {
@@ -152,16 +176,13 @@ function rowHtml(scenario: Scenario, r: Timeline['rows'][number], total: number,
     r.spanMs > 0
       ? `<span class="wf-bar" style="left:${pct(r.startMs, total)};width:${pct(r.spanMs, total)}"><span class="wf-self" style="width:${((100 * r.selfMs) / r.spanMs).toFixed(2)}%"></span></span>`
       : `<span class="wf-tick" style="left:${pct(r.startMs, total)}"></span>`
-  const dur =
-    r.spanMs > 0
-      ? `${escapeHtml(formatMs(r.spanMs))}${r.overrun ? '<abbr class="warnx" title="Children exceed this call\'s own duration">!</abbr>' : ''}`
-      : '<span class="nt">—</span>'
+  const dur = r.spanMs > 0 ? `${escapeHtml(formatMs(r.spanMs))}` : '<span class="nt">—</span>'
   const async =
     m.type === 'ASYNCHRONOUS' || m.type === 'LOST'
       ? ` <span class="tag">${escapeHtml(m.type.toLowerCase())}</span>`
       : ''
   return `<li><button type="button" class="wf-row${m.order === 'CLOCK' ? ' clock' : ''}" style="--d:${r.depth}" data-show-message="${escapeAttr(m.id)}" data-scenario-id="${escapeAttr(id)}">
-    <span class="wf-lab">${orderBadgesHtml(m.order, m.pairing)}<span class="who">${who}</span> ${escapeHtml(m.label)}${async}</span>
+    <span class="wf-lab">${orderBadgesHtml(m.order, m.pairing)}<span class="who">${who}</span> ${escapeHtml(m.label)}${async}${r.overrun ? `<span class="warnx" title="${escapeAttr(`The calls inside took ${formatMs(r.childMs)}, longer than this call's measured ${formatMs(r.ownMs)}: the measurements disagree`)}">${escapeHtml(`Calls inside took longer: ${formatMs(r.childMs)} > ${formatMs(r.ownMs)}`)}</span>` : ''}</span>
     <span class="wf-track">${bar}</span>
     <span class="wf-dur">${dur}</span>
   </button></li>`

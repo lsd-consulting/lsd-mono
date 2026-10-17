@@ -59,7 +59,7 @@ for (const [pageName, open] of Object.entries(PAGES)) {
       ['tall', 30],
       ['short', 6],
     ] as const) {
-      test(`find: ${pageName} page, ${sizeName}, ${drawing} drawing, Enter brings the match on screen`, async ({
+      test(`find: ${pageName} page, ${sizeName}, ${drawing} drawing, Enter brings the current match on screen`, async ({
         page,
       }) => {
         await page.setViewportSize(viewport)
@@ -76,10 +76,9 @@ for (const [pageName, open] of Object.entries(PAGES)) {
             .poll(
               () =>
                 page.evaluate((text) => {
-                  const hit = [...document.querySelectorAll<SVGTextElement>('.seq-svg .msg-label')].find((t) => {
-                    const label = t.textContent?.trim() ?? ''
-                    return label.startsWith(text) && !'0123456789'.includes(label.charAt(text.length) || 'x')
-                  })
+                  // Enter steps to the next match: call 1.2 also matches call 1.20 to 1.29.
+                  const hit = document.querySelector<SVGTextElement>('.seq-svg .search-current .msg-label')
+                  if (!hit?.textContent?.trim().startsWith(text)) return 'not drawn'
                   const header = document.querySelector<HTMLElement>('.seq-sticky-header')
                   if (!hit || !header) return 'not drawn'
                   const box = hit.getBoundingClientRect()

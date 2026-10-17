@@ -25,12 +25,25 @@ afterEach(() => {
 })
 
 describe('page scroll', () => {
-  it('makes the stage as tall as the drawing and gives the minimap the scrollport height', () => {
+  it('makes the stage as tall as the drawing', () => {
     const { stage, scroll } = mount(5000, 800, 300)
     sizeStage(scroll)
     expect(stage.style.height).toBe('5000px')
-    expect(stage.style.getPropertyValue('--seq-port-h')).toBe('800px')
     expect(stage.closest<HTMLElement>('.seq-diagram')!.style.getPropertyValue('--seq-toolbar-h')).toBe('40px')
+  })
+
+  it('on a phone only the toolbar row with Find stays stuck: the rows above it are the lead', () => {
+    const { scroll } = mount(5000, 800, 300)
+    const toolbar = document.querySelector<HTMLElement>('.seq-toolbar')!
+    toolbar.innerHTML = '<label class="diagram-find"></label>'
+    Object.defineProperty(toolbar, 'offsetHeight', { value: 130, configurable: true })
+    Object.defineProperty(toolbar.firstElementChild!, 'offsetTop', { value: 90, configurable: true })
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('max-width: 560px') }))
+    sizeStage(scroll)
+    const diagram = scroll.closest<HTMLElement>('.seq-diagram')!
+    expect(diagram.style.getPropertyValue('--seq-toolbar-lead')).toBe('82px')
+    expect(diagram.style.getPropertyValue('--seq-toolbar-h')).toBe('48px')
+    vi.unstubAllGlobals()
   })
 
   it('leaves the stage to its own height in print', () => {

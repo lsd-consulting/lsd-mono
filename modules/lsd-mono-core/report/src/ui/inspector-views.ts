@@ -2,6 +2,7 @@
 import type { MessageEvent } from '../types'
 import { edgeInteractions, typeCue, type ComponentEdge, type ComponentGraph } from '../lib/component-graph'
 import { escapeHtml } from '../lib/escape'
+import { isErrorStatus } from '../lib/status'
 import type { MetricsView } from './inspector'
 import { metricsPanelHtml } from './metrics'
 
@@ -14,7 +15,8 @@ export function messageMetaHtml(scenarioId: string, message: MessageEvent): stri
         ${message.timing && message.timing !== 'NONE' ? `<span class="pill">${escapeHtml(message.timing.toLowerCase())}</span>` : ''}
         ${message.order === 'CLOCK' ? '<span class="pill clock">clock-ordered</span>' : ''}
         ${message.pairing === 'GUESSED' ? '<span class="pill">guessed pairing</span>' : ''}
-        ${summaryPills(message.data)}
+        ${statusPill(message.status)}
+        ${summaryPills(message.data, message.status)}
         <span class="pill">${escapeHtml(scenarioId)}</span>`
 }
 
@@ -73,12 +75,24 @@ export function errorMetaHtml(error: { status: string; headline: string }): stri
         <span class="pill">${escapeHtml(error.headline)}</span>`
 }
 
-export function summaryPills(data: unknown): string {
+/** The interaction's status; an error says so in words, so the colour is only a cue. */
+function statusPill(status: string | undefined): string {
+  if (!status) return ''
+  return isErrorStatus(status)
+    ? `<span class="pill error" title="Counted in the Errors metric">${escapeHtml(status)} · error</span>`
+    : `<span class="pill">${escapeHtml(status)}</span>`
+}
+
+/** Request summary pills; a payload status that repeats the interaction status is left out. */
+export function summaryPills(data: unknown, status?: string): string {
   if (!isRecord(data)) return ''
   const pills: string[] = []
   if (typeof data.method === 'string' && data.method) pills.push(`<span class="pill">${escapeHtml(data.method)}</span>`)
   if (typeof data.path === 'string' && data.path) pills.push(`<span class="pill">${escapeHtml(data.path)}</span>`)
-  if ((typeof data.status === 'string' && data.status) || typeof data.status === 'number')
+  if (
+    ((typeof data.status === 'string' && data.status) || typeof data.status === 'number') &&
+    String(data.status) !== status
+  )
     pills.push(`<span class="pill">${escapeHtml(data.status)}</span>`)
   return pills.join('')
 }

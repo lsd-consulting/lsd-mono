@@ -10,7 +10,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/data/**'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test-util.ts', 'src/data/**'],
       reporter: ['text-summary', 'html', 'json-summary'],
       reportsDirectory: '../build/reports/coverage/report-ui',
       // A little under the coverage when these were last raised: statements 80.7%, branches
