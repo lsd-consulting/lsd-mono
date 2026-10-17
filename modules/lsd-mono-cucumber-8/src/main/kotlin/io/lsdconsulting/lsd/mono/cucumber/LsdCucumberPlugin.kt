@@ -121,9 +121,16 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
         return lsd.beginScenario(reportKey = key, key = testCase.scenarioKey(), bindCurrentThread = bindCurrentThread)
     }
 
+    /**
+     * With splitBySteps, a section per step that runs. Once a step or hook has not passed,
+     * Cucumber skips the remaining steps without running them, so they get no (empty) section;
+     * the description still lists them, marked skipped.
+     */
     private fun onTestStepStarted(event: TestStepStarted) {
         val step = event.testStep
-        if (splitByStep && step is PickleStepTestStep) lsd.findScenario(event.testCase.scenarioKey())?.section(step.line())
+        if (!splitByStep || step !is PickleStepTestStep) return
+        val stopped = stepResults[event.testCase.id]?.values?.any { it.status != CucumberStatus.PASSED } == true
+        if (!stopped) lsd.findScenario(event.testCase.scenarioKey())?.section(step.line())
     }
 
     private fun onTestStepFinished(event: TestStepFinished) {

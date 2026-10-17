@@ -106,7 +106,7 @@ A passed scenario is stored as a success. The scenario title is the Cucumber sce
 
 These carry no stack trace; a failure keeps its stack behind **Show stack trace**.
 
-Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step (every property is listed in the [core README](../lsd-mono-core/README.md#configuration-reference)). That stays in the same diagram. It is not a new page.
+Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step (every property is listed in the [core README](../lsd-mono-core/README.md#configuration-reference)). That stays in the same diagram. It is not a new page. The step a scenario stopped at gets its section; the steps Cucumber then skips get none, because they never run, and the description lists them as `(skipped)`.
 
 ## Where the report is written
 

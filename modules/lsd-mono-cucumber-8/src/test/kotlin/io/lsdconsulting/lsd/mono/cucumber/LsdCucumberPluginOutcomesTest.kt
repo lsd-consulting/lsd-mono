@@ -143,6 +143,22 @@ class LsdCucumberPluginOutcomesTest {
     }
 
     @Test
+    fun `splitBySteps gives no section to a step skipped after a failure`() {
+        System.setProperty(LsdProperties.CUCUMBER_SPLIT_BY_STEPS, "true")
+
+        val scenarios = runOutcomes()
+
+        assertEquals(
+            listOf("section Given the shop is open", "message open basket", "section When the card is declined"),
+            eventsOf(scenarios.getValue("fails")),
+        )
+        assertEquals(
+            listOf("section Given the shop is open", "message open basket", "section When a coupon SAVE10 applies"),
+            eventsOf(scenarios.getValue("ambiguous")),
+        )
+    }
+
+    @Test
     fun `the end of the run writes the index with the feature's report`() {
         runOutcomes()
 
