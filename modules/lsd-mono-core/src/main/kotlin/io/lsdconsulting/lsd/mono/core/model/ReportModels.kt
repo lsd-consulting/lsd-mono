@@ -105,9 +105,15 @@ internal data class ScenarioTimingJson(
     val wallClockMs: Double?,
     val clockOrdering: String,
     val clockOrdered: Int,
-    val warnings: List<String>,
+    val warnings: List<WarningJson>,
     val reorderedByClock: List<String>,
     val pairAccuracy: List<PairAccuracyJson> = emptyList(),
+)
+
+/** A timing warning: `kind` (for example `LONGER_THAN_PARENT`) and its sentence. */
+internal data class WarningJson(
+    val kind: String,
+    val message: String,
 )
 
 /** Accuracy of the messages between two participants. */
@@ -364,7 +370,12 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
                 if (timing.wallClockMs != null) add("wallClockMs" to msNumber(timing.wallClockMs))
                 add("clockOrdering" to JsonString(timing.clockOrdering))
                 add("clockOrdered" to JsonNumber(timing.clockOrdered.toString()))
-                if (timing.warnings.isNotEmpty()) add("warnings" to JsonArray(timing.warnings.map(::JsonString)))
+                if (timing.warnings.isNotEmpty()) {
+                    add(
+                        "warnings" to
+                            JsonArray(timing.warnings.map { obj(listOf("kind" to JsonString(it.kind), "message" to JsonString(it.message))) }),
+                    )
+                }
                 if (timing.reorderedByClock.isNotEmpty()) {
                     add("reorderedByClock" to JsonArray(timing.reorderedByClock.map(::JsonString)))
                 }

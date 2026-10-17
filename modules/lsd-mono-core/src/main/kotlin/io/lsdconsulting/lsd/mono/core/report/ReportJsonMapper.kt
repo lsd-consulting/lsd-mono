@@ -31,6 +31,7 @@ import io.lsdconsulting.lsd.mono.core.model.ScenarioTimingJson
 import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.core.model.TraceJson
+import io.lsdconsulting.lsd.mono.core.model.WarningJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -85,7 +86,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                 wallClockMs = timing.wallClockMs,
                 clockOrdering = timing.clockOrdering.name,
                 clockOrdered = timing.clockOrdered,
-                warnings = timing.warnings,
+                warnings = timing.warnings.map { WarningJson(it.kind.name, it.message) },
                 reorderedByClock = timing.reorderedByClock,
                 pairAccuracy = timing.pairAccuracy.map { PairAccuracyJson(it.from, it.to, it.accuracy.name) },
             ),

@@ -1,12 +1,20 @@
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { formatMs, hasTiming, timeline, type Timeline } from '../lib/timing'
-import type { Accuracy, Scenario } from '../types'
+import type { Accuracy, Scenario, WarningKind } from '../types'
 
 const ACCURACY_LABEL: Record<Accuracy, string> = {
   STRUCTURE_ONLY: 'structure only',
   TIMESTAMPED: 'timestamped',
   MEASURED: 'measured',
   TRACED: 'traced',
+}
+
+const WARNING_LABEL: Record<WarningKind, string> = {
+  REPLY_WITHOUT_CALL: 'reply without call',
+  DURATION_ON_REPLY_DROPPED: 'duration on reply dropped',
+  LONGER_THAN_PARENT: 'longer than parent',
+  DUPLICATE_SPAN: 'duplicate span',
+  SKEW: 'skew',
 }
 
 const LANE_COLOURS = 6
@@ -96,7 +104,8 @@ export function timingPanelHtml(scenario: Scenario): string {
     t.approximate ? '<span class="pill">approximate start times</span>' : '',
     scenario.clockOrdered ? `<span class="pill clock">${scenario.clockOrdered} clock-ordered</span>` : '',
     ...(scenario.warnings ?? []).map(
-      (w) => `<span class="pill warn" title="${escapeAttr(w)}">${escapeHtml(w.split(':')[0])}</span>`,
+      (w) =>
+        `<span class="pill warn" title="${escapeAttr(`${WARNING_LABEL[w.kind] ?? w.kind}: ${w.message}`)}">${escapeHtml(WARNING_LABEL[w.kind] ?? w.kind)}</span>`,
     ),
   ].join('')
   return `<section class="timing" aria-label="Timing">

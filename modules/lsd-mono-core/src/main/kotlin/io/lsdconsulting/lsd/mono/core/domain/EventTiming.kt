@@ -16,6 +16,26 @@ internal data class EventTiming(
     val order: OrderSource,
 )
 
+/** What a timing warning is about. The report UI labels its pills from [label]. */
+internal enum class WarningKind(
+    val label: String,
+) {
+    REPLY_WITHOUT_CALL("reply without call"),
+    DURATION_ON_REPLY_DROPPED("duration on reply dropped"),
+    LONGER_THAN_PARENT("longer than parent"),
+    DUPLICATE_SPAN("duplicate span"),
+    SKEW("skew"),
+}
+
+/** A timing warning: its [kind] and a sentence about the events involved. */
+internal data class TimingWarning(
+    val kind: WarningKind,
+    val message: String,
+) {
+    /** `kind: message`, for logs and tests. */
+    val text: String get() = "${kind.label}: $message"
+}
+
 /** The accuracy of the messages from [from] to [to] (replies count with their call). */
 internal data class PairAccuracy(
     val from: String,
@@ -32,7 +52,7 @@ internal data class ScenarioTiming(
     val wallClockMs: Double? = null,
     val clockOrdering: ClockOrdering = ClockOrdering.SAME_SOURCE,
     val clockOrdered: Int = 0,
-    val warnings: List<String> = emptyList(),
+    val warnings: List<TimingWarning> = emptyList(),
     val reorderedByClock: List<String> = emptyList(),
     val perEvent: Map<String, EventTiming> = emptyMap(),
     /** Each call's duration, its own or its reply's, by call id. The JSON writes it on the call. */
@@ -107,7 +127,7 @@ private class Analysis(
     val pairing: Map<String, PairingSource?>,
     val callMs: Map<String, Double>,
     val pairedReplies: Set<String>,
-    val warnings: List<String>,
+    val warnings: List<TimingWarning>,
     val reverted: Boolean,
     /** Replies with no call. */
     val orphans: Int,
@@ -180,13 +200,13 @@ private class Pairs(
     val pairing: Array<PairingSource?>,
     /** Call or publish id to the index of the event that carries it. */
     val byCallId: Map<String, Int>,
-    val warnings: List<String>,
+    val warnings: List<TimingWarning>,
 )
 
 /** Pair each reply with a call: by `replyTo`, else by span id, else guessed by direction. */
 private fun pairCalls(events: List<SequenceEvent>): Pairs {
     val n = events.size
-    val warnings = mutableListOf<String>()
+    val warnings = mutableListOf<TimingWarning>()
     val replyOf = IntArray(n) { -1 }
     val callOf = IntArray(n) { -1 }
     val pairing = arrayOfNulls<PairingSource>(n)
@@ -220,8 +240,11 @@ private fun pairCalls(events: List<SequenceEvent>): Pairs {
                 t.spanId?.let { span ->
                     val same = bySpan.getOrPut(t.traceId to span) { ArrayList() }
                     seenSpan[t.traceId to span]?.let { first ->
-                        warnings += "duplicate span: '${(events[first] as Message).label}' and '${e.label}' share span $span " +
-                            "in trace ${t.traceId}; their replies pair with the latest open one"
+                        warnings += TimingWarning(
+                            WarningKind.DUPLICATE_SPAN,
+                            "'${(events[first] as Message).label}' and '${e.label}' share span $span " +
+                                "in trace ${t.traceId}; their replies pair with the latest open one",
+                        )
                     } ?: seenSpan.put(t.traceId to span, i)
                     same.add(i)
                 }
@@ -257,7 +280,7 @@ private fun pairCalls(events: List<SequenceEvent>): Pairs {
             pairing[i] = how
         } else {
             pairing[i] = PairingSource.NONE
-            warnings += "reply without call: '${e.label}' (${e.from} to ${e.to})"
+            warnings += TimingWarning(WarningKind.REPLY_WITHOUT_CALL, "'${e.label}' (${e.from} to ${e.to})")
         }
     }
     return Pairs(replyOf, callOf, pairing, byCallId, warnings)
@@ -267,7 +290,7 @@ private fun pairCalls(events: List<SequenceEvent>): Pairs {
 private class CallDurations(
     val callMs: Array<Double?>,
     val derived: BooleanArray,
-    val warnings: List<String>,
+    val warnings: List<TimingWarning>,
 )
 
 private fun callDurations(
@@ -275,7 +298,7 @@ private fun callDurations(
     pairs: Pairs,
 ): CallDurations {
     val n = events.size
-    val warnings = mutableListOf<String>()
+    val warnings = mutableListOf<TimingWarning>()
     val callMs = arrayOfNulls<Double>(n)
     val derived = BooleanArray(n)
     for (i in 0 until n) {
@@ -285,7 +308,7 @@ private fun callDurations(
         val own = m.timedMs
         val theirs = reply?.timedMs
         if (own != null && theirs != null && reply.durationMs != null && m.durationMs != null) {
-            warnings += "duration on reply dropped: '${m.label}' already has one"
+            warnings += TimingWarning(WarningKind.DURATION_ON_REPLY_DROPPED, "'${m.label}' already has one")
         }
         callMs[i] = own ?: theirs
         derived[i] = if (own != null) m.derived else reply?.derived == true
@@ -428,14 +451,17 @@ private fun longerThanParent(
     events: List<SequenceEvent>,
     durations: CallDurations,
     parent: IntArray,
-): List<String> =
+): List<TimingWarning> =
     events.indices.mapNotNull { i ->
         val own = durations.callMs[i] ?: return@mapNotNull null
         val p = parent[i].takeIf { it >= 0 } ?: return@mapNotNull null
         val outer = durations.callMs[p] ?: return@mapNotNull null
         if (own <= outer + LONGER_EPSILON_MS) return@mapNotNull null
-        "longer than parent: '${(events[i] as Message).label}' took ${formatMs(own)} ms, " +
-            "more than '${(events[p] as Message).label}' (${formatMs(outer)} ms) that it runs inside"
+        TimingWarning(
+            WarningKind.LONGER_THAN_PARENT,
+            "'${(events[i] as Message).label}' took ${formatMs(own)} ms, " +
+                "more than '${(events[p] as Message).label}' (${formatMs(outer)} ms) that it runs inside",
+        )
     }
 
 private fun formatMs(ms: Double): String = if (ms == Math.floor(ms)) ms.toLong().toString() else "%.3f".format(java.util.Locale.ROOT, ms).trimEnd('0')
@@ -455,14 +481,20 @@ private fun analyse(
     val skew =
         if (undone > 0) {
             listOf(
-                "skew: clock order ignored for $undone events, as it would put a reply before its call, " +
-                    "a consume before its publish, or a child outside its parent; capture order kept",
+                TimingWarning(
+                    WarningKind.SKEW,
+                    "clock order ignored for $undone events, as it would put a reply before its call, " +
+                        "a consume before its publish, or a child outside its parent; capture order kept",
+                ),
             )
         } else {
             emptyList()
         } +
             clock.splitPairs.map { (a, b) ->
-                "skew: clocks of $a and $b disagree with the structure, so their events are clock-ordered within each source only"
+                TimingWarning(
+                    WarningKind.SKEW,
+                    "clocks of $a and $b disagree with the structure, so their events are clock-ordered within each source only",
+                )
             }
     return Analysis(
         ordered = order.map { events[it] },
@@ -472,7 +504,7 @@ private fun analyse(
         pairedReplies = events.indices.filter { pairs.callOf[it] >= 0 }.mapTo(HashSet()) { events[it].id },
         warnings = warnings + skew,
         reverted = undone > 0,
-        orphans = pairs.warnings.count { it.startsWith("reply without call") },
+        orphans = pairs.warnings.count { it.kind == WarningKind.REPLY_WITHOUT_CALL },
         parentOf =
             events.indices
                 .filter { events[it] is Message && pairs.callOf[it] < 0 && parent[it] >= 0 }

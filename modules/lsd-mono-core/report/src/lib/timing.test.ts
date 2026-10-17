@@ -147,6 +147,15 @@ describe('timing view', () => {
     expect(panel).toContain('api → kafka</span> <b class="acc-structure_only">structure only</b>')
   })
 
+  it('labels warning pills from their kind, with the sentence on hover', () => {
+    const panel = timingPanelHtml({
+      ...nested,
+      warnings: [{ kind: 'LONGER_THAN_PARENT', message: "'inner' took 30 ms: more than 'outer'" }],
+    })
+    expect(panel).toContain('>longer than parent</span>')
+    expect(panel).toContain('title="longer than parent: &#39;inner&#39; took 30 ms: more than &#39;outer&#39;"')
+  })
+
   it('escapes labels and participant names', () => {
     const html = timingPanelHtml(
       scenario([msg('<script>', '<img x>', 'y', { durationMs: 1 })], { accuracy: 'MEASURED' }),

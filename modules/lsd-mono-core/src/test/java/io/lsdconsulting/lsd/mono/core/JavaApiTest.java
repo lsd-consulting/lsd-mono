@@ -100,7 +100,7 @@ class JavaApiTest {
                 "message", "message", "note", "note", "note", "activate", "activate", "deactivate", "deactivate", "section",
                 "divider", "delay", "delay", "spacer", "spacer", "message", "message", "message", "note", "message",
                 "message", "message", "message", "message", "message"),
-            all(json, "\"kind\": \"(\\w+)\""));
+            all(json, "\"kind\": \"([a-z]+)\""));
         assertTrue(json.contains("\"timing\": \"MEASURED\""), json);
         assertTrue(json.contains("\"order\": \"o-1\"") || Files.readString(payloads(tempDir)).contains("o-1"), json);
         assertTrue(json.contains("\"startedAt\": \"2026-01-01T00:00:00Z\""), json);

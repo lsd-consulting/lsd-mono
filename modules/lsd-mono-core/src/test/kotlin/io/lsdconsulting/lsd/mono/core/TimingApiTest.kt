@@ -89,7 +89,7 @@ class TimingApiTest {
         val started = System.nanoTime()
         val (_, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
         assertTrue(Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(2))
-        assertTrue(timing.warnings.none { it.startsWith("reply without call") })
+        assertTrue(timing.warnings.map { it.text }.none { it.startsWith("reply without call") })
         assertEquals("TRACE", timing.perEvent[events[1].id]?.pairing?.name)
         assertEquals("GUESSED", timing.perEvent[events[0].id]?.pairing?.name)
     }
@@ -206,7 +206,7 @@ class TimingApiTest {
         assertEquals(listOf("publish", "late", "consume", "other"), labels(ordered))
         assertEquals(
             listOf("skew: clocks of billing and orders disagree with the structure, so their events are clock-ordered within each source only"),
-            timing.warnings,
+            timing.warnings.map { it.text },
         )
     }
 
@@ -260,7 +260,7 @@ class TimingApiTest {
         val (_, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
         assertEquals(
             listOf("duplicate span: 'first' and 'second' share span s in trace t; their replies pair with the latest open one"),
-            timing.warnings,
+            timing.warnings.map { it.text },
         )
     }
 
@@ -286,7 +286,7 @@ class TimingApiTest {
         val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
         assertEquals(listOf("call", "reply"), labels(ordered))
         assertEquals(0, timing.clockOrdered)
-        assertTrue(timing.warnings.any { it.startsWith("skew") }, timing.warnings.toString())
+        assertTrue(timing.warnings.map { it.text }.any { it.startsWith("skew") }, timing.warnings.toString())
     }
 
     @Test
@@ -299,7 +299,7 @@ class TimingApiTest {
             )
         val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
         assertEquals(listOf("publish", "consume"), labels(ordered))
-        assertTrue(timing.warnings.any { it.startsWith("skew") })
+        assertTrue(timing.warnings.map { it.text }.any { it.startsWith("skew") })
     }
 
     @Test
@@ -407,7 +407,7 @@ class TimingApiTest {
         b.reply("ok")
         lsd.completeScenario("spans", status = Status.SUCCESS)
         val json = report(lsd, "Spans")
-        assertFalse(json.contains("longer than parent"), "the child is inside A (300 ms), not B (50 ms): $json")
+        assertFalse(json.contains("LONGER_THAN_PARENT"), "the child is inside A (300 ms), not B (50 ms): $json")
     }
 
     @Test
@@ -419,7 +419,11 @@ class TimingApiTest {
         a.reply("ok")
         b.reply("ok")
         lsd.completeScenario("stack", status = Status.SUCCESS)
-        assertTrue(report(lsd, "Stack").contains("longer than parent: 'child' took 100 ms, more than 'B'"))
+        assertTrue(
+            report(lsd, "Stack").replace(Regex("\\s+"), " ").contains(
+                """"kind": "LONGER_THAN_PARENT", "message": "'child' took 100 ms, more than 'B'""",
+            ),
+        )
     }
 
     @Test
@@ -432,7 +436,7 @@ class TimingApiTest {
         lsd.completeScenario("longer", status = Status.SUCCESS)
         val json = report(lsd, "Longer")
         assertTrue(
-            json.contains("longer than parent: 'authorise' took 250.5 ms, more than 'POST /orders' (100 ms) that it runs inside"),
+            json.contains("\"message\": \"'authorise' took 250.5 ms, more than 'POST /orders' (100 ms) that it runs inside\""),
             json,
         )
         assertFalse(json.contains("'insert' took"), "a shorter child is fine")

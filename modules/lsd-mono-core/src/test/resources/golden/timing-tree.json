@@ -270,7 +270,10 @@
       "clockOrdering": "ALL_SOURCES",
       "clockOrdered": 0,
       "warnings": [
-        "duplicate span: 'first' and 'second' share span s in trace u; their replies pair with the latest open one"
+        {
+          "kind": "DUPLICATE_SPAN",
+          "message": "'first' and 'second' share span s in trace u; their replies pair with the latest open one"
+        }
       ]
     },
     {
@@ -369,7 +372,10 @@
       "clockOrdering": "ALL_SOURCES",
       "clockOrdered": 4,
       "warnings": [
-        "skew: clocks of billing and orders disagree with the structure, so their events are clock-ordered within each source only"
+        {
+          "kind": "SKEW",
+          "message": "clocks of billing and orders disagree with the structure, so their events are clock-ordered within each source only"
+        }
       ],
       "reorderedByClock": [
         "12 -\u003e 11",

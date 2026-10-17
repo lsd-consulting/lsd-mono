@@ -119,6 +119,15 @@ export type TimingSource = 'NONE' | 'TIMESTAMPED' | 'MEASURED' | 'DERIVED'
 export type PairingSource = 'NONE' | 'GUESSED' | 'CALL_ID' | 'TRACE'
 /** `CLOCK`: moved by clock ordering (startedAt). Shown with a badge. */
 export type OrderSource = 'SEQUENCE' | 'STRUCTURE' | 'CLOCK'
+/** What a timing warning is about; the Timing view labels its pill from it. */
+export type WarningKind =
+  'REPLY_WITHOUT_CALL' | 'DURATION_ON_REPLY_DROPPED' | 'LONGER_THAN_PARENT' | 'DUPLICATE_SPAN' | 'SKEW'
+
+export interface TimingWarning {
+  kind: WarningKind
+  message: string
+}
+
 export type Accuracy = 'STRUCTURE_ONLY' | 'TIMESTAMPED' | 'MEASURED' | 'TRACED'
 export type ClockOrdering = 'OFF' | 'SAME_SOURCE' | 'ALL_SOURCES'
 
@@ -168,7 +177,7 @@ export interface Scenario {
   wallClockMs?: number
   clockOrdering?: ClockOrdering
   clockOrdered?: number
-  warnings?: string[]
+  warnings?: TimingWarning[]
   reorderedByClock?: string[]
   /** Accuracy per participant pair, present only when the pairs differ. */
   pairAccuracy?: { from: string; to: string; accuracy: Accuracy }[]

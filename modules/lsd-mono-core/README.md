@@ -272,7 +272,9 @@ and `order` (`SEQUENCE`, `STRUCTURE`, `CLOCK`), plus `callId`, `replyTo`, `cause
 Timing view draws its tree from these, so it always matches the library's pairing. `durationMs` is fractional and sits on the call: a call carries
 its own duration or its reply's, and a paired reply carries none. Each scenario carries `accuracy`
 (`STRUCTURE_ONLY`, `TIMESTAMPED`, `MEASURED`, `TRACED`), `measuredCoverage`, `pairingCoverage`,
-`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`. When
+`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`, each
+`{ kind, message }` with `kind` one of `REPLY_WITHOUT_CALL`, `DURATION_ON_REPLY_DROPPED`,
+`LONGER_THAN_PARENT`, `DUPLICATE_SPAN` or `SKEW`. When
 participant pairs differ, `pairAccuracy` lists `{ from, to, accuracy }` per pair (a reply counts with
 its call), and the Timing view shows it as "Accuracy by pair".
 
