@@ -3,8 +3,8 @@
  * Usage: node measure.mjs /path/to/docs/perf-samples
  */
 import { chromium } from '../../modules/lsd-mono-core/report/node_modules/playwright/index.mjs'
-import { writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { heap, longTaskStats, percentile, recordLongTasks, writeResults } from './perf-kit.mjs'
 
 const dir = process.argv[2]
 if (!dir) {
@@ -40,26 +40,6 @@ for (const size of [100, 500, 2000]) {
   })
 }
 
-function percentile(values, p) {
-  if (!values.length) return null
-  const sorted = [...values].sort((a, b) => a - b)
-  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1))
-  return sorted[idx]
-}
-
-async function heap(page) {
-  try {
-    const session = await page.context().newCDPSession(page)
-    await session.send('Performance.enable')
-    const { metrics } = await session.send('Performance.getMetrics')
-    const heap = metrics.find((m) => m.name === 'JSHeapUsedSize')
-    await session.detach()
-    return heap ? Math.round(heap.value) : null
-  } catch (err) {
-    return null
-  }
-}
-
 const browser = await chromium.launch({ headless: true })
 const version = browser.version()
 const results = []
@@ -69,16 +49,7 @@ for (const spec of pages) {
   const url = 'file://' + filePath
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
-  await page.addInitScript(() => {
-    window.__longTasks = []
-    try {
-      new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) window.__longTasks.push(entry.duration)
-      }).observe({ type: 'longtask', buffered: true })
-    } catch (err) {
-      window.__longTasks = null
-    }
-  })
+  await recordLongTasks(page)
   const row = {
     size: spec.size,
     side: spec.side,
@@ -185,7 +156,7 @@ for (const spec of pages) {
       await page.locator('[data-diagram-find]').fill(needle)
       await page.waitForFunction(() => {
         const el = document.querySelector('.diagram-find-count')
-        return el && /1 match/.test(el.textContent || '')
+        return el && /^1 (of 1|match)\b/.test(el.textContent || '')
       }, null, { timeout: 5000 })
       row.searchMs = Date.now() - s0
       await page.evaluate(() => {
@@ -265,9 +236,9 @@ for (const spec of pages) {
       row.popupButtonsInView = mid.count
       row.heapAfterPopup = await heap(page)
       row.nodesAfterPopup = await page.evaluate(() => document.getElementsByTagName('*').length)
-      const tasks = await page.evaluate(() => window.__longTasks)
-      row.longTaskCountAfterPopup = tasks == null ? null : tasks.filter((d) => d >= 50).length
-      row.longTaskMaxAfterPopupMs = tasks && tasks.length ? Math.round(Math.max(...tasks) * 10) / 10 : tasks == null ? null : 0
+      const tasks = await longTaskStats(page)
+      row.longTaskCountAfterPopup = tasks.count
+      row.longTaskMaxAfterPopupMs = tasks.maxMs
     }
   } catch (err) {
     row.error = String(err && err.message ? err.message : err)
@@ -279,5 +250,4 @@ for (const spec of pages) {
 
 await browser.close()
 const out = { chrome: version, measuredAt: new Date().toISOString(), results }
-writeFileSync('/tmp/lsd-perf/measure.json', JSON.stringify(out, null, 2))
-console.log('WROTE /tmp/lsd-perf/measure.json chrome', version)
+writeResults('measure.json', out)

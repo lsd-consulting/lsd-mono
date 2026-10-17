@@ -7,21 +7,9 @@
  * The first arrow is a short left-hand hop so Fit's top label stays near the origin.
  * Later arrows hop across the diagram, including a full-width span every 25th message.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import path from 'node:path'
-import { shellParts } from '../../modules/lsd-mono-core/report/src/lib/payloads.ts'
+import { arrowPayload, generatorArgs, writeSample } from './sample-kit.mjs'
 
-const shellPath = process.argv[2]
-const outDir = process.argv[3]
-if (!shellPath || !outDir) {
-  console.error('usage: node --experimental-strip-types generate-wide.mjs <shell.html> <out-dir>')
-  process.exit(1)
-}
-
-const shell = readFileSync(shellPath, 'utf8')
-const marker = '<script>'
-const idx = shell.indexOf(marker)
-if (idx < 0) throw new Error('shell has no script tag')
+const { shell, outDir } = generatorArgs('node --experimental-strip-types generate-wide.mjs <shell.html> <out-dir>')
 
 const KINDS = [
   { type: 'ACTOR', name: 'User' },
@@ -54,34 +42,7 @@ function participantsFor(count) {
 }
 
 function payload(step, n) {
-  const lines = []
-  for (let i = 0; i < 12; i++) {
-    lines.push({
-      sku: `SOCK-${n}-${i}`,
-      name: 'Merino hiking sock, crew length',
-      qty: 1 + (i % 3),
-      warehouse: i % 2 === 0 ? 'LDN-1' : 'MAN-2',
-      note: `allocation ${n}.${i} reserved against cart line, payment intent, and fraud score`,
-    })
-  }
-  return {
-    method: 'POST',
-    path: `/v1/hop/${n}`,
-    status: 200,
-    headers: {
-      'content-type': 'application/json',
-      accept: 'application/json',
-      'x-request-id': `req-${n}-${step.label.replace(/\s+/g, '-')}`,
-      'x-trace': `trace-${n}-${'abcdef0123456789'.repeat(6)}`,
-    },
-    body: {
-      marker: 'arrow-payload',
-      orderId: `ord_${n}`,
-      label: step.label,
-      items: lines,
-      comment: `Captured ${step.label} body for message ${n}. `.repeat(8).trim(),
-    },
-  }
+  return arrowPayload(step.label, n)
 }
 
 function stepFor(i, count) {
@@ -113,6 +74,8 @@ function reportFor(count, size) {
       data: payload(step, id),
     }
     if (id % 4 === 2) event.durationMs = 15
+    // Every fourth message replies to the one before it (its arrow keeps the hop pattern).
+    if (type === 'SYNCHRONOUS_RESPONSE') event.replyOf = String(id - 1)
     events.push(event)
   }
   events.push({
@@ -146,23 +109,14 @@ function reportFor(count, size) {
   }
 }
 
-mkdirSync(outDir, { recursive: true })
-const sample = payload({ label: 'hop' }, 1)
-console.log('payload bytes', Buffer.byteLength(JSON.stringify(sample)))
+console.log('payload bytes', Buffer.byteLength(JSON.stringify(payload({ label: 'hop' }, 1))))
 
 for (const spec of CASES) {
   const report = reportFor(spec.participants, spec.messages)
   const stem = `mono-p${spec.participants}-m${spec.messages}`
-  const parts = shellParts(report, `${stem}-payloads.js`)
-  if (!parts.payloadsJs) throw new Error('expected deferred payloads')
-  if (parts.htmlScript.includes('arrow-payload')) throw new Error('body leaked into the report script')
-  const html = shell.slice(0, idx) + parts.htmlScript + shell.slice(idx)
-  const file = path.join(outDir, `${stem}-diagram.html`)
-  const payloadsFile = path.join(outDir, `${stem}-payloads.js`)
-  writeFileSync(file, html)
-  writeFileSync(payloadsFile, parts.payloadsJs)
+  const { file, htmlBytes, payloadBytes } = writeSample(shell, outDir, stem, report)
   const types = new Set(report.scenarios[0].participants.map((p) => p.type))
   console.log(
-    `wrote ${file} participants=${spec.participants} messages=${spec.messages} types=${[...types].join(',')} htmlBytes=${Buffer.byteLength(html)} payloadBytes=${Buffer.byteLength(parts.payloadsJs)}`,
+    `wrote ${file} participants=${spec.participants} messages=${spec.messages} types=${[...types].join(',')} htmlBytes=${htmlBytes} payloadBytes=${payloadBytes}`,
   )
 }

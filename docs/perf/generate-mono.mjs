@@ -5,21 +5,9 @@
  *
  * Usage: node generate-mono.mjs <shell.html> <out-dir>
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import path from 'node:path'
-import { shellParts } from '../../modules/lsd-mono-core/report/src/lib/payloads.ts'
+import { arrowPayload, generatorArgs, writeSample } from './sample-kit.mjs'
 
-const shellPath = process.argv[2]
-const outDir = process.argv[3]
-if (!shellPath || !outDir) {
-  console.error('usage: node generate-mono.mjs <shell.html> <out-dir>')
-  process.exit(1)
-}
-
-const shell = readFileSync(shellPath, 'utf8')
-const marker = '<script>'
-const idx = shell.indexOf(marker)
-if (idx < 0) throw new Error('shell has no script tag')
+const { shell, outDir } = generatorArgs('node --experimental-strip-types generate-mono.mjs <shell.html> <out-dir>')
 
 const participants = [
   { id: 'client', name: 'Client', type: 'PARTICIPANT' },
@@ -28,42 +16,18 @@ const participants = [
   { id: 'database', name: 'Database', type: 'PARTICIPANT' },
 ]
 
+// Each cycle nests: place order → charge → insert, and the database replies to the insert.
+// `parent` and `replyOf` are offsets back to the event they point at, as the core writes
+// parentId and replyOf, so the Timing view's tree is exercised too.
 const cycle = [
   { from: 'client', to: 'api', label: 'place order', type: 'SYNCHRONOUS', method: 'POST', path: '/v1/orders', status: 202 },
-  { from: 'api', to: 'payments', label: 'charge', type: 'SYNCHRONOUS', durationMs: 15, method: 'POST', path: '/v1/charges', status: 201 },
-  { from: 'payments', to: 'database', label: 'insert', type: 'SYNCHRONOUS', method: 'POST', path: '/orders', status: 200 },
-  { from: 'database', to: 'payments', label: 'ok', type: 'SYNCHRONOUS_RESPONSE', method: 'POST', path: '/orders', status: 200 },
+  { from: 'api', to: 'payments', label: 'charge', type: 'SYNCHRONOUS', durationMs: 15, parent: 1, method: 'POST', path: '/v1/charges', status: 201 },
+  { from: 'payments', to: 'database', label: 'insert', type: 'SYNCHRONOUS', parent: 1, method: 'POST', path: '/orders', status: 200 },
+  { from: 'database', to: 'payments', label: 'ok', type: 'SYNCHRONOUS_RESPONSE', replyOf: 1, method: 'POST', path: '/orders', status: 200 },
 ]
 
 function payload(step, n) {
-  const lines = []
-  for (let i = 0; i < 12; i++) {
-    lines.push({
-      sku: `SOCK-${n}-${i}`,
-      name: 'Merino hiking sock, crew length',
-      qty: 1 + (i % 3),
-      warehouse: i % 2 === 0 ? 'LDN-1' : 'MAN-2',
-      note: `allocation ${n}.${i} reserved against cart line, payment intent, and fraud score`,
-    })
-  }
-  return {
-    method: step.method,
-    path: `${step.path}/${n}`,
-    status: step.status,
-    headers: {
-      'content-type': 'application/json',
-      accept: 'application/json',
-      'x-request-id': `req-${n}-${step.label.replace(/\s+/g, '-')}`,
-      'x-trace': `trace-${n}-${'abcdef0123456789'.repeat(6)}`,
-    },
-    body: {
-      marker: 'arrow-payload',
-      orderId: `ord_${n}`,
-      label: step.label,
-      items: lines,
-      comment: `Captured ${step.label} body for message ${n}. `.repeat(8).trim(),
-    },
-  }
+  return arrowPayload(step.label, n, { method: step.method, path: `${step.path}/${n}`, status: step.status })
 }
 
 function reportFor(size) {
@@ -83,6 +47,8 @@ function reportFor(size) {
         data,
       }
       if (step.durationMs != null) event.durationMs = step.durationMs
+      if (step.parent) event.parentId = String(id - step.parent)
+      if (step.replyOf) event.replyOf = String(id - step.replyOf)
       events.push(event)
       id++
     }
@@ -119,21 +85,11 @@ function reportFor(size) {
   }
 }
 
-mkdirSync(outDir, { recursive: true })
-const sample = payload(cycle[0], 1)
-const sampleBytes = Buffer.byteLength(JSON.stringify(sample))
-console.log('payload bytes', sampleBytes)
+console.log('payload bytes', Buffer.byteLength(JSON.stringify(payload(cycle[0], 1))))
 
 for (const size of [100, 500, 2000]) {
   const report = reportFor(size)
-  const parts = shellParts(report, `mono-${size}-payloads.js`)
-  if (!parts.payloadsJs) throw new Error('expected deferred payloads')
-  if (parts.htmlScript.includes('arrow-payload')) throw new Error('body leaked into the report script')
-  const html = shell.slice(0, idx) + parts.htmlScript + shell.slice(idx)
-  const file = path.join(outDir, `mono-${size}-diagram.html`)
-  const payloadsFile = path.join(outDir, `mono-${size}-payloads.js`)
-  writeFileSync(file, html)
-  writeFileSync(payloadsFile, parts.payloadsJs)
+  const { file, htmlBytes, payloadBytes } = writeSample(shell, outDir, `mono-${size}`, report)
   const messages = report.scenarios[0].events.filter((e) => e.kind === 'message')
-  console.log(`wrote ${file} messages=${messages.length} htmlBytes=${Buffer.byteLength(html)} payloadBytes=${Buffer.byteLength(parts.payloadsJs)}`)
+  console.log(`wrote ${file} messages=${messages.length} htmlBytes=${htmlBytes} payloadBytes=${payloadBytes}`)
 }
