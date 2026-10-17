@@ -89,7 +89,8 @@ internal data class ScenarioTiming(
  * 3. Structure wins: when clock order would put a reply before its call, a consume before its
  *    publish, or a child outside its parent call, the groups involved keep capture order and a
  *    `skew` warning is added. Under [ClockOrdering.ALL_SOURCES] a group first falls back to
- *    ordering within each source, and the warning names the source pair whose clocks disagree.
+ *    ordering within each source, and a warning names each source pair it now orders apart:
+ *    every pair in that group, not only the two whose clocks disagree.
  * Wall clock (`wallClockMs`) is given only for a single source where every measured call has a start.
  *
  * 4. When capture order itself is scrambled (interceptor threads, so replies arrive before their

@@ -237,6 +237,28 @@ class TimingApiTest {
     }
 
     @Test
+    fun `three sources where one pair disagrees fall back together, and every pair ordered apart is named`() {
+        val p = CallRef("p")
+        val events =
+            listOf(
+                msg("stock late", at = t(40), source = "stock", type = MessageType.ASYNCHRONOUS),
+                msg("publish", at = t(10), source = "orders", type = MessageType.ASYNCHRONOUS, callRef = p),
+                msg("consume", at = t(5), source = "billing", type = MessageType.ASYNCHRONOUS, causedBy = p),
+                msg("stock early", at = t(1), source = "stock", type = MessageType.ASYNCHRONOUS),
+            )
+        val (ordered, timing) = orderAndAnalyse(events, ClockOrdering.ALL_SOURCES)
+        assertEquals(listOf("stock early", "publish", "consume", "stock late"), labels(ordered), "stock is sorted within its own slots")
+        val apart = { a: String, b: String ->
+            "skew: clocks of $a and $b disagree with the structure, so their events are clock-ordered within each source only"
+        }
+        assertEquals(
+            listOf(apart("billing", "orders"), apart("billing", "stock"), apart("orders", "stock")),
+            timing.warnings.map { it.text },
+            "the whole group falls back, so stock is no longer compared with the others either",
+        )
+    }
+
+    @Test
     fun `accuracy per participant pair, given when the pairs differ`() {
         val c = CallRef("c")
         val events =
