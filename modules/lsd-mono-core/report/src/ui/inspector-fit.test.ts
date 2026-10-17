@@ -2,17 +2,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Metric } from '../types'
 import { componentGraph } from '../lib/component-graph'
+import { bindInspector, inspectorMarkup } from './inspector'
 import {
   INSPECTOR_NARROW_PX,
   INSPECTOR_VIEW_GUTTER_PX,
   INSPECTOR_WIDTH_KEY,
   TIMING_VIEW_MIN_PX,
-  bindInspector,
   fitViewWidth,
-  inspectorMarkup,
   inspectorWidthLimits,
   naturalWidth,
-} from './inspector'
+} from './inspector-width'
 
 const metrics: Metric[] = [{ key: 'Messages', value: '14' }]
 
