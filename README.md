@@ -27,7 +27,7 @@ dependencies {
 }
 ```
 
-The artifacts are `io.lsdconsulting:lsd-mono-core`, `io.lsdconsulting:lsd-mono-junit-jupiter`, `io.lsdconsulting:lsd-mono-cucumber-8`, and `io.lsdconsulting:lsd-mono-coroutines`, version `0.0.1-SNAPSHOT`. They are not published. They run on Java 17 or later (compiled with `--release 17`; CI tests 17, 21 and 25). Cucumber support is major 8.
+The artifacts are `io.github.lsd-consulting:lsd-mono-core`, `io.github.lsd-consulting:lsd-mono-junit-jupiter`, `io.github.lsd-consulting:lsd-mono-cucumber-8`, and `io.github.lsd-consulting:lsd-mono-coroutines`, version `0.0.1-SNAPSHOT`. They are not published. They run on Java 17 or later (compiled with `--release 17`; CI tests 17, 21 and 25). Cucumber support is major 8.
 
 ## Capture a scenario
 

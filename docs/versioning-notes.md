@@ -4,7 +4,7 @@ Not a release. No tag, no publish, and no version bump in this note.
 
 ## How it is versioned today
 
-Group is `io.lsdconsulting`. The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), and coroutines-integration (`lsd-mono-coroutines`).
+Group is `io.github.lsd-consulting`, the Maven Central namespace lsd-core is published under (packages stay `io.lsdconsulting.lsd.mono`). The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), and coroutines-integration (`lsd-mono-coroutines`).
 
 The train version is `0.0.1-SNAPSHOT`, set once on the root project. Every module inherits it (`lsd.common`). No module diverges today, so there is no override mechanism yet. When the first `patch` or `solo-major` is needed, add one: a recorded override per module, naming the train major it may diverge from, and a build check that fails when a module differs from the train without one.
 

@@ -4,7 +4,9 @@ plugins {
     id("lsd.formatting")
 }
 
-group = "io.lsdconsulting"
+// The Maven Central namespace lsd-consulting already publishes lsd-core under. Packages stay
+// io.lsdconsulting.lsd.mono; only the Maven group differs.
+group = "io.github.lsd-consulting"
 version = "0.0.1-SNAPSHOT"
 
 // Picks up every subproject that registers readmeSamples, including ones added later.
