@@ -33,7 +33,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Accuracy per participant pair: `pairAccuracy` in the report JSON when pairs differ, shown as "Accuracy by pair" in the Timing view.
 - Report JSON: `parentId` (the call a message runs inside) and `replyOf` (the call a paired reply answers) on each message. The Timing view builds its tree from them instead of pairing and nesting again, so it always matches the library (span nesting, duplicate spans, the `ALL_SOURCES` fallback).
 - Timing warnings in the report JSON are `{ kind, message }` (`LONGER_THAN_PARENT`, `SKEW`, …); the Timing view labels its pills from `kind`, with the sentence on hover.
-- One name for a start time: the clock-ordering option is `orderByStartedAt` (`lsd.mono.timing.orderByStartedAt`, `TimingConfig.orderByStartedAt`, `Timing.orderByStartedAt`/`withOrderByStartedAt`), and every report event writes `startedAt` (structural rows used to write `createdAt`).
+- One name for a start time: the clock-ordering option is `orderByStartedAt` (`lsd.mono.timing.orderByStartedAt` and `LsdProperties.TIMING_ORDER_BY_STARTED_AT`, `TimingConfig.orderByStartedAt`, `Timing.orderByStartedAt`/`withOrderByStartedAt`), and every report event writes `startedAt` (structural rows used to write `createdAt`).
 - Narrow screens (860px and below) fold the scenario list (the index's report list) to the selected item under
   an "N scenarios ▾" disclosure; a typed search lists every match. On phones, search and the status chips
   share one row (the chips show their counts, and keep their names for screen readers).

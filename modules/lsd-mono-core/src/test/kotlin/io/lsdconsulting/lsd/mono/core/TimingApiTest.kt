@@ -36,7 +36,7 @@ class TimingApiTest {
 
     @AfterEach
     fun reset() {
-        System.clearProperty(LsdProperties.TIMING_ORDER_BY_CREATED_AT)
+        System.clearProperty(LsdProperties.TIMING_ORDER_BY_STARTED_AT)
     }
 
     private val t0 = Instant.parse("2026-10-14T12:00:00Z")
@@ -477,7 +477,7 @@ class TimingApiTest {
     fun `configure sets the clock ordering, and null falls back to the config key`() {
         val lsd = LsdContext()
         assertEquals(ClockOrdering.SAME_SOURCE, lsd.timingConfig.effectiveOrderByStartedAt())
-        System.setProperty(LsdProperties.TIMING_ORDER_BY_CREATED_AT, "all")
+        System.setProperty(LsdProperties.TIMING_ORDER_BY_STARTED_AT, "all")
         assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByStartedAt())
         lsd.configure { it.orderByStartedAt(ClockOrdering.OFF) }
         assertEquals(ClockOrdering.OFF, lsd.timingConfig.orderByStartedAt())
@@ -502,7 +502,7 @@ class TimingApiTest {
             "all" to ClockOrdering.ALL_SOURCES,
             "junk" to ClockOrdering.SAME_SOURCE,
         ).forEach { (raw, mode) ->
-            System.setProperty(LsdProperties.TIMING_ORDER_BY_CREATED_AT, raw)
+            System.setProperty(LsdProperties.TIMING_ORDER_BY_STARTED_AT, raw)
             assertEquals(mode, LsdProperties.clockOrdering(), raw)
         }
     }
