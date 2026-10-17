@@ -27,7 +27,7 @@ export interface NoteEvent {
   kind: 'note'
   id: string
   /** ISO-8601 instant. Sorted before layout when any event in the list has one. */
-  createdAt?: string
+  startedAt?: string
   text: string
   /** Anchor participant. Required for placement `over`; optional for left/right. */
   over?: string
@@ -37,7 +37,7 @@ export interface NoteEvent {
 export interface DividerEvent {
   kind: 'divider'
   id: string
-  createdAt?: string
+  startedAt?: string
   label: string
 }
 
@@ -45,7 +45,7 @@ export interface DividerEvent {
 export interface SectionEvent {
   kind: 'section'
   id: string
-  createdAt?: string
+  startedAt?: string
   title: string
 }
 
@@ -53,7 +53,7 @@ export interface SectionEvent {
 export interface DelayEvent {
   kind: 'delay'
   id: string
-  createdAt?: string
+  startedAt?: string
   label?: string
 }
 
@@ -61,7 +61,7 @@ export interface DelayEvent {
 export interface SpacerEvent {
   kind: 'spacer'
   id: string
-  createdAt?: string
+  startedAt?: string
   heightPx?: number
 }
 
@@ -69,7 +69,7 @@ export interface ActivateEvent {
   kind: 'activate' | 'deactivate'
   id: string
   participantId: string
-  createdAt?: string
+  startedAt?: string
   /** Optional activation-bar colour. Only meaningful for kind `activate`. */
   colour?: string
 }
@@ -92,7 +92,6 @@ export interface MessageEvent {
   data?: unknown
   /** Key into the payload sidecar (`scenarioId/messageId`). Absent when `data` is the whole payload. */
   payloadId?: string
-  createdAt?: string
   /** Capture order. */
   seq?: number
   callId?: string
@@ -103,18 +102,32 @@ export interface MessageEvent {
   trace?: { traceId: string; spanId?: string; parentSpanId?: string }
   /** Clock domain. Absent means `local`. */
   source?: string
+  /** When it started, by its source's clock. */
   startedAt?: string
   capturedAt?: string
   status?: string
   timing?: TimingSource
   pairing?: PairingSource
   order?: OrderSource
+  /** Id of the call this message runs inside, as the library nested it (span link, else innermost open call). */
+  parentId?: string
+  /** On a paired reply: id of the call it answers. */
+  replyOf?: string
 }
 
 export type TimingSource = 'NONE' | 'TIMESTAMPED' | 'MEASURED' | 'DERIVED'
 export type PairingSource = 'NONE' | 'GUESSED' | 'CALL_ID' | 'TRACE'
-/** `CLOCK`: moved by clock ordering (createdAt). Shown with a badge. */
+/** `CLOCK`: moved by clock ordering (startedAt). Shown with a badge. */
 export type OrderSource = 'SEQUENCE' | 'STRUCTURE' | 'CLOCK'
+/** What a timing warning is about; the Timing view labels its pill from it. */
+export type WarningKind =
+  'REPLY_WITHOUT_CALL' | 'DURATION_ON_REPLY_DROPPED' | 'LONGER_THAN_PARENT' | 'DUPLICATE_SPAN' | 'SKEW'
+
+export interface TimingWarning {
+  kind: WarningKind
+  message: string
+}
+
 export type Accuracy = 'STRUCTURE_ONLY' | 'TIMESTAMPED' | 'MEASURED' | 'TRACED'
 export type ClockOrdering = 'OFF' | 'SAME_SOURCE' | 'ALL_SOURCES'
 
@@ -164,8 +177,10 @@ export interface Scenario {
   wallClockMs?: number
   clockOrdering?: ClockOrdering
   clockOrdered?: number
-  warnings?: string[]
+  warnings?: TimingWarning[]
   reorderedByClock?: string[]
+  /** Accuracy per participant pair, present only when the pairs differ. */
+  pairAccuracy?: { from: string; to: string; accuracy: Accuracy }[]
 }
 
 export interface Report {

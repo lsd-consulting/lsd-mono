@@ -68,6 +68,8 @@ export interface RowPaint {
   activations?: ActivationSpan[]
   /** Padding around the lifeline area. HTML overlays and full-width bands use it. */
   frame?: DiagramFrame
+  /** Smallest open target in CSS px (bigger on touch screens). Absent means MIN_HIT_CSS. */
+  minHit?: number
 }
 
 export const EMPTY_PAINT: RowPaint = { query: '', hiddenIds: new Set() }

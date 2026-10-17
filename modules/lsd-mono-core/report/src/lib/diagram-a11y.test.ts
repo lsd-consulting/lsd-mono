@@ -4,9 +4,9 @@ import { MESSAGE_LABEL_RISE, ROW_H, TOP_LABEL_PAD, layoutRows } from './layout'
 import { messageLabelRect } from './diagram-view'
 import {
   MIN_HIT_CSS,
+  TOUCH_HIT_CSS,
   circleClearsCenter,
   diagramKeyAction,
-  findOpensMessage,
   focusScrollTop,
   focusTargetAfterClose,
   hitBoxContains,
@@ -15,7 +15,6 @@ import {
   replacementFocus,
   scrollPaddingTop,
   tabindexFor,
-  zoomScrollBehavior,
 } from './diagram-a11y'
 
 const events: DiagramEvent[] = [
@@ -110,6 +109,32 @@ describe('arrow hit box', () => {
     expect(box.top + box.height).toBeLessThanOrEqual((arrowY + nextY) / 2)
   })
 
+  it('grows to 44px on touch where the rows allow, and still stops at the neighbours', () => {
+    const arrowY = 200
+    const label = { x: 10, y: arrowY - MESSAGE_LABEL_RISE, width: 8, height: MESSAGE_LABEL_RISE }
+    const roomy = messageHitBox({
+      label,
+      zoom: 1,
+      viewTop: 0,
+      prevArrowY: 100,
+      nextArrowY: 300,
+      minSize: TOUCH_HIT_CSS,
+    })
+    expect(roomy.width).toBeGreaterThanOrEqual(TOUCH_HIT_CSS)
+    expect(roomy.height).toBeGreaterThanOrEqual(TOUCH_HIT_CSS)
+    const tight = messageHitBox({
+      label,
+      zoom: 1,
+      viewTop: 0,
+      prevArrowY: 180,
+      nextArrowY: 220,
+      minSize: TOUCH_HIT_CSS,
+    })
+    expect(tight.top).toBeGreaterThanOrEqual(190)
+    expect(tight.top + tight.height).toBeLessThanOrEqual(210)
+    expect(tight.width).toBeGreaterThanOrEqual(TOUCH_HIT_CSS)
+  })
+
   it('keeps a short row on the spacing exception instead of swallowing the neighbour', () => {
     const arrowY = 100
     const prevY = arrowY - ROW_H.message
@@ -152,25 +177,11 @@ describe('focus scroll keeps the top label', () => {
   })
 })
 
-describe('reduced motion and find', () => {
-  it('jumps Zoom and Fit when reduced motion is requested', () => {
-    expect(zoomScrollBehavior(true)).toBe('auto')
-    expect(zoomScrollBehavior(false)).toBe('smooth')
-  })
-
+describe('reduced motion and payload places', () => {
   it('treats a deferred payload id as focusable when the body is not on the message', () => {
     const deferred: DiagramEvent[] = [
       { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS', payloadId: 's/m' },
     ]
     expect(messagePlaces(deferred, new Set())[0].focusable).toBe(true)
-    expect(findOpensMessage(deferred, 'place', new Set())).toBe('m')
-  })
-
-  it('Find opens the same payload message as Enter', () => {
-    const id = findOpensMessage(events, 'charge', new Set())
-    expect(id).toBe('m3')
-    const places = messagePlaces(events, new Set())
-    expect(diagramKeyAction({ key: 'Enter', places, activeId: id, inDiagram: true }).messageId).toBe(id)
-    expect(findOpensMessage(events, 'ack', new Set())).toBeNull()
   })
 })

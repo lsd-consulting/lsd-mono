@@ -60,7 +60,7 @@ class JavaApiTest {
         lsd.message("Customer", "Api", "POST /orders", new Order("o-1"));
         lsd.message("Customer", "Api", "lost", null, MessageType.LOST);
         lsd.message("Customer", "Api", "lost again", MessageType.LOST);
-        lsd.message("Api", "Db", "late", null, MessageType.SYNCHRONOUS, 5L, "#f00", Instant.parse("2026-01-01T00:00:00Z"));
+        lsd.message("Api", "Db", "late", null, MessageType.SYNCHRONOUS, "#f00", Timing.of(Instant.parse("2026-01-01T00:00:00Z"), java.time.Duration.ofMillis(5)));
         lsd.response("Db", "Api");
         lsd.response("Db", "Api", "1 row", Map.of("rows", 1));
         lsd.async("Api", "Queue", "order.placed");
@@ -100,12 +100,27 @@ class JavaApiTest {
                 "message", "message", "note", "note", "note", "activate", "activate", "deactivate", "deactivate", "section",
                 "divider", "delay", "delay", "spacer", "spacer", "message", "message", "message", "note", "message",
                 "message", "message", "message", "message", "message"),
-            all(json, "\"kind\": \"(\\w+)\""));
+            all(json, "\"kind\": \"([a-z]+)\""));
         assertTrue(json.contains("\"timing\": \"MEASURED\""), json);
         assertTrue(json.contains("\"order\": \"o-1\"") || Files.readString(payloads(tempDir)).contains("o-1"), json);
-        assertTrue(json.contains("\"createdAt\": \"2026-01-01T00:00:00Z\""), json);
+        assertTrue(json.contains("\"startedAt\": \"2026-01-01T00:00:00Z\""), json);
         assertTrue(json.contains("\"label\": \"IllegalStateException\""), json);
         assertEquals(2, all(json, "\"type\": \"(LOST)\"").size(), "a MessageType in the data position is the type");
+    }
+
+    @Test
+    void timingIsConfiguredFromJavaWithALambda() throws Exception {
+        LsdContext lsd = new LsdContext();
+        assertSame(lsd, lsd.configure(t -> t.orderByStartedAt(ClockOrdering.OFF)));
+        assertEquals(ClockOrdering.OFF, lsd.getTimingConfig().orderByStartedAt());
+        lsd.message("A", "B", "ping");
+        lsd.completeScenario("java-timing");
+        String json = Files.readString(reportJson(lsd.completeReport("Java timing")));
+        assertTrue(json.contains("\"clockOrdering\": \"OFF\""), json);
+
+        lsd.configure(t -> t.orderByStartedAt(null));
+        assertEquals(null, lsd.getTimingConfig().orderByStartedAt());
+        assertEquals(ClockOrdering.SAME_SOURCE, lsd.getTimingConfig().effectiveOrderByStartedAt());
     }
 
     @Test
@@ -188,6 +203,36 @@ class JavaApiTest {
         String json = events(Files.readString(reportJson(lsd.completeReport("Java traps", "java-traps"))));
         assertEquals(List.of("null type", "null type with data"), all(json, "\"label\": \"([^\"]*)\""));
         assertEquals(List.of("SYNCHRONOUS", "SYNCHRONOUS"), all(json, "\"type\": \"(\\w+)\""));
+    }
+
+    @Test
+    void interactionsWithStatusAndHeadersCanBeBuiltFromJava() throws IOException {
+        LsdContext lsd = new LsdContext();
+        lsd.accept(new Interaction(InteractionKind.REQUEST, "Web", "Api", "POST /orders", null, "c1"));
+        lsd.accept(new Interaction(InteractionKind.RESPONSE, "Api", "Web", "Created", "201", null, "c1"));
+        lsd.accept(new Interaction(
+                InteractionKind.PUBLISH,
+                "Api",
+                "Kafka",
+                "order.placed",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Map.of("id", 7),
+                Map.of("content-type", "application/json", "Authorization", "Bearer secret")));
+        lsd.completeScenario("java-interactions");
+
+        String json = Files.readString(reportJson(lsd.completeReport("Java interactions")));
+
+        assertTrue(json.contains("\"status\": \"201\""), json);
+        assertTrue(json.contains("\"content-type\": \"application/json\""), json);
+        assertTrue(json.contains("\"body\": {"), json);
+        assertTrue(!json.contains("Bearer secret"), "authorization is redacted");
     }
 
     @Test

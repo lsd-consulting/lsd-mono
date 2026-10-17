@@ -1,8 +1,10 @@
 // The diagram scrolls with the page. Its stage is as tall as the whole drawing, and the
 // scrollport is sticky under the top bar, at most one screen tall. The page's scroll position
 // past the top of the stage is mirrored into the scrollport's scrollTop, so windowed painting,
-// the sticky participant header, the minimap and focus keep working from scrollTop. When the
-// diagram moves its own scrollTop (minimap, focus, section jump, zoom), the page follows.
+// the sticky participant header and focus keep working from scrollTop. When the
+// diagram moves its own scrollTop (focus, section jump, zoom), the page follows.
+import { isPhone } from '../media'
+import { stickyLead } from '../topbar-height'
 import { diagramState, diagramView } from './state'
 
 /** Distance between the page's position past the stage top and the scrollport's scrollTop. */
@@ -35,20 +37,25 @@ export function sizeStage(scrollport: HTMLElement): void {
   if (!stage) return
   if (!linked(scrollport)) {
     stage.style.removeProperty('height')
-    stage.style.removeProperty('--seq-port-h')
     return
   }
   const height = `${scrollport.scrollHeight + (scrollport.offsetHeight - scrollport.clientHeight)}px`
   if (stage.style.height !== height) stage.style.height = height
-  // The scrollport sticks below the toolbar while the toolbar sticks (not on a phone).
+  // The scrollport sticks below the toolbar while the toolbar sticks. On a phone only the
+  // toolbar's last row (Find) stays stuck; the rows above it scroll away (the lead).
   const diagram = stage.closest<HTMLElement>('.seq-diagram')
   const toolbar = diagram?.querySelector<HTMLElement>('.seq-toolbar')
-  const bar = toolbar && getComputedStyle(toolbar).position === 'sticky' ? `${toolbar.offsetHeight}px` : '0px'
-  if (diagram && diagram.style.getPropertyValue('--seq-toolbar-h') !== bar)
-    diagram.style.setProperty('--seq-toolbar-h', bar)
-  // The minimap matches the scrollport's height.
-  const port = `${scrollport.offsetHeight}px`
-  if (stage.style.getPropertyValue('--seq-port-h') !== port) stage.style.setProperty('--seq-port-h', port)
+  if (!diagram) return
+  const sticky = toolbar != null && getComputedStyle(toolbar).position === 'sticky'
+  // The Find row's top is its tallest item's top (the field or the step buttons).
+  const row = [...(toolbar?.querySelectorAll<HTMLElement>('.diagram-find, .find-steps') ?? [])]
+  const rowTop = row.length ? Math.min(...row.map((el) => el.offsetTop)) : null
+  const lead = sticky && rowTop != null && isPhone() ? stickyLead(0, rowTop) : 0
+  const bar = sticky ? `${toolbar.offsetHeight - lead}px` : '0px'
+  if (diagram.style.getPropertyValue('--seq-toolbar-h') !== bar) diagram.style.setProperty('--seq-toolbar-h', bar)
+  const leadPx = `${lead}px`
+  if (diagram.style.getPropertyValue('--seq-toolbar-lead') !== leadPx)
+    diagram.style.setProperty('--seq-toolbar-lead', leadPx)
 }
 
 /**
@@ -115,6 +122,18 @@ function onPageScroll(): void {
   }
 }
 
+const watchedToolbars = new WeakSet<HTMLElement>()
+
+/** The toolbar rewraps (the hidden-participants chip comes and goes): its stuck height and lead change. */
+function watchToolbar(scrollport: HTMLElement): void {
+  const toolbar = scrollport.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-toolbar')
+  if (!toolbar || watchedToolbars.has(toolbar) || typeof ResizeObserver === 'undefined') return
+  watchedToolbars.add(toolbar)
+  new ResizeObserver(() => {
+    if (scrollport.isConnected) sizeStage(scrollport)
+  }).observe(toolbar)
+}
+
 /** Link one diagram's scrollport to the page scroll. Safe to call again after a re-render. */
 export function bindPageScroll(scrollport: HTMLElement): void {
   if (typeof window === 'undefined') return
@@ -125,6 +144,7 @@ export function bindPageScroll(scrollport: HTMLElement): void {
     window.addEventListener('resize', onPageScroll, { passive: true })
   }
   scrollport.addEventListener('scroll', () => leadPage(scrollport), { passive: true })
+  watchToolbar(scrollport)
   sizeStage(scrollport)
   followPage(scrollport)
 }

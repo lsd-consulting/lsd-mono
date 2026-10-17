@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { readAppCss } from './read-css.test-util'
 
 const css = (name: string) => readFileSync(new URL(`./${name}`, import.meta.url), 'utf8')
 const diagramCss = css('diagram.css')
 const tokensCss = css('tokens.css')
-const appCss = css('app.css')
+const appCss = readAppCss()
 
 /** Body of the first rule whose selector list contains `selector`. */
 function block(css: string, selector: string): string {

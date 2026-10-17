@@ -147,7 +147,7 @@ export function edgeInteractions(edge: ComponentEdge): ComponentInteraction[] {
 }
 
 /** One interaction as text: `place order · sync`, `publish · async ×3`, `(no label) · sync`. */
-export function interactionText(item: ComponentInteraction): string {
+function interactionText(item: ComponentInteraction): string {
   const cue = item.type
     .split(', ')
     .map((type) => typeCue(type))
@@ -157,7 +157,7 @@ export function interactionText(item: ComponentInteraction): string {
 }
 
 /** Most interactions a hover title lists before it says how many more there are. */
-export const TITLE_MAX_INTERACTIONS = 12
+const TITLE_MAX_INTERACTIONS = 12
 
 /**
  * Hover text for a link: who calls whom, how many messages, then one interaction per line.

@@ -72,6 +72,10 @@
 .pill.warn {
   color: var(--warn);
 }
+.pill.error {
+  color: var(--error);
+  border-color: color-mix(in oklab, var(--error) 50%, var(--border));
+}
 .tbadge {
   font-size: 10px;
   border: 1px solid var(--border);
@@ -262,12 +266,16 @@
   color: var(--text-muted);
 }
 .warnx {
+  display: block;
   color: var(--warn);
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 0.85em;
+  white-space: normal;
   margin-left: 2px;
 }
-@media (max-width: 640px) {
+/* Phones (PHONE_MAX_PX): the waterfall row stacks its bar under the label. */
+@media (max-width: 560px) {
   .timing-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -305,4 +313,38 @@
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 0 4px;
+}
+
+/* Phones: the four timing chips sit on one row that scrolls sideways, not a 2×2 block. */
+@media (max-width: 560px) {
+  .timing-strip {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+  .timing-strip > li {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+  .timing-chip {
+    width: auto;
+    padding: 6px 10px;
+  }
+}
+.pair-accuracy {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 0.9em;
+}
+.pair-accuracy b {
+  font-weight: 600;
+}
+.pair-accuracy .acc-structure_only {
+  color: var(--text-muted);
 }

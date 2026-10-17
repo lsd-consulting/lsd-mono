@@ -504,29 +504,7 @@ async function recordTour(browser, tourDir, file) {
     await page.keyboard.press('Escape')
     await snap(200)
 
-    // 8. Minimap.
-    await caption('Drag the minimap to move through a long diagram')
-    const minimap = diagram.locator('.seq-minimap-window')
-    const mm = await centre(minimap)
-    const track = await diagram.locator('.seq-minimap').boundingBox()
-    await moveTo(mm.x, mm.y)
-    await page.mouse.move(mm.x, mm.y)
-    await page.mouse.down()
-    await ring(true)
-    await snap(120)
-    const travel = track ? Math.max(40, track.y + track.height - mm.y - 30) : 160
-    for (let i = 1; i <= 6; i++) {
-      const y = mm.y + (travel * i) / 6
-      await page.mouse.move(mm.x, y)
-      await placePointer(mm.x, y)
-      await ring(true)
-      await snap(80)
-    }
-    await page.mouse.up()
-    await ring(false)
-    await snap(1000)
-
-    // 9. Themes: light, high contrast, then Auto (follows the OS, light here).
+    // 8. Themes: light, high contrast, then Auto (follows the OS, light here).
     await caption('Light and high-contrast themes, or Auto to follow the OS')
     await page.evaluate(() => window.scrollTo(0, 0))
     await snap(200)

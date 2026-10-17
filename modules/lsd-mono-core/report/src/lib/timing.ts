@@ -13,6 +13,10 @@ export interface TimelineRow {
   timed: boolean
   /** Children took longer than the call's own measured duration. */
   overrun: boolean
+  /** The call's own measured duration, ms. */
+  ownMs: number
+  /** Total time of the calls inside it, ms. */
+  childMs: number
   /** The participant the time is spent in: the callee. */
   participant: string
 }
@@ -45,9 +49,10 @@ interface Node {
 const isCall = (m: MessageEvent) => m.type === 'SYNCHRONOUS' || m.type === 'BI_DIRECTIONAL'
 
 /**
- * Builds the call tree and lays it on a time axis. Replies pair by `replyTo`, else by direction
- * (the innermost open call the other way). A call's duration is its own `durationMs` or its
- * reply's. Starts come from `startedAt` within a single source; otherwise children are packed
+ * Lays the report's call tree on a time axis. The tree comes from the report: each message's
+ * `parentId` (the call it runs inside) and each paired reply's `replyOf`, worked out once in the
+ * library (ids, spans, clock ordering). A call's duration is its `durationMs`: the report
+ * writes a paired reply's duration on its call. Starts come from `startedAt` within a single source; otherwise children are packed
  * one after another inside their parent, and the timeline is marked approximate.
  */
 export function timeline(scenario: Scenario): Timeline {
@@ -64,43 +69,25 @@ const timelines = new WeakMap<Scenario, Timeline>()
 
 function buildTimeline(scenario: Scenario): Timeline {
   const root: Node = { kids: [], own: 0, timed: false, span: 0, self: 0, start: 0, childSum: 0 }
-  const stack: Node[] = [root]
-  const byCallId = new Map<string, Node>()
+  const nodes = new Map<string, Node>()
   // Start offsets only within one clock: the scenario's first source.
   const clock = scenario.sources?.[0] ?? 'local'
   const onClock = (e: MessageEvent) => (e.source ?? 'local') === clock
   let t0: number | undefined
   for (const e of scenario.events) {
     if (e.kind !== 'message') continue
-    const at = onClock(e) && e.createdAt ? Date.parse(e.createdAt) : undefined
+    const at = onClock(e) && e.startedAt ? Date.parse(e.startedAt) : undefined
     if (at != null && !Number.isNaN(at)) t0 = t0 == null ? at : Math.min(t0, at)
   }
   for (const e of scenario.events) {
     if (e.kind !== 'message') continue
     if (e.type === 'SYNCHRONOUS_RESPONSE') {
-      let node = e.replyTo ? byCallId.get(e.replyTo) : undefined
-      if (!node) {
-        for (let k = stack.length - 1; k > 0; k--) {
-          const m = stack[k].message
-          if (m && m.from === e.to && m.to === e.from) {
-            node = stack[k]
-            break
-          }
-        }
-      }
-      if (node) {
-        node.reply = e
-        if (!node.timed && e.durationMs != null) {
-          node.own = e.durationMs
-          node.timed = true
-        }
-        const at = stack.indexOf(node)
-        if (at > 0) stack.splice(at)
-      }
+      const call = e.replyOf ? nodes.get(e.replyOf) : undefined
+      if (call) call.reply = e
       continue
     }
-    const parent = stack[stack.length - 1]
-    const startedAt = onClock(e) && e.createdAt ? Date.parse(e.createdAt) : NaN
+    const parent = (e.parentId && nodes.get(e.parentId)) || root
+    const startedAt = onClock(e) && e.startedAt ? Date.parse(e.startedAt) : NaN
     const node: Node = {
       message: e,
       parent,
@@ -114,8 +101,7 @@ function buildTimeline(scenario: Scenario): Timeline {
       childSum: 0,
     }
     parent.kids.push(node)
-    if (e.callId) byCallId.set(e.callId, node)
-    if (isCall(e) && e.from !== e.to) stack.push(node)
+    nodes.set(e.id, node)
   }
   const measure = (n: Node): number => {
     n.childSum = n.kids.reduce((sum, k) => sum + measure(k), 0)
@@ -137,6 +123,8 @@ function buildTimeline(scenario: Scenario): Timeline {
         selfMs: n.self,
         timed: n.timed || n.span > 0,
         overrun: n.timed && n.childSum > n.own,
+        ownMs: n.own,
+        childMs: n.childSum,
         participant: n.message.to || n.message.from,
       })
     }
@@ -174,5 +162,5 @@ export function formatMs(ms: number): string {
 /** Whether the scenario has any timing worth a Timing view. */
 export function hasTiming(scenario: Scenario): boolean {
   if (scenario.accuracy) return scenario.accuracy !== 'STRUCTURE_ONLY'
-  return scenario.events.some((e) => e.kind === 'message' && (e.durationMs != null || e.createdAt != null))
+  return scenario.events.some((e) => e.kind === 'message' && (e.durationMs != null || e.startedAt != null))
 }

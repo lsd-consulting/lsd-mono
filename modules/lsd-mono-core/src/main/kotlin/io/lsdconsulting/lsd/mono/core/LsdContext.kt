@@ -25,7 +25,6 @@ import java.nio.file.Path
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Consumer
 
@@ -47,7 +46,7 @@ import java.util.function.Consumer
  *
  * **Activate colour:** optional on [activate]; omitted from JSON when absent.
  * **Timing:** see `domain/EventTiming.kt`. [completeScenario] pairs calls and replies, works out
- * each scenario's accuracy and applies clock ordering ([orderByCreatedAt]) before the scenario
+ * each scenario's accuracy and applies clock ordering ([TimingConfig.orderByStartedAt]) before the scenario
  * is stored, so layout and JSON see the same order.
  *
  * **Threads:** every method is thread-safe. Each running scenario has its own
@@ -66,14 +65,15 @@ import java.util.function.Consumer
 public class LsdContext :
     Capturer(),
     InteractionSink {
-    /**
-     * Clock ordering for scenarios completed from now on. `null` (the default) reads
-     * `lsd.mono.timing.orderByCreatedAt`, which defaults to [ClockOrdering.SAME_SOURCE].
-     */
-    @Volatile
-    public var orderByCreatedAt: ClockOrdering? = null
+    /** Timing settings for scenarios completed from now on; change them with [configure]. */
+    public val timingConfig: TimingConfig = TimingConfig()
 
-    private val seq = AtomicLong()
+    /**
+     * Change [timingConfig], from Kotlin or Java alike, and return this context:
+     * `lsd.configure { it.orderByStartedAt(ClockOrdering.ALL_SOURCES) }` or
+     * `lsd.configure(t -> t.orderByStartedAt(ClockOrdering.OFF))`.
+     */
+    public fun configure(settings: Consumer<TimingConfig>): LsdContext = apply { settings.accept(timingConfig) }
 
     /** Same as [ingest]. */
     override fun accept(interaction: Interaction): Unit = ingest(interaction)
@@ -100,9 +100,8 @@ public class LsdContext :
     private val participants = ParticipantRegistry()
     private val jsonMapper = ReportJsonMapper { idGenerator.next() }
 
-    private val sequence = AtomicLong()
-    private val active = ConcurrentHashMap<String, LsdScenario>()
-    private val bound = ThreadBindings()
+    private val scenarios = ScenarioRegistry(this, lock)
+    private val binder = EventBinder({ idGenerator }, ::resolve)
 
     /** The kinds of capture that have failed, so each is warned about once ([guarded]). */
     private val droppedKinds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap
@@ -110,11 +109,7 @@ public class LsdContext :
     private val openReport = ThreadLocal<LsdReport>()
     private val openReports = HashSet<String>()
 
-    /** Unbound captures with no scenario running. Completed by [completeScenario], as before. */
-    private val defaultScenario = LsdScenario(this, key = "", reportKey = null, sequence = 0)
-
-    @Volatile
-    private var warnedAmbiguous = false
+    private val defaultScenario get() = scenarios.defaultScenario
 
     /**
      * Declare participants, to give them a type (shape), display name or colour, and to fix
@@ -144,26 +139,17 @@ public class LsdContext :
         reportKey: String? = null,
         key: String = UUID.randomUUID().toString(),
         bindCurrentThread: Boolean = true,
-    ): LsdScenario {
-        val scenario = LsdScenario(this, key, reportKey, sequence.incrementAndGet())
-        synchronized(lock) {
-            check(!active.containsKey(key)) { "A scenario with key '$key' is already running" }
-            if (active.isEmpty() && !defaultScenario.isEmpty()) scenario.addAll(defaultScenario.drain())
-            active[key] = scenario
-        }
-        if (bindCurrentThread) bound.set(scenario)
-        return scenario
-    }
+    ): LsdScenario = scenarios.begin(reportKey, key, bindCurrentThread)
 
     /**
      * The scenario the calling thread is bound to, if it is still running. That is the one
      * bound on this thread, or else one inherited from the thread that started it (see
      * [LsdScenario.bind] and the README on threads; pool workers do not inherit).
      */
-    public fun currentScenario(): LsdScenario? = bound.get()?.takeIf { isActive(it) }
+    public fun currentScenario(): LsdScenario? = scenarios.current()
 
     /** A running scenario by the key it was begun with. */
-    public fun findScenario(key: String): LsdScenario? = active[key]
+    public fun findScenario(key: String): LsdScenario? = scenarios.find(key)
 
     /**
      * The value to send in the [LsdHeaders.SCENARIO] header on a request or message to [host]:
@@ -188,7 +174,7 @@ public class LsdContext :
     public fun findScenarioByHeader(headerValue: String?): LsdScenario? =
         guarded("scenario header lookup", { null }) {
             val wanted = headerValue?.trim()?.takeIf { it.isNotEmpty() } ?: return@guarded null
-            active.values.firstOrNull { it.correlationId == wanted }
+            scenarios.findByCorrelationId(wanted)
         }
 
     /**
@@ -344,7 +330,7 @@ public class LsdContext :
             synchronized(lock) {
                 // Writing a report has always dropped captures that no scenario was completed for.
                 // Keep that when nothing is running, but say so.
-                if (reportKey == null || active.isEmpty()) dropStrayCaptures(title)
+                if (reportKey == null || scenarios.isEmpty()) dropStrayCaptures(title)
                 completed
                     .remove(reportKey)
                     .orEmpty()
@@ -374,19 +360,15 @@ public class LsdContext :
     public fun clear() {
         synchronized(lock) {
             idGenerator = IdGenerator(LsdProperties.deterministicIds())
-            seq.set(0)
+            binder.reset()
             payloads.limits = PayloadConverters.Limits.fromProperties()
             payloads.redaction = PayloadConverters.Redaction.fromProperties()
             completed.clear()
             reportFiles.clear()
             participants.clear()
-            active.values.forEach { it.abandonCalls() }
-            active.clear()
-            defaultScenario.abandonCalls()
-            defaultScenario.drain()
-            warnedAmbiguous = false
+            scenarios.clear()
         }
-        bound.remove()
+        scenarios.unbindCurrentThread()
     }
 
     /**
@@ -412,8 +394,7 @@ public class LsdContext :
     override fun startCall(request: Message): PendingCall =
         guarded("call", { PendingCall.detached(defaultScenario, request) }) { target().startCall(request) }
 
-    internal fun isActive(scenario: LsdScenario): Boolean =
-        scenario === defaultScenario || active[scenario.key] === scenario
+    internal fun isActive(scenario: LsdScenario): Boolean = scenarios.isActive(scenario)
 
     /**
      * Bind [events] and add them to [scenario] together. [dataCopied] is true when a
@@ -426,7 +407,7 @@ public class LsdContext :
     ) {
         if (events.isEmpty()) return
         guarded(if (events.size == 1) "event" else "batch of events", { }) {
-            val bound = events.map { bind(if (dataCopied) it else copyData(it)) }
+            val bound = events.map { binder.bind(if (dataCopied) it else copyData(it)) }
             if (!scenario.addEvents(bound)) warnLate(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
         }
     }
@@ -465,10 +446,7 @@ public class LsdContext :
     internal fun copyData(event: SequenceEvent): SequenceEvent =
         if (event is Message && event.data != null) event.copy(data = payloads.snapshot(event.data)) else event
 
-    internal fun bindThread(scenario: LsdScenario): LsdBinding {
-        val restore = bound.set(scenario)
-        return LsdBinding(restore)
-    }
+    internal fun bindThread(scenario: LsdScenario): LsdBinding = scenarios.bindThread(scenario)
 
     internal fun complete(
         scenario: LsdScenario,
@@ -481,12 +459,12 @@ public class LsdContext :
             if (scenario === defaultScenario) {
                 defaultScenario.drain()
             } else {
-                if (!active.remove(scenario.key, scenario)) return
+                if (!scenarios.remove(scenario)) return
                 scenario.close()
             }
-        bound.forget(scenario)
+        scenarios.forget(scenario)
         warnUnreplied(title, scenario.abandonCalls())
-        val (events, timing) = orderAndAnalyse(captured, orderByCreatedAt ?: LsdProperties.clockOrdering())
+        val (events, timing) = orderAndAnalyse(captured, timingConfig.effectiveOrderByStartedAt())
         synchronized(lock) {
             val stored =
                 Scenario(
@@ -499,7 +477,7 @@ public class LsdContext :
                     error = error,
                     timing = timing,
                 )
-            val order = if (scenario === defaultScenario) sequence.incrementAndGet() else scenario.sequence
+            val order = if (scenario === defaultScenario) scenarios.nextOrder() else scenario.sequence
             completed.getOrPut(scenario.reportKey) { ArrayList() }.add(order to stored)
         }
     }
@@ -510,8 +488,8 @@ public class LsdContext :
             defaultScenario.drain()
             return
         }
-        if (active.remove(scenario.key, scenario)) scenario.close()
-        bound.forget(scenario)
+        if (scenarios.remove(scenario)) scenario.close()
+        scenarios.forget(scenario)
     }
 
     /**
@@ -520,7 +498,7 @@ public class LsdContext :
      * captures. A scenario completed concurrently by its test keeps that completion.
      */
     private fun completeStillRunning(title: String, reportKey: String?) {
-        val running = active.values.filter { it.reportKey == reportKey }.sortedBy { it.sequence }
+        val running = scenarios.running(reportKey)
         if (running.isEmpty()) return
         logger.log(
             System.Logger.Level.WARNING,
@@ -578,62 +556,7 @@ public class LsdContext :
         }
 
     /** Where an unscoped call goes: the bound scenario, the only running one, or the default. */
-    private fun target(): LsdScenario {
-        currentScenario()?.let { return it }
-        val running = active.values.toList()
-        if (running.size == 1) return running.single()
-        if (running.size > 1 && !warnedAmbiguous) {
-            warnedAmbiguous = true
-            logger.log(
-                System.Logger.Level.WARNING,
-                "LSD: captured on thread '${Thread.currentThread().name}', which is not bound to a scenario, " +
-                    "while ${running.size} scenarios are running in parallel. It cannot be attributed and goes to " +
-                    "the default scenario. Use LsdScenario.bind() or LsdContext.wrap() on threads you start.",
-            )
-        }
-        return defaultScenario
-    }
-
-    private fun bind(event: SequenceEvent): SequenceEvent =
-        when (event) {
-            is Message -> bindMessage(event)
-            is Note ->
-                event.copy(
-                    id = idGenerator.next(),
-                    over = event.over?.takeIf { it.isNotBlank() }?.let { resolve(it).id },
-                )
-            is Divider -> event.copy(id = idGenerator.next())
-            is Section -> event.copy(id = idGenerator.next())
-            is Delay -> event.copy(id = idGenerator.next())
-            is Spacer -> event.copy(id = idGenerator.next())
-            is Lifeline ->
-                event.copy(
-                    id = idGenerator.next(),
-                    participantId = resolve(event.participantId).id,
-                )
-        }
-
-    private fun bindMessage(captured: Message): Message {
-        val id = idGenerator.next()
-        captured.callRef?.let { if (it.id == null) it.id = id }
-        val event = captured.copy(seq = seq.incrementAndGet(), capturedAt = Instant.now())
-        return when (event.type) {
-            MessageType.SHORT_INBOUND -> {
-                val toRef = event.to?.takeIf { it.isNotBlank() } ?: event.from.orEmpty()
-                event.copy(id = id, from = null, to = resolve(toRef).id)
-            }
-            MessageType.SHORT_OUTBOUND -> {
-                val fromRef = event.from?.takeIf { it.isNotBlank() } ?: event.to.orEmpty()
-                event.copy(id = id, from = resolve(fromRef).id, to = null)
-            }
-            else ->
-                event.copy(
-                    id = id,
-                    from = resolve(event.from.orEmpty()).id,
-                    to = resolve(event.to.orEmpty()).id,
-                )
-        }
-    }
+    private fun target(): LsdScenario = scenarios.target()
 
     private fun resolve(ref: String): Participant = synchronized(lock) { participants.resolve(ref) }
 

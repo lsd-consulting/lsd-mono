@@ -1,0 +1,57 @@
+/* Part of app.css. Reset, page base and in-page jump offsets. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-image:
+    radial-gradient(1200px 600px at 10% -10%, oklch(0.55 0.12 175 / 0.12), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, oklch(0.55 0.14 280 / 0.1), transparent 55%);
+  background-attachment: fixed;
+}
+
+a {
+  color: var(--accent-strong);
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+mark {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  padding: 0 0.2em;
+  border-radius: 4px;
+}
+
+/* The sticky top bar covers the top of the page, so in-page jumps (a scenario card, a
+   deep-linked message) stop below it. --topbar-h follows the bar's real height (main.ts). */
+html {
+  scroll-padding-top: var(--topbar-h);
+}
+
+#app {
+  min-height: 100dvh;
+  display: grid;
+  /* auto, not --topbar-h: on a phone the bar wraps onto more rows and must grow to hold
+     them. A fixed row clamped it, and the search box and status chips spilled out of it
+     and floated over the page while it scrolled. */
+  grid-template-rows: auto 1fr;
+}

@@ -44,3 +44,8 @@ export function applySidebarCollapsed(shell: Element | null, button: Element | n
   button.setAttribute('title', label)
   button.textContent = sidebarToggleGlyph(collapsed)
 }
+
+/** Narrow-screen list toggle: "5 scenarios" or "1 report". The ▾/▴ glyph is drawn apart. */
+export function navFoldLabel(count: number, noun: 'scenario' | 'report'): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`
+}

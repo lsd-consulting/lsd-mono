@@ -5,6 +5,9 @@ import { eventHiddenByColumns, type Rect } from './diagram-view'
 /** WCAG 2.5.8 minimum target, in CSS pixels. The arrow stroke stays thin. */
 export const MIN_HIT_CSS = 24
 
+/** On a touch screen a finger needs more: 44px, still clipped at the neighbours' midpoints. */
+export const TOUCH_HIT_CSS = 44
+
 /** An arrow can be opened when it has a summary, a deferred payload, or both. */
 export function messageHasPayload(event: { data?: unknown; payloadId?: string | null }): boolean {
   if (event.payloadId) return true
@@ -161,7 +164,7 @@ export function focusableNeighbors(
 
 /**
  * Invisible CSS-pixel hit box over an arrow and its label.
- * Grows to 24px around the arrow centre unless that would cross the midpoint
+ * Grows to `minSize` (24px, or TOUCH_HIT_CSS on touch) around the arrow centre unless that would cross the midpoint
  * to the previous or next target. The stroke is not part of this box.
  * When the row is shorter than 24px, the smaller box is the spacing exception:
  * a 24px circle on this centre still does not cover the neighbour's centre.
@@ -172,7 +175,9 @@ export function messageHitBox(input: {
   viewTop: number
   prevArrowY?: number
   nextArrowY?: number
+  minSize?: number
 }): HitBox {
+  const min = input.minSize ?? MIN_HIT_CSS
   const zoom = input.zoom > 0 && Number.isFinite(input.zoom) ? input.zoom : 1
   const arrowY = input.label.y + input.label.height
   const cx = (input.label.x + input.label.width / 2) * zoom
@@ -182,10 +187,10 @@ export function messageHitBox(input: {
   const labelRight = labelLeft + input.label.width * zoom
   const labelBottom = labelTop + input.label.height * zoom
 
-  const left = Math.min(labelLeft, cx - MIN_HIT_CSS / 2)
-  let right = Math.max(labelRight, cx + MIN_HIT_CSS / 2)
-  let top = Math.min(labelTop, cy - MIN_HIT_CSS / 2)
-  let bottom = Math.max(labelBottom, cy + MIN_HIT_CSS / 2)
+  const left = Math.min(labelLeft, cx - min / 2)
+  let right = Math.max(labelRight, cx + min / 2)
+  let top = Math.min(labelTop, cy - min / 2)
+  let bottom = Math.max(labelBottom, cy + min / 2)
 
   if (input.prevArrowY != null) {
     const mid = ((input.prevArrowY + arrowY) / 2 - input.viewTop) * zoom
@@ -230,31 +235,6 @@ export function scrollPaddingTop(headerCss: number): number {
 export function focusScrollTop(arrowY: number, zoom: number): number {
   const scale = zoom > 0 && Number.isFinite(zoom) ? zoom : 1
   return Math.max(0, roundCss((arrowY - MESSAGE_LABEL_RISE) * scale))
-}
-
-/**
- * Zoom and Fit animate the scroll when motion is allowed, and jump when it is not.
- * The scale is still a scale: columns are not restacked for text size.
- */
-export function zoomScrollBehavior(prefersReducedMotion: boolean): 'auto' | 'smooth' {
-  return prefersReducedMotion ? 'auto' : 'smooth'
-}
-
-/**
- * Find is the equivalent path for an undersized arrow: Enter on a query opens
- * the first drawn match that has a payload, the same inspector as a click.
- */
-export function findOpensMessage(events: DiagramEvent[], query: string, hiddenIds: ReadonlySet<string>): string | null {
-  const q = query.trim().toLowerCase()
-  if (!q) return null
-  for (const event of events) {
-    if (event.kind !== 'message') continue
-    if (eventHiddenByColumns(event, hiddenIds)) continue
-    if (!messageHasPayload(event)) continue
-    if (!event.label.toLowerCase().includes(q)) continue
-    return event.id
-  }
-  return null
 }
 
 function roundCss(value: number): number {

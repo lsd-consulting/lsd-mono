@@ -2,7 +2,9 @@
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
 
-![A tour of the report: choosing a scenario from the list, zoom and Fit, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the minimap, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
+![A tour of the report: choosing a scenario from the list, zoom and Fit, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
+
+**[Open the live report →](https://lsd-consulting.github.io/lsd-mono/kitchen-sink.html)** An online shop checkout across 14 services and five scenarios, built from the current UI on every push to `main`. Click an arrow to see its request, reply or event payload.
 
 [`lsd-mono-cucumber-8` README](modules/lsd-mono-cucumber-8/README.md) covers the Cucumber 8 plugin.
 
@@ -99,7 +101,7 @@ The tour at the top clicks around a small shop report: four scenarios with every
 
 The report shows one scenario at a time, chosen from the sidebar, and the choice is kept in the URL. Each scenario has:
 
-- the sequence diagram, fitted to its panel, with zoom, Fit, find, participant hiding and a minimap. A diagram taller than the screen extends the page and scrolls with it; the toolbar and the participant header stay at the top while you scroll;
+- the sequence diagram, fitted to its panel, with zoom, Fit, find (Enter / Shift+Enter or the ↑ ↓ buttons step through the matches, “2 of 11”) and participant hiding. A diagram taller than the screen extends the page and scrolls with it; the toolbar and the participant header stay at the top while you scroll;
 - a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are redacted when captured), the component diagram, and timing and metrics;
 - a timing summary (wall-clock, calls, slowest call, accuracy) with swim lanes and a waterfall, when the scenario has timing.
 
@@ -115,7 +117,7 @@ The task captures the tour report with `LsdContext`, then drives the packaged sh
 
 ### Kitchen-sink sample
 
-The [kitchen-sink report](https://lsd-consulting.github.io/lsd-mono/kitchen-sink.html) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in five scenarios: a timed checkout, happy path, payment declined (captured out of order), out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, payloads, timestamps, and warning and errored scenarios. The timed checkout shows the timing API: measured durations, trace and span ids, events put back in clock order (marked clock-ordered), and the Timing view's swim lanes and waterfall. [`KitchenSinkSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/KitchenSinkSample.kt) captures it. The report is not committed. The [Pages workflow](.github/workflows/pages.yml) builds it from the current UI on every push to `main` that touches `lsd-mono-core` or the build, and publishes it with the [`index.html`](https://lsd-consulting.github.io/lsd-mono/) that `createIndex()` writes for it. To build the site locally, then open `modules/lsd-mono-core/build/pages/index.html` in a browser:
+The [kitchen-sink report](https://lsd-consulting.github.io/lsd-mono/kitchen-sink.html) (the live report linked above) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in five scenarios: a timed checkout, happy path, payment declined (captured out of order), out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, realistic HTTP, SQL and Kafka payloads with headers, timestamps, and warning and errored scenarios. The timed checkout shows the timing API: measured durations, trace and span ids, events put back in clock order (marked clock-ordered), and the Timing view's swim lanes and waterfall. [`KitchenSinkSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/KitchenSinkSample.kt) captures it. The report is not committed. The [Pages workflow](.github/workflows/pages.yml) builds it from the current UI on every push to `main` that touches `lsd-mono-core` or the build, and publishes it with the [`index.html`](https://lsd-consulting.github.io/lsd-mono/) that `createIndex()` writes for it. To build the site locally, then open `modules/lsd-mono-core/build/pages/index.html` in a browser:
 
 ```bash
 ./gradlew :modules:lsd-mono-core:kitchenSinkSample

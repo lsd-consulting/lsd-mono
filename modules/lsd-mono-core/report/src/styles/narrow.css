@@ -1,0 +1,216 @@
+/* Part of app.css. Stacked layout (860px and below), collapsed rail (861px and up) and phone (560px and below). */
+@media (max-width: 860px) {
+  .shell,
+  .shell.with-inspector {
+    grid-template-columns: 1fr;
+  }
+  /* Narrow screens: the panel sits inline below the report and is part of the page, not a
+     second scroll box. A capped, scrolling panel took the swipe (a touch gesture latches to
+     the inner scroller), so the page could not be scrolled past it. Wide content still
+     scrolls sideways inside its own block; the header sticks under the top bar so Close
+     stays in reach. */
+  .inspector,
+  .inspector.inspector-json-wide {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    overflow-x: clip;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  .inspector-head {
+    top: var(--topbar-h, 0px);
+  }
+  .inspector-resize {
+    display: none;
+  }
+  /* The panel is already the full width here, so Expand could not widen it (the width is
+     clamped to the screen) and did nothing. JSON wraps instead. */
+  #inspector-json-expand {
+    display: none;
+  }
+  .sidebar {
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .scenario-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+  .scenario-nav.index-nav {
+    display: flex;
+  }
+  .kbd {
+    display: none;
+  }
+  .brand-sub {
+    display: none;
+  }
+}
+
+/* Narrow layout stacks the list above the report; there is nothing to collapse. Instead
+   the list folds to the selected item under an "N scenarios ▾" disclosure. */
+.nav-fold {
+  display: none;
+}
+@media (max-width: 860px) {
+  .sidebar-toggle,
+  .sidebar-head .sidebar-title {
+    display: none;
+  }
+  .sidebar {
+    padding: 10px 12px 12px;
+  }
+  .nav-fold:not([hidden]) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .nav-fold:focus-visible {
+    outline: none;
+    box-shadow: var(--focus);
+  }
+  .nav-folded .hist {
+    display: none;
+  }
+  /* Only while the selected item is in the list; otherwise everything shows. */
+  .nav-folded .scenario-nav:has([aria-current]) > li:not(:has([aria-current])),
+  .nav-folded .nav-group-items:has([aria-current]) > li:not(:has([aria-current])) {
+    display: none;
+  }
+}
+
+/* Collapsed scenario list: an icon rail with the status dot and scenario number.
+   Screen only. Print leaves the list out altogether. Names stay in the accessibility tree
+   (visually hidden) and each item has a tooltip. */
+@media screen and (min-width: 861px) {
+  .shell.sidebar-collapsed {
+    --sidebar-w: 60px;
+  }
+  .sidebar-collapsed .sidebar {
+    padding: 12px 8px 24px;
+    overflow-x: hidden;
+  }
+  .sidebar-collapsed .sidebar-head {
+    justify-content: center;
+  }
+  .sidebar-collapsed .sidebar-title,
+  .sidebar-collapsed .hist,
+  .sidebar-collapsed .nav-empty {
+    display: none;
+  }
+  .sidebar-collapsed .scenario-nav button {
+    position: relative;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 5px;
+    padding: 8px 0;
+    text-align: center;
+  }
+  .sidebar-collapsed .nav-group-head {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 8px 0;
+  }
+  .sidebar-collapsed .nav-group-head .dot {
+    margin-top: 0;
+  }
+  .sidebar-collapsed .nav-group-caret {
+    display: none;
+  }
+  .sidebar-collapsed .nav-group-items {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .sidebar-collapsed .scenario-nav .dot {
+    margin-top: 0;
+  }
+  .sidebar-collapsed .nav-icon {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .sidebar-collapsed .nav-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Still sticky, with search and filters inside: the bar wraps onto two rows. Opaque, because
+     the toolbar rows that scroll away pass under it. */
+  .topbar {
+    background: var(--bg-elevated);
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    gap: 6px 8px;
+  }
+  /* Search and the status chips share one row; the chips show their count, and the
+     status word stays for screen readers. */
+  .search-wrap {
+    max-width: none;
+    order: 3;
+    /* Too wide for the first row, so search and the chips wrap together onto the second. */
+    flex: 1 1 calc(100% - 160px);
+    min-width: 0;
+  }
+  .filters {
+    order: 4;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .chip {
+    padding: 4px 8px;
+    min-height: 32px;
+  }
+  /* The diagram comes first on a phone; the description and key facts follow it. */
+  .scenario-body {
+    display: flex;
+    flex-direction: column;
+  }
+  .scenario-body > .cards {
+    order: 1;
+  }
+  .report-hero {
+    margin-bottom: 12px;
+  }
+  .report-hero .meta {
+    font-size: 12px;
+    gap: 4px 10px;
+  }
+  /* The toolbar's own buttons say what they do; the hint line only pushes the drawing down. */
+  .diagram-hint {
+    display: none;
+  }
+  .chip .chip-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

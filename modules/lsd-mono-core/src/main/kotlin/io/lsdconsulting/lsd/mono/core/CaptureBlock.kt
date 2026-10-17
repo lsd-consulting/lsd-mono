@@ -114,12 +114,9 @@ public class MessageSpec internal constructor(
 ) {
     private var label = ""
     private var data: Any? = null
-    private var durationMs: Long? = null
     private var colour: String? = null
-    private var at: Instant? = null
-    private var exactMs: Double? = null
+    private var timing = Timing()
     private var trace: Trace? = null
-    private var source: String? = null
 
     /** The text on the arrow. */
     public infix fun label(text: String): MessageSpec = apply { label = text }
@@ -127,23 +124,23 @@ public class MessageSpec internal constructor(
     /** The payload shown in the inspector. It is copied now, so later changes don't reach the report. */
     public infix fun data(value: Any?): MessageSpec = apply { data = copy(value) }
 
-    /** How long the call took, for the metrics. */
-    public infix fun took(ms: Long): MessageSpec = apply { durationMs = ms }
+    /** How long the call took, measured, in milliseconds (fractional allowed): `took 12` or `took 0.4`. */
+    public infix fun took(ms: Number): MessageSpec = apply { timing = timing.copy(durationMs = ms.toDouble()) }
 
-    /** How long the call took, measured, in fractional milliseconds. */
-    public infix fun took(ms: Double): MessageSpec = apply { exactMs = ms }
+    /** The message's [Timing]: start, measured duration, clock source, ordering hint. Replaces any set before. */
+    public infix fun timing(value: Timing): MessageSpec = apply { timing = value }
 
     /** Trace and span ids, for exact pairing and nesting. */
     public infix fun trace(ids: Trace): MessageSpec = apply { trace = ids }
 
     /** The clock domain (service or JVM) it was timed in. */
-    public infix fun source(name: String): MessageSpec = apply { source = name }
+    public infix fun source(name: String): MessageSpec = apply { timing = timing.copy(source = name) }
 
     /** The arrow's colour, such as `#dc2626`. */
     public infix fun colour(css: String): MessageSpec = apply { colour = css }
 
-    /** When it happened, for capture that arrives out of order. */
-    public infix fun at(instant: Instant): MessageSpec = apply { at = instant }
+    /** When it started, for capture that arrives out of order. */
+    public infix fun startedAt(instant: Instant): MessageSpec = apply { timing = timing.copy(startedAt = instant) }
 
     internal fun toMessage(): Message =
         Message(
@@ -154,11 +151,6 @@ public class MessageSpec internal constructor(
             type = type,
             colour = colour,
             data = data,
-            durationMs = durationMs,
-            createdAt = at,
-            exactMs = exactMs,
-            trace = trace,
-            source = source,
             callRef = if (type == MessageType.ASYNCHRONOUS) CallRef(null) else null,
-        )
+        ).withTiming(timing, trace)
 }

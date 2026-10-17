@@ -18,7 +18,7 @@ import java.time.Instant
  *
  * A trimmed shop: six lifelines so the diagram reads at README size, four
  * scenarios with every status, payloads, durations for Metrics, and enough
- * messages for the minimap. `scripts/readme-samples.mjs` finds the
+ * messages to scroll. `scripts/readme-samples.mjs` finds the
  * `authorise £24.00` arrow, the `Order events` participant, and the three-message
  * Orders to Orders DB link by name, so keep those in sync with it.
  */
@@ -95,8 +95,8 @@ private fun placeOrder(lsd: LsdContext) {
         )
         // Captured out of order by an interceptor thread: clock ordering (same source, the
         // default) puts them back in time order and marks them clock-ordered.
-        "Orders" sends "Order events" label "stock.committed" at PAID_AT.plusMillis(9)
-        "Orders" sends "Order events" label "payment.captured" at PAID_AT.plusMillis(4)
+        "Orders" sends "Order events" label "stock.committed" startedAt PAID_AT.plusMillis(9)
+        "Orders" sends "Order events" label "payment.captured" startedAt PAID_AT.plusMillis(4)
         "Orders" repliesTo "Web Shop" label "201 Created" data mapOf(
             "status" to 201,
             "body" to mapOf("orderId" to "ord-1001", "eta" to "2026-10-12"),

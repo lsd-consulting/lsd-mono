@@ -37,7 +37,7 @@ These are **implemented**, not stubs, unless noted.
 | Scenario / report / index / clear | `LsdContext.kt` |
 | `ReportJson` + `window.__LSD_REPORT__` injection into shell | `report/ReportWriter.renderShell`; locked by `CaptureToJsonTest` |
 | Minimal listing HTML + `*-report.json` (per report, `<title>-<hash>` names, atomic writes) | `ReportWriter.writeReport` |
-| report chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, minimap, message deep links, and reduced-motion support | `report/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
+| report chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, message deep links, and reduced-motion support | `report/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
 | Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report/src/lib/sequence-diagram.ts` |
 | JUnit Jupiter 6 extension + `LsdScenario` parameter | `LsdExtension.kt` — success / fail / disabled / aborted / nested / `@AfterEach` capture; `@LsdPostTestProcessing` was removed in favour of `@AfterEach`; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
 | Cucumber 8 plugin | `modules/lsd-mono-cucumber-8`, `LsdCucumberPlugin`. Completes a scenario per Cucumber scenario. The description is the Given/When/Then lines. The report highlights Given, When, Then, and And in the Description card. Logging and HTTP interceptors are still not in the tree. |
@@ -228,7 +228,7 @@ Each item: legacy behaviour → why it matters → suggested LSD Mono shape → 
 
 ### 3.4 UX gaps that remain
 
-The large-diagram UX baseline is shipped: sticky participant header, scenario and in-diagram search, dark/light/high-contrast themes, keyboard message navigation, 24-pixel message hit targets, real `aria-posinset` / `aria-setsize`, side inspector with lazy payloads, minimap, `#scenario=` and `#msg=` links, one scenario at a time chosen from the sidebar (#39), zoom/fit, participant hiding, reduced motion, and axe/theme/Fit checks. These are not open tasks.
+The large-diagram UX baseline is shipped: sticky participant header, scenario and in-diagram search, dark/light/high-contrast themes, keyboard message navigation, 24-pixel message hit targets, real `aria-posinset` / `aria-setsize`, side inspector with lazy payloads, `#scenario=` and `#msg=` links, one scenario at a time chosen from the sidebar (#39), zoom/fit, participant hiding, reduced motion, and axe/theme/Fit checks. These are not open tasks.
 
 | Area | Remaining work | Priority |
 |------|----------------|----------|
@@ -282,7 +282,7 @@ The following slices are complete and remain here as migration history rather th
 4. Remaining sequence event kinds: notes, delay, spacer, short arrows, LOST, and BI_DIRECTIONAL.
 5. Metrics, properties, and label truncation.
 6. Component graph file generation was built, then removed. The in-page view replaced it (issue #4).
-7. Diagram UX: zoom, fit, participant hiding, in-diagram find, keyboard navigation, inspector, minimap, deep links, reduced motion, and accessibility checks.
+7. Diagram UX: zoom, fit, participant hiding, in-diagram find, keyboard navigation, inspector, deep links, reduced motion, and accessibility checks.
 8. Lifeline colour, timestamps, print, high contrast, clickable arrows, and browser performance results.
 
 Open implementation work is tracked in `docs/internal/next-steps.md` and the **Still open** rows above.
