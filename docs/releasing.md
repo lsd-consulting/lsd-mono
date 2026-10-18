@@ -47,9 +47,18 @@ Renovate writes `fix(deps): …` for runtime dependency updates (a patch release
 5. Only then does `semantic-release` tag `vX.Y.Z` and write the GitHub release notes. A failed publish leaves no tag, so
    the next push tries again.
 
-The GitHub release carries the generated notes. `CHANGELOG.md` stays hand-written: after a release, move its
-`Unreleased` entries under the new version in a `docs:` commit, and set the version in the root README's
-"Getting started" snippets (`lsdMonoVersion` and `lsd-mono.version`) to the new release in the same commit.
+The [GitHub release notes](https://github.com/lsd-consulting/lsd-mono/releases) are the changelog. There is no `CHANGELOG.md`.
+semantic-release writes them from the commits since the last tag: each `feat`, `fix` and `perf` subject under its
+heading, with a link to the commit, and the text of every `BREAKING CHANGE:` footer under "BREAKING CHANGES". So:
+
+- Write the subject for a user of the library: what changes for them, not how.
+- Put the explanation a user needs (what was wrong, what to do differently) in the commit body. The notes link to it.
+- Put anything a user must change in a `BREAKING CHANGE:` footer. That text goes into the notes word for word.
+- When a release needs more than that, edit its GitHub release after it is published.
+
+After a release, set the version in the root README's "Getting started" snippets (`lsdMonoVersion` and
+`lsd-mono.version`) to the new release in a `docs:` commit. The README says the badge has the latest, so this can wait
+for the next docs change.
 
 The artifacts show on Maven Central (`repo1.maven.org`) a few minutes to half an hour after the job.
 

@@ -20,11 +20,14 @@ In `modules/lsd-mono-core/report`: `npm run typecheck`, `npm run lint`, `npm tes
 - **Public API.** `lsd-mono-core` uses explicit API mode. A change to the public surface shows up in
   `modules/lsd-mono-core/api/lsd-mono-core.api`: run `./gradlew updateKotlinAbi` and commit the dump
   with the change, so it is reviewed.
-- **No deprecation shims.** Nothing is published yet; change the API instead of keeping an old form.
+- **No deprecation shims.** Until v1, change the API instead of keeping an old form, and say what to change in a
+  `BREAKING CHANGE:` footer.
 - **Conventional commits.** `feat: …`, `fix: …`, `docs: …`, `build: …`, `ci: …`, `chore: …`, `refactor: …`,
   `test: …` (lower case, no full stop). semantic-release turns them into releases; while the version is 0.x a
   breaking change (`!` or a `BREAKING CHANGE:` footer) gives a minor. CI checks every commit and pull request title.
-  See [docs/releasing.md](docs/releasing.md).
+  There is no changelog file: the [release notes](https://github.com/lsd-consulting/lsd-mono/releases) are generated from the commits.
+  So write the subject for users, put the explanation they need in the body, and put what they must change in a
+  `BREAKING CHANGE:` footer. See [docs/releasing.md](docs/releasing.md).
 - **Coverage only goes up.** Each module's floor (`lsdCoverage { lineFloor }`) and the Vitest
   thresholds fail the build when coverage drops below them, and also when coverage is more than 3
   points above them. Raise the floor when you add tests.

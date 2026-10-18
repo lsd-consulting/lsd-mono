@@ -8,7 +8,8 @@
 | Older `0.y.z` releases | No: upgrade to the latest |
 
 Until v1, fixes go to `main` and ship in the next `0.y.z` release, which is cut automatically
-([docs/releasing.md](docs/releasing.md)). There are no backports.
+([docs/releasing.md](docs/releasing.md)), with its fixes listed in the [release notes](https://github.com/lsd-consulting/lsd-mono/releases). There are no
+backports.
 
 ## Reporting a vulnerability
 

@@ -20,7 +20,7 @@ The source is at https://github.com/lsd-consulting/lsd-mono.
 
 ## Getting started
 
-The artifacts are on Maven Central under `io.github.lsd-consulting`, all four on one version. Releases are automatic, so the version below may be behind: the Maven Central badge above shows the latest. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
+The artifacts are on Maven Central under `io.github.lsd-consulting`, all four on one version. Releases are automatic, so the version below may be behind: the Maven Central badge above shows the latest, and the [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
 
 | Artifact | Use it for |
 | --- | --- |
@@ -32,7 +32,7 @@ The artifacts are on Maven Central under `io.github.lsd-consulting`, all four on
 Gradle (Kotlin DSL), with the integrations you use:
 
 ```kotlin
-val lsdMonoVersion = "0.2.1"
+val lsdMonoVersion = "0.2.2"
 
 dependencies {
     testImplementation("io.github.lsd-consulting:lsd-mono-core:$lsdMonoVersion")
@@ -46,7 +46,7 @@ Maven:
 
 ```xml
 <properties>
-    <lsd-mono.version>0.2.1</lsd-mono.version>
+    <lsd-mono.version>0.2.2</lsd-mono.version>
 </properties>
 
 <dependencies>
