@@ -259,9 +259,11 @@ jobs:
   release:
     # Releases to Maven Central after gate passes on a push to main (release.yml, docs/releasing.md).
     # Off until the repository variable RELEASE_ENABLED is "true". Not part of gate: a release
-    # failure does not mark the commit red.
+    # failure does not mark the commit red. `!cancelled()` replaces the implicit success(), which
+    # also needs every job before gate to have succeeded, so a skipped check-ux (no report UI
+    # change) skipped the release too.
     needs: gate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.gate.result == 'success' && vars.RELEASE_ENABLED == 'true'
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.gate.result == 'success' && vars.RELEASE_ENABLED == 'true' }}
     permissions:
       contents: write
     uses: ./.github/workflows/release.yml
