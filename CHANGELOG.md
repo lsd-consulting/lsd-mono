@@ -8,6 +8,8 @@ this file is written by hand.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-18
+
 ### Fixed
 
 - The report header shows when it was generated in the reader's own time zone with its real abbreviation (for example
@@ -114,6 +116,7 @@ The first release on Maven Central.
   `startedAt`, `took` (any number) and `timing`. Structural rows keep `at`. The report JSON writes a message's start
   as `startedAt` only (no `createdAt`), and the report UI reads it from there.
 
-[Unreleased]: https://github.com/lsd-consulting/lsd-mono/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/lsd-consulting/lsd-mono/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/lsd-consulting/lsd-mono/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/lsd-consulting/lsd-mono/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/lsd-consulting/lsd-mono/releases/tag/v0.1.0
