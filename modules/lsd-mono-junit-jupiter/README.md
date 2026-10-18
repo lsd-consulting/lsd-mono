@@ -122,7 +122,7 @@ junit.jupiter.execution.parallel.mode.default=concurrent
 junit.jupiter.execution.parallel.mode.classes.default=concurrent
 ```
 
-Each test gets its own scenario, started before `@BeforeEach` and bound to the thread that runs the test. Captures in the test and its `@BeforeEach` and `@AfterEach` methods land in that test. Each top-level class still writes one report, with its nested classes, and never takes another class's scenarios.
+Each test gets its own scenario, started before `@BeforeEach` and bound to the thread that runs the test. Captures in the test and its `@BeforeEach` and `@AfterEach` methods land in that test, and so do participants declared there. Participants declared in `@BeforeAll` apply to every test. Each top-level class still writes one report, with its nested classes, and never takes another class's scenarios.
 
 Work the test hands to another thread needs the test carried with it, or the injected `LsdScenario` (see above):
 

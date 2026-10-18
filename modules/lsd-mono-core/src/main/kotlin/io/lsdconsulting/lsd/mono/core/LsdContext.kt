@@ -17,6 +17,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.Callable
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Consumer
 
 /**
@@ -87,11 +88,16 @@ public class LsdContext :
     /** Guards report-level state: participants, scenarios and [reports]. Reentrant, as `synchronized` is. */
     private val lock = Any()
     private val reports = CompletedReports(lock)
-    private val participants = ParticipantRegistry()
+
+    /** Shared by the context's participant registries, so their participants keep registration order. */
+    private val participantOrder = AtomicLong()
+
+    /** Declared outside any scenario: every scenario sees these. */
+    private val participants = ParticipantRegistry(participantOrder)
     private val jsonMapper = ReportJsonMapper { idGenerator.next() }
 
     private val scenarios = ScenarioRegistry(this, lock)
-    private val binder = EventBinder({ idGenerator }, ::resolve)
+    private val binder = EventBinder { idGenerator }
 
     /** The kinds of capture that have failed, so each is warned about once ([guarded]). */
     private val droppedKinds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap
@@ -106,12 +112,18 @@ public class LsdContext :
      * participant that is never declared is drawn as a plain [ParticipantType.PARTICIPANT]
      * the first time an event names it. Declaring an id twice with a different name keeps both,
      * with a numbered id for the second.
+     *
+     * Declarations go where captures do. Inside a scenario (the bound one, or the only running
+     * one), they apply to that scenario only, so tests running in parallel can't change each
+     * other's participants. Made with no scenario running (for example in a `@BeforeAll`), they
+     * apply to every scenario, and a scenario's own declaration of the same id takes precedence.
      */
     public fun addParticipants(vararg additional: Participant): Unit = addParticipants(additional.toList())
 
     /** [addParticipants] for a list. */
     public fun addParticipants(additional: List<Participant>) {
-        synchronized(lock) { participants.declare(additional) }
+        val scenario = target()
+        synchronized(lock) { registryOf(scenario).declare(additional) }
     }
 
     /**
@@ -398,7 +410,8 @@ public class LsdContext :
     ) {
         if (events.isEmpty()) return
         guarded(if (events.size == 1) "event" else "batch of events", { }) {
-            val bound = events.map { binder.bind(if (dataCopied) it else copyData(it)) }
+            val resolve = { ref: String -> resolve(scenario, ref) }
+            val bound = events.map { binder.bind(if (dataCopied) it else copyData(it), resolve) }
             if (!scenario.addEvents(bound)) CaptureLog.late(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
         }
     }
@@ -457,7 +470,7 @@ public class LsdContext :
                     description = description.orEmpty(),
                     status = status,
                     facts = facts,
-                    participants = participants.usedBy(events),
+                    participants = registryOf(scenario).usedBy(events, sharedWith(scenario)),
                     events = events,
                     error = error,
                     timing = timing,
@@ -498,7 +511,18 @@ public class LsdContext :
     /** Where an unscoped call goes: the bound scenario, the only running one, or the default. */
     private fun target(): LsdScenario = scenarios.target()
 
-    private fun resolve(ref: String): Participant = synchronized(lock) { participants.resolve(ref) }
+    private fun resolve(
+        scenario: LsdScenario,
+        ref: String,
+    ): Participant = synchronized(lock) { registryOf(scenario).resolve(ref, sharedWith(scenario)) }
+
+    internal fun newParticipantRegistry(): ParticipantRegistry = ParticipantRegistry(participantOrder)
+
+    /** The default scenario uses the context's own registry; a scenario its own. */
+    private fun registryOf(scenario: LsdScenario): ParticipantRegistry =
+        if (scenario === defaultScenario) participants else scenario.participants
+
+    private fun sharedWith(scenario: LsdScenario): ParticipantRegistry? = if (scenario === defaultScenario) null else participants
 
     /** Holds [instance]. */
     public companion object {

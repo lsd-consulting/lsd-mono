@@ -392,13 +392,18 @@ panel width (`lsd-report-inspector-width`, session storage).
 ### Threads and parallel tests
 
 Every `LsdContext` method is thread-safe. Unscoped calls (`capture`, `message`,
-`addFact`, `completeScenario`) go to:
+`addFact`, `addParticipants`, `completeScenario`) go to:
 
 1. the scenario the calling thread is bound to, if any, or else the one it inherited
    (below);
 2. otherwise the only running scenario, if exactly one is running;
 3. otherwise the default scenario, which is how single-threaded code has always
    worked. With several scenarios running, a warning is logged once.
+
+Participants declared inside a scenario belong to that scenario only, so tests running in
+parallel never draw each other's participants, whichever declares first. Declarations made with
+no scenario running (for example in a `@BeforeAll`) apply to every scenario. A scenario's own
+declaration of the same id takes precedence.
 
 Test integrations start a scenario per test and group them by report key:
 

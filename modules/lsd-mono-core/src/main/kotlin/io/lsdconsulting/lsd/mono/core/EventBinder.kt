@@ -17,18 +17,19 @@ import java.util.concurrent.atomic.AtomicLong
  * Binds a captured event to its context: gives it an id, a capture sequence number and the time
  * it was captured, and resolves the participant names it refers to.
  */
-internal class EventBinder(
-    private val ids: () -> IdGenerator,
-    private val resolve: (String) -> Participant,
-) {
+internal class EventBinder(private val ids: () -> IdGenerator) {
     private val seq = AtomicLong()
 
     /** Start the capture sequence again, as [LsdContext.clear] does. */
     fun reset() = seq.set(0)
 
-    fun bind(event: SequenceEvent): SequenceEvent =
+    /** Bind [event], resolving its participant names with [resolve]. */
+    fun bind(
+        event: SequenceEvent,
+        resolve: (String) -> Participant,
+    ): SequenceEvent =
         when (event) {
-            is Message -> bindMessage(event)
+            is Message -> bindMessage(event, resolve)
             is Note ->
                 event.copy(
                     id = ids().next(),
@@ -45,7 +46,10 @@ internal class EventBinder(
                 )
         }
 
-    private fun bindMessage(captured: Message): Message {
+    private fun bindMessage(
+        captured: Message,
+        resolve: (String) -> Participant,
+    ): Message {
         val id = ids().next()
         captured.callRef?.let { if (it.id == null) it.id = id }
         val event = captured.copy(seq = seq.incrementAndGet(), capturedAt = Instant.now())

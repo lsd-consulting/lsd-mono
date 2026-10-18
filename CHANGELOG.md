@@ -8,6 +8,17 @@ this file is written by hand.
 
 ## [Unreleased]
 
+### Fixed
+
+- Tests running in parallel no longer change each other's participants (#61). All scenarios used to share one
+  participant registry, so when two tests declared the same id, the one that declared first won the id for both. A
+  test could then draw the other test's participant, with its name and shape, and which one won changed from run to
+  run. Now a participant declared inside a scenario (for example in the test or its `@BeforeEach`) belongs to that
+  scenario only. Declarations made with no scenario running (for example in `@BeforeAll`) still apply to every
+  scenario, and a scenario's own declaration of the same id takes precedence. The API is unchanged. One visible
+  difference: a participant declared in one test no longer carries over to later tests. Declare shared participants
+  in `@BeforeAll`, or in each test.
+
 ## [0.2.1] - 2026-10-18
 
 ### Fixed

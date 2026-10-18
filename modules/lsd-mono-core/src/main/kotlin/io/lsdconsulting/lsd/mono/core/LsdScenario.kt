@@ -37,6 +37,9 @@ public class LsdScenario internal constructor(
      */
     public val correlationId: String = UUID.randomUUID().toString().replace("-", "")
 
+    /** Participants declared or first named in this scenario, guarded by the context's lock (#61). */
+    internal val participants: ParticipantRegistry = context.newParticipantRegistry()
+
     private val lock = Any()
     private val facts = ArrayList<Fact>()
     private val events = ArrayList<SequenceEvent>()
