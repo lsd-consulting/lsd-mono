@@ -102,16 +102,17 @@
 }
 
 .participant-box {
+  --pc-ink: color-mix(in oklab, var(--pc, var(--accent)) calc(100% - var(--ink-black, 0%)), black);
   filter: drop-shadow(0 2px 6px oklch(0 0 0 / 0.2));
 }
 .participant-shape {
   fill: var(--surface);
-  stroke: var(--pc, var(--accent));
+  stroke: var(--pc-ink);
   stroke-width: 1.6;
 }
 .participant-actor {
   fill: none;
-  stroke: var(--pc, var(--accent));
+  stroke: var(--pc-ink);
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -121,7 +122,7 @@
 }
 .participant-mark {
   fill: none;
-  stroke: var(--pc, var(--accent));
+  stroke: var(--pc-ink);
   stroke-width: 1.7;
   stroke-linecap: round;
 }
@@ -158,6 +159,15 @@
   fill: transparent;
   pointer-events: none;
 }
+/* Arrows and their tips take the producer's colour darkened for the page (--ink-black), so a pale
+   colour keeps 3:1 against the diagram. The colour comes in as --pc on the row or the marker. */
+.msg-path,
+.arrow-ink-stroke {
+  stroke: color-mix(in oklab, var(--pc, var(--accent)) calc(100% - var(--ink-black, 0%)), black);
+}
+.arrow-ink-fill {
+  fill: color-mix(in oklab, var(--pc, var(--accent)) calc(100% - var(--ink-black, 0%)), black);
+}
 .message.has-data:hover .msg-path,
 .message.has-data:focus-visible .msg-path {
   filter: url(#softGlow);
@@ -188,7 +198,7 @@
 }
 /* A payload to open: braces in the accent colour, bold enough to read at small zoom. */
 .msg-payload {
-  fill: var(--accent);
+  fill: var(--payload-ink);
   font-family: var(--mono);
   font-size: 10.5px;
   font-weight: 700;
@@ -201,7 +211,7 @@
   color: var(--text-muted);
 }
 .payload-legend-key {
-  color: var(--accent);
+  color: var(--payload-ink);
   font-family: var(--mono);
   font-weight: 700;
   margin-right: 2px;
@@ -254,6 +264,7 @@
 }
 
 [data-theme="light"] .participant-box {
+  --pc-ink: color-mix(in oklab, var(--pc, var(--accent)) calc(100% - var(--ink-black, 0%)), black);
   filter: drop-shadow(0 1px 3px oklch(0.4 0.02 250 / 0.12));
 }
 

@@ -40,6 +40,10 @@
   --find-current-bg: oklch(0.86 0.17 90);
   --find-current-text: oklch(0.2 0.03 250);
   --find-ring: oklch(0.86 0.17 90);
+  /* Diagram strokes: how much black goes into a producer's colour so a pale one still reads on the
+     page (WCAG 1.4.11, 3:1). Dark pages need none. --payload-ink is the {} marker text (4.5:1). */
+  --ink-black: 0%;
+  --payload-ink: var(--accent);
 }
 
 [data-theme="light"] {
@@ -71,6 +75,8 @@
   --find-current-bg: oklch(0.8 0.17 75);
   --find-current-text: oklch(0.16 0.03 250);
   --find-ring: oklch(0.55 0.16 60);
+  --ink-black: 35%;
+  --payload-ink: var(--accent-strong);
 }
 
 /* Third theme. Black/white with thick borders. Status still uses text plus pattern, not hue alone. */
@@ -103,6 +109,8 @@
   --find-current-bg: #000;
   --find-current-text: #ff0;
   --find-ring: #000;
+  --ink-black: 45%;
+  --payload-ink: #000;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -246,17 +246,17 @@ export function arrowMarker(id: string, colour: string, end: ArrowEnd): string {
   const stroke = escapeAttr(colour)
   if (end === 'open') {
     return `<marker id="${markerId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M1 1 L9 5 L1 9" fill="none" stroke="${stroke}" stroke-width="1.6"/>
+      <path class="arrow-ink-stroke" d="M1 1 L9 5 L1 9" fill="none" stroke="${stroke}" stroke-width="1.6" style="--pc:${stroke}"/>
     </marker>`
   }
   if (end === 'lost') {
     // X tip — shape cue distinct from a filled sync arrow (not colour-only).
     return `<marker id="${markerId}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
-      <path d="M2 2 L10 10 M10 2 L2 10" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round"/>
+      <path class="arrow-ink-stroke" d="M2 2 L10 10 M10 2 L2 10" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" style="--pc:${stroke}"/>
     </marker>`
   }
   return `<marker id="${markerId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-    <path d="M0 0 L10 5 L0 10 z" fill="${stroke}"/>
+    <path class="arrow-ink-fill" d="M0 0 L10 5 L0 10 z" fill="${stroke}" style="--pc:${stroke}"/>
   </marker>`
 }
 
