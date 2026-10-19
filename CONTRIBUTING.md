@@ -2,7 +2,7 @@
 
 ## Build
 
-Requires a JDK (the Java baseline is `jvm` in `gradle/libs.versions.toml`; Gradle provisions the toolchain) and Node 22 for the report UI. With [nvm](https://github.com/nvm-sh/nvm): `nvm use 22`.
+Requires a JDK (the Java baseline is `jvm` in `gradle/libs.versions.toml`; Gradle provisions the toolchain) and, for the report UI, the Node version in [`.nvmrc`](.nvmrc), which CI uses too. With [nvm](https://github.com/nvm-sh/nvm): `nvm use`.
 
 ```sh
 ./gradlew build verifyGenerated
@@ -22,12 +22,13 @@ In `modules/lsd-mono-core/report`: `npm run typecheck`, `npm run lint`, `npm tes
   with the change, so it is reviewed.
 - **No deprecation shims.** Until v1, change the API instead of keeping an old form, and say what to change in a
   `BREAKING CHANGE:` footer.
-- **Conventional commits.** `feat: …`, `fix: …`, `docs: …`, `build: …`, `ci: …`, `chore: …`, `refactor: …`,
-  `test: …` (lower case, no full stop). semantic-release turns them into releases; while the version is 0.x a
-  breaking change (`!` or a `BREAKING CHANGE:` footer) gives a minor. CI checks every commit and pull request title.
-  There is no changelog file: the [release notes](https://github.com/lsd-consulting/lsd-mono/releases) are generated from the commits.
-  So write the subject for users, put the explanation they need in the body, and put what they must change in a
-  `BREAKING CHANGE:` footer. See [docs/releasing.md](docs/releasing.md).
+- **Conventional commits.** `type(scope)!: subject`, lower case, no full stop. The types, and which of them
+  release, are in the table in [docs/releasing.md](docs/releasing.md#commit-messages). semantic-release turns them
+  into releases; while the version is 0.x a breaking change (`!` or a `BREAKING CHANGE:` footer) gives a minor. CI
+  checks every commit and pull request title. There is no changelog file: the
+  [release notes](https://github.com/lsd-consulting/lsd-mono/releases) are generated from the commits. So write the
+  subject for users, put the explanation they need in the body, and put what they must change in a
+  `BREAKING CHANGE:` footer.
 - **Coverage only goes up.** Each module's floor (`lsdCoverage { lineFloor }`) and the Vitest
   thresholds fail the build when coverage drops below them, and also when coverage is more than 3
   points above them. Raise the floor when you add tests.
