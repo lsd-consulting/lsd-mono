@@ -35,6 +35,42 @@ export async function openFixture(page: Page, theme: (typeof THEMES)[number]): P
   await page.evaluate(() => document.fonts.ready)
 }
 
+/**
+ * sRGB bytes for computed colours, each the [property] of the first element matching its
+ * selector, via a 1px canvas, so oklch, color-mix and system colours all resolve.
+ */
+export async function computedColours(page: Page, picks: [selector: string, property: string][]): Promise<number[][]> {
+  return page.evaluate((list) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 1
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+    const rgba = (colour: string) => {
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillStyle = colour
+      ctx.fillRect(0, 0, 1, 1)
+      return [...ctx.getImageData(0, 0, 1, 1).data]
+    }
+    return list.map(([selector, property]) => {
+      const el = document.querySelector(selector)
+      if (!el) throw new Error(`nothing matches ${selector}`)
+      return rgba(getComputedStyle(el).getPropertyValue(property))
+    })
+  }, picks)
+}
+
+/** WCAG contrast ratio of two sRGB colours. */
+export function contrastRatio(a: number[], b: number[]): number {
+  const lum = ([r, g, bl]: number[]) => {
+    const c = [r, g, bl].map((v) => {
+      const s = v / 255
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+  }
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
 export async function seriousViolations(page: Page): Promise<Result[]> {
   const results = await new AxeBuilder({ page }).withTags([...AXE_TAGS]).analyze()
   return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')

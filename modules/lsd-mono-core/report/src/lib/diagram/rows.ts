@@ -10,7 +10,7 @@ import {
   tabindexFor,
 } from '../diagram-a11y'
 import { isCoarsePointer } from '../media'
-import { eventHiddenByColumns, findMatch, messageLabelRect, visibleParticipants } from '../diagram-view'
+import { type FindMatch, eventHiddenByColumns, findMatch, messageLabelRect, visibleParticipants } from '../diagram-view'
 import { escapeAttr, escapeHtml } from '../escape'
 import {
   ACT_NEST_DX,
@@ -341,9 +341,9 @@ function renderMessageRow(
   const dur = msg.durationMs != null ? `<tspan class="msg-dur"> · ${escapeHtml(msg.durationMs)}ms</tspan>` : ''
   const payload = hasData ? PAYLOAD_MARKER : ''
   const cue = spec.typeCue ? `<tspan class="msg-type-cue"> [${escapeHtml(spec.typeCue)}]</tspan>` : ''
-  const current = match && paint.searchCurrentId === msg.id
-  const hitClass = match ? ` search-hit${current ? ' search-current' : ''}` : ''
-  const hitAttr = match ? ` data-search-hit="${current ? 'current' : 'match'}"` : ''
+  const current = match !== null && paint.searchCurrentId === msg.id
+  const hitClass = match ? ` search-hit${current ? ' search-current' : ''}${matchClasses(match)}` : ''
+  const hitAttr = match ? ` data-search-hit="${current ? 'current' : 'match'}" data-search-in="${match}"` : ''
   const typeAttr = `data-msg-type="${escapeAttr(msg.type)}"`
   if (hasData) buttons.push(messageOpenButton(msg, y, width, index, viewTop, zoom, paint))
 
@@ -411,10 +411,20 @@ function renderMessageRow(
  * Real button over the arrow and its label. The SVG itself is aria-hidden,
  * so a role on the line would be skipped by screen readers.
  */
+/** Which parts of an arrow Find bands: the label, the {} marker, or both. */
+function matchClasses(match: FindMatch): string {
+  if (match === 'both') return ' search-in-label search-in-payload'
+  return match === 'label' ? ' search-in-label' : ' search-in-payload'
+}
+
+const MATCH_PLACE: Record<FindMatch, string> = { label: '', payload: ' in payload', both: ' in label and payload' }
+
 /** Spoken in place of the highlight: the SVG is hidden from assistive tech, its buttons are not. */
 function searchCue(msg: MessageEvent, paint: RowPaint): string {
-  if (!findMatch(msg, paint.query, paint.payloadHits)) return ''
-  return paint.searchCurrentId === msg.id ? ', current search match' : ', search match'
+  const match = findMatch(msg, paint.query, paint.payloadHits)
+  if (!match) return ''
+  const what = paint.searchCurrentId === msg.id ? 'current search match' : 'search match'
+  return `, ${what}${MATCH_PLACE[match]}`
 }
 
 function messageOpenButton(

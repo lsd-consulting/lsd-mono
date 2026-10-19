@@ -490,6 +490,35 @@ describe('diagram view paint', () => {
     expect(svg).toContain('search-hit')
   })
 
+  it('bands the {} marker for a payload match, and says where the match is on the button', () => {
+    const msg = {
+      kind: 'message' as const,
+      id: 'm-p',
+      from: 'api',
+      to: 'db',
+      label: 'read rows',
+      type: 'SYNCHRONOUS' as const,
+      data: { sql: 'select' },
+    }
+    const paint = (query: string, searchCurrentId: string | null = null) => ({
+      query,
+      hiddenIds: new Set<string>(),
+      payloadHits: new Set(['m-p']),
+      searchCurrentId,
+    })
+    const payloadOnly = renderRowSvg(rowFor(msg), 400, participants, 200, paint('select'))
+    expect(payloadOnly).toContain('search-hit search-in-payload')
+    expect(payloadOnly).not.toContain('search-in-label')
+    expect(payloadOnly).toContain('data-search-in="payload"')
+    expect(payloadOnly).toContain('aria-label="Open read rows, search match in payload"')
+    const both = renderRowSvg(rowFor(msg), 400, participants, 200, paint('read', 'm-p'))
+    expect(both).toContain('search-hit search-current search-in-label search-in-payload')
+    expect(both).toContain('aria-label="Open read rows, current search match in label and payload"')
+    const label = renderRowSvg(rowFor(msg), 400, participants, 200, { query: 'read', hiddenIds: new Set() })
+    expect(label).toContain('search-hit search-in-label"')
+    expect(label).toContain('aria-label="Open read rows, search match"')
+  })
+
   it('marks a matching note the same way, and the current match more strongly', () => {
     const svg = renderRowSvg(
       rowFor({ kind: 'note', id: 'n-s', text: 'cache miss', over: 'api', placement: 'over' }),

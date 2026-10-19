@@ -527,9 +527,12 @@
 }
 /* Find: a highlighter band behind each matching label (a wide stroke painted under the
    glyphs), a stronger band and a thicker, glowing arrow on the current match, and an outlined
-   card for a matching note. The buttons over the arrows say "search match" for screen readers. */
-.search-hit .msg-label,
-.search-hit .msg-label tspan {
+   card for a matching note. A match in the payload bands the {} marker instead, so where the
+   match is shows without colour. The buttons over the arrows say "search match" (and "in
+   payload") for screen readers. */
+.search-in-label .msg-label,
+.search-in-label .msg-label tspan:not(.msg-payload),
+.search-in-payload .msg-payload {
   fill: var(--find-hit-text);
   stroke: var(--find-hit-bg);
   stroke-width: 7px;
@@ -537,8 +540,16 @@
   paint-order: stroke fill;
   font-weight: 750;
 }
-.search-current .msg-label,
-.search-current .msg-label tspan {
+.search-in-payload .msg-payload {
+  font-weight: 800;
+}
+/* The marker sits inside the label's text, so a label-only match must not pass it the band. */
+.search-in-label:not(.search-in-payload) .msg-payload {
+  stroke: none;
+}
+.search-current.search-in-label .msg-label,
+.search-current.search-in-label .msg-label tspan:not(.msg-payload),
+.search-current.search-in-payload .msg-payload {
   fill: var(--find-current-text);
   stroke: var(--find-current-bg);
   stroke-width: 9px;
@@ -564,11 +575,16 @@
 }
 /* High contrast: the current match takes the system highlight, so it stays distinct from other matches. */
 @media (forced-colors: active) {
-  .search-current .msg-label,
-  .search-current .msg-label tspan,
+  .search-current.search-in-label .msg-label,
+  .search-current.search-in-label .msg-label tspan:not(.msg-payload),
+  .search-current.search-in-payload .msg-payload,
   .search-current .note-text {
     fill: HighlightText;
     stroke: Highlight;
+  }
+  .search-in-payload:not(.search-current) .msg-payload {
+    fill: Canvas;
+    stroke: CanvasText;
   }
   .search-current .msg-path,
   .search-current .note-card {

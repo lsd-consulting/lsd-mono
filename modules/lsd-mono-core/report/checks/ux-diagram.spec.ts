@@ -1,38 +1,16 @@
 import { expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
-import { THEMES, openFixture, diagramOnScreen, openWide, zoomOf } from './ux-helpers'
+import { THEMES, computedColours, contrastRatio, openFixture, diagramOnScreen, openWide, zoomOf } from './ux-helpers'
 
 // Diagram drawing: note colours, labels, long names, zoom and fit, deep links, tall diagrams.
 
-/** sRGB bytes for any CSS colour the page resolves (oklch, color-mix, hex), via a 1px canvas. */
 async function noteColours(page: Page): Promise<{ card: number[]; text: number[] }> {
-  return page.evaluate(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = 1
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
-    const rgba = (colour: string) => {
-      ctx.clearRect(0, 0, 1, 1)
-      ctx.fillStyle = colour
-      ctx.fillRect(0, 0, 1, 1)
-      return [...ctx.getImageData(0, 0, 1, 1).data]
-    }
-    const card = getComputedStyle(document.querySelector('.note-card')!)
-    const text = getComputedStyle(document.querySelector('.note-text')!)
-    return { card: rgba(card.fill), text: rgba(text.fill) }
-  })
-}
-
-function contrastRatio(a: number[], b: number[]): number {
-  const lum = ([r, g, bl]: number[]) => {
-    const c = [r, g, bl].map((v) => {
-      const s = v / 255
-      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
-    })
-    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
-  }
-  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
-  return (hi + 0.05) / (lo + 0.05)
+  const [card, text] = await computedColours(page, [
+    ['.note-card', 'fill'],
+    ['.note-text', 'fill'],
+  ])
+  return { card, text }
 }
 
 // axe does not score SVG text, so check note cards directly.
