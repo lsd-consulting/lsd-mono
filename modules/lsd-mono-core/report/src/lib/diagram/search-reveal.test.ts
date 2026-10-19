@@ -165,7 +165,10 @@ describe('find: payload matches', () => {
       onChange: () => {},
     })
     expect(updateSearchCurrent('s')?.event.id).toBe('m1')
+    expect(diagramView('s').searchStepped).toBe(false)
     expect(searchStateLabel(scenarioSearchState('s'), 'charge')).toBe('1 of 2, 1 in payloads')
+    expect(stepSearchCurrent('s', 1)?.event.id).toBe('m2')
+    expect(diagramView('s').searchStepped).toBe(true)
     diagramView('s').includePayloads = false
     expect(updateSearchCurrent('s')?.event.id).toBe('m2')
     expect(searchStateLabel(scenarioSearchState('s'), 'charge')).toBe('1 of 1')

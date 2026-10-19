@@ -38,7 +38,7 @@ import type { LayoutRow } from './layout'
 // The diagram's API for the app and tests; the modules in ./diagram import each other directly.
 export { renderRowSvg } from './diagram/rows'
 export { participantHeadFor, participantLabelSvg } from './diagram/shapes'
-export { diagramView, forgetDiagrams } from './diagram/state'
+export { diagramView, forgetDiagrams, setFindHooks } from './diagram/state'
 export { bindDiagramScroll, sliceViewTop, stepFind, syncDiagramWindow } from './diagram/viewport'
 
 export function frameOf(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): DiagramFrame {

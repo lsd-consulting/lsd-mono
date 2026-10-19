@@ -265,6 +265,70 @@
   outline: none;
   box-shadow: var(--focus);
 }
+/* Find's matches in the payload: a count and Previous / Next above the JSON, every match marked
+   like a diagram match, the current one in the current-match colours with an outline. */
+.json-find {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.json-find[hidden] {
+  display: none;
+}
+.json-find-count {
+  margin-right: 4px;
+}
+.json-find button {
+  min-width: 30px;
+  height: 26px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.json-find button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+@media (pointer: coarse) {
+  .json-find button {
+    min-width: 44px;
+    height: 44px;
+  }
+}
+.inspector-body pre mark.json-hit {
+  background: var(--find-hit-bg);
+  color: var(--find-hit-text);
+  border-radius: 2px;
+  font-weight: 700;
+}
+.inspector-body pre mark.json-hit.is-current {
+  background: var(--find-current-bg);
+  color: var(--find-current-text);
+  outline: 2px solid var(--find-ring);
+  outline-offset: 1px;
+}
+@media (forced-colors: active) {
+  .inspector-body pre mark.json-hit {
+    forced-color-adjust: none;
+    background: Mark;
+    color: MarkText;
+    outline: 1px solid CanvasText;
+  }
+  .inspector-body pre mark.json-hit.is-current {
+    background: Highlight;
+    color: HighlightText;
+    outline: 2px solid CanvasText;
+  }
+  .json-find button {
+    border-color: ButtonText;
+  }
+}
 /* Wider than the narrow column: stop wrapping so the payload can be read. Not a modal. */
 .inspector.inspector-json-wide pre {
   white-space: pre;

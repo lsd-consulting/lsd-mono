@@ -21,6 +21,20 @@ export const diagramState = {
   movingFocus: false,
   /** Find in payloads, per scenario id: loaded and indexed the first time Find needs them. */
   payloadFind: new Map<string, PayloadFind>(),
+  /** The app's side of Find: the panel redraws its marks and follows the current match. */
+  findHooks: {} as FindHooks,
+}
+
+/** What the app does when Find changes. The diagram code does not know about the side panel. */
+export interface FindHooks {
+  /** The scenario's query, its payload matches or its payload toggle changed. */
+  changed?: (scenarioId: string) => void
+  /** Next or Previous made [eventId] the scenario's current match. */
+  stepped?: (scenarioId: string, eventId: string) => void
+}
+
+export function setFindHooks(hooks: FindHooks): void {
+  diagramState.findHooks = hooks
 }
 
 /** Forget every diagram and its view: another report's scenarios may reuse the same ids. */
@@ -58,6 +72,8 @@ export interface DiagramView {
   activeMessageId: string | null
   /** The find match brought on screen (the first one), drawn stronger than the others. */
   searchCurrentId?: string | null
+  /** True once Next or Previous moved the current match for this query; a late payload answer then leaves it. */
+  searchStepped?: boolean
   /** Whether Find also searches message payloads. On unless the user turns it off. */
   includePayloads: boolean
 }

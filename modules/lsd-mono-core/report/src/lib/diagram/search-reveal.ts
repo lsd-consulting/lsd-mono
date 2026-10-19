@@ -111,7 +111,9 @@ export function findStepKey(
 export function stepSearchCurrent(scenarioId: string, step: 1 | -1): LayoutRow | null {
   const state = scenarioSearchState(scenarioId)
   const row = state.hits[stepIndex(state.hits.length, state.current, step)] ?? null
-  diagramView(scenarioId).searchCurrentId = row?.event.id ?? null
+  const view = diagramView(scenarioId)
+  view.searchCurrentId = row?.event.id ?? null
+  view.searchStepped = row !== null
   return row
 }
 
@@ -125,6 +127,7 @@ export function rowExtent(row: LayoutRow): { top: number; bottom: number } {
 export function updateSearchCurrent(scenarioId: string): LayoutRow | null {
   const view = diagramView(scenarioId)
   view.searchCurrentId = null
+  view.searchStepped = false
   const row = scenarioSearchState(scenarioId).hits[0] ?? null
   view.searchCurrentId = row?.event.id ?? null
   return row

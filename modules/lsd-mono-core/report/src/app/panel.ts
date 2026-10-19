@@ -7,7 +7,10 @@ import { placePrintMetrics, printMetricsSection } from '../ui/metrics'
 import { timingPanelHtml } from '../ui/timing'
 import { placePrintPanel, printComponentsSection, printMessageSection } from '../ui/print-panel'
 import { renderComponentDiagram } from '../lib/component-diagram'
-import { findMessage } from '../lib/sequence-diagram'
+import { diagramView, findMessage } from '../lib/sequence-diagram'
+import { messageHasPayload } from '../lib/diagram-a11y'
+import { foldQuery } from '../lib/payload-search'
+import type { OpenMessageOptions } from '../ui/inspector'
 import { componentGraph } from '../lib/component-graph'
 import { writeHash, writeScenarioHash } from './url-hash'
 import { index, session } from './context'
@@ -116,13 +119,36 @@ export function openMetrics(scenario: Scenario): void {
   usage.ping('metrics-open')
 }
 
-export function openMessage(scenario: Scenario, msg: MessageEvent): void {
+export function openMessage(scenario: Scenario, msg: MessageEvent, options?: OpenMessageOptions): void {
   if (!session.inspector) return
   session.panelScenarioId = scenario.id
   session.invoker = { scenarioId: scenario.id, messageId: msg.id }
   writeHash({ scenarioId: scenario.id, messageId: msg.id })
-  session.inspector.openMessage(scenario.id, msg)
+  session.inspector.openMessage(scenario.id, msg, options)
   syncWithPanel()
+}
+
+/**
+ * Find in a diagram stepped onto [eventId]. A side panel showing one of that scenario's messages
+ * follows to it, keeping focus in Find; a closed panel, or one showing something else, stays as it is.
+ */
+export function followFind(scenarioId: string, eventId: string): void {
+  const open = session.inspector?.isOpen() ? session.invoker : null
+  if (!open?.messageId || open.scenarioId !== scenarioId || open.messageId === eventId) return
+  const scenario = session.report.scenarios.find((item) => item.id === scenarioId)
+  const msg = scenario ? findMessage(scenario, eventId) : undefined
+  if (scenario && msg && messageHasPayload(msg)) openMessage(scenario, msg, { focus: false })
+}
+
+/** Find's query for the side panel's marks: folded, or '' while payloads are not searched. */
+export function panelFindQuery(scenarioId: string): string {
+  const view = diagramView(scenarioId)
+  return view.includePayloads ? foldQuery(view.query) : ''
+}
+
+/** Find changed in [scenarioId]: redraw the marks if the panel shows one of its messages. */
+export function refreshPanelFind(scenarioId: string): void {
+  if (session.invoker?.messageId && session.invoker.scenarioId === scenarioId) session.inspector?.refreshFind()
 }
 
 export function messageFromNode(node: Element): { scenarioId: string; message: MessageEvent } | null {

@@ -2,6 +2,7 @@ import type { MessageEvent, Metric } from '../types'
 import { renderComponentDiagram } from '../lib/component-diagram'
 import { STACKED_MAX_PX } from '../lib/media'
 import { bindJsonBody } from './inspector-json'
+import { bindJsonMarks } from './json-marks'
 import {
   INSPECTOR_MIN_PX,
   INSPECTOR_NARROW_PX,
@@ -44,6 +45,8 @@ export interface InspectorOptions {
   onClose: (invoker: InspectorInvoker | null) => void
   /** The JSON (or stack) shown in the panel changed: loaded, shown, or hidden. */
   onContent?: () => void
+  /** Find's query for a scenario's payloads, folded, or '' when nothing should be marked. */
+  findQuery?: (scenarioId: string) => string
 }
 
 /** What the open panel shows, for the print copy in the scenario. */
@@ -57,8 +60,13 @@ export interface PanelPrintView {
   text: string | null
 }
 
+/** How a message opens. Find following its current match leaves focus where it is. */
+export interface OpenMessageOptions {
+  focus?: boolean
+}
+
 export interface InspectorController {
-  openMessage: (scenarioId: string, message: MessageEvent) => void
+  openMessage: (scenarioId: string, message: MessageEvent, options?: OpenMessageOptions) => void
   /** Component diagram for one scenario, in this same panel. Drawn from messages already loaded. */
   openComponents: (scenarioId: string, graph: ComponentGraph, title: string) => void
   /** Scenario timing and metrics, in this same panel. No JSON or Copy. */
@@ -68,6 +76,8 @@ export interface InspectorController {
   isOpen: () => boolean
   /** Null while the panel is closed. */
   printView: () => PanelPrintView | null
+  /** Find's query changed: redraw its marks in the JSON shown. */
+  refreshFind: () => void
 }
 
 /**
@@ -92,6 +102,11 @@ export function inspectorMarkup(): string {
         <div class="json-row">
           <button type="button" id="inspector-json" aria-expanded="false" aria-controls="inspector-pre">Show JSON</button>
           <button type="button" id="inspector-json-expand" hidden aria-pressed="false" aria-controls="inspector-pre">Expand</button>
+        </div>
+        <div class="json-find" id="inspector-find" role="group" aria-label="Find matches in this payload" hidden>
+          <span class="json-find-count" aria-live="polite"></span>
+          <button type="button" data-json-step="prev" aria-label="Previous match in payload" title="Previous match in payload">↑</button>
+          <button type="button" data-json-step="next" aria-label="Next match in payload" title="Next match in payload">↓</button>
         </div>
         <pre id="inspector-pre" hidden></pre>
       </div>
@@ -128,11 +143,11 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     return doc.defaultView?.innerWidth ?? 1200
   }
 
-  function setOpen(open: boolean): void {
+  function setOpen(open: boolean, focus = true): void {
     if (open) width.apply(width.current())
     panel!.hidden = !open
     shell()?.classList.toggle('with-inspector', open)
-    if (!open) return
+    if (!open || !focus) return
     panel!.focus()
   }
 
@@ -141,6 +156,14 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     if (viewport() <= STACKED_MAX_PX) revealBelowTopbar(panel!, content)
   }
 
+  const findBox = doc.querySelector<HTMLElement>('#inspector-find')!
+  const marks = bindJsonMarks({
+    pre,
+    box: findBox,
+    count: findBox.querySelector<HTMLElement>('.json-find-count')!,
+    prev: findBox.querySelector<HTMLButtonElement>('[data-json-step="prev"]')!,
+    next: findBox.querySelector<HTMLButtonElement>('[data-json-step="next"]')!,
+  })
   const json = bindJsonBody({
     toggle,
     pre,
@@ -148,6 +171,8 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     current: () => generation,
     onContent: options.onContent,
     reveal: revealOnPhone,
+    marks,
+    query: () => (invoker?.kind === 'message' && options.findQuery ? options.findQuery(invoker.scenarioId) : ''),
   })
 
   /** Component diagram and metrics views. Only one is in the panel at a time. */
@@ -214,7 +239,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     options.onClose(back)
   }
 
-  function begin(next: InspectorInvoker | null, label = 'JSON'): number {
+  function begin(next: InspectorInvoker | null, label = 'JSON', focus = true): number {
     generation += 1
     invoker = next
     // Which view is showing. The panel never prints; main.ts prints a copy of this view in its scenario.
@@ -225,7 +250,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     lead.textContent = ''
     showMessageChrome()
     width.reload()
-    setOpen(true)
+    setOpen(true, focus)
     return generation
   }
 
@@ -242,8 +267,11 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
         text: pre.hidden ? null : pre.textContent,
       }
     },
-    openMessage(scenarioId, message) {
-      const token = begin({ scenarioId, messageId: message.id, kind: 'message' })
+    refreshFind() {
+      if (!panel.hidden) json.refreshMarks()
+    },
+    openMessage(scenarioId, message, open = {}) {
+      const token = begin({ scenarioId, messageId: message.id, kind: 'message' }, 'JSON', open.focus ?? true)
       json.revealWhenShown()
       title.textContent = message.label
       meta.innerHTML = messageMetaHtml(scenarioId, message)

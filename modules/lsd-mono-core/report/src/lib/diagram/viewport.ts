@@ -139,10 +139,12 @@ function applyDiagramFrame(scrollport: HTMLElement): void {
 /** Step the diagram's find to its next (1) or previous (-1) match and bring it on screen. */
 export function stepFind(scrollport: HTMLElement, step: 1 | -1): void {
   const scenarioId = scrollport.dataset.scenarioId
-  if (!scenarioId || !stepSearchCurrent(scenarioId, step)) return
+  const row = scenarioId ? stepSearchCurrent(scenarioId, step) : null
+  if (!scenarioId || !row) return
   syncFindControls(scrollport)
   syncDiagramWindow(scrollport)
   if (revealSearchHit(scrollport)) syncDiagramWindow(scrollport)
+  diagramState.findHooks.stepped?.(scenarioId, row.event.id)
 }
 
 function commitZoom(
@@ -359,7 +361,8 @@ function scrollportOf(scenarioId: string): HTMLElement | null {
 
 /**
  * Search the scenario's payloads for its query. An answer that arrives after the keystroke
- * repaints the matches and the count; with no current match yet, the first one becomes current.
+ * repaints the matches and the count, and unless the user has stepped since typing, the first
+ * match becomes current and comes on screen.
  */
 function refreshPayloads(scenarioId: string): void {
   const scenario = diagramState.mounted.get(scenarioId)?.scenario
@@ -368,11 +371,13 @@ function refreshPayloads(scenarioId: string): void {
     const scroll = scrollportOf(scenarioId)
     if (!scroll) return
     const view = diagramView(scenarioId)
-    const first = !view.searchCurrentId
-    if (first) updateSearchCurrent(scenarioId)
+    const before = view.searchCurrentId ?? null
+    // Until Next or Previous moves it, the current match is the first: maybe a payload match above.
+    if (!before || !view.searchStepped) updateSearchCurrent(scenarioId)
     syncFindControls(scroll)
     syncDiagramWindow(scroll)
-    if (first && revealSearchHit(scroll)) syncDiagramWindow(scroll)
+    if (view.searchCurrentId !== before && revealSearchHit(scroll)) syncDiagramWindow(scroll)
+    diagramState.findHooks.changed?.(scenarioId)
   })
 }
 
@@ -412,6 +417,7 @@ export function bindDiagramScroll(root: ParentNode): void {
       updateSearchCurrent(id)
       syncFindControls(scroll)
       syncDiagramWindow(scroll)
+      diagramState.findHooks.changed?.(id)
       // Typing on a phone has no Enter: bring the first match on screen once typing pauses.
       clearTimeout(reveal)
       reveal = setTimeout(() => {

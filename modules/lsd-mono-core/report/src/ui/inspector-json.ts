@@ -1,4 +1,5 @@
-import { payloadText as shownText } from '../lib/payload-search'
+import { payloadText as displayText } from '../lib/payload-search'
+import type { JsonMarks } from './json-marks'
 
 export interface JsonBody {
   /** A new view opened: JSON (or stack) hidden, toggle reading "Show [label]". */
@@ -13,6 +14,8 @@ export interface JsonBody {
   none: () => void
   /** Stop showing: the panel closed or a view without JSON opened. */
   stop: () => void
+  /** Find's query changed: mark its matches in the JSON shown, or clear them. */
+  refreshMarks: () => void
 }
 
 /**
@@ -26,6 +29,9 @@ export function bindJsonBody(parts: {
   current: () => number
   onContent?: () => void
   reveal: (content: HTMLElement) => void
+  /** Find's matches in the JSON, and the folded query to mark ('' for none). */
+  marks?: JsonMarks
+  query?: () => string
 }): JsonBody {
   const { toggle, pre, copy, current } = parts
   let pending: Promise<unknown> = Promise.resolve(undefined)
@@ -35,11 +41,23 @@ export function bindJsonBody(parts: {
   let showJson = false
   /** Set when an arrow opens: on a phone its JSON is scrolled into view once it shows. */
   let revealJson = false
+  /** The text in the pre while it shows, so Find's marks can be redrawn on it. */
+  let shown: string | null = null
+
+  /** Put [text] in the pre with Find's matches marked. Whether anything matched (and is on screen). */
+  function fill(text: string): boolean {
+    shown = text
+    const query = parts.query?.() ?? ''
+    if (query && parts.marks) return parts.marks.show(text, query)
+    parts.marks?.hide()
+    pre.textContent = text
+    return false
+  }
 
   async function payloadText(): Promise<string> {
     const value = ready ? cached : await pending
     if (value === undefined) return '(no payload)'
-    return shownText(value)
+    return displayText(value)
   }
 
   async function show(token: number): Promise<void> {
@@ -50,19 +68,22 @@ export function bindJsonBody(parts: {
       text = '(no payload)'
     }
     if (token !== current() || !showJson) return
-    pre.textContent = text
     pre.hidden = false
+    const marked = fill(text)
     toggle.setAttribute('aria-expanded', 'true')
     toggle.textContent = `Hide ${label}`
     parts.onContent?.()
     if (revealJson) {
       revealJson = false
-      parts.reveal(pre)
+      // A match is already brought on screen; otherwise show the start of the JSON.
+      if (!marked) parts.reveal(pre)
     }
   }
 
   function collapse(): void {
     showJson = false
+    shown = null
+    parts.marks?.hide()
     pre.hidden = true
     pre.textContent = ''
     toggle.setAttribute('aria-expanded', 'false')
@@ -99,6 +120,8 @@ export function bindJsonBody(parts: {
       cached = undefined
       showJson = true
       revealJson = false
+      shown = null
+      parts.marks?.hide()
       pre.hidden = true
       pre.textContent = ''
       toggle.hidden = false
@@ -141,6 +164,11 @@ export function bindJsonBody(parts: {
     },
     stop() {
       showJson = false
+      shown = null
+      parts.marks?.hide()
+    },
+    refreshMarks() {
+      if (shown !== null && !pre.hidden) fill(shown)
     },
   }
 }

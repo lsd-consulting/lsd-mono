@@ -255,6 +255,49 @@ describe('inspector', () => {
     expect(pre.hidden).toBe(true)
   })
 
+  it("marks Find's matches in the JSON, steps through them, and clears them when the query does", async () => {
+    let query = 'sock'
+    const parts = shellParts(fullReport(), 'payloads.js')
+    const controller = bindInspector(document, {
+      loadPayload: async (scenarioId, messageId) => parts.payloads[`${scenarioId}/${messageId}`],
+      onClose: () => {},
+      findQuery: () => query,
+    })
+    const other = document.querySelector<HTMLButtonElement>('#other')!
+    other.focus()
+    controller.openMessage('s', opened, { focus: false })
+    expect(document.activeElement).toBe(other)
+    await settle()
+    const pre = document.querySelector<HTMLElement>('#inspector-pre')!
+    const box = document.querySelector<HTMLElement>('#inspector-find')!
+    const count = box.querySelector('.json-find-count')!
+    expect(box.hidden).toBe(false)
+    expect(count.getAttribute('aria-live')).toBe('polite')
+    expect(pre.querySelectorAll('mark.json-hit')).toHaveLength(1)
+    expect(pre.querySelector('mark.is-current')!.textContent).toBe('SOCK')
+    expect(pre.querySelector('mark.is-current')!.getAttribute('aria-current')).toBe('true')
+    expect(count.textContent).toBe('1 of 1 in payload')
+    expect(controller.printView()!.text).toBe(pre.textContent)
+    expect(pre.textContent).not.toContain('<mark')
+
+    query = '"'
+    controller.refreshFind()
+    const marks = pre.querySelectorAll('mark.json-hit')
+    expect(marks.length).toBeGreaterThan(4)
+    expect(count.textContent).toBe(`1 of ${marks.length} in payload`)
+    box.querySelector<HTMLButtonElement>('[data-json-step="prev"]')!.click()
+    expect(count.textContent).toBe(`${marks.length} of ${marks.length} in payload`)
+    box.querySelector<HTMLButtonElement>('[data-json-step="next"]')!.click()
+    expect(count.textContent).toBe(`1 of ${marks.length} in payload`)
+    expect(pre.querySelectorAll('mark.is-current')).toHaveLength(1)
+
+    query = ''
+    controller.refreshFind()
+    expect(pre.querySelectorAll('mark')).toHaveLength(0)
+    expect(box.hidden).toBe(true)
+    expect(pre.textContent).toContain(bodyMarker)
+  })
+
   it('widens the json column without becoming a modal, and copy still takes the full payload', async () => {
     mount()
     const arrow = document.querySelector<HTMLButtonElement>('button.msg-open')!

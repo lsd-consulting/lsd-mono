@@ -9,7 +9,14 @@ import { diagramKeyAction, focusTargetAfterClose, messagePlaces } from '../lib/d
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
 import { setPayloadLoader } from '../lib/diagram/payload-find'
 import { findStepKey } from '../lib/diagram/search-reveal'
-import { diagramView, findMessage, focusDiagramMessage, stepFind, syncDiagramWindow } from '../lib/sequence-diagram'
+import {
+  diagramView,
+  findMessage,
+  focusDiagramMessage,
+  setFindHooks,
+  stepFind,
+  syncDiagramWindow,
+} from '../lib/sequence-diagram'
 import {
   currentMode,
   getPreferredTheme,
@@ -34,6 +41,9 @@ import {
   messageFromNode,
   loadMessagePayload,
   loadPayloadMap,
+  followFind,
+  panelFindQuery,
+  refreshPanelFind,
 } from './panel'
 import { counts } from './filters'
 import { writeScenarioHash } from './url-hash'
@@ -189,8 +199,10 @@ function bindTopbarButtons(): void {
 /** The side panel (inspector), and its Timing rows that reveal a message in the diagram. */
 function bindSidePanel(): void {
   setPayloadLoader(() => loadPayloadMap())
+  setFindHooks({ changed: refreshPanelFind, stepped: followFind })
   session.inspector = bindInspector(document, {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
+    findQuery: panelFindQuery,
     onContent: () => syncPrintPanel(),
     onClose: (opened) => {
       writeScenarioHash()
