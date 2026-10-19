@@ -44,7 +44,7 @@
 .seq-scroll {
   /* Its own height up to one screen. Vertical scroll comes from the page (page-scroll.ts);
      horizontal scroll stays here, for diagrams wider than the panel. */
-  max-height: calc(100dvh - var(--topbar-h, 0px) - var(--seq-toolbar-h, 0px));
+  max-height: calc(100dvh - var(--topbar-h, 0px) - var(--seq-toolbar-h, 0px) - var(--seq-below, 0px));
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;

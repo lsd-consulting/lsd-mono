@@ -56,6 +56,22 @@ export function sizeStage(scrollport: HTMLElement): void {
   const leadPx = `${lead}px`
   if (diagram.style.getPropertyValue('--seq-toolbar-lead') !== leadPx)
     diagram.style.setProperty('--seq-toolbar-lead', leadPx)
+  // What the page holds below the stage (panel padding, margins). The scrollport cannot stick
+  // there, so at the end of the page it is carried up by that much and its top, with the
+  // participant header, slides under the bars. Leave that room out of its height instead, so
+  // it fits between the bars and the stage's end and stays stuck to the last scroll position.
+  // Phones only: a desktop keeps the full-height scrollport it has always had.
+  // An open inspector stacks under the report on a phone and is not part of that room, so
+  // while it is open the last measure stands.
+  if (document.querySelector('.with-inspector')) return
+  const below = `${isPhone() ? belowStage(stage) : 0}px`
+  if (diagram.style.getPropertyValue('--seq-below') !== below) diagram.style.setProperty('--seq-below', below)
+}
+
+/** Page height under the stage's bottom edge, in CSS pixels. */
+function belowStage(stage: HTMLElement): number {
+  const stageBottom = stage.getBoundingClientRect().bottom + window.scrollY
+  return Math.max(0, Math.round(document.documentElement.scrollHeight - stageBottom))
 }
 
 /**
@@ -122,6 +138,11 @@ function onPageScroll(): void {
   }
 }
 
+/** The window changed size: what sits below a stage may have rewrapped. */
+function onPageResize(): void {
+  for (const scrollport of scrollports) if (scrollport.isConnected) sizeStage(scrollport)
+}
+
 const watchedToolbars = new WeakSet<HTMLElement>()
 
 /** The toolbar rewraps (the hidden-participants chip comes and goes): its stuck height and lead change. */
@@ -142,6 +163,7 @@ export function bindPageScroll(scrollport: HTMLElement): void {
     listening = true
     window.addEventListener('scroll', onPageScroll, { passive: true })
     window.addEventListener('resize', onPageScroll, { passive: true })
+    window.addEventListener('resize', onPageResize, { passive: true })
   }
   scrollport.addEventListener('scroll', () => leadPage(scrollport), { passive: true })
   watchToolbar(scrollport)

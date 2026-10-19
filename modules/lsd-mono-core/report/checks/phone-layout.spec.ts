@@ -175,3 +175,44 @@ for (const [phone, device] of Object.entries(PHONES)) {
     })
   })
 }
+
+// Tall phones in portrait: past the top of the diagram, the participant header stays in view below
+// the bars at every scroll position, including the very end of the page.
+for (const [name, viewport] of [
+  ['390x844', { width: 390, height: 844 }],
+  ['412x915', { width: 412, height: 915 }],
+  ['320x640', { width: 320, height: 640 }],
+] as const) {
+  test.describe(`participant header on a ${name} phone`, () => {
+    const { userAgent, deviceScaleFactor, isMobile, hasTouch } = PHONES.iPhone
+    test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
+
+    test('the sticky header sits below the top bar and Find row from the diagram top to the page end', async ({
+      page,
+    }) => {
+      await open(page, 'report')
+      const stuckHeader = () =>
+        page.evaluate(() => {
+          const header = document.querySelector<HTMLElement>('.seq-sticky-header')!.getBoundingClientRect()
+          const toolbar = document.querySelector<HTMLElement>('.seq-toolbar')!.getBoundingClientRect()
+          const bar = document.querySelector<HTMLElement>('.topbar')!.getBoundingClientRect()
+          return { top: header.top, bottom: header.bottom, toolbarBottom: toolbar.bottom, barBottom: bar.bottom }
+        })
+      const start = await page.evaluate(
+        () => document.querySelector('.seq-stage')!.getBoundingClientRect().top + scrollY,
+      )
+      const end = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)
+      for (const y of [start, start + 200, (start + end) / 2, end - 50, end]) {
+        await page.evaluate((to) => scrollTo(0, to), y)
+        await page.waitForTimeout(80)
+        const m = await stuckHeader()
+        // Once the diagram's top has reached the toolbar the header is never under it.
+        if (y > start) {
+          expect(m.top, `header top at scroll ${y}`).toBeGreaterThanOrEqual(m.toolbarBottom - 1)
+          expect(m.top, `header top at scroll ${y}`).toBeGreaterThanOrEqual(m.barBottom - 1)
+        }
+        expect(m.bottom).toBeLessThanOrEqual(viewport.height)
+      }
+    })
+  })
+}
