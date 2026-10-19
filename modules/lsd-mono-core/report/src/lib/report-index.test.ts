@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Report } from '../types'
-import { loadExternalPayloads, loadPayloadsFrom, resetPayloadCache } from './payloads'
+import { lazyPayloads, loadExternalPayloads, loadPayloadsFrom, payloadTextScript, resetPayloadCache } from './payloads'
 import {
   addScript,
   defaultReportId,
@@ -67,6 +67,7 @@ afterEach(() => {
   resetPayloadCache()
   delete window.__LSD_REPORTS__
   delete window.__LSD_PAYLOADS__
+  delete window.__LSD_PAYLOAD_TEXT__
   document.head.innerHTML = ''
 })
 
@@ -184,5 +185,69 @@ describe('loadExternalPayloads', () => {
       },
     })
     expect(await loadExternalPayloads(false)).toEqual({ 's/m': 2 })
+  })
+})
+
+describe('payload text (#63)', () => {
+  it('writes each payload as JSON text and parses one only when it is read, once', () => {
+    const script = payloadTextScript({ 's/m1': { body: '</script>', n: 1 }, 's/m2': 'plain' })
+    expect(script.startsWith('window.__LSD_PAYLOAD_TEXT__=')).toBe(true)
+    expect(script).not.toContain('</script>')
+    // What the script assigns: a JSON object of strings.
+    const text = JSON.parse(script.slice('window.__LSD_PAYLOAD_TEXT__='.length, -2)) as Record<string, string>
+    expect(text['s/m1']).toBe('{"body":"</script>","n":1}')
+    const parse = vi.spyOn(JSON, 'parse')
+    const payloads = lazyPayloads(text)
+    expect(Object.keys(payloads)).toEqual(['s/m1', 's/m2'])
+    expect(parse).not.toHaveBeenCalled()
+    expect(payloads['s/m2']).toBe('plain')
+    expect(parse).toHaveBeenCalledTimes(1)
+    const first = payloads['s/m1']
+    expect(first).toEqual({ body: '</script>', n: 1 })
+    expect(payloads['s/m1']).toBe(first)
+    expect(parse).toHaveBeenCalledTimes(2)
+    expect('s/m3' in payloads).toBe(false)
+    parse.mockRestore()
+  })
+
+  it('drops each text once parsed, and shows text that is not JSON as it is with one warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const text: Record<string, string> = { 's/ok': '{"a":1}', 's/bad': '{"a":', 's/worse': 'not json' }
+    const payloads = lazyPayloads(text)
+    expect(payloads['s/ok']).toEqual({ a: 1 })
+    expect(Object.keys(text)).toEqual(['s/bad', 's/worse'])
+    expect(payloads['s/bad']).toBe('{"a":')
+    expect(payloads['s/worse']).toBe('not json')
+    expect(payloads['s/bad']).toBe('{"a":')
+    expect(text).toEqual({})
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0][0]).toContain('s/bad')
+    warn.mockRestore()
+  })
+
+  it('loads a payload text script on the report page and on the index page, beside older scripts', async () => {
+    window.__LSD_PAYLOADS_SRC__ = 'text-payloads.js'
+    serveScripts({
+      'text-payloads.js': () => {
+        window.__LSD_PAYLOAD_TEXT__ = { 's/m': '{"from":"text"}' }
+      },
+      'index-text-payloads.js': () => {
+        window.__LSD_PAYLOAD_TEXT__ = { 's/m': '{"from":"index"}' }
+      },
+      'old-payloads.js': () => {
+        window.__LSD_PAYLOADS__ = { 's/m': { from: 'old' } }
+      },
+    })
+    expect((await loadExternalPayloads(false))['s/m']).toEqual({ from: 'text' })
+    resetPayloadCache()
+    delete window.__LSD_PAYLOADS__
+    const [text, old] = await Promise.all([
+      loadPayloadsFrom('index-text-payloads.js'),
+      loadPayloadsFrom('old-payloads.js'),
+    ])
+    expect(text['s/m']).toEqual({ from: 'index' })
+    expect(old['s/m']).toEqual({ from: 'old' })
+    expect(window.__LSD_PAYLOAD_TEXT__).toBeUndefined()
+    delete window.__LSD_PAYLOADS_SRC__
   })
 })

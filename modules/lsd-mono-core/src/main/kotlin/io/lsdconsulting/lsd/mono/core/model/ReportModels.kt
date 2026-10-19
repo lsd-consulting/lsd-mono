@@ -9,6 +9,7 @@ import io.lsdconsulting.lsd.mono.core.json.JsonString
 import io.lsdconsulting.lsd.mono.core.json.JsonValue
 import io.lsdconsulting.lsd.mono.core.json.anyToJson
 import io.lsdconsulting.lsd.mono.core.json.render
+import io.lsdconsulting.lsd.mono.core.json.renderCompact
 
 /**
  * Report JSON aligned with report `src/types.ts` (`Report` / `Scenario` / `DiagramEvent`).
@@ -501,6 +502,10 @@ private fun isSummaryField(name: String, value: Any?): Boolean =
         else -> false
     }
 
-/** One entry per deferred payload. The outer map is not subject to the payload item limit. */
+/**
+ * One entry per deferred payload, each as its compact JSON text: the shell parses a payload only
+ * when it is opened or searched, not every body when the script loads (#63). The outer map is not
+ * subject to the payload item limit.
+ */
 internal fun shellPayloadScript(payloads: Map<String, Any?>): String =
-    "window.__LSD_PAYLOADS__=${JsonObject(payloads.map { (id, data) -> id to anyToJson(data) }).render()};\n"
+    "window.__LSD_PAYLOAD_TEXT__=${JsonObject(payloads.map { (id, data) -> id to JsonString(anyToJson(data).renderCompact()) }).render()};\n"

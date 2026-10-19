@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 import type { IndexManifest } from '../src/lib/report-index'
+import { payloadTextScript } from '../src/lib/payloads'
 import type { Report } from '../src/types'
 
 /**
@@ -62,6 +63,14 @@ export const findReport: Report = {
   ],
 }
 
+/**
+ * The sibling payload script as the core writes it now (`__LSD_PAYLOAD_TEXT__`), or as a report
+ * from before #63 wrote it (`__LSD_PAYLOADS__`), which an index page can still list.
+ */
+function payloadsScript(legacy: boolean): string {
+  return legacy ? `window.__LSD_PAYLOADS__=${JSON.stringify(deferred)};` : payloadTextScript(deferred)
+}
+
 export async function openFindReport(page: Page, theme = 'light'): Promise<void> {
   await page.addInitScript(
     ({ report, themeName }) => {
@@ -72,14 +81,14 @@ export async function openFindReport(page: Page, theme = 'light'): Promise<void>
     { report: findReport, themeName: theme },
   )
   await page.route('**/find-payloads.js', (route) =>
-    route.fulfill({ contentType: 'text/javascript', body: `window.__LSD_PAYLOADS__=${JSON.stringify(deferred)};` }),
+    route.fulfill({ contentType: 'text/javascript', body: payloadsScript(false) }),
   )
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
   await expect(page.locator('.seq-svg')).toBeVisible()
 }
 
-export async function openFindIndex(page: Page): Promise<void> {
+export async function openFindIndex(page: Page, { legacy = false } = {}): Promise<void> {
   const manifest: IndexManifest = {
     title: 'LSD reports',
     generatedAt: findReport.generatedAt,
@@ -106,7 +115,7 @@ export async function openFindIndex(page: Page): Promise<void> {
     }),
   )
   await page.route('**/find-payloads.js', (route) =>
-    route.fulfill({ contentType: 'text/javascript', body: `window.__LSD_PAYLOADS__=${JSON.stringify(deferred)};` }),
+    route.fulfill({ contentType: 'text/javascript', body: payloadsScript(legacy) }),
   )
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')

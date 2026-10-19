@@ -80,19 +80,30 @@ export const pageSlicer: Slicer = {
 /**
  * Run [work] in slices of at most [slicer].budgetMs, giving the page back between them. Stops
  * without calling [onDone] once [cancelled] says so. Returns true when the work finished in this
- * call, so a small report gets its answer before the keystroke's handler returns.
+ * call, so a small report gets its answer before the keystroke's handler returns. If [work]
+ * throws, it stops and [onError] runs instead of [onDone].
  */
 export function runSliced(
   work: Iterator<unknown>,
   slicer: Slicer,
   cancelled: () => boolean,
   onDone: () => void,
+  onError: (error: unknown) => void = (error) => {
+    throw error
+  },
 ): boolean {
   const slice = (): boolean => {
     if (cancelled()) return false
     const end = slicer.now() + slicer.budgetMs
     for (;;) {
-      if (work.next().done) {
+      let done: boolean | undefined
+      try {
+        done = work.next().done
+      } catch (error) {
+        onError(error)
+        return false
+      }
+      if (done) {
         onDone()
         return true
       }

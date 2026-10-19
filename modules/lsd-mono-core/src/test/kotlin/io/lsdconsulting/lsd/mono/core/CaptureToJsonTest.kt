@@ -93,8 +93,9 @@ class CaptureToJsonTest {
         assertTrue(diagram.contains("window.__LSD_REPORT__??"), "shell should fall back to sample data when the global is absent")
         assertFalse(diagram.contains("cart-1"), "message bodies stay out of the first paint")
         val payloads = tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-payloads.js").readText()
-        assertTrue(payloads.contains("window.__LSD_PAYLOADS__="))
-        assertTrue(payloads.contains("\"cartId\": \"cart-1\""))
+        // Each payload is its JSON text, parsed when the shell opens it (#63).
+        assertTrue(payloads.startsWith("window.__LSD_PAYLOAD_TEXT__="), payloads)
+        assertTrue(payloads.contains("""\"cartId\":\"cart-1\""""), payloads)
 
         assertEquals(ReportWriter.reportFileStem("Orders flow") + "-report.json", files.reportJson.fileName.toString())
         assertFalse(tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-report.html").toFile().exists(), "no listing page")

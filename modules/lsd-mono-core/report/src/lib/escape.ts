@@ -56,10 +56,15 @@ const SCRIPT_UNSAFE = /[<>&\u2028\u2029]/g
  * the file is valid UTF-8. Matches Kotlin `jsonString`. `undefined` becomes `null`.
  */
 export function jsonForScript(value: unknown): string {
-  const json = JSON.stringify(value) ?? 'null'
-  return json
-    .replace(SCRIPT_UNSAFE, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
-    .replace(LONE_SURROGATE_ESCAPE, '\\ufffd')
+  return wellFormedJson(value).replace(SCRIPT_UNSAFE, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
+}
+
+/**
+ * [value] as JSON with each lone surrogate written as `\\ufffd`, as Kotlin `jsonString` writes it,
+ * so text that is parsed later reads the same from either writer. `undefined` becomes `null`.
+ */
+export function wellFormedJson(value: unknown): string {
+  return (JSON.stringify(value) ?? 'null').replace(LONE_SURROGATE_ESCAPE, '\\ufffd')
 }
 
 /** For a value inside a CSS selector, such as `[data-id="…"]` or `#card-…`. */

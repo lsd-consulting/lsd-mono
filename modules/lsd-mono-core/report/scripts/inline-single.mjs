@@ -47,8 +47,8 @@ if (js.includes('import.meta') || js.includes('pm_visa')) {
   throw new Error('single-file shell still contains a module import or a demo payload body')
 }
 const payloadsMod = await import(pathToFileURL(join(root, 'src/data/sample-payloads.ts')).href)
-const { jsonForScript } = await import(pathToFileURL(join(root, 'src/lib/escape.ts')).href)
-const payloadJs = 'window.__LSD_PAYLOADS__=' + jsonForScript(payloadsMod.samplePayloads) + ';\n'
+const { payloadTextScript } = await import(pathToFileURL(join(root, 'src/lib/payloads.ts')).href)
+const payloadJs = payloadTextScript(payloadsMod.samplePayloads)
 // Beside the shell: with no captured report it shows the built-in demo, which loads these.
 const payloadOut = join(dist, 'lsd-report-payloads.js')
 writeFileSync(payloadOut, payloadJs)

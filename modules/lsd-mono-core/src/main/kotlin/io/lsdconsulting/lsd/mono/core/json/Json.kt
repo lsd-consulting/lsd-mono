@@ -134,3 +134,30 @@ private fun pad(indent: Int): String = "  ".repeat(indent)
 
 internal fun JsonValue.render(): String =
     buildString { write(this, 0) }
+
+/** The same JSON on one line, with no spaces: for text that is parsed, not read. */
+internal fun JsonValue.renderCompact(): String =
+    buildString { writeCompact(this@renderCompact) }
+
+private fun StringBuilder.writeCompact(value: JsonValue) {
+    when (value) {
+        is JsonObject -> {
+            append('{')
+            value.fields.forEachIndexed { index, (key, item) ->
+                if (index > 0) append(',')
+                append(jsonString(key)).append(':')
+                writeCompact(item)
+            }
+            append('}')
+        }
+        is JsonArray -> {
+            append('[')
+            value.items.forEachIndexed { index, item ->
+                if (index > 0) append(',')
+                writeCompact(item)
+            }
+            append(']')
+        }
+        else -> value.write(this, 0)
+    }
+}

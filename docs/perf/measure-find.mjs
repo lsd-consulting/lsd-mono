@@ -100,27 +100,41 @@ async function openPage(spec) {
   const page = await context.newPage()
   await recordLongTasks(page)
   await page.addInitScript(() => {
-    // When the payload script has run: its parse is the first part of a cold search.
-    let held
-    Object.defineProperty(window, '__LSD_PAYLOADS__', {
-      configurable: true,
-      get: () => held,
-      set: (map) => {
-        if (map && !window.__parsedAt) window.__parsedAt = performance.now()
-        held = map
-      },
-    })
+    // When the payload script has run: its parse is the first part of a cold search. Since #63 it
+    // assigns each payload's JSON text to __LSD_PAYLOAD_TEXT__; older pages assign __LSD_PAYLOADS__.
+    for (const name of ['__LSD_PAYLOAD_TEXT__', '__LSD_PAYLOADS__']) {
+      let held
+      Object.defineProperty(window, name, {
+        configurable: true,
+        get: () => held,
+        set: (map) => {
+          if (map && !window.__parsedAt) window.__parsedAt = performance.now()
+          held = map
+        },
+      })
+    }
   })
   if (spec.scale > 1) {
     await page.addInitScript((scale) => {
-      const timed = Object.getOwnPropertyDescriptor(window, '__LSD_PAYLOADS__')
-      Object.defineProperty(window, '__LSD_PAYLOADS__', {
-        configurable: true,
-        get: timed.get,
-        set: (map) => {
-          if (map) for (const k of Object.keys(map)) map[k] = Array.from({ length: scale }, (_, i) => ({ copy: i, ...map[k] }))
-          timed.set(map)
-        },
+      const copies = (one) => Array.from({ length: scale }, (_, i) => ({ copy: i, ...one }))
+      const wrap = (name, scaleMap) => {
+        const timed = Object.getOwnPropertyDescriptor(window, name)
+        Object.defineProperty(window, name, {
+          configurable: true,
+          get: timed.get,
+          set: (map) => {
+            if (map) scaleMap(map)
+            timed.set(map)
+          },
+        })
+      }
+      wrap('__LSD_PAYLOAD_TEXT__', (map) => {
+        window.__scaledText = true
+        for (const k of Object.keys(map)) map[k] = JSON.stringify(copies(JSON.parse(map[k])))
+      })
+      // An older page's map; the shell's own map from __LSD_PAYLOAD_TEXT__ is already scaled.
+      wrap('__LSD_PAYLOADS__', (map) => {
+        if (!window.__scaledText) for (const k of Object.keys(map)) map[k] = copies(map[k])
       })
     }, spec.scale)
   }

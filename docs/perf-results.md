@@ -264,6 +264,34 @@ At 100 participants the header is 645 nodes against 535 before the participant f
 
 Regenerate with the commands in the Chromium 156 rerun above (`generate-wide.mjs` now takes its participants and arrows from `report/checks/wide-sample.ts`, which the check:ux tests also open).
 
+## Payloads parsed when opened (19 Oct 2026, 21:41 BST)
+
+`-payloads.js` used to be one object literal, so the first popup on a large report had to evaluate every payload ([#63](https://github.com/lsd-consulting/lsd-mono/issues/63)). It is now `window.__LSD_PAYLOAD_TEXT__`, which maps each payload id to its compact JSON text. Each payload is parsed with `JSON.parse` the first time it is read and then cached. Find over payloads parses them one index slice at a time. The page still works offline from `file://`. The index page still reads an older `window.__LSD_PAYLOADS__` script. Same machine (Apple M3 Max), headless Chromium 156, Node 22 (Node only drives Playwright here; CI uses the version in `.nvmrc`, 24). "Before" is the build with #62, measured straight before this change.
+
+| Measurement (100 participants × 2000 messages) | Before | After |
+|---|---|---|
+| First popup, `measure-wide.mjs` (3 runs, ms) | 153 / 150 / 153 | 82 / 83 / 83 |
+| First popup, in-page click to rendered (ms) | 78–97 | 55–66 |
+| Popup at 400 messages (ms) | 66–69 | 66–69 |
+| Payload file (bytes) | 5,619,888 | 6,151,892 (+9%, escaped quotes) |
+| Script evaluation only, microbench (ms) | 26 | 11 (+ a few ms per opened payload) |
+
+Find over payloads (`measure-find.mjs`, case `mono-p100-m2000`):
+
+| CPU throttle | Measurement | Before | After |
+|---|---|---|---|
+| 1× | Cold first search (ms) | 57–63 | 44–51 |
+| 1× | Payload parse (ms) | 41–46 | 17–23 |
+| 6× | Cold first search (ms) | 174–182 | 212–227 |
+| 6× | Longest task during cold search (ms) | 24–28 | 26–31 |
+| 6× | Warm first search (ms) | 107–113 | 161–166 |
+| 6× | Long tasks over 50 ms while typing | 0 | 0 |
+| — | Payload heap (MB) | 4.8 | 5.7 |
+
+The popup now meets the 90 ms target. The cost is that at 6× throttle the first search over payloads takes about 40–50 ms longer, because parsing moved out of page load into the index slices. No task in it is over 50 ms, so typing stays responsive. Without throttling it is faster.
+
+Rerun with the commands in "Find over payloads" below: `measure-wide.mjs` gives the popup, and `measure-find.mjs <samples-dir> mono-p100-m2000:1:1` (or `:6:1`) gives one find case. After the 100×2000 popup, the page logs two long tasks of about 58 ms, the same as before (two, 57 ms). This change did not look into them.
+
 ## Report index at 200 reports (14 Oct 2026, 20:20 BST)
 
 `index.html` is the report app with a manifest of every report in the directory. A report's data

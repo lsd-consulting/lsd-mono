@@ -17,7 +17,9 @@ declare global {
     __LSD_REPORT__?: Report
     /** Full message payloads, loaded when the inspector opens. Not part of the first paint. */
     __LSD_PAYLOADS__?: Record<string, unknown>
-    /** Sibling script that assigns `__LSD_PAYLOADS__`. Relative to the report HTML. */
+    /** What the payload script assigns: each payload's JSON text, parsed when it is read. */
+    __LSD_PAYLOAD_TEXT__?: Record<string, string>
+    /** Sibling script that assigns `__LSD_PAYLOAD_TEXT__`. Relative to the report HTML. */
     __LSD_PAYLOADS_SRC__?: string
     /** Set on the index page instead of `__LSD_REPORT__`: every report in the directory. */
     __LSD_INDEX__?: IndexManifest

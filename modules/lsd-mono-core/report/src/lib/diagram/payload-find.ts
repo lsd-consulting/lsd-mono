@@ -102,34 +102,42 @@ function current(scenarioId: string, find: PayloadFind): boolean {
 
 function load(scenario: Scenario, find: PayloadFind): void {
   find.phase = 'loading'
-  loadMap(scenario).then(
-    (map) => {
-      if (!current(scenario.id, find)) return
-      find.phase = 'indexing'
-      find.entries = []
-      runSliced(
-        indexPayloads(payloadSources(scenario, map), find.entries),
-        slicer,
-        () => !current(scenario.id, find),
-        () => {
-          find.phase = 'ready'
-          search(find, true)
-        },
-      )
-    },
-    () => {
-      if (!current(scenario.id, find)) return
-      find.phase = 'failed'
-      find.onChange()
-    },
-  )
+  loadMap(scenario).then((map) => {
+    if (!current(scenario.id, find)) return
+    find.phase = 'indexing'
+    find.entries = []
+    runSliced(
+      indexPayloads(payloadSources(scenario, map), find.entries),
+      slicer,
+      () => !current(scenario.id, find),
+      () => {
+        find.phase = 'ready'
+        search(find, true)
+      },
+      fail,
+    )
+  }, fail)
+  function fail(): void {
+    if (!current(scenario.id, find)) return
+    find.phase = 'failed'
+    find.onChange()
+  }
 }
 
-/** Each message with a payload, and the value the side panel would show for it. */
+/**
+ * Each message with a payload, and the value the side panel would show for it. Each payload is
+ * read when indexing reaches it, not here: the payload script's map parses a payload on first
+ * read (#63), so reading them all at once would be one long task.
+ */
 function payloadSources(scenario: Scenario, map: Record<string, unknown>): PayloadSource[] {
   return scenario.events
     .filter((event): event is MessageEvent => event.kind === 'message' && messageHasPayload(event))
-    .map((msg) => ({ id: msg.id, value: msg.payloadId ? map[payloadKey(scenario.id, msg.id)] : msg.data }))
+    .map((msg) => ({
+      id: msg.id,
+      get value() {
+        return msg.payloadId ? map[payloadKey(scenario.id, msg.id)] : msg.data
+      },
+    }))
 }
 
 /** Search for [find].wanted unless it is already answered. [notify] when the caller has returned. */

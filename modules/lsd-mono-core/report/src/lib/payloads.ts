@@ -1,5 +1,5 @@
 import type { DiagramEvent, MessageEvent, Report, Scenario } from '../types'
-import { cssEscape, jsonForScript } from './escape.ts'
+import { cssEscape, jsonForScript, wellFormedJson } from './escape.ts'
 
 /** Keys kept on the message for the first paint. Everything else waits for the inspector. */
 const SUMMARY_KEYS = new Set(['method', 'path', 'status'])
@@ -73,7 +73,10 @@ export interface ShellParts {
   payloads: Record<string, unknown>
   /** Script element inserted before the shell. Does not contain deferred bodies. */
   htmlScript: string
-  /** Sibling classic script, or null when every payload already fits on the message. */
+  /**
+   * Sibling classic script, or null when every payload already fits on the message. It assigns
+   * `__LSD_PAYLOAD_TEXT__`: each payload as its JSON text, parsed only when it is read (#63).
+   */
   payloadsJs: string | null
 }
 
@@ -87,8 +90,64 @@ export function shellParts(report: Report, payloadsSrc: string): ShellParts {
     report: split.report,
     payloads: split.payloads,
     htmlScript: `<script>${srcAssign}window.__LSD_REPORT__=${reportJson};</script>\n`,
-    payloadsJs: hasPayloads ? `window.__LSD_PAYLOADS__=${jsonForScript(split.payloads)};\n` : null,
+    payloadsJs: hasPayloads ? payloadTextScript(split.payloads) : null,
   }
+}
+
+/**
+ * The payload script: each payload as JSON text, so loading it parses strings, not every body.
+ * Lone surrogates become U+FFFD, as the Kotlin writer (`shellPayloadScript`) writes them.
+ */
+export function payloadTextScript(payloads: Record<string, unknown>): string {
+  const text = Object.fromEntries(Object.entries(payloads).map(([key, value]) => [key, wellFormedJson(value)]))
+  return `window.__LSD_PAYLOAD_TEXT__=${jsonForScript(text)};\n`
+}
+
+/**
+ * Payloads by key from JSON [text]: each is parsed the first time it is read, then kept, and its
+ * text is dropped. A 100-participant, 2,000-message report no longer parses 5.6 MB of bodies to
+ * open one. Text that is not JSON is shown as it is, with one console warning per script.
+ */
+export function lazyPayloads(text: Record<string, string>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  let warned = false
+  const parse = (key: string): unknown => {
+    const raw = text[key]
+    try {
+      return JSON.parse(raw) as unknown
+    } catch {
+      if (!warned) {
+        warned = true
+        console.warn(`LSD report: payload ${key} is not valid JSON; showing its text as it is.`)
+      }
+      return raw
+    }
+  }
+  for (const key of Object.keys(text)) {
+    Object.defineProperty(out, key, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        const value = parse(key)
+        Object.defineProperty(out, key, { value, enumerable: true, writable: true, configurable: true })
+        delete text[key]
+        return value
+      },
+    })
+  }
+  return out
+}
+
+/**
+ * What a payload script left: `__LSD_PAYLOAD_TEXT__` from this version's writer, or
+ * `__LSD_PAYLOADS__` from an older one (an index page can list reports from both).
+ */
+function takenPayloads(): Record<string, unknown> | undefined {
+  if (window.__LSD_PAYLOAD_TEXT__) {
+    window.__LSD_PAYLOADS__ = lazyPayloads(window.__LSD_PAYLOAD_TEXT__)
+    window.__LSD_PAYLOAD_TEXT__ = undefined
+  }
+  return window.__LSD_PAYLOADS__
 }
 
 let payloadsPromise: Promise<Record<string, unknown>> | null = null
@@ -109,11 +168,13 @@ export function loadPayloadsFrom(src: string): Promise<Record<string, unknown>> 
     pending = payloadQueue.then(async () => {
       const before = window.__LSD_PAYLOADS__
       window.__LSD_PAYLOADS__ = undefined
+      window.__LSD_PAYLOAD_TEXT__ = undefined
       try {
         await injectPayloadScript(src)
-        return window.__LSD_PAYLOADS__ ?? {}
+        return takenPayloads() ?? {}
       } finally {
         window.__LSD_PAYLOADS__ = before
+        window.__LSD_PAYLOAD_TEXT__ = undefined
       }
     })
     pending.catch(() => payloadsBySrc.delete(src))
@@ -136,7 +197,8 @@ export function resetPayloadCache(): void {
  * sample bodies are not in the first script.
  */
 export function loadExternalPayloads(useSample: boolean): Promise<Record<string, unknown>> {
-  if (typeof window !== 'undefined' && window.__LSD_PAYLOADS__) return Promise.resolve(window.__LSD_PAYLOADS__)
+  const onPage = typeof window !== 'undefined' ? takenPayloads() : undefined
+  if (onPage) return Promise.resolve(onPage)
   if (!payloadsPromise) {
     payloadsPromise = fetchPayloads(useSample).catch((error: unknown) => {
       payloadsPromise = null
@@ -151,7 +213,7 @@ const SAMPLE_PAYLOAD_SRC = 'lsd-report-payloads.js'
 async function fetchPayloads(useSample: boolean): Promise<Record<string, unknown>> {
   if (typeof window !== 'undefined' && window.__LSD_PAYLOADS_SRC__) {
     await injectPayloadScript(window.__LSD_PAYLOADS_SRC__)
-    return window.__LSD_PAYLOADS__ ?? {}
+    return takenPayloads() ?? {}
   }
   if (useSample) {
     // Dev server can import the module. The packaged shell is a classic script, so production
@@ -162,7 +224,7 @@ async function fetchPayloads(useSample: boolean): Promise<Record<string, unknown
       return mod.samplePayloads
     }
     await injectPayloadScript(SAMPLE_PAYLOAD_SRC)
-    return window.__LSD_PAYLOADS__ ?? {}
+    return takenPayloads() ?? {}
   }
   return {}
 }

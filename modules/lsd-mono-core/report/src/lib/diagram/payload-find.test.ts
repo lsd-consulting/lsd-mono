@@ -147,4 +147,21 @@ describe('find in payloads', () => {
     expect(onChange).not.toHaveBeenCalled()
     expect(diagramState.payloadFind.size).toBe(0)
   })
+
+  it('fails instead of staying pending when indexing throws', async () => {
+    const onChange = vi.fn()
+    const broken = {}
+    Object.defineProperty(broken, 's/m1', {
+      enumerable: true,
+      get() {
+        throw new Error('bad payload')
+      },
+    })
+    setPayloadLoader(() => Promise.resolve(broken))
+    diagramView('s').query = 'sock'
+    refreshPayloadFind(scenario, onChange)
+    await settle()
+    expect(payloadMatches('s')).toMatchObject({ failed: true, pending: false })
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
 })

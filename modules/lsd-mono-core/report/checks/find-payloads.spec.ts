@@ -14,7 +14,14 @@ const findReportWithoutPayloads = {
   })),
 }
 
-for (const [pageName, open] of Object.entries({ report: openFindReport, index: openFindIndex })) {
+const pages = {
+  report: (page: Page) => openFindReport(page),
+  index: (page: Page) => openFindIndex(page),
+  // A report written before #63, listed on a newer index page.
+  'index, older payload script': (page: Page) => openFindIndex(page, { legacy: true }),
+}
+
+for (const [pageName, open] of Object.entries(pages)) {
   test(`find (${pageName} page): payload matches count, step and are named like label matches`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await open(page)
