@@ -22,6 +22,7 @@ import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds } from '../sequence-diagr
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, sizeStage } from './page-scroll'
+import { refreshPayloadFind } from './payload-find'
 import {
   SEARCH_REVEAL_DELAY_MS,
   revealSearchHit,
@@ -351,6 +352,30 @@ function ensurePrintHooks(): void {
   })
 }
 
+/** The scenario's mounted scrollport, looked up when an answer arrives (the diagram may have re-rendered). */
+function scrollportOf(scenarioId: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`.seq-scroll[data-scenario-id="${cssEscape(scenarioId)}"]`)
+}
+
+/**
+ * Search the scenario's payloads for its query. An answer that arrives after the keystroke
+ * repaints the matches and the count; with no current match yet, the first one becomes current.
+ */
+function refreshPayloads(scenarioId: string): void {
+  const scenario = diagramState.mounted.get(scenarioId)?.scenario
+  if (!scenario) return
+  refreshPayloadFind(scenario, () => {
+    const scroll = scrollportOf(scenarioId)
+    if (!scroll) return
+    const view = diagramView(scenarioId)
+    const first = !view.searchCurrentId
+    if (first) updateSearchCurrent(scenarioId)
+    syncFindControls(scroll)
+    syncDiagramWindow(scroll)
+    if (first && revealSearchHit(scroll)) syncDiagramWindow(scroll)
+  })
+}
+
 export function bindDiagramScroll(root: ParentNode): void {
   ensurePrintHooks()
   root.querySelectorAll<HTMLElement>('.seq-diagram').forEach((diagram) => {
@@ -378,8 +403,12 @@ export function bindDiagramScroll(root: ParentNode): void {
     })
     const find = diagram.querySelector<HTMLInputElement>('[data-diagram-find]')
     let reveal: ReturnType<typeof setTimeout> | undefined
+    // Payloads load the first time Find is used, so they are often ready before the first key.
+    find?.addEventListener('focus', () => refreshPayloads(id))
+    if (view.query) refreshPayloads(id)
     find?.addEventListener('input', () => {
       diagramView(id).query = find.value
+      refreshPayloads(id)
       updateSearchCurrent(id)
       syncFindControls(scroll)
       syncDiagramWindow(scroll)

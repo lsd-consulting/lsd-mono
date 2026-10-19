@@ -4,8 +4,9 @@
 // keyboard's Go or Search key. The diagram scrolls with the page, so this moves the page, at the
 // current zoom, below the top bar, the toolbar when it sticks, and the sticky participant header,
 // and above the on-screen keyboard (visualViewport).
-import { eventHiddenByColumns, rowMatchesQuery, searchCountLabel } from '../diagram-view'
+import { NO_PAYLOAD_HITS, eventHiddenByColumns, findMatch, searchCountLabel } from '../diagram-view'
 import { MESSAGE_LABEL_RISE, type LayoutRow } from '../layout'
+import { payloadMatches } from './payload-find'
 import { scrollDiagramToOffset } from './page-scroll'
 import { diagramState, diagramView } from './state'
 
@@ -23,37 +24,55 @@ export interface SearchState {
   current: number
   /** Matching rows on a hidden column: counted, but not stepped to. */
   hidden: number
+  /** Rows in [hits] whose payload matched. */
+  inPayloads: number
+  /** Payloads are still loading or being searched for this query. */
+  pending: boolean
+  /** The payloads could not be loaded. */
+  failed: boolean
 }
 
-/** Find's matches among [rows] for [query], with [currentId]'s place among them. */
+/**
+ * Find's matches among [rows] for [query], with [currentId]'s place among them. A message also
+ * matches when its id is in [payloadHits], the messages whose payload matched.
+ */
 export function searchState(
   rows: readonly LayoutRow[],
   query: string,
   hiddenIds: ReadonlySet<string>,
   currentId: string | null = null,
+  payloadHits: ReadonlySet<string> = NO_PAYLOAD_HITS,
 ): SearchState {
   const hits: LayoutRow[] = []
   let hidden = 0
+  let inPayloads = 0
   if (query.trim()) {
     for (const row of rows) {
-      if (!rowMatchesQuery(row.event, query)) continue
+      const match = findMatch(row.event, query, payloadHits)
+      if (!match) continue
       if (eventHiddenByColumns(row.event, hiddenIds)) hidden++
-      else hits.push(row)
+      else {
+        hits.push(row)
+        if (match !== 'label') inPayloads++
+      }
     }
   }
-  return { hits, current: hits.findIndex((r) => r.event.id === currentId), hidden }
+  const current = hits.findIndex((r) => r.event.id === currentId)
+  return { hits, current, hidden, inPayloads, pending: false, failed: false }
 }
 
-/** The scenario's Find state, from its mounted rows and view. */
+/** The scenario's Find state, from its mounted rows, its view and what its payloads matched. */
 export function scenarioSearchState(scenarioId: string): SearchState {
   const view = diagramView(scenarioId)
   const rows = diagramState.mounted.get(scenarioId)?.rows ?? []
-  return searchState(rows, view.query, view.hidden, view.searchCurrentId ?? null)
+  const payloads = payloadMatches(scenarioId)
+  const state = searchState(rows, view.query, view.hidden, view.searchCurrentId ?? null, payloads.hits)
+  return { ...state, pending: payloads.pending, failed: payloads.failed }
 }
 
 /** The live-region text for [state]: "2 of 5", or "5 matches" with no current match. */
 export function searchStateLabel(state: SearchState, query: string): string {
-  return searchCountLabel(state.hits.length + state.hidden, state.hidden, query, state.current + 1)
+  return searchCountLabel(state.hits.length + state.hidden, state.hidden, query, state.current + 1, state)
 }
 
 /**
@@ -105,8 +124,8 @@ export function rowExtent(row: LayoutRow): { top: number; bottom: number } {
 /** Set the scenario's current match from its query. Returns the row, or null when nothing matches. */
 export function updateSearchCurrent(scenarioId: string): LayoutRow | null {
   const view = diagramView(scenarioId)
-  const diagram = diagramState.mounted.get(scenarioId)
-  const row = diagram ? (searchState(diagram.rows, view.query, view.hidden).hits[0] ?? null) : null
+  view.searchCurrentId = null
+  const row = scenarioSearchState(scenarioId).hits[0] ?? null
   view.searchCurrentId = row?.event.id ?? null
   return row
 }

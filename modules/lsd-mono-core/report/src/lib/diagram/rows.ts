@@ -10,7 +10,7 @@ import {
   tabindexFor,
 } from '../diagram-a11y'
 import { isCoarsePointer } from '../media'
-import { eventHiddenByColumns, messageLabelRect, rowMatchesQuery, visibleParticipants } from '../diagram-view'
+import { eventHiddenByColumns, findMatch, messageLabelRect, visibleParticipants } from '../diagram-view'
 import { escapeAttr, escapeHtml } from '../escape'
 import {
   ACT_NEST_DX,
@@ -42,6 +42,7 @@ import {
   shortMessageEndpoints,
   xFor,
 } from './shapes'
+import { payloadMatches } from './payload-find'
 import { type DiagramFrame, type DiagramView, EMPTY_PAINT, type MountedDiagram, type RowPaint } from './state'
 import { messageEndpoints } from './viewport'
 
@@ -156,6 +157,7 @@ export function windowSvg(
     places: messagePlaces(scenario.events, view.hidden),
     activeMessageId: view.activeMessageId,
     searchCurrentId: view.searchCurrentId ?? null,
+    payloadHits: payloadMatches(scenario.id).hits,
     neighbors: focusableNeighbors(rows, view.hidden),
     activations: spans,
     frame,
@@ -258,7 +260,7 @@ function renderRow(
   if (event.kind === 'note') {
     const layout = noteLayout(event.placement, event.over, index, width)
     const place = layout.placement
-    const match = rowMatchesQuery(event, paint.query)
+    const match = findMatch(event, paint.query)
     const current = match && paint.searchCurrentId === event.id
     const hit = match ? ` search-hit${current ? ' search-current' : ''}` : ''
     const hitAttr = match ? ` data-search-hit="${current ? 'current' : 'match'}"` : ''
@@ -326,7 +328,7 @@ function renderMessageRow(
   paint: RowPaint,
 ): string {
   const spec = messageArrowSpec(msg.type)
-  const match = rowMatchesQuery(msg, query)
+  const match = findMatch(msg, query, paint.payloadHits)
   const rawColour =
     msg.colour || (msg.type === 'SYNCHRONOUS_RESPONSE' ? '#94a3b8' : colourOf.get(msg.from || msg.to) || '#34d399')
   const endId = ensureMarker(rawColour, spec.end)
@@ -411,7 +413,7 @@ function renderMessageRow(
  */
 /** Spoken in place of the highlight: the SVG is hidden from assistive tech, its buttons are not. */
 function searchCue(msg: MessageEvent, paint: RowPaint): string {
-  if (!rowMatchesQuery(msg, paint.query)) return ''
+  if (!findMatch(msg, paint.query, paint.payloadHits)) return ''
   return paint.searchCurrentId === msg.id ? ', current search match' : ', search match'
 }
 

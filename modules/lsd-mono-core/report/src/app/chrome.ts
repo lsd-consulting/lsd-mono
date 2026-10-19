@@ -7,6 +7,7 @@ import { keyHelpHtml } from './key-bindings'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspector'
 import { diagramKeyAction, focusTargetAfterClose, messagePlaces } from '../lib/diagram-a11y'
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
+import { setPayloadLoader } from '../lib/diagram/payload-find'
 import { findStepKey } from '../lib/diagram/search-reveal'
 import { diagramView, findMessage, focusDiagramMessage, stepFind, syncDiagramWindow } from '../lib/sequence-diagram'
 import {
@@ -32,6 +33,7 @@ import {
   openMessage,
   messageFromNode,
   loadMessagePayload,
+  loadPayloadMap,
 } from './panel'
 import { counts } from './filters'
 import { writeScenarioHash } from './url-hash'
@@ -186,6 +188,7 @@ function bindTopbarButtons(): void {
 
 /** The side panel (inspector), and its Timing rows that reveal a message in the diagram. */
 function bindSidePanel(): void {
+  setPayloadLoader(() => loadPayloadMap())
   session.inspector = bindInspector(document, {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     onContent: () => syncPrintPanel(),

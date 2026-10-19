@@ -15,7 +15,7 @@ import {
   syncFindControls,
   updateSearchCurrent,
 } from './search-reveal'
-import { diagramState, diagramView, type MountedDiagram } from './state'
+import { diagramState, diagramView, forgetDiagrams, type MountedDiagram } from './state'
 
 function row(event: DiagramEvent, y: number, height = 40): LayoutRow {
   return { index: 0, y, height, event }
@@ -42,8 +42,7 @@ function mount(top: number, height = 600, sticky = 'sticky') {
 }
 
 afterEach(() => {
-  diagramState.mounted.clear()
-  diagramState.views.clear()
+  forgetDiagrams()
   vi.restoreAllMocks()
 })
 
@@ -126,6 +125,50 @@ describe('find: stepping through matches', () => {
     diagramView('s').query = 'refund'
     expect(stepSearchCurrent('s', 1)).toBeNull()
     expect(position()).toEqual({ current: 0, count: 0 })
+  })
+})
+
+describe('find: payload matches', () => {
+  it('counts a payload match like a label match, steps through both in drawing order, and names them', () => {
+    const payloadHits = new Set(['m1', 'm9'])
+    const extra = [
+      ...rows,
+      row({ kind: 'message', id: 'm9', from: 'c', to: 'a', label: 'ok', type: 'SYNCHRONOUS' }, 2400),
+    ]
+    const state = searchState(extra, 'charge', new Set(), 'm2', payloadHits)
+    expect(state.hits.map((r) => r.event.id)).toEqual(['m1', 'm2', 'm9'])
+    expect(state.inPayloads).toBe(2)
+    expect(searchStateLabel(state, 'charge')).toBe('2 of 3, 2 in payloads')
+    const hidden = searchState(extra, 'charge', new Set(['a']), null, payloadHits)
+    expect(hidden.hits.map((r) => r.event.id)).toEqual(['m2'])
+    expect(searchStateLabel(hidden, 'charge')).toBe('3 matches, 2 on a hidden column')
+  })
+
+  it('says when payloads are still being searched or could not be loaded', () => {
+    const none = searchState(rows, 'zzz', new Set())
+    expect(searchStateLabel({ ...none, pending: true }, 'zzz')).toBe('Searching payloads…')
+    const some = searchState(rows, 'order', new Set(), 'm1')
+    expect(searchStateLabel({ ...some, pending: true }, 'order')).toBe('1 of 3, searching payloads…')
+    expect(searchStateLabel({ ...some, failed: true }, 'order')).toBe('1 of 3, payloads could not be loaded')
+  })
+
+  it('takes the payload matches for the scenario from its payload search', () => {
+    diagramState.mounted.set('s', { rows } as unknown as MountedDiagram)
+    diagramView('s').query = 'charge'
+    diagramState.payloadFind.set('s', {
+      phase: 'ready',
+      entries: [],
+      query: 'charge',
+      hits: new Set(['m1']),
+      wanted: 'charge',
+      job: 1,
+      onChange: () => {},
+    })
+    expect(updateSearchCurrent('s')?.event.id).toBe('m1')
+    expect(searchStateLabel(scenarioSearchState('s'), 'charge')).toBe('1 of 2, 1 in payloads')
+    diagramView('s').includePayloads = false
+    expect(updateSearchCurrent('s')?.event.id).toBe('m2')
+    expect(searchStateLabel(scenarioSearchState('s'), 'charge')).toBe('1 of 1')
   })
 })
 

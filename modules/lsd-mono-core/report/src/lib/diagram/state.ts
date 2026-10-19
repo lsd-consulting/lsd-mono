@@ -3,6 +3,7 @@ import type { Scenario } from '../../types'
 import type { MessagePlace } from '../diagram-a11y'
 import { AUTO_FIT_MAX_ZOOM, DEFAULT_ZOOM } from '../diagram-view'
 import type { ActivationSpan, LayoutRow } from '../layout'
+import type { PayloadFind } from './payload-find'
 
 /** Everything the sequence diagram keeps between renders, in one place. */
 export const diagramState = {
@@ -18,12 +19,15 @@ export const diagramState = {
   printHooks: false,
   /** True while focusDiagramMessage moves focus, so a repaint does not steal it back. */
   movingFocus: false,
+  /** Find in payloads, per scenario id: loaded and indexed the first time Find needs them. */
+  payloadFind: new Map<string, PayloadFind>(),
 }
 
 /** Forget every diagram and its view: another report's scenarios may reuse the same ids. */
 export function forgetDiagrams(): void {
   diagramState.mounted.clear()
   diagramState.views.clear()
+  diagramState.payloadFind.clear()
 }
 
 export interface MountedDiagram {
@@ -54,6 +58,8 @@ export interface DiagramView {
   activeMessageId: string | null
   /** The find match brought on screen (the first one), drawn stronger than the others. */
   searchCurrentId?: string | null
+  /** Whether Find also searches message payloads. On unless the user turns it off. */
+  includePayloads: boolean
 }
 
 export interface RowPaint {
@@ -63,6 +69,8 @@ export interface RowPaint {
   activeMessageId?: string | null
   /** Event id of the current find match. */
   searchCurrentId?: string | null
+  /** Messages whose payload matches the query. */
+  payloadHits?: ReadonlySet<string>
   neighbors?: Map<string, { prevArrowY?: number; nextArrowY?: number }>
   /** Bars for the whole scenario. Arrows attach to the innermost bar at their row. */
   activations?: ActivationSpan[]
@@ -85,6 +93,7 @@ export function diagramView(scenarioId: string): DiagramView {
       hidden: new Set(),
       query: '',
       activeMessageId: null,
+      includePayloads: true,
     }
     diagramState.views.set(scenarioId, view)
   }

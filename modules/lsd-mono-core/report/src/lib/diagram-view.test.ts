@@ -10,6 +10,7 @@ import {
   messageLabelRect,
   rectContains,
   rowMatchesQuery,
+  findMatch,
   searchCountLabel,
   stepZoom,
   unscaledViewport,
@@ -153,6 +154,18 @@ describe('eventHiddenByColumns', () => {
   })
 })
 
+describe('findMatch', () => {
+  it('says whether the label, the payload or both matched', () => {
+    const hits = new Set([events[0].id])
+    expect(findMatch(events[0], 'read', hits)).toBe('both')
+    expect(findMatch(events[0], 'zzz', hits)).toBe('payload')
+    expect(findMatch(events[0], 'read')).toBe('label')
+    expect(findMatch(events[0], 'zzz')).toBeNull()
+    // A note has no payload.
+    expect(findMatch(events[3], 'zzz', new Set([events[3].id]))).toBeNull()
+  })
+})
+
 describe('rowMatchesQuery', () => {
   it('matches message labels and note text, case-insensitively, and nothing else', () => {
     expect(rowMatchesQuery(events[0], 'read')).toBe(true)
@@ -170,6 +183,10 @@ describe('rowMatchesQuery', () => {
     expect(searchCountLabel(5, 1, 'c', 4)).toBe('4 of 4, 1 on a hidden column')
     expect(searchCountLabel(5, 0, '', 2)).toBe('')
     expect(searchCountLabel(0, 0, '   ')).toBe('')
+    expect(searchCountLabel(5, 1, 'c', 2, { inPayloads: 3 })).toBe('2 of 4, 3 in payloads, 1 on a hidden column')
+    expect(searchCountLabel(2, 0, 'c', 0, { pending: true })).toBe('2 matches, searching payloads…')
+    expect(searchCountLabel(0, 0, 'c', 0, { pending: true })).toBe('Searching payloads…')
+    expect(searchCountLabel(0, 0, 'c', 0, { failed: true })).toBe('0 matches, payloads could not be loaded')
   })
 })
 

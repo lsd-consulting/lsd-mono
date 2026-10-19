@@ -191,20 +191,62 @@ export function rowMatchesQuery(event: DiagramEvent, query: string): boolean {
   return false
 }
 
+/** Where Find matched a row: its label or note text, its payload, or both. */
+export type FindMatch = 'label' | 'payload' | 'both'
+
+/**
+ * How [event] matches [query]: its label or note text (rowMatchesQuery), or its payload when its
+ * id is in [payloadHits], the messages whose payload matched (see diagram/payload-find).
+ */
+export function findMatch(
+  event: DiagramEvent,
+  query: string,
+  payloadHits: ReadonlySet<string> = NO_PAYLOAD_HITS,
+): FindMatch | null {
+  const label = rowMatchesQuery(event, query)
+  const payload = event.kind === 'message' && payloadHits.has(event.id)
+  if (label && payload) return 'both'
+  if (label) return 'label'
+  return payload ? 'payload' : null
+}
+
+export const NO_PAYLOAD_HITS: ReadonlySet<string> = new Set()
+
 export function matchingEventIds(events: DiagramEvent[], query: string): string[] {
   return events.filter((event) => rowMatchesQuery(event, query)).map((event) => event.id)
+}
+
+/** What Find knows about payloads, for the count: matches in them, still searching, or not loaded. */
+export interface PayloadCount {
+  /** Matches you can step to whose payload matched. */
+  inPayloads?: number
+  /** Payloads are still loading or being searched for this query. */
+  pending?: boolean
+  /** The payloads could not be loaded, so only labels and notes were searched. */
+  failed?: boolean
 }
 
 /**
  * Live-region text. Empty query is silent. Hidden-column hits are named, not only recoloured.
  * With a current match ([current], 1-based) it reads "2 of 5", counting the matches you can step to.
+ * Payload matches are named ("2 of 5, 3 in payloads"), and so is a search still running.
  */
-export function searchCountLabel(total: number, hidden: number, query: string, current = 0): string {
+export function searchCountLabel(
+  total: number,
+  hidden: number,
+  query: string,
+  current = 0,
+  payloads: PayloadCount = {},
+): string {
   if (!query.trim()) return ''
+  if (total === 0 && payloads.pending) return 'Searching payloads…'
   const noun = total === 1 ? 'match' : 'matches'
-  const base = current > 0 ? `${current} of ${total - hidden}` : `${total} ${noun}`
-  if (hidden > 0) return `${base}, ${hidden} on a hidden column`
-  return base
+  const parts = [current > 0 ? `${current} of ${total - hidden}` : `${total} ${noun}`]
+  if (payloads.inPayloads) parts.push(`${payloads.inPayloads} in payloads`)
+  if (hidden > 0) parts.push(`${hidden} on a hidden column`)
+  if (payloads.pending) parts.push('searching payloads…')
+  if (payloads.failed) parts.push('payloads could not be loaded')
+  return parts.join(', ')
 }
 
 /**

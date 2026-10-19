@@ -134,12 +134,14 @@ export function messageFromNode(node: Element): { scenarioId: string; message: M
   return { scenarioId: scenario.id, message }
 }
 
+/** The shown report's deferred payloads, keyed by payloadKey: the side panel and Find share one load. */
+export function loadPayloadMap(): Promise<Record<string, unknown>> {
+  if (index) return session.reportPayloadsSrc ? loadPayloadsFrom(session.reportPayloadsSrc) : Promise.resolve({})
+  return loadExternalPayloads(session.report === sampleReport)
+}
+
 export async function loadMessagePayload(scenarioId: string, messageId: string): Promise<unknown> {
-  const map = index
-    ? session.reportPayloadsSrc
-      ? await loadPayloadsFrom(session.reportPayloadsSrc)
-      : {}
-    : await loadExternalPayloads(session.report === sampleReport)
+  const map = await loadPayloadMap()
   const key = payloadKey(scenarioId, messageId)
   if (key in map) return map[key]
   return undefined
