@@ -43,6 +43,7 @@ import {
   xFor,
 } from './shapes'
 import { payloadMatches } from './payload-find'
+import { messageSpeech } from './text-view'
 import { type DiagramFrame, type DiagramView, EMPTY_PAINT, type MountedDiagram, type RowPaint } from './state'
 import { messageEndpoints } from './viewport'
 
@@ -155,6 +156,7 @@ export function windowSvg(
     query: view.query,
     hiddenIds: view.hidden,
     places: messagePlaces(scenario.events, view.hidden),
+    participants: scenario.participants,
     activeMessageId: view.activeMessageId,
     searchCurrentId: view.searchCurrentId ?? null,
     payloadHits: payloadMatches(scenario.id).hits,
@@ -186,7 +188,7 @@ export function windowSvg(
     ${actBars}
     ${body}
   </svg>
-  ${buttons.length ? `<div role="list" class="msg-places" aria-label="Sequence messages">${buttons.join('')}</div>` : ''}
+  ${buttons.length ? `<div role="group" class="msg-places" aria-label="Open a message payload">${buttons.join('')}</div>` : ''}
 `
 }
 
@@ -419,7 +421,7 @@ function matchClasses(match: FindMatch): string {
 
 const MATCH_PLACE: Record<FindMatch, string> = { label: '', payload: ' in payload', both: ' in label and payload' }
 
-/** Spoken in place of the highlight: the SVG is hidden from assistive tech, its buttons are not. */
+/** Spoken in place of the highlight: the SVG is hidden from assistive tech, its buttons are not. The full message list is the text view. */
 function searchCue(msg: MessageEvent, paint: RowPaint): string {
   const match = findMatch(msg, paint.query, paint.payloadHits)
   if (!match) return ''
@@ -450,8 +452,6 @@ function messageOpenButton(
     minSize: paint.minHit,
   })
   const places = paint.places ?? [{ id: msg.id, posinset: 1, setsize: 1, focusable: true }]
-  const place = places.find((item) => item.id === msg.id) ?? places[0]
   const tab = tabindexFor(msg.id, paint.activeMessageId ?? null, places)
-  // posinset/setsize are not valid on button. The listitem carries the real index.
-  return `<div role="listitem" class="msg-place" aria-setsize="${place.setsize}" aria-posinset="${place.posinset}"><button type="button" class="msg-open" data-message-id="${escapeAttr(msg.id)}" aria-label="${escapeAttr(`Open ${msg.label}${searchCue(msg, paint)}`)}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button></div>`
+  return `<div class="msg-place"><button type="button" class="msg-open" data-message-id="${escapeAttr(msg.id)}" aria-label="${escapeAttr(`Open ${messageSpeech(msg, paint.participants ?? [], true)}${searchCue(msg, paint)}`)}" tabindex="${tab}" style="left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px"></button></div>`
 }

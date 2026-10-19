@@ -82,6 +82,8 @@ export interface RowPaint {
   query: string
   hiddenIds: ReadonlySet<string>
   places?: MessagePlace[]
+  /** Names for the spoken from and to of each arrow's button. */
+  participants?: { id: string; name: string }[]
   activeMessageId?: string | null
   /** Event id of the current find match. */
   searchCurrentId?: string | null

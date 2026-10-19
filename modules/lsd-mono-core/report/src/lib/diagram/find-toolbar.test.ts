@@ -105,7 +105,7 @@ describe('the Find toolbar and payloads', () => {
     await settle()
     expect(count()).toBe('1 of 2, 1 in payloads')
     expect(host.querySelector('.msg-open[data-message-id="m1"]')!.getAttribute('aria-label')).toBe(
-      'Open place order, current search match in payload',
+      'Open place order, Client to Api, call, has payload, current search match in payload',
     )
   })
 })

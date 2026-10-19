@@ -6,6 +6,7 @@ import { hasComponentDiagram } from './component-graph'
 import { focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
 import { eventHiddenByColumns, unscaledViewport, visibleParticipants, zoomLabel } from './diagram-view'
 import { headerHtml } from './diagram/rows'
+import { textViewHtml } from './diagram/text-view'
 import {
   laneIndex,
   laneWidth,
@@ -266,6 +267,11 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
       ${jump}
       ${toolbarHtml(scenario, view)}
       ${payloadLegendHtml(scenario)}
+      ${textViewHtml(
+        scenario,
+        diagram.rows.map((row) => row.event),
+        view.hidden,
+      )}
       <div class="seq-stage">
         <div class="seq-scroll" data-scenario-id="${escapeAttr(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeAttr(scenario.title)}">
           <div class="seq-sticky-header" style="width:${width * zoom}px">${headerHtml(scenario, frame, view.hidden, zoom, null)}</div>

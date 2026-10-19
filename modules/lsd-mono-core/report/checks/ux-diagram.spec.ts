@@ -1,7 +1,16 @@
 import { expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
-import { THEMES, computedColours, contrastRatio, openFixture, diagramOnScreen, openWide, zoomOf } from './ux-helpers'
+import {
+  THEMES,
+  computedColours,
+  contrastRatio,
+  openFixture,
+  diagramOnScreen,
+  openWide,
+  seriousViolations,
+  zoomOf,
+} from './ux-helpers'
 
 // Diagram drawing: note colours, labels, long names, zoom and fit, deep links, tall diagrams.
 
@@ -271,4 +280,25 @@ test('a tall diagram grows the page: page scroll drives the diagram, header stay
   // The diagram has no minimap, on desktop or phone.
   await expect(page.locator('.seq-minimap')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/tall-diagram-end.png' })
+})
+
+// The drawing is hidden from assistive tech; the text view and the payload buttons are what it gets.
+test('every message is in the accessibility tree with from, to and kind, and the heading is plain', async ({
+  page,
+}) => {
+  await openFixture(page, 'dark')
+  await expect(page.getByRole('heading', { name: 'Sequence diagram', exact: true })).toBeVisible()
+  const items = page.getByRole('list', { name: 'Messages in order' }).getByRole('listitem')
+  const texts = await items.allTextContents()
+  const messages = texts.filter((text) => !text.startsWith('Note:'))
+  expect(messages).toHaveLength(14)
+  expect(messages[0]).toBe('Client to Api, call: place order, has payload')
+  expect(messages[2]).toBe('Database to Api, reply: ok 2, has payload')
+  // Diagram order: the note sits between the third and fourth message.
+  expect(texts[3]).toMatch(/^Note: Card is charged/)
+  // The payload buttons say who calls whom and make no position claim with gaps.
+  const button = page.locator('button.msg-open').first()
+  await expect(button).toHaveAccessibleName('Open place order, Client to Api, call, has payload')
+  await expect(page.locator('.msg-places [aria-posinset]')).toHaveCount(0)
+  expect(await seriousViolations(page)).toEqual([])
 })

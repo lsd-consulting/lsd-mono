@@ -23,7 +23,9 @@ for (const [pageName, open] of Object.entries({ report: openFindReport, index: o
     await find.click()
     await page.keyboard.type('snowdrop', { delay: 10 })
     await expect(count).toHaveText('1 of 3, 2 in payloads')
-    await expect(page.locator('.msg-open[aria-label^="Open place order, current search match"]')).toHaveCount(1)
+    await expect(
+      page.locator('.msg-open[aria-label^="Open place order,"][aria-label*="current search match"]'),
+    ).toHaveCount(1)
     await page.keyboard.press('Enter')
     await expect(count).toHaveText('2 of 3, 2 in payloads')
     await expect(page.locator('.seq-svg .search-current .msg-label')).toContainText('reserve stock')
@@ -53,10 +55,12 @@ test('a payload match bands the {} marker, not the label, with AA contrast and n
     await expect(page.locator('.diagram-find-count')).toHaveText('1 of 2, 2 in payloads')
     await expect(page.locator(payloadMarker('current'))).toHaveCount(1)
     await expect(page.locator(payloadMarker('match'))).toHaveCount(1)
-    await expect(page.locator('.msg-open[aria-label="Open place order, current search match in payload"]')).toHaveCount(
-      1,
-    )
-    await expect(page.locator('.msg-open[aria-label="Open reserve stock, search match in payload"]')).toHaveCount(1)
+    await expect(
+      page.locator('.msg-open[aria-label^="Open place order,"][aria-label$=", current search match in payload"]'),
+    ).toHaveCount(1)
+    await expect(
+      page.locator('.msg-open[aria-label^="Open reserve stock,"][aria-label$=", search match in payload"]'),
+    ).toHaveCount(1)
     const label = await page
       .locator('.seq-svg .search-current .msg-label')
       .evaluate((el) => getComputedStyle(el).stroke)

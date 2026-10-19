@@ -45,10 +45,10 @@ export function scenarioHtml(s: Scenario): string {
         </section>
       </div>
       <section class="diagram-panel">
-        <h3>
-          Sequence diagram
+        <div class="diagram-heading">
+          <h3>Sequence diagram</h3>
           <span class="diagram-hint">Zoom and fit · hide participants · find labels · ↑↓ between messages</span>
-        </h3>
+        </div>
         ${diagram}
       </section>
     </div>

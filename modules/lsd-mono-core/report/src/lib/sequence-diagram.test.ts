@@ -134,12 +134,13 @@ describe('renderRowSvg fragments', () => {
       participants,
     )
     expect(html).toContain('<button type="button" class="msg-open"')
-    expect(html).toContain('aria-label="Open place order"')
+    expect(html).toContain('aria-label="Open place order, api to db, call, has payload"')
     expect(html).toContain('data-message-id="m-data"')
     expect(html).not.toContain('aria-haspopup')
     expect(html).not.toContain('aria-modal')
-    expect(html).toContain('aria-setsize="1"')
-    expect(html).toContain('aria-posinset="1"')
+    // The text view lists every message, so the buttons carry no position that would skip gaps.
+    expect(html).not.toContain('aria-setsize')
+    expect(html).not.toContain('aria-posinset')
     expect(html).toContain('tabindex="0"')
     expect(html).toContain('stroke-width="2"')
     expect(html).not.toContain('stroke-width="4"')
@@ -510,13 +511,15 @@ describe('diagram view paint', () => {
     expect(payloadOnly).toContain('search-hit search-in-payload')
     expect(payloadOnly).not.toContain('search-in-label')
     expect(payloadOnly).toContain('data-search-in="payload"')
-    expect(payloadOnly).toContain('aria-label="Open read rows, search match in payload"')
+    expect(payloadOnly).toContain('aria-label="Open read rows, api to db, call, has payload, search match in payload"')
     const both = renderRowSvg(rowFor(msg), 400, participants, 200, paint('read', 'm-p'))
     expect(both).toContain('search-hit search-current search-in-label search-in-payload')
-    expect(both).toContain('aria-label="Open read rows, current search match in label and payload"')
+    expect(both).toContain(
+      'aria-label="Open read rows, api to db, call, has payload, current search match in label and payload"',
+    )
     const label = renderRowSvg(rowFor(msg), 400, participants, 200, { query: 'read', hiddenIds: new Set() })
     expect(label).toContain('search-hit search-in-label"')
-    expect(label).toContain('aria-label="Open read rows, search match"')
+    expect(label).toContain('aria-label="Open read rows, api to db, call, has payload, search match"')
   })
 
   it('marks a matching note the same way, and the current match more strongly', () => {

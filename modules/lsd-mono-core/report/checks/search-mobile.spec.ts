@@ -53,7 +53,9 @@ for (const [phone, device] of Object.entries(PHONES)) {
         await expect(find).toBeFocused()
         await expect(page.locator('.seq-svg .search-current .msg-label')).toContainText('call 3.20')
         await expect(page.locator('.seq-svg')).not.toContainText('[match]')
-        await expect(page.locator('.msg-open[aria-label="Open call 3.20, current search match"]')).toHaveCount(1)
+        await expect(
+          page.locator('.msg-open[aria-label^="Open call 3.20,"][aria-label$=", current search match"]'),
+        ).toHaveCount(1)
         const band = await page
           .locator('.seq-svg .search-current .msg-label')
           .evaluate((el) => [getComputedStyle(el).stroke, getComputedStyle(el).strokeWidth])
