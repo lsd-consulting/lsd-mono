@@ -5,17 +5,25 @@ name: Pages
 # GitHub Pages, so https://lsd-consulting.github.io/lsd-mono/ opens the report index and
 # example-report.html opens the report on its own.
 # The example report is not committed; nothing else under docs/ is published.
+#
+# The site is the latest release: the version the README tells people to use. It deploys after
+# the Gradle workflow passes on a push to main and only when that run released, so the commit
+# has its vX.Y.Z tag and the report shows that version. A push that releases nothing leaves the
+# site as it is. Run it by hand to deploy main (shown as the next patch snapshot, such as
+# 0.3.1-SNAPSHOT) or, with `ref`, a release tag. The checkout has the full history and the tags,
+# which the train version reads (TrainVersion.kt). The site never pings (writesSampleReport turns
+# the usage ping off).
 on:
-  push:
+  workflow_run:
+    workflows: [Gradle]
+    types: [completed]
     branches: [main]
-    paths:
-      - "modules/lsd-mono-core/**"
-      - "build-logic/**"
-      - "gradle/**"
-      - "*.gradle.kts"
-      - "gradle.properties"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag or commit to deploy, such as v0.3.0. Empty for main."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -26,7 +34,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # A passing build of a push to main that tagged its commit, or a run by hand.
+  released:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
+    steps:
+      - id: ref
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_REF: ${{ inputs.ref }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            echo "ref=${INPUT_REF:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Release tags are lightweight; an annotated one lists its commit on a ^{} line.
+          tag=$(git ls-remote --tags "$REPO" 'v[0-9]*' | awk -v sha="$SHA" '$1 == sha { sub("refs/tags/", "", $2); sub(/\^\{\}$/, "", $2); print $2; exit }')
+          if [ -z "$tag" ]; then
+            echo "$SHA released nothing, so the site stays on the last release."
+            exit 0
+          fi
+          echo "$SHA is $tag"
+          echo "ref=$tag" >> "$GITHUB_OUTPUT"
+
   deploy:
+    needs: released
+    if: needs.released.outputs.ref
     # Pinned for the same reason as the Gradle workflow. See docs/ci.md.
     runs-on: ubuntu-26.04
     timeout-minutes: 15
@@ -41,6 +81,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The release tag, or what was asked for by hand.
+          ref: ${{ needs.released.outputs.ref }}
+          # Every tag, so the version is the release's (or the next snapshot), not 0.0.1-SNAPSHOT.
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
@@ -61,6 +105,9 @@ jobs:
         run: ./gradlew :modules:lsd-mono-core:kitchenSinkSample
       - name: Check the site
         run: |
+          version=$(./gradlew -q printVersion)
+          echo "Site built as $version"
+          [ "$version" != 0.0.1-SNAPSHOT ] || { echo "::error::no tags in the checkout, so no version"; exit 1; }
           site=modules/lsd-mono-core/build/pages
           for f in index.html example-report.html; do
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
