@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.cucumber
 import io.cucumber.plugin.event.EventHandler
 import io.cucumber.plugin.event.EventPublisher
 import io.cucumber.plugin.event.Location
+import io.cucumber.plugin.event.Node
 import io.cucumber.plugin.event.Result
 import io.cucumber.plugin.event.Status
 import io.cucumber.plugin.event.TestCase
@@ -10,9 +11,11 @@ import io.cucumber.plugin.event.TestCaseFinished
 import io.cucumber.plugin.event.TestCaseStarted
 import io.cucumber.plugin.event.TestRunFinished
 import io.cucumber.plugin.event.TestRunStarted
+import io.cucumber.plugin.event.TestSourceParsed
 import io.cucumber.plugin.event.TestStep
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -23,6 +26,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
+import java.util.Optional
 import java.util.UUID
 import kotlin.io.path.exists
 
@@ -88,6 +92,17 @@ class LsdCucumberPluginEventsTest {
     }
 
     @Test
+    fun `a Feature name parsed after its scenarios began still titles the report`() {
+        val testCase = FakeTestCase("checkout")
+        publisher.publish(TestCaseStarted(Instant.now(), testCase))
+        publisher.finish(testCase, Status.PASSED)
+        publisher.publish(TestSourceParsed(Instant.now(), URI("classpath:shop.feature"), listOf(FakeFeature(" Shop front "))))
+        publisher.publish(runFinished())
+
+        assertEquals("Shop front", ReportJson(reportJson(tempDir, "shop")).root.string("title"))
+    }
+
+    @Test
     fun `a run with no scenarios writes no report and no index`() {
         publisher.publish(runFinished())
 
@@ -145,6 +160,18 @@ class LsdCucumberPluginEventsTest {
         override fun getUri() = URI("classpath:shop.feature")
 
         override fun getId(): UUID = id
+    }
+
+    private class FakeFeature(private val name: String) : Node.Feature {
+        override fun getLocation() = Location(1, 1)
+
+        override fun getKeyword(): Optional<String> = Optional.of("Feature")
+
+        override fun getName(): Optional<String> = Optional.of(name)
+
+        override fun elements(): Collection<Node> = emptyList()
+
+        override fun getParent(): Optional<Node> = Optional.empty()
     }
 
     /** The run's end, passed. The one-argument constructor is deprecated. */

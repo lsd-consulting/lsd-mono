@@ -332,9 +332,26 @@ public class LsdContext :
      * report's options, and the usage ping counts it once when the report is opened.
      */
     @InternalLsdApi
-    public fun completeReport(title: String, reportKey: String?, source: String): ReportFiles = writeReport(title, reportKey, source)
+    public fun completeReport(title: String, reportKey: String?, source: String): ReportFiles = writeReport(title, reportKey, source, title)
 
-    private fun writeReport(title: String, reportKey: String?, source: String): ReportFiles {
+    /**
+     * [completeReport] for a test integration whose file names come from [fileTitle] rather than
+     * the [title] shown in the report, so a better title does not rename the files.
+     */
+    @InternalLsdApi
+    public fun completeReport(
+        title: String,
+        reportKey: String?,
+        source: String,
+        fileTitle: String,
+    ): ReportFiles = writeReport(title, reportKey, source, fileTitle)
+
+    private fun writeReport(
+        title: String,
+        reportKey: String?,
+        source: String,
+        fileTitle: String = title,
+    ): ReportFiles {
         completeStillRunning(title, reportKey)
         val taken =
             synchronized(lock) {
@@ -344,8 +361,8 @@ public class LsdContext :
                 reports.take(reportKey)
             }
         val report = jsonMapper.toReportJson(title, taken, source)
-        val files = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey)
-        reports.written(ReportWriter.indexEntry(report, reportKey))
+        val files = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey, fileTitle = fileTitle)
+        reports.written(ReportWriter.indexEntry(report, reportKey, fileTitle))
         return files
     }
 

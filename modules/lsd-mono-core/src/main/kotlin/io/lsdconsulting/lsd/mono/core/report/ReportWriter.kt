@@ -77,7 +77,8 @@ internal object ReportWriter {
     /**
      * Write one report. File names are [reportFileStem]: the title plus a hash of
      * [reportKey] (a test class or feature id) when given, else of the title, so
-     * reports with the same title do not collide.
+     * reports with the same title do not collide. [fileTitle] stands in for the title in the
+     * file names when an integration names its files apart from the title it shows.
      * @return the diagram, listing and JSON files.
      */
     @JvmStatic
@@ -86,9 +87,10 @@ internal object ReportWriter {
         report: ReportJson,
         outputDir: File,
         reportKey: String? = null,
+        fileTitle: String = report.title,
     ): ReportFiles {
         outputDir.mkdirs()
-        val stem = reportFileStem(report.title, reportKey)
+        val stem = reportFileStem(fileTitle, reportKey)
         val jsonName = "$stem-report.json"
         val diagramName = "$stem-diagram.html"
         val payloadsName = "$stem-payloads.js"
@@ -108,13 +110,17 @@ internal object ReportWriter {
         val diagramPath = outputDir.resolve(diagramName).toPath()
         writeAtomically(jsonPath, report.toJson())
         writeAtomically(diagramPath, shell)
-        writeIndexEntry(outputDir, indexEntry(report, reportKey))
+        writeIndexEntry(outputDir, indexEntry(report, reportKey, fileTitle))
         return ReportFiles(diagramHtml = diagramPath, reportJson = jsonPath)
     }
 
     /** What the index lists for a report written with [writeReport]. */
-    fun indexEntry(report: ReportJson, reportKey: String? = null): ReportFile {
-        val stem = reportFileStem(report.title, reportKey)
+    fun indexEntry(
+        report: ReportJson,
+        reportKey: String? = null,
+        fileTitle: String = report.title,
+    ): ReportFile {
+        val stem = reportFileStem(fileTitle, reportKey)
         return ReportFile(
             filename = "$stem-diagram.html",
             title = report.title,

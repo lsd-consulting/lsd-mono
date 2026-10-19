@@ -30,7 +30,8 @@ import io.cucumber.plugin.event.Status as CucumberStatus
 
 /**
  * Cucumber 8 plugin. One Cucumber scenario becomes one LSD scenario. The feature
- * file name is the report title. Step definitions call [LsdContext] themselves.
+ * feature's `Feature:` name is the report title (its file name when that is blank), and the file
+ * name names the report files. Step definitions call [LsdContext] themselves.
  *
  * Uses first-party [LsdContext] from `lsd-mono-core`, not Maven lsd-core.
  * [LsdContext.section] is used when `lsd.mono.cucumber.splitBySteps=true` instead of
@@ -43,15 +44,19 @@ import io.cucumber.plugin.event.Status as CucumberStatus
  * `--threads`). Cucumber delivers a scenario's events on the thread that runs it, so
  * each scenario begins its own [io.lsdconsulting.lsd.mono.core.LsdScenario] there,
  * bound to that thread, and completes it from its own `TestCaseFinished`. Each feature
- * file is one report keyed by its URI, written when the run finishes. Scenario outline
- * rows are numbered by their position in the feature file, not by the order they ran.
+ * file is one report keyed by its URI and titled by its `Feature:` name, written when the run
+ * finishes. Scenario outline rows are numbered by their position in the feature file, not by
+ * the order they ran.
  */
 public class LsdCucumberPlugin : ConcurrentEventListener {
     private val lsd: LsdContext = LsdContext.instance
 
-    /** Feature URI to its title and when it first started, for report order. */
-    private val features = ConcurrentHashMap<String, Pair<String, Long>>()
+    /** Feature report key to its title, file name and when it first started, for report order. */
+    private val features = ConcurrentHashMap<String, Feature>()
     private val featureOrder = AtomicLong()
+
+    /** Feature report key to the name after `Feature:`, from the parsed source; absent when blank. */
+    private val featureNames = ConcurrentHashMap<String, String>()
 
     /** `uri:line` of each outline example row to its 1-based number within the outline. */
     private val exampleNumbers = ConcurrentHashMap<String, Int>()
@@ -86,6 +91,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
 
     private fun reset() {
         features.clear()
+        featureNames.clear()
         exampleNumbers.clear()
         outlineCounts.clear()
         stepResults.clear()
@@ -93,7 +99,15 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     }
 
     private fun onTestSourceParsed(event: TestSourceParsed) {
-        event.nodes.forEach { node -> numberExamples(event.uri, node) }
+        event.nodes.forEach { node ->
+            if (node is Node.Feature) {
+                node.name
+                    .map(String::trim)
+                    .filter(String::isNotEmpty)
+                    .ifPresent { featureNames[featureKey(event.uri)] = it }
+            }
+            numberExamples(event.uri, node)
+        }
     }
 
     private fun numberExamples(uri: URI, node: Node) {
@@ -117,7 +131,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     /** Begin [testCase]'s scenario in its feature's report, noting the feature for the end of the run. */
     private fun begin(testCase: TestCase, bindCurrentThread: Boolean): LsdScenario {
         val key = featureKey(testCase.uri)
-        features.computeIfAbsent(key) { featureTitle(testCase.uri, testCase.name) to featureOrder.incrementAndGet() }
+        features.computeIfAbsent(key) { Feature(featureTitle(testCase.uri, testCase.name), featureOrder.incrementAndGet()) }
         return lsd.beginScenario(reportKey = key, key = testCase.scenarioKey(), bindCurrentThread = bindCurrentThread)
     }
 
@@ -187,8 +201,11 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     }
 
     private fun onTestRunFinished() {
-        val ordered = features.entries.sortedBy { it.value.second }
-        ordered.forEach { (key, value) -> lsd.completeReport(value.first, key, source = "cucumber") }
+        val ordered = features.entries.sortedBy { it.value.order }
+        // The Feature name is read here, not when the first scenario began, so one parsed late still counts.
+        ordered.forEach { (key, feature) ->
+            lsd.completeReport(featureNames[key] ?: feature.fileTitle, key, source = "cucumber", fileTitle = feature.fileTitle)
+        }
         if (ordered.isNotEmpty()) lsd.createIndex()
         reset()
     }
@@ -210,6 +227,9 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     }
 }
 
+/** A feature's report: the [fileTitle] its files are named after (and its title without a Feature name), its start [order]. */
+private class Feature(val fileTitle: String, val order: Long)
+
 /**
  * The report key of the feature at [uri], stable across machines: a file under [cwd] becomes its
  * relative path. Any other URI (`classpath:`, a file elsewhere) is kept as it is.
@@ -220,7 +240,10 @@ internal fun featureKey(uri: URI, cwd: Path = Paths.get("").toAbsolutePath()): S
     return if (path.startsWith(cwd)) cwd.relativize(path).toString().replace('\\', '/') else uri.toString()
 }
 
-/** The report title of the feature at [uri]: its file name without `.feature`, else [fallback]. */
+/**
+ * The report title of the feature at [uri] when its `Feature:` name is blank or was not parsed:
+ * its file name without `.feature`, else [fallback].
+ */
 internal fun featureTitle(uri: URI, fallback: String): String {
     val text = uri.toString().substringBefore('?').substringBefore('#')
     val file = text.substringAfterLast('/').substringAfterLast(':')
