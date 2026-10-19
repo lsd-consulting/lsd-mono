@@ -59,6 +59,10 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { line: 1, help: 'In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages' },
   { line: 1, help: '<kbd>Enter</kbd> opens the side panel' },
   {
+    line: 1,
+    help: 'In participant headers, <kbd>←</kbd>/<kbd>→</kbd> move between Hide and More, <kbd>Shift</kbd>+<kbd>F10</kbd> more actions',
+  },
+  {
     line: 2,
     help: 'In Find, <kbd>Enter</kbd>/<kbd>Shift</kbd>+<kbd>Enter</kbd> (or <kbd>F3</kbd>) next/previous match',
   },

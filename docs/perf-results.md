@@ -249,6 +249,21 @@ Horizontal scroll, the sticky header during the vertical sweep, label overlap (0
 - **Long tasks.** The wide pages show one 50–64 ms long task each (none before). Frame p95 stays at 16.7 ms on every page.
 - First interactive is within 20–90 ms of the 3 Oct numbers, and varies by that much between runs.
 
+## Participant header buttons rendered once (19 Oct 2026, 21:40 BST)
+
+Each participant header used to carry its own Hide and More buttons (ten nodes each). There is now one set, moved onto the header that is hovered, tapped, focused or opened from the keyboard ([#62](https://github.com/lsd-consulting/lsd-mono/issues/62)). Same machine (Apple M3 Max), headless Chromium **156.0.8078.4**, viewport 1440×900, `measure-wide.mjs`, Node 22 (Node only drives Playwright here; CI uses the version in `.nvmrc`, 24). "Before" is the same build without the change, measured straight before it. Both use the 95% Fit floor from #81.
+
+| Participants | Messages | Header nodes before → after | DOM before → after | Long tasks before → after | First interactive ms before → after | Popup ms before → after |
+|--------------|----------|-----------------------------|--------------------|---------------------------|-------------------------------------|-------------------------|
+| 20 | 400 | 310 → 139 | 1,133 → 962 | 0 → 0 | 78 → 78 | 68 → 67 |
+| 50 | 400 | 770 → 329 | 1,623 → 1,182 | 1 (51 ms) → 0 | 81 → 75 | 83 → 66 |
+| 100 | 400 | 1,536 → 645 | 2,439 → 1,548 | 1 (58 ms) → 1 (50 ms) | 89 → 80 | 83 → 84 |
+| 100 | 2000 | 1,536 → 645 | 4,039 → 3,148 | 1 (81 ms) → 1 (75 ms) | 125 → 118 | 156 → 153 |
+
+At 100 participants the header is 645 nodes against 535 before the participant filter: one slot per participant (100) plus the one set of buttons. p95 frame time stays at 16.7–16.8 ms. The 100-participant pages still show one 50–75 ms long task; this change did not look into it. The 100×2000 popup is [#63](https://github.com/lsd-consulting/lsd-mono/issues/63).
+
+Regenerate with the commands in the Chromium 156 rerun above (`generate-wide.mjs` now takes its participants and arrows from `report/checks/wide-sample.ts`, which the check:ux tests also open).
+
 ## Report index at 200 reports (14 Oct 2026, 20:20 BST)
 
 `index.html` is the report app with a manifest of every report in the directory. A report's data

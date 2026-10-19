@@ -15,22 +15,61 @@ import {
 // Participant filter (#8): Hide (×) and More (⋯) on each header, a chip while anything is
 // hidden, and a menu with "Hide all but this one".
 
+/** The opacity of [id]'s header buttons, or null while the one set of them is on another header (#62). */
 const actionsOpacity = (page: Page, id: string) =>
-  page
-    .locator(`[data-participant-head="${id}"] .participant-head-actions`)
-    .first()
-    .evaluate((el) => getComputedStyle(el).opacity)
+  page.evaluate((head) => {
+    const bar = document.querySelector(`[data-participant-head="${head}"] .participant-head-actions`)
+    return bar ? getComputedStyle(bar).opacity : null
+  }, id)
 
 const headerNames = (page: Page) =>
   page
     .locator('.seq-header-svg .participant-box')
     .evaluateAll((els) => els.map((el) => el.getAttribute('data-participant')))
 
+test('a pointer passing over another header does not move keyboard focus: Enter hides the focused one (#62)', async ({
+  page,
+}) => {
+  await openFixture(page, 'dark')
+  await page.getByRole('button', { name: 'Component diagram' }).focus()
+  await page.keyboard.press('Tab')
+  const hideClient = page.getByRole('button', { name: 'Hide Client' })
+  await expect(hideClient).toBeFocused()
+  await page.locator('[data-participant-head="db"]').hover()
+  await expect(hideClient).toBeFocused()
+  expect(await actionsOpacity(page, 'db')).toBeNull()
+  await page.keyboard.press('Enter')
+  expect(await headerNames(page)).toEqual(['api', 'db', 'bus'])
+  await expect(page.locator('.participant-filter-status')).toHaveText('Client hidden. 1 hidden.')
+})
+
+test('a click on a header name, then Tab in from the page: hover still leaves keyboard focus alone (#62)', async ({
+  page,
+}) => {
+  await openFixture(page, 'dark')
+  // A click on Client's name, low in its header, under where the buttons appear: focus stays out.
+  const client = page.locator('[data-participant-head="client"]')
+  const box = (await client.boundingBox())!
+  await client.click({ position: { x: box.width / 2, y: box.height - 6 } })
+  await expect(page.locator('.participant-heads button:focus')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Component diagram' }).focus()
+  await page.keyboard.press('Tab')
+  const hideClient = page.getByRole('button', { name: 'Hide Client' })
+  await expect(hideClient).toBeFocused()
+  await page.locator('[data-participant-head="db"]').hover()
+  await expect(hideClient).toBeFocused()
+  await page.keyboard.press('Enter')
+  expect(await headerNames(page)).toEqual(['api', 'db', 'bus'])
+  await expect(page.locator('.participant-filter-status')).toHaveText('Client hidden. 1 hidden.')
+})
+
 test('a header × appears on hover and hides that participant; the chip lists it and passes axe', async ({ page }) => {
   await openFixture(page, 'dark')
   await expect(page.locator('[data-participant-toggle]')).toHaveCount(0)
   await expect(page.locator('.hidden-chip')).toHaveCount(0)
-  expect(await actionsOpacity(page, 'db')).toBe('0')
+  // The one set of buttons starts on the first header, there but hidden.
+  expect(await actionsOpacity(page, 'client')).toBe('0')
+  expect(await actionsOpacity(page, 'db')).toBeNull()
 
   await page.locator('[data-participant-head="db"]').hover()
   expect(await actionsOpacity(page, 'db')).toBe('1')
@@ -188,7 +227,8 @@ test('on a phone a tap shows a header’s buttons below it, a long press opens t
     const page = await context.newPage()
     await openFixture(page, 'dark')
     await page.locator('.seq-diagram').scrollIntoViewIfNeeded()
-    expect(await actionsOpacity(page, 'api')).toBe('0')
+    expect(await actionsOpacity(page, 'client')).toBe('0')
+    expect(await actionsOpacity(page, 'api')).toBeNull()
 
     // A tap shows the buttons: inside the header, or below it when the header is drawn too small for them.
     await page.locator('[data-participant-head="api"]').tap()

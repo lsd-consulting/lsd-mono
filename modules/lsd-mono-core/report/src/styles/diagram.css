@@ -526,6 +526,16 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+/* Touch: 44 px targets (TOUCH_HIT_CSS); PILL_W_TOUCH in participant-filter.ts is this width. */
+@media (pointer: coarse) {
+  .participant-head-actions {
+    width: 94px;
+  }
+  .participant-head-actions button {
+    width: 44px;
+    height: 44px;
+  }
+}
 .participant-head-actions svg {
   stroke: currentColor;
   fill: currentColor;

@@ -56,8 +56,13 @@ const headIds = (root: HTMLElement) =>
   [...root.querySelectorAll<HTMLElement>('[data-participant-head]')].map((el) => el.dataset.participantHead)
 const chip = (root: HTMLElement) => root.querySelector<HTMLButtonElement>('[data-hidden-chip]')
 const status = (root: HTMLElement) => root.querySelector('.participant-filter-status')!.textContent
-const hideBtn = (root: HTMLElement, id: string) =>
-  root.querySelector<HTMLButtonElement>(`[data-hide-participant="${id}"]`)!
+/** A pointer pressed on [id]'s header brings the one set of buttons there; its Hide. */
+const hideBtn = (root: HTMLElement, id: string) => {
+  const head = root.querySelector(`[data-participant-head="${id}"]`)!
+  head.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+  head.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))
+  return root.querySelector<HTMLButtonElement>(`[data-hide-participant="${id}"]`)!
+}
 const labels = (root: HTMLElement) => [...root.querySelectorAll('.msg-label > title')].map((el) => el.textContent)
 const press = (el: Element, key: string, init: KeyboardEventInit = {}) =>
   el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }))
@@ -100,14 +105,12 @@ describe('participant filter markup', () => {
     )
     const host = document.createElement('div')
     host.innerHTML = headActionsHtml(slots, 56, 'more:b')
+    // One set of buttons, on the header with the tab stop (#62).
     const buttons = [...host.querySelectorAll('button')]
-    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
-      'Hide Alpha',
-      'More actions for Alpha',
-      'Hide Beta <b>',
-      'More actions for Beta <b>',
-    ])
-    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, -1, -1, 0])
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Hide Beta <b>', 'More actions for Beta <b>'])
+    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, 0])
+    expect(host.querySelector('[data-participant-head="a"]')!.children).toHaveLength(0)
+    expect(host.querySelector<HTMLElement>('[data-participant-head="b"]')!.dataset.name).toBe('Beta <b>')
     expect(host.querySelector('[data-participant-head="b"]')!.getAttribute('title')).toBe('Beta <b>, queue')
     expect(host.querySelector('.participant-heads')!.hasAttribute('data-compact')).toBe(false)
     host.innerHTML = headActionsHtml(slots, COMPACT_HEADER_PX - 1, null)
@@ -317,7 +320,8 @@ describe('participant filter in the diagram', () => {
     expect(menu.hidden).toBe(false)
     expect(menu.getAttribute('aria-label')).toBe('Actions for Orders DB')
     head.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }))
-    hideBtn(root, 'db').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    // The long press put the buttons on its header; the lifted finger's click lands on its Hide.
+    root.querySelector('[data-hide-participant="db"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(diagramView(s.id).hidden.size).toBe(0)
   })
 
@@ -387,5 +391,78 @@ describe('participant filter in the diagram', () => {
     find.value = 'insert'
     find.dispatchEvent(new Event('input'))
     expect(root.querySelector('.diagram-find-count')!.textContent).toContain('1 on a hidden column')
+  })
+
+  it('keeps keyboard focus on its participant when a pointer passes over another header', () => {
+    const { s, root } = mount()
+    const hover = (id: string) =>
+      root
+        .querySelector(`[data-participant-head="${id}"]`)!
+        .dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))
+    hover('client')
+    const hide = root.querySelector<HTMLButtonElement>('[data-hide-participant="client"]')!
+    hide.focus()
+    press(hide, 'Tab')
+    hover('db')
+    expect(document.activeElement).toBe(hide)
+    expect(hide.dataset.hideParticipant).toBe('client')
+    expect(hide.getAttribute('aria-label')).toBe('Hide Client')
+    press(hide, 'Enter')
+    hide.click()
+    expect([...diagramView(s.id).hidden]).toEqual(['client'])
+  })
+
+  it('still follows the pointer once a pointer has pressed in the header', () => {
+    const { root } = mount()
+    const head = (id: string) => root.querySelector(`[data-participant-head="${id}"]`)!
+    head('client').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))
+    const hide = root.querySelector<HTMLButtonElement>('[data-hide-participant="client"]')!
+    head('client').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    hide.focus()
+    head('db').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))
+    expect(hide.dataset.hideParticipant).toBe('db')
+    expect(hide.getAttribute('aria-label')).toBe('Hide Orders DB')
+  })
+
+  it('forgets a press on a header name once a key is pressed outside it (Tab in from the page)', () => {
+    const { root } = mount()
+    const head = (id: string) => root.querySelector(`[data-participant-head="${id}"]`)!
+    head('client').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))
+    // A click on the name: no focus moves into the header.
+    head('client').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    const hide = root.querySelector<HTMLButtonElement>('[data-hide-participant="client"]')!
+    hide.focus()
+    head('db').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))
+    expect(document.activeElement).toBe(hide)
+    expect(hide.getAttribute('aria-label')).toBe('Hide Client')
+  })
+
+  it('moves the one set of buttons to the header in use, renamed, and keeps the tab stop with it', () => {
+    const { root } = mount()
+    expect(root.querySelectorAll('.participant-heads button')).toHaveLength(2)
+    const first = root.querySelector<HTMLButtonElement>('[data-hide-participant="client"]')!
+    expect(hideBtn(root, 'db')).toBe(first)
+    expect(first.getAttribute('aria-label')).toBe('Hide Orders DB')
+    expect(root.querySelector('[data-participant-menu="db"]')!.getAttribute('aria-label')).toBe(
+      'More actions for Orders DB',
+    )
+    expect(first.closest('[data-participant-head]')!.getAttribute('data-participant-head')).toBe('db')
+    expect(root.querySelectorAll('.participant-heads button')).toHaveLength(2)
+
+    // Keyboard: arrows walk Hide and More of each header in turn and wrap.
+    first.focus()
+    press(first, 'ArrowLeft')
+    expect(document.activeElement).toBe(root.querySelector('[data-participant-menu="api"]'))
+    press(document.activeElement!, 'End')
+    press(document.activeElement!, 'ArrowRight')
+    expect(document.activeElement).toBe(root.querySelector('[data-hide-participant="client"]'))
+    press(document.activeElement!, 'ArrowLeft')
+    expect(document.activeElement).toBe(root.querySelector('[data-participant-menu="bus"]'))
+
+    // Right-click on a header without the buttons brings them there, so Escape returns focus.
+    const api = root.querySelector<HTMLElement>('[data-participant-head="api"]')!
+    api.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+    expect(api.querySelector('[data-hide-participant="api"]')).not.toBeNull()
   })
 })

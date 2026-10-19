@@ -1,9 +1,12 @@
 import type { Participant } from '../types'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
+import { isCoarsePointer } from './media'
 
 /**
- * Participant filter (#8). Each participant header has its own Hide (×) and
- * More (⋯) buttons, shown on hover, keyboard focus, or a tap on touch screens.
+ * Participant filter (#8). Each participant header offers Hide (×) and More (⋯)
+ * buttons, shown on hover, keyboard focus, or a tap on touch screens. There is
+ * one set of them, moved onto the header in use (#62), so a 100-participant
+ * header is not ten nodes per participant.
  * The toolbar shows a chip only while something is hidden; it opens a list of
  * the hidden participants. Right-click, long-press, ⋯, or the context-menu key
  * on a header offers "Hide all but this one".
@@ -24,8 +27,31 @@ export interface HeadSlot {
   pillX: number
 }
 
+/**
+ * The page's last input, per document: a press (and where), or a key. Tracked on the document in
+ * the capture phase, so a key pressed outside a header (Tab into it) counts, and so a press on a
+ * header's name, which never moves focus into it, is forgotten at the next key. Any keydown
+ * counts, even a lone Shift: the header stays in keyboard mode until the next press.
+ */
+const lastInput = new WeakMap<Document, { target: EventTarget | null } | null>()
+
+function trackLastInput(doc: Document): void {
+  if (lastInput.has(doc)) return
+  lastInput.set(doc, null)
+  doc.addEventListener('pointerdown', (ev) => lastInput.set(doc, { target: ev.target }), true)
+  doc.addEventListener('keydown', () => lastInput.set(doc, null), true)
+}
+
+/** Whether the last input was a press inside [header]. */
+function pressedIn(doc: Document, header: HTMLElement): boolean {
+  const last = lastInput.get(doc)
+  return last != null && last.target instanceof Node && header.contains(last.target)
+}
+
 /** Drawn width of the Hide and More pill (two 24 px buttons, gap, padding, border). */
 export const PILL_W = 54
+/** The pill on a touch screen: two 44 px buttons (TOUCH_HIT_CSS), as diagram.css draws it there. */
+export const PILL_W_TOUCH = 94
 
 function participantName(p: Participant): string {
   return p.alias ?? p.name
@@ -54,13 +80,14 @@ export function headSlots(
   visible: { id: string; name: string; typeLabel: string; x: number }[],
   headerWidth: number,
 ): HeadSlot[] {
+  const pillW = isCoarsePointer() ? PILL_W_TOUCH : PILL_W
   return visible.map((p, i) => {
     const prev = visible[i - 1]
     const next = visible[i + 1]
     const left = prev ? (prev.x + p.x) / 2 : 0
     const right = next ? (p.x + next.x) / 2 : headerWidth
     // A pill past the header's edge would widen the scroll area and undo a fit.
-    const pillLeft = Math.max(0, Math.min(p.x - PILL_W / 2, headerWidth - PILL_W))
+    const pillLeft = Math.max(0, Math.min(p.x - pillW / 2, headerWidth - pillW))
     return {
       id: p.id,
       name: p.name,
@@ -73,25 +100,34 @@ export function headSlots(
 }
 
 /**
- * The header's action buttons. One roving tab stop for the whole row: the
- * button named by [focusKey] (or the first Hide) has tabindex 0.
+ * The header's slots, and the one set of action buttons on the slot named by [focusKey] (or
+ * the first). That set is the row's roving tab stop: the button named by [focusKey] (or Hide)
+ * has tabindex 0. [bindParticipantFilter] moves it onto whichever header is in use.
  */
 export function headActionsHtml(slots: HeadSlot[], height: number, focusKey: string | null): string {
   if (!slots.length) return ''
   const keys = slots.flatMap((s) => [`hide:${s.id}`, `more:${s.id}`])
   const active = focusKey && keys.includes(focusKey) ? focusKey : keys[0]
-  const tab = (key: string) => (key === active ? '0' : '-1')
+  const [kind, ...rest] = active.split(':')
+  const activeId = rest.join(':')
   const heads = slots
     .map((s) => {
-      const id = escapeAttr(s.id)
-      const name = escapeAttr(s.name)
-      return `<div class="participant-head" data-participant-head="${id}" title="${escapeAttr(`${s.name}, ${s.typeLabel}`)}" style="left:${round(s.left)}px;width:${round(s.width)}px;height:${round(height)}px;--pill-x:${round(s.pillX)}px"><span class="participant-head-actions"><button type="button" class="participant-hide" data-hide-participant="${id}" aria-label="Hide ${name}" aria-keyshortcuts="Shift+F10" tabindex="${tab(`hide:${s.id}`)}">${CROSS_SVG}</button><button type="button" class="participant-more" data-participant-menu="${id}" aria-label="More actions for ${name}" aria-haspopup="menu" aria-expanded="false" tabindex="${tab(`more:${s.id}`)}">${DOTS_SVG}</button></span></div>`
+      const actions = s.id === activeId ? headActionButtonsHtml(s.id, s.name, kind === 'more' ? 'more' : 'hide') : ''
+      return `<div class="participant-head" data-participant-head="${escapeAttr(s.id)}" data-name="${escapeAttr(s.name)}" title="${escapeAttr(`${s.name}, ${s.typeLabel}`)}" style="left:${round(s.left)}px;width:${round(s.width)}px;height:${round(height)}px;--pill-x:${round(s.pillX)}px">${actions}</div>`
     })
     .join('')
   // A header drawn small (a fitted wide diagram, a phone) puts the buttons under it,
   // so they do not cover the name of the participant they act on.
   const compact = height < COMPACT_HEADER_PX ? ' data-compact' : ''
-  return `<div class="participant-heads" role="toolbar" aria-label="Participants: hide, or press Shift+F10 for more"${compact}>${heads}</div>`
+  return `<div class="participant-heads" role="toolbar" aria-label="Participants: ← and → move between Hide and More buttons, Shift+F10 for more actions"${compact}>${heads}</div>`
+}
+
+/** Hide and More for participant [id], with the tab stop on [tabStop]. */
+export function headActionButtonsHtml(id: string, name: string, tabStop: 'hide' | 'more'): string {
+  const attrId = escapeAttr(id)
+  const attrName = escapeAttr(name)
+  const tab = (kind: string) => (kind === tabStop ? '0' : '-1')
+  return `<span class="participant-head-actions"><button type="button" class="participant-hide" data-hide-participant="${attrId}" aria-label="Hide ${attrName}" aria-keyshortcuts="Shift+F10" tabindex="${tab('hide')}">${CROSS_SVG}</button><button type="button" class="participant-more" data-participant-menu="${attrId}" aria-label="More actions for ${attrName}" aria-haspopup="menu" aria-expanded="false" tabindex="${tab('more')}">${DOTS_SVG}</button></span>`
 }
 
 /** Below this drawn header height the buttons sit under the header, not on it. */
@@ -195,6 +231,47 @@ export function bindParticipantFilter(root: HTMLElement, host: FilterHost): void
     if (status) status.textContent = text
   }
   const headButtons = () => Array.from(header.querySelectorAll<HTMLButtonElement>('.participant-heads button'))
+  const heads = () => Array.from(header.querySelectorAll<HTMLElement>('[data-participant-head]'))
+  const headOf = (id: string) => header.querySelector<HTMLElement>(`[data-participant-head="${cssEscape(id)}"]`)
+
+  /**
+   * Move the one set of Hide and More buttons onto [head], renamed for its participant, and
+   * return it. A button that had focus keeps it.
+   */
+  function actionsOn(head: HTMLElement): HTMLElement {
+    const id = head.dataset.participantHead ?? ''
+    const name = head.dataset.name ?? id
+    const bar = header!.querySelector<HTMLElement>('.participant-head-actions')
+    if (bar?.parentElement === head) return bar
+    if (!bar) {
+      head.insertAdjacentHTML('beforeend', headActionButtonsHtml(id, name, 'hide'))
+      return head.querySelector<HTMLElement>('.participant-head-actions')!
+    }
+    const focused = bar.contains(doc.activeElement) ? (doc.activeElement as HTMLElement) : null
+    const hideBtn = bar.querySelector<HTMLButtonElement>('[data-hide-participant]')!
+    const moreBtn = bar.querySelector<HTMLButtonElement>('[data-participant-menu]')!
+    hideBtn.dataset.hideParticipant = id
+    hideBtn.setAttribute('aria-label', `Hide ${name}`)
+    moreBtn.dataset.participantMenu = id
+    moreBtn.setAttribute('aria-label', `More actions for ${name}`)
+    moreBtn.setAttribute('aria-expanded', 'false')
+    head.append(bar)
+    focused?.focus({ preventScroll: true })
+    return bar
+  }
+
+  /** Put the buttons on [head] and focus its Hide or More, as the row's tab stop. */
+  function focusHead(head: HTMLElement, kind: 'hide' | 'more'): HTMLButtonElement {
+    const bar = actionsOn(head)
+    const btn = bar.querySelector<HTMLButtonElement>(
+      kind === 'hide' ? '[data-hide-participant]' : '[data-participant-menu]',
+    )!
+    roveTo(btn)
+    btn.focus({ preventScroll: true })
+    // The More button can sit past the scrollport's right edge: bring the pill into view.
+    btn.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+    return btn
+  }
 
   function renderFilter(focusChip = false): void {
     const hidden = hiddenInOrder(host.participants(), host.hidden())
@@ -215,11 +292,8 @@ export function bindParticipantFilter(root: HTMLElement, host: FilterHost): void
       ;(shows[Math.min(target.popoverIndex, shows.length - 1)] ?? null)?.focus()
       return
     }
-    const btn = header!.querySelector<HTMLButtonElement>(`[data-hide-participant="${cssEscape(target.head)}"]`)
-    if (btn) {
-      roveTo(btn)
-      btn.focus()
-    }
+    const head = headOf(target.head)
+    if (head) focusHead(head, 'hide')
   }
 
   /** Change the hidden set, redraw, announce, then move focus. */
@@ -291,14 +365,17 @@ export function bindParticipantFilter(root: HTMLElement, host: FilterHost): void
   header.addEventListener('keydown', (ev) => {
     const btn = (ev.target as Element).closest?.<HTMLButtonElement>('.participant-heads button')
     if (!btn) return
-    const buttons = headButtons()
-    const i = buttons.indexOf(btn)
-    const id = btn.closest<HTMLElement>('[data-participant-head]')?.dataset.participantHead ?? ''
-    let to: HTMLButtonElement | undefined
-    if (ev.key === 'ArrowRight') to = buttons[(i + 1) % buttons.length]
-    else if (ev.key === 'ArrowLeft') to = buttons[(i - 1 + buttons.length) % buttons.length]
-    else if (ev.key === 'Home') to = buttons[0]
-    else if (ev.key === 'End') to = buttons[buttons.length - 1]
+    const row = heads()
+    const head = btn.closest<HTMLElement>('[data-participant-head]')!
+    const at = row.indexOf(head)
+    const onMore = btn.hasAttribute('data-participant-menu')
+    const id = head.dataset.participantHead ?? ''
+    // Hide and More of each header in turn, wrapping at the ends.
+    let to: [HTMLElement, 'hide' | 'more'] | undefined
+    if (ev.key === 'ArrowRight') to = onMore ? [row[(at + 1) % row.length], 'hide'] : [head, 'more']
+    else if (ev.key === 'ArrowLeft') to = onMore ? [head, 'hide'] : [row[(at - 1 + row.length) % row.length], 'more']
+    else if (ev.key === 'Home') to = [row[0], 'hide']
+    else if (ev.key === 'End') to = [row[row.length - 1], 'more']
     else if (ev.key === 'ContextMenu' || (ev.key === 'F10' && ev.shiftKey)) {
       ev.preventDefault()
       ev.stopPropagation()
@@ -311,8 +388,22 @@ export function bindParticipantFilter(root: HTMLElement, host: FilterHost): void
     } else return
     ev.preventDefault()
     ev.stopPropagation()
-    roveTo(to)
-    to.focus()
+    focusHead(...to)
+  })
+
+  trackLastInput(doc)
+
+  // A pointer over a header brings the buttons there (and the row's tab stop with them), unless
+  // the menu is open or the keyboard is using them.
+  header.addEventListener('pointerover', (ev) => {
+    const head = (ev.target as Element).closest?.<HTMLElement>('[data-participant-head]')
+    if (!head || !menu.hidden) return
+    // Deliberate: while keyboard focus is in the header, hovering another header does not bring
+    // the buttons there. Moving them would rename the focused button, and Enter would then hide
+    // the participant under the pointer instead of the one the keyboard chose. Focus that came
+    // from a press in this header (a mouse user) still lets them follow the pointer.
+    if (header.contains(doc.activeElement) && !pressedIn(doc, header)) return
+    actionsOn(head)
   })
 
   header.addEventListener('focusin', (ev) => {
@@ -358,6 +449,7 @@ export function bindParticipantFilter(root: HTMLElement, host: FilterHost): void
 
   /** Touch: a tap shows that header's buttons. A tap elsewhere hides them again. */
   function reveal(head: HTMLElement): void {
+    actionsOn(head)
     header!.querySelectorAll('[data-revealed]').forEach((el) => {
       if (el !== head) el.removeAttribute('data-revealed')
     })
@@ -389,7 +481,8 @@ export function bindParticipantFilter(root: HTMLElement, host: FilterHost): void
     })
     menu.setAttribute('aria-label', `Actions for ${name}`)
     menuFor = id
-    const head = header!.querySelector<HTMLElement>(`[data-participant-head="${cssEscape(id)}"]`)
+    const head = headOf(id)
+    if (head && !opener) actionsOn(head)
     menuOpener = opener ?? head?.querySelector<HTMLButtonElement>('[data-hide-participant]') ?? null
     menuOpener
       ?.closest('[data-participant-head]')

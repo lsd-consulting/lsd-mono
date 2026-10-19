@@ -57,3 +57,54 @@ test('the 100-participant sample opens at 1280px with message labels in view and
     path: process.env.LSD_SHOTS ? `${process.env.LSD_SHOTS}/q-65-100p-1280-diagram.png` : undefined,
   })
 })
+
+// #62: one set of header buttons, moved to the header in use, keeps the 100-participant header
+// near its 535 nodes from before the participant filter (1,536 with buttons on every header).
+test('the 100-participant header has one set of Hide and More buttons, which follows the pointer', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.addInitScript(
+    (report) => {
+      window.__LSD_REPORT__ = report
+    },
+    wideReport(100, 400),
+  )
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await expect(page.locator('.seq-svg')).toBeVisible()
+  const header = page.locator('.seq-sticky-header')
+  expect(await header.evaluate((el) => el.getElementsByTagName('*').length)).toBeLessThanOrEqual(700)
+  await expect(header.locator('.participant-heads button')).toHaveCount(2)
+  await header.locator('[data-participant-head="p03"]').hover()
+  await expect(page.getByRole('button', { name: 'Hide Queue 03', exact: true })).toBeVisible()
+  await expect(header.locator('.participant-heads button')).toHaveCount(2)
+})
+
+test('moving along the header from the keyboard keeps the focused button inside the diagram (#62)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.addInitScript(
+    (report) => {
+      window.__LSD_REPORT__ = report
+    },
+    wideReport(100, 400),
+  )
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await expect(page.locator('.seq-svg')).toBeVisible()
+  await page.locator('.participant-heads [data-hide-participant]').focus()
+  await expect(page.locator('.participant-heads button:focus')).toHaveCount(1)
+  const inside = () =>
+    page.evaluate(() => {
+      const port = document.querySelector('.seq-scroll')!.getBoundingClientRect()
+      const box = document.activeElement!.getBoundingClientRect()
+      return {
+        label: document.activeElement!.getAttribute('aria-label'),
+        in: box.left >= port.left - 1 && box.right <= port.right + 1,
+      }
+    })
+  for (const key of ['End', 'ArrowRight', 'Home', 'ArrowLeft']) {
+    await page.keyboard.press(key)
+    expect(await inside(), key).toMatchObject({ in: true })
+  }
+})
