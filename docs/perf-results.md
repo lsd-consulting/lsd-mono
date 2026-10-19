@@ -410,3 +410,35 @@ The shell is 288,459 bytes, 10.6 KB more (140,037 bytes gzipped, 2.9 KB more).
 | Index ≤ 1.5× payload size | 1.33× (1.38× at 10×) | met |
 | No task > 50 ms while typing at 10× | none, at 1× and 4× CPU | met |
 | 1000 marks ≤ 5 ms | 2.4–2.9 ms | met |
+
+## Timing view (19 Oct 2026, 21:55 BST)
+
+The Timing view (summary strip, accuracy by pair, time by participant, swim lanes and waterfall) on long timed scenarios ([#69](https://github.com/lsd-consulting/lsd-mono/issues/69)). Same machine (Apple M3 Max), headless Chromium **156.0.8078.4**, viewport 1440×900, `file://`, Node 22 (Node only drives Playwright here; CI uses the version in `.nvmrc`, 24). Three runs per row, medians.
+
+### Fixture
+
+`generate-mono.mjs` now also writes `timed-100`, `timed-500` and `timed-2000` (calls). Each request is a call tree five calls deep in places: place order → check token, create order → insert order, charge. Every call has `durationMs` and its reply (`replyOf`), and nested calls carry `parentId`. The api's calls have `startedAt` on the scenario's clock. The orders service's calls come from a second source, so they are packed inside their parent. Each request ends with an untimed async publish. That gives 2,400 waterfall rows and 2,000 swim-lane bars at 2,000 calls (4,400 events).
+
+```
+cd modules/lsd-mono-core/report && npm run build:single && cd -
+node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
+node docs/perf/measure-timing.mjs "$PWD/docs/perf-samples"            # or e.g. timed-2000:4 for one case
+```
+
+[`measure-timing.mjs`](perf/measure-timing.mjs) opens the view from the Wall-clock chip. It times the open in the page from the click to the frame after it (the view is built in the click handler) and records the long tasks in the 200 ms after it. It then scrolls the side panel through the waterfall for 2 s (frame times), and clicks the waterfall row halfway down until its arrow is drawn in the diagram (row-to-message jump).
+
+| Calls | CPU | Rows / lane bars | Panel DOM nodes | Page DOM before → after | Open (ms) | Longest task on open (ms) | Scroll p95 (ms) | Row → message (ms) |
+|---|---|---|---|---|---|---|---|---|
+| 100 | 1× | 120 / 100 | 1,174 | 629 → 1,786 | 22 | 69–73 | 16.7 | 6–21 |
+| 500 | 1× | 600 / 500 | 5,494 | 1,509 → 6,986 | 41 | 74–77 | 16.7 | 8–23 |
+| 2,000 | 1× | 2,400 / 2,000 | 21,694 | 4,809 → 26,486 | 138 | 77–85 | 16.7 | 12–17 |
+| 100 | 4× | 120 / 100 | 1,174 | 629 → 1,786 | 70 | 76–78 | 16.7 | 15–16 |
+| 500 | 4× | 600 / 500 | 5,494 | 1,509 → 6,986 | 168 | 94–101 | 16.7 | 21–22 |
+| 2,000 | 4× | 2,400 / 2,000 | 21,694 | 4,809 → 26,486 | 549 | 313–325 | 16.7 | 40–48 |
+
+Scrolling the waterfall holds 60 fps at every size, with no long tasks. Jumping from a row to its message stays under 50 ms. Two findings:
+
+- **The DOM grows with every call**, about 11 nodes per call (waterfall row plus lane bar). At 2,000 calls the panel is 21,694 nodes, and opening it takes 138 ms on a desktop and 549 ms at 4× CPU, with one 313–325 ms long task. That is over the 100 ms long-task budget from 500 calls at 4× CPU. The timeline is already built once per scenario (`timeline()` caches it), so the cost is the markup. Most of it is the HTML parse and the panel's `max-content` width measure (`naturalWidth`), which lays the whole panel out twice.
+- **Opening the panel at any size** is followed by three long tasks of 62–72 ms, starting about 50 ms after the click and about 75 ms apart, even at 100 calls. The Timing view has already been drawn by then. They look like the page reacting to the wider side panel, but this was not traced.
+
+Tried and not kept: `content-visibility: auto` on waterfall rows halved the open (2,000 calls: 138 → 64 ms at 1×, 549 → 251 ms at 4×). The longest task at 4× stayed at 292–312 ms, and the scroll p95 at 4× rose from 16.7 to 33.4 ms as rows were laid out on the way in. The fix is to window the waterfall rows and lane bars, as the diagram windows its rows. That needs decisions on keyboard order, the browser's find-in-page and print, so it is left as a follow-up.
