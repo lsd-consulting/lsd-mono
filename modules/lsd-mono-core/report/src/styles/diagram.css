@@ -733,18 +733,21 @@
    row, and only that row stays stuck under the top bar: the rows above it slide away with the
    page (--seq-toolbar-lead, set by page-scroll.ts), so the diagram keeps the screen. */
 @media (max-width: 560px) {
-  /* Section links: one row that scrolls sideways. */
-  .section-jump {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
+  /* Section links wrap onto rows rather than scrolling sideways: at 320px (400% zoom) none is out
+     of sight, and a focused one is always fully visible. */
   .section-jump button {
-    flex: 0 0 auto;
-    white-space: nowrap;
+    white-space: normal;
+    max-width: 100%;
+    text-align: left;
   }
   .seq-toolbar {
     top: calc(var(--topbar-h, 0px) - var(--seq-toolbar-lead, 0px));
+  }
+  /* The rows above Find are stuck out of sight under the top bar. When the keyboard takes focus to
+     one of their controls (Shift+Tab from Find), the whole toolbar drops below the bar so the
+     control can be seen (WCAG 2.4.11), and goes back when focus leaves. */
+  .seq-toolbar:has(.zoom-controls :focus-visible, .participant-filter :focus-visible, .panel-controls :focus-visible) {
+    top: var(--topbar-h, 0px);
   }
   .seq-toolbar .zoom-controls {
     order: 1;

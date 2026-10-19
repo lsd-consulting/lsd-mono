@@ -216,3 +216,127 @@ for (const [name, viewport] of [
     })
   })
 }
+
+// WCAG 2.4.11 Focus Not Obscured: on a phone the toolbar's upper rows slide under the top bar, so
+// a focused Zoom button could sit entirely beneath it. Walk the whole tab order both ways.
+for (const [name, viewport] of [
+  ['390x844', { width: 390, height: 844 }],
+  ['320x640', { width: 320, height: 640 }],
+] as const) {
+  test.describe(`focus on a ${name} phone`, () => {
+    const { userAgent, deviceScaleFactor, isMobile, hasTouch } = PHONES.iPhone
+    test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
+
+    const hidden = (page: Page) =>
+      page.evaluate(() => {
+        const el = document.activeElement
+        if (!el || el === document.body) return null
+        const box = el.getBoundingClientRect()
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+        const seen = !!hit && (el === hit || el.contains(hit) || hit.contains(el))
+        const name = el.getAttribute('aria-label') ?? el.textContent?.trim().slice(0, 30) ?? el.tagName
+        return seen ? null : `${name} at y=${Math.round(box.top)}`
+      })
+
+    for (const direction of ['Tab', 'Shift+Tab'] as const) {
+      test(`${direction} through the page never leaves the focused control under a bar`, async ({ page }) => {
+        await open(page, 'report')
+        // Start with the page scrolled to its end, where the toolbar's upper rows are stuck out of
+        // sight: Shift+Tab from Find goes up into them, Tab from the scenario list comes down to them.
+        await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
+        await page.waitForTimeout(100)
+        await page
+          .locator(direction === 'Tab' ? '#btn-nav-fold' : '[data-diagram-find]')
+          .evaluate((el) => (el as HTMLElement).focus({ preventScroll: true }))
+        const covered: string[] = []
+        const seenNames = new Set<string>()
+        for (let i = 0; i < 14; i++) {
+          await page.keyboard.press(direction)
+          await page.waitForTimeout(30)
+          const issue = await hidden(page)
+          if (issue) covered.push(issue)
+          seenNames.add(
+            await page.evaluate(
+              () =>
+                document.activeElement?.getAttribute('aria-label') ??
+                document.activeElement?.textContent?.trim().slice(0, 20) ??
+                '',
+            ),
+          )
+        }
+        expect(seenNames.has('Zoom in'), 'the walk reached the zoom buttons').toBe(true)
+        expect(covered).toEqual([])
+      })
+    }
+  })
+}
+
+// WCAG 1.4.10 Reflow: at 320 CSS px (400% zoom) nothing in the scenario card is cut off.
+test.describe('the scenario card at 320px', () => {
+  const { userAgent, deviceScaleFactor, isMobile, hasTouch } = PHONES.iPhone
+  test.use({ viewport: { width: 320, height: 640 }, userAgent, deviceScaleFactor, isMobile, hasTouch })
+
+  const longFacts: Report = {
+    ...uxFixture,
+    scenarios: [
+      {
+        ...uxFixture.scenarios[0],
+        facts: [
+          { key: 'traceId', value: '4bf92f3577b34da6a3ce929d0e0e4736' },
+          { key: 'clock ordering', value: 'same source (deferred clock ordering applied to every captured message)' },
+          { key: 'orderId', value: 'ord_ux' },
+        ],
+        events: [
+          { kind: 'section', id: 's1', title: 'Measured and traced' },
+          ...sectionsReport(3).scenarios[0].events.slice(0, 4),
+          { kind: 'section', id: 's2', title: 'Captured out of order, put back by the clock' },
+          { kind: 'section', id: 's3', title: 'Refunds and reversals' },
+        ],
+        participants: sectionsReport(3).scenarios[0].participants,
+      },
+    ],
+  }
+
+  test('every Key facts value sits inside the card and keeps its full text', async ({ page }) => {
+    await open(page, 'report', '', longFacts)
+    const result = await page.evaluate(() => {
+      const card = document.querySelector<HTMLElement>('.scenario-card')!.getBoundingClientRect()
+      const values = [...document.querySelectorAll<HTMLElement>('.kv dd')].map((dd) => {
+        const box = dd.getBoundingClientRect()
+        return { text: dd.textContent, right: box.right, left: box.left, scroll: dd.scrollWidth - dd.clientWidth }
+      })
+      const keys = [...document.querySelectorAll<HTMLElement>('.kv dt')].map((dt) => dt.getBoundingClientRect().width)
+      return { cardRight: card.right, cardLeft: card.left, values, keys }
+    })
+    // The keys are readable too: none squeezed to nothing.
+    expect(result.keys.every((width) => width > 20)).toBe(true)
+    expect(result.values.map((v) => v.text)).toContain('4bf92f3577b34da6a3ce929d0e0e4736')
+    for (const value of result.values) {
+      expect(value.right, value.text).toBeLessThanOrEqual(result.cardRight)
+      expect(value.left, value.text).toBeGreaterThanOrEqual(result.cardLeft)
+      expect(value.scroll, `${value.text} clipped`).toBeLessThanOrEqual(0)
+    }
+  })
+
+  test('the section buttons stay inside the card, and a focused one is fully visible', async ({ page }) => {
+    await open(page, 'report', '', longFacts)
+    const row = (await page.locator('.section-jump').boundingBox())!
+    const buttons = page.locator('.section-jump button')
+    for (let i = 0; i < (await buttons.count()); i++) {
+      await buttons.nth(i).focus()
+      const box = (await buttons.nth(i).boundingBox())!
+      expect(box.x, `section ${i} left`).toBeGreaterThanOrEqual(row.x - 0.5)
+      expect(box.x + box.width, `section ${i} right`).toBeLessThanOrEqual(row.x + row.width + 0.5)
+    }
+    // And nothing in the card is wider than the card.
+    const wide = await page.evaluate(() => {
+      const card = document.querySelector<HTMLElement>('.scenario-card')!
+      return [...card.querySelectorAll<HTMLElement>('*')]
+        .filter((el) => !el.closest('.seq-scroll, svg, .msg-text') && el.scrollWidth - el.clientWidth > 1)
+        .filter((el) => getComputedStyle(el).overflowX === 'visible')
+        .map((el) => `${el.tagName}.${el.className}`)
+    })
+    expect(wide).toEqual([])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0)
+  })
+})
