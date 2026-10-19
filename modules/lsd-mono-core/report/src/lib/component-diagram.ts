@@ -160,7 +160,7 @@ export function renderComponentDiagram(graph: ComponentGraph, title: string): Co
   const vy = Math.floor(box.minY - PAD)
   const width = Math.ceil(box.maxX + PAD) - vx
   const height = Math.ceil(box.maxY + PAD) - vy
-  const svg = `<svg class="component-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${width} ${height}" width="${width}" height="${height}" style="max-width:${width}px" role="group" aria-label="${escapeAttr(summary)}">
+  const svg = `<svg class="component-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${width} ${height}" width="${width}" height="${height}" style="max-width:${width}px;--component-width:${width}px" role="group" aria-label="${escapeAttr(summary)}">
     <title>${escapeHtml(summary)}</title>
     <defs>
       <marker id="lsd-comp-filled" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="9" refY="5" orient="auto-start-reverse">

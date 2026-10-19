@@ -59,6 +59,8 @@ describe('renderComponentDiagram', () => {
     expect(svg).toContain('style="--pc:#38bdf8"')
     expect(svg.match(/class="component-node/g)).toHaveLength(4)
     expect(svg).toContain('<title>Customer, actor</title>')
+    // narrow.css keeps a phone panel at this natural width, scrolling sideways (#66).
+    expect(svg).toContain(`style="max-width:${width}px;--component-width:${width}px"`)
   })
 
   it('draws links without captions, keeps the line style and direction, and counts busy links', () => {

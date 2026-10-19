@@ -292,6 +292,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       graphHost.innerHTML = componentsBodyHtml(drawn.svg, graph)
       width.fit(drawn.width)
       revealOnPhone()
+      bindComponentScroll(graphHost.querySelector<HTMLElement>('.component-scroll'))
     },
     openMetrics(scenarioId, view) {
       begin({ scenarioId, kind: 'metrics' })
@@ -349,4 +350,67 @@ export function delegateMessageOpen(
   if (!found) return false
   open(found.scenarioId, found.message)
   return true
+}
+
+/** Watches the component drawing's box for a rotate or a resize; one drawing is shown at a time. */
+let componentResize: ResizeObserver | null = null
+
+/**
+ * The component drawing's sideways scroll (#66). Only a phone-width panel lets it overflow. It
+ * opens with its top row centred, so the root is on screen, and marks [scroller] with
+ * `data-more-right` and `data-more-left` while part of it lies past that edge, for the cues in
+ * narrow.css. The marks follow a scroll, a resize or a rotate. A link that takes focus is
+ * scrolled into view.
+ */
+const boundScrollers = new WeakSet<HTMLElement>()
+const componentMarks = new WeakMap<HTMLElement, () => void>()
+
+export function bindComponentScroll(scroller: HTMLElement | null): void {
+  componentResize?.disconnect()
+  componentResize = null
+  if (!scroller) return
+  const update = (): void => {
+    const more = scroller.scrollWidth - scroller.clientWidth
+    scroller.toggleAttribute('data-more-right', scroller.scrollLeft < more - 1)
+    scroller.toggleAttribute('data-more-left', more > 1 && scroller.scrollLeft > 1)
+    // A tab stop (and a named region) only while there is something to scroll to: a drawing that
+    // fits, as on a desktop panel, would be an empty stop before its links.
+    if (more > 1) {
+      scroller.tabIndex = 0
+      scroller.setAttribute('role', 'region')
+      scroller.setAttribute('aria-label', 'Component diagram drawing')
+    } else {
+      scroller.removeAttribute('tabindex')
+      scroller.removeAttribute('role')
+      scroller.removeAttribute('aria-label')
+    }
+  }
+  // Each render makes a new scroller, so listeners go on once per element; a second bind of the
+  // same element (a re-bind without a re-render) only re-marks it.
+  if (!boundScrollers.has(scroller)) {
+    boundScrollers.add(scroller)
+    scroller.addEventListener('scroll', () => componentMarks.get(scroller)?.(), { passive: true })
+    scroller.addEventListener('focusin', (ev) => {
+      const target = ev.target as Element
+      if (target !== scroller) target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+    })
+  }
+  componentMarks.set(scroller, update)
+  if (typeof ResizeObserver !== 'undefined') {
+    componentResize = new ResizeObserver(update)
+    componentResize.observe(scroller)
+  }
+  centreTopRow(scroller)
+  update()
+}
+
+/** Scroll an overflowing drawing so the middle of its top row (the root, for one) is centred. */
+export function centreTopRow(scroller: HTMLElement): void {
+  if (scroller.scrollWidth <= scroller.clientWidth + 1) return
+  const boxes = [...scroller.querySelectorAll('.component-node')].map((node) => node.getBoundingClientRect())
+  if (!boxes.length) return
+  const top = Math.min(...boxes.map((box) => box.top))
+  const row = boxes.filter((box) => box.top < top + 1)
+  const middle = (Math.min(...row.map((box) => box.left)) + Math.max(...row.map((box) => box.right))) / 2
+  scroller.scrollLeft += middle - scroller.getBoundingClientRect().left - scroller.clientWidth / 2
 }

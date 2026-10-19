@@ -4,7 +4,7 @@ import type { MessageEvent, MessageType, Report } from '../types'
 import { sampleReport } from '../data/sample-report'
 import { shellParts } from '../lib/payloads'
 import { componentGraph } from '../lib/component-graph'
-import { bindInspector, delegateMessageOpen, inspectorMarkup } from './inspector'
+import { bindComponentScroll, bindInspector, delegateMessageOpen, inspectorMarkup } from './inspector'
 import {
   INSPECTOR_MIN_PX,
   INSPECTOR_NARROW_PX,
@@ -392,5 +392,77 @@ describe('inspector', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     document.querySelector<HTMLButtonElement>('button.msg-open')!.click()
     expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${inspectorWidthLimits(window.innerWidth).max}px`)
+  })
+})
+
+describe('bindComponentScroll', () => {
+  it('marks the component drawing while part of it lies past the right edge', () => {
+    const scroller = document.createElement('div')
+    const size = (scrollLeft: number, clientWidth: number, scrollWidth: number) => {
+      Object.defineProperty(scroller, 'clientWidth', { value: clientWidth, configurable: true })
+      Object.defineProperty(scroller, 'scrollWidth', { value: scrollWidth, configurable: true })
+      scroller.scrollLeft = scrollLeft
+    }
+    size(0, 358, 516)
+    bindComponentScroll(scroller)
+    expect(scroller.hasAttribute('data-more-right')).toBe(true)
+    expect(scroller.hasAttribute('data-more-left')).toBe(false)
+    size(158, 358, 516)
+    scroller.dispatchEvent(new Event('scroll'))
+    expect(scroller.hasAttribute('data-more-right')).toBe(false)
+    expect(scroller.hasAttribute('data-more-left')).toBe(true)
+    expect(scroller.getAttribute('tabindex')).toBe('0')
+    expect(scroller.getAttribute('role')).toBe('region')
+    bindComponentScroll(null)
+  })
+
+  it('leaves a drawing that fits unmarked', () => {
+    const scroller = document.createElement('div')
+    Object.defineProperty(scroller, 'clientWidth', { value: 523 })
+    Object.defineProperty(scroller, 'scrollWidth', { value: 523 })
+    bindComponentScroll(scroller)
+    expect(scroller.hasAttribute('data-more-right')).toBe(false)
+    expect(scroller.hasAttribute('data-more-left')).toBe(false)
+    expect(scroller.hasAttribute('tabindex')).toBe(false)
+    expect(scroller.hasAttribute('role')).toBe(false)
+  })
+
+  it('binds its listeners once, however often the same drawing is bound', () => {
+    const scroller = document.createElement('div')
+    const link = scroller.appendChild(document.createElement('a'))
+    let scrolled = 0
+    link.scrollIntoView = () => {
+      scrolled++
+    }
+    bindComponentScroll(scroller)
+    bindComponentScroll(scroller)
+    link.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    expect(scrolled).toBe(1)
+    bindComponentScroll(null)
+  })
+
+  it('re-marks the edges when the box is resized, as on a rotate', () => {
+    const observed: ResizeObserverCallback[] = []
+    const original = globalThis.ResizeObserver
+    globalThis.ResizeObserver = class {
+      constructor(callback: ResizeObserverCallback) {
+        observed.push(callback)
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    try {
+      const scroller = document.createElement('div')
+      Object.defineProperty(scroller, 'scrollWidth', { value: 516, configurable: true })
+      Object.defineProperty(scroller, 'clientWidth', { value: 516, configurable: true })
+      bindComponentScroll(scroller)
+      expect(scroller.hasAttribute('data-more-right')).toBe(false)
+      Object.defineProperty(scroller, 'clientWidth', { value: 358, configurable: true })
+      observed[0]([], {} as ResizeObserver)
+      expect(scroller.hasAttribute('data-more-right')).toBe(true)
+    } finally {
+      globalThis.ResizeObserver = original
+    }
   })
 })

@@ -1,0 +1,291 @@
+{
+  "title": "Example report",
+  "generatedAt": "2026-10-19T12:00:00Z",
+  "generator": "check fixture",
+  "status": "success",
+  "scenarios": [
+    {
+      "id": "144",
+      "title": "Timed checkout (timing API)",
+      "status": "success",
+      "description": "",
+      "facts": [],
+      "metrics": [],
+      "participants": [
+        {
+          "id": "web-ui",
+          "name": "Web UI",
+          "type": "BOUNDARY"
+        },
+        {
+          "id": "api-gateway",
+          "name": "API Gateway",
+          "type": "BOUNDARY",
+          "alias": "Public API Gateway (rate limited)"
+        },
+        {
+          "id": "order-service",
+          "name": "Order Service",
+          "type": "PARTICIPANT",
+          "colour": "#2563eb"
+        },
+        {
+          "id": "basket",
+          "name": "Basket",
+          "type": "ENTITY",
+          "alias": "Shopping Basket Aggregate"
+        },
+        {
+          "id": "inventory-service",
+          "name": "Inventory Service",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "orders-db",
+          "name": "Orders DB",
+          "type": "DATABASE",
+          "alias": "Orders DB (PostgreSQL primary)"
+        },
+        {
+          "id": "payment-service",
+          "name": "Payment Service",
+          "type": "PARTICIPANT",
+          "colour": "#16a34a"
+        },
+        {
+          "id": "fraud-check",
+          "name": "Fraud Check",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "payment-provider",
+          "name": "Payment Provider",
+          "type": "PARTICIPANT",
+          "alias": "Payment Provider (ext)"
+        },
+        {
+          "id": "kafka",
+          "name": "Kafka order-events",
+          "type": "QUEUE",
+          "alias": "Kafka topic order-events.v2"
+        },
+        {
+          "id": "notification-service",
+          "name": "Notification Service",
+          "type": "PARTICIPANT",
+          "alias": "Customer Notification Preferences and Delivery Orchestration Service"
+        },
+        {
+          "id": "email",
+          "name": "Email",
+          "type": "ENTITY"
+        },
+        {
+          "id": "warehouse",
+          "name": "Warehouse",
+          "type": "PARTICIPANT",
+          "colour": "#ea580c"
+        },
+        {
+          "id": "smtp-relay",
+          "name": "SMTP Relay",
+          "type": "PARTICIPANT"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "web-ui",
+          "to": "api-gateway",
+          "label": "POST /checkout",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "3",
+          "from": "api-gateway",
+          "to": "order-service",
+          "label": "create order",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "4",
+          "from": "order-service",
+          "to": "basket",
+          "label": "load basket",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "5",
+          "from": "basket",
+          "to": "order-service",
+          "label": "2 lines",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "6",
+          "from": "order-service",
+          "to": "inventory-service",
+          "label": "reserve stock",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "7",
+          "from": "inventory-service",
+          "to": "orders-db",
+          "label": "upsert reservation",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "8",
+          "from": "orders-db",
+          "to": "inventory-service",
+          "label": "1 row",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "9",
+          "from": "inventory-service",
+          "to": "order-service",
+          "label": "reserved",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "10",
+          "from": "order-service",
+          "to": "payment-service",
+          "label": "authorise £42.00",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "11",
+          "from": "payment-service",
+          "to": "fraud-check",
+          "label": "score",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "12",
+          "from": "fraud-check",
+          "to": "payment-service",
+          "label": "low risk",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "13",
+          "from": "payment-service",
+          "to": "payment-provider",
+          "label": "POST /authorise",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "14",
+          "from": "payment-provider",
+          "to": "payment-service",
+          "label": "approved",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "15",
+          "from": "payment-service",
+          "to": "order-service",
+          "label": "authorised",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "18",
+          "from": "order-service",
+          "to": "kafka",
+          "label": "order.placed",
+          "type": "ASYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "17",
+          "from": "order-service",
+          "to": "warehouse",
+          "label": "pick list",
+          "type": "ASYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "19",
+          "from": "order-service",
+          "to": "api-gateway",
+          "label": "201 Created",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "20",
+          "from": "api-gateway",
+          "to": "web-ui",
+          "label": "201",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "22",
+          "from": "kafka",
+          "to": "notification-service",
+          "label": "consume order.placed",
+          "type": "ASYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "23",
+          "from": "notification-service",
+          "to": "email",
+          "label": "send receipt",
+          "type": "ASYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "24",
+          "from": "email",
+          "to": "smtp-relay",
+          "label": "deliver receipt",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "25",
+          "from": "smtp-relay",
+          "to": "email",
+          "label": "421 try again later",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "26",
+          "from": "email",
+          "to": "smtp-relay",
+          "label": "deliver receipt (retry)",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "27",
+          "from": "smtp-relay",
+          "to": "email",
+          "label": "250 queued",
+          "type": "SYNCHRONOUS_RESPONSE"
+        }
+      ]
+    }
+  ]
+}

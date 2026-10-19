@@ -34,9 +34,11 @@ export function componentsMetaHtml(graph: ComponentGraph, heading: string): stri
 /** The drawing, then the list a clicked link fills. */
 export function componentsBodyHtml(drawnSvg: string, graph: ComponentGraph): string {
   const hint = graph.edges.length
-    ? '<p class="inspector-empty">Hover over a link to see its messages, or click it to list them here.</p>'
+    ? '<p class="inspector-empty"><span class="legend-click">Hover over a link to see its messages, or click it to list them here.</span><span class="legend-tap">Tap a link to list its messages here.</span></p>'
     : ''
-  return `${drawnSvg}<div class="component-links" aria-live="polite">${hint}</div>`
+  // The drawing scrolls sideways on its own, so the link list under it stays put (narrow.css).
+  // A region with a tab stop, so a keyboard can scroll it when it overflows.
+  return `<div class="component-scroll">${drawnSvg}</div><div class="component-links" aria-live="polite">${hint}</div>`
 }
 
 /** One link's interactions, listed under the drawing. */
