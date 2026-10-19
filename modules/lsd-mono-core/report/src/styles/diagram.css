@@ -83,10 +83,21 @@
   z-index: 3;
   display: none;
 }
-.seq-more span {
+.seq-more-btn {
+  all: unset;
   position: absolute;
   right: 6px;
   top: 6px;
+  pointer-events: auto;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.seq-more-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.seq-more span {
+  display: block;
   padding: 2px 8px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;

@@ -71,6 +71,10 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   },
   { line: 3, help: '<kbd>?</kbd> help', action: 'help', matches: (e, ctx) => alone(e, ctx, '?') },
   { line: 3, help: '<kbd>Esc</kbd> close', action: 'close', matches: (e) => e.key === 'Escape' },
+  {
+    line: 4,
+    help: 'In a wide diagram, <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> scroll a screen sideways, <kbd>Home</kbd>/<kbd>End</kbd> go to its edges',
+  },
 ]
 
 /** The first page action [e] triggers, or null. */

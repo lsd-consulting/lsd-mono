@@ -1,6 +1,6 @@
 // The diagram viewport: windowed painting, zoom, fit, width observation and scroll binding.
 import type { MessageEvent } from '../../types'
-import { focusablePlaces, messagePlaces, replacementFocus } from '../diagram-a11y'
+import { focusablePlaces, messagePlaces, replacementFocus, sidewaysScrollLeft } from '../diagram-a11y'
 import {
   MAX_ZOOM,
   eventHiddenByColumns,
@@ -338,9 +338,17 @@ export function revealMessageX(scrollport: HTMLElement, messageId: string): void
   if (next !== scrollport.scrollLeft) scrollport.scrollLeft = next
 }
 
-/** Mark a scrollport that has lanes beyond its right edge, for the "more lanes" cue. */
+/**
+ * Mark a scrollport that has lanes beyond its right edge, for the "more lanes" cue. When the cue
+ * hides under focus (pressed until the right edge), focus moves to the scrollport, not <body>.
+ * Safari doesn't focus a clicked button, so there the handoff never runs (and isn't needed).
+ */
 export function syncMoreCue(scrollport: HTMLElement): void {
   const more = scrollport.scrollWidth - scrollport.clientWidth - scrollport.scrollLeft > 4
+  const active = scrollport.ownerDocument.activeElement
+  if (!more && active?.matches('[data-more-lanes]') && scrollport.contains(active)) {
+    scrollport.focus({ preventScroll: true })
+  }
   scrollport.toggleAttribute('data-more-right', more)
 }
 
@@ -404,6 +412,9 @@ function scrollportOf(scenarioId: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`.seq-scroll[data-scenario-id="${cssEscape(scenarioId)}"]`)
 }
 
+/** What the "More lanes →" button does: what Shift+→ does from the keyboard. */
+const SCREEN_RIGHT = { key: 'ArrowRight', shiftKey: true, metaKey: false, ctrlKey: false, altKey: false }
+
 /**
  * Search the scenario's payloads for its query. An answer that arrives after the keystroke
  * repaints the matches and the count, and unless the user has stepped since typing, the first
@@ -445,6 +456,13 @@ export function bindDiagramScroll(root: ParentNode): void {
     scroll.addEventListener('wheel', (ev) => onDiagramWheel(scroll, ev), { passive: false })
     diagram.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((btn) => {
       btn.addEventListener('click', () => onZoomClick(scroll, btn.dataset.zoom))
+    })
+    // The "More lanes →" cue is a button: it scrolls one screen right, and a click on it never
+    // reaches the arrow underneath (#65).
+    diagram.querySelector<HTMLButtonElement>('[data-more-lanes]')?.addEventListener('click', (ev) => {
+      ev.stopPropagation()
+      const left = sidewaysScrollLeft(SCREEN_RIGHT, scroll)
+      if (left != null) scroll.scrollLeft = left
     })
     bindParticipantFilter(diagram, {
       participants: () => diagramState.mounted.get(id)?.scenario.participants ?? [],

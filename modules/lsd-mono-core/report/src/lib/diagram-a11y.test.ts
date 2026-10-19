@@ -3,8 +3,6 @@ import type { DiagramEvent } from '../types'
 import { MESSAGE_LABEL_RISE, ROW_H, TOP_LABEL_PAD, layoutRows } from './layout'
 import { messageLabelRect } from './diagram-view'
 import {
-  MIN_HIT_CSS,
-  TOUCH_HIT_CSS,
   circleClearsCenter,
   diagramKeyAction,
   focusScrollTop,
@@ -12,9 +10,12 @@ import {
   hitBoxContains,
   messageHitBox,
   messagePlaces,
+  MIN_HIT_CSS,
   replacementFocus,
   scrollPaddingTop,
+  sidewaysScrollLeft,
   tabindexFor,
+  TOUCH_HIT_CSS,
 } from './diagram-a11y'
 
 const events: DiagramEvent[] = [
@@ -183,5 +184,38 @@ describe('reduced motion and payload places', () => {
       { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS', payloadId: 's/m' },
     ]
     expect(messagePlaces(deferred, new Set())[0].focusable).toBe(true)
+  })
+})
+
+describe('sidewaysScrollLeft (#65)', () => {
+  const key = (k: string, shiftKey = false, extra: Partial<KeyboardEvent> = {}) => ({
+    key: k,
+    shiftKey,
+    metaKey: false,
+    ctrlKey: false,
+    altKey: false,
+    ...extra,
+  })
+  const wide = { scrollLeft: 100, clientWidth: 1000, scrollWidth: 5000 }
+
+  it('scrolls a screen less 48px with Shift+arrows, clamped to the edges', () => {
+    expect(sidewaysScrollLeft(key('ArrowRight', true), wide)).toBe(1052)
+    expect(sidewaysScrollLeft(key('ArrowLeft', true), wide)).toBe(0)
+    expect(sidewaysScrollLeft(key('ArrowRight', true), { ...wide, scrollLeft: 3900 })).toBe(4000)
+  })
+
+  it('goes to the edges with Home and End, and leaves them to the page at that edge already', () => {
+    expect(sidewaysScrollLeft(key('Home'), wide)).toBe(0)
+    expect(sidewaysScrollLeft(key('End'), wide)).toBe(4000)
+    expect(sidewaysScrollLeft(key('Home'), { ...wide, scrollLeft: 0 })).toBeNull()
+    expect(sidewaysScrollLeft(key('End'), { ...wide, scrollLeft: 4000 })).toBeNull()
+  })
+
+  it('leaves other keys, modified keys and a diagram that fits alone', () => {
+    expect(sidewaysScrollLeft(key('ArrowRight'), wide)).toBeNull()
+    expect(sidewaysScrollLeft(key('ArrowDown', true), wide)).toBeNull()
+    expect(sidewaysScrollLeft(key('End', false, { ctrlKey: true }), wide)).toBeNull()
+    expect(sidewaysScrollLeft(key('Home', true), wide)).toBeNull()
+    expect(sidewaysScrollLeft(key('End'), { scrollLeft: 0, clientWidth: 900, scrollWidth: 900 })).toBeNull()
   })
 })

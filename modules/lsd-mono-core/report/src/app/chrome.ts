@@ -6,7 +6,7 @@ import type { Status } from '../types'
 import { keyHelpHtml } from './key-bindings'
 import { setSingleKeys, singleKeysEnabled } from '../ui/shortcuts'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspector'
-import { diagramKeyAction, focusTargetAfterClose, messagePlaces } from '../lib/diagram-a11y'
+import { diagramKeyAction, focusTargetAfterClose, messagePlaces, sidewaysScrollLeft } from '../lib/diagram-a11y'
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
 import { setPayloadLoader } from '../lib/diagram/payload-find'
 import { findStepKey } from '../lib/diagram/search-reveal'
@@ -344,8 +344,15 @@ function onFindKey(ev: KeyboardEvent, target: HTMLInputElement, step: 1 | -1): v
   stepFind(scroll, step)
 }
 
-/** Up, Down and Enter on a diagram or its focused arrow. */
+/** Up, Down and Enter on a diagram or its focused arrow; Shift+←/→, Home and End scroll it sideways. */
 function onDiagramKey(ev: KeyboardEvent, scrollKey: HTMLElement, openBtn: HTMLButtonElement | null): void {
+  const left = sidewaysScrollLeft(ev, scrollKey)
+  if (left != null) {
+    ev.preventDefault()
+    ev.stopPropagation()
+    scrollKey.scrollLeft = left
+    return
+  }
   const scenario = scenarioFrom(scrollKey)
   if (scenario) {
     const view = diagramView(scenario.id)

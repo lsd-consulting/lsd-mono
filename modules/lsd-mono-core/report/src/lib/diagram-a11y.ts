@@ -75,6 +75,28 @@ function knownActive(stops: MessagePlace[], activeId: string | null): string | n
   return null
 }
 
+/**
+ * Where a sideways key scrolls a wide diagram, or null for any other key (#65): Shift+← and
+ * Shift+→ one screen (less a little, so a lane stays in view), Home and End to the edges. Home or
+ * End at that edge already is null, so the key goes on to scroll the page.
+ */
+export function sidewaysScrollLeft(
+  ev: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'metaKey' | 'ctrlKey' | 'altKey'>,
+  scroll: { scrollLeft: number; clientWidth: number; scrollWidth: number },
+): number | null {
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return null
+  const max = Math.max(0, scroll.scrollWidth - scroll.clientWidth)
+  if (max <= 0) return null
+  const page = Math.max(40, scroll.clientWidth - 48)
+  let next: number
+  if (ev.shiftKey && ev.key === 'ArrowRight') next = scroll.scrollLeft + page
+  else if (ev.shiftKey && ev.key === 'ArrowLeft') next = scroll.scrollLeft - page
+  else if (!ev.shiftKey && ev.key === 'Home' && scroll.scrollLeft > 0) next = 0
+  else if (!ev.shiftKey && ev.key === 'End' && scroll.scrollLeft < max) next = max
+  else return null
+  return Math.min(max, Math.max(0, Math.round(next)))
+}
+
 export function diagramKeyAction(input: {
   key: string
   places: MessagePlace[]

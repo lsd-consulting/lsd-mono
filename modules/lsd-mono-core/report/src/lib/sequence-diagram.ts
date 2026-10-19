@@ -275,7 +275,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
       <div class="seq-stage">
         <div class="seq-scroll" data-scenario-id="${escapeAttr(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeAttr(scenario.title)}">
           <div class="seq-sticky-header" style="width:${width * zoom}px">${headerHtml(scenario, frame, view.hidden, zoom, null)}</div>
-          <div class="seq-more" aria-hidden="true"><span>More lanes →</span></div>
+          <div class="seq-more"><button type="button" class="seq-more-btn" data-more-lanes tabindex="-1" aria-label="More lanes to the right: scroll right"><span>More lanes →</span></button></div>
           <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
             <div class="seq-window"></div>
           </div>
