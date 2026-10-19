@@ -105,7 +105,11 @@ export function bindJsonMarks(parts: {
     mark.classList.add('is-current')
     mark.setAttribute('aria-current', 'true')
     count.textContent = marksLabel(current + 1, marks.length, total)
-    bringIntoView(mark)
+    // Next frame, so the marked text is laid out once, for that frame, not again here (#60: 1000
+    // marks in a 360 KB payload went from 6 ms to 2 ms of the keystroke). A later step wins.
+    requestAnimationFrame(() => {
+      if (marks[current] === mark && mark.isConnected) bringIntoView(mark)
+    })
   }
 
   function step(by: 1 | -1): void {
