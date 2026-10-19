@@ -6,6 +6,7 @@ import {
   eventHiddenByColumns,
   fittedView,
   messageLabelRect,
+  scrollportXFor,
   settleFitWidth,
   stepZoom,
   unscaledViewport,
@@ -15,6 +16,7 @@ import {
 } from '../diagram-view'
 import type { FittedView, Rect } from '../diagram-view'
 import { cssEscape } from '../escape'
+import type { LayoutRow } from '../layout'
 import { DEFAULT_OVERSCAN, DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, virtualRowRange } from '../layout'
 import { bindParticipantFilter } from '../participant-filter'
 import { scrollBehavior } from '../media'
@@ -39,6 +41,7 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   const diagram = diagramState.mounted.get(id)
   if (!diagram) return
   sizeStage(scrollport)
+  syncMoreCue(scrollport)
   const view = diagramView(id)
   const zoom = view.zoom
   const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
@@ -136,6 +139,15 @@ function applyDiagramFrame(scrollport: HTMLElement): void {
   if (readout) readout.textContent = zoomLabel(zoom)
 }
 
+/** Bring the current Find match on screen, down the page and sideways. False when there is none. */
+function revealFindHit(scrollport: HTMLElement): boolean {
+  if (!revealSearchHit(scrollport)) return false
+  const scenarioId = scrollport.dataset.scenarioId
+  const current = scenarioId ? diagramView(scenarioId).searchCurrentId : null
+  if (current) revealMessageX(scrollport, current)
+  return true
+}
+
 /** Step the diagram's find to its next (1) or previous (-1) match and bring it on screen. */
 export function stepFind(scrollport: HTMLElement, step: 1 | -1): void {
   const scenarioId = scrollport.dataset.scenarioId
@@ -143,7 +155,7 @@ export function stepFind(scrollport: HTMLElement, step: 1 | -1): void {
   if (!scenarioId || !row) return
   syncFindControls(scrollport)
   syncDiagramWindow(scrollport)
-  if (revealSearchHit(scrollport)) syncDiagramWindow(scrollport)
+  if (revealFindHit(scrollport)) syncDiagramWindow(scrollport)
   diagramState.findHooks.stepped?.(scenarioId, row.event.id)
 }
 
@@ -285,21 +297,50 @@ function observeWidth(scrollport: HTMLElement): void {
   diagramState.observedScrollports.add(scrollport)
 }
 
+/** Label box of a message row, in drawn coordinates (they start frame.left left of x = 0). */
+export function messageLabelBox(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>, row: LayoutRow): Rect | null {
+  const event = row.event
+  if (event.kind !== 'message' || eventHiddenByColumns(event, hiddenIds)) return null
+  const frame = frameOf(diagram, hiddenIds)
+  const index = laneIndex(visibleParticipants(diagram.scenario.participants, hiddenIds))
+  const ends = messageEndpoints(event, index, frame.base)
+  const rect = messageLabelRect({ arrowY: row.y, x1: ends.x1, x2: ends.x2 })
+  return { ...rect, x: rect.x + frame.left }
+}
+
 /** Label box of the uppermost message still drawn. Fit scrolls this into view. */
 function topMessageLabelRect(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): Rect {
-  const frame = frameOf(diagram, hiddenIds)
-  const width = frame.base
-  const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
-  const index = laneIndex(visible)
   for (const row of diagram.rows) {
-    const event = row.event
-    if (event.kind !== 'message' || eventHiddenByColumns(event, hiddenIds)) continue
-    const ends = messageEndpoints(event, index, width)
-    const rect = messageLabelRect({ arrowY: row.y, x1: ends.x1, x2: ends.x2 })
-    // Fit works in drawn coordinates, which start frame.left left of x = 0.
-    return { ...rect, x: rect.x + frame.left }
+    const box = messageLabelBox(diagram, hiddenIds, row)
+    if (box) return box
   }
   return { x: 0, y: 0, width: 1, height: 1 }
+}
+
+/**
+ * Scroll sideways, only as far as needed, so a message's label is inside the scrollport. Fit can
+ * stop at a readable scale with lanes beyond the right edge; Find and keyboard focus use this to
+ * bring a match or an arrow out of them.
+ */
+export function revealMessageX(scrollport: HTMLElement, messageId: string): void {
+  const id = scrollport.dataset.scenarioId
+  const diagram = id ? diagramState.mounted.get(id) : undefined
+  if (!id || !diagram) return
+  const row = diagram.rows.find((item) => item.event.kind === 'message' && item.event.id === messageId)
+  const box = row && messageLabelBox(diagram, diagramView(id).hidden, row)
+  if (!box) return
+  const zoom = diagramView(id).zoom
+  const left = box.x * zoom
+  const right = left + box.width * zoom
+  const view = scrollport.clientWidth
+  const next = scrollportXFor(scrollport.scrollLeft, view, left, right)
+  if (next !== scrollport.scrollLeft) scrollport.scrollLeft = next
+}
+
+/** Mark a scrollport that has lanes beyond its right edge, for the "more lanes" cue. */
+export function syncMoreCue(scrollport: HTMLElement): void {
+  const more = scrollport.scrollWidth - scrollport.clientWidth - scrollport.scrollLeft > 4
+  scrollport.toggleAttribute('data-more-right', more)
 }
 
 export function messageEndpoints(
@@ -376,7 +417,7 @@ function refreshPayloads(scenarioId: string): void {
     if (!before || !view.searchStepped) updateSearchCurrent(scenarioId)
     syncFindControls(scroll)
     syncDiagramWindow(scroll)
-    if (view.searchCurrentId !== before && revealSearchHit(scroll)) syncDiagramWindow(scroll)
+    if (view.searchCurrentId !== before && revealFindHit(scroll)) syncDiagramWindow(scroll)
     diagramState.findHooks.changed?.(scenarioId)
   })
 }
@@ -421,7 +462,7 @@ export function bindDiagramScroll(root: ParentNode): void {
       // Typing on a phone has no Enter: bring the first match on screen once typing pauses.
       clearTimeout(reveal)
       reveal = setTimeout(() => {
-        if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
+        if (revealFindHit(scroll)) syncDiagramWindow(scroll)
       }, SEARCH_REVEAL_DELAY_MS)
     })
     diagram.querySelector<HTMLButtonElement>('[data-find-payloads]')?.addEventListener('click', (ev) => {

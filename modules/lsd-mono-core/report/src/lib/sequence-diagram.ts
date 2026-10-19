@@ -19,7 +19,7 @@ import {
 } from './diagram/shapes'
 import { type DiagramFrame, type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
 import { scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
-import { syncDiagramWindow } from './diagram/viewport'
+import { revealMessageX, syncDiagramWindow } from './diagram/viewport'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
 import {
   ACT_NEST_DX,
@@ -275,6 +275,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
       <div class="seq-stage">
         <div class="seq-scroll" data-scenario-id="${escapeAttr(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeAttr(scenario.title)}">
           <div class="seq-sticky-header" style="width:${width * zoom}px">${headerHtml(scenario, frame, view.hidden, zoom, null)}</div>
+          <div class="seq-more" aria-hidden="true"><span>More lanes →</span></div>
           <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
             <div class="seq-window"></div>
           </div>
@@ -329,6 +330,7 @@ export function focusDiagramMessage(scrollport: HTMLElement, messageId: string):
         scrollport.scrollTop = focusScrollTop(row.y, view.zoom)
       }
     }
+    revealMessageX(scrollport, messageId)
     syncDiagramWindow(scrollport)
   } finally {
     diagramState.movingFocus = false

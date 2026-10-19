@@ -12,10 +12,11 @@ export const DEFAULT_ZOOM = 1
  */
 export const AUTO_FIT_MAX_ZOOM = 1
 /**
- * Fit (automatic or the button) never goes below this: labels stay readable and arrow
- * targets keep their size, and a wider diagram scrolls sideways. Zoom out still reaches MIN_ZOOM.
+ * Fit (automatic or the button) never goes below this: message labels are 11px in the drawing,
+ * so 95% keeps them above 10 CSS px, and arrow targets keep their size. A wider diagram scrolls
+ * sideways, with a cue that more lanes lie to the right. Zoom out still reaches MIN_ZOOM.
  */
-export const FIT_MIN_ZOOM = 0.5
+export const FIT_MIN_ZOOM = 0.95
 /** Button and wheel step, as a fraction of 100%. */
 const ZOOM_STEP = 0.1
 
@@ -128,6 +129,18 @@ export function fittedView(input: {
     originY,
     visible: { x: originX, y: originY, width: visibleW, height: visibleH },
   }
+}
+
+/**
+ * scrollLeft that brings [left, right] (CSS pixels of the drawing) inside a scrollport `view`
+ * wide, moving as little as possible. A box wider than the view lines up its left edge.
+ */
+export function scrollportXFor(scrollLeft: number, view: number, left: number, right: number): number {
+  const margin = 12
+  if (right - left > view - 2 * margin) return Math.max(0, Math.round(left - margin))
+  if (left < scrollLeft + margin) return Math.max(0, Math.round(left - margin))
+  if (right > scrollLeft + view - margin) return Math.max(0, Math.round(right - view + margin))
+  return scrollLeft
 }
 
 export function zoomLabel(zoom: number): string {

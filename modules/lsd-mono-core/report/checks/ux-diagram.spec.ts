@@ -173,15 +173,17 @@ test('long participant names stay inside their shapes and clear of their neighbo
   expect(boxes.find((box) => box.id === 'stock')!.lines).toBe(1)
 })
 
+// Fit stops at 95%, where 11px labels are still above 10px, so only a diagram a little wider than its
+// panel (this one is about 1250px) fits; a wider one scrolls sideways instead.
 test('a wide diagram opens fitted, refits on resize until the user zooms, then keeps their zoom', async ({ page }) => {
-  await page.setViewportSize({ width: 1200, height: 800 })
+  await page.setViewportSize({ width: 1250, height: 800 })
   await openWide(page)
   const first = await zoomOf(page, 'wide-a')
   expect(first.percent, 'opens below 100%, fitted to the panel').toBeLessThan(100)
   expect(first.overflowX, 'nothing to scroll sideways').toBeLessThanOrEqual(0)
 
   // Not zoomed yet: a narrower window refits.
-  await page.setViewportSize({ width: 900, height: 800 })
+  await page.setViewportSize({ width: 1235, height: 800 })
   await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBeLessThan(first.percent)
   expect((await zoomOf(page, 'wide-a')).overflowX).toBeLessThanOrEqual(0)
 
@@ -194,20 +196,21 @@ test('a wide diagram opens fitted, refits on resize until the user zooms, then k
   expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
 
   // Fit hands it back to automatic fitting.
+  await page.setViewportSize({ width: 1250, height: 800 })
   await card.getByRole('button', { name: 'Fit to screen' }).click()
   const fitted = (await zoomOf(page, 'wide-a')).percent
-  await page.setViewportSize({ width: 1000, height: 800 })
+  await page.setViewportSize({ width: 1235, height: 800 })
   await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBeLessThan(fitted)
   expect((await zoomOf(page, 'wide-a')).overflowX).toBeLessThanOrEqual(0)
 
-  // A phone-width panel stops at the 50% floor and scrolls sideways instead.
+  // A phone-width panel stops at the 95% floor and scrolls sideways instead.
   await page.setViewportSize({ width: 390, height: 800 })
-  await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBe(50)
+  await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBe(95)
   expect((await zoomOf(page, 'wide-a')).overflowX).toBeGreaterThan(0)
 })
 
 test('a scenario chosen from the list is fitted when it shows', async ({ page }) => {
-  await page.setViewportSize({ width: 1200, height: 800 })
+  await page.setViewportSize({ width: 1250, height: 800 })
   await openWide(page)
   await page.locator('#scenario-nav [data-nav="wide-b"]').click()
   await expect(page.locator('#card-wide-b .seq-svg')).toBeVisible()
@@ -302,3 +305,54 @@ test('every message is in the accessibility tree with from, to and kind, and the
   await expect(page.locator('.msg-places [aria-posinset]')).toHaveCount(0)
   expect(await seriousViolations(page)).toEqual([])
 })
+
+// The example report has 14 participants, so Fit used to land at 50% with 5.5px labels.
+for (const [name, viewport] of [
+  ['1280x800', { width: 1280, height: 800 }],
+  ['1440x900', { width: 1440, height: 900 }],
+  ['390x844', { width: 390, height: 844 }],
+] as const) {
+  test(`the example report opens with readable labels at ${name}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    await expect(page.locator('.seq-svg')).toBeVisible()
+    await expect(page.locator('.msg-label').first()).toBeVisible()
+    const smallest = await page.evaluate(() =>
+      Math.min(
+        ...[...document.querySelectorAll<SVGTextElement>('.seq-svg .msg-label')].map(
+          (text) => Number.parseFloat(getComputedStyle(text).fontSize) * text.getScreenCTM()!.a,
+        ),
+      ),
+    )
+    expect(smallest, 'message label size in CSS px').toBeGreaterThanOrEqual(10)
+
+    // Lanes beyond the right edge are announced, and Find brings a label from there into view.
+    const scroll = page.locator('.seq-scroll')
+    const overflow = await scroll.evaluate((el) => el.scrollWidth - el.clientWidth)
+    if (overflow <= 0) {
+      await expect(page.locator('.seq-more span')).toBeHidden()
+      return
+    }
+    await expect(page.locator('.seq-more span')).toBeVisible()
+    await expect(page.locator('.seq-more span')).toContainText('More lanes')
+    const far = await page.evaluate(() => {
+      const port = document.querySelector('.seq-scroll')!.getBoundingClientRect()
+      const labels = [...document.querySelectorAll<SVGTextElement>('.seq-svg .msg-label')]
+      return labels.find((text) => text.getBoundingClientRect().left > port.right)?.textContent?.trim() ?? null
+    })
+    expect(far, 'a painted label beyond the right edge').not.toBeNull()
+    await page.locator('[data-diagram-find]').fill(far!.split(/\s/)[0])
+    await page.keyboard.press('Enter')
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const port = document.querySelector('.seq-scroll')!.getBoundingClientRect()
+          const hit = document.querySelector('.seq-svg [data-search-hit="current"] .msg-label')
+          const box = hit?.getBoundingClientRect()
+          return !!box && box.left >= port.left - 1 && box.right <= port.right + 1
+        }),
+      )
+      .toBe(true)
+  })
+}

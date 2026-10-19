@@ -190,7 +190,7 @@ test('on a phone a tap shows a header’s buttons below it, a long press opens t
     await page.locator('.seq-diagram').scrollIntoViewIfNeeded()
     expect(await actionsOpacity(page, 'api')).toBe('0')
 
-    // A tap shows the buttons; the header is drawn small here, so they sit below it.
+    // A tap shows the buttons: inside the header, or below it when the header is drawn too small for them.
     await page.locator('[data-participant-head="api"]').tap()
     expect(await actionsOpacity(page, 'api')).toBe('1')
     const placed = await page.evaluate(() => {
@@ -198,9 +198,15 @@ test('on a phone a tap shows a header’s buttons below it, a long press opens t
       const bar = document.querySelector('[data-participant-head="api"] .participant-head-actions')!
       const box = bar.getBoundingClientRect()
       const hit = document.elementFromPoint(box.left + 12, box.top + 12)
-      return { headerBottom: header.bottom, top: box.top, onTop: !!hit?.closest('.participant-head-actions') }
+      return {
+        headerTop: header.top,
+        headerBottom: header.bottom,
+        top: box.top,
+        onTop: !!hit?.closest('.participant-head-actions'),
+      }
     })
-    expect(placed.top).toBeGreaterThanOrEqual(placed.headerBottom)
+    expect(placed.top).toBeGreaterThanOrEqual(placed.headerTop)
+    expect(placed.top).toBeLessThan(placed.headerBottom + 40)
     expect(placed.onTop, 'the revealed buttons are on top and tappable').toBe(true)
     await page.getByRole('button', { name: 'Hide Api' }).tap()
     expect(await headerNames(page)).toEqual(['client', 'db', 'bus'])
@@ -217,6 +223,8 @@ test('on a phone a tap shows a header’s buttons below it, a long press opens t
     await expect(page.locator('.hidden-chip')).toHaveCount(0)
 
     // Long press (iOS Safari fires no contextmenu, so the report times the press itself).
+    // Fit stops at 95%, so on a phone the lane may lie beyond the right edge: scroll to it first.
+    await page.locator('[data-participant-head="db"]').scrollIntoViewIfNeeded()
     const head = (await page.locator('[data-participant-head="db"]').boundingBox())!
     const cdp = await context.newCDPSession(page)
     const point = { x: head.x + head.width / 2, y: head.y + head.height / 2 }

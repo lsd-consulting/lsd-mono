@@ -66,6 +66,39 @@
 .seq-spacer {
   position: relative;
 }
+/* Fit stops at a readable scale, so a wide diagram runs past the right edge. This says so while
+   lanes remain there (viewport.ts sets data-more-right), and the edge is shaded. */
+.seq-more {
+  position: sticky;
+  left: 0;
+  top: var(--seq-header-h, 56px);
+  width: 100%;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+  display: none;
+}
+.seq-more span {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+.seq-scroll[data-more-right] {
+  box-shadow: inset -14px 0 12px -12px color-mix(in oklab, var(--text) 35%, transparent);
+}
+.seq-scroll[data-more-right] .seq-more {
+  display: block;
+}
 .seq-window {
   position: absolute;
   top: 0;
