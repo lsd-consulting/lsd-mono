@@ -4,6 +4,7 @@ import { isCoarsePointer } from '../lib/media'
 import { renderNav } from './nav'
 import type { Status } from '../types'
 import { keyHelpHtml } from './key-bindings'
+import { setSingleKeys, singleKeysEnabled } from '../ui/shortcuts'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspector'
 import { diagramKeyAction, focusTargetAfterClose, messagePlaces } from '../lib/diagram-a11y'
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
@@ -116,6 +117,7 @@ export function renderShell(): void {
     <div class="help-toast" id="help" data-open="false" role="note">
       <strong style="color:var(--text)">Keyboard</strong><br/>
       ${keyHelpHtml()}
+      <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> Single-key shortcuts (<kbd>/</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>d</kbd> <kbd>?</kbd>)</label>
     </div>
   `
 
@@ -188,6 +190,10 @@ function bindTopbarButtons(): void {
   document.querySelector('#btn-nav-fold')!.addEventListener('click', () => {
     state.navOpen = !state.navOpen
     renderNav()
+  })
+
+  document.querySelector<HTMLInputElement>('#single-keys')!.addEventListener('change', (ev) => {
+    setSingleKeys((ev.currentTarget as HTMLInputElement).checked)
   })
 
   document.querySelector('#btn-help')!.addEventListener('click', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { KEY_BINDINGS, keyHelpHtml, pageAction, type KeyContext } from './key-bindings'
 
-const page: KeyContext = { arrows: true, onControl: false, hasScenario: true }
+const page: KeyContext = { arrows: true, onControl: false, hasScenario: true, singleKeys: true }
 const key = (k: string, mods: { metaKey?: boolean; ctrlKey?: boolean } = {}) => ({
   key: k,
   metaKey: mods.metaKey ?? false,
@@ -29,6 +29,26 @@ describe('page key bindings', () => {
     expect(pageAction(key('j'), { ...page, arrows: false })).toBe('next')
     expect(pageAction(key('Enter'), { ...page, onControl: true })).toBeNull()
     expect(pageAction(key('Enter'), { ...page, hasScenario: false })).toBeNull()
+  })
+
+  it('does nothing for the one-character shortcuts when they are off, and keeps the rest', () => {
+    const off = { ...page, singleKeys: false }
+    for (const k of ['/', 'j', 'k', 'd', '?']) expect(pageAction(key(k), off), k).toBeNull()
+    // Modifier shortcuts, arrows, Enter and Escape are not character keys.
+    expect(pageAction(key('k', { metaKey: true }), off)).toBe('search')
+    expect(pageAction(key('k', { ctrlKey: true }), off)).toBe('search')
+    expect(pageAction(key('ArrowDown'), off)).toBe('next')
+    expect(pageAction(key('ArrowUp'), off)).toBe('prev')
+    expect(pageAction(key('Enter'), off)).toBe('diagram')
+    expect(pageAction(key('Escape'), off)).toBe('close')
+  })
+
+  it('does not take j, d or / with Ctrl, Cmd or Alt held, so browser shortcuts stay theirs', () => {
+    for (const k of ['/', 'j', 'd', '?']) {
+      expect(pageAction(key(k, { ctrlKey: true }), page), `ctrl ${k}`).toBeNull()
+      expect(pageAction(key(k, { metaKey: true }), page), `cmd ${k}`).toBeNull()
+      expect(pageAction({ ...key(k), altKey: true }, page), `alt ${k}`).toBeNull()
+    }
   })
 
   it('lists every key the page handles in the help toast', () => {

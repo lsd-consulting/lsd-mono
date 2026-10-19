@@ -3,6 +3,7 @@ import { paintThemeButton } from './chrome'
 import { focusSelectedDiagram } from './main-view'
 import { moveSelection, focusedNavId } from './nav'
 import { toggleTheme } from '../ui/theme'
+import { singleKeysEnabled } from '../ui/shortcuts'
 import { session, state } from './context'
 import { pageAction } from './key-bindings'
 
@@ -40,6 +41,7 @@ export function onKey(e: KeyboardEvent): void {
     arrows: Boolean(target === document.body || target.closest('#scenario-nav') || target.matches('#scenario-title')),
     onControl: Boolean(target.closest('button, a, [role="slider"]')),
     hasScenario: Boolean(session.renderedId),
+    singleKeys: singleKeysEnabled(),
   })
   if (!action || action === 'close') return
   e.preventDefault()

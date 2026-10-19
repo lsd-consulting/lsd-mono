@@ -10,7 +10,11 @@ export interface KeyContext {
   onControl: boolean
   /** A scenario is shown, so Enter has a diagram to go to. */
   hasScenario: boolean
+  /** The one-character shortcuts (/ j k d ?) are on. A person can turn them off (WCAG 2.1.4). */
+  singleKeys: boolean
 }
+
+type KeyEvent = Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey'> & { altKey?: boolean }
 
 export interface KeyBinding {
   /** Help toast line, from 0. */
@@ -19,7 +23,12 @@ export interface KeyBinding {
   help: string
   /** Missing for keys handled elsewhere (diagram, Find), which are listed for help only. */
   action?: PageAction
-  matches?: (e: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey'>, ctx: KeyContext) => boolean
+  matches?: (e: KeyEvent, ctx: KeyContext) => boolean
+}
+
+/** A key typed alone: no Ctrl, Cmd or Alt. These are the shortcuts the toggle switches off. */
+function alone(e: KeyEvent, ctx: KeyContext, key: string): boolean {
+  return ctx.singleKeys && e.key === key && !e.metaKey && !e.ctrlKey && !e.altKey
 }
 
 export const KEY_BINDINGS: readonly KeyBinding[] = [
@@ -27,19 +36,19 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
     line: 0,
     help: '<kbd>/</kbd> search',
     action: 'search',
-    matches: (e) => e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey)),
+    matches: (e, ctx) => alone(e, ctx, '/') || (e.key === 'k' && (e.metaKey || e.ctrlKey)),
   },
   {
     line: 0,
     help: '<kbd>j</kbd>/<kbd>k</kbd> or <kbd>↓</kbd>/<kbd>↑</kbd> next/prev scenario',
     action: 'next',
-    matches: (e, ctx) => e.key === 'j' || (e.key === 'ArrowDown' && ctx.arrows),
+    matches: (e, ctx) => alone(e, ctx, 'j') || (e.key === 'ArrowDown' && ctx.arrows),
   },
   {
     line: 0,
     help: '',
     action: 'prev',
-    matches: (e, ctx) => e.key === 'k' || (e.key === 'ArrowUp' && ctx.arrows),
+    matches: (e, ctx) => alone(e, ctx, 'k') || (e.key === 'ArrowUp' && ctx.arrows),
   },
   {
     line: 0,
@@ -58,14 +67,14 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
     line: 3,
     help: '<kbd>d</kbd> theme (Auto follows the OS, dark, light, high contrast)',
     action: 'theme',
-    matches: (e) => e.key === 'd',
+    matches: (e, ctx) => alone(e, ctx, 'd'),
   },
-  { line: 3, help: '<kbd>?</kbd> help', action: 'help', matches: (e) => e.key === '?' },
+  { line: 3, help: '<kbd>?</kbd> help', action: 'help', matches: (e, ctx) => alone(e, ctx, '?') },
   { line: 3, help: '<kbd>Esc</kbd> close', action: 'close', matches: (e) => e.key === 'Escape' },
 ]
 
 /** The first page action [e] triggers, or null. */
-export function pageAction(e: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey'>, ctx: KeyContext): PageAction | null {
+export function pageAction(e: KeyEvent, ctx: KeyContext): PageAction | null {
   for (const binding of KEY_BINDINGS) {
     if (binding.action && binding.matches?.(e, ctx)) return binding.action
   }
