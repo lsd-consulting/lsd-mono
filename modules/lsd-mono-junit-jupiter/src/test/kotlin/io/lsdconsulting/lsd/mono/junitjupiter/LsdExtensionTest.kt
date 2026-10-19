@@ -12,20 +12,12 @@ import org.junit.jupiter.api.extension.ExtendWith
 import kotlin.concurrent.thread
 
 /**
- * Smoke test that Jupiter 6 can load [LsdExtension] and complete a successful scenario
- * via first-party [LsdContext] (lsd-mono-core).
- * Report HTML is written by the extension's [AfterAllCallback] (after this class finishes).
+ * The [LsdScenario] parameter [LsdExtension] resolves. What a completed scenario writes (title,
+ * status, facts, messages) is checked on the report JSON in [LsdExtensionOutcomesTest].
  */
 @ExtendWith(LsdExtension::class)
 class LsdExtensionTest {
     private val lsd = LsdContext.instance
-
-    @Test
-    fun `extension completes a successful scenario`() {
-        lsd.addFact("framework", "junit-jupiter-6")
-        lsd.capture { "Test" calls "LsdMono" label "ping" }
-        assertTrue(true)
-    }
 
     private var beforeEachScenario: LsdScenario? = null
 

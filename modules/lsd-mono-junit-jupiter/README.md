@@ -86,7 +86,7 @@ void placesAnOrder(LsdScenario scenario) {
 
 The parameter does not change the scenario's title. `LsdContext.instance` keeps working for code that has no parameter, such as interceptors.
 
-A passed test is stored as a successful scenario titled from the class and method display names (for example `PlaceOrderTest: places an order`). A failure or abort is stored with a structured error on the scenario. Nested test classes do not write a second report from the nested `afterAll`.
+A passed test is stored as a successful scenario titled from the class and method display names (for example `place order test: places an order`). A default name, the class or method identifier, is split into lower-case words (`getURLsForIDs` becomes `get urls for ids`); a name you wrote, with `@DisplayName`, a backticked Kotlin name or a display name generator, is kept as written, capitals and brackets included. A failure or abort is stored with a structured error on the scenario. Nested test classes do not write a second report from the nested `afterAll`.
 
 ## Where the report is written
 

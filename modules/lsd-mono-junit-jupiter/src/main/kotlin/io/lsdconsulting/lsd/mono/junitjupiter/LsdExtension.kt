@@ -147,31 +147,47 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
         if (parent.isPresent) {
             val parentDisplayName = prefixParentDisplayName(parent.get())
             val separator = if (parentDisplayName.isBlank()) "" else ": "
-            return parentDisplayName + separator + ownName(context).deCamelCase()
+            return parentDisplayName + separator + titlePart(context)
         }
         return ""
     }
 
     /**
-     * The context's display name, without the parameter types JUnit adds to a method's
-     * default one (`places an order(LsdScenario)`), so an injected parameter does not
-     * change the scenario's title.
+     * The context's part of the scenario title. JUnit's default name for a method or class (a
+     * camelCase identifier) is split into lower-case words; the parameter types JUnit adds to a
+     * method's default name (`placesAnOrder(LsdScenario)`) are left out, so an injected parameter
+     * does not change the title. A name someone wrote (`@DisplayName`, a backticked Kotlin name, a
+     * display name generator, a parameterised invocation) is kept as written.
      */
-    private fun ownName(context: ExtensionContext): String {
+    private fun titlePart(context: ExtensionContext): String {
         val name = context.displayName
-        val method = context.element.orElse(null) as? Method ?: return name
-        return if (name.startsWith(method.name + "(") && name.endsWith(")")) method.name else name
+        val default =
+            when (val element = context.element.orElse(null)) {
+                is Method ->
+                    element.name.takeIf { name == it || (name.startsWith("$it(") && name.endsWith(")")) }
+                is Class<*> -> element.simpleName.takeIf { name == it }
+                else -> null
+            }
+        return default?.deCamelCase() ?: name.trim()
     }
 }
 
-private val lowerUpper = Regex("([a-z])([A-Z])")
-private val upperLower = Regex("([A-Z])([a-z])")
-private val parentheses = Regex("[()]")
+private val identifier = Regex("""[\p{L}_$][\p{L}\p{N}_$]*""")
 
-internal fun String.deCamelCase(): String =
-    replace(lowerUpper, "$1 $2")
-        .replace(upperLower, " $1$2")
-        .replace("  ", " ")
-        .replace(parentheses, "")
-        .trim()
-        .lowercase()
+/**
+ * A word of a camelCase or snake_case name: an acronym with a plural s (`URLs`), an acronym
+ * (`HTTP` in `parseHTTPResponse`), a capitalised or lower-case word, or a number; digits stay on
+ * the word before them (`test1`, `retry3 times`), as they always have.
+ */
+private val word = Regex("""(?:\p{Lu}{2,}s(?!\p{Ll})|\p{Lu}+(?!\p{Ll})|\p{Lu}?\p{Ll}+|\p{N}+)\p{N}*""")
+
+/**
+ * `placesAnOrder` as `places an order`. Only an identifier is split: text with spaces,
+ * brackets or other punctuation is returned as written, trimmed.
+ */
+internal fun String.deCamelCase(): String {
+    val name = trim()
+    if (!identifier.matches(name)) return name
+    val words = word.findAll(name).map { it.value.lowercase() }.toList()
+    return if (words.isEmpty()) name else words.joinToString(" ")
+}

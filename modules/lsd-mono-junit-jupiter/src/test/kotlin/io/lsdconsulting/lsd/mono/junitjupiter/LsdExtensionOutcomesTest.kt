@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Order
@@ -53,19 +54,21 @@ class LsdExtensionOutcomesTest {
     fun `failed test writes structured error fields`() {
         val summary = execute(LsdOutcomeFixtures::class.java)
 
-        assertEquals(2, summary.summary.testsSucceededCount.toInt(), "success + nested")
+        assertEquals(4, summary.summary.testsSucceededCount.toInt(), "success, display name, camelCase + nested")
         assertEquals(1, summary.summary.testsFailedCount.toInt())
         assertEquals(1, summary.summary.testsAbortedCount.toInt())
         assertEquals(1, summary.summary.testsSkippedCount.toInt())
 
         val json = reportJson("LsdOutcomeFixtures")
         assertTrue(json.contains(""""source": "junit""""), "the usage ping counts the JUnit extension")
-        val prefix = "LsdOutcomeFixtures".deCamelCase()
+        // Literal titles: the expected text must not come from the code that makes it (#75).
+        val prefix = "lsd outcome fixtures"
 
         val passed = scenarioSlice(json, "$prefix: records a passing scenario")
         assertTrue(passed.contains(""""status": "success""""), passed)
         assertTrue(passed.contains(""""description": "Test passed""""), passed)
         assertTrue(passed.contains(""""label": "ping""""), passed)
+        assertTrue(Regex(""""key": "framework",\s*"value": "junit-jupiter-6"""").containsMatchIn(passed), passed)
         assertTrue(passed.contains(""""label": "after-each""""), passed)
         assertFalse(passed.contains(""""error""""), passed)
 
@@ -94,7 +97,12 @@ class LsdExtensionOutcomesTest {
         assertTrue(aborted.contains(""""stack":"""), aborted)
         assertFalse(aborted.contains("overlay"), aborted)
 
-        val nested = scenarioSlice(json, "$prefix: ${"WhenGrouped".deCamelCase()}: adds a nested scenario")
+        // A written display name keeps its case and brackets; a camelCase method name is split.
+        val named = scenarioSlice(json, "$prefix: Order for iPhone (partial)")
+        assertTrue(named.contains(""""status": "success""""), named)
+        assertTrue(scenarioSlice(json, "$prefix: get urls for ids").contains(""""status": "success""""))
+
+        val nested = scenarioSlice(json, "$prefix: when grouped: adds a nested scenario")
         assertTrue(nested.contains(""""status": "success""""), nested)
         assertTrue(nested.contains(""""text": "from nested""""), nested)
 
@@ -113,7 +121,7 @@ class LsdExtensionOutcomesTest {
                 .useConfigurationSource(null)
         }
 
-        val failed = scenarioSlice(reportJson("LsdOutcomeFixtures"), "${"LsdOutcomeFixtures".deCamelCase()}: blows up with a structured failure")
+        val failed = scenarioSlice(reportJson("LsdOutcomeFixtures"), "lsd outcome fixtures: blows up with a structured failure")
         assertTrue(failed.contains("Displaying the stacktrace was disabled"), failed)
         assertFalse(failed.contains("at io.lsdconsulting"), failed)
     }
@@ -174,7 +182,21 @@ class LsdOutcomeFixtures {
     @Test
     @Order(1)
     fun `records a passing scenario`() {
+        lsd.addFact("framework", "junit-jupiter-6")
         lsd.capture { "Test" calls "LsdMono" label "ping" }
+    }
+
+    @Test
+    @Order(5)
+    @DisplayName("Order for iPhone (partial)")
+    fun displayNamed() {
+        lsd.capture { "Test" calls "LsdMono" label "named" }
+    }
+
+    @Test
+    @Order(6)
+    fun getURLsForIDs() {
+        lsd.capture { "Test" calls "LsdMono" label "camel" }
     }
 
     @Test
