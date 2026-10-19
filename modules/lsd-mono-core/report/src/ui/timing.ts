@@ -42,7 +42,7 @@ export function timingStripHtml(scenario: Scenario): string {
   const t = timeline(scenario)
   const slowest = t.rows.filter((r) => r.spanMs > 0).sort((a, b) => b.spanMs - a.spanMs || a.depth - b.depth)
   const top = slowest.find((r) => r.depth > 0) ?? slowest[0]
-  const accuracy = scenario.accuracy ?? 'MEASURED'
+  const accuracy = accuracyLabel(scenario.accuracy ?? 'MEASURED')
   const wall = Math.max(scenario.wallClockMs ?? 0, t.totalMs)
   const derivedWall = scenario.wallClockMs == null || scenario.wallClockMs < t.totalMs
   const clock = scenario.clockOrdered ?? 0
@@ -52,11 +52,21 @@ export function timingStripHtml(scenario: Scenario): string {
       <span class="k">${escapeHtml(key)}</span><span class="v">${escapeHtml(value)}</span><span class="h">${escapeHtml(hint)}</span>
     </button></li>`
   return `<ul class="timing-strip" aria-label="Timing summary">
-    ${chip('Wall-clock', `${derivedWall ? '≈' : ''}${formatMs(wall)}`, derivedWall ? 'from durations' : `${scenario.sources?.length ?? 1} source`)}
+    ${chip('Wall-clock', `${derivedWall ? '≈' : ''}${formatMs(wall)}`, derivedWall ? 'from durations' : sourcesHint(scenario.sources?.length ?? 1))}
     ${chip('Calls', String(t.calls), `${t.timedCalls} timed`)}
     ${chip('Slowest', top ? formatMs(top.spanMs) : '—', top?.message.label ?? 'nothing timed')}
-    ${chip('Accuracy', ACCURACY_LABEL[accuracy], clock ? `${clock} clock-ordered` : pairingHint(scenario), clock ? ' clock' : '')}
+    ${chip('Accuracy', accuracy, clock ? `${clock} clock-ordered` : pairingHint(scenario), clock ? ' clock' : '')}
   </ul>`
+}
+
+/** "1 source", "3 sources". */
+function sourcesHint(n: number): string {
+  return `${n} ${n === 1 ? 'source' : 'sources'}`
+}
+
+/** A newer core may send an accuracy this report does not know: show it as sent. */
+function accuracyLabel(accuracy: Accuracy): string {
+  return ACCURACY_LABEL[accuracy] ?? accuracy
 }
 
 function pairingHint(scenario: Scenario): string {
@@ -100,7 +110,7 @@ export function timingPanelHtml(scenario: Scenario): string {
     )
     .join('')
   const notesHtml = [
-    `<span class="pill">${escapeHtml(ACCURACY_LABEL[scenario.accuracy ?? 'MEASURED'])}</span>`,
+    `<span class="pill">${escapeHtml(accuracyLabel(scenario.accuracy ?? 'MEASURED'))}</span>`,
     t.approximate ? '<span class="pill">approximate start times</span>' : '',
     scenario.clockOrdered ? `<span class="pill clock">${scenario.clockOrdered} clock-ordered</span>` : '',
     ...(scenario.warnings ?? []).map(
@@ -129,25 +139,36 @@ function pairAccuracyHtml(scenario: Scenario): string {
   const items = pairs
     .map(
       (p) =>
-        `<li><span class="who">${escapeHtml(nameOf(scenario, p.from))} → ${escapeHtml(nameOf(scenario, p.to))}</span> <b class="acc-${escapeAttr(p.accuracy.toLowerCase())}">${escapeHtml(ACCURACY_LABEL[p.accuracy] ?? p.accuracy)}</b></li>`,
+        `<li><span class="who">${escapeHtml(nameOf(scenario, p.from))} → ${escapeHtml(nameOf(scenario, p.to))}</span> <b class="acc-${escapeAttr(p.accuracy.toLowerCase())}">${escapeHtml(accuracyLabel(p.accuracy))}</b></li>`,
     )
     .join('')
   return `<h4>Accuracy by pair <small>the scenario is only as accurate as its weakest pair</small></h4>
     <ul class="pair-accuracy">${items}</ul>`
 }
 
-function axisHtml(total: number): string {
+/** Axis ticks in ms: a round step, at least two ticks, labels that say the step (0.2, 500, 2 s). */
+export function axisHtml(total: number): string {
   const step = niceStep(total)
   const ticks: string[] = []
-  for (let v = 0; v <= total + 1e-9; v += step)
-    ticks.push(`<span style="left:${pct(v, total)}">${Math.round(v)}</span>`)
+  // Count ticks rather than adding the step up, so 0.1 + 0.2 never drifts past the last tick.
+  for (let i = 0; i * step <= total + step * 1e-9; i++)
+    ticks.push(`<span style="left:${pct(i * step, total)}">${tickLabel(i * step, step)}</span>`)
   return `<div class="wf-axis" aria-hidden="true"><span></span><span class="ticks">${ticks.join('')}</span><span></span></div>`
 }
 
-function niceStep(total: number): number {
+/** 1, 2 or 5 times a power of ten, about a quarter of `total`; below 1 ms too (durations can be fractional). */
+export function niceStep(total: number): number {
   const raw = total / 4
-  const mag = 10 ** Math.floor(Math.log10(Math.max(raw, 1)))
-  return [1, 2, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? raw
+  if (!(raw > 0) || !Number.isFinite(raw)) return 1
+  const mag = 10 ** Math.floor(Math.log10(raw))
+  return [1, 2, 5, 10].map((m) => m * mag).find((s) => s >= raw * (1 - 1e-9)) ?? raw
+}
+
+/** A tick in ms, in seconds from a one-second step, with as many decimals as the step needs. */
+export function tickLabel(v: number, step: number): string {
+  if (step >= 1000) return `${+(v / 1000).toFixed(Math.max(0, -Math.floor(Math.log10(step / 1000))))} s`
+  if (step >= 1) return String(Math.round(v))
+  return v.toFixed(Math.ceil(-Math.log10(step) - 1e-9))
 }
 
 function swimLanesHtml(scenario: Scenario, t: Timeline, colour: Map<string, number>, id: string): string {

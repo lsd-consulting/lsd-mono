@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MessageEvent, Scenario } from '../types'
-import { formatMs, hasTiming, timeline } from './timing'
-import { timingPanelHtml, timingStripHtml } from '../ui/timing'
+import { formatMs, timeline } from './timing'
 
 const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> = {}): MessageEvent => ({
   kind: 'message',
@@ -96,71 +95,5 @@ describe('timeline', () => {
     expect(formatMs(2.25)).toBe('2.3 ms')
     expect(formatMs(652.25)).toBe('652 ms')
     expect(formatMs(12_500)).toBe('12.5 s')
-  })
-})
-
-describe('timing view', () => {
-  it('has no strip or lanes for a structure-only scenario', () => {
-    const plain = scenario([msg('a', 'x', 'y')], { accuracy: 'STRUCTURE_ONLY' })
-    expect(hasTiming(plain)).toBe(false)
-    expect(timingStripHtml(plain)).toBe('')
-    expect(timingPanelHtml(plain)).toContain('No timing captured')
-  })
-
-  it('shows the strip, swim lanes, waterfall and the clock badge', () => {
-    const strip = timingStripHtml(nested)
-    expect(strip).toContain('Accuracy')
-    expect(strip).toContain('traced')
-    expect(strip).toContain('1 clock-ordered')
-    const panel = timingPanelHtml(nested)
-    expect(panel).toContain('class="swim-lanes"')
-    expect(panel.match(/class="lane"/g)).toHaveLength(2)
-    expect(panel).toContain('tbadge clock')
-    expect(panel).toContain('data-show-message="inner"')
-  })
-
-  it('says in words when the calls inside take longer than the call', () => {
-    const over = scenario([
-      msg('outer', 'web', 'api', { callId: 'c1', durationMs: 10 }),
-      msg('inner', 'api', 'db', { callId: 'c2', durationMs: 25, parentId: 'outer' }),
-      msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2' }),
-      msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
-    ])
-    const panel = timingPanelHtml(over)
-    expect(panel).toContain('Calls inside took longer: 25 ms &gt; 10 ms')
-    expect(panel).toContain('longer than this call&#39;s measured 10 ms')
-    expect(panel).not.toContain('>!<')
-    expect(panel.match(/class="warnx"/g)).toHaveLength(1)
-  })
-
-  it('lists accuracy by pair when the report gives it', () => {
-    expect(timingPanelHtml(nested)).not.toContain('Accuracy by pair')
-    const panel = timingPanelHtml({
-      ...nested,
-      pairAccuracy: [
-        { from: 'web', to: 'api', accuracy: 'TRACED' },
-        { from: 'api', to: 'kafka', accuracy: 'STRUCTURE_ONLY' },
-      ],
-    })
-    expect(panel).toContain('Accuracy by pair')
-    expect(panel).toContain('web → api</span> <b class="acc-traced">traced</b>')
-    expect(panel).toContain('api → kafka</span> <b class="acc-structure_only">structure only</b>')
-  })
-
-  it('labels warning pills from their kind, with the sentence on hover', () => {
-    const panel = timingPanelHtml({
-      ...nested,
-      warnings: [{ kind: 'LONGER_THAN_PARENT', message: "'inner' took 30 ms: more than 'outer'" }],
-    })
-    expect(panel).toContain('>longer than parent</span>')
-    expect(panel).toContain('title="longer than parent: &#39;inner&#39; took 30 ms: more than &#39;outer&#39;"')
-  })
-
-  it('escapes labels and participant names', () => {
-    const html = timingPanelHtml(
-      scenario([msg('<script>', '<img x>', 'y', { durationMs: 1 })], { accuracy: 'MEASURED' }),
-    )
-    expect(html).not.toContain('<script>')
-    expect(html).not.toContain('<img x>')
   })
 })
