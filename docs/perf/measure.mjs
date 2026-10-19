@@ -154,11 +154,15 @@ for (const spec of pages) {
       const needle = `needle-${spec.size}`
       const s0 = Date.now()
       await page.locator('[data-diagram-find]').fill(needle)
+      // Find answers labels at once and payloads when they are searched (#60): wait for both.
       await page.waitForFunction(() => {
         const el = document.querySelector('.diagram-find-count')
-        return el && /^1 (of 1|match)\b/.test(el.textContent || '')
+        const text = el?.textContent || ''
+        return /^1 (of 1|match)\b/.test(text) && !/searching/i.test(text)
       }, null, { timeout: 5000 })
       row.searchMs = Date.now() - s0
+      // Typing brings the first match on screen once it pauses; let that happen before scrolling.
+      await page.waitForTimeout(300)
       await page.evaluate(() => {
         const scroller = document.querySelector('.seq-scroll')
         if (scroller) scroller.scrollTop = scroller.scrollHeight

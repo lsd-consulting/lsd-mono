@@ -304,3 +304,66 @@ java -cp "$CP" docs/perf/IndexPerf.java 200 /tmp/lsd-index-200
 java -cp "$CP" docs/perf/IndexPerfCold.java /tmp/lsd-index-200
 node docs/perf/measure-index.mjs /tmp/lsd-index-200
 ```
+
+## Find over payloads (19 Oct 2026, 07:40 BST)
+
+Find matches message payloads as well as labels and notes (#60). The payloads load the first time Find is used, are indexed as the side panel shows them (indented JSON, case folded), and are indexed and searched in slices of about 8 ms, so typing never waits for a large report. Same machine (Apple M3 Max), headless Chromium **156.0.8078.4**, viewport 1440×900, `file://`. Samples regenerated from the current shell, as in the Chromium 156 rerun above. [`measure-find.mjs`](perf/measure-find.mjs), 3 runs per row, medians (ranges where they matter).
+
+```
+cd modules/lsd-mono-core/report && npm run build:single && cd -
+node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
+node --experimental-strip-types docs/perf/generate-wide.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
+node docs/perf/measure-find.mjs "$PWD/docs/perf-samples"
+```
+
+- **Cold first search**: the first key in Find on a fresh page, `sock-1`, which loads the 5.6 MB payload script, indexes it and searches it, timed in the page from the key to the final count (`1 of 1111, 1111 in payloads`).
+- **Longest task**: the longest gap between `MessageChannel` pings while it runs, so the longest stretch the page could not answer a key.
+- **Keys**: eleven keys after it (`s` … `sock-199`, two Backspaces, `zzzz`). *Blocking* is the input handler; *answer* is until the count is final, which for a full search (Backspace, a new word) comes over several slices.
+- **Heap**: CDP `JSHeapUsedSize` after GC, the payloads loaded by hand first so the index is told apart from them.
+- **10×**: every payload repeated ten times as it loads (77 M characters of indented JSON).
+
+| Page | CPU | Cold first search | Longest task | Key answer, median | Key blocking, max | Long tasks ≥ 50 ms while typing | Payloads off: key median / blocking max |
+|---|---|---|---|---|---|---|---|
+| mono-2000 (4 lanes) | 1× | 47 ms | 11 ms | 2.3 ms | 5.4 ms | 0 | 1.4 / 1.8 ms |
+| mono-2000 | 6× | 168 ms | 25–30 ms | 14 ms | 20.5 ms | 0 | 7.8 / 9.5 ms |
+| mono-p100-m2000 (100 lanes) | 1× | 57 ms | 11 ms | 3.4 ms | 6.3 ms | 0 | 2.3 / 3.1 ms |
+| mono-p100-m2000 | 6× | 185 ms | 29–31 ms | 20 ms | 22.8 ms | 0 | 11.5 / 15.9 ms |
+| mono-p100-m2000, 10× payloads | 1× | 151 ms | 13.5–13.7 ms | 4.5 ms | 11 ms | 0 | 2.3 / 3.5 ms |
+| mono-p100-m2000, 10× payloads | 4× | 552 ms | 27–28 ms | 18 ms | 19 ms | 0 | 8.3 / 11.3 ms |
+
+Of the 47 ms cold search at 2000 events, the payload script has run by 32 ms; indexing 7.3 M characters and searching them is the other 15 ms, in two slices. A full search's answer (Backspace, a new word) takes 59–61 ms at 6× on mono-2000 and 78–80 ms on the wide page, over slices, without blocking a key.
+
+| Memory | Payload script | Payloads in the heap | Index |
+|---|---|---|---|
+| 2000 events | 5.6 MB | 4.9 MB | 7.5 MB (1.33× the script) |
+| 2000 events, 10× | 56 MB | 6.0 MB (shared strings) | 77.6 MB (1.38×) |
+
+The index holds each payload's indented text, about one byte per character.
+
+**Side panel marks.** With the panel open on the first arrow, a key that marks 1000 matches in a 360 KB payload (10×, at the mark cap) blocks for 5.8–6.4 ms, against 3.4–3.5 ms with the panel closed: the marks add 2.4–2.9 ms. Before the mark was scrolled into view on the next frame they added about 6 ms (the payload was laid out twice). 235 marks in a 36 KB payload add under 0.5 ms.
+
+**First load.** [`measure.mjs`](perf/measure.mjs) on the shell before #60 (8478279) and after, three rounds each, alternating:
+
+| | 100 | 500 | 2000 |
+|---|---|---|---|
+| First interactive, before / after | 61–69 / 62–63 ms | 66–67 / 65–70 ms | 74–78 / 76–79 ms |
+| Heap after load, before / after | 3.31 / 3.33 MB | 3.49 / 3.51 MB | 4.90 / 4.89–4.94 MB |
+| Find `needle-N`, before / after | 5 ms (one 25) / 40–44 ms | 4–5 / 41–44 ms | 6 / 111–113 ms |
+| First popup, before / after | 39–54 / 10–30 ms | 43–46 / 12–28 ms | 77 / 28–42 ms |
+
+Find now waits for the payload answer too, so `measure.mjs`'s search includes loading and indexing the payloads. Its 111–113 ms at 2000 is in a browser that has just opened the 500-event legacy pages, after the scroll sweep, and is polled from Node; the in-page cold search above is 47 ms. The first popup is faster because Find has already loaded the payloads. `measure.mjs` now waits for that answer, then 300 ms for Find's reveal, before it scrolls to open arrows; without the wait, the reveal could move the page under the click.
+
+The shell is 288,459 bytes, 10.6 KB more (140,037 bytes gzipped, 2.9 KB more).
+
+### Against the budgets set for #60
+
+| Budget | Result | |
+|---|---|---|
+| First load unchanged | First interactive and heap after load within run-to-run spread | met |
+| Shell +≤ 4 KB | +2.9 KB gzipped, +10.6 KB raw | met gzipped, not raw |
+| Key ≤ 10 ms on a desktop | 2.3–3.4 ms median, 6.3 ms worst (11 ms at 10×) | met |
+| Key ≤ 25 ms at 6× CPU | 14–20 ms median, 22.8 ms worst blocking; a full search's answer arrives over slices in 59–80 ms | met for blocking and the median |
+| First payload search ≤ 100 ms, no index slice > 16 ms (desktop) | 47–64 ms cold, longest task 11 ms (13.7 ms at 10×) | met |
+| Index ≤ 1.5× payload size | 1.33× (1.38× at 10×) | met |
+| No task > 50 ms while typing at 10× | none, at 1× and 4× CPU | met |
+| 1000 marks ≤ 5 ms | 2.4–2.9 ms | met |
