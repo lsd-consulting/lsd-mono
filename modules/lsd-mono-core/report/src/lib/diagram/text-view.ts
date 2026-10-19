@@ -48,7 +48,7 @@ function itemHtml(event: DiagramEvent, scenario: Scenario): string {
     case 'message':
       return `<li>${escapeHtml(messageSpeech(event, scenario.participants))}</li>`
     case 'section':
-      return `<li role="presentation"><h4>${escapeHtml(event.title)}</h4></li>`
+      return `<li><h4>${escapeHtml(event.title)}</h4></li>`
     case 'note':
       return `<li>Note: ${escapeHtml(event.text)}</li>`
     case 'divider':

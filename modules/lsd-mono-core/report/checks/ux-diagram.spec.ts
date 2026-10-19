@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
+import { sectionsReport } from './diagram-pages'
 import { uxFixture } from './ux-fixture'
 import {
   THEMES,
@@ -8,6 +9,7 @@ import {
   openFixture,
   diagramOnScreen,
   openWide,
+  formatViolations,
   seriousViolations,
   zoomOf,
 } from './ux-helpers'
@@ -356,3 +358,17 @@ for (const [name, viewport] of [
       .toBe(true)
   })
 }
+
+test('section titles are headings in the text view, and axe stays clean with sections', async ({ page }) => {
+  await page.addInitScript((report) => {
+    window.__LSD_REPORT__ = report
+  }, sectionsReport(6))
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await expect(page.locator('.seq-svg')).toBeVisible()
+  const list = page.getByRole('list', { name: 'Messages in order' })
+  await expect(list.getByRole('heading', { level: 4 }).first()).toBeAttached()
+  expect(await list.getByRole('heading', { level: 4 }).count()).toBeGreaterThan(0)
+  const violations = await seriousViolations(page)
+  expect(violations, formatViolations(violations)).toEqual([])
+})
