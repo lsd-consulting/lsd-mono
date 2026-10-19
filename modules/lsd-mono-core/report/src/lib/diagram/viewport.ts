@@ -24,6 +24,7 @@ import { PRINT_MAX_UPSCALE, findFieldLabel, frameOf, paintedMessageIds } from '.
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, sizeStage } from './page-scroll'
+import { addPrintSlices, removePrintSlices } from './print-slices'
 import { refreshPayloadFind } from './payload-find'
 import {
   SEARCH_REVEAL_DELAY_MS,
@@ -385,11 +386,14 @@ function ensurePrintHooks(): void {
   const repaint = () => {
     document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => syncDiagramWindow(el))
   }
+  const diagrams = () => document.querySelectorAll<HTMLElement>('.seq-diagram')
   window.addEventListener('beforeprint', () => {
     diagramState.printAllRows = true
     repaint()
+    diagrams().forEach((diagram) => addPrintSlices(diagram))
   })
   window.addEventListener('afterprint', () => {
+    diagrams().forEach((diagram) => removePrintSlices(diagram))
     diagramState.printAllRows = false
     repaint()
   })

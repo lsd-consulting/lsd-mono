@@ -1,3 +1,9 @@
+/* A wide diagram prints at full size in strips of lanes on landscape pages (print-slices.ts). */
+@page diagram {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
 @media print {
   :root,
   [data-theme="dark"],
@@ -74,6 +80,28 @@
   .scenario-body > .cards,
   .scenario-body > .diagram-panel {
     break-inside: avoid;
+  }
+  /* Strips run over several pages, so the panel cannot be kept whole. */
+  .scenario-body > .diagram-panel:has(.seq-diagram[data-print-sliced]) {
+    break-inside: auto;
+  }
+  .seq-diagram[data-print-sliced] .seq-stage {
+    display: none !important;
+  }
+  .seq-diagram[data-print-sliced] .print-slices {
+    display: block;
+    page: diagram;
+  }
+  .print-slice {
+    overflow: hidden;
+    background: #fff;
+  }
+  .print-slice + .print-slice {
+    break-before: page;
+  }
+  .print-slice svg {
+    display: block;
+    max-width: none;
   }
   /* The side panel (narrow, scrolled) never prints. What it shows prints as a
      copy in its scenario at full card width, only while it is open: metrics

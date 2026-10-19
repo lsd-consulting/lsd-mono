@@ -66,6 +66,10 @@
 .seq-spacer {
   position: relative;
 }
+/* Print-only strips of a wide diagram (print-slices.ts). */
+.print-slices {
+  display: none;
+}
 /* Fit stops at a readable scale, so a wide diagram runs past the right edge. This says so while
    lanes remain there (viewport.ts sets data-more-right), and the edge is shaded. */
 .seq-more {

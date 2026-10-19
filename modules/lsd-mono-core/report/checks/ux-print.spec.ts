@@ -176,3 +176,77 @@ test('the {} payload marker and its legend show on screen, not in print, and use
   expect(colours.marker).toBe(colours.canvasText)
   expect(colours.key).toBe(colours.canvasText)
 })
+
+/** Fourteen lanes, like the example report: far wider than an A4 page. */
+const fourteenLanes: Report = {
+  ...uxFixture,
+  scenarios: [
+    {
+      ...uxFixture.scenarios[0],
+      id: 'lanes',
+      title: 'Fourteen lanes',
+      participants: Array.from({ length: 14 }, (_, i) => ({ id: `p${i}`, name: `Service ${i}`, type: 'PARTICIPANT' })),
+      events: Array.from({ length: 20 }, (_, i) => ({
+        kind: 'message',
+        id: `m${i}`,
+        from: `p${i % 14}`,
+        to: `p${(i + 5) % 14}`,
+        label: `call ${i}`,
+        type: 'SYNCHRONOUS',
+        data: { n: i },
+      })),
+    },
+  ],
+}
+
+// The example report has 14 participants. Shrunk to an A4 page its labels came out at about 4pt;
+// now it prints at full size in strips of lanes on landscape pages, labels at 8pt or more.
+test('a wide diagram prints at full size in strips of lanes that cover the whole drawing', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await openReport(page, fourteenLanes)
+  await expect(page.locator('.seq-svg')).toBeVisible()
+  await startPrint(page)
+  await expect(page.locator('.print-slices')).toBeVisible()
+  await expect(page.locator('.seq-stage')).toBeHidden()
+  const printed = await page.evaluate(() => {
+    const strips = [...document.querySelectorAll<HTMLElement>('.print-slice')]
+    const width = Number(document.querySelector('.seq-header-svg')!.getAttribute('viewBox')!.split(' ')[2])
+    const labels = [...document.querySelectorAll<SVGTextElement>('.print-slices .msg-label')]
+    return {
+      strips: strips.length,
+      stripWidth: strips[0].querySelector('.seq-svg')!.getBoundingClientRect().width,
+      tallest: Math.max(...strips.map((strip) => strip.getBoundingClientRect().height)),
+      // Where each page's lanes start in the drawing: 0, then 1000, 2000…
+      starts: [
+        ...new Set(
+          strips.map((strip) => Number(strip.querySelector('.seq-svg')!.getAttribute('viewBox')!.split(' ')[0])),
+        ),
+      ],
+      bodyX: Number(document.querySelector('.seq-window .seq-svg')!.getAttribute('viewBox')!.split(' ')[0]),
+      headed: strips.every((strip) => strip.querySelector('.seq-header-svg')),
+      width,
+      smallestPx: Math.min(...labels.map((t) => parseFloat(getComputedStyle(t).fontSize) * t.getScreenCTM()!.a)),
+      page: getComputedStyle(document.querySelector('.print-slices')!).getPropertyValue('page'),
+      labelCount: labels.length,
+    }
+  })
+  expect(printed.strips).toBeGreaterThan(1)
+  expect(printed.labelCount).toBeGreaterThan(10)
+  // 8pt is 10.67 CSS px.
+  expect(printed.smallestPx).toBeGreaterThanOrEqual(8 / 0.75)
+  expect(printed.page).toBe('diagram')
+  // Nothing is lost: the strips together are at least as wide as the drawing.
+  expect(printed.strips * printed.stripWidth).toBeGreaterThanOrEqual(printed.width)
+  // Every page carries its lanes' header and fits A4 landscape inside 10mm margins (190mm, 718px).
+  expect(printed.headed).toBe(true)
+  expect(printed.stripWidth).toBeLessThanOrEqual(1047)
+  expect(printed.starts).toEqual(
+    Array.from({ length: printed.starts.length }, (_, i) => printed.bodyX + i * printed.stripWidth),
+  )
+  expect(printed.starts.length * printed.stripWidth).toBeGreaterThanOrEqual(printed.width)
+  expect(printed.tallest).toBeLessThanOrEqual(718)
+  await endPrint(page)
+  await expect(page.locator('.print-slices')).toHaveCount(0)
+  await expect(page.locator('.seq-stage')).toBeVisible()
+})
