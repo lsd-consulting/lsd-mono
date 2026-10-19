@@ -1,4 +1,4 @@
-import { pretty } from './format'
+import { payloadText as shownText } from '../lib/payload-search'
 
 export interface JsonBody {
   /** A new view opened: JSON (or stack) hidden, toggle reading "Show [label]". */
@@ -39,7 +39,7 @@ export function bindJsonBody(parts: {
   async function payloadText(): Promise<string> {
     const value = ready ? cached : await pending
     if (value === undefined) return '(no payload)'
-    return typeof value === 'string' ? value : pretty(value)
+    return shownText(value)
   }
 
   async function show(token: number): Promise<void> {
