@@ -147,6 +147,14 @@ for (const [phone, device] of Object.entries(PHONES)) {
         expect(after.panelDocTop).toBe(panelTop)
         await expect(page.locator('[data-diagram-find]')).toBeInViewport()
         await expect(page.locator('[data-find-step="next"]')).toBeInViewport()
+        // The Payloads toggle sits in the Find field.
+        await expect(page.locator('[data-find-payloads]')).toBeInViewport()
+        const toggle = await page.locator('[data-find-payloads]').boundingBox()
+        const field = await page.locator('[data-diagram-find]').boundingBox()
+        expect(Math.abs(toggle!.y + toggle!.height / 2 - (field!.y + field!.height / 2))).toBeLessThan(4)
+        // So do the step buttons and the count, on one line.
+        const next = await page.locator('[data-find-step="next"]').boundingBox()
+        expect(Math.abs(next!.y + next!.height / 2 - (field!.y + field!.height / 2))).toBeLessThan(4)
       })
     }
 

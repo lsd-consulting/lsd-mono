@@ -4,7 +4,14 @@
 // keyboard's Go or Search key. The diagram scrolls with the page, so this moves the page, at the
 // current zoom, below the top bar, the toolbar when it sticks, and the sticky participant header,
 // and above the on-screen keyboard (visualViewport).
-import { NO_PAYLOAD_HITS, eventHiddenByColumns, findMatch, searchCountLabel } from '../diagram-view'
+import {
+  NO_PAYLOAD_HITS,
+  eventHiddenByColumns,
+  findMatch,
+  searchCountHtml,
+  searchCountLabel,
+  searchCountParts,
+} from '../diagram-view'
 import { MESSAGE_LABEL_RISE, type LayoutRow } from '../layout'
 import { payloadMatches } from './payload-find'
 import { scrollDiagramToOffset } from './page-scroll'
@@ -75,6 +82,12 @@ export function searchStateLabel(state: SearchState, query: string): string {
   return searchCountLabel(state.hits.length + state.hidden, state.hidden, query, state.current + 1, state)
 }
 
+/** The same text as spans, so the phone toolbar can leave "N in payloads" to the {} bands. */
+export function searchStateHtml(state: SearchState, query: string): string {
+  const parts = searchCountParts(state.hits.length + state.hidden, state.hidden, query, state.current + 1, state)
+  return searchCountHtml(parts)
+}
+
 /**
  * The match after (step 1) or before (step -1) [current] among [count], wrapping around. With no
  * current match (-1) Next goes to the first and Previous to the last. -1 when nothing matches.
@@ -92,7 +105,7 @@ export function syncFindControls(scrollport: HTMLElement): void {
   if (!scenarioId || !root) return
   const state = scenarioSearchState(scenarioId)
   const count = root.querySelector('.diagram-find-count')
-  if (count) count.textContent = searchStateLabel(state, diagramView(scenarioId).query)
+  if (count) count.innerHTML = searchStateHtml(state, diagramView(scenarioId).query)
   root
     .querySelectorAll<HTMLButtonElement>('[data-find-step]')
     .forEach((btn) => (btn.disabled = state.hits.length === 0))

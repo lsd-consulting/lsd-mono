@@ -17,7 +17,7 @@ import {
   xFor,
 } from './diagram/shapes'
 import { type DiagramFrame, type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
-import { scenarioSearchState, searchStateLabel } from './diagram/search-reveal'
+import { scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
 import { syncDiagramWindow } from './diagram/viewport'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
 import {
@@ -183,9 +183,29 @@ function metricsControl(scenario: Scenario): string {
   })
 }
 
+/** Find's accessible name: payloads are named only while they are searched. The pressed {} shows it on screen. */
+export function findFieldLabel(searchesPayloads: boolean): string {
+  return searchesPayloads
+    ? 'Find messages, notes and payloads in this diagram'
+    : 'Find messages and notes in this diagram'
+}
+
+/** Turns payloads in or out of Find. Only on a diagram with a payload to search. */
+function payloadToggleHtml(scenario: Scenario, view: DiagramView): string {
+  if (!scenarioHasPayloads(scenario)) return ''
+  // Inside the field's right end, the braces of the arrows' payload marker, so the toolbar keeps its
+  // width; its name stays "Payloads". Inside the label, but a button there does not focus the field.
+  return `<button type="button" class="find-payloads" data-find-payloads aria-pressed="${view.includePayloads}" title="Find in message payloads too"><span aria-hidden="true">{}</span><span class="visually-hidden">Payloads</span></button>`
+}
+
+function scenarioHasPayloads(scenario: Scenario): boolean {
+  return scenario.events.some((e) => e.kind === 'message' && messageHasPayload(e))
+}
+
 function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   const find = scenarioSearchState(scenario.id)
   const steppable = find.hits.length > 0 ? '' : ' disabled'
+  const label = findFieldLabel(view.includePayloads && scenarioHasPayloads(scenario))
   // The hidden-participants chip is drawn by bindParticipantFilter, and only while
   // something is hidden. The status line announces each hide and show.
   return `
@@ -200,8 +220,8 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
       <span class="participant-filter-status visually-hidden" role="status"></span>
       <label class="diagram-find">
         <span class="diagram-find-label">Find</span>
-        <input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="Find messages and notes in this diagram" autocomplete="off"/>
-        <span class="diagram-find-count" aria-live="polite">${escapeHtml(searchStateLabel(find, view.query))}</span>
+        <span class="find-field"><input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="${escapeAttr(label)}" autocomplete="off"/>${payloadToggleHtml(scenario, view)}</span>
+        <span class="diagram-find-count" aria-live="polite">${searchStateHtml(find, view.query)}</span>
       </label>
       <div class="find-steps" role="group" aria-label="Step through matches">
         <button type="button" data-find-step="prev" aria-label="Previous match" title="Previous match (Shift+Enter)"${steppable}>↑</button>
@@ -219,7 +239,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
  * The verb follows the pointer (CSS swaps click for tap on touch). Screen only.
  */
 function payloadLegendHtml(scenario: Scenario): string {
-  if (!scenario.events.some((e) => e.kind === 'message' && messageHasPayload(e))) return ''
+  if (!scenarioHasPayloads(scenario)) return ''
   return `<p class="payload-legend"><span class="payload-legend-key" aria-hidden="true">{}</span><span class="visually-hidden">An arrow marked with braces</span> has a payload: <span class="legend-click">click</span><span class="legend-tap">tap</span> the arrow to open it</p>`
 }
 

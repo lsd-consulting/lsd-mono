@@ -53,6 +53,7 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
     line: 2,
     help: 'In Find, <kbd>Enter</kbd>/<kbd>Shift</kbd>+<kbd>Enter</kbd> (or <kbd>F3</kbd>) next/previous match',
   },
+  { line: 2, help: 'Find also searches payloads (<b>{}</b> in the field turns that off)' },
   {
     line: 3,
     help: '<kbd>d</kbd> theme (Auto follows the OS, dark, light, high contrast)',

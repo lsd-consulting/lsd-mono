@@ -98,7 +98,7 @@ The shell does not depend on PlantUML, so diagram UX is not tied to golden SVG o
 | Message detail | CSS `:target` hash overlays | Side inspector + lazy payload + copy + type/from→to pills |
 | Timing | Durations on arrows | Accuracy per scenario, summary strip, swim lanes and waterfall; clock-ordered and guessed-pairing badges |
 | Navigation | Sticky chips + jump menu | Sidebar + status histogram + `j`/`k` keyboard nav, diagram Up/Down/Enter, and deep links |
-| Search | Scenario title filter | Title + description + facts, plus in-diagram message/note find |
+| Search | Scenario title filter | Title + description + facts, plus in-diagram find over messages, notes and payloads |
 | Theme | Light-only GitHub-ish tokens | Auto follows the OS (dark, light, more contrast); a fixed choice persists until you pick Auto again |
 | Mobile | Improved in the shell refresh | Sidebar collapses to grid; toolbar wraps; diagram scrolls horizontally |
 | Offline chrome | CDN d3 / hljs / mark.js unless assets are embedded | No network at all: script, styles and fonts are in the file. The only request is the optional usage ping (`checks/offline.spec.ts`) |
@@ -114,7 +114,7 @@ Not supported by design: PlantUML sprite includes and skinparam colours. Still o
 2. **warn** — payment timeout + retry
 3. **error** — insufficient stock → 409, payment skipped
 
-The shape stays close to `ScenarioModel` + `SequenceEvent` / `Message` / `DataHolder` so the JVM `ReportJson` writer can feed the same shell. Captured reports come from the parent façade; this file is only the no-payload demo.
+The shape stays close to `ScenarioModel` + `SequenceEvent` / `Message` / `DataHolder` so the JVM `ReportJson` writer can feed the same shell. Captured reports come from the parent façade; this file is only the no-payload demo. Its JSON bodies are in `src/data/sample-payloads.ts`, loaded when the side panel or Find first needs them. Try Find with `snowdrop`: it is only in the checkout's payload (its voucher code), so it shows a payload match.
 
 ## Keyboard
 
@@ -128,3 +128,5 @@ The shape stays close to `ScenarioModel` + `SequenceEvent` / `Message` / `DataHo
 | `Esc` | Close dialog / help / blur search |
 
 Inside the diagram, Tab lands once, then Up and Down move between messages and Enter opens the inspector.
+
+In the diagram's Find, Enter / Shift+Enter, F3 or Cmd/Ctrl+G step through the matches. Find also searches message payloads unless the `{}` button in the field (*Payloads*) is off.

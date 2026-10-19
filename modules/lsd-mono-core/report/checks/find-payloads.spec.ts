@@ -1,8 +1,18 @@
 import { devices, expect, test, type Page } from '@playwright/test'
-import { openFindIndex, openFindReport } from './find-fixture'
+import { findReport, openFindIndex, openFindReport } from './find-fixture'
 import { THEMES, computedColours, contrastRatio, formatViolations, seriousViolations } from './ux-helpers'
 
 // Find in payloads (#60): the arrows whose payload matches count and step like label matches.
+
+const findReportWithoutPayloads = {
+  ...findReport,
+  scenarios: findReport.scenarios.map((scenario) => ({
+    ...scenario,
+    events: scenario.events.map((event) =>
+      event.kind === 'message' ? { ...event, data: undefined, payloadId: undefined } : event,
+    ),
+  })),
+}
 
 for (const [pageName, open] of Object.entries({ report: openFindReport, index: openFindIndex })) {
   test(`find (${pageName} page): payload matches count, step and are named like label matches`, async ({ page }) => {
@@ -238,4 +248,46 @@ test.describe('on a phone', () => {
     await expect(page.locator('.json-find-count')).toHaveText('2 of 3 in payload')
     await expect.poll(() => currentMarkOnScreen(page), { timeout: 3000 }).toBe('on screen')
   })
+})
+
+test('the Payloads toggle turns payloads out of Find and back in', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await openFindReport(page)
+  const find = page.locator('[data-diagram-find]')
+  const toggle = page.getByRole('button', { name: 'Payloads', exact: true })
+  const count = page.locator('.diagram-find-count')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await expect(find).toHaveAccessibleName('Find messages, notes and payloads in this diagram')
+  // The toggle sits inside the field's box, so the toolbar is no wider for it.
+  const [field, braces] = [(await find.boundingBox())!, (await toggle.boundingBox())!]
+  expect(braces.x).toBeGreaterThan(field.x)
+  expect(braces.x + braces.width).toBeLessThanOrEqual(field.x + field.width)
+  await find.fill('snowdrop')
+  await expect(count).toHaveText('1 of 3, 2 in payloads')
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(find).toHaveAccessibleName('Find messages and notes in this diagram')
+  await expect(count).toHaveText('1 of 1')
+  await expect(page.locator('.seq-svg [data-search-in="payload"]')).toHaveCount(0)
+  await page.locator('.msg-open[aria-label^="Open reserve stock"]').click()
+  await expect(page.locator('#inspector-pre')).toBeVisible()
+  await expect(page.locator('#inspector-pre mark')).toHaveCount(0)
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await expect(count).toHaveText('1 of 3, 2 in payloads')
+  await expect(page.locator('#inspector-pre mark.json-hit')).toHaveCount(3)
+})
+
+test('a diagram without payloads has no Payloads toggle', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.addInitScript(
+    (report) => {
+      window.__LSD_REPORT__ = report
+    },
+    { ...findReportWithoutPayloads },
+  )
+  await page.goto('/')
+  await expect(page.locator('.seq-svg')).toBeVisible()
+  await expect(page.locator('[data-find-payloads]')).toHaveCount(0)
+  await expect(page.locator('[data-diagram-find]')).toHaveAccessibleName('Find messages and notes in this diagram')
 })

@@ -351,6 +351,51 @@
   cursor: text;
   min-width: 10rem;
 }
+/* Payloads in Find: the arrows' {} marker at the field's right end, so the toolbar is no wider.
+   Pressed (searched) it is boxed and filled; off it is struck through, so the state shows without colour. */
+.find-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.find-field:has(.find-payloads) input {
+  width: 12rem;
+  padding-right: 32px;
+}
+.seq-toolbar .find-payloads {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  min-width: 28px;
+  padding: 0 4px;
+  border-radius: 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: line-through;
+}
+.seq-toolbar .find-payloads[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+@media (forced-colors: active) {
+  .seq-toolbar .find-payloads {
+    border-color: transparent;
+    color: ButtonText;
+  }
+  .seq-toolbar .find-payloads[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+}
 .zoom-readout,
 .diagram-find-count,
 .diagram-find-label {
@@ -676,16 +721,36 @@
     order: 4;
     flex-basis: calc(100% - 110px);
     flex-wrap: nowrap;
+    min-width: 0;
   }
   /* The field names itself (placeholder and aria-label); the word only took a line. */
   .seq-toolbar .diagram-find-label {
     display: none;
   }
-  .seq-toolbar .diagram-find input {
+  .seq-toolbar .find-field {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .seq-toolbar .diagram-find input,
+  .seq-toolbar .find-field:has(.find-payloads) input {
+    width: 0;
     min-width: 0;
     flex: 1 1 auto;
   }
   .seq-toolbar .find-steps {
     order: 5;
+  }
+  /* The count stays on one line, and leaves "N in payloads" to the bands on the arrows (screen
+     readers still hear it), so the field keeps its room. */
+  .seq-toolbar .diagram-find-count {
+    white-space: nowrap;
+  }
+  .diagram-find-count .find-count-payloads {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

@@ -1,4 +1,5 @@
 import type { DiagramEvent, MessageEvent, NoteEvent, Participant } from '../types'
+import { escapeHtml } from './escape'
 import { HEADER_BLOCK_H, MESSAGE_LABEL_RISE } from './layout'
 
 const MIN_ZOOM = 0.25
@@ -226,6 +227,36 @@ export interface PayloadCount {
   failed?: boolean
 }
 
+/** One piece of the count: the match count, the payload matches, the hidden ones, or a status. */
+export interface CountPart {
+  kind: 'count' | 'payloads' | 'hidden' | 'status'
+  text: string
+}
+
+/**
+ * Live-region text in pieces (see searchCountLabel), so a narrow toolbar can leave one out of
+ * sight while screen readers still hear it.
+ */
+export function searchCountParts(
+  total: number,
+  hidden: number,
+  query: string,
+  current = 0,
+  payloads: PayloadCount = {},
+): CountPart[] {
+  if (!query.trim()) return []
+  if (total === 0 && payloads.pending) return [{ kind: 'status', text: 'Searching payloads…' }]
+  const noun = total === 1 ? 'match' : 'matches'
+  const parts: CountPart[] = [
+    { kind: 'count', text: current > 0 ? `${current} of ${total - hidden}` : `${total} ${noun}` },
+  ]
+  if (payloads.inPayloads) parts.push({ kind: 'payloads', text: `${payloads.inPayloads} in payloads` })
+  if (hidden > 0) parts.push({ kind: 'hidden', text: `${hidden} on a hidden column` })
+  if (payloads.pending) parts.push({ kind: 'status', text: 'searching payloads…' })
+  if (payloads.failed) parts.push({ kind: 'status', text: 'payloads could not be loaded' })
+  return parts
+}
+
 /**
  * Live-region text. Empty query is silent. Hidden-column hits are named, not only recoloured.
  * With a current match ([current], 1-based) it reads "2 of 5", counting the matches you can step to.
@@ -238,15 +269,16 @@ export function searchCountLabel(
   current = 0,
   payloads: PayloadCount = {},
 ): string {
-  if (!query.trim()) return ''
-  if (total === 0 && payloads.pending) return 'Searching payloads…'
-  const noun = total === 1 ? 'match' : 'matches'
-  const parts = [current > 0 ? `${current} of ${total - hidden}` : `${total} ${noun}`]
-  if (payloads.inPayloads) parts.push(`${payloads.inPayloads} in payloads`)
-  if (hidden > 0) parts.push(`${hidden} on a hidden column`)
-  if (payloads.pending) parts.push('searching payloads…')
-  if (payloads.failed) parts.push('payloads could not be loaded')
-  return parts.join(', ')
+  return searchCountParts(total, hidden, query, current, payloads)
+    .map((part) => part.text)
+    .join(', ')
+}
+
+/** The count as spans, one per piece, each after the first starting with its comma. Escaped. */
+export function searchCountHtml(parts: readonly CountPart[]): string {
+  return parts
+    .map((part, i) => `<span class="find-count-${part.kind}">${escapeHtml(i ? `, ${part.text}` : part.text)}</span>`)
+    .join('')
 }
 
 /**

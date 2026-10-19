@@ -18,6 +18,7 @@ export const samplePayloads: Record<string, unknown> = {
         },
       ],
       paymentMethodId: 'pm_visa',
+      voucherCode: 'SNOWDROP-10',
     },
   },
   'sc-happy/m2': {

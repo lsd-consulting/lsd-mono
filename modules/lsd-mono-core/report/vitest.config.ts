@@ -16,7 +16,7 @@ export default defineConfig({
       // A little under the coverage when these were last raised: statements 81.9%, branches
       // 71.0%, functions 89.1%, lines 85.6%. A ratchet: scripts/coverage-ratchet.mjs (run by
       // `npm test`) fails when any metric rises more than 3 points above its threshold.
-      thresholds: { statements: 80, branches: 69, functions: 88, lines: 84 },
+      thresholds: { statements: 80, branches: 70, functions: 88, lines: 84 },
     },
   },
 })

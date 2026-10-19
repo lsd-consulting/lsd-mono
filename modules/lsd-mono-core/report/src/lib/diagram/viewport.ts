@@ -18,7 +18,7 @@ import { cssEscape } from '../escape'
 import { DEFAULT_OVERSCAN, DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, virtualRowRange } from '../layout'
 import { bindParticipantFilter } from '../participant-filter'
 import { scrollBehavior } from '../media'
-import { PRINT_MAX_UPSCALE, frameOf, paintedMessageIds } from '../sequence-diagram'
+import { PRINT_MAX_UPSCALE, findFieldLabel, frameOf, paintedMessageIds } from '../sequence-diagram'
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, sizeStage } from './page-scroll'
@@ -423,6 +423,18 @@ export function bindDiagramScroll(root: ParentNode): void {
       reveal = setTimeout(() => {
         if (revealSearchHit(scroll)) syncDiagramWindow(scroll)
       }, SEARCH_REVEAL_DELAY_MS)
+    })
+    diagram.querySelector<HTMLButtonElement>('[data-find-payloads]')?.addEventListener('click', (ev) => {
+      const view = diagramView(id)
+      view.includePayloads = !view.includePayloads
+      const toggle = ev.currentTarget as HTMLButtonElement
+      toggle.setAttribute('aria-pressed', String(view.includePayloads))
+      find?.setAttribute('aria-label', findFieldLabel(view.includePayloads))
+      refreshPayloads(id)
+      updateSearchCurrent(id)
+      syncFindControls(scroll)
+      syncDiagramWindow(scroll)
+      diagramState.findHooks.changed?.(id)
     })
     diagram.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => {
       btn.addEventListener('click', () => {
