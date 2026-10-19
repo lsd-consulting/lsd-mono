@@ -202,6 +202,9 @@ function bindTopbarButtons(): void {
   })
 }
 
+/** Which timing chip opened Metrics (its position in the strip), or null when the toolbar button did. */
+let metricsChip: number | null = null
+
 /** The side panel (inspector), and its Timing rows that reveal a message in the diagram. */
 function bindSidePanel(): void {
   setPayloadLoader(() => loadPayloadMap())
@@ -220,8 +223,14 @@ function bindSidePanel(): void {
       }
       if (opened?.kind === 'components' || opened?.kind === 'metrics') {
         session.invoker = null
-        const button = opened.kind === 'components' ? '[data-show-components]' : '[data-show-metrics]'
-        document.querySelector<HTMLButtonElement>(`#card-${cssEscape(opened.scenarioId)} ${button}`)?.focus()
+        const card = document.querySelector<HTMLElement>(`#card-${cssEscape(opened.scenarioId)}`)
+        // The toolbar button, unless Metrics was opened from a timing chip: those carry
+        // data-show-metrics too, and the first of them is far up the page.
+        const chip = opened.kind === 'metrics' ? metricsChip : null
+        metricsChip = null
+        const target = chip != null ? card?.querySelectorAll<HTMLElement>('.timing-chip')[chip] : undefined
+        const toolbar = opened.kind === 'components' ? '[data-show-components]' : '[data-show-metrics]'
+        ;(target ?? card?.querySelector<HTMLElement>(`.seq-toolbar ${toolbar}`))?.focus()
         return
       }
       const messageId = focusTargetAfterClose(opened?.messageId ?? null)
@@ -279,6 +288,8 @@ function onMainClick(ev: MouseEvent): void {
   }
   const metricsBtn = target.closest<HTMLButtonElement>('[data-show-metrics]')
   if (metricsBtn) {
+    const chips = [...(metricsBtn.closest('.scenario-card')?.querySelectorAll('.timing-chip') ?? [])]
+    metricsChip = chips.includes(metricsBtn) ? chips.indexOf(metricsBtn) : null
     const scenario = session.report.scenarios.find((item) => item.id === metricsBtn.dataset.showMetrics)
     if (scenario) openMetrics(scenario)
     return
