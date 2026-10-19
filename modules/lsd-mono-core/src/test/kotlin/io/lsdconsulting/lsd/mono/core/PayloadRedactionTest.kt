@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.PayloadConverters.Limits
 import io.lsdconsulting.lsd.mono.core.PayloadConverters.Redaction
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -12,16 +13,10 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
 /** Secrets in message data are written as `[lsd: redacted]` (#43). */
+@LsdTestConfig
 class PayloadRedactionTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @AfterEach
-    fun clearProperties() {
-        System.clearProperty(LsdProperties.PAYLOAD_REDACT)
-        System.clearProperty(LsdProperties.PAYLOAD_REDACT_KEYS)
-        System.clearProperty(LsdProperties.OUTPUT_DIR)
-    }
 
     private val converters = PayloadConverters(Limits(), Redaction())
 

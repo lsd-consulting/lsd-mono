@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.cucumber
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -15,22 +16,19 @@ import java.nio.file.Path
  * written report JSON. The step captures the message. The plugin supplies the
  * scenario title, the step description, and the success status.
  */
+@LsdTestConfig(deterministicIds = true)
 class LsdCucumberPluginTest {
     @TempDir
     lateinit var tempDir: Path
 
     @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
+    fun setUp() {
         System.setProperty("cucumber.publish.enabled", "false")
         LsdContext.instance.clear()
     }
 
     @AfterEach
-    fun restoreOutputDir() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
-        System.clearProperty("lsd.mono.ids.deterministic")
+    fun clearContext() {
         LsdContext.instance.clear()
     }
 

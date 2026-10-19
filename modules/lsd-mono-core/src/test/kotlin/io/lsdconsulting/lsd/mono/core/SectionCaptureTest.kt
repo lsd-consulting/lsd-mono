@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -15,15 +16,10 @@ import kotlin.io.path.readText
  * Sections replace PlantUML newpage. They stay in one event stream and must not
  * drop activate/deactivate events on either side of the boundary.
  */
+@LsdTestConfig(deterministicIds = true)
 class SectionCaptureTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun deterministicOutput() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
 
     @Test
     fun `two sections keep activations on both sides of the boundary`() {

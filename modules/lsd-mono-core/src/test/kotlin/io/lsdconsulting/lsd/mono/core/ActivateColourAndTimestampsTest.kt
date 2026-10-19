@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -12,15 +13,10 @@ import java.nio.file.Path
 import java.time.Instant
 import kotlin.io.path.readText
 
+@LsdTestConfig(deterministicIds = true)
 class ActivateColourAndTimestampsTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun deterministicOutput() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
 
     @Test
     fun `activate colour is optional in JSON and omitted when absent`() {

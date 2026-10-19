@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.model.ReportSource
 import io.lsdconsulting.lsd.mono.core.properties.LsdConfig
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -18,22 +19,10 @@ import kotlin.io.path.readText
  * `lsd.mono.report.usagePing` and the report's `source`: what the report page's usage ping
  * (report/src/lib/usage-ping.ts) reads. The page itself decides whether to send anything.
  */
+@LsdTestConfig
 class UsagePingOptionTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun output() {
-        LsdConfig.resetForTests()
-        System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())
-    }
-
-    @AfterEach
-    fun clear() {
-        System.clearProperty(LsdProperties.OUTPUT_DIR)
-        System.clearProperty(LsdProperties.USAGE_PING)
-        LsdConfig.resetForTests()
-    }
 
     private fun write(source: String? = null): String {
         val lsd = LsdContext()

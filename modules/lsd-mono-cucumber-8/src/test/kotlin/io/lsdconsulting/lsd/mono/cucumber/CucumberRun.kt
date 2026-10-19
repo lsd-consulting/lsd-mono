@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.cucumber
 
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClasspathResource
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
@@ -35,18 +36,11 @@ internal fun runFeatures(
 }
 
 /** The one `<feature>-*-report.json` in [dir]. */
-internal fun reportJson(dir: Path, feature: String): String {
-    val files = dir.listDirectoryEntries("$feature-*-report.json")
-    check(files.size == 1) { "expected one report for $feature in ${dir.listDirectoryEntries().map { it.name }}" }
-    return files.single().readText()
-}
+internal fun reportJson(dir: Path, feature: String): String = ReportJson.single(dir, "$feature-*-report.json").text
 
-/**
- * The scenarios in a report's JSON by title, each as its own JSON text. Relies on the writer's
- * two-space indentation: a scenario object opens at four spaces with its `id` first.
- */
-internal fun scenariosByTitle(json: String): Map<String, String> =
-    json
-        .split(Regex("""\n {4}\{\n {6}"id": """))
-        .drop(1)
-        .associateBy { Regex("""\n {6}"title": "([^"]*)"""").find(it)!!.groupValues[1] }
+/** The scenarios in a report's JSON by title, each as the text it was written as. Titles must be unique. */
+internal fun scenariosByTitle(json: String): Map<String, String> {
+    val scenarios = ReportJson(json).scenarios
+    check(scenarios.map { it.title }.toSet().size == scenarios.size) { "duplicate titles: ${scenarios.map { it.title }}" }
+    return scenarios.associate { it.title to it.json }
+}

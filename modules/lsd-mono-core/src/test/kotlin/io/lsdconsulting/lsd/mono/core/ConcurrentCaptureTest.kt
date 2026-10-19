@@ -2,6 +2,8 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -25,21 +27,10 @@ import kotlin.io.path.readText
  * API, so it also shows what went wrong before capture was made thread-safe (it threw
  * ConcurrentModificationException). The rest cover scenario scopes and report keys.
  */
+@LsdTestConfig(deterministicIds = true)
 class ConcurrentCaptureTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
-
-    @AfterEach
-    fun restore() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
-        System.clearProperty("lsd.mono.ids.deterministic")
-    }
 
     @Test
     fun `captures from many threads into one scenario are neither lost nor duplicated`() {
@@ -229,13 +220,8 @@ class ConcurrentCaptureTest {
     private fun readReport(title: String, reportKey: String?): String =
         tempDir.resolve(ReportWriter.reportFileStem(title, reportKey) + "-report.json").readText()
 
-    private fun scenarioSlice(json: String, title: String): String {
-        val key = """"title": "$title""""
-        val start = json.indexOf(key)
-        assertTrue(start >= 0, "missing scenario '$title'")
-        val next = json.indexOf("\"title\": \"", start + key.length)
-        return if (next < 0) json.substring(start) else json.substring(start, next)
-    }
+    /** The scenario titled [title], and only it, as written. */
+    private fun scenarioSlice(json: String, title: String): String = ReportJson(json).scenario(title).json
 
     private fun runConcurrently(threads: Int, body: (Int) -> Unit) {
         val pool = Executors.newFixedThreadPool(threads)

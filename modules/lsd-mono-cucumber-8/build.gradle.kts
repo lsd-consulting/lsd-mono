@@ -56,6 +56,8 @@ dependencies {
     implementation(platform(libs.cucumber.bom))
 
     testImplementation(platform(libs.junit.bom))
+    // LsdTestConfig and ReportJson (#74).
+    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
     testImplementation(libs.cucumber.java8)
     testImplementation(libs.cucumber.junit.platform.engine)
     testImplementation(libs.junit.jupiter)

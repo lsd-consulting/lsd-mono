@@ -6,6 +6,7 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
 import io.lsdconsulting.lsd.mono.core.properties.LsdConfig
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -22,15 +23,10 @@ import kotlin.io.path.readText
  * the current API (#68). The test fails when the README block and the marked lines differ, and it
  * runs the example to check the file names the README quotes.
  */
+@LsdTestConfig
 class RootReadmeExampleTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @AfterEach
-    fun clear() {
-        System.clearProperty(LsdProperties.OUTPUT_DIR)
-        LsdConfig.resetForTests()
-    }
 
     private fun example(): ReportFiles {
         // readme:start

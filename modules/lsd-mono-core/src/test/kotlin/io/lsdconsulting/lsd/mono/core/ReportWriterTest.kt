@@ -3,7 +3,9 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
+import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -24,6 +26,7 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 /** Direct tests for [ReportWriter] file naming, atomic writes, and the shared index (#25). */
+@LsdTestConfig
 class ReportWriterTest {
     @TempDir
     lateinit var tempDir: Path
@@ -112,9 +115,9 @@ class ReportWriterTest {
 
     @Test
     fun `an index from one writer lists reports written by others in the same directory`() {
-        // Two contexts stand in for two Gradle test forks or modules sharing one output dir.
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        try {
+        // Two contexts stand in for two Gradle test forks or modules sharing one output dir
+        // (LsdTestConfig points it at tempDir).
+        run {
             val forkA = LsdContext()
             val forkB = LsdContext()
             forkA.completeScenario("a")
@@ -130,8 +133,6 @@ class ReportWriterTest {
             }
             assertTrue(manifest(fromA).indexOf("Fork A") < manifest(fromA).indexOf("Fork B"), "sorted by title")
             assertFalse(fromA.contains("lsd-report.single.html"), "no shared latest link")
-        } finally {
-            System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
         }
     }
 

@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -21,6 +22,7 @@ import kotlin.io.path.readText
  * What an interceptor calls never throws into the application under test; misusing the
  * test DSL still does (#49).
  */
+@LsdTestConfig
 class CaptureNeverThrowsTest {
     @TempDir
     lateinit var tempDir: Path
@@ -51,7 +53,6 @@ class CaptureNeverThrowsTest {
 
     @BeforeEach
     fun setUp() {
-        System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())
         logger.addHandler(handler)
         lsd.payloads.register<Bomb> { throw AssertionError("converter bug") }
     }
@@ -59,7 +60,6 @@ class CaptureNeverThrowsTest {
     @AfterEach
     fun tearDown() {
         logger.removeHandler(handler)
-        System.clearProperty(LsdProperties.OUTPUT_DIR)
     }
 
     private fun warnings() = synchronized(records) { records.filter { it.level == Level.WARNING }.map { it.message } }

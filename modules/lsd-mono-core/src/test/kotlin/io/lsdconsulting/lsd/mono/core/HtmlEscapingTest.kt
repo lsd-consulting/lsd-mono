@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.html.Html
 import io.lsdconsulting.lsd.mono.core.json.jsonString
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -20,19 +21,10 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 
 /** One escaper per context (#28), and a whole hostile report proving nothing leaks. */
+@LsdTestConfig
 class HtmlEscapingTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-    }
-
-    @AfterEach
-    fun restore() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
-    }
 
     @Test
     fun `text escapes ampersand and angle brackets only`() {

@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -19,15 +20,10 @@ import kotlin.io.path.readText
  * note left/right, delay, spacer, short inbound/outbound, LOST, BI_DIRECTIONAL.
  * Short arrows must not invent a "?" participant.
  */
+@LsdTestConfig(deterministicIds = true)
 class RemainingSequenceEventKindsTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun deterministicOutput() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
 
     @Test
     fun `note placement delay spacer short lost and bi serialise without fake participants`() {

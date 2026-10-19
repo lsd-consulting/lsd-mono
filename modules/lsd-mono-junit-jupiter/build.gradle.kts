@@ -20,6 +20,8 @@ dependencies {
     api(libs.junit.jupiter.api)
 
     testImplementation(platform(libs.junit.bom))
+    // LsdTestConfig and ReportJson (#74).
+    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.platform.launcher)
 

@@ -6,6 +6,7 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.BOUNDARY
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -25,21 +26,10 @@ import kotlin.random.Random
  * with tests running in parallel a test could draw another test's participant (its name and
  * shape) depending on which declared first.
  */
+@LsdTestConfig(deterministicIds = true)
 class ScenarioParticipantsTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
-
-    @AfterEach
-    fun restore() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
-        System.clearProperty("lsd.mono.ids.deterministic")
-    }
 
     /** Three tests: two declare the same id with different participants, one declares nothing. */
     private val tests: Map<String, (LsdContext, LsdScenario) -> Unit> =

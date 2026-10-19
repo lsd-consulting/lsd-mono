@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.properties.LsdKey
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -13,15 +14,8 @@ import java.nio.file.Path
 import kotlin.io.path.readLines
 
 /** The [LsdKey] table: legacy fallbacks, defaults, and the README table that documents it. */
+@LsdTestConfig
 class LsdPropertiesTest {
-    private val names = LsdKey.entries.flatMap { listOfNotNull(it.key, it.legacy) }
-    private val saved = names.associateWith { System.getProperty(it) }
-
-    @AfterEach
-    fun restore() {
-        saved.forEach { (key, value) -> if (value == null) System.clearProperty(key) else System.setProperty(key, value) }
-    }
-
     @Test
     fun `every key prefers its mono name, then its legacy name, then its default`() {
         LsdKey.entries.forEach { key ->

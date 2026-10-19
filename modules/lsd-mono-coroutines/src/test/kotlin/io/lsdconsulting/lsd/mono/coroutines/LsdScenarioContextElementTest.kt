@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.coroutines
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -30,21 +31,16 @@ import kotlin.io.path.readText
  * Every test keeps two scenarios running. With only one running scenario, a capture from
  * an unbound thread is given to it anyway, so a test could pass without the binding working.
  */
+@LsdTestConfig
 class LsdScenarioContextElementTest {
     @TempDir
     lateinit var tempDir: Path
 
     private val lsd = LsdContext()
 
-    @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-    }
-
     @AfterEach
     fun restore() {
         lsd.clear()
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
     }
 
     /** A running scenario that is not bound to the calling thread. */

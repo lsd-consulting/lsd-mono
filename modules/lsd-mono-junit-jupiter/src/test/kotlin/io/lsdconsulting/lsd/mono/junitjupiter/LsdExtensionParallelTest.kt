@@ -2,6 +2,8 @@ package io.lsdconsulting.lsd.mono.junitjupiter
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -26,20 +28,19 @@ import kotlin.io.path.readText
  * concurrent, four threads) and checks every report holds only its own scenarios, and
  * every scenario only its own messages and facts (#24, #25).
  */
+@LsdTestConfig
 class LsdExtensionParallelTest {
     @TempDir
     lateinit var tempDir: Path
 
     @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
+    fun setUp() {
         LsdContext.instance.clear()
         ParallelFixtureState.reset()
     }
 
     @AfterEach
-    fun restoreOutputDir() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
+    fun clearContext() {
         LsdContext.instance.clear()
     }
 
@@ -104,19 +105,10 @@ class LsdExtensionParallelTest {
         }
     }
 
-    private fun reportJson(className: String): String {
-        val files = tempDir.listDirectoryEntries("$className*-report.json")
-        assertEquals(1, files.size, "expected one report for $className, found ${tempDir.listDirectoryEntries().map { it.name }}")
-        return files.single().readText()
-    }
+    private fun reportJson(className: String): String = ReportJson.single(tempDir, "$className*-report.json").text
 
-    private fun scenarioSlice(json: String, title: String): String {
-        val key = """"title": "$title""""
-        val start = json.indexOf(key)
-        assertTrue(start >= 0, "missing scenario '$title'")
-        val next = json.indexOf("\"title\": \"", start + key.length)
-        return if (next < 0) json.substring(start) else json.substring(start, next)
-    }
+    /** The scenario titled [title], and only it, as written. */
+    private fun scenarioSlice(json: String, title: String): String = ReportJson(json).scenario(title).json
 
     companion object {
         const val TESTS_PER_CLASS = 6

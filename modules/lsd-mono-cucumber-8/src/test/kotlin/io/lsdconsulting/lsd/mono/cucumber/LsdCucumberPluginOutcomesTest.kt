@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.cucumber
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -17,22 +18,18 @@ import kotlin.io.path.readText
  * Runs outcomes.feature, one scenario per Cucumber result plus one with hooks, and checks what
  * the plugin writes for each: status, error, description, sections, and the index.
  */
+@LsdTestConfig(deterministicIds = true)
 class LsdCucumberPluginOutcomesTest {
     @TempDir
     lateinit var tempDir: Path
 
     @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
+    fun setUp() {
         LsdContext.instance.clear()
     }
 
     @AfterEach
     fun restore() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
-        System.clearProperty("lsd.mono.ids.deterministic")
-        System.clearProperty(LsdProperties.CUCUMBER_SPLIT_BY_STEPS)
         LsdContext.instance.clear()
     }
 

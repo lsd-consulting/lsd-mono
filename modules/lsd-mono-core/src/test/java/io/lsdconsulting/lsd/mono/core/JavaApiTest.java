@@ -10,7 +10,7 @@ import io.lsdconsulting.lsd.mono.core.domain.NoteSide;
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType;
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError;
 import io.lsdconsulting.lsd.mono.core.domain.Status;
-import io.lsdconsulting.lsd.mono.core.properties.LsdProperties;
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,8 +22,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -31,21 +29,10 @@ import org.junit.jupiter.api.io.TempDir;
  * Locks in how the API reads from Java: the verbs' overloads, capture blocks, statics, scenarios
  * and converters. A change that breaks a call here breaks Java users, so it must be deliberate.
  */
+@LsdTestConfig(deterministicIds = true)
 class JavaApiTest {
     @TempDir
     Path tempDir;
-
-    @BeforeEach
-    void setUp() {
-        System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString());
-        System.setProperty(LsdProperties.DETERMINISTIC_IDS, "true");
-    }
-
-    @AfterEach
-    void tearDown() {
-        System.clearProperty(LsdProperties.OUTPUT_DIR);
-        System.clearProperty(LsdProperties.DETERMINISTIC_IDS);
-    }
 
     record Order(String id) {}
 

@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.PayloadConvertersTest.Companion.assertValidJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -20,20 +21,10 @@ import kotlin.io.path.name
 import kotlin.io.path.readText
 
 /** Awkward message data through the whole capture and report path (#27). */
+@LsdTestConfig
 class PayloadCaptureTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-    }
-
-    @AfterEach
-    fun restore() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
-        System.clearProperty(LsdProperties.PAYLOAD_MAX_STRING_LENGTH)
-    }
 
     class Explodes {
         override fun toString(): String = throw IllegalStateException("toString exploded")

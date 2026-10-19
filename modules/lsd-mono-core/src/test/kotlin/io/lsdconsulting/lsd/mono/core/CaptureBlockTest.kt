@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -11,17 +12,8 @@ import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import kotlin.concurrent.thread
 
+@LsdTestConfig(deterministicIds = true)
 class CaptureBlockTest {
-    @BeforeEach
-    fun deterministicIds() {
-        System.setProperty(LsdProperties.DETERMINISTIC_IDS, "true")
-    }
-
-    @AfterEach
-    fun clearIds() {
-        System.clearProperty(LsdProperties.DETERMINISTIC_IDS)
-    }
-
     private fun scenario() = LsdContext().beginScenario(bindCurrentThread = false)
 
     private fun LsdScenario.events(): List<SequenceEvent> = close().second

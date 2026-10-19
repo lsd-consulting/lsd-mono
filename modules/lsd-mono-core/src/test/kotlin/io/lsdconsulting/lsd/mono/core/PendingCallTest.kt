@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS_RESPONSE
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -19,21 +20,10 @@ import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.thread
 import kotlin.io.path.readText
 
+@LsdTestConfig(deterministicIds = true)
 class PendingCallTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun output() {
-        System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())
-        System.setProperty(LsdProperties.DETERMINISTIC_IDS, "true")
-    }
-
-    @AfterEach
-    fun clearProperties() {
-        System.clearProperty(LsdProperties.OUTPUT_DIR)
-        System.clearProperty(LsdProperties.DETERMINISTIC_IDS)
-    }
 
     private fun LsdScenario.messages(): List<Message> = close().second.map { it as Message }
 

@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -20,23 +21,12 @@ import kotlin.io.path.exists
 import kotlin.io.path.readText
 
 /** `scenario { }`, `report { }` and `wrap(Callable)`: binding, nesting, failures and parallel reports. */
+@LsdTestConfig(deterministicIds = true)
 class ScopedBlocksTest {
     @TempDir
     lateinit var tempDir: Path
 
     private val lsd = LsdContext()
-
-    @BeforeEach
-    fun output() {
-        System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())
-        System.setProperty(LsdProperties.DETERMINISTIC_IDS, "true")
-    }
-
-    @AfterEach
-    fun clearProperties() {
-        System.clearProperty(LsdProperties.OUTPUT_DIR)
-        System.clearProperty(LsdProperties.DETERMINISTIC_IDS)
-    }
 
     private fun json(title: String, reportKey: String? = null): String =
         tempDir.resolve(ReportWriter.reportFileStem(title, reportKey) + "-report.json").readText()

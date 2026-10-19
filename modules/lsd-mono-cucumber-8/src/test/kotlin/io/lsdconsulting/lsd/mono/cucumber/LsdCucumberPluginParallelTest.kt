@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.cucumber
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.cucumber.fixture.ParallelSteps
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -15,21 +16,20 @@ import java.nio.file.Path
  * feature report holds only its own scenarios, each with only its own messages and
  * fact, and that outline rows keep their file order numbers (#24).
  */
+@LsdTestConfig
 class LsdCucumberPluginParallelTest {
     @TempDir
     lateinit var tempDir: Path
 
     @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
+    fun setUp() {
         System.setProperty("cucumber.publish.enabled", "false")
         LsdContext.instance.clear()
         ParallelSteps.maxInFlight.set(0)
     }
 
     @AfterEach
-    fun restoreOutputDir() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
+    fun clearContext() {
         LsdContext.instance.clear()
     }
 

@@ -3,6 +3,8 @@ import io.lsdconsulting.lsd.mono.gradle.withNodeOnPath
 plugins {
     id("lsd.kotlin-jvm")
     `java-library`
+    // LsdTestConfig and ReportJson for this module's tests and the integrations' (#74). Not published.
+    `java-test-fixtures`
     // Feature-tour and example report (kitchen-sink) sample tasks (readmeSamples, kitchenSinkSample).
     id("lsd.samples")
 }
@@ -20,7 +22,16 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
+
+    testFixturesImplementation(platform(libs.junit.bom))
+    testFixturesImplementation(libs.junit.jupiter.api)
 }
+
+// The test fixtures are for this repository's tests: keep them out of the published component, so
+// Maven Central gets no -test-fixtures jar and the POM and Gradle metadata do not mention one.
+val javaComponent = components["java"] as AdhocComponentWithVariants
+javaComponent.withVariantsFromConfiguration(configurations["testFixturesApiElements"]) { skip() }
+javaComponent.withVariantsFromConfiguration(configurations["testFixturesRuntimeElements"]) { skip() }
 
 tasks.test {
     // HtmlEscapingGuardTest scans every module's main Kotlin, not only this one's.

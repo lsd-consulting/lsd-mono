@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -21,21 +22,10 @@ import kotlin.io.path.writeText
  * vitest (`report/src/lib/timing-tree.test.ts`) reads the same file, so the Timing view is shown
  * to follow the library's tree rather than work out its own.
  */
+@LsdTestConfig(deterministicIds = true)
 class TimingTreeGoldenTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun deterministicOutput() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
-
-    @AfterEach
-    fun clear() {
-        System.clearProperty("lsd.mono.report.outputDir")
-        System.clearProperty("lsd.mono.ids.deterministic")
-    }
 
     @Test
     fun `span nesting, duplicate spans and the ALL_SOURCES fallback`() {

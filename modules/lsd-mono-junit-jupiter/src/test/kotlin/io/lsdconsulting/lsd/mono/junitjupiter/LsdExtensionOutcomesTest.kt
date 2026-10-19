@@ -1,6 +1,9 @@
 package io.lsdconsulting.lsd.mono.junitjupiter
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -30,23 +33,19 @@ import kotlin.io.path.readText
  * aborted, nested, and `@AfterEach` outcomes land in one report.
  * Fixture classes are not named *Test, so the Gradle suite does not run them directly.
  */
+@LsdTestConfig(deterministicIds = true)
 class LsdExtensionOutcomesTest {
     @TempDir
     lateinit var tempDir: Path
 
     @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-        System.setProperty("lsd.mono.hideStacktrace", "false")
+    fun setUp() {
+        System.setProperty(LsdProperties.HIDE_STACKTRACE, "false")
         LsdContext.instance.clear()
     }
 
     @AfterEach
-    fun restoreOutputDir() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
-        System.clearProperty("lsd.mono.ids.deterministic")
-        System.clearProperty("lsd.mono.hideStacktrace")
+    fun clearContext() {
         LsdContext.instance.clear()
     }
 
@@ -113,9 +112,9 @@ class LsdExtensionOutcomesTest {
     @Test
     @OptIn(io.lsdconsulting.lsd.mono.core.InternalLsdApi::class)
     fun `lsd keys are read from JUnit configuration parameters`() {
-        System.clearProperty("lsd.mono.hideStacktrace")
+        System.clearProperty(LsdProperties.HIDE_STACKTRACE)
         try {
-            execute(LsdOutcomeFixtures::class.java, mapOf("lsd.mono.hideStacktrace" to "yes"))
+            execute(LsdOutcomeFixtures::class.java, mapOf(LsdProperties.HIDE_STACKTRACE to "yes"))
         } finally {
             io.lsdconsulting.lsd.mono.core.properties.LsdProperties
                 .useConfigurationSource(null)
@@ -158,19 +157,10 @@ class LsdExtensionOutcomesTest {
     }
 
     /** One report per top-level class, named from its title plus a hash of the class id. */
-    private fun reportJson(className: String): String {
-        val files = tempDir.listDirectoryEntries("$className-*-report.json")
-        assertEquals(1, files.size, "expected one report for $className in ${tempDir.listDirectoryEntries()}")
-        return files.single().readText()
-    }
+    private fun reportJson(className: String): String = ReportJson.single(tempDir, "$className-*-report.json").text
 
-    private fun scenarioSlice(json: String, title: String): String {
-        val key = """"title": "$title""""
-        val start = json.indexOf(key)
-        assertTrue(start >= 0, "missing scenario '$title' in $json")
-        val next = json.indexOf("\"title\": \"", start + key.length)
-        return if (next < 0) json.substring(start) else json.substring(start, next)
-    }
+    /** The scenario titled [title], and only it, as written. */
+    private fun scenarioSlice(json: String, title: String): String = ReportJson(json).scenario(title).json
 }
 
 @Tag("lsd-fixture")

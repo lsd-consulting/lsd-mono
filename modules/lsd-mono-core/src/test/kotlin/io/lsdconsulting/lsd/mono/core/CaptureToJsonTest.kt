@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -14,15 +15,10 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.readText
 
+@LsdTestConfig(deterministicIds = true)
 class CaptureToJsonTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun deterministicOutput() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
 
     @Test
     fun `multi-message scenario serialises to report json and is injected into the shell`() {

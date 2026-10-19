@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -18,15 +19,10 @@ import kotlin.io.path.readText
  * `generatedAt` and `generator` are checked, then scrubbed; everything else must match the
  * golden byte-for-byte, so the golden does not change with the clock or the project version.
  */
+@LsdTestConfig(deterministicIds = true)
 class MultiScenarioStatusGoldenTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun deterministicOutput() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
 
     @Test
     fun `three scenarios lock success warn and error with error rollup`() {

@@ -12,6 +12,7 @@ import io.cucumber.plugin.event.TestRunFinished
 import io.cucumber.plugin.event.TestRunStarted
 import io.cucumber.plugin.event.TestStep
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -30,6 +31,7 @@ import kotlin.io.path.exists
  * produce in a normal run: a retried test case, a finish with no start, outline rows with no
  * parsed source, and a run with no scenarios.
  */
+@LsdTestConfig
 class LsdCucumberPluginEventsTest {
     @TempDir
     lateinit var tempDir: Path
@@ -39,7 +41,6 @@ class LsdCucumberPluginEventsTest {
 
     @BeforeEach
     fun setUp() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
         lsd.clear()
         LsdCucumberPlugin().setEventPublisher(publisher)
         publisher.publish(TestRunStarted(Instant.now()))
@@ -47,7 +48,6 @@ class LsdCucumberPluginEventsTest {
 
     @AfterEach
     fun restore() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
         lsd.clear()
     }
 

@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.json.anyToJson
 import io.lsdconsulting.lsd.mono.core.json.jsonString
 import io.lsdconsulting.lsd.mono.core.json.render
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -11,24 +12,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /** Direct tests for Json.kt, [LsdProperties] and StringUtils (#25). */
+@LsdTestConfig
 class CoreHelpersTest {
-    private val touched = listOf(
-        LsdProperties.OUTPUT_DIR,
-        "lsd.core.report.outputDir",
-        LsdProperties.LABEL_MAX_WIDTH,
-        "lsd.core.label.maxWidth",
-        LsdProperties.METRICS_ENABLED,
-        "lsd.core.metrics.enabled",
-        LsdProperties.HIDE_STACKTRACE,
-        "lsd.junit.hideStacktrace",
-    )
-    private val saved = touched.associateWith { System.getProperty(it) }
-
-    @AfterEach
-    fun restore() {
-        saved.forEach { (key, value) -> if (value == null) System.clearProperty(key) else System.setProperty(key, value) }
-    }
-
     @Test
     fun `jsonString escapes quotes, control characters and script-breaking markup`() {
         assertEquals(""""a\"b\\c"""", jsonString("a\"b\\c"))

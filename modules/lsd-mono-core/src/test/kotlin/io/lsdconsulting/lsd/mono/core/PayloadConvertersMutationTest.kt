@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.core
 
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -11,19 +12,10 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
 
 /** Message data is copied when it is captured, so later changes by the test do not reach the report (#27). */
+@LsdTestConfig
 class PayloadConvertersMutationTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun pointReportsAtTempDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-    }
-
-    @AfterEach
-    fun restore() {
-        System.setProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
-    }
 
     @Test
     fun `mutating data after capture does not change the report`() {

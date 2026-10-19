@@ -2,8 +2,10 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.formatMs
+import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.isErrorStatus
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -19,27 +21,10 @@ import kotlin.io.path.readText
  * Scenario metrics: message count and captured duration. `lsd.mono.metrics.enabled` defaults on
  * and empties them when false. There are no ranked duration insights: the Timing view shows slow calls.
  */
+@LsdTestConfig(deterministicIds = true)
 class ScenarioMetricsTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun deterministicOutput() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
-
-    @AfterEach
-    fun clearGates() {
-        listOf(
-            "lsd.mono.metrics.enabled",
-            "lsd.core.metrics.enabled",
-            "lsd.mono.label.maxWidth",
-            "lsd.core.label.maxWidth",
-            "lsd.mono.report.outputDir",
-            "lsd.mono.ids.deterministic",
-        ).forEach { System.clearProperty(it) }
-    }
 
     @Test
     fun `a call with its own duration and a timed reply counts once`() {
@@ -90,7 +75,7 @@ class ScenarioMetricsTest {
 
     @Test
     fun `enabled report json has the message count, captured duration and options, and no insights`() {
-        System.setProperty("lsd.mono.label.maxWidth", "12")
+        System.setProperty(LsdProperties.LABEL_MAX_WIDTH, "12")
         val lsd = LsdContext()
         val longLabel = "abcdefghijklmnopqrstuvwxyz"
         lsd.message("A", "B", "parent", timing = Timing.tookMs(100.0))
@@ -114,7 +99,7 @@ class ScenarioMetricsTest {
 
     @Test
     fun `disabled metrics omit the counts`() {
-        System.setProperty("lsd.mono.metrics.enabled", "false")
+        System.setProperty(LsdProperties.METRICS_ENABLED, "false")
         val lsd = LsdContext()
         lsd.message("A", "B", "ping", timing = Timing.tookMs(40.0))
         lsd.completeScenario("quiet", "", Status.SUCCESS)

@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -25,21 +26,10 @@ import kotlin.concurrent.thread
 import kotlin.io.path.readText
 
 /** Carrying a scenario across threads and processes safely (#45). */
+@LsdTestConfig
 class ScenarioPropagationTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun output() {
-        System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())
-    }
-
-    @AfterEach
-    fun clearProperties() {
-        System.clearProperty(LsdProperties.OUTPUT_DIR)
-        System.clearProperty(LsdProperties.PROPAGATION_ALLOWED_HOSTS)
-        System.clearProperty(LsdProperties.INHERIT_BINDING)
-    }
 
     private fun LsdScenario.labels(): List<String> = close().second.map { (it as Message).label }
 

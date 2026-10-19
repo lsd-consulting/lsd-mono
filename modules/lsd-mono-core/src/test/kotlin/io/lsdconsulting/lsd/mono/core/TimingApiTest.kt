@@ -10,6 +10,7 @@ import io.lsdconsulting.lsd.mono.core.domain.WarningKind
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -25,20 +26,10 @@ import java.time.Instant
 import kotlin.io.path.readText
 
 /** The timing API, slice 1: accuracy, pairing, clock ordering with structural guards, JSON. */
+@LsdTestConfig(deterministicIds = true)
 class TimingApiTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun output() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-        System.setProperty("lsd.mono.ids.deterministic", "true")
-    }
-
-    @AfterEach
-    fun reset() {
-        System.clearProperty(LsdProperties.TIMING_ORDER_BY_STARTED_AT)
-    }
 
     private val t0 = Instant.parse("2026-10-14T12:00:00Z")
 

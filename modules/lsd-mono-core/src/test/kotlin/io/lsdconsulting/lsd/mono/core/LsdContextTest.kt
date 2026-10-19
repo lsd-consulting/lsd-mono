@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -13,14 +14,10 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.nio.file.Path
 
+@LsdTestConfig
 class LsdContextTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @BeforeEach
-    fun setOutputDir() {
-        System.setProperty("lsd.mono.report.outputDir", tempDir.toString())
-    }
 
     @Test
     fun `completeReport writes the json, data script, diagram and index`() {

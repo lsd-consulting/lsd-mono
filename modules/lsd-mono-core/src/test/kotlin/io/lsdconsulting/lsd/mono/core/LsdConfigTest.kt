@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.properties.LsdConfig
 import io.lsdconsulting.lsd.mono.core.properties.LsdKey
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -24,6 +25,7 @@ import kotlin.io.path.writeText
  * `lsd-mono.properties` > default) and how booleans are read (#50). The environment cannot be
  * set from a test; it is looked up between the system property and the configuration source.
  */
+@LsdTestConfig
 class LsdConfigTest {
     @TempDir
     lateinit var tempDir: Path
@@ -50,9 +52,7 @@ class LsdConfigTest {
 
     @AfterEach
     fun tearDown() {
-        keys.forEach(System::clearProperty)
         logger.removeHandler(handler)
-        LsdConfig.resetForTests()
     }
 
     private fun file(vararg entries: Pair<String, String>) = LsdConfig.resetForTests(Properties().apply { entries.forEach { (k, v) -> setProperty(k, v) } })
