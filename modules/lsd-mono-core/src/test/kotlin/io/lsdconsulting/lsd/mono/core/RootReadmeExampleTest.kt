@@ -98,6 +98,27 @@ class RootReadmeExampleTest {
         assertEquals(body, block.drop(imports.size + 1), "copy the example between the readme markers into README.md")
     }
 
+    /**
+     * The "Getting started" snippets say `X.Y.Z`, not a release: a literal version would be the previous release in
+     * every tag's README, since the tag comes before any commit after it could change it (#78).
+     */
+    @Test
+    fun `the getting started snippets name no release version`() {
+        val gettingStarted =
+            readme
+                .readLines()
+                .dropWhile { it != "## Getting started" }
+                .drop(1)
+                .takeWhile { !it.startsWith("## ") }
+        val versions =
+            gettingStarted.filter { "lsdMonoVersion =" in it || "<lsd-mono.version>" in it }
+        assertEquals(2, versions.size, "the Gradle and Maven snippets each set the version once: $versions")
+        assertTrue(versions.all { "X.Y.Z" in it }, "the snippets say X.Y.Z, not a release: $versions")
+        val literal = Regex("""\b\d+\.\d+\.\d+\b""")
+        val withVersions = gettingStarted.filter { literal.containsMatchIn(it) && "lsd-consulting" in it }
+        assertTrue(withVersions.isEmpty(), "a release version in the Getting started snippets: $withVersions")
+    }
+
     @Test
     fun `the example writes the files the README names`() {
         System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())

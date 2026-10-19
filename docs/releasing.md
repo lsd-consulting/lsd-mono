@@ -56,9 +56,9 @@ heading, with a link to the commit, and the text of every `BREAKING CHANGE:` foo
 - Put anything a user must change in a `BREAKING CHANGE:` footer. That text goes into the notes word for word.
 - When a release needs more than that, edit its GitHub release after it is published.
 
-After a release, set the version in the root README's "Getting started" snippets (`lsdMonoVersion` and
-`lsd-mono.version`) to the new release in a `docs:` commit. The README says the badge has the latest, so this can wait
-for the next docs change.
+Nothing needs changing after a release. The root README's "Getting started" snippets say `X.Y.Z` instead of a version,
+pointing at the Maven Central badge, so the README in every tag is right; `RootReadmeExampleTest` fails if a literal
+version comes back.
 
 The artifacts show on Maven Central (`repo1.maven.org`) a few minutes to half an hour after the job.
 
