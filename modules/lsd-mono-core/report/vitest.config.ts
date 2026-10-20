@@ -4,6 +4,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'lint/**/*.test.js'],
+    // Each file keeps its own worker (vitest's default isolate: true), on purpose (#97). isolate: false
+    // ran about 3 s faster on four cores (6.6 s to 3.5 s with coverage), but in a shuffled order it let
+    // DOM state leak between files (inspector-fit.test.ts failed), and coverage then depends on which
+    // files share a worker, which would make the ratchet below flaky. pool: 'threads' gained nothing
+    // and failed outright without isolation. The unit tests are not the slow part of CI.
     // JUnit XML beside the Gradle test results, so CI can upload it when a test fails.
     reporters: ['default', 'junit'],
     outputFile: { junit: '../build/test-results/vitest/junit.xml' },
