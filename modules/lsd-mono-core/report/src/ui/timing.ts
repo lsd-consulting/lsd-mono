@@ -47,15 +47,16 @@ export function timingStripHtml(scenario: Scenario): string {
   const derivedWall = scenario.wallClockMs == null || scenario.wallClockMs < t.totalMs
   const clock = scenario.clockOrdered ?? 0
   const id = escapeAttr(scenario.id)
-  const chip = (key: string, value: string, hint: string, extra = '') =>
-    `<li><button type="button" class="timing-chip${escapeAttr(extra)}" data-show-metrics="${id}">
+  // A chip with a [section] opens the panel at that section (the Accuracy chip: Accuracy by pair).
+  const chip = (key: string, value: string, hint: string, extra = '', section = '') =>
+    `<li><button type="button" class="timing-chip${escapeAttr(extra)}" data-show-metrics="${id}"${section ? ` data-metrics-section="${escapeAttr(section)}"` : ''}>
       <span class="k">${escapeHtml(key)}</span><span class="v">${escapeHtml(value)}</span><span class="h">${escapeHtml(hint)}</span>
     </button></li>`
   return `<ul class="timing-strip" aria-label="Timing summary">
     ${chip('Wall-clock', `${derivedWall ? '≈' : ''}${formatMs(wall)}`, derivedWall ? 'from durations' : sourcesHint(scenario.sources?.length ?? 1))}
     ${chip('Calls', String(t.calls), `${t.timedCalls} timed`)}
     ${chip('Slowest', top ? formatMs(top.spanMs) : '—', top?.message.label ?? 'nothing timed')}
-    ${chip('Accuracy', accuracy, clock ? `${clock} clock-ordered` : pairingHint(scenario), clock ? ' clock' : '')}
+    ${chip('Accuracy', accuracy, clock ? `${clock} clock-ordered` : pairingHint(scenario), clock ? ' clock' : '', scenario.pairAccuracy?.length ? PAIR_ACCURACY_SECTION : '')}
   </ul>`
 }
 
@@ -120,30 +121,61 @@ export function timingPanelHtml(scenario: Scenario): string {
   ].join('')
   return `<section class="timing" aria-label="Timing">
     <div class="timing-notes">${notesHtml}</div>
-    ${pairAccuracyHtml(scenario)}
-    <h4>Time by participant <small>self time, ${escapeHtml(formatMs(t.totalMs))} total</small></h4>
+    <h3>Time by participant <small>self time, ${escapeHtml(formatMs(t.totalMs))} total</small></h3>
     <div class="timing-stack" role="img" aria-label="Time by participant">${stack}</div>
     <ul class="timing-legend">${legend}</ul>
-    <h4>Swim lanes <small>calls into each participant, on one time axis</small></h4>
+    <h3>Swim lanes <small>calls into each participant, on one time axis</small></h3>
     ${swimLanesHtml(scenario, t, colour, id)}
-    <h4>Waterfall <small>solid = self · light = children · tick = untimed</small></h4>
+    <h3>Waterfall <small>solid = self · light = children · tick = untimed</small></h3>
     ${axisHtml(T)}
     <ol class="waterfall">${t.rows.map((r) => rowHtml(scenario, r, T, id)).join('')}</ol>
   </section>`
 }
 
-/** Which participant pairs are traced, measured, timestamped or structure only, when they differ. */
-function pairAccuracyHtml(scenario: Scenario): string {
+/** The panel section the Accuracy chip opens at (`data-panel-section`). */
+export const PAIR_ACCURACY_SECTION = 'pair-accuracy'
+
+/** Up to this many pairs the list shows open; more fold into a summary line. */
+export const PAIRS_SHOWN_OPEN = 6
+
+/** Best to worst, for the summary's counts. */
+const ACCURACY_ORDER: readonly string[] = ['TRACED', 'MEASURED', 'TIMESTAMPED', 'STRUCTURE_ONLY']
+
+/** "20 pairs · 12 traced, 6 timestamped, 2 structure only": the count, then each level's, best first. */
+export function pairAccuracySummary(pairs: readonly { accuracy: Accuracy }[]): string {
+  const counts = new Map<string, number>()
+  for (const p of pairs) counts.set(p.accuracy, (counts.get(p.accuracy) ?? 0) + 1)
+  const rank = (a: string) => (ACCURACY_ORDER.includes(a) ? ACCURACY_ORDER.indexOf(a) : ACCURACY_ORDER.length)
+  const levels = [...counts.entries()]
+    .sort(([a], [b]) => rank(a) - rank(b))
+    .map(([a, n]) => `${n} ${accuracyLabel(a as Accuracy)}`)
+  return `${pairs.length} ${pairs.length === 1 ? 'pair' : 'pairs'} · ${levels.join(', ')}`
+}
+
+/**
+ * Which participant pairs are traced, measured, timestamped or structure only, when they differ:
+ * the last section of the Timing and metrics panel (drill-down detail; the overall accuracy is at
+ * the top). More than [PAIRS_SHOWN_OPEN] pairs start folded under a summary of the counts.
+ * Empty without pair data or without timing (the panel then has no timing sections either).
+ */
+export function pairAccuracySectionHtml(scenario: Scenario): string {
   const pairs = scenario.pairAccuracy ?? []
-  if (!pairs.length) return ''
+  if (!pairs.length || !hasTiming(scenario)) return ''
   const items = pairs
     .map(
       (p) =>
         `<li><span class="who">${escapeHtml(nameOf(scenario, p.from))} → ${escapeHtml(nameOf(scenario, p.to))}</span> <b class="acc-${escapeAttr(p.accuracy.toLowerCase())}">${escapeHtml(accuracyLabel(p.accuracy))}</b></li>`,
     )
     .join('')
-  return `<h4>Accuracy by pair <small>the scenario is only as accurate as its weakest pair</small></h4>
-    <ul class="pair-accuracy">${items}</ul>`
+  const list = `<ul class="pair-accuracy">${items}</ul>`
+  const body =
+    pairs.length > PAIRS_SHOWN_OPEN
+      ? `<details class="pair-accuracy-more"><summary>${escapeHtml(pairAccuracySummary(pairs))}</summary>${list}</details>`
+      : list
+  return `<div class="panel-section" data-panel-section="${PAIR_ACCURACY_SECTION}">
+    <h3>Accuracy by pair <small>the scenario is only as accurate as its weakest pair</small></h3>
+    ${body}
+  </div>`
 }
 
 /** Axis ticks in ms: a round step, at least two ticks, labels that say the step (0.2, 500, 2 s). */

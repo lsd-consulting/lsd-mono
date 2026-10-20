@@ -4,7 +4,7 @@ import { edgeInteractions, typeCue, type ComponentEdge, type ComponentGraph } fr
 import { escapeHtml } from '../lib/escape'
 import { isErrorStatus } from '../lib/status'
 import type { MetricsView } from './inspector'
-import { metricsPanelHtml } from './metrics'
+import { metricsPanelHtml, metricsSectionHtml } from './metrics'
 
 /** Pills for a message: type, direction, duration, timing, order and pairing cues, request summary. */
 export function messageMetaHtml(scenarioId: string, message: MessageEvent): string {
@@ -66,9 +66,13 @@ export function metricsMetaHtml(view: MetricsView): string {
         <span class="pill">${escapeHtml(view.heading)}</span>`
 }
 
-/** The Timing view, when there is one, above the metrics. */
+/**
+ * The Timing view, when there is one, then the metrics under their own heading, then Accuracy by
+ * pair (drill-down detail) last. Without timing, just the metrics.
+ */
 export function metricsBodyHtml(scenarioId: string, view: MetricsView): string {
-  return (view.timingHtml ?? '') + metricsPanelHtml(view.metrics)
+  if (!view.timingHtml) return metricsPanelHtml(view.metrics)
+  return view.timingHtml + metricsSectionHtml(view.metrics) + (view.pairAccuracyHtml ?? '')
 }
 
 export function errorMetaHtml(error: { status: string; headline: string }): string {

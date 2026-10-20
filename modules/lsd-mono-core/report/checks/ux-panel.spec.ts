@@ -306,7 +306,16 @@ async function openTiming(page: Page): Promise<void> {
 test('the Timing view shows Accuracy by pair and the longer-than-parent warning, and passes axe', async ({ page }) => {
   await openReport(page, timedFixture)
   await openTiming(page)
-  await expect(page.locator('#inspector h4', { hasText: 'Accuracy by pair' })).toBeVisible()
+  // #95: an H3, the last section of the panel, after the metrics list.
+  await expect(page.locator('#inspector h3', { hasText: 'Accuracy by pair' })).toBeVisible()
+  await expect(page.locator('#inspector h2, #inspector h3')).toHaveText([
+    'Timing and metrics',
+    /^Time by participant/,
+    /^Swim lanes/,
+    /^Waterfall/,
+    'Metrics',
+    /^Accuracy by pair/,
+  ])
   await expect(page.locator('#inspector .pair-accuracy li')).toHaveText([
     /Client → Api\s+measured/,
     /Api → Database\s+timestamped/,
@@ -326,6 +335,7 @@ test.describe('on a phone', () => {
     await openReport(page, timedFixture)
     await openTiming(page)
     await page.locator('#inspector .pair-accuracy').scrollIntoViewIfNeeded()
+    await expect(page.locator('#inspector h3', { hasText: 'Accuracy by pair' })).toBeVisible()
     await expect(page.locator('#inspector .pair-accuracy li')).toHaveCount(2)
     await page.locator('#inspector .waterfall .warnx').scrollIntoViewIfNeeded()
     await expect(page.locator('#inspector .waterfall .warnx')).toBeVisible()

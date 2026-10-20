@@ -11,6 +11,17 @@ export function metricsPanelHtml(metrics: Metric[]): string {
 }
 
 /**
+ * The metrics list as a section of the Timing and metrics panel, under its own heading so it can
+ * be found among the timing sections. The Metrics view without timing has the panel title instead.
+ */
+export function metricsSectionHtml(metrics: Metric[]): string {
+  return `<div class="panel-section" data-panel-section="metrics">
+    <h3>Metrics</h3>
+    ${metricsPanelHtml(metrics)}
+  </div>`
+}
+
+/**
  * Print-only copy of the Metrics view, as a card in its scenario. CSS keeps it
  * hidden on screen. It exists only while the Metrics view is open, so a printout
  * has metrics exactly when the user was looking at them.

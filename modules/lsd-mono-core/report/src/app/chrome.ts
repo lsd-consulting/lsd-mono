@@ -292,7 +292,7 @@ function onMainClick(ev: MouseEvent): void {
     const chips = [...(metricsBtn.closest('.scenario-card')?.querySelectorAll('.timing-chip') ?? [])]
     metricsChip = chips.includes(metricsBtn) ? chips.indexOf(metricsBtn) : null
     const scenario = session.report.scenarios.find((item) => item.id === metricsBtn.dataset.showMetrics)
-    if (scenario) openMetrics(scenario)
+    if (scenario) openMetrics(scenario, metricsBtn.dataset.metricsSection)
     return
   }
   const errBtn = target.closest<HTMLButtonElement>('[data-show-error]')

@@ -49,12 +49,16 @@
 .timing-chip.clock {
   border-color: color-mix(in oklab, var(--warn) 55%, var(--border));
 }
-.timing h4 {
+/* The panel's section headings (#95: H3 under the panel's H2, no skipped level). */
+.timing h3,
+.panel-section h3 {
   margin: 16px 0 8px;
   font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0.04em;
 }
-.timing h4 small {
+.timing h3 small,
+.panel-section h3 small {
   font-weight: 400;
   color: var(--text-muted);
   margin-left: 6px;
@@ -332,6 +336,22 @@
     width: auto;
     padding: 6px 10px;
   }
+}
+/* More than six pairs fold under a summary of the counts; the summary is a full-width target. */
+.pair-accuracy-more > summary {
+  cursor: pointer;
+  min-height: 24px;
+  padding: 2px 0;
+  font-size: 0.9em;
+  color: var(--text);
+}
+.pair-accuracy-more > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.pair-accuracy-more[open] > summary {
+  margin-bottom: 6px;
 }
 .pair-accuracy {
   list-style: none;

@@ -276,7 +276,8 @@ its own duration or its reply's, and a paired reply carries none. Each scenario 
 `{ kind, message }` with `kind` one of `REPLY_WITHOUT_CALL`, `DURATION_ON_REPLY_DROPPED`,
 `LONGER_THAN_PARENT`, `DUPLICATE_SPAN` or `SKEW`. When
 participant pairs differ, `pairAccuracy` lists `{ from, to, accuracy }` per pair (a reply counts with
-its call), and the Timing view shows it as "Accuracy by pair".
+its call), and the Timing view shows it as "Accuracy by pair", its last section (folded under a count per
+accuracy when there are more than six pairs; the card's Accuracy chip opens the panel there).
 
 An interaction's `status` is written on its message. When any message in a scenario has one, the
 metrics add `Errors`: the number whose status is an error, either an HTTP-style code from 400 to 599

@@ -4,7 +4,15 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { Accuracy, MessageEvent, Report, Scenario, WarningKind } from '../types'
 import { hasTiming } from '../lib/timing'
-import { axisHtml, niceStep, tickLabel, timingPanelHtml, timingStripHtml } from './timing'
+import {
+  axisHtml,
+  niceStep,
+  pairAccuracySectionHtml,
+  pairAccuracySummary,
+  tickLabel,
+  timingPanelHtml,
+  timingStripHtml,
+} from './timing'
 const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> = {}): MessageEvent => ({
   kind: 'message',
   id,
@@ -72,18 +80,76 @@ describe('timing view', () => {
     expect(panel.match(/class="warnx"/g)).toHaveLength(1)
   })
 
-  it('lists accuracy by pair when the report gives it', () => {
-    expect(timingPanelHtml(nested)).not.toContain('Accuracy by pair')
-    const panel = timingPanelHtml({
+  it('lists accuracy by pair in its own section, not in the timing sections, when the report gives it', () => {
+    expect(pairAccuracySectionHtml(nested)).toBe('')
+    const paired: Scenario = {
       ...nested,
       pairAccuracy: [
         { from: 'web', to: 'api', accuracy: 'TRACED' },
         { from: 'api', to: 'kafka', accuracy: 'STRUCTURE_ONLY' },
       ],
-    })
-    expect(panel).toContain('Accuracy by pair')
-    expect(panel).toContain('web → api</span> <b class="acc-traced">traced</b>')
-    expect(panel).toContain('api → kafka</span> <b class="acc-structure_only">structure only</b>')
+    }
+    expect(timingPanelHtml(paired)).not.toContain('Accuracy by pair')
+    const section = pairAccuracySectionHtml(paired)
+    expect(section).toContain('<h3>Accuracy by pair')
+    expect(section).toContain('data-panel-section="pair-accuracy"')
+    expect(section).toContain('web → api</span> <b class="acc-traced">traced</b>')
+    expect(section).toContain('api → kafka</span> <b class="acc-structure_only">structure only</b>')
+    // Two pairs: shown open, no summary to unfold.
+    expect(section).not.toContain('<details')
+  })
+
+  it('folds more than six pairs under a summary of the count and each level, six or fewer stay open', () => {
+    const levels: Accuracy[] = ['STRUCTURE_ONLY', 'TRACED', 'TIMESTAMPED', 'TRACED', 'TRACED', 'TIMESTAMPED', 'TRACED']
+    const pairs = levels.map((accuracy, i) => ({ from: `p${i}`, to: `q${i}`, accuracy }))
+    const seven = pairAccuracySectionHtml({ ...nested, pairAccuracy: pairs })
+    expect(seven).toMatch(
+      /<details class="pair-accuracy-more"><summary>7 pairs · 4 traced, 2 timestamped, 1 structure only<\/summary><ul class="pair-accuracy">/,
+    )
+    expect(seven).not.toContain('<details open')
+    expect(seven.match(/<li>/g)).toHaveLength(7)
+    const six = pairAccuracySectionHtml({ ...nested, pairAccuracy: pairs.slice(0, 6) })
+    expect(six).not.toContain('<details')
+    expect(six.match(/<li>/g)).toHaveLength(6)
+  })
+
+  it('summarises pairs best level first, singular for one, an unknown level as sent and last', () => {
+    expect(pairAccuracySummary([{ accuracy: 'MEASURED' }])).toBe('1 pair · 1 measured')
+    expect(
+      pairAccuracySummary([
+        { accuracy: 'FUTURE' as Accuracy },
+        { accuracy: 'STRUCTURE_ONLY' },
+        { accuracy: 'MEASURED' },
+        { accuracy: 'TRACED' },
+      ]),
+    ).toBe('4 pairs · 1 traced, 1 measured, 1 structure only, 1 FUTURE')
+  })
+
+  it('has no Accuracy by pair section without timing', () => {
+    expect(
+      pairAccuracySectionHtml({
+        ...scenario([msg('a', 'x', 'y')]),
+        pairAccuracy: [{ from: 'a', to: 'b', accuracy: 'TRACED' }],
+      }),
+    ).toBe('')
+  })
+
+  it('uses H3 for the timing sections, under the panel title', () => {
+    const panel = timingPanelHtml(nested)
+    expect(panel).not.toContain('<h4')
+    expect([...panel.matchAll(/<h3>([^<]+)/g)].map((m) => m[1].trim())).toEqual([
+      'Time by participant',
+      'Swim lanes',
+      'Waterfall',
+    ])
+  })
+
+  it('points only the Accuracy chip at Accuracy by pair, and only when there are pairs', () => {
+    const sections = (html: string) => [...html.matchAll(/data-metrics-section="([^"]+)"/g)].map((m) => m[1])
+    expect(sections(timingStripHtml(nested))).toEqual([])
+    const strip = timingStripHtml({ ...nested, pairAccuracy: [{ from: 'web', to: 'api', accuracy: 'TRACED' }] })
+    expect(sections(strip)).toEqual(['pair-accuracy'])
+    expect(strip).toMatch(/data-metrics-section="pair-accuracy">\s*<span class="k">Accuracy<\/span>/)
   })
 
   it('labels warning pills from their kind, with the sentence on hover', () => {

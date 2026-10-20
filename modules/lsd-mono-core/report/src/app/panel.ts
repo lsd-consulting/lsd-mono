@@ -4,7 +4,7 @@ import { sampleReport } from '../data/sample-report'
 import type { MessageEvent, Scenario } from '../types'
 import { loadExternalPayloads, loadPayloadsFrom, payloadKey } from '../lib/payloads'
 import { placePrintMetrics, printMetricsSection } from '../ui/metrics'
-import { timingPanelHtml } from '../ui/timing'
+import { pairAccuracySectionHtml, timingPanelHtml } from '../ui/timing'
 import { placePrintPanel, printComponentsSection, printMessageSection } from '../ui/print-panel'
 import { renderComponentDiagram } from '../lib/component-diagram'
 import { diagramView, findMessage } from '../lib/sequence-diagram'
@@ -105,7 +105,8 @@ export function openComponents(scenario: Scenario): void {
   usage.ping('components-open')
 }
 
-export function openMetrics(scenario: Scenario): void {
+/** Metrics for [scenario], at the top, or at [section] (a `data-panel-section`, e.g. from the Accuracy chip). */
+export function openMetrics(scenario: Scenario, section?: string): void {
   if (!session.inspector) return
   session.panelScenarioId = scenario.id
   session.invoker = { scenarioId: scenario.id, kind: 'metrics' }
@@ -114,6 +115,8 @@ export function openMetrics(scenario: Scenario): void {
     heading: scenario.title,
     metrics: scenario.metrics,
     timingHtml: timingPanelHtml(scenario),
+    pairAccuracyHtml: pairAccuracySectionHtml(scenario),
+    section,
   })
   syncWithPanel()
   usage.ping('metrics-open')

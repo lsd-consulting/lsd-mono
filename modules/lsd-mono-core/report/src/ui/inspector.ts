@@ -1,6 +1,7 @@
 import type { MessageEvent, Metric } from '../types'
 import { renderComponentDiagram } from '../lib/component-diagram'
-import { STACKED_MAX_PX } from '../lib/media'
+import { STACKED_MAX_PX, scrollBehavior } from '../lib/media'
+import { cssEscape } from '../lib/escape'
 import { bindJsonBody } from './inspector-json'
 import { bindJsonMarks } from './json-marks'
 import {
@@ -36,6 +37,10 @@ export interface MetricsView {
   metrics: Metric[]
   /** Timing view (summary, swim lanes, waterfall), shown above the metrics. */
   timingHtml?: string
+  /** Accuracy by pair, shown last (after the metrics). */
+  pairAccuracyHtml?: string
+  /** A `data-panel-section` to open at, expanded and scrolled into view, instead of the top. */
+  section?: string
 }
 
 export interface InspectorOptions {
@@ -154,6 +159,28 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   /** On a phone the panel is inline below the report: bring what just opened into view. */
   function revealOnPhone(content?: HTMLElement): void {
     if (viewport() <= STACKED_MAX_PX) revealBelowTopbar(panel!, content)
+  }
+
+  /**
+   * Open [section] (a folded list unfolds) and scroll it to just under the panel's sticky header:
+   * inside the panel where it scrolls (the side column), or the page where the panel is part of
+   * it (stacked, under 860px). Focus stays where opening put it; the header with Close stays in view.
+   */
+  function revealSection(section: HTMLElement): void {
+    section.querySelectorAll('details').forEach((d) => (d.open = true))
+    const head = panel!.querySelector<HTMLElement>('.inspector-head')?.getBoundingClientRect().height ?? 0
+    const top = section.getBoundingClientRect().top
+    const gap = 8
+    if (viewport() > STACKED_MAX_PX) {
+      const delta = top - panel!.getBoundingClientRect().top - head - gap
+      panel!.scrollTo({ top: panel!.scrollTop + delta, behavior: scrollBehavior() })
+      return
+    }
+    const win = doc.defaultView
+    if (!win) return
+    const bar = Number.parseFloat(getComputedStyle(doc.documentElement).getPropertyValue('--topbar-h'))
+    const offset = (Number.isFinite(bar) ? bar : 0) + head + gap
+    win.scrollTo({ top: Math.max(0, win.scrollY + top - offset), behavior: scrollBehavior() })
   }
 
   const findBox = doc.querySelector<HTMLElement>('#inspector-find')!
@@ -302,7 +329,11 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
       showViewChrome(metricsHost)
       metricsHost.innerHTML = metricsBodyHtml(scenarioId, view)
       width.fit(Math.max(naturalWidth(metricsHost), view.timingHtml ? TIMING_VIEW_MIN_PX : 0))
-      revealOnPhone()
+      const section = view.section
+        ? metricsHost.querySelector<HTMLElement>(`[data-panel-section="${cssEscape(view.section)}"]`)
+        : null
+      if (section) revealSection(section)
+      else revealOnPhone()
     },
     openError(error) {
       const token = begin(null, 'stack')
