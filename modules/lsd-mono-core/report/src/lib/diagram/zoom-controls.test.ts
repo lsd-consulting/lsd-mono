@@ -4,7 +4,11 @@ import type { Participant, Scenario } from '../../types'
 import { SINGLE_KEYS_KEY } from '../../ui/shortcuts'
 import { bindDiagramScroll, diagramView, renderDiagramHtml, syncDiagramWindow } from '../sequence-diagram'
 import { WHEEL_STEP_PX, zoomByWheel } from './zoom-controls'
-import { onZoomKey, zoomKeyAction } from './zoom-keys'
+import { registerZoomKeys } from './zoom-keys'
+import { zoomKeyAction } from '../keys/zoom-key-map'
+import { diagramKeyContext } from './diagram-keys'
+import { createKeyRouter } from '../keys/router'
+import { singleKeysEnabled } from '../../ui/shortcuts'
 
 let n = 0
 /** A fresh scenario per test, [lanes] wide: views live per scenario id for the page's life. */
@@ -66,9 +70,14 @@ const press = (el: Element, key: string, init: KeyboardEventInit = {}) => {
   return ev
 }
 
-/** What chrome.ts does with keys in the main column: zoom first. */
-const onMainKey = (ev: Event) => onZoomKey(ev as KeyboardEvent)
-document.addEventListener('keydown', onMainKey)
+/** The page's key router, with the zoom keys only. */
+const router = createKeyRouter((e) => ({
+  panel: null,
+  page: null,
+  diagram: diagramKeyContext(e.target, { singleKeys: singleKeysEnabled(), panelOpen: false }),
+}))
+registerZoomKeys(router)
+router.listen(document)
 
 afterEach(() => {
   document.body.innerHTML = ''

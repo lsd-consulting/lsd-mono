@@ -1,23 +1,13 @@
 // The page shell (top bar, sidebar, main column, side panel) and its event listeners.
 import { renderMain, revealMessage, focusScenarioHeading } from './main-view'
-import { isCoarsePointer } from '../lib/media'
 import { renderNav } from './nav'
 import type { Status } from '../types'
-import { keyHelpHtml } from './key-bindings'
+import { keyHelpHtml, singleKeysLabelHtml } from '../lib/keys/bindings'
 import { setSingleKeys, singleKeysEnabled } from '../ui/shortcuts'
 import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspector'
-import { diagramKeyAction, messagePlaces, sidewaysScrollLeft } from '../lib/diagram-a11y'
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
 import { setPayloadLoader } from '../lib/diagram/payload-find'
-import { onZoomKey } from '../lib/diagram/zoom-keys'
-import {
-  diagramView,
-  findMessage,
-  focusDiagramMessage,
-  setFindHooks,
-  stepFind,
-  syncDiagramWindow,
-} from '../lib/sequence-diagram'
+import { focusDiagramMessage, setFindHooks, syncDiagramWindow } from '../lib/sequence-diagram'
 import { currentMode, getPreferredTheme } from '../ui/theme'
 import { bindThemeMenu, themeControlHtml } from '../ui/theme-menu'
 import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSidebarCollapsed } from '../ui/sidebar'
@@ -25,7 +15,6 @@ import { statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
 import { trackTopbarHeight } from '../lib/topbar-height'
 import {
-  scenarioFrom,
   openError,
   syncWithPanel,
   syncPrintPanel,
@@ -42,7 +31,8 @@ import {
 import { counts } from './filters'
 import { writeScenarioHash } from './url-hash'
 import { index, session, state, app } from './context'
-import { closeFocus, mainClick, mainKey } from './intents'
+import { closeFocus, mainClick } from './intents'
+import { openFromDiagram } from './diagram-keys'
 export function renderShell(): void {
   const c = counts()
   const total = c.success + c.warn + c.error
@@ -100,7 +90,7 @@ export function renderShell(): void {
     <div class="help-toast" id="help" data-open="false" role="note">
       <strong style="color:var(--text)">Keyboard</strong><br/>
       ${keyHelpHtml()}
-      <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> Single-key shortcuts (<kbd>/</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>d</kbd> <kbd>?</kbd>, and <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd> <kbd>Shift</kbd>+<kbd>1</kbd> in a diagram)</label>
+      <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> ${singleKeysLabelHtml()}</label>
     </div>
   `
 
@@ -117,7 +107,6 @@ function bindChrome(): void {
   bindSidePanel()
   const main = document.querySelector<HTMLElement>('#main')!
   main.addEventListener('click', onMainClick)
-  main.addEventListener('keydown', onMainKey)
 }
 
 /** Search, the status chips, and the empty state's Clear filters button. */
@@ -267,73 +256,3 @@ function onMainClick(ev: MouseEvent): void {
 }
 
 const scenarioById = (id: string | undefined) => session.report.scenarios.find((item) => item.id === id)
-
-/** Opens the message [messageId] of the scenario card holding [node]. */
-function openFromDiagram(node: Element, messageId: string | null): void {
-  const scenario = scenarioFrom(node)
-  if (!scenario || !messageId) return
-  const msg = findMessage(scenario, messageId)
-  if (msg) openMessage(scenario, msg)
-}
-
-/** Keys in the main column: diagram zoom, stepping in diagram find, diagram message navigation, and Enter on an arrow. */
-function onMainKey(ev: KeyboardEvent): void {
-  if (onZoomKey(ev, Boolean(session.inspector?.isOpen()))) return
-  const key = mainKey(ev, ev.target as Element | null)
-  if (key?.kind === 'find-step') onFindKey(ev, key.input, key.step)
-  else if (key?.kind === 'diagram') onDiagramKey(ev, key.scroll, key.openBtn)
-  else if (key?.kind === 'open-message') {
-    ev.preventDefault()
-    openFromDiagram(key.hit, key.messageId)
-  }
-}
-
-/** A step key in a diagram's find box: go to the next or previous match, wrapping, and bring it on screen. */
-function onFindKey(ev: KeyboardEvent, target: HTMLInputElement, step: 1 | -1): void {
-  const scroll = target.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
-  if (!scroll) return
-  ev.preventDefault()
-  // A soft keyboard's Go / Search key sends Enter: close the keyboard so the match has the screen.
-  if (ev.key === 'Enter' && isCoarsePointer()) target.blur()
-  stepFind(scroll, step)
-}
-
-/** Up, Down and Enter on a diagram or its focused arrow; Shift+←/→, Home and End scroll it sideways. */
-function onDiagramKey(ev: KeyboardEvent, scrollKey: HTMLElement, openBtn: HTMLButtonElement | null): void {
-  const left = sidewaysScrollLeft(ev, scrollKey)
-  if (left != null) {
-    ev.preventDefault()
-    ev.stopPropagation()
-    scrollKey.scrollLeft = left
-    return
-  }
-  const scenario = scenarioFrom(scrollKey)
-  if (scenario) {
-    const view = diagramView(scenario.id)
-    const action = diagramKeyAction({
-      key: ev.key,
-      places: messagePlaces(scenario.events, view.hidden),
-      activeId: openBtn?.dataset.messageId ?? view.activeMessageId,
-      inDiagram: true,
-    })
-    if (action.type === 'move' && action.messageId) {
-      ev.preventDefault()
-      ev.stopPropagation()
-      focusDiagramMessage(scrollKey, action.messageId)
-      if (session.inspector?.isOpen()) {
-        const msg = findMessage(scenario, action.messageId)
-        if (msg) openMessage(scenario, msg)
-      }
-      return
-    }
-    if (action.type === 'open' && action.messageId) {
-      ev.preventDefault()
-      ev.stopPropagation()
-      const msg = findMessage(scenario, action.messageId)
-      if (msg) openMessage(scenario, msg)
-      return
-    }
-    // Escape goes on to the side panel, which closes on it (#102).
-    if (openBtn && ev.key !== 'Escape') ev.stopPropagation()
-  }
-}

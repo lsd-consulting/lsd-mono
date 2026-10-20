@@ -24,17 +24,17 @@ export default defineConfig({
       // scripts/coverage-ratchet.mjs (run by `npm test`) fails when any metric, overall or for a glob,
       // rises more than 3 points above its threshold, and lists files under 50% of lines.
       thresholds: {
-        statements: 85,
-        branches: 76,
-        functions: 89,
-        lines: 88,
-        // src/lib 92.3 / 82.4 / 95.6 / 96.1
-        'src/lib/**': { statements: 90, branches: 80, functions: 94, lines: 94 },
+        statements: 87,
+        branches: 78,
+        functions: 91,
+        lines: 90,
+        // src/lib 92.8 / 83.6 / 96.3 / 96.4 (the key table and router, #102)
+        'src/lib/**': { statements: 90, branches: 82, functions: 94, lines: 94 },
         // src/ui 92.3 / 83.5 / 97.4 / 94.4 (the theme menu tests, #106)
         'src/ui/**': { statements: 91, branches: 82, functions: 96, lines: 93 },
-        // src/app 50.4 / 51.2 / 57.3 / 53.5: the decisions are pure functions with unit tests (intents.ts,
-        // #99); the listeners that carry them out are covered end to end by check:ux, which does not count here.
-        'src/app/**': { statements: 49, branches: 50, functions: 56, lines: 52 },
+        // src/app 55.5 / 52.3 / 62.1 / 58.4: the decisions are pure functions with unit tests (intents.ts,
+        // #99, and the key handlers, #102); the rest is covered end to end by check:ux, which does not count here.
+        'src/app/**': { statements: 54, branches: 50, functions: 61, lines: 57 },
       },
     },
   },

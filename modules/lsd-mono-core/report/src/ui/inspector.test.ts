@@ -12,6 +12,14 @@ import {
   clampInspectorWidth,
   inspectorWidthLimits,
 } from './inspector-width'
+import { createKeyRouter } from '../lib/keys/router'
+import type { InspectorController } from './inspector'
+/** Escape as the page's key router gives it to the side panel (#102). */
+function pressEscape(controller: InspectorController): void {
+  const router = createKeyRouter(() => ({ panel: { open: controller.isOpen() }, diagram: null, page: null }))
+  router.on('panel', 'close-panel', () => controller.close())
+  router.dispatch(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+}
 
 const bodyMarker = 'arrow-payload-SOCK'
 
@@ -299,7 +307,7 @@ describe('inspector', () => {
   })
 
   it('widens the json column without becoming a modal, and copy still takes the full payload', async () => {
-    mount()
+    const controller = mount()
     const arrow = document.querySelector<HTMLButtonElement>('button.msg-open')!
     arrow.focus()
     arrow.click()
@@ -344,26 +352,26 @@ describe('inspector', () => {
     widen.click()
     expect(widen.textContent).toBe('Expand')
     expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${INSPECTOR_NARROW_PX}px`)
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    pressEscape(controller)
     expect(panel().hidden).toBe(true)
     expect(document.activeElement).toBe(arrow)
   })
 
   it('opens from Enter and Escape returns focus to that arrow', async () => {
-    mount()
+    const controller = mount()
     const arrow = document.querySelector<HTMLButtonElement>('button.msg-open')!
     arrow.focus()
     arrow.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     expect(panel().hidden).toBe(false)
     expect(document.activeElement).toBe(panel())
     expect(panel().getAttribute('aria-modal')).toBeNull()
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    pressEscape(controller)
     expect(panel().hidden).toBe(true)
     expect(document.activeElement).toBe(arrow)
   })
 
   it('drags the inner edge and keeps that width for the session', () => {
-    mount()
+    const controller = mount()
     document.querySelector<HTMLButtonElement>('button.msg-open')!.click()
     const handle = document.querySelector<HTMLElement>('#inspector-resize')!
     const shell = document.querySelector<HTMLElement>('#shell')!
@@ -389,7 +397,7 @@ describe('inspector', () => {
       window.innerWidth * 0.9,
     )
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    pressEscape(controller)
     document.querySelector<HTMLButtonElement>('button.msg-open')!.click()
     expect(shell.style.getPropertyValue('--inspector-w')).toBe(`${inspectorWidthLimits(window.innerWidth).max}px`)
   })

@@ -1,7 +1,7 @@
 import './styles/app.css'
 import './styles/timing.css'
 import './styles/diagram.css'
-import { onKey } from './app/keys'
+import { listenForKeys } from './app/keys'
 import { renderShell } from './app/chrome'
 import { applyHash } from './app/routing'
 import type { Report } from './types'
@@ -43,7 +43,7 @@ usage.configure(window.__LSD_REPORT__ ?? index)
 usage.ping('report-open')
 if (window.__LSD_REPORT__) pingSource(window.__LSD_REPORT__)
 window.addEventListener('hashchange', () => applyHash())
-window.addEventListener('keydown', onKey)
+listenForKeys(document)
 window.addEventListener('resize', () => {
   document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => {
     syncDiagramWindow(el)

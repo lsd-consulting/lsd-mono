@@ -1,53 +1,69 @@
-// Page-wide keyboard shortcuts.
+// The page's key router (#102): what each routed scope sees, and the page and side panel keys.
+// The diagram's keys are in diagram-keys.ts and lib/diagram/zoom-keys.ts.
 import { focusSelectedDiagram } from './main-view'
 import { moveSelection, focusedNavId } from './nav'
 import { toggleTheme } from '../ui/theme'
 import { paintThemeControl } from '../ui/theme-menu'
 import { singleKeysEnabled } from '../ui/shortcuts'
 import { session, state } from './context'
-import { keyTarget, pageKeyIntent } from './intents'
+import { keyTarget } from './intents'
+import { diagramKeyContext } from '../lib/diagram/diagram-keys'
+import { registerZoomKeys } from '../lib/diagram/zoom-keys'
+import { createKeyRouter, type KeyContexts, type KeyRouter } from '../lib/keys/router'
+import { registerDiagramKeys } from './diagram-keys'
 
-export function onKey(e: KeyboardEvent): void {
+/** What each routed scope sees for the key [e]. */
+export function keyContexts(e: KeyboardEvent): KeyContexts {
   const target = e.target as HTMLElement
-  // One Escape closes one thing (#102): the side panel's own listener runs first and takes it.
-  if (e.key === 'Escape' && e.defaultPrevented) return
-  // j/k anywhere outside a text box; arrows only on the list, the page or the scenario
-  // heading, so they keep their own meaning in the diagram toolbar and its popovers.
-  // On the list, focus follows the selection. Enter on a focused button presses that
-  // button (a list item, filters, theme…); anywhere else it goes into the shown diagram.
-  const intent = pageKeyIntent(e, keyTarget(target), {
-    inspectorOpen: Boolean(session.inspector?.isOpen()),
-    helpOpen: state.helpOpen,
-    hasScenario: Boolean(session.renderedId),
-    singleKeys: singleKeysEnabled(),
-  })
-  if (!intent) return
-  e.preventDefault()
-  switch (intent) {
-    case 'close-help':
-      state.helpOpen = false
-      document.querySelector('#help')!.setAttribute('data-open', 'false')
-      return
-    case 'blur':
-      ;(target as HTMLInputElement).blur()
-      return
-    case 'search':
-      document.querySelector<HTMLInputElement>('#search')?.focus()
-      return
-    case 'next':
-      moveSelection(1, focusedNavId(target))
-      return
-    case 'prev':
-      moveSelection(-1, focusedNavId(target))
-      return
-    case 'diagram':
-      focusSelectedDiagram()
-      return
-    case 'theme':
-      paintThemeControl(toggleTheme())
-      return
-    case 'help':
-      state.helpOpen = !state.helpOpen
-      document.querySelector('#help')!.setAttribute('data-open', String(state.helpOpen))
+  const panelOpen = Boolean(session.inspector?.isOpen())
+  const singleKeys = singleKeysEnabled()
+  return {
+    panel: { open: panelOpen },
+    diagram: diagramKeyContext(target, { singleKeys, panelOpen }),
+    page: {
+      ...keyTarget(target),
+      hasScenario: Boolean(session.renderedId),
+      singleKeys,
+      helpOpen: state.helpOpen,
+    },
   }
+}
+
+/** The side panel's key: Escape closes it. */
+export function registerPanelKeys(router: KeyRouter): void {
+  router.on('panel', 'close-panel', () => session.inspector?.close())
+}
+
+/**
+ * Page-wide keys. j/k anywhere outside a text box; arrows only on the list, the page or the
+ * scenario heading, so they keep their own meaning in the diagram toolbar and its popovers. On the
+ * list, focus follows the selection. Enter on a focused button presses that button (a list item,
+ * filters, theme…); anywhere else it goes into the shown diagram.
+ */
+export function registerPageKeys(router: KeyRouter): void {
+  const setHelp = (open: boolean) => {
+    state.helpOpen = open
+    document.querySelector('#help')!.setAttribute('data-open', String(open))
+  }
+  router.on('page', 'close-help', () => setHelp(false))
+  router.on('page', 'blur', (e) => (e.target as HTMLInputElement).blur())
+  router.on('page', 'search', () => document.querySelector<HTMLInputElement>('#search')?.focus())
+  router.on('page', 'next', (e) => moveSelection(1, focusedNavId(e.target as HTMLElement)))
+  router.on('page', 'prev', (e) => moveSelection(-1, focusedNavId(e.target as HTMLElement)))
+  router.on('page', 'diagram', () => focusSelectedDiagram())
+  router.on('page', 'theme', () => paintThemeControl(toggleTheme()))
+  router.on('page', 'help', () => setHelp(!state.helpOpen))
+}
+
+/** The one keydown listener for the page, the side panel and the diagrams. */
+export function listenForKeys(doc: Document): KeyRouter {
+  const router = createKeyRouter(keyContexts)
+  registerPanelKeys(router)
+  registerZoomKeys(router)
+  registerDiagramKeys(router)
+  registerPageKeys(router)
+  const missing = router.unhandled()
+  if (missing.length) throw new Error(`key bindings with no handler: ${missing.join(', ')}`)
+  router.listen(doc)
+  return router
 }

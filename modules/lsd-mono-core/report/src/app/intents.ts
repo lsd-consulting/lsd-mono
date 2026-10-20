@@ -3,13 +3,11 @@
 // only carry it out, and the decisions get unit tests that run in seconds.
 import { focusTargetAfterClose } from '../lib/diagram-a11y'
 import type { HashRef } from '../lib/report-hash'
-import { findStepKey } from '../lib/diagram/search-reveal'
 import type { Scenario } from '../types'
 import type { InspectorInvoker } from '../ui/inspector'
 import { defaultScenarioId } from '../ui/selection'
-import { pageAction, type PageAction } from './key-bindings'
 
-// Page keys (keys.ts)
+// Page keys (keys.ts builds the router's page context from this)
 
 /** What a key's target says about the page shortcuts, read from the DOM. */
 export interface KeyTarget {
@@ -36,38 +34,6 @@ export function keyTarget(target: HTMLElement): KeyTarget {
     ),
     onControl: Boolean(target.closest('button, a, [role="slider"]')),
   }
-}
-
-/** The page state a page key depends on. */
-export interface PageKeyState {
-  inspectorOpen: boolean
-  helpOpen: boolean
-  hasScenario: boolean
-  singleKeys: boolean
-}
-
-/** What a page key does: close the help, leave a text field, run a page action, or nothing. */
-export type PageKeyIntent = 'close-help' | 'blur' | Exclude<PageAction, 'close'> | null
-
-export function pageKeyIntent(
-  e: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey'> & { altKey?: boolean },
-  target: KeyTarget,
-  state: PageKeyState,
-): PageKeyIntent {
-  if (e.key === 'Escape') {
-    // The side panel closes itself first; then the help; then a text field lets go.
-    if (state.inspectorOpen) return null
-    if (state.helpOpen) return 'close-help'
-    return target.typing ? 'blur' : null
-  }
-  if (target.typing || target.ownKeys) return null
-  const action = pageAction(e, {
-    arrows: target.arrows,
-    onControl: target.onControl,
-    hasScenario: state.hasScenario,
-    singleKeys: state.singleKeys,
-  })
-  return !action || action === 'close' ? null : action
 }
 
 // Clicks in the main column (chrome.ts)
@@ -115,33 +81,6 @@ export function mainClick(target: Element | null): MainClick {
   const hit = target.closest<SVGGElement>('.message.has-data')
   const messageId = hit?.getAttribute('data-message-id')
   return hit && messageId ? { kind: 'message', hit, messageId } : null
-}
-
-// Keys in the main column (chrome.ts), after the zoom keys
-
-export type MainKey =
-  | { kind: 'find-step'; input: HTMLInputElement; step: 1 | -1 }
-  | { kind: 'diagram'; scroll: HTMLElement; openBtn: HTMLButtonElement | null }
-  | { kind: 'open-message'; hit: SVGGElement; messageId: string | null }
-  | null
-
-/**
- * Where a key in the main column goes: a step key in a diagram's Find box steps the matches;
- * a key on a diagram or one of its arrows moves along the arrows; Enter or Space on an arrow
- * drawn as a link opens it.
- */
-export function mainKey(
-  ev: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'metaKey' | 'ctrlKey' | 'altKey'>,
-  target: Element | null,
-): MainKey {
-  const step = target?.matches('[data-diagram-find]') ? findStepKey(ev) : null
-  if (step) return { kind: 'find-step', input: target as HTMLInputElement, step }
-  const scroll = target?.closest?.<HTMLElement>('.seq-scroll')
-  const openBtn = target?.closest?.<HTMLButtonElement>('button.msg-open') ?? null
-  if (scroll && (openBtn || target === scroll)) return { kind: 'diagram', scroll, openBtn }
-  const hit = target?.closest?.<SVGGElement>('.message.has-data')
-  if (!hit || (ev.key !== 'Enter' && ev.key !== ' ')) return null
-  return { kind: 'open-message', hit, messageId: hit.getAttribute('data-message-id') }
 }
 
 // Closing the side panel (chrome.ts)

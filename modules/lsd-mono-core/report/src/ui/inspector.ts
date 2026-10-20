@@ -118,8 +118,6 @@ export function inspectorMarkup(): string {
     </aside>`
 }
 
-let onEscape: ((event: KeyboardEvent) => void) | null = null
-
 export function bindInspector(doc: Document, options: InspectorOptions): InspectorController {
   const panel = doc.querySelector<HTMLElement>('#inspector')
   if (!panel) throw new Error('inspector markup is missing')
@@ -352,13 +350,6 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   }
 
   closeBtn.addEventListener('click', () => close())
-  if (onEscape) doc.removeEventListener('keydown', onEscape)
-  onEscape = (event: KeyboardEvent) => {
-    if (event.key !== 'Escape' || panel.hidden) return
-    event.preventDefault()
-    close()
-  }
-  doc.addEventListener('keydown', onEscape)
   return controller
 }
 

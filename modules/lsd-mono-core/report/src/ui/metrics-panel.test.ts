@@ -4,6 +4,14 @@ import type { MessageEvent, Metric, Scenario } from '../types'
 import { renderDiagramHtml } from '../lib/sequence-diagram'
 import { bindInspector, inspectorMarkup } from './inspector'
 import { metricsPanelHtml } from './metrics'
+import { createKeyRouter } from '../lib/keys/router'
+import type { InspectorController } from './inspector'
+/** Escape as the page's key router gives it to the side panel (#102). */
+function pressEscape(controller: InspectorController): void {
+  const router = createKeyRouter(() => ({ panel: { open: controller.isOpen() }, diagram: null, page: null }))
+  router.on('panel', 'close-panel', () => controller.close())
+  router.dispatch(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+}
 
 const metrics: Metric[] = [
   { key: 'Messages', value: '14' },
@@ -116,7 +124,7 @@ describe('metrics in the side panel', () => {
     expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('#inspector-pre')!.hidden).toBe(true)
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    pressEscape(controller)
     expect(panel.hidden).toBe(true)
     expect(closed).toEqual(['metrics'])
 

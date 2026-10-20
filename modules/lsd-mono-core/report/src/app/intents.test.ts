@@ -1,27 +1,8 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Scenario } from '../types'
-import {
-  closeFocus,
-  keyTarget,
-  mainClick,
-  mainKey,
-  openingScenario,
-  pageKeyIntent,
-  type KeyTarget,
-  type PageKeyState,
-} from './intents'
+import { closeFocus, keyTarget, mainClick, openingScenario } from './intents'
 
-const key = (k: string, mods: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean } = {}) => ({
-  key: k,
-  metaKey: false,
-  ctrlKey: false,
-  shiftKey: false,
-  altKey: false,
-  ...mods,
-})
-const onPage: KeyTarget = { typing: false, ownKeys: false, arrows: true, onControl: false }
-const idle: PageKeyState = { inspectorOpen: false, helpOpen: false, hasScenario: true, singleKeys: true }
 const el = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)!
 
 describe('keyTarget', () => {
@@ -62,41 +43,6 @@ describe('keyTarget', () => {
   it('knows a control that Enter presses', () => {
     for (const id of ['#item', '#link', '#slider']) expect(keyTarget(el(id)).onControl, id).toBe(true)
     expect(keyTarget(el('#plain')).onControl).toBe(false)
-  })
-})
-
-describe('pageKeyIntent', () => {
-  it('lets the open side panel handle Escape first, then the help, then a text field', () => {
-    expect(pageKeyIntent(key('Escape'), onPage, { ...idle, inspectorOpen: true, helpOpen: true })).toBeNull()
-    expect(pageKeyIntent(key('Escape'), { ...onPage, typing: true }, { ...idle, helpOpen: true })).toBe('close-help')
-    expect(pageKeyIntent(key('Escape'), { ...onPage, typing: true }, idle)).toBe('blur')
-    expect(pageKeyIntent(key('Escape'), onPage, idle)).toBeNull()
-  })
-
-  it('runs the page actions from the key table', () => {
-    expect(pageKeyIntent(key('/'), onPage, idle)).toBe('search')
-    expect(pageKeyIntent(key('j'), onPage, idle)).toBe('next')
-    expect(pageKeyIntent(key('k'), onPage, idle)).toBe('prev')
-    expect(pageKeyIntent(key('ArrowDown'), onPage, idle)).toBe('next')
-    expect(pageKeyIntent(key('?'), onPage, idle)).toBe('help')
-    expect(pageKeyIntent(key('k', { metaKey: true }), { ...onPage, onControl: true }, idle)).toBe('search')
-  })
-
-  it('keeps off text fields and controls with keys of their own', () => {
-    expect(pageKeyIntent(key('j'), { ...onPage, typing: true }, idle)).toBeNull()
-    expect(pageKeyIntent(key('k', { metaKey: true }), { ...onPage, typing: true }, idle)).toBeNull()
-    expect(pageKeyIntent(key('j'), { ...onPage, ownKeys: true }, idle)).toBeNull()
-  })
-
-  it('leaves the arrows to controls elsewhere, and single keys off when they are turned off', () => {
-    expect(pageKeyIntent(key('ArrowDown'), { ...onPage, arrows: false }, idle)).toBeNull()
-    expect(pageKeyIntent(key('j'), onPage, { ...idle, singleKeys: false })).toBeNull()
-  })
-
-  it('takes Enter into the shown diagram, except on a control', () => {
-    expect(pageKeyIntent(key('Enter'), onPage, idle)).toBe('diagram')
-    expect(pageKeyIntent(key('Enter'), { ...onPage, onControl: true }, idle)).toBeNull()
-    expect(pageKeyIntent(key('Enter'), onPage, { ...idle, hasScenario: false })).toBeNull()
   })
 })
 
@@ -148,41 +94,6 @@ describe('mainClick', () => {
     expect(mainClick(el('#plain-label'))).toBeNull()
     expect(mainClick(el('#arrow'))).toBeNull()
     expect(mainClick(null)).toBeNull()
-  })
-})
-
-describe('mainKey', () => {
-  beforeEach(() => {
-    document.body.innerHTML = `
-      <div class="seq-diagram">
-        <input data-diagram-find id="find">
-        <div class="seq-scroll" tabindex="0"><button class="msg-open" data-message-id="m1" id="arrow"></button></div>
-        <svg><g class="message has-data" data-message-id="m1" tabindex="0" id="hit"></g></svg>
-        <p id="plain"></p>
-      </div>`
-  })
-
-  it('steps the Find matches with Enter, Shift+Enter, F3 and Ctrl or Cmd+G in the Find box', () => {
-    const find = el<HTMLInputElement>('#find')
-    expect(mainKey(key('Enter'), find)).toEqual({ kind: 'find-step', input: find, step: 1 })
-    expect(mainKey(key('Enter', { shiftKey: true }), find)).toEqual({ kind: 'find-step', input: find, step: -1 })
-    expect(mainKey(key('g', { ctrlKey: true }), find)).toMatchObject({ step: 1 })
-    expect(mainKey(key('a'), find)).toBeNull()
-  })
-
-  it('gives keys on the diagram and its arrows to the diagram', () => {
-    const scroll = el('.seq-scroll')
-    expect(mainKey(key('ArrowDown'), scroll)).toEqual({ kind: 'diagram', scroll, openBtn: null })
-    expect(mainKey(key('Enter'), el('#arrow'))).toEqual({ kind: 'diagram', scroll, openBtn: el('#arrow') })
-  })
-
-  it('opens an arrow drawn as a link with Enter or Space only', () => {
-    const hit = el<SVGGElement>('#hit')
-    expect(mainKey(key('Enter'), hit)).toEqual({ kind: 'open-message', hit, messageId: 'm1' })
-    expect(mainKey(key(' '), hit)).toMatchObject({ kind: 'open-message' })
-    expect(mainKey(key('a'), hit)).toBeNull()
-    expect(mainKey(key('Enter'), el('#plain'))).toBeNull()
-    expect(mainKey(key('Enter'), null)).toBeNull()
   })
 })
 

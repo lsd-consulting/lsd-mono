@@ -1,13 +1,13 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// onKey carries out what pageKeyIntent decides (intents.test.ts covers the decisions).
+// The page and side panel keys through the router (lib/keys/bindings.test.ts covers the decisions).
 const nav = vi.hoisted(() => ({ moveSelection: vi.fn(), focusedNavId: vi.fn(() => 'b') }))
 const view = vi.hoisted(() => ({ focusSelectedDiagram: vi.fn() }))
 const themeMenu = vi.hoisted(() => ({ paintThemeControl: vi.fn() }))
 const theme = vi.hoisted(() => ({ toggleTheme: vi.fn(() => ({ mode: 'light', theme: 'light' })) }))
 const ctx = vi.hoisted(() => ({
-  session: { renderedId: 'a', inspector: { isOpen: (): boolean => false } },
+  session: { renderedId: 'a', inspector: { isOpen: (): boolean => false, close: vi.fn() } },
   state: { helpOpen: false },
 }))
 
@@ -17,13 +17,18 @@ vi.mock('../ui/theme-menu', () => themeMenu)
 vi.mock('../ui/theme', () => theme)
 vi.mock('../ui/shortcuts', () => ({ singleKeysEnabled: () => true }))
 vi.mock('./context', () => ctx)
+vi.mock('./diagram-keys', () => ({ registerDiagramKeys: () => {} }))
 
-const { onKey } = await import('./keys')
+const { keyContexts, registerPageKeys, registerPanelKeys } = await import('./keys')
+const { createKeyRouter } = await import('../lib/keys/router')
+const router = createKeyRouter(keyContexts)
+registerPanelKeys(router)
+registerPageKeys(router)
 
-/** Dispatches [key] on [target] the way the window listener sees it, and returns the event. */
+/** Dispatches [key] on [target] the way the document listener sees it, and returns the event. */
 function press(target: EventTarget, key: string, mods: KeyboardEventInit = {}): KeyboardEvent {
   const ev = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...mods })
-  target.addEventListener('keydown', (e) => onKey(e as KeyboardEvent), { once: true })
+  target.addEventListener('keydown', (e) => router.dispatch(e as KeyboardEvent), { once: true })
   target.dispatchEvent(ev)
   return ev
 }
@@ -77,14 +82,17 @@ describe('onKey', () => {
     expect(esc.defaultPrevented).toBe(true)
   })
 
-  it('lets go of a text field on Escape, and leaves Escape to an open side panel', () => {
+  it('lets go of a text field on Escape, and gives Escape to an open side panel first, and only to it', () => {
     const search = document.querySelector<HTMLInputElement>('#search')!
     search.focus()
     expect(press(search, 'Escape').defaultPrevented).toBe(true)
     expect(document.activeElement).not.toBe(search)
     search.focus()
     ctx.session.inspector.isOpen = () => true
-    expect(press(search, 'Escape').defaultPrevented).toBe(false)
+    ctx.state.helpOpen = true
+    expect(press(search, 'Escape').defaultPrevented).toBe(true)
+    expect(ctx.session.inspector.close).toHaveBeenCalledOnce()
+    expect(ctx.state.helpOpen).toBe(true)
     expect(document.activeElement).toBe(search)
   })
 
