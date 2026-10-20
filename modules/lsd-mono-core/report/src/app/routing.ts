@@ -5,6 +5,7 @@ import { parseReportHash, type HashRef } from '../lib/report-hash'
 import { findMessage, focusDiagramMessage } from '../lib/sequence-diagram'
 import { cssEscape } from '../lib/escape'
 import { openMessage } from './panel'
+import { showDiagramView } from './diagram-views'
 import { indexEntry } from './filters'
 import { index, session } from './context'
 /**
@@ -34,7 +35,11 @@ export function applyRef(ref: HashRef): void {
   if (!scenario) return
   // A scenario the filters hide is shown anyway: the link asked for it.
   revealFiltered(scenario.id)
+  // The view the URL names (#105): a message, or no view, is Sequence. Set before the card is drawn.
+  const view = ref.view === 'components' && !ref.messageId ? 'components' : 'sequence'
+  session.diagramView = view
   if (session.renderedId !== scenario.id) selectScenario(scenario.id)
+  else showDiagramView(view, false)
   if (!ref.messageId) return
   const msg = findMessage(scenario, ref.messageId)
   if (!msg) return

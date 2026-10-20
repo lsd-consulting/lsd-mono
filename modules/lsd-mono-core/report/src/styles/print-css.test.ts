@@ -34,12 +34,18 @@ describe('print css', () => {
     expect(hidden).toMatch(/\.sidebar\b/)
   })
 
-  it('prints JSON wrapped and unclipped, and the component diagram whole at page width', () => {
+  it('prints JSON wrapped and unclipped', () => {
     expect(print).toMatch(
       /\.print-message pre\s*\{[^}]*white-space:\s*pre-wrap[^}]*overflow:\s*visible[^}]*max-height:\s*none/,
     )
-    expect(print).toMatch(/\.print-components\s*\{[^}]*break-inside:\s*avoid/)
-    expect(print).toMatch(/\.print-components \.component-diagram\s*\{[^}]*width:\s*100%[^}]*height:\s*auto/)
+  })
+
+  it('prints the Components view, when it is selected, whole at page width (#105)', () => {
+    const components = diagramCss.slice(
+      diagramCss.indexOf('.comp-scroll {', diagramCss.indexOf('.component-links .show-in-sequence')),
+    )
+    expect(components).toMatch(/\.comp-scroll\s*\{[^}]*max-height:\s*none[^}]*overflow:\s*visible/)
+    expect(components).toMatch(/\.comp-scroll \.component-diagram\s*\{[^}]*width:\s*100%[^}]*height:\s*auto/)
   })
 
   it('draws sequence diagrams across the page width', () => {

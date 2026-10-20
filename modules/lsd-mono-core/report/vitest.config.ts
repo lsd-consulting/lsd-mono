@@ -30,11 +30,12 @@ export default defineConfig({
         lines: 90,
         // src/lib 93.5 / 84.3 / 97.0 / 97.0 (the repaint path tests, #104)
         'src/lib/**': { statements: 92, branches: 82, functions: 95, lines: 95 },
-        // src/ui 92.3 / 83.5 / 97.4 / 94.4 (the theme menu tests, #106)
-        'src/ui/**': { statements: 91, branches: 82, functions: 96, lines: 93 },
-        // src/app 55.5 / 52.3 / 62.1 / 58.4: the decisions are pure functions with unit tests (intents.ts,
-        // #99, and the key handlers, #102); the rest is covered end to end by check:ux, which does not count here.
-        'src/app/**': { statements: 54, branches: 50, functions: 61, lines: 57 },
+        // src/ui 92.7 / 85.6 / 97.6 / 94.6 (the link panel tests, #105)
+        'src/ui/**': { statements: 91, branches: 84, functions: 96, lines: 93 },
+        // src/app 65.5 / 60.8 / 69.9 / 68.2: the decisions are pure functions with unit tests (intents.ts,
+        // #99, the key handlers, #102, and the view switch, its hash and reveal, #105); the rest is
+        // covered end to end by check:ux, which does not count here.
+        'src/app/**': { statements: 64, branches: 59, functions: 68, lines: 67 },
       },
     },
   },

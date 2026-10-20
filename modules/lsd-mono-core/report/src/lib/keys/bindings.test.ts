@@ -262,6 +262,7 @@ describe('help', () => {
         'In Find, <kbd>Enter</kbd>/<kbd>Shift</kbd>+<kbd>Enter</kbd> (or <kbd>F3</kbd>) next/previous match · Find also searches payloads (<b>{}</b> in the field turns that off)',
         '<kbd>d</kbd> theme (Auto follows the OS, light, dark, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close',
         'In a diagram, <kbd>+</kbd>/<kbd>−</kbd> zoom, <kbd>0</kbd> default zoom, <kbd>Shift</kbd>+<kbd>1</kbd> overview (<kbd>Esc</kbd> leaves it) · In a wide diagram, <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> scroll a screen sideways, <kbd>Home</kbd>/<kbd>End</kbd> go to its edges',
+        'On the Sequence and Components tabs, <kbd>←</kbd>/<kbd>→</kbd> move between them, <kbd>Enter</kbd> shows that view',
       ].join('\n'),
     )
   })

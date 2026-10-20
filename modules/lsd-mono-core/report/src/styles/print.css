@@ -105,7 +105,7 @@
   }
   /* The side panel (narrow, scrolled) never prints. What it shows prints as a
      copy in its scenario at full card width, only while it is open: metrics
-     before the diagram, message JSON, error or component diagram after it. */
+     before the diagram, message JSON, error or component link after it. */
   #inspector {
     display: none !important;
   }
@@ -152,18 +152,6 @@
     overflow-wrap: anywhere;
     overflow: visible;
     max-height: none;
-  }
-  /* Component diagram: one page, page width, never cut off. A small drawing grows
-     at most 1.5x; a tall one shrinks to fit the page height. */
-  .print-components {
-    break-inside: avoid;
-  }
-  .print-components .component-diagram {
-    width: 100%;
-    max-width: min(100%, var(--print-components-max, 100%));
-    height: auto;
-    max-height: 240mm;
-    overflow: visible;
   }
   a,
   button {

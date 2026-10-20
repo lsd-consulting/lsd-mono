@@ -58,13 +58,18 @@ describe('inspector view marker', () => {
     document.body.innerHTML = `<div class="shell">${inspectorMarkup()}</div>`
   })
 
-  it('names the open view so print CSS can tell metrics from json and the component diagram', () => {
+  it('names the open view so print CSS can tell metrics from json and a component link', () => {
     const controller = bindInspector(document, { loadPayload: async () => undefined, onClose: () => {} })
     const panel = document.querySelector<HTMLElement>('#inspector')!
     controller.openMetrics('pay', { heading: 'Pay', metrics })
     expect(panel.dataset.view).toBe('metrics')
-    controller.openComponents('pay', { nodes: [], edges: [] }, 'Pay')
-    expect(panel.dataset.view).toBe('components')
+    controller.openLink(
+      'pay',
+      { nodes: [], edges: [{ from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 1 }] },
+      0,
+      'Pay',
+    )
+    expect(panel.dataset.view).toBe('link')
     controller.openMessage('pay', { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'x', type: 'SYNCHRONOUS' })
     expect(panel.dataset.view).toBe('message')
     controller.openError({ status: 'error', headline: 'Boom', message: 'bad' })

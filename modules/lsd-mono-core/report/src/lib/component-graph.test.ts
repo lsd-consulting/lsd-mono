@@ -98,7 +98,7 @@ describe('componentGraph', () => {
         types: ['SYNCHRONOUS'],
         count: 1,
         label: 'POST /checkout',
-        interactions: [{ label: 'POST /checkout', type: 'SYNCHRONOUS', count: 1 }],
+        interactions: [{ label: 'POST /checkout', type: 'SYNCHRONOUS', count: 1, messageIds: ['1'] }],
       },
       {
         from: 'api',
@@ -107,8 +107,8 @@ describe('componentGraph', () => {
         count: 2,
         label: 'INSERT order',
         interactions: [
-          { label: 'INSERT order', type: 'SYNCHRONOUS', count: 1 },
-          { label: 'SELECT stock', type: 'SYNCHRONOUS', count: 1 },
+          { label: 'INSERT order', type: 'SYNCHRONOUS', count: 1, messageIds: ['3'] },
+          { label: 'SELECT stock', type: 'SYNCHRONOUS', count: 1, messageIds: ['4'] },
         ],
       },
       {
@@ -117,7 +117,7 @@ describe('componentGraph', () => {
         types: ['ASYNCHRONOUS'],
         count: 1,
         label: 'OrderPlaced',
-        interactions: [{ label: 'OrderPlaced', type: 'ASYNCHRONOUS', count: 1 }],
+        interactions: [{ label: 'OrderPlaced', type: 'ASYNCHRONOUS', count: 1, messageIds: ['5'] }],
       },
     ])
   })
@@ -235,10 +235,11 @@ describe('link interactions', () => {
     expect(graph.edges).toHaveLength(1)
     expect(graph.edges[0].count).toBe(5)
     expect(graph.edges[0].interactions).toEqual([
-      { label: 'INSERT order', type: 'SYNCHRONOUS', count: 2 },
-      { label: 'SELECT stock', type: 'SYNCHRONOUS', count: 1 },
-      { label: 'INSERT order', type: 'ASYNCHRONOUS', count: 1 },
-      { label: '', type: 'SYNCHRONOUS', count: 1 },
+      // Each with its messages, in order: Show in sequence (#105) goes to the first.
+      { label: 'INSERT order', type: 'SYNCHRONOUS', count: 2, messageIds: ['1', '3'] },
+      { label: 'SELECT stock', type: 'SYNCHRONOUS', count: 1, messageIds: ['2'] },
+      { label: 'INSERT order', type: 'ASYNCHRONOUS', count: 1, messageIds: ['4'] },
+      { label: '', type: 'SYNCHRONOUS', count: 1, messageIds: ['5'] },
     ])
   })
 

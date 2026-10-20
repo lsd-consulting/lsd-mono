@@ -25,9 +25,7 @@ export function keyTarget(target: HTMLElement): KeyTarget {
   return {
     typing: target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable,
     ownKeys: Boolean(
-      target.closest(
-        'button.msg-open, [data-show-components], [data-show-metrics], #inspector, .seq-scroll, #theme-menu',
-      ),
+      target.closest('button.msg-open, [data-show-metrics], #inspector, .seq-scroll, .comp-scroll, #theme-menu'),
     ),
     arrows: Boolean(
       target === target.ownerDocument.body || target.closest('#scenario-nav') || target.matches('#scenario-title'),
@@ -43,7 +41,6 @@ export function keyTarget(target: HTMLElement): KeyTarget {
 export type MainClick =
   | { kind: 'jump'; scroll: HTMLElement; y: number }
   | { kind: 'close-panel'; button: HTMLButtonElement }
-  | { kind: 'components'; scenarioId: string | undefined }
   | { kind: 'metrics'; scenarioId: string | undefined; section: string | undefined; chip: number | null }
   | { kind: 'error'; scenarioId: string | undefined }
   | { kind: 'message'; hit: SVGGElement; messageId: string }
@@ -52,7 +49,7 @@ export type MainClick =
 /**
  * The control a click in the main column landed on. The listener takes a section jump first,
  * then gives a click on an arrow's button to the panel (delegateMessageOpen), then the rest.
- * A Metrics or Component diagram button whose view is open closes it, like any expanded control.
+ * A Metrics button whose view is open closes it, like any expanded control.
  */
 export function mainClick(target: Element | null): MainClick {
   if (!target?.closest) return null
@@ -63,8 +60,6 @@ export function mainClick(target: Element | null): MainClick {
   }
   const expanded = target.closest<HTMLButtonElement>('.panel-btn[aria-expanded="true"]')
   if (expanded) return { kind: 'close-panel', button: expanded }
-  const components = target.closest<HTMLButtonElement>('[data-show-components]')
-  if (components) return { kind: 'components', scenarioId: components.dataset.showComponents }
   const metrics = target.closest<HTMLButtonElement>('[data-show-metrics]')
   if (metrics) {
     // A timing chip opens Metrics too; which one, so Close can give it focus back.

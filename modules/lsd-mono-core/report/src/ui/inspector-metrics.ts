@@ -77,7 +77,7 @@ export function bindMetricsView(shell: PanelShell, host: HTMLElement): MetricsPa
       return {
         kind: 'button',
         scenarioId: invoker.scenarioId,
-        selector: '.seq-toolbar [data-show-metrics]',
+        selector: '.diagram-pane:not([hidden]) .seq-toolbar [data-show-metrics]',
         chip: invoker.chip ?? null,
       }
     },

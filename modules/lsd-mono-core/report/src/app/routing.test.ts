@@ -16,6 +16,8 @@ vi.mock('./panel', () => panel)
 vi.mock('../lib/sequence-diagram', () => diagram)
 vi.mock('./filters', () => ({ indexEntry: (id: string) => ctx.index?.reports.find((r) => r.id === id) }))
 vi.mock('../lib/report-index', () => ({ defaultReportId: () => 'first' }))
+const views = vi.hoisted(() => ({ showDiagramView: vi.fn() }))
+vi.mock('./diagram-views', () => views)
 vi.mock('./context', () => ({
   get index() {
     return ctx.index
@@ -91,6 +93,20 @@ describe('applyRef', () => {
     expect(nav.selectScenario).not.toHaveBeenCalled()
     expect(diagram.focusDiagramMessage).toHaveBeenCalledWith(document.querySelector('.seq-scroll'), 'm1')
     expect(panel.openMessage).not.toHaveBeenCalled()
+  })
+
+  it('sets the view the hash names before drawing, or shows it on the scenario already drawn (#105)', () => {
+    applyRef({ scenarioId: 'checkout', view: 'components' })
+    expect(ctx.session.diagramView).toBe('components')
+    expect(nav.selectScenario).toHaveBeenCalledWith('checkout')
+    expect(views.showDiagramView).not.toHaveBeenCalled()
+    ctx.session.renderedId = 'checkout'
+    applyRef({ scenarioId: 'checkout' })
+    expect(ctx.session.diagramView).toBe('sequence')
+    expect(views.showDiagramView).toHaveBeenCalledWith('sequence', false)
+    // A message is in Sequence, whatever the hash says.
+    applyRef({ scenarioId: 'checkout', messageId: 'm1', view: 'components' })
+    expect(ctx.session.diagramView).toBe('sequence')
   })
 
   it('stops at the scenario when the message is not in it', () => {

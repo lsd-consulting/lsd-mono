@@ -176,8 +176,9 @@
 }
 .diagram-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
   margin: 8px 16px;
 }
 .diagram-panel h3 {
@@ -187,12 +188,16 @@
   letter-spacing: 0.07em;
   color: var(--text-faint);
   font-weight: 700;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .diagram-hint {
+  /* Beside the tabs while it has room; in a card narrowed by the side panel, on a line of its own. */
+  min-width: min(100%, 22em);
   margin-left: auto;
+  text-align: right;
   font-size: 11px;
   font-weight: 500;
   text-transform: none;

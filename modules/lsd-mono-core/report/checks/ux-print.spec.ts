@@ -31,7 +31,13 @@ test('print leaves out the scenario list and toolbars, prints nothing from a clo
 }) => {
   await openReport(page, { report: uxFixture, theme: 'light' })
   await startPrint(page)
-  for (const chrome of ['.topbar', '.sidebar', '.seq-toolbar', '#inspector']) {
+  for (const chrome of [
+    '.topbar',
+    '.sidebar',
+    '.diagram-pane:not([hidden]) .seq-toolbar',
+    '.diagram-tabs',
+    '#inspector',
+  ]) {
     await expect(page.locator(chrome), chrome).toBeHidden()
   }
   await expect(page.locator('.print-panel')).toHaveCount(0)
@@ -99,49 +105,39 @@ test('print shows the open message JSON in full, in its scenario after the diagr
   await endPrint(page)
 })
 
-test('print shows the open component diagram whole, at page width, after the sequence diagram', async ({ page }) => {
+test('print with the Components view shown draws the component diagram whole, at page width, without the link panel', async ({
+  page,
+}) => {
   await openReport(page, { report: uxFixture, theme: 'light' })
-  await page.getByRole('button', { name: 'Component diagram' }).click()
-  await expect(page.locator('#inspector-graph svg.component-diagram')).toBeVisible()
-  const printed = page.locator('#card-ux .print-components')
-  await expect(printed).toBeHidden()
+  await page.getByRole('tab', { name: 'Components' }).click()
+  await page.locator('.comp-scroll .edge-hit').first().click({ force: true })
+  await expect(page.locator('#inspector')).toBeVisible()
 
   await startPrint(page)
-  await expect(printed).toBeVisible()
   await expect(page.locator('#inspector')).toBeHidden()
+  await expect(page.locator('.diagram-tabs')).toBeHidden()
+  await expect(page.locator('.seq-diagram')).toBeHidden()
+  const printed = page.locator('#card-ux .comp-scroll')
   await expect(printed.locator('.component-node')).toHaveCount(3)
   const fit = await printed.evaluate((el) => {
     const svg = el.querySelector('svg.component-diagram')!
     const box = el.getBoundingClientRect()
     const drawing = svg.getBoundingClientRect()
-    const style = getComputedStyle(el)
-    const room =
-      box.width -
-      parseFloat(style.paddingLeft) -
-      parseFloat(style.paddingRight) -
-      parseFloat(style.borderLeftWidth) -
-      parseFloat(style.borderRightWidth)
-    const max = parseFloat(style.getPropertyValue('--print-components-max'))
+    const natural = parseFloat(getComputedStyle(el).getPropertyValue('--comp-natural-w'))
     return {
-      afterDiagram: el.previousElementSibling?.classList.contains('diagram-panel') ?? false,
-      breakInside: style.breakInside,
       left: drawing.left - box.left,
       right: box.right - drawing.right,
       width: drawing.width,
-      room,
-      max,
+      room: el.clientWidth,
+      natural,
+      clipped: el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1,
     }
   })
-  expect(fit.afterDiagram).toBe(true)
-  expect(fit.breakInside).toBe('avoid')
-  expect(fit.left).toBeGreaterThanOrEqual(0)
-  expect(fit.right).toBeGreaterThanOrEqual(0)
-  expect(fit.width).toBeGreaterThanOrEqual(Math.min(fit.room, fit.max) - 2)
-  await endPrint(page)
-
-  await page.keyboard.press('Escape')
-  await startPrint(page)
-  await expect(page.locator('.print-panel')).toHaveCount(0)
+  expect(fit.left).toBeGreaterThanOrEqual(-0.5)
+  expect(fit.right).toBeGreaterThanOrEqual(-0.5)
+  expect(fit.clipped).toBe(false)
+  // As wide as the page allows, up to one and a half times its drawn size.
+  expect(fit.width).toBeGreaterThanOrEqual(Math.min(fit.room, fit.natural * 1.5) - 2)
   await endPrint(page)
 })
 

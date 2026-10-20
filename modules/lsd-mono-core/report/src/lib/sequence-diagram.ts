@@ -2,7 +2,6 @@
 // the viewport lives in ./diagram; their state is one controller, diagramState.
 import type { MessageEvent, Scenario } from '../types'
 import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
-import { hasComponentDiagram } from './component-graph'
 import { drawnFocusTarget, focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
 import { unscaledViewport } from './diagram-view'
 import { headerHtml } from './diagram/rows'
@@ -42,17 +41,11 @@ function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDT
 const METRICS_ICON_SVG =
   '<svg class="panel-btn-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M2.5 13.5h11M4.5 11V8M8 11V4M11.5 11V6.5"/></svg>'
 
-/** Three linked nodes, drawn in currentColor. Decorative: the button's text is its name. */
-const COMPONENTS_ICON_SVG =
-  '<svg class="panel-btn-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M5.6 5.2 7 9.6M10.4 5.2 9 9.6M6 3.5h4"/><circle cx="4" cy="3.5" r="2"/><circle cx="12" cy="3.5" r="2"/><circle cx="8" cy="12" r="2"/></svg>'
-
 interface PanelButton {
-  kind: 'metrics' | 'components'
+  kind: 'metrics'
   scenarioId: string
   iconSvg: string
   text: string
-  /** Why the button is disabled, or null when it is enabled. */
-  disabledReason: string | null
 }
 
 /**
@@ -60,29 +53,16 @@ interface PanelButton {
  * view is open for this scenario; the app keeps it in step with the panel.
  */
 function panelButtonHtml(button: PanelButton): string {
-  const disabledHtml = button.disabledReason === null ? '' : ` disabled title="${escapeAttr(button.disabledReason)}"`
-  return `<button type="button" class="panel-btn ${button.kind}-open" data-show-${button.kind}="${escapeAttr(button.scenarioId)}" aria-controls="inspector" aria-expanded="false"${disabledHtml}>${button.iconSvg}<span>${escapeHtml(button.text)}</span></button>`
+  return `<button type="button" class="panel-btn ${button.kind}-open" data-show-${button.kind}="${escapeAttr(button.scenarioId)}" aria-controls="inspector" aria-expanded="false">${button.iconSvg}<span>${escapeHtml(button.text)}</span></button>`
 }
 
-/** Opens the component diagram for this scenario in the inspector. Disabled when no message links two components. */
-function componentsControl(scenario: Scenario): string {
-  return panelButtonHtml({
-    kind: 'components',
-    scenarioId: scenario.id,
-    iconSvg: COMPONENTS_ICON_SVG,
-    text: 'Component diagram',
-    disabledReason: hasComponentDiagram(scenario) ? null : 'No messages between components',
-  })
-}
-
-/** Opens this scenario's metrics in the inspector. Disabled when there are none (metrics off or nothing timed). */
+/** Opens this scenario's metrics in the inspector. */
 function metricsControl(scenario: Scenario): string {
   return panelButtonHtml({
     kind: 'metrics',
     scenarioId: scenario.id,
     iconSvg: METRICS_ICON_SVG,
     text: 'Metrics',
-    disabledReason: scenario.metrics.length > 0 ? null : 'No metrics for this scenario',
   })
 }
 
@@ -118,11 +98,18 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
         <button type="button" data-find-step="prev" aria-label="Previous match" title="Previous match (Shift+Enter)"${steppable}>↑</button>
         <button type="button" data-find-step="next" aria-label="Next match" title="Next match (Enter)"${steppable}>↓</button>
       </div>
-      <div class="panel-controls" role="group" aria-label="Open in the side panel">
-        ${metricsControl(scenario)}
-        ${componentsControl(scenario)}
-      </div>
+      ${panelControlsHtml(scenario)}
     </div>`
+}
+
+/**
+ * The toolbar's side-panel group: Metrics. The Components view has the same one. Without metrics
+ * (metrics off, or nothing timed) there is no button: a disabled one said why only on hover, and
+ * on a phone it was a dead row.
+ */
+export function panelControlsHtml(scenario: Scenario): string {
+  if (scenario.metrics.length === 0) return ''
+  return `<div class="panel-controls" role="group" aria-label="Open in the side panel">${metricsControl(scenario)}</div>`
 }
 
 /**

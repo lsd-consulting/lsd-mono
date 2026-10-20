@@ -6,7 +6,6 @@ import { bindInspector, inspectorMarkup } from './inspector'
 import {
   INSPECTOR_NARROW_PX,
   INSPECTOR_VIEW_GUTTER_PX,
-  INSPECTOR_WIDTH_KEY,
   TIMING_VIEW_MIN_PX,
   fitViewWidth,
   inspectorWidthLimits,
@@ -73,19 +72,6 @@ describe('panel auto-size', () => {
     vi.restoreAllMocks()
   })
 
-  it('sizes the component diagram to its drawing on desktop, and keeps the saved message width', () => {
-    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1600)
-    const controller = bind()
-    controller.openComponents('s', graph(8), 'Wide')
-    const wide = parseFloat(width())
-    expect(wide).toBeGreaterThan(INSPECTOR_NARROW_PX)
-    expect(wide).toBeLessThanOrEqual(800)
-    controller.openComponents('s', graph(2), 'Small')
-    expect(parseFloat(width())).toBeLessThan(wide)
-    expect(parseFloat(width())).toBeGreaterThanOrEqual(INSPECTOR_NARROW_PX)
-    expect(sessionStorage.getItem(INSPECTOR_WIDTH_KEY)).toBeNull()
-  })
-
   it('sizes metrics to their content on desktop', () => {
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1600)
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(700)
@@ -102,7 +88,8 @@ describe('panel auto-size', () => {
 
   it('leaves a drag free to resize after an auto-size', () => {
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1600)
-    bind().openComponents('s', graph(8), 'Wide')
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(700)
+    bind().openMetrics('s', { heading: 'Pay', metrics })
     const before = parseFloat(width())
     const handle = document.querySelector<HTMLElement>('#inspector-resize')!
     handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
@@ -115,7 +102,7 @@ describe('panel auto-size', () => {
     const controller = bind()
     controller.openMetrics('s', { heading: 'Pay', metrics })
     const phone = width()
-    controller.openComponents('s', graph(8), 'Wide')
+    controller.openLink('s', graph(8), 0, 'Wide')
     expect(width()).toBe(phone)
   })
 })
@@ -136,7 +123,7 @@ describe('reveal on a phone', () => {
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(viewport)
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     const controller = bind()
-    controller.openComponents('s', graph(3), 'Small')
+    controller.openLink('s', graph(3), 0, 'Small')
     controller.openMetrics('s', { heading: 'Pay', metrics })
     controller.openMessage('s', {
       kind: 'message',

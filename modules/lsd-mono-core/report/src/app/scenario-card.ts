@@ -1,8 +1,12 @@
-// The scenario card: its header, description, facts, timing strip and sequence diagram, and the report hero above it.
+// The scenario card: its header, description, facts, timing strip and diagram (Sequence or
+// Components, #105), and the report hero above it.
 import type { Scenario } from '../types'
 import { scenarioDescriptionHtml } from '../ui/scenario-summary'
 import { timingStripHtml } from '../ui/timing'
-import { renderDiagramHtml } from '../lib/sequence-diagram'
+import { panelControlsHtml, renderDiagramHtml } from '../lib/sequence-diagram'
+import { componentViewHtml } from '../lib/component-view'
+import { hasComponentDiagram } from '../lib/component-graph'
+import { type DiagramViewName, diagramViewHeading, diagramViewHint } from '../lib/diagram-view-names'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt } from '../ui/format'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { index, session } from './context'
@@ -24,6 +28,9 @@ export function heroHtml(): string {
 export function scenarioHtml(s: Scenario): string {
   const labelMaxWidth = session.report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
   const diagram = renderDiagramHtml(s, labelMaxWidth)
+  // The chosen view sticks across scenarios (#105); one without component links shows Sequence.
+  const components = hasComponentDiagram(s)
+  const shown: DiagramViewName = components ? session.diagramView : 'sequence'
   return `
   <article class="scenario-card ${escapeAttr(s.status)}" id="card-${escapeAttr(s.id)}" data-status="${escapeAttr(s.status)}" aria-labelledby="scenario-title">
     <div class="scenario-head">
@@ -44,13 +51,39 @@ export function scenarioHtml(s: Scenario): string {
           </dl>
         </section>
       </div>
-      <section class="diagram-panel">
+      <section class="diagram-panel" data-view="${shown}">
         <div class="diagram-heading">
-          <h3>Sequence diagram</h3>
-          <span class="diagram-hint">Zoom and overview · hide participants · find labels · ↑↓ between messages</span>
+          <h3 id="diagram-title">${escapeHtml(diagramViewHeading(shown))}</h3>
+          ${diagramTabsHtml(shown, components)}
+          <span class="diagram-hint">${escapeHtml(diagramViewHint(shown))}</span>
+          <span class="diagram-view-status visually-hidden" role="status"></span>
         </div>
-        ${diagram}
+        <div class="diagram-area" id="diagram-area" role="tabpanel" aria-labelledby="diagram-tab-${shown}">
+          <div class="diagram-pane" data-pane="sequence"${shown === 'sequence' ? '' : ' hidden'}>${diagram}</div>
+          ${components ? `<div class="diagram-pane" data-pane="components"${shown === 'components' ? '' : ' hidden'}>${componentViewHtml(s, panelControlsHtml(s))}</div>` : ''}
+        </div>
       </section>
     </div>
   </article>`
+}
+
+/**
+ * The Sequence | Components tabs (#105): manual activation, so ←/→ move between them and
+ * Enter or Space selects; only the selected one is a tab stop. Without component links,
+ * Components is disabled and says why.
+ */
+function diagramTabsHtml(shown: DiagramViewName, components: boolean): string {
+  const tab = (name: DiagramViewName, text: string) => {
+    const selected = name === shown
+    const off = name === 'components' && !components
+    // The reason is the tab's description, so a screen reader says it, not only a hover.
+    const disabled = off
+      ? ' aria-disabled="true" aria-describedby="diagram-tab-components-why" title="No messages between components"'
+      : ''
+    return `<button type="button" role="tab" class="diagram-tab" id="diagram-tab-${name}" data-diagram-view="${name}" aria-selected="${selected}" aria-controls="diagram-area" tabindex="${selected ? 0 : -1}"${disabled}>${escapeHtml(text)}</button>`
+  }
+  const why = components
+    ? ''
+    : '<span id="diagram-tab-components-why" class="visually-hidden">No messages between components</span>'
+  return `<div class="diagram-tabs" role="tablist" aria-label="Diagram">${tab('sequence', 'Sequence')}${tab('components', 'Components')}</div>${why}`
 }

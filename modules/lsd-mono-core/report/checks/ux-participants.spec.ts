@@ -22,6 +22,10 @@ const actionsOpacity = (page: Page, id: string) =>
     return bar ? getComputedStyle(bar).opacity : null
   }, id)
 
+/** The sequence toolbar's last control, the tab stop just before the header row. */
+const lastToolbarControl = (page: Page) =>
+  page.locator('.diagram-pane[data-pane="sequence"] .seq-toolbar button:not([disabled])').last()
+
 const headerNames = (page: Page) =>
   page
     .locator('.seq-header-svg .participant-box')
@@ -31,7 +35,7 @@ test('a pointer passing over another header does not move keyboard focus: Enter 
   page,
 }) => {
   await openFixture(page, 'dark')
-  await page.getByRole('button', { name: 'Component diagram' }).focus()
+  await lastToolbarControl(page).focus()
   await page.keyboard.press('Tab')
   const hideClient = page.getByRole('button', { name: 'Hide Client' })
   await expect(hideClient).toBeFocused()
@@ -52,7 +56,7 @@ test('a click on a header name, then Tab in from the page: hover still leaves ke
   const box = (await client.boundingBox())!
   await client.click({ position: { x: box.width / 2, y: box.height - 6 } })
   await expect(page.locator('.participant-heads button:focus')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Component diagram' }).focus()
+  await lastToolbarControl(page).focus()
   await page.keyboard.press('Tab')
   const hideClient = page.getByRole('button', { name: 'Hide Client' })
   await expect(hideClient).toBeFocused()
@@ -142,7 +146,7 @@ test('right-click, or Shift+F10 from the keyboard, offers Hide all but this one;
   // Keyboard: one tab stop for the header row, shown on focus; arrows move along it.
   // (A fresh page: the tab stop otherwise stays on the header the menu was opened from.)
   await openFixture(page, 'dark')
-  await page.getByRole('button', { name: 'Component diagram' }).focus()
+  await lastToolbarControl(page).focus()
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'Hide Client' })).toBeFocused()
   expect(await actionsOpacity(page, 'client')).toBe('1')
@@ -186,11 +190,11 @@ test('hiding refits a diagram the user has not zoomed, and keeps a zoom they cho
   expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
   // Per scenario: the other diagram keeps all its participants.
   await page.locator('#scenario-nav [data-nav="wide-b"]').click()
-  await expect(page.locator('#card-wide-b .participant-box')).toHaveCount(6)
+  await expect(page.locator('#card-wide-b .seq-header-svg .participant-box')).toHaveCount(6)
   await expect(page.locator('#card-wide-b .hidden-chip')).toHaveCount(0)
   // Back on the first scenario, its hidden participants and its zoom are as they were.
   await page.locator('#scenario-nav [data-nav="wide-a"]').click()
-  await expect(page.locator('#card-wide-a .participant-box')).toHaveCount(1)
+  await expect(page.locator('#card-wide-a .seq-header-svg .participant-box')).toHaveCount(1)
   await expect(page.locator('#card-wide-a .hidden-chip')).toHaveText('5 hidden')
   expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
 })

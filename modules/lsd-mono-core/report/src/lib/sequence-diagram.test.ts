@@ -672,7 +672,7 @@ describe('participantHead', () => {
   })
 })
 
-describe('component diagram button', () => {
+describe('side panel buttons', () => {
   function scenarioWith(events: DiagramEvent[]): Scenario {
     return {
       id: 'comp',
@@ -696,20 +696,13 @@ describe('component diagram button', () => {
     expect(legend).toContain('<span class="legend-tap">tap</span>')
   })
 
-  it('sits in the diagram toolbar and names the scenario it opens', () => {
+  it("has no Component diagram button: the drawing is the diagram area's Components view (#105)", () => {
     const html = renderDiagramHtml(
       scenarioWith([{ kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' }]),
     )
-    const toolbar = html.slice(html.indexOf('class="seq-toolbar"'), html.indexOf('class="seq-stage"'))
-    expect(toolbar).toContain('data-show-components="comp"')
-    expect(toolbar).toContain('<span>Component diagram</span></button>')
-    expect(toolbar).not.toMatch(/data-show-components="comp"[^>]*disabled/)
-  })
-
-  it('is disabled when no message links two components', () => {
-    const html = renderDiagramHtml(
-      scenarioWith([{ kind: 'message', id: 'm', from: 'api', to: '', label: 'emit', type: 'SHORT_OUTBOUND' }]),
-    )
-    expect(html).toMatch(/data-show-components="comp"[^>]*disabled/)
+    expect(html).not.toContain('data-show-components')
+    expect(html).not.toContain('Component diagram')
+    // No metrics in this scenario, so no Metrics button either.
+    expect(html).not.toContain('data-show-metrics')
   })
 })

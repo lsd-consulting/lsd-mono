@@ -249,13 +249,19 @@ async function recordTour(page, file) {
   await ring(false)
   await snap(1000)
 
-  // 5. Component diagram, and a link's messages.
+  // 5. The Components view, and a link's messages in the side panel (#105).
   await caption('See the scenario as a component diagram')
-  await click(page.locator('[data-show-components]').first(), {
-    hold: 1100,
-    settle: () => page.locator('#inspector-graph svg.component-diagram').waitFor(),
+  // The diagram's heading just under the top bar, so the drawing has the screen.
+  await page.evaluate(() => {
+    const heading = document.querySelector('.diagram-heading').getBoundingClientRect()
+    const bar = document.querySelector('.topbar').getBoundingClientRect().bottom
+    window.scrollBy(0, heading.top - bar - 8)
   })
-  const link = page.locator('#inspector-graph').getByRole('button', { name: 'Orders to Orders DB, 3 interactions' })
+  await click(page.getByRole('tab', { name: 'Components' }), {
+    hold: 900,
+    settle: () => page.locator('.comp-scroll svg.component-diagram').waitFor(),
+  })
+  const link = page.locator('.comp-scroll').getByRole('button', { name: 'Orders to Orders DB, 3 interactions' })
   await caption('Click a link to list the messages behind it', { sameBeat: true })
   const linkBox = await link.locator('.edge-badge').boundingBox()
   if (linkBox) {
@@ -264,17 +270,20 @@ async function recordTour(page, file) {
     await snap(140)
     await link.focus()
     await page.keyboard.press('Enter')
+    await page.locator('#inspector-link .component-links').waitFor()
     await page.evaluate(() => document.activeElement?.blur())
     await snap(160)
     await ring(false)
-    // The list sits under the drawing; bring it into the panel's view.
-    await page.locator('#inspector-graph .component-links').evaluate((el) => {
-      el.scrollIntoView({ block: 'end' })
-    })
-    const listed = await page.locator('#inspector-graph .component-links h3').boundingBox()
-    if (listed) await moveTo(listed.x + 60, listed.y - 20, 5)
-    await snap(1600)
+    const listed = await page.locator('#inspector-link .component-links').boundingBox()
+    if (listed) await moveTo(listed.x + 60, listed.y + 10, 5)
+    await snap(1300)
   }
+  await page.locator('#inspector-close').click()
+  await page.locator('#inspector').waitFor({ state: 'hidden' })
+  await click(page.getByRole('tab', { name: 'Sequence' }), {
+    hold: 300,
+    settle: () => page.locator('.diagram-pane[data-pane="sequence"]:not([hidden])').waitFor(),
+  })
 
   // 6. Timing: the summary strip opens swim lanes and the waterfall.
   await caption('Timing: summary strip, swim lanes and a waterfall')

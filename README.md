@@ -158,7 +158,7 @@ A report written by a release of lsd-mono (not a `-SNAPSHOT` build) counts towar
 https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@<version>/ping/<event>.txt
 ```
 
-- **Events.** `report-open` when a report or the index page opens. `source-junit`, `source-cucumber` or `source-api` for the integration that wrote the report. `metrics-open` and `components-open` when the Metrics view or the component diagram is opened. Each event is one file under [`ping/`](ping) and is requested at most once per page load.
+- **Events.** `report-open` when a report or the index page opens. `source-junit`, `source-cucumber` or `source-api` for the integration that wrote the report. `metrics-open` when the Metrics view is opened, and `components-open` when a scenario's Components view is shown. Each event is one file under [`ping/`](ping) and is requested at most once per page load.
 - **What is sent.** Only the request: the version and the event, in the path. There is no query string, cookie or referrer, and no report title, scenario data or ids. Like any request, it shows jsDelivr your IP address and browser User-Agent ([jsDelivr's privacy policy](https://www.jsdelivr.com/terms/privacy-policy)). We only read jsDelivr's public totals per file and version.
 - **The report doesn't depend on it.** The request is never awaited and a failure is ignored, so a report opened offline, from `file://`, or behind a proxy or Content-Security-Policy that blocks jsDelivr works and looks the same.
 - **Turn it off** with `lsd.mono.report.usagePing=false`, set like any other [property](#configuration) (for example `LSD_MONO_REPORT_USAGEPING=false`). The setting is written into the report, and `false` means the page makes no request at all.
@@ -167,12 +167,13 @@ Snapshot builds, the report UI's dev server and checks, and the sample reports t
 
 ## What the report looks like
 
-The tour at the top clicks around a small shop report: four scenarios with every status, six participants, payloads, and durations. [`FeatureTourSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/FeatureTourSample.kt) captures it. The [lsd-mono-core README](modules/lsd-mono-core/README.md#component-diagram) covers the **Component diagram** button.
+The tour at the top clicks around a small shop report: four scenarios with every status, six participants, payloads, and durations. [`FeatureTourSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/FeatureTourSample.kt) captures it. The [lsd-mono-core README](modules/lsd-mono-core/README.md#component-diagram) covers the **Components** view.
 
 The report shows one scenario at a time, chosen from the sidebar, and the choice is kept in the URL. Each scenario has:
 
 - the sequence diagram, fitted to its panel, with zoom steps (− and +), the % readout to go back to the default view, an Overview of the whole width, [find](#find-in-the-diagram) and participant hiding. A diagram taller than the screen extends the page and scrolls with it; the toolbar and the participant header stay at the top while you scroll;
-- a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are redacted when captured), the component diagram, and timing and metrics;
+- a **Sequence | Components** switch over each diagram, for the scenario's component diagram;
+- a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are redacted when captured), a component link's messages, and timing and metrics;
 - a timing summary (wall-clock, calls, slowest call, accuracy) with swim lanes and a waterfall, when the scenario has timing.
 
 The theme follows the operating system (dark, light, or more contrast) until you choose one from the theme menu in the top bar, or step through them with `d`.

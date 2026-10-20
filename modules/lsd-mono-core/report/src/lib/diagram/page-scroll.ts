@@ -36,10 +36,15 @@ function pageScrollTop(scrollport: HTMLElement, stage: HTMLElement): number {
   return Math.min(max, Math.max(0, past))
 }
 
+/** Not drawn: its view is hidden behind the Components tab (#105), which keeps its place for it. */
+function undrawn(scrollport: HTMLElement): boolean {
+  return scrollport.getClientRects().length === 0
+}
+
 /** Make the stage as tall as the drawing, so the page can scroll through all of it. */
 export function sizeStage(scrollport: HTMLElement): void {
   const stage = stageOf(scrollport)
-  if (!stage) return
+  if (!stage || undrawn(scrollport)) return
   if (!linked(scrollport)) {
     stage.style.removeProperty('height')
     return
@@ -88,7 +93,7 @@ const led = new WeakMap<HTMLElement, number>()
 /** Page scrolled: carry it into the scrollport. */
 function followPage(scrollport: HTMLElement): void {
   const stage = stageOf(scrollport)
-  if (!stage || !linked(scrollport)) return
+  if (!stage || !linked(scrollport) || undrawn(scrollport)) return
   const asked = led.get(scrollport)
   led.delete(scrollport)
   if (asked !== undefined && Math.abs(window.scrollY - asked) <= TOLERANCE_PX) return

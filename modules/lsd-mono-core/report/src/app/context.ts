@@ -30,6 +30,10 @@ export const session = createSession(
       : sampleReport),
 )
 
+// A link or a reload names the view too (#105).
+const initialRef = index ? null : parseReportHash(window.location.hash)
+if (initialRef?.view === 'components' && !initialRef.messageId) session.diagramView = 'components'
+
 export const state: State = {
   query: '',
   status: { success: true, warn: true, error: true },

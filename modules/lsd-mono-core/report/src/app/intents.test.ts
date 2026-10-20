@@ -13,7 +13,8 @@ describe('keyTarget', () => {
       <h2 id="scenario-title" tabindex="-1">A</h2>
       <a id="link" href="#x">x</a><div id="slider" role="slider" tabindex="0"></div><p id="plain">text</p>
       <div class="seq-scroll" tabindex="0"><button class="msg-open" id="arrow"></button></div>
-      <button data-show-components="a" id="components"></button><button data-show-metrics="a" id="metrics"></button>
+      <div class="comp-scroll" tabindex="0"><svg><g class="edge-group" tabindex="0" id="comp-link"></g></svg></div>
+      <button data-show-metrics="a" id="metrics"></button>
       <aside id="inspector"><button id="close">Close</button></aside>
       <div id="theme-menu" role="menu"><button role="menuitemradio" id="dark-item">Dark</button></div>`
   })
@@ -27,8 +28,8 @@ describe('keyTarget', () => {
     expect(keyTarget(el('#item')).typing).toBe(false)
   })
 
-  it('leaves the arrows, the panel buttons, the panel, the diagram and the theme menu their own keys', () => {
-    for (const id of ['#arrow', '#components', '#metrics', '#close', '.seq-scroll', '#dark-item'])
+  it('leaves the arrows, the panel buttons, the panel, both views and the theme menu their own keys', () => {
+    for (const id of ['#arrow', '#metrics', '#close', '.seq-scroll', '.comp-scroll', '#comp-link', '#dark-item'])
       expect(keyTarget(el(id)).ownKeys, id).toBe(true)
     for (const id of ['#item', '#plain', '#link']) expect(keyTarget(el(id)).ownKeys, id).toBe(false)
   })
@@ -63,8 +64,7 @@ describe('mainClick', () => {
         <div class="seq-diagram">
           <nav class="section-jump"><button data-jump-y="120" id="jump"><span id="jump-text">Part 2</span></button></nav>
           <div class="seq-toolbar">
-            <button class="panel-btn" data-show-metrics="a" aria-expanded="false" id="metrics">Metrics</button>
-            <button class="panel-btn" data-show-components="a" aria-expanded="true" id="components">Components</button>
+            <button class="panel-btn" data-show-metrics="a" aria-expanded="true" id="metrics">Metrics</button>
           </div>
           <div class="seq-scroll"><button class="msg-open" id="arrow"></button>
             <svg><g class="message has-data" data-message-id="m1"><text id="label">call</text></g>
@@ -82,11 +82,10 @@ describe('mainClick', () => {
   })
 
   it('closes the open view from its expanded button, and opens the others', () => {
-    expect(mainClick(el('#components'))).toEqual({ kind: 'close-panel', button: el('#components') })
-    expect(mainClick(el('#metrics'))).toEqual({ kind: 'metrics', scenarioId: 'a', section: undefined, chip: null })
+    expect(mainClick(el('#metrics'))).toEqual({ kind: 'close-panel', button: el('#metrics') })
     expect(mainClick(el('#error'))).toEqual({ kind: 'error', scenarioId: 'a' })
-    el('#components').setAttribute('aria-expanded', 'false')
-    expect(mainClick(el('#components'))).toEqual({ kind: 'components', scenarioId: 'a' })
+    el('#metrics').setAttribute('aria-expanded', 'false')
+    expect(mainClick(el('#metrics'))).toEqual({ kind: 'metrics', scenarioId: 'a', section: undefined, chip: null })
   })
 
   it('remembers which timing chip opened Metrics, and the section it opens at', () => {

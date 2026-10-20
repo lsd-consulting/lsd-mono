@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { MessageEvent } from '../types'
-import { renderComponentDiagram } from '../lib/component-diagram'
 import { componentGraph } from '../lib/component-graph'
 import { bindInspector, inspectorMarkup, type PanelPrintView } from './inspector'
-import { placePrintPanel, printComponentsSection, printMessageSection } from './print-panel'
+import { placePrintPanel, printMessageSection } from './print-panel'
 
 const messageView: PanelPrintView = {
   view: 'message',
@@ -47,28 +46,6 @@ describe('printMessageSection', () => {
     expect(host.querySelector('h3')!.textContent).toBe('Error · Boom')
     expect(host.querySelector('.print-lead')!.textContent).toBe('bad')
     expect(host.querySelector('pre')).toBeNull()
-  })
-})
-
-describe('printComponentsSection', () => {
-  it('draws the diagram with its own marker ids and no fixed screen width', () => {
-    const drawn = renderComponentDiagram(graph, 'Checkout')
-    const host = document.createElement('div')
-    host.innerHTML = printComponentsSection(
-      { ...messageView, view: 'components', title: 'Component diagram' },
-      drawn.svg,
-      drawn.width,
-    )
-    const section = host.querySelector<HTMLElement>('section.print-components')!
-    expect(section.dataset.printPanel).toBe('components')
-    expect(section.style.getPropertyValue('--print-components-max')).toBe(`${Math.round(drawn.width * 1.5)}px`)
-    const svg = section.querySelector('svg.component-diagram')!
-    expect(svg.getAttribute('style')).toBeNull()
-    expect(svg.getAttribute('viewBox')).toBeTruthy()
-    const ids = [...svg.querySelectorAll('marker')].map((m) => m.id)
-    expect(ids.length).toBeGreaterThan(0)
-    expect(ids.every((id) => id.startsWith('lsd-comp-print-'))).toBe(true)
-    expect(section.innerHTML).not.toMatch(/url\(#lsd-comp-(?!print-)/)
   })
 })
 
@@ -143,9 +120,12 @@ describe('inspector printView', () => {
     expect(controller.printView()).toBeNull()
   })
 
-  it('names the component diagram view', () => {
+  it('names a component link view, which prints as a Link (#105)', () => {
     const controller = bindInspector(document, { loadPayload: async () => undefined, onClose: () => {} })
-    controller.openComponents('pay', graph, 'Pay')
-    expect(controller.printView()).toMatchObject({ view: 'components', title: 'Component diagram', text: null })
+    controller.openLink('pay', graph, 0, 'Pay')
+    const view = controller.printView()!
+    expect(view).toMatchObject({ view: 'link', text: null })
+    expect(view.title).toContain(' → ')
+    expect(printMessageSection(view)).toContain('<h3>Link · ')
   })
 })

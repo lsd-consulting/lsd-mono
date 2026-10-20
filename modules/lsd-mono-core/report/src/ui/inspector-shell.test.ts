@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { componentGraph } from '../lib/component-graph'
 import { sampleReport } from '../data/sample-report'
 import { bindInspector, inspectorMarkup } from './inspector'
-import { bindComponentsView } from './inspector-components'
+import { bindLinkView } from './inspector-link'
 import { bindErrorView, bindMessageView } from './inspector-message'
 import { bindMetricsView } from './inspector-metrics'
 import { bindPanelShell } from './inspector-shell'
@@ -30,24 +30,24 @@ function fakeShell(): PanelShell {
 describe('focusReturn', () => {
   const shell = fakeShell()
 
-  it('goes back to the toolbar button, or the timing chip that opened Metrics', () => {
+  it("goes back to the link, the shown view's Metrics button, or the timing chip that opened Metrics", () => {
     const host = document.createElement('div')
-    expect(bindComponentsView(shell, host).focusReturn({ scenarioId: 'a', kind: 'components' })).toEqual({
+    expect(bindLinkView(shell, host).focusReturn({ scenarioId: 'a', kind: 'link', edge: 3 })).toEqual({
       kind: 'button',
       scenarioId: 'a',
-      selector: '.seq-toolbar [data-show-components]',
+      selector: '.comp-scroll .edge-group[data-edge-index="3"]',
       chip: null,
     })
     const metrics = bindMetricsView(shell, host)
     expect(metrics.focusReturn({ scenarioId: 'a', kind: 'metrics' })).toEqual({
       kind: 'button',
       scenarioId: 'a',
-      selector: '.seq-toolbar [data-show-metrics]',
+      selector: '.diagram-pane:not([hidden]) .seq-toolbar [data-show-metrics]',
       chip: null,
     })
     expect(metrics.focusReturn({ scenarioId: 'a', kind: 'metrics', chip: 2 })).toMatchObject({ chip: 2 })
     expect(metrics.focusReturn(null)).toEqual({ kind: 'none' })
-    expect(bindComponentsView(shell, host).focusReturn(null)).toEqual({ kind: 'none' })
+    expect(bindLinkView(shell, host).focusReturn(null)).toEqual({ kind: 'none' })
   })
 
   it('goes back to the message that was open, or nowhere', () => {
@@ -78,10 +78,15 @@ describe('the shell and its views', () => {
     expect(closed).toEqual([
       {
         invoker: { scenarioId: 's1', kind: 'metrics', chip: 1 },
-        focus: { kind: 'button', scenarioId: 's1', selector: '.seq-toolbar [data-show-metrics]', chip: 1 },
+        focus: {
+          kind: 'button',
+          scenarioId: 's1',
+          selector: '.diagram-pane:not([hidden]) .seq-toolbar [data-show-metrics]',
+          chip: 1,
+        },
       },
     ])
-    inspector.openComponents('s1', graph, 'S')
+    inspector.openLink('s1', graph, 0, 'S')
     inspector.openError({ status: 'error', headline: 'Boom', message: 'm' })
     inspector.close()
     expect(closed[1]).toEqual({ invoker: null, focus: { kind: 'none' } })
@@ -110,8 +115,8 @@ describe('the shell closes the view it shows (#103)', () => {
     const { panel, closed } = mountShell()
     const a = countingView('a')
     const b = countingView('b')
-    panel.shell.begin(a, { scenarioId: 's', kind: 'components' })
-    panel.shell.begin(a, { scenarioId: 's', kind: 'components' })
+    panel.shell.begin(a, { scenarioId: 's', kind: 'link' })
+    panel.shell.begin(a, { scenarioId: 's', kind: 'link' })
     expect(a.closes).toBe(0)
     panel.shell.begin(b, { scenarioId: 's', kind: 'metrics' })
     expect(a.closes).toBe(1)
@@ -123,38 +128,5 @@ describe('the shell closes the view it shows (#103)', () => {
     // Closed already: nothing more to close.
     panel.close()
     expect(b.closes).toBe(1)
-  })
-})
-
-describe('the component drawing stops being watched when its view goes (#103)', () => {
-  const original = globalThis.ResizeObserver
-  afterEach(() => {
-    globalThis.ResizeObserver = original
-  })
-
-  it('disconnects its resize observer when another view opens and when the panel closes', () => {
-    const observing: number[] = []
-    let made = 0
-    globalThis.ResizeObserver = class {
-      private readonly id = made++
-      observe() {
-        observing.push(this.id)
-      }
-      unobserve() {}
-      disconnect() {
-        observing.splice(observing.indexOf(this.id), 1)
-      }
-    }
-    document.body.innerHTML = `<div class="shell">${inspectorMarkup()}</div>`
-    const inspector = bindInspector(document, { loadPayload: () => Promise.resolve(null), onClose: () => {} })
-    const scenario = sampleReport.scenarios[0]
-    inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
-    expect(observing).toHaveLength(1)
-    inspector.openMetrics(scenario.id, { heading: scenario.title, metrics: [] })
-    expect(observing).toEqual([])
-    inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
-    expect(observing).toHaveLength(1)
-    inspector.close()
-    expect(observing).toEqual([])
   })
 })

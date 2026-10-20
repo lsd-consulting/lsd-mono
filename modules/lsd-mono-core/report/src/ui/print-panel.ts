@@ -2,7 +2,7 @@ import type { PanelPrintView } from './inspector'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 
 /**
- * Print-only copies of the side panel's message, error and component diagram
+ * Print-only copies of the side panel's message, error and component link
  * views. The panel itself never prints: it is a narrow, scrolled column beside
  * the report. Its copy goes in the scenario the panel belongs to, straight after
  * that scenario's sequence diagram, so the JSON sits under the arrow it came from.
@@ -11,30 +11,13 @@ import { escapeAttr, escapeHtml } from '../lib/escape'
 
 /** Message or error view: title, pills, any lead text, and the JSON or stack in full. */
 export function printMessageSection(view: PanelPrintView): string {
-  const heading = view.view === 'error' ? 'Error' : 'Message'
+  const heading = view.view === 'error' ? 'Error' : view.view === 'link' ? 'Link' : 'Message'
   const lead = view.lead ? `<p class="print-lead">${escapeHtml(view.lead)}</p>` : ''
   const body = view.text != null ? `<pre>${escapeHtml(view.text)}</pre>` : ''
   return `<section class="card print-panel print-message" data-print-panel="${escapeAttr(view.view)}">
     <h3>${heading} · <span class="print-label">${escapeHtml(view.title)}</span></h3>
     ${view.metaHtml ? `<div class="meta-row">${view.metaHtml}</div>` : ''}
     ${lead}${body}
-  </section>`
-}
-
-/**
- * Component diagram, drawn again so its marker ids do not clash with the panel's
- * copy. Print CSS scales it to the page width and keeps it on one page.
- */
-export function printComponentsSection(view: PanelPrintView, svg: string, width: number): string {
-  const drawingSvg = svg
-    .replace(/lsd-comp-/g, 'lsd-comp-print-')
-    .replace(/(<svg class="component-diagram"[^>]*?) style="[^"]*"/, '$1')
-    // Paper is not interactive: the links are plain drawings in the copy.
-    .replace(/ tabindex="0" role="button"/g, '')
-  return `<section class="card print-panel print-components" data-print-panel="components" style="--print-components-max:${Math.round(width * 1.5)}px">
-    <h3>${escapeHtml(view.title)}</h3>
-    ${view.metaHtml ? `<div class="meta-row">${view.metaHtml}</div>` : ''}
-    ${drawingSvg}
   </section>`
 }
 

@@ -1,0 +1,222 @@
+/* The Sequence | Components tabs and the Components view (#105). */
+.diagram-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.diagram-tab {
+  min-width: 24px;
+  min-height: 28px;
+  padding: 2px 12px;
+  border: 0;
+  /* The selected tab is told by its fill and its 2px underline, not by colour alone. */
+  border-bottom: 2px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.diagram-tab[aria-selected="true"] {
+  background: var(--accent-soft);
+  border-bottom-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+.diagram-tab[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+.diagram-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  .diagram-tab[aria-selected="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-bottom-color: CanvasText;
+  }
+  .diagram-tab[aria-disabled="true"] {
+    opacity: 1;
+    color: GrayText;
+  }
+}
+@media (pointer: coarse) {
+  .diagram-tab {
+    min-height: 44px;
+  }
+}
+/* Phones: the heading wraps, and the two tabs share the card's width. */
+@media screen and (max-width: 560px) {
+  .diagram-heading {
+    flex-wrap: wrap;
+  }
+  .diagram-tabs {
+    display: flex;
+    flex: 1 1 100%;
+    order: 2;
+  }
+  .diagram-tab {
+    flex: 1;
+  }
+}
+
+/* The drawing scrolls both ways inside the card, at most a screen tall. Its size at the current
+   scale is --comp-w by --comp-h; a drawing smaller than the scrollport sits in its middle. */
+.comp-scroll {
+  max-height: calc(100dvh - var(--topbar-h, 0px) - 64px);
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  /* Sideways only: a vertical swipe at its top or bottom goes on to scroll the page. */
+  overscroll-behavior-x: contain;
+  --more-left: 0 0 0 0 transparent;
+  --more-right: 0 0 0 0 transparent;
+  --more-up: 0 0 0 0 transparent;
+  --more-down: 0 0 0 0 transparent;
+  box-shadow: var(--more-left), var(--more-right), var(--more-up), var(--more-down);
+}
+.comp-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.comp-scroll .component-diagram {
+  width: var(--comp-w);
+  height: var(--comp-h);
+  min-width: 0;
+  max-width: none;
+  margin: 0 auto;
+}
+.comp-scroll[data-more-left] {
+  --more-left: inset 14px 0 12px -12px color-mix(in oklab, var(--text) 35%, transparent);
+}
+.comp-scroll[data-more-right] {
+  --more-right: inset -14px 0 12px -12px color-mix(in oklab, var(--text) 35%, transparent);
+}
+.comp-scroll[data-more-up] {
+  --more-up: inset 0 14px 12px -12px color-mix(in oklab, var(--text) 35%, transparent);
+}
+.comp-scroll[data-more-down] {
+  --more-down: inset 0 -14px 12px -12px color-mix(in oklab, var(--text) 35%, transparent);
+}
+/* Forced colours drop the shadow (and the scrollbar can be 0px): a dashed border marks each edge with more. */
+@media (forced-colors: active) {
+  .comp-scroll {
+    border: 3px solid transparent;
+  }
+  .comp-scroll[data-more-left] {
+    border-left: 3px dashed CanvasText;
+  }
+  .comp-scroll[data-more-right] {
+    border-right: 3px dashed CanvasText;
+  }
+  .comp-scroll[data-more-up] {
+    border-top: 3px dashed CanvasText;
+  }
+  .comp-scroll[data-more-down] {
+    border-bottom: 3px dashed CanvasText;
+  }
+}
+
+/* A link's interactions in the side panel. */
+.component-links {
+  margin: 4px 0 0;
+  padding-left: 22px;
+  font-size: 13px;
+}
+.component-links li {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.component-links .cue {
+  color: var(--text-muted);
+}
+.component-links .show-in-sequence {
+  margin-left: 6px;
+}
+
+@media print {
+  .diagram-tabs {
+    display: none;
+  }
+  /* Components selected: the drawing prints at the page width, on one page, never cut off. */
+  .comp-scroll {
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
+    border-color: #000;
+  }
+  .comp-scroll .component-diagram {
+    width: 100%;
+    max-width: min(100%, calc(var(--comp-natural-w, var(--comp-w)) * 1.5));
+    height: auto;
+    max-height: 240mm;
+  }
+}
+/* The drawing itself (component-graph.ts), moved here from the side panel with the view. */
+.component-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  color: var(--text-muted);
+  font-family: var(--font);
+}
+.component-diagram .edge {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.component-diagram .edge-async {
+  stroke-dasharray: 6 4;
+}
+/* Wide, invisible stroke so a thin link is easy to hover and click. */
+.component-diagram .edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+}
+.component-diagram .edge-group {
+  cursor: pointer;
+  outline: none;
+}
+.component-diagram .edge-group:hover,
+.component-diagram .edge-group:focus-visible,
+.component-diagram .edge-group.is-selected {
+  color: var(--accent-strong);
+}
+.component-diagram .edge-group:focus-visible .edge-hit {
+  stroke: var(--accent-soft);
+}
+.component-diagram .edge-badge rect {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+.component-diagram .edge-badge text {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.component-diagram .marker-fill {
+  fill: currentColor;
+  stroke: none;
+}
+.component-diagram .marker-open {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+.component-diagram .empty {
+  fill: var(--text-muted);
+  font-size: 13px;
+}

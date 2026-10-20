@@ -46,16 +46,18 @@ function toolbarOf(html: string): string {
 }
 
 describe('metrics button', () => {
-  it('sits next to the component diagram button and names the scenario it opens', () => {
+  it('sits in the side panel group, alone now the component diagram is a view (#105), and names the scenario it opens', () => {
     const toolbar = toolbarOf(renderDiagramHtml(scenario()))
     expect(toolbar).toMatch(
-      /data-show-metrics="pay"[^>]*>(?:(?!<\/button>).)*<span>Metrics<\/span><\/button>\s*<button[^>]*data-show-components="pay"/s,
+      /aria-label="Open in the side panel"><button[^>]*data-show-metrics="pay"[^>]*>(?:(?!<\/button>).)*<span>Metrics<\/span><\/button><\/div>/s,
     )
     expect(toolbar).not.toMatch(/data-show-metrics="pay"[^>]*disabled/)
   })
 
-  it('is disabled when there are no metrics', () => {
-    expect(toolbarOf(renderDiagramHtml(scenario({ metrics: [] })))).toMatch(/data-show-metrics="pay"[^>]*disabled/)
+  it('is left out when there are no metrics, with its group', () => {
+    const toolbar = toolbarOf(renderDiagramHtml(scenario({ metrics: [] })))
+    expect(toolbar).not.toContain('data-show-metrics')
+    expect(toolbar).not.toContain('panel-controls')
   })
 })
 
@@ -63,10 +65,7 @@ describe('side panel buttons', () => {
   it('say they open the side panel, closed until the app marks one open, named by their text alone', () => {
     const host = document.createElement('div')
     host.innerHTML = renderDiagramHtml(scenario())
-    for (const [selector, text] of [
-      ['[data-show-metrics]', 'Metrics'],
-      ['[data-show-components]', 'Component diagram'],
-    ] as const) {
+    for (const [selector, text] of [['[data-show-metrics]', 'Metrics']] as const) {
       const button = host.querySelector<HTMLButtonElement>(`.panel-controls ${selector}`)!
       expect(button.getAttribute('aria-controls')).toBe('inspector')
       expect(button.getAttribute('aria-expanded')).toBe('false')
@@ -124,7 +123,7 @@ describe('metrics in the side panel', () => {
     expect(document.querySelector('#inspector-meta')!.textContent).toContain('Happy path')
     expect(host.hidden).toBe(false)
     expect(host.querySelectorAll('dl.kv dt')).toHaveLength(2)
-    expect(document.querySelector<HTMLElement>('#inspector-graph')!.hidden).toBe(true)
+    expect(document.querySelector<HTMLElement>('#inspector-link')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('.json-row')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('#inspector-pre')!.hidden).toBe(true)
@@ -154,13 +153,14 @@ describe('metrics in the side panel', () => {
     expect(closed).toEqual(['metrics', 'metrics'])
   })
 
-  it('swapping to the component diagram clears the metrics view', () => {
+  it('swapping to a component link clears the metrics view', () => {
     const controller = bindInspector(document, { loadPayload: async () => undefined, onClose: () => {} })
     controller.openMetrics('pay', { heading: 'Happy path', metrics })
-    controller.openComponents('pay', { nodes: [], edges: [] }, 'Happy path')
+    const link = { from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 1 }
+    controller.openLink('pay', { nodes: [], edges: [link] }, 0, 'Happy path')
     const host = document.querySelector<HTMLElement>('#inspector-metrics')!
     expect(host.hidden).toBe(true)
     expect(host.childElementCount).toBe(0)
-    expect(document.querySelector<HTMLElement>('#inspector-graph')!.hidden).toBe(false)
+    expect(document.querySelector<HTMLElement>('#inspector-link')!.hidden).toBe(false)
   })
 })

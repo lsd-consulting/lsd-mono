@@ -4,7 +4,7 @@ import { INSPECTOR_MIN_PX, INSPECTOR_NARROW_PX } from './inspector-width'
 import type { FocusReturn, InspectorInvoker } from './inspector-view'
 import { bindPanelShell, type PanelPrintView } from './inspector-shell'
 import { bindErrorView, bindMessageView } from './inspector-message'
-import { bindComponentsView } from './inspector-components'
+import { bindLinkView } from './inspector-link'
 import { bindMetricsView, type MetricsView } from './inspector-metrics'
 
 export type { PanelPrintView } from './inspector-shell'
@@ -32,8 +32,8 @@ export interface OpenMessageOptions {
 
 export interface InspectorController {
   openMessage: (scenarioId: string, message: MessageEvent, options?: OpenMessageOptions) => void
-  /** Component diagram for one scenario, in this same panel. Drawn from messages already loaded. */
-  openComponents: (scenarioId: string, graph: ComponentGraph, title: string) => void
+  /** One link of a scenario's Components view and its interactions (#105). */
+  openLink: (scenarioId: string, graph: ComponentGraph, edgeIndex: number, title: string) => void
   /** Scenario timing and metrics, in this same panel. No JSON or Copy. */
   openMetrics: (scenarioId: string, view: MetricsView) => void
   openError: (error: { status: string; headline: string; message: string; stack?: string }) => void
@@ -62,7 +62,7 @@ export function inspectorMarkup(): string {
       <div class="inspector-body">
         <div class="meta-row" id="inspector-meta"></div>
         <p id="inspector-lead" hidden></p>
-        <div id="inspector-graph" hidden></div>
+        <div id="inspector-link" hidden></div>
         <div id="inspector-metrics" hidden></div>
         <div class="json-row">
           <button type="button" id="inspector-json" aria-expanded="false" aria-controls="inspector-pre">Show JSON</button>
@@ -86,7 +86,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   const panel = bindPanelShell(doc, options)
   const message = bindMessageView(panel.shell, options.loadPayload)
   const error = bindErrorView(panel.shell)
-  const components = bindComponentsView(panel.shell, panel.graphHost)
+  const link = bindLinkView(panel.shell, panel.linkHost)
   const metrics = bindMetricsView(panel.shell, panel.metricsHost)
   return {
     isOpen: panel.isOpen,
@@ -94,7 +94,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     printView: panel.printView,
     refreshFind: panel.refreshFind,
     openMessage: (scenarioId, msg, open = {}) => message.open(scenarioId, msg, open.focus ?? true),
-    openComponents: (scenarioId, graph, heading) => components.open(scenarioId, graph, heading),
+    openLink: (scenarioId, graph, edge, heading) => link.open(scenarioId, graph, edge, heading),
     openMetrics: (scenarioId, view) => metrics.open(scenarioId, view),
     openError: (err) => error.open(err),
   }

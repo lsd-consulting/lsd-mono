@@ -150,43 +150,52 @@ for (const [phone, device] of Object.entries(PHONES)) {
           .toBeGreaterThanOrEqual(viewport.height)
       })
 
-      test('the component diagram: swipes on it scroll the page, a tap picks a link, Close stays in reach', async ({
+      test('the Components view: swipes on it scroll the page, a tap opens a link, Close stays in reach', async ({
         page,
       }) => {
         await open(page, timedReport())
         await expect(page.locator('.seq-svg')).toBeVisible()
-        await page.locator('[data-show-components]').first().tap()
-        const panel = page.locator('.inspector')
-        await expect(panel.locator('.component-diagram')).toBeVisible()
+        await page.getByRole('tab', { name: 'Components' }).tap()
+        const graph = page.locator('.comp-scroll')
+        await expect(graph.locator('.component-diagram')).toBeVisible()
         expect(await verticalScrollBoxes(page)).toEqual([])
         expect(await pageWidth(page), 'nothing widens the page').toBeLessThanOrEqual(0)
         const cdp = await page.context().newCDPSession(page)
         const x = Math.round(viewport.width / 2)
-        const graph = panel.locator('#inspector-graph')
         await graph.scrollIntoViewIfNeeded()
         await page.evaluate(() => scrollBy(0, -150))
         const box = (await graph.boundingBox())!
         const before = await state(page)
-        await swipe(page, cdp, x, Math.min(box.y + box.height - 10, viewport.height - 40), Math.max(box.y + 10, 120))
+        // A swipe that starts on the drawing, carried well past its top (this drawing is short).
+        const from = Math.min(box.y + box.height - 10, viewport.height - 40)
+        await swipe(page, cdp, x, from, Math.max(from - 300, 60))
         await expect
           .poll(async () => (await state(page)).pageY, { message: 'a swipe on the drawing scrolls the page' })
           .toBeGreaterThan(before.pageY + 50)
-        expect(await closeInReach(page)).toBe('in reach')
-        const edge = panel.locator('.edge-group').first()
+        const edge = graph.locator('.edge-group').first()
         await edge.scrollIntoViewIfNeeded()
         const hit = (await edge.locator('.edge-hit').boundingBox())!
         await page.touchscreen.tap(hit.x + hit.width / 2, hit.y + hit.height / 2)
-        await expect(panel.locator('.edge-group.is-selected')).toHaveCount(1)
+        await expect(graph.locator('.edge-group.is-selected')).toHaveCount(1)
+        await expect(page.locator('.inspector #inspector-link .component-links')).toBeVisible()
+        expect(await closeInReach(page)).toBe('in reach')
       })
 
-      for (const [what, opener, body] of [
-        ['component diagram', '[data-show-components]', '.component-diagram'],
-        ['metrics', '[data-show-metrics]', '#inspector-metrics'],
+      const openers = {
+        'a component link': async (page: Page) => {
+          await page.getByRole('tab', { name: 'Components' }).tap()
+          await page.locator('.comp-scroll .edge-hit').first().dispatchEvent('click')
+        },
+        metrics: (page: Page) => page.locator('[data-show-metrics]').first().tap(),
+      }
+      for (const [what, body] of [
+        ['a component link', '#inspector-link'],
+        ['metrics', '#inspector-metrics'],
       ] as const) {
         test(`opening the ${what} scrolls its heading just below the top bar`, async ({ page }) => {
           await open(page, timedReport())
           await expect(page.locator('.seq-svg')).toBeVisible()
-          await page.locator(opener).first().tap()
+          await openers[what](page)
           await expect(page.locator('.inspector').locator(body)).toBeVisible()
           await expect
             .poll(() =>

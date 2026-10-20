@@ -207,40 +207,6 @@
   }
 }
 
-/* Phones and the stacked panel: the component diagram keeps its natural size, where its 11px
-   names stay readable, and scrolls sideways in #inspector-graph instead of shrinking to the
-   panel. Wider panels and print still scale it to fit. */
-@media screen and (max-width: 860px) {
-  .component-diagram {
-    min-width: var(--component-width, 0);
-  }
-  .component-scroll {
-    --more-right: 0 0 0 0 transparent;
-    --more-left: 0 0 0 0 transparent;
-    box-shadow: var(--more-right), var(--more-left);
-  }
-  .component-scroll[data-more-right] {
-    --more-right: inset -14px 0 12px -12px color-mix(in oklab, var(--text) 35%, transparent);
-  }
-  .component-scroll[data-more-left] {
-    --more-left: inset 14px 0 12px -12px color-mix(in oklab, var(--text) 35%, transparent);
-  }
-}
-/* Forced colours drop the shadow (and the scrollbar can be 0px): a border marks each edge with more. */
-@media screen and (max-width: 860px) and (forced-colors: active) {
-  .component-scroll {
-    border-inline: 3px solid transparent;
-  }
-  .component-scroll[data-more-right] {
-    border-right-color: CanvasText;
-    border-right-style: dashed;
-  }
-  .component-scroll[data-more-left] {
-    border-left-color: CanvasText;
-    border-left-style: dashed;
-  }
-}
-
 /* Phones and narrow windows: the keyboard help is a bottom sheet (#112). It scrolls inside
    itself, and its head (with the close button) stays at the top, so it can be closed after the
    top bar's ? has scrolled away. */

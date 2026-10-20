@@ -8,7 +8,9 @@ import { cssEscape } from '../lib/escape'
 import { heroHtml, scenarioHtml } from './scenario-card'
 import { syncWithPanel } from './panel'
 import { filtered } from './filters'
-import { writeScenarioHash } from './url-hash'
+import { dropUnshownView, writeScenarioHash } from './url-hash'
+import { bindComponentViews } from '../lib/component-view'
+import { bindDiagramTabs, focusComponentView, openLink, pingShownView, showDiagramView } from './diagram-views'
 import { index, session, state } from './context'
 export function focusScenarioHeading(): void {
   document.querySelector<HTMLElement>('#main .scenario-head h2')?.focus({ preventScroll: true })
@@ -70,14 +72,20 @@ export function renderMain(): void {
   }
   main.innerHTML = `${heroHtml()}${scenarioHtml(scenario)}`
   if (session.booted && !session.panelScenarioId) writeScenarioHash()
+  else dropUnshownView()
   syncWithPanel()
   bindDiagramScroll(main)
+  bindDiagramTabs(main)
+  bindComponentViews(main, (scenarioId, edge) => openLink(scenarioId, edge))
+  pingShownView(main)
 }
 
 /** Scroll a scenario's diagram to a message. Shows that scenario first. */
 export function revealMessage(scenarioId: string, messageId: string): void {
   if (!session.report.scenarios.some((item) => item.id === scenarioId)) return
   if (session.renderedId !== scenarioId) selectScenario(scenarioId)
+  // A message is in the Sequence view.
+  showDiagramView('sequence', false)
   const y = messageOffsetY(scenarioId, messageId)
   const scroll = document.querySelector<HTMLElement>(`#card-${cssEscape(scenarioId)} .seq-scroll`)
   if (!scroll || y == null) return
@@ -86,8 +94,9 @@ export function revealMessage(scenarioId: string, messageId: string): void {
   syncDiagramWindow(scroll)
 }
 
-/** Enter: into the shown scenario's diagram, on its current message (or the diagram itself). */
+/** Enter: into the shown scenario's diagram, on its current message (or the diagram itself), or its first link. */
 export function focusSelectedDiagram(): void {
+  if (focusComponentView()) return
   const scroll = document.querySelector<HTMLElement>('#main .seq-scroll')
   if (!scroll) return
   const stop = scroll.querySelector<HTMLElement>('button.msg-open[tabindex="0"]') ?? scroll

@@ -1,5 +1,6 @@
 // The page shell (top bar, sidebar, main column, side panel) and its event listeners.
 import { renderMain, revealMessage, focusScenarioHeading } from './main-view'
+import { showInSequence } from './diagram-views'
 import { renderNav } from './nav'
 import type { Status } from '../types'
 import { keyHelpHtml, singleKeysLabelHtml } from '../lib/keys/bindings'
@@ -19,7 +20,6 @@ import {
   openError,
   syncWithPanel,
   syncPrintPanel,
-  openComponents,
   openMetrics,
   openMessage,
   messageFromNode,
@@ -199,8 +199,14 @@ function bindSidePanel(): void {
     },
   })
 
-  // Timing view rows (swim lanes, waterfall) live in the side panel, outside the scenario card.
+  // Timing view rows (swim lanes, waterfall) and a link's "Show in sequence" (#105) live in the
+  // side panel, outside the scenario card.
   document.querySelector<HTMLElement>('#inspector')!.addEventListener('click', (ev) => {
+    const inSequence = (ev.target as Element | null)?.closest?.<HTMLButtonElement>('[data-show-in-sequence]')
+    if (inSequence?.dataset.scenarioId && inSequence.dataset.showInSequence) {
+      showInSequence(inSequence.dataset.scenarioId, inSequence.dataset.showInSequence)
+      return
+    }
     const showMsg = (ev.target as Element | null)?.closest?.<HTMLButtonElement>('[data-show-message]')
     const scenarioId = showMsg?.dataset.scenarioId
     const messageId = showMsg?.dataset.showMessage
@@ -208,7 +214,7 @@ function bindSidePanel(): void {
   })
 }
 
-/** Clicks in the main column: section jumps, arrows, and the Components, Metrics and error buttons. */
+/** Clicks in the main column: section jumps, arrows, and the Metrics and error buttons. */
 function onMainClick(ev: MouseEvent): void {
   const click = mainClick(ev.target as Element | null)
   if (click?.kind === 'jump') {
@@ -228,11 +234,6 @@ function onMainClick(ev: MouseEvent): void {
     case 'close-panel': {
       session.inspector?.close()
       click.button.focus()
-      return
-    }
-    case 'components': {
-      const scenario = scenarioById(click.scenarioId)
-      if (scenario) openComponents(scenario)
       return
     }
     case 'metrics': {

@@ -1,7 +1,7 @@
 // What each inspector view shows: its pills and body markup. bindInspector owns the panel and its state.
 import type { MessageEvent } from '../types'
 import { edgeInteractions, typeCue, type ComponentEdge, type ComponentGraph } from '../lib/component-graph'
-import { escapeHtml } from '../lib/escape'
+import { escapeAttr, escapeHtml } from '../lib/escape'
 import { isErrorStatus } from '../lib/status'
 import type { MetricsView } from './inspector'
 import { metricsPanelHtml, metricsSectionHtml } from './metrics'
@@ -20,39 +20,36 @@ export function messageMetaHtml(scenarioId: string, message: MessageEvent): stri
         <span class="pill">${escapeHtml(scenarioId)}</span>`
 }
 
-export function componentsMetaHtml(graph: ComponentGraph, heading: string): string {
-  const nodes = graph.nodes.length
-  const links = graph.edges.length
-  return nodes
-    ? `<span class="pill">${nodes} ${nodes === 1 ? 'component' : 'components'}</span>
-        <span class="pill">${links} ${links === 1 ? 'link' : 'links'}</span>
-        <span class="pill">${escapeHtml(heading)}</span>`
-    : `<span class="pill">Nothing to draw</span>
-        <span class="pill">${escapeHtml(heading)}</span>`
-}
-
-/** The drawing, then the list a clicked link fills. */
-export function componentsBodyHtml(drawnSvg: string, graph: ComponentGraph): string {
-  const hint = graph.edges.length
-    ? '<p class="inspector-empty"><span class="legend-click">Hover over a link to see its messages, or click it to list them here.</span><span class="legend-tap">Tap a link to list its messages here.</span></p>'
-    : ''
-  // The drawing scrolls sideways on its own, so the link list under it stays put (narrow.css).
-  // A region with a tab stop, so a keyboard can scroll it when it overflows.
-  return `<div class="component-scroll">${drawnSvg}</div><div class="component-links" aria-live="polite">${hint}</div>`
-}
-
-/** One link's interactions, listed under the drawing. */
-export function componentLinkHtml(graph: ComponentGraph, edge: ComponentEdge): string {
+/** A link's panel title: "Order Service → Payment Service". */
+export function componentLinkTitle(graph: ComponentGraph, edge: ComponentEdge): string {
   const name = (id: string) => graph.nodes.find((node) => node.id === id)?.name ?? id
+  return `${name(edge.from)} → ${name(edge.to)}`
+}
+
+export function componentLinkMetaHtml(edge: ComponentEdge, heading: string): string {
+  const total = `${edge.count} ${edge.count === 1 ? 'interaction' : 'interactions'}`
+  return `<span class="pill">${total}</span>
+        <span class="pill">${escapeHtml(heading)}</span>`
+}
+
+/**
+ * One link's interactions, each with a button to its (first) message in the sequence diagram.
+ * The buttons' names start with their visible text and add the label, so a list of them is told apart.
+ */
+export function componentLinkHtml(scenarioId: string, edge: ComponentEdge): string {
   const items = edgeInteractions(edge)
     .map((item) => {
       const cue = item.type.split(', ').map(typeCue).join(', ')
       const times = item.count > 1 ? ` ×${item.count}` : ''
-      return `<li>${escapeHtml(item.label || '(no label)')} <span class="cue">· ${escapeHtml(cue)}${times}</span></li>`
+      const label = item.label || '(no label)'
+      const first = item.messageIds?.[0]
+      const show = first
+        ? ` <button type="button" class="text-btn show-in-sequence" data-show-in-sequence="${escapeAttr(first)}" data-scenario-id="${escapeAttr(scenarioId)}" aria-label="${escapeAttr(`Show in sequence: ${label}`)}">Show in sequence</button>`
+        : ''
+      return `<li><span class="link-item">${escapeHtml(label)} <span class="cue">· ${escapeHtml(cue)}${times}</span></span>${show}</li>`
     })
     .join('')
-  const total = `${edge.count} ${edge.count === 1 ? 'interaction' : 'interactions'}`
-  return `<h3>${escapeHtml(name(edge.from))} → ${escapeHtml(name(edge.to))} <span class="cue">(${total})</span></h3><ol>${items}</ol>`
+  return `<ol class="component-links">${items}</ol>`
 }
 
 export function metricsTitle(view: MetricsView): string {

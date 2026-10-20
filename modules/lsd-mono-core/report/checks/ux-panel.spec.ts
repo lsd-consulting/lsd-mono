@@ -34,27 +34,32 @@ test('axe after the diagram scrolls and after the inspector opens', async ({ pag
   }
 })
 
-test('axe with the component diagram open, and Escape returns focus to its button', async ({ page }) => {
+test('axe with the Components view and a link panel, and Escape returns focus to the link (#105)', async ({ page }) => {
   for (const theme of THEMES) {
     await openFixture(page, theme)
-    const open = page.getByRole('button', { name: 'Component diagram' })
-    await open.click()
-    await expect(page.locator('#inspector-title')).toHaveText('Component diagram')
-    await expect(page.locator('#inspector-graph svg.component-diagram')).toBeVisible()
+    await page.getByRole('tab', { name: 'Components' }).click()
+    const drawing = page.locator('.comp-scroll')
+    await expect(drawing.locator('svg.component-diagram')).toBeVisible()
     // Client, Api, and Database. Queue is in the header but on no message.
-    await expect(page.locator('#inspector-graph .component-node')).toHaveCount(3)
+    await expect(drawing.locator('.component-node')).toHaveCount(3)
+    const shown = await seriousViolations(page)
+    expect(shown, `${theme}\n${formatViolations(shown)}`).toEqual([])
+    const link = drawing.getByRole('button', { name: 'Client to Api, 5 interactions' })
+    await link.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.locator('#inspector-title')).toHaveText('Client → Api')
     const violations = await seriousViolations(page)
     expect(violations, `${theme}\n${formatViolations(violations)}`).toEqual([])
     await page.keyboard.press('Escape')
     await expect(page.locator('#inspector')).toBeHidden()
-    await expect(open).toBeFocused()
+    await expect(link).toBeFocused()
   }
 })
 
-test('component links have no captions, count their messages, and list them on hover and click', async ({ page }) => {
+test('component links have no captions, count their messages, and list them in the side panel', async ({ page }) => {
   await openFixture(page, 'light')
-  await page.getByRole('button', { name: 'Component diagram' }).click()
-  const graph = page.locator('#inspector-graph')
+  await page.getByRole('tab', { name: 'Components' }).click()
+  const graph = page.locator('.comp-scroll')
   await expect(graph.locator('svg.component-diagram')).toBeVisible()
   await expect(graph.locator('.edge-label')).toHaveCount(0)
   await expect(graph.locator('svg text', { hasText: 'charge' })).toHaveCount(0)
@@ -72,15 +77,19 @@ test('component links have no captions, count their messages, and list them on h
     ].join('\n'),
   )
   await link.locator('.edge-hit').click({ force: true })
-  const list = graph.locator('.component-links')
-  await expect(list.locator('h3')).toHaveText('Api → Database (5 interactions)')
+  await expect(page.locator('#inspector-title')).toHaveText('Api → Database')
+  await expect(page.locator('#inspector-meta')).toContainText('5 interactions')
+  const list = page.locator('#inspector-link .component-links')
   await expect(list.locator('li')).toHaveCount(5)
-  await expect(list.locator('li').first()).toHaveText('insert 1 · sync')
+  await expect(list.locator('li').first()).toContainText('insert 1 · sync')
+  await expect(list.getByRole('button', { name: /^Show in sequence/ })).toHaveCount(5)
+  await expect(link).toHaveClass(/is-selected/)
   const other = graph.getByRole('button', { name: 'Client to Api, 5 interactions' })
   await other.focus()
   await page.keyboard.press('Enter')
-  await expect(list.locator('h3')).toHaveText('Client → Api (5 interactions)')
+  await expect(page.locator('#inspector-title')).toHaveText('Client → Api')
   await expect(other).toHaveClass(/is-selected/)
+  await expect(link).not.toHaveClass(/is-selected/)
   const violations = await seriousViolations(page)
   expect(violations, formatViolations(violations)).toEqual([])
 })
@@ -113,51 +122,47 @@ test('axe with metrics in the side panel, and Escape or Close returns focus to t
   await expect(open).toBeFocused()
 })
 
-test('Metrics and Component diagram show which view is open, and pressing the open one closes it', async ({ page }) => {
+test('Metrics shows when its view is open, and pressing it again closes it', async ({ page }) => {
   await openFixture(page, 'light')
   const metrics = page.getByRole('button', { name: 'Metrics', exact: true })
-  const components = page.getByRole('button', { name: 'Component diagram', exact: true })
-  for (const button of [metrics, components]) {
-    await expect(button).toHaveAttribute('aria-controls', 'inspector')
-    await expect(button).toHaveAttribute('aria-expanded', 'false')
-  }
+  await expect(metrics).toHaveAttribute('aria-controls', 'inspector')
+  await expect(metrics).toHaveAttribute('aria-expanded', 'false')
   const restBackground = await metrics.evaluate((el) => getComputedStyle(el).backgroundColor)
 
   await metrics.click()
   await expect(metrics).toHaveAttribute('aria-expanded', 'true')
-  await expect(components).toHaveAttribute('aria-expanded', 'false')
   expect(await metrics.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(restBackground)
 
-  await components.click()
-  await expect(page.locator('#inspector-title')).toHaveText('Component diagram')
-  await expect(metrics).toHaveAttribute('aria-expanded', 'false')
-  await expect(components).toHaveAttribute('aria-expanded', 'true')
-
-  // An arrow's payload replaces the view: neither button is pressed.
+  // An arrow's payload replaces the view: the button is no longer pressed.
   await page.locator('button.msg-open').first().click()
-  await expect(components).toHaveAttribute('aria-expanded', 'false')
-
-  await components.click()
-  await expect(components).toHaveAttribute('aria-expanded', 'true')
-  await components.click()
-  await expect(page.locator('#inspector')).toBeHidden()
-  await expect(components).toHaveAttribute('aria-expanded', 'false')
-  await expect(components).toBeFocused()
+  await expect(metrics).toHaveAttribute('aria-expanded', 'false')
 
   await metrics.click()
-  await page.keyboard.press('Escape')
+  await expect(metrics).toHaveAttribute('aria-expanded', 'true')
+  await metrics.click()
+  await expect(page.locator('#inspector')).toBeHidden()
   await expect(metrics).toHaveAttribute('aria-expanded', 'false')
+  await expect(metrics).toBeFocused()
+
+  // The Components view's Metrics button shows the same state.
+  await page.getByRole('tab', { name: 'Components' }).click()
+  const inComponents = page.getByRole('button', { name: 'Metrics', exact: true })
+  await inComponents.click()
+  await expect(inComponents).toHaveAttribute('aria-expanded', 'true')
+  await page.keyboard.press('Escape')
+  await expect(inComponents).toHaveAttribute('aria-expanded', 'false')
+  await expect(inComponents).toBeFocused()
 })
 
-test('in forced colours the button of the open view takes the system highlight', async ({ page }) => {
+test('in forced colours the Metrics button of the open view takes the system highlight', async ({ page }) => {
   await openFixture(page, 'light')
   await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' })
   const metrics = page.getByRole('button', { name: 'Metrics', exact: true })
-  const components = page.getByRole('button', { name: 'Component diagram', exact: true })
+  const background = (el: Element) => getComputedStyle(el).backgroundColor
+  const rest = await metrics.evaluate(background)
   await metrics.click()
   await expect(metrics).toHaveAttribute('aria-expanded', 'true')
-  const background = (el: Element) => getComputedStyle(el).backgroundColor
-  expect(await metrics.evaluate(background)).not.toBe(await components.evaluate(background))
+  expect(await metrics.evaluate(background)).not.toBe(rest)
 })
 
 test('print shows metrics only while the Metrics view is open, in its scenario', async ({ page }) => {
@@ -200,12 +205,15 @@ test('print shows metrics only while the Metrics view is open, in its scenario',
 
   // Other side-panel views print their own copy, with no metrics. The panel never prints.
   await page.emulateMedia({ media: 'screen', reducedMotion: 'reduce' })
-  await page.getByRole('button', { name: 'Component diagram' }).click()
+  await page.getByRole('tab', { name: 'Components' }).click()
+  await page.locator('.comp-scroll .edge-hit').first().click({ force: true })
+  await expect(page.locator('#inspector-title')).toHaveText('Client → Api')
   await page.emulateMedia({ media: 'print', reducedMotion: 'reduce' })
   await expect(page.locator('.print-metrics')).toHaveCount(0)
   await expect(page.locator('#inspector')).toBeHidden()
 
   await page.emulateMedia({ media: 'screen', reducedMotion: 'reduce' })
+  await page.getByRole('tab', { name: 'Sequence' }).click()
   await metricsBtn.click()
   await page.locator('button.msg-open').first().click()
   await expect(page.locator('#inspector-title')).not.toHaveText('Metrics')
@@ -214,7 +222,7 @@ test('print shows metrics only while the Metrics view is open, in its scenario',
   await expect(page.locator('#inspector')).toBeHidden()
 })
 
-test('the component diagram and metrics panels open sized to their content, and a phone keeps the full-width inline panel', async ({
+test('the link and metrics panels open sized to their content, and a phone keeps the full-width inline panel', async ({
   page,
   browser,
   baseURL,
@@ -229,15 +237,16 @@ test('the component diagram and metrics panels open sized to their content, and 
       return { width: box.width, overflow: el.scrollWidth - el.clientWidth }
     }, host)
 
-  await page.locator('[data-show-components]').first().click()
+  await page.getByRole('tab', { name: 'Components' }).click()
+  await page.locator('.comp-scroll .edge-hit').first().click({ force: true })
   await expect(panel).toBeVisible()
-  await expect.poll(async () => (await fits('#inspector-graph')).overflow).toBeLessThanOrEqual(1)
-  const graph = await fits('#inspector-graph')
+  await expect.poll(async () => (await fits('#inspector-link')).overflow).toBeLessThanOrEqual(1)
+  const graph = await fits('#inspector-link')
   expect(graph.width).toBeGreaterThanOrEqual(380)
   expect(graph.width).toBeLessThanOrEqual(1440 * 0.5 + 1)
-  await page.screenshot({ path: 'test-results/panel-fit-components-desktop.png' })
+  await page.screenshot({ path: 'test-results/panel-fit-link-desktop.png' })
 
-  await page.locator('[data-show-metrics]').first().click()
+  await page.locator('.diagram-pane:not([hidden]) [data-show-metrics]').click()
   await expect(page.locator('#inspector-metrics')).toBeVisible()
   await expect.poll(async () => (await fits('#inspector-metrics')).overflow).toBeLessThanOrEqual(1)
   const metrics = await fits('#inspector-metrics')
@@ -261,11 +270,12 @@ test('the component diagram and metrics panels open sized to their content, and 
   })
   const phone = await context.newPage()
   await openFixture(phone, 'dark')
+  await phone.getByRole('tab', { name: 'Components' }).click()
   for (const [button, host] of [
-    ['[data-show-components]', '#inspector-graph'],
-    ['[data-show-metrics]', '#inspector-metrics'],
+    ['.comp-scroll .edge-hit', '#inspector-link'],
+    ['.diagram-pane:not([hidden]) [data-show-metrics]', '#inspector-metrics'],
   ] as const) {
-    await phone.locator(button).first().click()
+    await phone.locator(button).first().click({ force: true })
     await expect(phone.locator(host)).toBeVisible()
     const box = await phone.locator('#inspector').boundingBox()
     expect(box!.width, `${host} stays the page width on a phone`).toBeGreaterThanOrEqual(388)

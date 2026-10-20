@@ -135,7 +135,7 @@ describe('inspector', () => {
     await Promise.resolve()
   }
 
-  it("lists a link's interactions in the panel when the link is clicked or pressed", () => {
+  it("lists a link's interactions in the panel, one link at a time (#105)", () => {
     const controller = bindInspector(document, { loadPayload: async () => ({}), onClose: () => {} })
     const call = (id: string, to: string, label: string, type: MessageType = 'SYNCHRONOUS') => ({
       kind: 'message' as const,
@@ -158,29 +158,20 @@ describe('inspector', () => {
         call('4', 'c', 'order.paid', 'ASYNCHRONOUS'),
       ],
     })
-    controller.openComponents('s', graph, 'Links')
-    const host = document.querySelector<HTMLElement>('#inspector-graph')!
-    const list = host.querySelector<HTMLElement>('.component-links')!
-    expect(list.textContent).toContain('click it to list them here')
-    const links = host.querySelectorAll<SVGGElement>('.edge-group')
-    expect(links).toHaveLength(2)
-
-    links[0].querySelector('.edge-hit')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    expect(list.querySelector('h3')!.textContent).toBe('Orders → Orders <DB> (3 interactions)')
-    expect([...list.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+    controller.openLink('s', graph, 0, 'Links')
+    const host = document.querySelector<HTMLElement>('#inspector-link')!
+    expect(document.querySelector('#inspector-title')!.textContent).toBe('Orders → Orders <DB>')
+    expect(document.querySelector('#inspector-meta')!.textContent).toContain('3 interactions')
+    expect([...host.querySelectorAll('li .link-item')].map((li) => li.textContent)).toEqual([
       'load basket · sync ×2',
       'reserve stock · sync',
     ])
-    expect(links[0].classList.contains('is-selected')).toBe(true)
-
-    links[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
-    expect(list.querySelector('h3')!.textContent).toBe('Orders → Events (1 interaction)')
-    expect([...list.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['order.paid · async'])
-    expect(links[0].classList.contains('is-selected')).toBe(false)
-    expect(links[1].classList.contains('is-selected')).toBe(true)
+    controller.openLink('s', graph, 1, 'Links')
+    expect(document.querySelector('#inspector-title')!.textContent).toBe('Orders → Events')
+    expect([...host.querySelectorAll('li .link-item')].map((li) => li.textContent)).toEqual(['order.paid · async'])
   })
 
-  it('shows a component diagram in the same panel, then a message restores the json chrome', async () => {
+  it('shows a link in the same panel, then a message restores the json chrome', async () => {
     const closed: Array<string | undefined> = []
     const controller = bindInspector(document, {
       loadPayload: async () => ({ ok: true }),
@@ -203,24 +194,15 @@ describe('inspector', () => {
         type: 'SYNCHRONOUS' as const,
       })),
     })
-    controller.openComponents('s', graph, 'Wide scenario')
-    const host = document.querySelector<HTMLElement>('#inspector-graph')!
+    controller.openLink('s', graph, 1, 'Wide scenario')
+    const host = document.querySelector<HTMLElement>('#inspector-link')!
     expect(panel().hidden).toBe(false)
-    expect(document.querySelector('#inspector-title')!.textContent).toBe('Component diagram')
-    expect(document.querySelector('#inspector-meta')!.textContent).toContain('5 components')
-    expect(document.querySelector('#inspector-meta')!.textContent).toContain('4 links')
+    expect(document.querySelector('#inspector-title')!.textContent).toBe('Beta → Gamma')
     expect(host.hidden).toBe(false)
-    expect(host.querySelector('svg.component-diagram')).not.toBeNull()
-    expect(host.querySelectorAll('.component-node')).toHaveLength(5)
+    expect(host.querySelectorAll('[data-show-in-sequence]')).toHaveLength(1)
     expect(document.querySelector<HTMLElement>('.json-row')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(true)
     expect(document.querySelector<HTMLElement>('#inspector-pre')!.hidden).toBe(true)
-    // Three callees side by side need more than the narrow column; the saved width stays put.
-    const widened = Number.parseInt(
-      document.querySelector<HTMLElement>('#shell')!.style.getPropertyValue('--inspector-w'),
-    )
-    expect(widened).toBeGreaterThan(INSPECTOR_NARROW_PX)
-    expect(sessionStorage.getItem(INSPECTOR_WIDTH_KEY)).toBeNull()
 
     controller.openMessage('s', message())
     expect(host.hidden).toBe(true)
@@ -229,9 +211,9 @@ describe('inspector', () => {
     expect(document.querySelector<HTMLElement>('#inspector-copy')!.hidden).toBe(false)
     expect(document.querySelector('#shell')!.getAttribute('style')).toContain(`${INSPECTOR_NARROW_PX}px`)
 
-    controller.openComponents('s', graph, 'Wide scenario')
+    controller.openLink('s', graph, 0, 'Wide scenario')
     controller.close()
-    expect(closed).toEqual(['components'])
+    expect(closed).toEqual(['link'])
   })
 
   it('opens from a click into a non-modal panel and shows json after the payload loads', async () => {

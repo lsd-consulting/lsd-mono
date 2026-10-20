@@ -3,7 +3,8 @@
  * Hash only: file:// pages cannot rely on the History API or a server.
  *
  * Forms:
- * - `#scenario=<scenarioId>`: that scenario is shown.
+ * - `#scenario=<scenarioId>`: that scenario is shown. `&view=components` after it shows its
+ *   Components view (#105); without it, Sequence.
  * - `#msg=<scenarioId>/<messageId>`: that scenario is shown and the message is open
  *   in the side panel.
  * - On the index page, either form follows `#report=<reportId>&`, naming the report
@@ -19,23 +20,25 @@ export interface HashRef {
   scenarioId: string
   /** Set when a message is open. */
   messageId?: string
+  /** The Components view is shown (#105). Never with a message, which opens in Sequence. */
+  view?: 'components'
 }
 
 const MESSAGE = '#msg='
 const SCENARIO = '#scenario='
 const REPORT = '#report='
+const COMPONENTS_VIEW = '&view=components'
 
 /** The hash for a scenario, or for an open message in it (includes the leading #). */
 export function reportHash(ref: HashRef): string {
   if (ref.reportId !== undefined) {
     const report = `${REPORT}${encodeId(ref.reportId)}`
     return ref.scenarioId
-      ? `${report}&${reportHash({ scenarioId: ref.scenarioId, messageId: ref.messageId }).slice(1)}`
+      ? `${report}&${reportHash({ scenarioId: ref.scenarioId, messageId: ref.messageId, view: ref.view }).slice(1)}`
       : report
   }
-  return ref.messageId
-    ? `${MESSAGE}${encodeId(ref.scenarioId)}/${encodeId(ref.messageId)}`
-    : `${SCENARIO}${encodeId(ref.scenarioId)}`
+  if (ref.messageId) return `${MESSAGE}${encodeId(ref.scenarioId)}/${encodeId(ref.messageId)}`
+  return `${SCENARIO}${encodeId(ref.scenarioId)}${ref.view === 'components' ? COMPONENTS_VIEW : ''}`
 }
 
 /** encodeURIComponent throws on a lone surrogate; such an id gets U+FFFD in its place. */
@@ -69,8 +72,12 @@ export function parseReportHash(hash: string): HashRef | null {
     return rest && rest.reportId === undefined ? { reportId, ...rest } : null
   }
   if (raw.startsWith(SCENARIO)) {
-    const scenarioId = decodeId(raw.slice(SCENARIO.length))
-    return scenarioId ? { scenarioId } : null
+    // Ids are encoded, so a literal & can only start the view.
+    const rest = raw.slice(SCENARIO.length)
+    const components = rest.endsWith(COMPONENTS_VIEW)
+    const scenarioId = decodeId(components ? rest.slice(0, -COMPONENTS_VIEW.length) : rest)
+    if (!scenarioId) return null
+    return components ? { scenarioId, view: 'components' } : { scenarioId }
   }
   if (!raw.startsWith(MESSAGE)) return null
   const rest = raw.slice(MESSAGE.length)

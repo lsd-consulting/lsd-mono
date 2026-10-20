@@ -18,7 +18,7 @@ for (const closeWith of ['Escape', 'Close'] as const) {
     }
 
     // From the toolbar button, which sits below the first timing chip.
-    const toolbar = page.locator('.seq-toolbar [data-show-metrics]')
+    const toolbar = page.locator('.diagram-pane:not([hidden]) .seq-toolbar [data-show-metrics]')
     await toolbar.focus()
     await page.keyboard.press('Enter')
     await expect(page.locator('#inspector')).toBeVisible()

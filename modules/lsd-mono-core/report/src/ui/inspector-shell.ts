@@ -21,7 +21,7 @@ export interface PanelShellOptions {
 
 /** What the open panel shows, for the print copy in the scenario. */
 export interface PanelPrintView {
-  view: 'message' | 'components' | 'metrics' | 'error'
+  view: 'message' | 'link' | 'metrics' | 'error'
   title: string
   /** The panel's pills, already escaped. */
   metaHtml: string
@@ -33,7 +33,7 @@ export interface PanelPrintView {
 export interface PanelShellControl {
   /** For the views. */
   shell: PanelShell
-  graphHost: HTMLElement
+  linkHost: HTMLElement
   metricsHost: HTMLElement
   close: () => void
   isOpen: () => boolean
@@ -137,7 +137,7 @@ export function bindPanelShell(doc: Document, options: PanelShellOptions): Panel
 
   return {
     shell,
-    graphHost: body.graphHost,
+    linkHost: body.linkHost,
     metricsHost: body.metricsHost,
     close,
     isOpen: () => !panel.hidden,
@@ -165,19 +165,19 @@ function panelBody(doc: Document) {
   const pre = doc.querySelector<HTMLElement>('#inspector-pre')!
   const jsonRow = doc.querySelector<HTMLElement>('.json-row')!
   const copy = doc.querySelector<HTMLButtonElement>('#inspector-copy')!
-  const graphHost = doc.querySelector<HTMLElement>('#inspector-graph')!
+  const linkHost = doc.querySelector<HTMLElement>('#inspector-link')!
   const metricsHost = doc.querySelector<HTMLElement>('#inspector-metrics')!
 
   /** Component diagram and metrics views. Only one is in the panel at a time. */
   function clearViews(): void {
-    for (const host of [graphHost, metricsHost]) {
+    for (const host of [linkHost, metricsHost]) {
       host.hidden = true
       host.replaceChildren()
     }
   }
 
   return {
-    graphHost,
+    linkHost,
     metricsHost,
     forMessage(): void {
       expandBtn.hidden = false

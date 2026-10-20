@@ -4,23 +4,25 @@ import type { Report } from '../src/types'
 import { seriousViolations } from './ux-helpers'
 import { openReport } from './open-report'
 
-// #66: on a phone the component diagram used to shrink to the panel, so the example report's
-// 11px names drew at 7-8px. Below the stacked-panel width it keeps its natural size and scrolls
-// sideways in its own box, opens with its top row centred, and marks each edge with more past it.
+// #66, kept by the Components view (#105): on a phone the component diagram keeps its natural
+// size, so the example report's 11px names stay 11px, and scrolls sideways in its own box. It
+// opens with its top row centred and marks each edge with more past it.
 
 /** The live example report's first scenario (14 components), as kitchenSinkSample writes it. */
 const example = JSON.parse(readFileSync(new URL('./example-components.json', import.meta.url), 'utf8')) as Report
 
 async function openComponents(page: Page, report: Report | null = example): Promise<void> {
   await openReport(page, report ? { report } : {})
-  await page.locator('[data-show-components]').first().click()
-  await expect(page.locator('#inspector-graph .component-diagram')).toBeVisible()
+  await page.getByRole('tab', { name: 'Components' }).click()
+  await expect(page.locator('.comp-scroll .component-diagram')).toBeVisible()
+  // The top row is centred the first time the view has a width, before the next frame.
+  await page.evaluate(() => new Promise(requestAnimationFrame))
 }
 
 function drawing(page: Page) {
   return page.evaluate(() => {
-    const svg = document.querySelector<SVGSVGElement>('#inspector-graph .component-diagram')!
-    const scroller = svg.closest<HTMLElement>('.component-scroll')!
+    const svg = document.querySelector<SVGSVGElement>('.comp-scroll .component-diagram')!
+    const scroller = svg.closest<HTMLElement>('.comp-scroll')!
     const sizes = [...svg.querySelectorAll<SVGTextElement>('.component-node text')].map(
       (text) => Number.parseFloat(getComputedStyle(text).fontSize) * text.getScreenCTM()!.a,
     )
@@ -57,14 +59,13 @@ for (const name of ['iPhone 13', 'Pixel 7'] as const) {
       expect(first.moreRight, 'the right edge is marked while more lies there').toBe(true)
       expect(first.moreLeft, 'and the left edge, once scrolled').toBe(true)
       expect(first.pageOverflowX, 'nothing widens the page').toBeLessThanOrEqual(0)
-      await expect(page.locator('.component-links')).toContainText('Tap a link')
-      await page.locator('#inspector-graph').scrollIntoViewIfNeeded()
+      await page.locator('.comp-scroll').scrollIntoViewIfNeeded()
       if (process.env.LSD_SHOTS)
         await page.screenshot({ path: `${process.env.LSD_SHOTS}/q-66-${name.replace(/ /g, '-')}-example.png` })
 
-      await page.locator('.component-scroll').evaluate((el) => el.scrollTo({ left: el.scrollWidth }))
+      await page.locator('.comp-scroll').evaluate((el) => el.scrollTo({ left: el.scrollWidth }))
       await expect.poll(async () => (await drawing(page)).moreRight).toBe(false)
-      await page.locator('.component-scroll').evaluate((el) => el.scrollTo({ left: 0 }))
+      await page.locator('.comp-scroll').evaluate((el) => el.scrollTo({ left: 0 }))
       await expect.poll(async () => (await drawing(page)).moreLeft).toBe(false)
       expect(await seriousViolations(page)).toEqual([])
     })
@@ -79,15 +80,15 @@ test.describe('forced colours on a phone', () => {
     await page.emulateMedia({ forcedColors: 'active' })
     await openComponents(page)
     const edges = () =>
-      page.locator('.component-scroll').evaluate((el) => {
+      page.locator('.comp-scroll').evaluate((el) => {
         const style = getComputedStyle(el)
         return { right: style.borderRightStyle, left: style.borderLeftStyle, width: style.borderRightWidth }
       })
     expect(await edges()).toEqual({ right: 'dashed', left: 'dashed', width: '3px' })
-    await page.locator('#inspector-graph').scrollIntoViewIfNeeded()
+    await page.locator('.comp-scroll').scrollIntoViewIfNeeded()
     if (process.env.LSD_SHOTS)
       await page.screenshot({ path: `${process.env.LSD_SHOTS}/q-66-iPhone-13-forced-colours.png` })
-    await page.locator('.component-scroll').evaluate((el) => el.scrollTo({ left: el.scrollWidth }))
+    await page.locator('.comp-scroll').evaluate((el) => el.scrollTo({ left: el.scrollWidth }))
     await expect.poll(async () => (await edges()).right).toBe('solid')
   })
 })
@@ -97,13 +98,13 @@ test('a link that takes focus is scrolled into view, and the drawing is a focusa
   const context = await browser.newContext({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
   const page = await context.newPage()
   await openComponents(page)
-  const scroller = page.locator('.component-scroll')
+  const scroller = page.locator('.comp-scroll')
   await expect(scroller).toHaveAttribute('role', 'region')
   await expect(scroller).toHaveAttribute('tabindex', '0')
-  const last = page.locator('.component-scroll .edge-group').last()
+  const last = page.locator('.comp-scroll .edge-group').last()
   await last.focus()
   const inView = await page.evaluate(() => {
-    const box = document.querySelector('.component-scroll')!.getBoundingClientRect()
+    const box = document.querySelector('.comp-scroll')!.getBoundingClientRect()
     const link = document.activeElement!.getBoundingClientRect()
     return link.right > box.left && link.left < box.right
   })
@@ -111,26 +112,26 @@ test('a link that takes focus is scrolled into view, and the drawing is a focusa
   await context.close()
 })
 
-test('on a desktop panel the example component diagram still fits without scrolling or a marked edge', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 800 })
+test('at 1440 the example component diagram opens at its natural size, so names stay 11px (#91)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
   await openComponents(page)
   const shown = await drawing(page)
-  expect(shown.overflowX).toBeLessThanOrEqual(0)
-  expect(shown.moreRight).toBe(false)
-  expect(shown.moreLeft).toBe(false)
-  // Nothing to scroll, so no empty tab stop before the links.
-  await expect(page.locator('.component-scroll')).not.toHaveAttribute('tabindex')
-  await expect(page.locator('.component-scroll')).not.toHaveAttribute('role')
-  await expect(page.locator('.component-links')).toContainText('Hover over a link')
-  if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/q-66-1280-example.png` })
+  // Drawn at 1091 px, not shrunk to its box as the side panel did (6.9 px names).
+  expect(shown.smallest).toBeGreaterThanOrEqual(11)
+  expect(shown.drawnWidth).toBe(1091)
+  expect(shown.topRowInView).toBe(true)
+  expect(shown.pageOverflowX).toBeLessThanOrEqual(0)
+  if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/q-105-1440-example.png` })
 })
 
-test('on a desktop panel the dev sample still fits with 11px names', async ({ page }) => {
+test('at 1280 the dev sample fits with 11px names, without a scroll cue or an empty tab stop', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await openComponents(page, null)
   const shown = await drawing(page)
   expect(shown.overflowX).toBeLessThanOrEqual(0)
   expect(shown.smallest).toBeGreaterThanOrEqual(11)
+  expect(shown.moreRight).toBe(false)
+  expect(shown.moreLeft).toBe(false)
+  await expect(page.locator('.comp-scroll')).not.toHaveAttribute('tabindex')
+  await expect(page.locator('.comp-scroll')).not.toHaveAttribute('role')
 })

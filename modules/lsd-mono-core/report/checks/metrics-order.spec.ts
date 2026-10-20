@@ -17,7 +17,8 @@ const ORDER = ['Timing and metrics', 'Time by participant', 'Swim lanes', 'Water
 const shots = process.env.LSD_SHOTS
 
 const card = (page: Page, id: string) => page.locator(`#card-${id}`)
-const metricsButton = (page: Page, id: string) => card(page, id).locator('.seq-toolbar [data-show-metrics]')
+const metricsButton = (page: Page, id: string) =>
+  card(page, id).locator('.diagram-pane:not([hidden]) .seq-toolbar [data-show-metrics]')
 const chip = (page: Page, id: string, key: string) =>
   card(page, id).locator('.timing-chip', { has: page.locator('.k', { hasText: key }) })
 const details = (page: Page) => page.locator('#inspector details.pair-accuracy-more')

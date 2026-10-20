@@ -3,6 +3,7 @@
 @import "./diagram-drawing.css";
 @import "./diagram-toolbar.css";
 @import "./zoom.css";
+@import "./component-view.css";
 @import "./find.css";
 @import "./participant-filter.css";
 @import "./diagram-media.css";

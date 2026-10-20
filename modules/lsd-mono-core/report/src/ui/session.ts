@@ -1,6 +1,7 @@
 import type { Report } from '../types'
 import type { HelpDialog } from './help-dialog'
 import type { InspectorController, InspectorInvoker } from './inspector'
+import type { DiagramViewName } from '../lib/diagram-view-names'
 
 /**
  * The report page's mutable state, in one place (as `diagramState` is for diagrams). app/context.ts
@@ -20,7 +21,9 @@ export interface Session {
   switchingScenario: boolean
   /** False until the URL hash has been read, so the first render cannot overwrite a #msg= link. */
   booted: boolean
-  /** Arrow, Metrics or Component diagram button that opened the inspector. Close returns focus here. */
+  /** The diagram view shown, Sequence or Components (#105). It sticks across scenarios. */
+  diagramView: DiagramViewName
+  /** Arrow, Metrics button, timing chip or component link that opened the inspector. Close returns focus here. */
   invoker: InspectorInvoker | null
   inspector: InspectorController | null
   /** The keyboard help (#112). */
@@ -41,6 +44,7 @@ export function createSession(report: Report): Session {
     reportPayloadsSrc: null,
     loadingReportId: null,
     renderedId: null,
+    diagramView: 'sequence',
     switchingScenario: false,
     booted: false,
     invoker: null,

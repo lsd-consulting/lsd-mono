@@ -1,17 +1,15 @@
-// The side panel's views (message, error, component diagram, metrics), their payloads, and their print copies.
+// The side panel's views (message, error, component link, metrics), their payloads, and their print copies.
 import { usage } from '../lib/usage-ping'
 import { sampleReport } from '../data/sample-report'
 import type { MessageEvent, Scenario } from '../types'
 import { loadExternalPayloads, loadPayloadsFrom, payloadKey } from '../lib/payloads'
 import { placePrintMetrics, printMetricsSection } from '../ui/metrics'
 import { pairAccuracySectionHtml, timingPanelHtml } from '../ui/timing'
-import { placePrintPanel, printComponentsSection, printMessageSection } from '../ui/print-panel'
-import { renderComponentDiagram } from '../lib/component-diagram'
+import { placePrintPanel, printMessageSection } from '../ui/print-panel'
 import { diagramView, findMessage } from '../lib/sequence-diagram'
 import { messageHasPayload } from '../lib/diagram-a11y'
 import { foldQuery } from '../lib/payload-search'
 import type { OpenMessageOptions } from '../ui/inspector'
-import { componentGraph } from '../lib/component-graph'
 import { writeHash, writeScenarioHash } from './url-hash'
 import { index, session } from './context'
 export function scenarioFrom(node: Element): Scenario | undefined {
@@ -37,7 +35,7 @@ export function openError(scenario: Scenario): void {
 
 /**
  * Everything that follows what the side panel shows: its print copies (the panel itself
- * never prints) and the pressed state of the toolbar's Metrics and Component diagram buttons.
+ * never prints) and the pressed state of the toolbar's Metrics buttons.
  */
 export function syncWithPanel(): void {
   syncPrintMetrics()
@@ -45,19 +43,17 @@ export function syncWithPanel(): void {
   syncPanelButtons()
 }
 
-/** aria-expanded on the toolbar's Metrics and Component diagram buttons: true while that view is open for that scenario. */
+/** aria-expanded on the toolbars' Metrics buttons (one per view): true while Metrics is open for that scenario. */
 function syncPanelButtons(): void {
   const open = session.inspector?.isOpen() ? session.invoker : null
   for (const button of document.querySelectorAll<HTMLButtonElement>('.panel-controls .panel-btn')) {
-    const kind = button.dataset.showMetrics !== undefined ? 'metrics' : 'components'
-    const scenarioId = button.dataset.showMetrics ?? button.dataset.showComponents
-    const expanded = open?.kind === kind && open.scenarioId === scenarioId
+    const expanded = open?.kind === 'metrics' && open.scenarioId === button.dataset.showMetrics
     button.setAttribute('aria-expanded', String(expanded))
   }
 }
 
 /**
- * The message JSON, error, or component diagram open in the side panel prints in
+ * The message JSON, error, or component link open in the side panel prints in
  * its scenario, after the sequence diagram. A closed panel prints nothing.
  */
 export function syncPrintPanel(): void {
@@ -67,11 +63,6 @@ export function syncPrintPanel(): void {
     : undefined
   if (!view || !scenario || view.view === 'metrics') {
     placePrintPanel(document, null)
-    return
-  }
-  if (view.view === 'components') {
-    const drawn = renderComponentDiagram(componentGraph(scenario), scenario.title)
-    placePrintPanel(document, { scenarioId: scenario.id, html: printComponentsSection(view, drawn.svg, drawn.width) })
     return
   }
   placePrintPanel(document, { scenarioId: scenario.id, html: printMessageSection(view) })
@@ -93,16 +84,6 @@ function syncPrintMetrics(): void {
         }
       : null,
   )
-}
-
-export function openComponents(scenario: Scenario): void {
-  if (!session.inspector) return
-  session.panelScenarioId = scenario.id
-  session.invoker = { scenarioId: scenario.id, kind: 'components' }
-  writeScenarioHash()
-  session.inspector.openComponents(scenario.id, componentGraph(scenario), scenario.title)
-  syncWithPanel()
-  usage.ping('components-open')
 }
 
 /** Metrics for [scenario], at the top, or at [section] (a `data-panel-section`, e.g. from the Accuracy chip). */

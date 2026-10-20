@@ -14,6 +14,14 @@ describe('reportHash / parseReportHash', () => {
     expect(parseReportHash(hash)).toEqual({ scenarioId: 'sc-happy', messageId: 'm1' })
   })
 
+  it('round-trips the Components view, which a message drops (#105)', () => {
+    const hash = reportHash({ scenarioId: 'a&b', view: 'components' })
+    expect(hash).toBe('#scenario=a%26b&view=components')
+    expect(parseReportHash(hash)).toEqual({ scenarioId: 'a&b', view: 'components' })
+    expect(parseReportHash('#scenario=a%26b')).toEqual({ scenarioId: 'a&b' })
+    expect(reportHash({ scenarioId: 's', messageId: 'm', view: 'components' })).toBe('#msg=s/m')
+  })
+
   it('encodes special characters in either id', () => {
     expect(reportHash({ scenarioId: 'sc/a', messageId: 'm 2' })).toBe('#msg=sc%2Fa/m%202')
     expect(parseReportHash('#msg=sc%2Fa/m%202')).toEqual({ scenarioId: 'sc/a', messageId: 'm 2' })

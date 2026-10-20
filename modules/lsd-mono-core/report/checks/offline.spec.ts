@@ -37,13 +37,20 @@ async function requestsWhile(page: Page, globals: Record<string, unknown>): Prom
   expect(
     await page.evaluate(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family)),
   ).toEqual(expect.arrayContaining(['Inter', 'JetBrains Mono']))
-  for (const button of ['[data-show-metrics]', '[data-show-components]']) {
-    const target = page.locator(button).first()
-    if (await target.isEnabled()) {
-      await target.click()
-      await expect(page.locator('#inspector')).toBeVisible()
-      await page.keyboard.press('Escape')
-    }
+  const metrics = page.locator('[data-show-metrics]').first()
+  if (await metrics.isEnabled()) {
+    await metrics.click()
+    await expect(page.locator('#inspector')).toBeVisible()
+    await page.keyboard.press('Escape')
+  }
+  // The Components view, and a link's panel, when the report has one.
+  const components = page.locator('#diagram-tab-components')
+  if ((await components.count()) && (await components.getAttribute('aria-disabled')) !== 'true') {
+    await components.click()
+    await page.locator('.comp-scroll .edge-group').first().dispatchEvent('click')
+    await expect(page.locator('#inspector')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.locator('#diagram-tab-sequence').click()
   }
   await page.locator('button.msg-open').first().click()
   await expect(page.locator('#inspector')).toBeVisible()

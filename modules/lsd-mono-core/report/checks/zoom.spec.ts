@@ -406,14 +406,13 @@ test('in a card beside the panel (under 880px) the toolbar keeps one row, Overvi
   expect((await toolbar.boundingBox())!.width).toBeLessThan(880)
   await expect(toolbar.locator('.zoom-overview-label')).toBeHidden()
   await expect(toolbar.getByRole('button', { name: 'Overview' })).toBeVisible()
-  // Zoom, Find and the panel buttons share one row, with room to spare, whatever the platform's
+  // Zoom, Find and Metrics share one row, with room to spare, whatever the platform's
   // fonts: the row's controls end well inside the toolbar (CI draws on Linux, wider than macOS).
   const tops = await Promise.all(
     [
       toolbar.getByRole('button', { name: 'Zoom in' }),
       toolbar.locator('[data-diagram-find]'),
       toolbar.getByRole('button', { name: /Metrics/ }),
-      toolbar.getByRole('button', { name: /Component diagram/ }),
     ].map(async (control) => (await control.boundingBox())!),
   )
   for (const box of tops) expect(Math.abs(box.y + box.height / 2 - (tops[0].y + tops[0].height / 2))).toBeLessThan(8)

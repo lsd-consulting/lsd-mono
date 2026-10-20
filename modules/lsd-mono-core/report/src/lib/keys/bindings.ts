@@ -239,6 +239,13 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
       noMods(e) &&
       (e.shiftKey ? e.key === 'ArrowLeft' || e.key === 'ArrowRight' : e.key === 'Home' || e.key === 'End'),
   },
+  // The Sequence | Components tabs (#105) take their keys in diagram-views.ts.
+  {
+    id: 'view-tabs',
+    scope: 'diagram',
+    line: 5,
+    help: 'On the Sequence and Components tabs, <kbd>←</kbd>/<kbd>→</kbd> move between them, <kbd>Enter</kbd> shows that view',
+  },
 
   // The page.
   {

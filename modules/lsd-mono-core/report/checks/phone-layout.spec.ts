@@ -62,20 +62,23 @@ for (const [phone, device] of Object.entries(PHONES)) {
       expect(await shownNavItems(page)).toHaveLength(1)
     })
 
-    test('Metrics and Component diagram share a toolbar row inside the card, as 44px touch targets', async ({
+    test('Metrics sits in the toolbar and the two view tabs share a row inside the card, as 44px touch targets', async ({
       page,
     }) => {
       await open(page, 'report')
-      const toolbar = page.locator('.seq-toolbar')
+      const toolbar = page.locator('.seq-toolbar').first()
       const bar = (await toolbar.boundingBox())!
       expect(await toolbar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0)
+      const metrics = (await toolbar.getByRole('button', { name: 'Metrics', exact: true }).boundingBox())!
+      expect(metrics.height).toBeGreaterThanOrEqual(44)
+      expect(metrics.x + metrics.width).toBeLessThanOrEqual(bar.x + bar.width + 0.5)
+      const card = (await page.locator('.diagram-panel').first().boundingBox())!
       const boxes = []
-      for (const name of ['Metrics', 'Component diagram']) {
-        const button = toolbar.getByRole('button', { name, exact: true })
-        const box = (await button.boundingBox())!
+      for (const name of ['Sequence', 'Components']) {
+        const box = (await page.getByRole('tab', { name, exact: true }).boundingBox())!
         expect(box.height, name).toBeGreaterThanOrEqual(44)
-        expect(box.x, name).toBeGreaterThanOrEqual(bar.x)
-        expect(box.x + box.width, name).toBeLessThanOrEqual(bar.x + bar.width + 0.5)
+        expect(box.x, name).toBeGreaterThanOrEqual(card.x)
+        expect(box.x + box.width, name).toBeLessThanOrEqual(card.x + card.width + 0.5)
         boxes.push(box)
       }
       expect(Math.abs(boxes[0].y - boxes[1].y)).toBeLessThan(1)

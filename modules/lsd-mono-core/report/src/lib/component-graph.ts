@@ -26,6 +26,8 @@ export interface ComponentInteraction {
   label: string
   type: string
   count: number
+  /** The messages folded into it, in order: "Show in sequence" goes to the first (#105). */
+  messageIds?: string[]
 }
 
 export interface ComponentEdge {
@@ -83,8 +85,10 @@ export function componentGraph(scenario: Pick<Scenario, 'participants' | 'events
     const label = event.label.trim()
     if (!acc.label && label) acc.label = label
     const same = acc.interactions.find((item) => item.label === label && item.type === event.type)
-    if (same) same.count += 1
-    else acc.interactions.push({ label, type: event.type, count: 1 })
+    if (same) {
+      same.count += 1
+      same.messageIds!.push(event.id)
+    } else acc.interactions.push({ label, type: event.type, count: 1, messageIds: [event.id] })
     for (const id of [from, to]) {
       if (seen.has(id)) continue
       seen.add(id)

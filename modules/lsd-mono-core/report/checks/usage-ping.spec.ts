@@ -64,15 +64,15 @@ for (const failWith of ['blockedbyclient', 'internetdisconnected']) {
     expect(off.pings).toEqual([])
     await quiet.close()
 
-    const metrics = page.locator('[data-show-metrics]').first()
-    const components = page.locator('[data-show-components]').first()
+    const metrics = page.locator('.diagram-pane:not([hidden]) [data-show-metrics]').first()
     for (let i = 0; i < 2; i++) {
       await metrics.click()
       await expect(page.locator('#inspector')).toBeVisible()
       await page.keyboard.press('Escape')
-      await components.click()
-      await expect(page.locator('#inspector')).toBeVisible()
-      await page.keyboard.press('Escape')
+      // Showing the Components view is the event, once per page.
+      await page.locator('#diagram-tab-components').click()
+      await expect(page.locator('.comp-scroll')).toBeVisible()
+      await page.locator('#diagram-tab-sequence').click()
     }
     await expect
       .poll(() => files(opened.pings))
@@ -90,8 +90,10 @@ for (const [what, data, path] of [
   test(`usage ping: no request at all when ${what}`, async ({ page }) => {
     const opened = await open(page, data, path)
     await page.locator('[data-show-metrics]').first().click()
-    await page.locator('[data-show-components]').first().click()
     await expect(page.locator('#inspector')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.locator('#diagram-tab-components').click()
+    await expect(page.locator('.comp-scroll')).toBeVisible()
     // Give a stray request time to show up.
     await page.waitForTimeout(200)
     expect(opened.pings).toEqual([])

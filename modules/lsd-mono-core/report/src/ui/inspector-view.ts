@@ -1,14 +1,16 @@
 // What the side panel's shell (inspector.ts) and its views (#103) share: each view (a message,
-// an error, the component diagram, metrics) opens through the shell, which owns sizing, opening,
+// an error, a component link, metrics) opens through the shell, which owns sizing, opening,
 // Escape and the close button, and says where focus goes when the panel closes on it.
 import type { JsonBody } from './inspector-json'
 import type { InspectorWidth } from './inspector-width'
 
 export interface InspectorInvoker {
   scenarioId: string
-  /** Set for a message. Absent when the panel is showing the component diagram or metrics. */
+  /** Set for a message. Absent when the panel is showing a component link or metrics. */
   messageId?: string
-  kind?: 'message' | 'components' | 'metrics'
+  kind?: 'message' | 'link' | 'metrics'
+  /** A link of the Components view: its index in the component graph (#105). */
+  edge?: number
   /** Metrics opened from a timing chip: its place in the strip, so Close gives it focus back. */
   chip?: number | null
 }
