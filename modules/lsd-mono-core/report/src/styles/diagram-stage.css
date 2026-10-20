@@ -1,0 +1,146 @@
+/* The diagram's frame: the stage, the sticky scrollport and participant header, the More lanes
+   cue and the buttons over the arrows. */
+.seq-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* The participant menu is placed inside the diagram. */
+  position: relative;
+}
+.seq-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* The stage is as tall as the whole drawing (page-scroll.ts sets its height), so the page
+     scrolls through it. The scrollport sticks under the top bar, at most one
+     screen tall, and the page position drives the scrollport's scrollTop. */
+  gap: 0;
+  align-items: start;
+  /* Not a scroll container: the sticky scrollport sticks to the page. */
+  overflow: visible;
+}
+.section-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px;
+}
+.section-jump button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.section-jump button:hover,
+.section-jump button:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  background: var(--accent-soft);
+}
+.section-jump button:focus-visible {
+  box-shadow: var(--focus);
+}
+.seq-scroll {
+  /* Its own height up to one screen. Vertical scroll comes from the page (page-scroll.ts);
+     horizontal scroll stays here, for diagrams wider than the panel. */
+  max-height: calc(100dvh - var(--topbar-h, 0px) - var(--seq-toolbar-h, 0px) - var(--seq-below, 0px));
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  position: sticky;
+  top: calc(var(--topbar-h, 0px) + var(--seq-toolbar-h, 0px));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  /* Sticky participant header. Focus and scroll-into-view stay below it. */
+  scroll-padding-top: var(--seq-header-h, 56px);
+  scroll-padding-bottom: 12px;
+}
+.seq-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.seq-spacer {
+  position: relative;
+}
+/* Print-only strips of a wide diagram (print-slices.ts). */
+.print-slices {
+  display: none;
+}
+/* Fit stops at a readable scale, so a wide diagram runs past the right edge. This says so while
+   lanes remain there (viewport.ts sets data-more-right), and the edge is shaded. */
+.seq-more {
+  position: sticky;
+  left: 0;
+  top: var(--seq-header-h, 56px);
+  width: 100%;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+  display: none;
+}
+.seq-more-btn {
+  all: unset;
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  pointer-events: auto;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.seq-more-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.seq-more span {
+  display: block;
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+.seq-scroll[data-more-right] {
+  box-shadow: inset -14px 0 12px -12px color-mix(in oklab, var(--text) 35%, transparent);
+}
+.seq-scroll[data-more-right] .seq-more {
+  display: block;
+}
+.seq-window {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.msg-open {
+  position: absolute;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  scroll-margin-top: calc(var(--seq-header-h, 56px) + 4px);
+  scroll-margin-bottom: 8px;
+}
+.msg-open:hover,
+.msg-open:focus-visible {
+  background: var(--accent-soft);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.seq-header-svg,
+.seq-svg {
+  display: block;
+  font-family: var(--font);
+}

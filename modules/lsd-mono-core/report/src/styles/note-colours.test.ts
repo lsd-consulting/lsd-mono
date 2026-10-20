@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { readAppCss } from './read-css.test-util'
+import { readAppCss, readDiagramCss } from './read-css.test-util'
 
 const css = (name: string) => readFileSync(new URL(`./${name}`, import.meta.url), 'utf8')
-const diagramCss = css('diagram.css')
+const diagramCss = readDiagramCss()
 const tokensCss = css('tokens.css')
 const appCss = readAppCss()
 

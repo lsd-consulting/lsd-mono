@@ -1,0 +1,118 @@
+/* Payloads in Find: the arrows' {} marker at the field's right end, so the toolbar is no wider.
+   Pressed (searched) it is boxed and filled; off it is struck through, so the state shows without colour. */
+.find-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.find-field:has(.find-payloads) input {
+  width: 12rem;
+  padding-right: 32px;
+}
+.seq-toolbar .find-payloads {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  min-width: 28px;
+  padding: 0 4px;
+  border-radius: 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: line-through;
+}
+.seq-toolbar .find-payloads[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+@media (forced-colors: active) {
+  .seq-toolbar .find-payloads {
+    border-color: transparent;
+    color: ButtonText;
+  }
+  .seq-toolbar .find-payloads[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+}
+.diagram-find-count,
+.diagram-find-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+/* Find: a highlighter band behind each matching label (a wide stroke painted under the
+   glyphs), a stronger band and a thicker, glowing arrow on the current match, and an outlined
+   card for a matching note. A match in the payload bands the {} marker instead, so where the
+   match is shows without colour. The buttons over the arrows say "search match" (and "in
+   payload") for screen readers. */
+.search-in-label .msg-label,
+.search-in-label .msg-label tspan:not(.msg-payload),
+.search-in-payload .msg-payload {
+  fill: var(--find-hit-text);
+  stroke: var(--find-hit-bg);
+  stroke-width: 7px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+  font-weight: 750;
+}
+.search-in-payload .msg-payload {
+  font-weight: 800;
+}
+/* The marker sits inside the label's text, so a label-only match must not pass it the band. */
+.search-in-label:not(.search-in-payload) .msg-payload {
+  stroke: none;
+}
+.search-current.search-in-label .msg-label,
+.search-current.search-in-label .msg-label tspan:not(.msg-payload),
+.search-current.search-in-payload .msg-payload {
+  fill: var(--find-current-text);
+  stroke: var(--find-current-bg);
+  stroke-width: 9px;
+  font-weight: 800;
+}
+.search-current .msg-path {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 3px var(--find-ring));
+}
+.search-hit .note-card {
+  stroke: var(--find-ring);
+  stroke-width: 2;
+}
+.search-hit .note-text {
+  font-weight: 750;
+}
+.search-current .note-card {
+  fill: var(--find-hit-bg);
+  stroke-width: 3.5;
+}
+.search-current .note-text {
+  fill: var(--find-hit-text);
+}
+/* High contrast: the current match takes the system highlight, so it stays distinct from other matches. */
+@media (forced-colors: active) {
+  .search-current.search-in-label .msg-label,
+  .search-current.search-in-label .msg-label tspan:not(.msg-payload),
+  .search-current.search-in-payload .msg-payload,
+  .search-current .note-text {
+    fill: HighlightText;
+    stroke: Highlight;
+  }
+  .search-in-payload:not(.search-current) .msg-payload {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+  .search-current .msg-path,
+  .search-current .note-card {
+    stroke: Highlight;
+  }
+}

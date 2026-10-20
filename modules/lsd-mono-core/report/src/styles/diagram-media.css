@@ -1,0 +1,126 @@
+/* Reduced motion, print and the phone layout for the diagram. Last, so they win. */
+/* Zoom scales the drawing. It does not reflow the sequence into one column. */
+@media (prefers-reduced-motion: reduce) {
+  .seq-scroll {
+    scroll-behavior: auto;
+  }
+}
+
+@media print {
+  .seq-stage {
+    display: block;
+    overflow: visible;
+    max-height: none;
+    height: auto !important;
+  }
+  .seq-scroll,
+  .seq-toolbar {
+    position: static;
+  }
+  /* Full page width: the header and the whole drawing (every row is painted for
+     print) scale with their viewBox. Small diagrams grow at most 1.5x
+     (--seq-print-max, set from the drawing width). Arrow hit targets are screen only. */
+  .seq-sticky-header,
+  .seq-spacer {
+    width: 100% !important;
+    max-width: var(--seq-print-max, 100%);
+    height: auto !important;
+  }
+  .seq-window {
+    position: static;
+    transform: none !important;
+  }
+  .seq-header-svg,
+  .seq-svg {
+    width: 100%;
+    height: auto;
+  }
+  /* "Open the payload" means nothing on paper. */
+  .payload-legend,
+  .msg-payload {
+    display: none;
+  }
+  .msg-places,
+  .participant-heads,
+  .participant-menu {
+    display: none;
+  }
+}
+
+/* On a phone the toolbar wraps onto several rows. Find and its step buttons go on the last
+   row, and only that row stays stuck under the top bar: the rows above it slide away with the
+   page (--seq-toolbar-lead, set by page-scroll.ts), so the diagram keeps the screen. */
+@media (max-width: 560px) {
+  /* Section links wrap onto rows rather than scrolling sideways: at 320px (400% zoom) none is out
+     of sight, and a focused one is always fully visible. */
+  .section-jump button {
+    white-space: normal;
+    max-width: 100%;
+    text-align: left;
+  }
+  .seq-toolbar {
+    top: calc(var(--topbar-h, 0px) - var(--seq-toolbar-lead, 0px));
+  }
+  /* The rows above Find are stuck out of sight under the top bar. When the keyboard takes focus to
+     one of their controls (Shift+Tab from Find), the whole toolbar drops below the bar so the
+     control can be seen (WCAG 2.4.11), and goes back when focus leaves. */
+  .seq-toolbar:has(.zoom-controls :focus-visible, .participant-filter :focus-visible, .panel-controls :focus-visible) {
+    top: var(--topbar-h, 0px);
+  }
+  .seq-toolbar .zoom-controls {
+    order: 1;
+    flex-wrap: nowrap;
+  }
+  /* Icon only: the button keeps its name (aria-label) and tooltip. */
+  .seq-toolbar .zoom-overview-label {
+    display: none;
+  }
+  .seq-toolbar .participant-filter {
+    order: 2;
+  }
+  /* Its own row, the two buttons sharing it: easy to find and to hit. */
+  .seq-toolbar .panel-controls {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .seq-toolbar .panel-btn {
+    flex: 1 1 auto;
+  }
+  .seq-toolbar .diagram-find {
+    order: 4;
+    flex-basis: calc(100% - 110px);
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+  /* The field names itself (placeholder and aria-label); the word only took a line. */
+  .seq-toolbar .diagram-find-label {
+    display: none;
+  }
+  .seq-toolbar .find-field {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .seq-toolbar .diagram-find input,
+  .seq-toolbar .find-field:has(.find-payloads) input {
+    width: 0;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .seq-toolbar .find-steps {
+    order: 5;
+  }
+  /* The count stays on one line, and leaves "N in payloads" to the bands on the arrows (screen
+     readers still hear it), so the field keeps its room. */
+  .seq-toolbar .diagram-find-count {
+    white-space: nowrap;
+  }
+  .diagram-find-count .find-count-payloads {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

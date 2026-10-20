@@ -1,0 +1,54 @@
+/* The toolbar above a diagram and its shared button style. Zoom, Find and the participant
+   filter have their own files. */
+.seq-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  padding: 0 12px;
+  /* Zoom and find stay in reach while the page scrolls through a tall diagram. The
+     scrollport sticks below it (--seq-toolbar-h, set by page-scroll.ts). */
+  position: sticky;
+  top: var(--topbar-h, 0px);
+  z-index: 3;
+  background: var(--surface);
+  padding-block: 6px;
+  /* A size container so the Overview button can drop its word when the row is tight. */
+  container: seq-toolbar / inline-size;
+}
+/* Up to 880px (a card beside the inspector) the toolbar's usual row only just fits, and fonts
+   differ by platform (Linux draws these labels about 8% wider than macOS). So Overview goes icon
+   only and the Find field drops its word, both keeping their names (aria-label, placeholder) and
+   Overview its tooltip, as the phone layout does: room to spare on Linux at 757px rather than
+   none, so Metrics and Component diagram keep their row. Below about 700px the row wraps as
+   before (and from 560px down the phone layout takes over). */
+@container seq-toolbar (max-width: 880px) {
+  .zoom-overview-label,
+  .diagram-find-label {
+    display: none;
+  }
+}
+.zoom-controls,
+.find-steps,
+.diagram-find {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.seq-toolbar button,
+.diagram-find input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.diagram-find input {
+  cursor: text;
+  min-width: 10rem;
+}

@@ -1,0 +1,58 @@
+/* Zoom (#94): − and + as icons, the level as a button that resets it, then Overview. */
+.zoom-controls {
+  gap: 4px;
+}
+.seq-toolbar .zoom-btn,
+.seq-toolbar .zoom-readout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 6px;
+}
+.seq-toolbar .zoom-readout {
+  min-width: 48px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.zoom-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.seq-toolbar .zoom-overview[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.seq-toolbar .zoom-controls [aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+@media (forced-colors: active) {
+  .seq-toolbar .zoom-controls [aria-disabled="true"] {
+    opacity: 1;
+    color: GrayText;
+    border-color: GrayText;
+  }
+  .seq-toolbar .zoom-overview[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+}
+/* Touch: 44 px targets (TOUCH_HIT_CSS), the four still on one row. */
+@media (pointer: coarse) {
+  .seq-toolbar .zoom-btn,
+  .seq-toolbar .zoom-readout {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .seq-toolbar .zoom-readout {
+    min-width: 56px;
+  }
+}

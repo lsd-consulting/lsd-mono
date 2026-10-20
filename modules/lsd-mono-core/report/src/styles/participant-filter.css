@@ -1,0 +1,175 @@
+/* Participant filter (#8): header buttons, the hidden chip and its popover, the menu. */
+.participant-heads {
+  position: absolute;
+  inset: 0;
+}
+.participant-head {
+  position: absolute;
+  top: 0;
+  /* Long-press opens the participant menu, not the browser's text callout. */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.participant-head-actions {
+  position: absolute;
+  top: 2px;
+  left: var(--pill-x, 0);
+  box-sizing: border-box;
+  width: 54px;
+  z-index: 1;
+  display: flex;
+  gap: 2px;
+  padding: 1px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-pop);
+  /* Out of sight until the header is hovered, focused from the keyboard, or tapped.
+     Still focusable: the header row is one tab stop. */
+  opacity: 0;
+  pointer-events: none;
+}
+.participant-heads[data-compact] .participant-head-actions {
+  top: calc(100% + 2px);
+}
+.participant-head:hover .participant-head-actions,
+.participant-head:has(:focus-visible) .participant-head-actions,
+.participant-head[data-revealed] .participant-head-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.participant-head:has(:focus-visible),
+.participant-head[data-revealed] {
+  z-index: 1;
+}
+.participant-head-actions button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.participant-head-actions button:hover,
+.participant-head-actions button:focus-visible {
+  background: var(--accent-soft);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Touch: 44 px targets (TOUCH_HIT_CSS); PILL_W_TOUCH in participant-filter.ts is this width. */
+@media (pointer: coarse) {
+  .participant-head-actions {
+    width: 94px;
+  }
+  .participant-head-actions button {
+    width: 44px;
+    height: 44px;
+  }
+}
+.participant-head-actions svg {
+  stroke: currentColor;
+  fill: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.participant-filter {
+  position: relative;
+}
+.participant-filter:empty {
+  display: none;
+}
+.seq-toolbar .hidden-chip {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.hidden-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  min-width: 14rem;
+  max-width: min(22rem, 80vw);
+  max-height: 18rem;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-pop);
+}
+.hidden-popover[hidden] {
+  display: none;
+}
+.hidden-popover ul {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.hidden-popover li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+}
+.hidden-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.participant-menu {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-pop);
+}
+.participant-menu[hidden] {
+  display: none;
+}
+.participant-menu [role="menuitem"] {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.participant-menu [role="menuitem"]:hover,
+.participant-menu [role="menuitem"]:focus-visible {
+  background: var(--accent-soft);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.participant-menu [aria-disabled="true"] {
+  color: var(--text-muted);
+  cursor: default;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

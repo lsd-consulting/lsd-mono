@@ -50,7 +50,7 @@ function pressedIn(doc: Document, header: HTMLElement): boolean {
 
 /** Drawn width of the Hide and More pill (two 24 px buttons, gap, padding, border). */
 export const PILL_W = 54
-/** The pill on a touch screen: two 44 px buttons (TOUCH_HIT_CSS), as diagram.css draws it there. */
+/** The pill on a touch screen: two 44 px buttons (TOUCH_HIT_CSS), as participant-filter.css draws it there (touch-sizes.test.ts keeps them in step). */
 export const PILL_W_TOUCH = 94
 
 function participantName(p: Participant): string {

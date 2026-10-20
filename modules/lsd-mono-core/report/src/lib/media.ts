@@ -24,7 +24,7 @@ export function isStacked(): boolean {
   return matches(`(max-width: ${STACKED_MAX_PX}px)`)
 }
 
-/** At and below this width the top bar and the diagram toolbar wrap, and only their last row sticks (app.css, diagram.css). */
+/** At and below this width the top bar and the diagram toolbar wrap, and only their last row sticks (narrow.css, diagram-media.css). */
 export const PHONE_MAX_PX = 560
 
 /** The phone layout. */

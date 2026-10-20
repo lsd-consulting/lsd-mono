@@ -1,0 +1,230 @@
+/* The drawing itself: lifelines, participants, activations, arrows and their labels, the payload
+   marker and its legend, notes, dividers, sections and delays. */
+.lifeline-line {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 5;
+}
+
+.participant-box {
+  --pc-ink: color-mix(in oklab, var(--pc, var(--accent)) calc(100% - var(--ink-black, 0%)), black);
+  filter: drop-shadow(0 2px 6px oklch(0 0 0 / 0.2));
+}
+.participant-shape {
+  fill: var(--surface);
+  stroke: var(--pc-ink);
+  stroke-width: 1.6;
+}
+.participant-actor {
+  fill: none;
+  stroke: var(--pc-ink);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.participant-actor circle {
+  fill: var(--surface);
+}
+.participant-mark {
+  fill: none;
+  stroke: var(--pc-ink);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+.participant-queue-back {
+  fill: color-mix(in oklab, var(--pc, var(--accent)) 22%, var(--surface));
+}
+.participant-label {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.activation {
+  fill: color-mix(in oklab, var(--pc, var(--accent)) 55%, var(--surface));
+  stroke: var(--pc, var(--accent));
+  stroke-width: 1;
+  opacity: 0.9;
+}
+
+.activation-coloured .activation {
+  stroke-dasharray: 2 1.5;
+}
+.activation-hatch {
+  pointer-events: none;
+}
+
+.message {
+  cursor: default;
+}
+.message.has-data {
+  cursor: pointer;
+}
+.message .msg-hit {
+  fill: transparent;
+  pointer-events: none;
+}
+/* Arrows and their tips take the producer's colour darkened for the page (--ink-black), so a pale
+   colour keeps 3:1 against the diagram. The colour comes in as --pc on the row or the marker. */
+.msg-path,
+.arrow-ink-stroke {
+  stroke: color-mix(in oklab, var(--pc, var(--accent)) calc(100% - var(--ink-black, 0%)), black);
+}
+.arrow-ink-fill {
+  fill: color-mix(in oklab, var(--pc, var(--accent)) calc(100% - var(--ink-black, 0%)), black);
+}
+.message.has-data:hover .msg-path,
+.message.has-data:focus-visible .msg-path {
+  filter: url(#softGlow);
+  stroke-width: 2.6;
+}
+.message.has-data:hover .msg-label,
+.message.has-data:focus-visible .msg-label {
+  fill: var(--accent-strong);
+}
+.message:focus-visible {
+  outline: none;
+}
+.message:focus-visible .msg-hit {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  fill: var(--accent-soft);
+}
+
+.msg-label {
+  fill: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 550;
+}
+.msg-dur {
+  fill: var(--text-faint);
+  font-size: 10px;
+  font-family: var(--mono);
+}
+/* A payload to open: braces in the accent colour, bold enough to read at small zoom. */
+.msg-payload {
+  fill: var(--payload-ink);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+/* Explains the marker, under the toolbar. */
+.payload-legend {
+  margin: 0;
+  padding: 2px 12px 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.payload-legend-key {
+  color: var(--payload-ink);
+  font-family: var(--mono);
+  font-weight: 700;
+  margin-right: 2px;
+}
+.legend-tap {
+  display: none;
+}
+@media (pointer: coarse) {
+  .legend-click {
+    display: none;
+  }
+  .legend-tap {
+    display: inline;
+  }
+}
+@media (forced-colors: active) {
+  .payload-legend-key {
+    color: CanvasText;
+  }
+  .msg-payload {
+    fill: CanvasText;
+  }
+}
+
+.note-card {
+  fill: var(--note-bg);
+  stroke: var(--warn);
+  stroke-width: 1;
+}
+.note-text {
+  fill: var(--warn);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.divider-line {
+  stroke: var(--border);
+  stroke-dasharray: 4 4;
+}
+.divider-pill {
+  fill: var(--surface-2);
+  stroke: var(--border);
+}
+.divider-label {
+  fill: var(--text-faint);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+[data-theme="light"] .participant-box {
+  --pc-ink: color-mix(in oklab, var(--pc, var(--accent)) calc(100% - var(--ink-black, 0%)), black);
+  filter: drop-shadow(0 1px 3px oklch(0.4 0.02 250 / 0.12));
+}
+
+.section-band {
+  fill: color-mix(in oklab, var(--accent) 14%, var(--surface-2));
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+.section-title {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+}
+
+.note-left .note-card {
+  stroke-dasharray: 3 2;
+}
+.note-right .note-card {
+  stroke-dasharray: 1 0;
+  stroke-width: 1.6;
+}
+
+.delay-line {
+  stroke: var(--border);
+  stroke-dasharray: 2 6;
+  stroke-width: 1.5;
+}
+.delay-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.spacer-ticks {
+  stroke: var(--border);
+  stroke-dasharray: 1 10;
+  stroke-width: 1;
+  opacity: 0.7;
+}
+
+.msg-type-cue {
+  fill: var(--text-faint);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--mono);
+}
+.message[data-msg-type="LOST"] .msg-path {
+  stroke-linecap: round;
+}
+.message[data-msg-type="BI_DIRECTIONAL"] .msg-path {
+  stroke-width: 2.2;
+}
+.message-short .msg-path {
+  stroke-dasharray: none;
+}

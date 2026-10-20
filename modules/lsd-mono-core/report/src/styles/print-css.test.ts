@@ -1,12 +1,11 @@
-import { readFileSync } from 'node:fs'
-import { readAppCss } from './read-css.test-util'
+import { readAppCss, readDiagramCss } from './read-css.test-util'
 import { describe, expect, it } from 'vitest'
 
 describe('print css', () => {
   const css = readAppCss()
   const screen = css.slice(0, css.indexOf('@media print'))
   const print = css.slice(css.indexOf('@media print'))
-  const diagramCss = readFileSync(new URL('./diagram.css', import.meta.url), 'utf8')
+  const diagramCss = readDiagramCss()
   const diagramPrint = diagramCss.slice(diagramCss.indexOf('@media print'))
 
   it('leaves the payload markers off paper', () => {
