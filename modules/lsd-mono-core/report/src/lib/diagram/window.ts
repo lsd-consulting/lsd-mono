@@ -79,8 +79,63 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   }
 }
 
-/** Resize the sticky header and body to the current zoom and visible columns. */
+/** Scrollports resized for a trial scale and not drawn since. */
+const unredrawn = new WeakSet<HTMLElement>()
+
+/**
+ * Run [trials], which may size the frame for trial scales with the resize it is handed, and end
+ * with the frame drawn: when a trial resize is the last thing done to it, applyDiagramFrame runs
+ * before this returns (an exception too). Calls nest and share that one drawing, so a fit inside
+ * a lane change draws once. The only way to resize without drawing.
+ */
+export function withTrialFrames<T>(scrollport: HTMLElement, trials: (resize: () => void) => T): T {
+  try {
+    return trials(() => resizeDiagram(scrollport))
+  } finally {
+    if (unredrawn.has(scrollport)) applyDiagramFrame(scrollport)
+  }
+}
+
+/**
+ * Size the header and body for the current zoom and visible lanes without drawing the header
+ * again: enough to measure the width a fit has left (settleFit, fitOverview try a scale, look at
+ * the scrollbar, and try again). The header's lane buttons are still the last drawing's, so they
+ * are clipped to stop them widening the scroll; withTrialFrames draws them again, once the scale
+ * is settled and before anything paints.
+ */
+function resizeDiagram(scrollport: HTMLElement): void {
+  unredrawn.add(scrollport)
+  const id = scrollport.dataset.scenarioId
+  if (!id) return
+  const diagram = diagramState.mounted.get(id)
+  if (!diagram) return
+  const view = diagramView(id)
+  const frame = frameOf(diagram, view.hidden)
+  const width = frame.total
+  const zoom = view.zoom
+  const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
+  if (header) {
+    header.style.width = `${width * zoom}px`
+    const svg = header.querySelector('.seq-header-svg')
+    svg?.setAttribute('viewBox', `${-frame.left} 0 ${width} ${HEADER_BLOCK_H}`)
+    svg?.setAttribute('width', String(width * zoom))
+    svg?.setAttribute('height', String(HEADER_BLOCK_H * zoom))
+    header.querySelector<HTMLElement>('.participant-heads')?.style.setProperty('overflow', 'hidden')
+  }
+  const spacer = scrollport.querySelector<HTMLElement>('.seq-spacer')
+  if (spacer) {
+    spacer.style.height = `${diagram.height * zoom}px`
+    spacer.style.width = `${width * zoom}px`
+  }
+}
+
+/**
+ * Draw the sticky header and size the body for the current zoom and visible lanes, then bring
+ * the zoom readout up to date. Once per change (#100): a zoom step, reset, Overview on or off, a
+ * refit, a lane hidden or shown.
+ */
 export function applyDiagramFrame(scrollport: HTMLElement): void {
+  unredrawn.delete(scrollport)
   const id = scrollport.dataset.scenarioId
   if (!id) return
   const diagram = diagramState.mounted.get(id)

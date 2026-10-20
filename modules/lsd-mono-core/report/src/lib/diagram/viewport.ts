@@ -8,7 +8,7 @@ import { diagramState, diagramView } from './state'
 import { zoomModeAfter } from './zoom-mode'
 import { bindFind } from './find-binding'
 import { ensurePrintHooks } from './print-hooks'
-import { applyDiagramFrame, syncDiagramWindow } from './window'
+import { syncDiagramWindow, withTrialFrames } from './window'
 import { bindZoomControls, zoomByWheel } from './zoom-controls'
 import { syncZoomControls } from './zoom-readout'
 import { autoFitDiagram, fitOverview } from './zoom'
@@ -50,16 +50,19 @@ function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string
   if (view.activeMessageId && !focusablePlaces(places).some((place) => place.id === view.activeMessageId)) {
     view.activeMessageId = null
   }
-  applyDiagramFrame(scrollport)
-  syncFindControls(scrollport)
-  if (view.mode.kind === 'overview') {
-    // Overview stays on, fitted to the lanes that are left.
-    fitOverview(scrollport)
-  } else if (view.mode.kind === 'default') {
-    // Hiding or showing a participant changes the width to fit.
-    view.mode = zoomModeAfter(view.mode, { kind: 'refit' })
-    autoFitDiagram(scrollport, false)
-  }
+  withTrialFrames(scrollport, (resize) => {
+    // Sized for the lanes left first, so a fit keeps the scroll position they leave.
+    resize()
+    syncFindControls(scrollport)
+    if (view.mode.kind === 'overview') {
+      // Overview stays on, fitted to the lanes that are left.
+      fitOverview(scrollport)
+    } else if (view.mode.kind === 'default') {
+      // Hiding or showing a participant changes the width to fit.
+      view.mode = zoomModeAfter(view.mode, { kind: 'refit' })
+      autoFitDiagram(scrollport, false)
+    }
+  })
   syncDiagramWindow(scrollport)
 }
 
@@ -72,12 +75,14 @@ export function bindDiagramScroll(root: ParentNode): void {
     const scroll = diagram.querySelector<HTMLElement>('.seq-scroll')
     if (!scroll?.dataset.scenarioId) return
     const id = scroll.dataset.scenarioId
-    applyDiagramFrame(scroll)
     // Fit before anything scrolls to a message (deep link, Timing view row), so that scroll uses
     // the fitted zoom. A re-render keeps the fit it already has.
-    const view = diagramView(id)
-    view.mode = zoomModeAfter(view.mode, { kind: 'refit' })
-    autoFitDiagram(scroll, true)
+    withTrialFrames(scroll, (resize) => {
+      resize()
+      const view = diagramView(id)
+      view.mode = zoomModeAfter(view.mode, { kind: 'refit' })
+      autoFitDiagram(scroll, true)
+    })
     syncDiagramWindow(scroll)
     observeWidth(scroll)
     scroll.addEventListener('scroll', () => syncDiagramWindow(scroll), { passive: true })

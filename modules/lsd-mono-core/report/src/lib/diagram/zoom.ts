@@ -7,7 +7,7 @@ import { scrollBehavior } from '../media'
 import { frameOf, topMessageLabelRect } from './geometry'
 import { scrollDiagramToOffset, scrollsWithPage, sizeStage } from './page-scroll'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './state'
-import { applyDiagramFrame, syncDiagramWindow } from './window'
+import { applyDiagramFrame, syncDiagramWindow, withTrialFrames } from './window'
 import { fittedWidthOf, zoomModeAfter } from './zoom-mode'
 
 /** Zoom to [next], keeping the scroll position in proportion unless [pin] gives one. */
@@ -24,9 +24,18 @@ export function commitZoom(
   const ratio = next / prev
   view.zoom = next
   applyDiagramFrame(scrollport)
-  const top = pin ? pin.top : scrollport.scrollTop * ratio
-  const left = pin ? pin.left : scrollport.scrollLeft * ratio
-  if (pin && scrollsWithPage(scrollport)) {
+  const to = pin ?? { top: scrollport.scrollTop * ratio, left: scrollport.scrollLeft * ratio }
+  scrollZoomed(scrollport, to, pin != null, motion)
+}
+
+/** Scroll to [to] after a zoom (pinned: a position chosen for it), then paint the rows there. */
+function scrollZoomed(
+  scrollport: HTMLElement,
+  { top, left }: { top: number; left: number },
+  pinned: boolean,
+  motion: ScrollBehavior,
+): void {
+  if (pinned && scrollsWithPage(scrollport)) {
     // A pinned position (the % readout, Overview in and out, a click in Overview) moves the page
     // itself, the stage sized for the new zoom first. Left to the scrollport, a page scroll event
     // still queued (a scroll just before the click) carried the old page position back into it.
@@ -47,10 +56,9 @@ export function showDefaultView(scrollport: HTMLElement, centre?: { x: number; y
   const diagram = id ? diagramState.mounted.get(id) : undefined
   if (!id || !diagram) return null
   const view = diagramView(id)
-  const prev = view.zoom
-  const fitted = settleFit(scrollport, diagram, view)
-  view.zoom = prev
+  // Out of a zoom of the user's own, or Overview, first: the frame drawn after the fit shows it.
   view.mode = zoomModeAfter(view.mode, { kind: 'reset' })
+  const fitted = settleFit(scrollport, diagram, view)
   const scale = fitted.scale
   const header = HEADER_BLOCK_H * scale
   const pin = centre
@@ -59,7 +67,7 @@ export function showDefaultView(scrollport: HTMLElement, centre?: { x: number; y
         left: Math.max(0, centre.x * scale - scrollport.clientWidth / 2),
       }
     : { top: Math.max(0, fitted.originY) * scale, left: Math.max(0, fitted.originX) * scale }
-  commitZoom(scrollport, scale, pin, scrollBehavior())
+  scrollZoomed(scrollport, pin, true, scrollBehavior())
   view.mode = zoomModeAfter(view.mode, { kind: 'fitted', width: scrollport.clientWidth })
   return scale
 }
@@ -67,7 +75,7 @@ export function showDefaultView(scrollport: HTMLElement, centre?: { x: number; y
 /**
  * Fit the diagram to its scrollport width, for the default view. Zooming can add or drop the
  * vertical scrollbar, which changes the width there is to fit, so this settles on a width that
- * still fits once zoomed. Leaves view.zoom at the fitted scale and the frame applied.
+ * still fits once zoomed. Leaves view.zoom at the fitted scale and the frame drawn for it.
  */
 function settleFit(scrollport: HTMLElement, diagram: MountedDiagram, view: DiagramView): FittedView {
   const contentWidth = frameOf(diagram, view.hidden).total
@@ -79,12 +87,14 @@ function settleFit(scrollport: HTMLElement, diagram: MountedDiagram, view: Diagr
       viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
       mustInclude,
     })
-  const width = settleFitWidth(scrollport.clientWidth, (w) => {
-    view.zoom = fitAt(w).scale
-    applyDiagramFrame(scrollport)
-    return scrollport.clientWidth
+  return withTrialFrames(scrollport, (resize) => {
+    const width = settleFitWidth(scrollport.clientWidth, (w) => {
+      view.zoom = fitAt(w).scale
+      resize()
+      return scrollport.clientWidth
+    })
+    return fitAt(width)
   })
-  return fitAt(width)
 }
 
 function printing(): boolean {
@@ -119,8 +129,6 @@ export function autoFitDiagram(scrollport: HTMLElement, first: boolean): void {
   const top = scrollport.scrollTop
   const left = scrollport.scrollLeft
   const fitted = settleFit(scrollport, diagram, view)
-  view.zoom = fitted.scale
-  applyDiagramFrame(scrollport)
   if (first) {
     scrollport.scrollTo({
       top: Math.max(0, fitted.originY) * fitted.scale,
@@ -147,13 +155,14 @@ export function fitOverview(scrollport: HTMLElement): void {
   const prev = view.zoom || 1
   const top = scrollport.scrollTop
   const contentWidth = frameOf(diagram, view.hidden).total
-  const width = settleFitWidth(scrollport.clientWidth, (w) => {
-    view.zoom = overviewScale(contentWidth, w)
-    applyDiagramFrame(scrollport)
-    return scrollport.clientWidth
+  const scale = withTrialFrames(scrollport, (resize) => {
+    const width = settleFitWidth(scrollport.clientWidth, (w) => {
+      view.zoom = overviewScale(contentWidth, w)
+      resize()
+      return scrollport.clientWidth
+    })
+    return overviewScale(contentWidth, width)
   })
-  const scale = overviewScale(contentWidth, width)
-  view.zoom = prev
-  commitZoom(scrollport, scale, { top: (top * scale) / prev, left: 0 }, scrollBehavior())
+  scrollZoomed(scrollport, { top: (top * scale) / prev, left: 0 }, true, scrollBehavior())
   view.mode = zoomModeAfter(view.mode, { kind: 'fitted', width: scrollport.clientWidth })
 }
