@@ -85,7 +85,7 @@ export function overviewNeeded(contentWidth: number, viewportWidth: number): boo
   return contentWidth > 0 && viewportWidth > 0 && contentWidth * FIT_MIN_ZOOM > viewportWidth + 0.5
 }
 
-/** How many of the lanes at [laneXs] (lifelines, drawn px) lie within [left, left + width). */
+/** How many of the lanes at [laneXs] (lifelines, drawn px) lie within [left, left + width], ends included. */
 export function lanesInView(laneXs: readonly number[], left: number, width: number): number {
   return laneXs.filter((x) => x >= left && x <= left + width).length
 }
@@ -96,6 +96,7 @@ export type ZoomChange =
   | { kind: 'default'; zoom: number }
   | { kind: 'overview'; zoom: number; shown: number; total: number }
   | { kind: 'overview-off'; zoom: number }
+  | { kind: 'fits'; zoom: number }
 
 export function zoomAnnouncement(change: ZoomChange): string {
   const level = zoomLabel(change.zoom)
@@ -110,6 +111,8 @@ export function zoomAnnouncement(change: ZoomChange): string {
         : `Overview, ${level}, ${change.shown} of ${change.total} lanes shown`
     case 'overview-off':
       return `Overview off, zoom ${level}`
+    case 'fits':
+      return `Whole diagram already fits, zoom ${level}`
   }
 }
 

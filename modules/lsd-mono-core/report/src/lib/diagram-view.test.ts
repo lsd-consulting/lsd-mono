@@ -191,6 +191,7 @@ describe('zoom announcements (#94)', () => {
       'Overview, 10%, 72 of 100 lanes shown',
     )
     expect(zoomAnnouncement({ kind: 'overview-off', zoom: 0.95 })).toBe('Overview off, zoom 95%')
+    expect(zoomAnnouncement({ kind: 'fits', zoom: 1 })).toBe('Whole diagram already fits, zoom 100%')
   })
 })
 

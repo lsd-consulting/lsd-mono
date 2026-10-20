@@ -38,6 +38,9 @@ const zoomIn = (page: Page) => card(page).getByRole('button', { name: 'Zoom in',
 const reset = (page: Page) => card(page).getByRole('button', { name: /^Reset zoom, now \d+%$/ })
 const overview = (page: Page) => card(page).getByRole('button', { name: 'Overview', exact: true })
 const readout = async (page: Page) => Number.parseInt(await reset(page).innerText(), 10)
+/** The % readout says [level]% (retrying until it does). */
+const expectZoom = (page: Page, level: number | string) =>
+  expect(card(page).locator('.zoom-readout')).toHaveText(`${level}%`)
 const status = (page: Page) => card(page).locator('.participant-filter-status')
 
 function scrollState(page: Page) {
@@ -64,7 +67,10 @@ async function statusChanges(page: Page, act: () => Promise<void>): Promise<stri
       })
     })
   await act()
-  await page.waitForTimeout(50)
+  // Wait for the change rather than a fixed time; a second change in the same task is caught too.
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __seen: string[] }).__seen.length))
+    .toBeGreaterThan(0)
   return page.evaluate(() => (window as unknown as { __seen: string[] }).__seen)
 }
 
@@ -98,37 +104,40 @@ test.describe('at 1440×900', () => {
 
   test('95% + gives 100%, − from 100% gives 90%, and the ends are 250% and 25%, disabled there', async ({ page }) => {
     await open(page, example)
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
     await zoomIn(page).click()
-    expect(await readout(page)).toBe(100)
+    await expectZoom(page, 100)
     await zoomOut(page).click()
-    expect(await readout(page)).toBe(90)
-    const seen = [90]
-    while ((await zoomIn(page).getAttribute('aria-disabled')) !== 'true') {
+    await expectZoom(page, 90)
+    for (const level of [100, 110, 125, 150, 175, 200, 250]) {
+      await expect(zoomIn(page)).not.toHaveAttribute('aria-disabled', 'true')
       await zoomIn(page).click()
-      seen.push(await readout(page))
+      await expectZoom(page, level)
     }
-    expect(seen).toEqual([90, 100, 110, 125, 150, 175, 200, 250])
+    await expect(zoomIn(page)).toHaveAttribute('aria-disabled', 'true')
     // Pressed at the limit (Playwright waits for an enabled control, so force the click).
     await zoomIn(page).click({ force: true })
-    expect(await readout(page)).toBe(250)
-    while ((await zoomOut(page).getAttribute('aria-disabled')) !== 'true') await zoomOut(page).click()
-    expect(await readout(page)).toBe(25)
+    await expectZoom(page, 250)
+    for (const level of [200, 175, 150, 125, 110, 100, 90, 80, 75, 67, 50, 33, 25]) {
+      await zoomOut(page).click()
+      await expectZoom(page, level)
+    }
+    await expect(zoomOut(page)).toHaveAttribute('aria-disabled', 'true')
     await zoomOut(page).click({ force: true })
-    expect(await readout(page)).toBe(25)
+    await expectZoom(page, 25)
   })
 
   test('the % readout puts back the opening scale and scroll position', async ({ page }) => {
     await open(page, example)
     const opened = await scrollState(page)
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
     await zoomIn(page).click()
     await zoomIn(page).click()
     await card(page)
       .locator('.seq-scroll')
       .evaluate((el) => el.scrollTo({ left: 300, top: 0 }))
     await reset(page).click()
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
     const after = await scrollState(page)
     expect(Math.abs(after.left - opened.left)).toBeLessThanOrEqual(2)
     expect(Math.abs(after.top - opened.top)).toBeLessThanOrEqual(2)
@@ -152,22 +161,45 @@ test.describe('at 1440×900', () => {
     await open(page, example)
     await zoomIn(page).click()
     await zoomIn(page).click()
+    await expectZoom(page, 110)
     await card(page)
       .locator('.seq-scroll')
       .evaluate((el) => el.scrollTo({ left: 240, top: 0 }))
-    const before = { zoom: await readout(page), ...(await scrollState(page)) }
+    const before = { zoom: 110, ...(await scrollState(page)) }
     for (const leave of ['button', 'Escape'] as const) {
       await overview(page).click()
       await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
       if (leave === 'button') await overview(page).click()
       else await page.keyboard.press('Escape')
       await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
-      expect(await readout(page)).toBe(before.zoom)
+      await expectZoom(page, before.zoom)
       const after = await scrollState(page)
       expect(Math.abs(after.left - before.left), leave).toBeLessThanOrEqual(2)
       expect(Math.abs(after.top - before.top), leave).toBeLessThanOrEqual(2)
     }
     await expect(status(page)).toHaveText(`Overview off, zoom ${before.zoom}%`)
+  })
+
+  test('Overview and back puts the page where it was, scrolled down the diagram', async ({ page }) => {
+    await open(page, example)
+    await zoomIn(page).click()
+    await expectZoom(page, 100)
+    // The diagram scrolls with the page: scroll the page down into it.
+    const stageTop = await card(page)
+      .locator('.seq-stage')
+      .evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
+    await page.evaluate((y) => window.scrollTo(0, y), stageTop + 400)
+    const where = () =>
+      page.evaluate(() => ({ page: window.scrollY, diagram: document.querySelector('.seq-scroll')!.scrollTop }))
+    await expect.poll(async () => (await where()).diagram).toBeGreaterThan(200)
+    const before = await where()
+    await overview(page).click()
+    await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
+    await page.keyboard.press('Escape')
+    await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
+    await expectZoom(page, 100)
+    await expect.poll(async () => Math.abs((await where()).diagram - before.diagram)).toBeLessThanOrEqual(2)
+    expect(Math.abs((await where()).page - before.page)).toBeLessThanOrEqual(2)
   })
 
   test('a click in Overview goes to the default view centred on that spot', async ({ page }) => {
@@ -214,7 +246,7 @@ test.describe('at 1440×900', () => {
     await target.focus()
     await page.keyboard.press('Enter')
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
     await expect(page.locator('#inspector')).toBeHidden()
     await expect(page.locator(`button.msg-open[data-message-id="${id}"]`)).toBeInViewport()
   })
@@ -223,11 +255,11 @@ test.describe('at 1440×900', () => {
     page,
   }) => {
     await open(page, example, DECLINED)
-    expect(await readout(page)).toBe(100)
+    await expectZoom(page, 100)
     await zoomIn(page).click()
-    expect(await readout(page)).toBe(110)
+    await expectZoom(page, 110)
     await reset(page).click()
-    expect(await readout(page)).toBe(100)
+    await expectZoom(page, 100)
     await expect(overview(page)).toHaveAttribute('aria-disabled', 'true')
     await expect(overview(page)).toHaveAttribute('title', 'Whole diagram already fits')
     if (shots) await page.screenshot({ path: `${shots}/q-94-1440-declined-default.png` })
@@ -243,10 +275,10 @@ test.describe('at 1440×900', () => {
 test('at 2560 wide the 4-lane scenario still opens and resets to 100%', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1200 })
   await open(page, example, DECLINED)
-  expect(await readout(page)).toBe(100)
+  await expectZoom(page, 100)
   await zoomOut(page).click()
   await reset(page).click()
-  expect(await readout(page)).toBe(100)
+  await expectZoom(page, 100)
 })
 
 test('on the 100-participant sample at 1440, Overview stops at 10%, keeps the cue and counts the lanes', async ({
@@ -255,7 +287,7 @@ test('on the 100-participant sample at 1440, Overview stops at 10%, keeps the cu
   await page.setViewportSize({ width: 1440, height: 900 })
   await open(page, wideReport(100, 400))
   await overview(page).click()
-  expect(await readout(page)).toBe(10)
+  await expectZoom(page, 10)
   await expect(card(page).getByRole('button', { name: 'More lanes to the right: scroll right' })).toBeVisible()
   // A lane is shown when its participant box is wholly inside the scrollport.
   const shown = await page.evaluate(() => {
@@ -280,17 +312,17 @@ test('on the 100-participant sample at 1440, Overview stops at 10%, keeps the cu
 test('on the 100-participant sample at 1280, default, + and Overview each say what they show', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await open(page, wideReport(100, 400))
-  expect(await readout(page)).toBe(95)
+  await expectZoom(page, '95')
   if (shots) await page.screenshot({ path: `${shots}/q-94-1280-100p-default.png` })
   await zoomIn(page).click()
   await expect(status(page)).toHaveText('Zoom 100%')
   if (shots) await page.screenshot({ path: `${shots}/q-94-1280-100p-zoomed.png` })
   await overview(page).click()
-  expect(await readout(page)).toBe(10)
+  await expectZoom(page, 10)
   await expect(status(page)).toHaveText(/^Overview, 10%, \d+ of 100 lanes shown$/)
   if (shots) await page.screenshot({ path: `${shots}/q-94-1280-100p-overview.png` })
   await page.keyboard.press('Escape')
-  expect(await readout(page)).toBe(100)
+  await expectZoom(page, 100)
 })
 
 test.describe('zoom keys', () => {
@@ -300,13 +332,13 @@ test.describe('zoom keys', () => {
     await open(page, example)
     await card(page).locator('button.msg-open').first().focus()
     await page.keyboard.press('+')
-    expect(await readout(page)).toBe(100)
+    await expectZoom(page, 100)
     await page.keyboard.press('=')
-    expect(await readout(page)).toBe(110)
+    await expectZoom(page, 110)
     await page.keyboard.press('-')
-    expect(await readout(page)).toBe(100)
+    await expectZoom(page, 100)
     await page.keyboard.press('0')
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
     await page.keyboard.press('Shift+Digit1')
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
     await page.keyboard.press('Shift+Digit1')
@@ -314,7 +346,7 @@ test.describe('zoom keys', () => {
     await page.keyboard.press('Shift+Digit1')
     await page.keyboard.press('Escape')
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
   })
 
   test('in Find and the page search they type, and outside the diagram card they do nothing', async ({ page }) => {
@@ -331,7 +363,7 @@ test.describe('zoom keys', () => {
     await page.locator('#btn-help').focus()
     await page.keyboard.press('+')
     await page.keyboard.press('Shift+Digit1')
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
   })
 
@@ -339,10 +371,10 @@ test.describe('zoom keys', () => {
     await open(page, example, undefined, { 'lsd-report-single-keys': 'off' })
     await card(page).locator('button.msg-open').first().focus()
     for (const key of ['+', '=', '-', '0', 'Shift+Digit1']) await page.keyboard.press(key)
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
     await zoomIn(page).click()
-    expect(await readout(page)).toBe(100)
+    await expectZoom(page, 100)
   })
 
   test('Ctrl/Cmd with +, - and 0 are left to the browser', async ({ page }) => {
@@ -358,7 +390,7 @@ test.describe('zoom keys', () => {
       ),
     )
     expect(prevented.every((p) => !p)).toBe(true)
-    expect(await readout(page)).toBe(95)
+    await expectZoom(page, '95')
   })
 
   test('the ? help lists the zoom keys', async ({ page }) => {

@@ -178,7 +178,7 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
     }
     const win = doc.defaultView
     if (!win) return
-    const bar = Number.parseFloat(getComputedStyle(doc.documentElement).getPropertyValue('--topbar-h'))
+    const bar = Number.parseFloat(win.getComputedStyle(doc.documentElement).getPropertyValue('--topbar-h'))
     const offset = (Number.isFinite(bar) ? bar : 0) + head + gap
     win.scrollTo({ top: Math.max(0, win.scrollY + top - offset), behavior: scrollBehavior() })
   }

@@ -19,7 +19,14 @@ import { frameOf } from '../sequence-diagram'
 import { singleKeysEnabled } from '../../ui/shortcuts'
 import { laneIndex, xFor } from './shapes'
 import { type DiagramView, diagramState, diagramView } from './state'
-import { applyDiagramFrame, commitZoom, messageLabelBox, revealMessageX, showDefaultView } from './viewport'
+import {
+  applyDiagramFrame,
+  commitZoom,
+  messageLabelBox,
+  refitDiagram,
+  revealMessageX,
+  showDefaultView,
+} from './viewport'
 
 const ICON =
   'class="zoom-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor"'
@@ -85,25 +92,71 @@ export function syncZoomControls(scrollport: HTMLElement): void {
 }
 
 /** Say what changed, once, in the toolbar's status line (the one the participant filter uses). */
+/** How long the status line stays empty before it says again what it last said. */
+const REPEAT_GAP_MS = 100
+
+/**
+ * Say [change] in the diagram's polite status line. The same words again (the % readout pressed
+ * twice) would be no change to a screen reader, so the line empties first and speaks a moment later.
+ */
 function announce(scrollport: HTMLElement, change: ZoomChange): void {
   const status = scrollport.closest('.seq-diagram')?.querySelector('.participant-filter-status')
-  if (status) status.textContent = zoomAnnouncement(change)
+  if (!status) return
+  const text = zoomAnnouncement(change)
+  const pending = repeats.get(status)
+  if (pending !== undefined) clearTimeout(pending)
+  repeats.delete(status)
+  if (status.textContent !== text) {
+    status.textContent = text
+    return
+  }
+  status.textContent = ''
+  repeats.set(
+    status,
+    setTimeout(() => {
+      repeats.delete(status)
+      status.textContent = text
+    }, REPEAT_GAP_MS),
+  )
 }
+const repeats = new WeakMap<Element, ReturnType<typeof setTimeout>>()
 
 /** One step along the ladder. Leaves Overview (without going back) when it is on. */
 function zoomStep(scrollport: HTMLElement, direction: 1 | -1): void {
   const view = diagramView(scrollport.dataset.scenarioId ?? '')
   const next = stepZoom(view.zoom, direction)
   if (next === view.zoom) return
+  const wasOverview = view.overview !== null
   view.overview = null
   view.autoFit = false
   commitZoom(scrollport, next, undefined, scrollBehavior())
-  announce(scrollport, { kind: 'step', zoom: next })
+  announce(scrollport, { kind: wasOverview ? 'overview-off' : 'step', zoom: next })
 }
 
-/** Ctrl/Cmd+wheel: the same ladder as the buttons. */
-export function zoomByWheel(scrollport: HTMLElement, deltaY: number): void {
-  if (deltaY !== 0) zoomStep(scrollport, deltaY > 0 ? -1 : 1)
+/** Wheel distance (px) for one level: about one mouse-wheel notch. */
+export const WHEEL_STEP_PX = 100
+/** A pause this long (ms) in Ctrl/Cmd+wheel starts the count again. */
+const WHEEL_IDLE_MS = 400
+const LINE_PX = 16
+
+const wheelSums = new WeakMap<HTMLElement, { sum: number; at: number }>()
+
+/**
+ * Ctrl/Cmd+wheel: the same ladder as the buttons, one level per [WHEEL_STEP_PX] of wheel. A
+ * trackpad pinch sends many small deltas; adding them up keeps it from racing up the ladder, and
+ * a mouse notch (about 100px) still moves one level. [deltaMode] 1 is lines, 2 pages.
+ */
+export function zoomByWheel(scrollport: HTMLElement, deltaY: number, deltaMode = 0, now = Date.now()): void {
+  if (deltaY === 0) return
+  const px = deltaY * (deltaMode === 1 ? LINE_PX : deltaMode === 2 ? scrollport.clientHeight || 800 : 1)
+  const last = wheelSums.get(scrollport)
+  const fresh = !last || now - last.at > WHEEL_IDLE_MS || Math.sign(last.sum) !== Math.sign(px)
+  let sum = (fresh ? 0 : last.sum) + px
+  if (Math.abs(sum) >= WHEEL_STEP_PX) {
+    zoomStep(scrollport, sum > 0 ? -1 : 1)
+    sum = 0
+  }
+  wheelSums.set(scrollport, { sum, at: now })
 }
 
 /** Back to the default view (see fittedView), centred on [centre] (drawn px) when given. */
@@ -170,7 +223,11 @@ function enterOverview(scrollport: HTMLElement): void {
   const diagram = diagramState.mounted.get(id)
   const view = diagramView(id)
   if (!diagram || view.overview) return
-  if (!overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth)) return
+  if (!overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth)) {
+    // Shift+1 (the button is disabled then) still gets an answer.
+    announce(scrollport, { kind: 'fits', zoom: view.zoom })
+    return
+  }
   view.overview = {
     zoom: view.zoom,
     top: scrollport.scrollTop,
@@ -192,7 +249,9 @@ function leaveOverview(scrollport: HTMLElement): void {
   commitZoom(scrollport, saved.zoom, { top: saved.top, left: saved.left }, scrollBehavior())
   view.autoFit = saved.autoFit
   view.fittedWidth = saved.fittedWidth
-  announce(scrollport, { kind: 'overview-off', zoom: saved.zoom })
+  // The panel may have changed width while Overview was on: refit an unzoomed diagram to it.
+  refitDiagram(scrollport)
+  announce(scrollport, { kind: 'overview-off', zoom: view.zoom })
 }
 
 /** From Overview, the default view centred on a message (Enter on it). */
@@ -230,7 +289,8 @@ export function zoomKeyAction(e: ZoomKeyEvent, ctx: { singleKeys: boolean; overv
   if (!ctx.singleKeys) return null
   if (e.key === '+' || e.key === '=') return 'in'
   if (e.key === '-' || e.key === '−') return 'out'
-  if (e.key === '0' && !e.shiftKey) return 'reset'
+  // Shift is allowed: on AZERTY the digit row needs it for 0.
+  if (e.key === '0') return 'reset'
   if (e.shiftKey && e.code === 'Digit1') return 'overview'
   return null
 }

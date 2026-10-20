@@ -40,7 +40,6 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   const diagram = diagramState.mounted.get(id)
   if (!diagram) return
   sizeStage(scrollport)
-  syncMoreCue(scrollport)
   const view = diagramView(id)
   const zoom = view.zoom
   const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
@@ -91,8 +90,8 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   // One tab stop: the active arrow when it is painted, otherwise the scrollport.
   scrollport.tabIndex = tabTarget && painted.has(tabTarget) ? -1 : 0
   windowEl.innerHTML = slice.length ? windowSvg(diagram, slice, view, frame, viewTop) : ''
-  // Again now the rows are drawn at this zoom: the rows from before a zoom change still set the
-  // scroll width above, so a zoom out to the whole width could leave the cue showing.
+  // Once the rows are drawn at this zoom: before the paint, the rows from before a zoom change
+  // still set the scroll width, so a zoom out to the whole width could leave the cue showing.
   syncMoreCue(scrollport)
   if (hadFocus) {
     const target = view.activeMessageId ?? priorId
@@ -190,7 +189,7 @@ export function commitZoom(
 function onDiagramWheel(scrollport: HTMLElement, ev: WheelEvent): void {
   if (!ev.ctrlKey && !ev.metaKey) return
   ev.preventDefault()
-  zoomByWheel(scrollport, ev.deltaY)
+  zoomByWheel(scrollport, ev.deltaY, ev.deltaMode)
 }
 
 /**
@@ -254,6 +253,11 @@ function printing(): boolean {
  * printing, or when the width is the one it last fitted. `first` scrolls to the top message like
  * the % readout; a refit keeps the scroll position in proportion.
  */
+/** Refit a diagram the user has not zoomed, now, if its width changed since it was last fitted. */
+export function refitDiagram(scrollport: HTMLElement): void {
+  autoFitDiagram(scrollport, false)
+}
+
 function autoFitDiagram(scrollport: HTMLElement, first: boolean): void {
   const id = scrollport.dataset.scenarioId
   const diagram = id ? diagramState.mounted.get(id) : undefined

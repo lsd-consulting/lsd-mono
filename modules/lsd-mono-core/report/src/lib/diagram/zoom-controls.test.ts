@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Participant, Scenario } from '../../types'
 import { SINGLE_KEYS_KEY } from '../../ui/shortcuts'
 import { bindDiagramScroll, diagramView, renderDiagramHtml, syncDiagramWindow } from '../sequence-diagram'
-import { onZoomKey, zoomKeyAction } from './zoom-controls'
+import { WHEEL_STEP_PX, onZoomKey, zoomByWheel, zoomKeyAction } from './zoom-controls'
 
 let n = 0
 /** A fresh scenario per test, [lanes] wide: views live per scenario id for the page's life. */
@@ -187,6 +187,32 @@ describe('Overview (#94)', () => {
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
   })
 
+  it('answers Shift+1 when the whole diagram already fits', () => {
+    const z = mount(3, 1400)
+    press(z.scroll, '!', { shiftKey: true, code: 'Digit1' })
+    expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
+    expect(z.status()).toBe('Whole diagram already fits, zoom 100%')
+  })
+
+  it('says Overview is off when − or + leaves it', () => {
+    const z = mount(12, 600)
+    z.button('overview').click()
+    z.button('in').click()
+    expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
+    expect(z.status()).toMatch(/^Overview off, zoom \d+%$/)
+  })
+
+  it('refits an unzoomed diagram on leaving, when the panel changed width while it was on', () => {
+    const z = mount(12, 600)
+    const before = z.view().zoom
+    z.button('overview').click()
+    Object.defineProperty(z.scroll, 'clientWidth', { configurable: true, value: 1400 })
+    z.button('overview').click()
+    expect(z.view().autoFit).toBe(true)
+    expect(z.view().fittedWidth).toBe(1400)
+    expect(z.view().zoom).toBeGreaterThanOrEqual(before)
+  })
+
   it('leaves for the default view centred on an arrow when Enter is pressed on it', () => {
     const z = mount(12, 600)
     z.button('overview').click()
@@ -221,6 +247,46 @@ describe('Overview (#94)', () => {
   })
 })
 
+describe('the status line (#94)', () => {
+  it('says the same thing twice: pressing the % readout again empties it, then speaks', () => {
+    vi.useFakeTimers()
+    try {
+      const z = mount(12, 600)
+      z.button('reset').click()
+      expect(z.status()).toBe('Default zoom, 95%')
+      z.button('reset').click()
+      expect(z.status()).toBe('')
+      vi.advanceTimersByTime(150)
+      expect(z.status()).toBe('Default zoom, 95%')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('Ctrl/Cmd+wheel (#94)', () => {
+  it('adds up small deltas to one level per notch, and starts again after a pause or a turn', () => {
+    const z = mount(12, 600)
+    const start = z.view().zoom
+    // A trackpad pinch: many small deltas, one level once they add up to a notch.
+    for (let i = 0; i < 9; i++) zoomByWheel(z.scroll, -10, 0, 1000 + i)
+    expect(z.view().zoom).toBe(start)
+    zoomByWheel(z.scroll, -10, 0, 1010)
+    expect(z.view().zoom).toBeGreaterThan(start)
+    const one = z.view().zoom
+    // A pause drops what was left; a turn the other way does too.
+    zoomByWheel(z.scroll, -60, 0, 1100)
+    zoomByWheel(z.scroll, -60, 0, 2000)
+    expect(z.view().zoom).toBe(one)
+    zoomByWheel(z.scroll, 60, 0, 2010)
+    expect(z.view().zoom).toBe(one)
+    // A mouse notch in lines (3 lines of 16px is under a notch; 7 is over).
+    zoomByWheel(z.scroll, 7, 1, 3000)
+    expect(z.view().zoom).toBeLessThan(one)
+    expect(WHEEL_STEP_PX).toBe(100)
+  })
+})
+
 describe('zoom keys (#94)', () => {
   it('maps + and =, -, 0, Shift+1 (by key position) and Esc in Overview', () => {
     const on = { singleKeys: true, overview: false }
@@ -230,6 +296,8 @@ describe('zoom keys (#94)', () => {
     expect(zoomKeyAction(key('='), on)).toBe('in')
     expect(zoomKeyAction(key('-'), on)).toBe('out')
     expect(zoomKeyAction(key('0'), on)).toBe('reset')
+    // AZERTY: 0 is Shift on the digit row.
+    expect(zoomKeyAction(key('0', { shiftKey: true, code: 'Digit0' }), on)).toBe('reset')
     expect(zoomKeyAction(key('!', { shiftKey: true, code: 'Digit1' }), on)).toBe('overview')
     // AZERTY: Shift on the 1 key is "1".
     expect(zoomKeyAction(key('1', { shiftKey: true, code: 'Digit1' }), on)).toBe('overview')
