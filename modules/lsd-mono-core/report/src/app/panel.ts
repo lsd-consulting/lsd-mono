@@ -106,10 +106,11 @@ export function openComponents(scenario: Scenario): void {
 }
 
 /** Metrics for [scenario], at the top, or at [section] (a `data-panel-section`, e.g. from the Accuracy chip). */
-export function openMetrics(scenario: Scenario, section?: string): void {
+/** [chip]: the timing chip that opened it, which gets focus back on Close (#86). */
+export function openMetrics(scenario: Scenario, section?: string, chip: number | null = null): void {
   if (!session.inspector) return
   session.panelScenarioId = scenario.id
-  session.invoker = { scenarioId: scenario.id, kind: 'metrics' }
+  session.invoker = { scenarioId: scenario.id, kind: 'metrics', chip }
   writeScenarioHash()
   session.inspector.openMetrics(scenario.id, {
     heading: scenario.title,
@@ -117,6 +118,7 @@ export function openMetrics(scenario: Scenario, section?: string): void {
     timingHtml: timingPanelHtml(scenario),
     pairAccuracyHtml: pairAccuracySectionHtml(scenario),
     section,
+    chip,
   })
   syncWithPanel()
   usage.ping('metrics-open')

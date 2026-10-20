@@ -1,68 +1,28 @@
-import type { MessageEvent, Metric } from '../types'
-import { renderComponentDiagram } from '../lib/component-diagram'
-import { STACKED_MAX_PX, scrollBehavior } from '../lib/media'
-import { cssEscape } from '../lib/escape'
-import { bindJsonBody } from './inspector-json'
-import { bindJsonMarks } from './json-marks'
-import {
-  INSPECTOR_MIN_PX,
-  INSPECTOR_NARROW_PX,
-  TIMING_VIEW_MIN_PX,
-  bindInspectorWidth,
-  naturalWidth,
-} from './inspector-width'
-import { revealBelowTopbar } from '../lib/reveal'
+import type { MessageEvent } from '../types'
 import type { ComponentGraph } from '../lib/component-graph'
-import {
-  componentLinkHtml,
-  componentsBodyHtml,
-  componentsMetaHtml,
-  errorMetaHtml,
-  messageMetaHtml,
-  metricsBodyHtml,
-  metricsMetaHtml,
-  metricsTitle,
-} from './inspector-views'
+import { INSPECTOR_MIN_PX, INSPECTOR_NARROW_PX } from './inspector-width'
+import type { FocusReturn, InspectorInvoker } from './inspector-view'
+import { bindPanelShell, type PanelPrintView } from './inspector-shell'
+import { bindErrorView, bindMessageView } from './inspector-message'
+import { bindComponentsView } from './inspector-components'
+import { bindMetricsView, type MetricsView } from './inspector-metrics'
 
-export interface InspectorInvoker {
-  scenarioId: string
-  /** Set for a message. Absent when the panel is showing the component diagram or metrics. */
-  messageId?: string
-  kind?: 'message' | 'components' | 'metrics'
-}
-
-export interface MetricsView {
-  /** Scenario title, shown as a pill. */
-  heading: string
-  metrics: Metric[]
-  /** Timing view (summary, swim lanes, waterfall), shown above the metrics. */
-  timingHtml?: string
-  /** Accuracy by pair, shown last (after the metrics). */
-  pairAccuracyHtml?: string
-  /** A `data-panel-section` to open at, expanded and scrolled into view, instead of the top. */
-  section?: string
-}
+export type { PanelPrintView } from './inspector-shell'
+export type { FocusReturn, InspectorInvoker } from './inspector-view'
+export type { MetricsView } from './inspector-metrics'
 
 export interface InspectorOptions {
   /** Full payload for a deferred message. Not called when the message already holds its whole payload. */
   loadPayload: (scenarioId: string, messageId: string) => Promise<unknown>
-  /** Escape and the close control. Focus belongs back on the invoking arrow. */
-  onClose: (invoker: InspectorInvoker | null) => void
+  /**
+   * Escape and the close control. [focus] is where the view that was showing gives focus back:
+   * the invoking arrow, toolbar button or timing chip.
+   */
+  onClose: (invoker: InspectorInvoker | null, focus: FocusReturn) => void
   /** The JSON (or stack) shown in the panel changed: loaded, shown, or hidden. */
   onContent?: () => void
   /** Find's query for a scenario's payloads, folded, or '' when nothing should be marked. */
   findQuery?: (scenarioId: string) => string
-}
-
-/** What the open panel shows, for the print copy in the scenario. */
-export interface PanelPrintView {
-  view: 'message' | 'components' | 'metrics' | 'error'
-  title: string
-  /** The panel's pills, already escaped. */
-  metaHtml: string
-  lead: string | null
-  /** JSON or stack text while it is shown in the panel. Null when hidden or still loading. */
-  text: string | null
 }
 
 /** How a message opens. Find following its current match leaves focus where it is. */
@@ -118,239 +78,26 @@ export function inspectorMarkup(): string {
     </aside>`
 }
 
+/**
+ * The side panel: its shell (inspector-shell.ts) and one controller per view, each behind
+ * PanelView (inspector-view.ts).
+ */
 export function bindInspector(doc: Document, options: InspectorOptions): InspectorController {
-  const panel = doc.querySelector<HTMLElement>('#inspector')
-  if (!panel) throw new Error('inspector markup is missing')
-  const title = doc.querySelector<HTMLElement>('#inspector-title')!
-  const meta = doc.querySelector<HTMLElement>('#inspector-meta')!
-  const lead = doc.querySelector<HTMLElement>('#inspector-lead')!
-  const toggle = doc.querySelector<HTMLButtonElement>('#inspector-json')!
-  const expandBtn = doc.querySelector<HTMLButtonElement>('#inspector-json-expand')!
-  const resize = doc.querySelector<HTMLElement>('#inspector-resize')!
-  const pre = doc.querySelector<HTMLElement>('#inspector-pre')!
-  const graphHost = doc.querySelector<HTMLElement>('#inspector-graph')!
-  const metricsHost = doc.querySelector<HTMLElement>('#inspector-metrics')!
-  const jsonRow = doc.querySelector<HTMLElement>('.json-row')!
-  const copy = doc.querySelector<HTMLButtonElement>('#inspector-copy')!
-  const closeBtn = doc.querySelector<HTMLButtonElement>('#inspector-close')!
-
-  let invoker: InspectorInvoker | null = null
-  let generation = 0
-  const width = bindInspectorWidth(doc, { panel, expandBtn, resize })
-
-  function shell(): HTMLElement | null {
-    return panel!.closest('.shell')
+  const panel = bindPanelShell(doc, options)
+  const message = bindMessageView(panel.shell, options.loadPayload)
+  const error = bindErrorView(panel.shell)
+  const components = bindComponentsView(panel.shell, panel.graphHost)
+  const metrics = bindMetricsView(panel.shell, panel.metricsHost)
+  return {
+    isOpen: panel.isOpen,
+    close: panel.close,
+    printView: panel.printView,
+    refreshFind: panel.refreshFind,
+    openMessage: (scenarioId, msg, open = {}) => message.open(scenarioId, msg, open.focus ?? true),
+    openComponents: (scenarioId, graph, heading) => components.open(scenarioId, graph, heading),
+    openMetrics: (scenarioId, view) => metrics.open(scenarioId, view),
+    openError: (err) => error.open(err),
   }
-
-  function viewport(): number {
-    return doc.defaultView?.innerWidth ?? 1200
-  }
-
-  function setOpen(open: boolean, focus = true): void {
-    if (open) width.apply(width.current())
-    panel!.hidden = !open
-    shell()?.classList.toggle('with-inspector', open)
-    if (!open || !focus) return
-    panel!.focus()
-  }
-
-  /** On a phone the panel is inline below the report: bring what just opened into view. */
-  function revealOnPhone(content?: HTMLElement): void {
-    if (viewport() <= STACKED_MAX_PX) revealBelowTopbar(panel!, content)
-  }
-
-  /**
-   * Open [section] (a folded list unfolds) and scroll it to just under the panel's sticky header:
-   * inside the panel where it scrolls (the side column), or the page where the panel is part of
-   * it (stacked, under 860px). Focus stays where opening put it; the header with Close stays in view.
-   */
-  function revealSection(section: HTMLElement): void {
-    section.querySelectorAll('details').forEach((d) => (d.open = true))
-    const head = panel!.querySelector<HTMLElement>('.inspector-head')?.getBoundingClientRect().height ?? 0
-    const top = section.getBoundingClientRect().top
-    const gap = 8
-    if (viewport() > STACKED_MAX_PX) {
-      const delta = top - panel!.getBoundingClientRect().top - head - gap
-      panel!.scrollTo({ top: panel!.scrollTop + delta, behavior: scrollBehavior() })
-      return
-    }
-    const win = doc.defaultView
-    if (!win) return
-    const bar = Number.parseFloat(win.getComputedStyle(doc.documentElement).getPropertyValue('--topbar-h'))
-    const offset = (Number.isFinite(bar) ? bar : 0) + head + gap
-    win.scrollTo({ top: Math.max(0, win.scrollY + top - offset), behavior: scrollBehavior() })
-  }
-
-  const findBox = doc.querySelector<HTMLElement>('#inspector-find')!
-  const marks = bindJsonMarks({
-    pre,
-    box: findBox,
-    count: findBox.querySelector<HTMLElement>('.json-find-count')!,
-    prev: findBox.querySelector<HTMLButtonElement>('[data-json-step="prev"]')!,
-    next: findBox.querySelector<HTMLButtonElement>('[data-json-step="next"]')!,
-  })
-  const json = bindJsonBody({
-    toggle,
-    pre,
-    copy,
-    current: () => generation,
-    onContent: options.onContent,
-    reveal: revealOnPhone,
-    marks,
-    query: () => (invoker?.kind === 'message' && options.findQuery ? options.findQuery(invoker.scenarioId) : ''),
-  })
-
-  /** Component diagram and metrics views. Only one is in the panel at a time. */
-  const viewHosts = [graphHost, metricsHost]
-  /** Graph behind the drawn component diagram, so a clicked link can list its messages. */
-  let shownGraph: ComponentGraph | null = null
-
-  /** List one link's interactions under the drawing and mark the link as selected. */
-  function showLink(group: Element): void {
-    const graph = shownGraph
-    const list = graphHost.querySelector<HTMLElement>('.component-links')
-    const edge = graph?.edges[Number(group.getAttribute('data-edge-index'))]
-    if (!graph || !list || !edge) return
-    graphHost.querySelectorAll('.edge-group.is-selected').forEach((el) => el.classList.remove('is-selected'))
-    group.classList.add('is-selected')
-    list.innerHTML = componentLinkHtml(graph, edge)
-  }
-
-  graphHost.addEventListener('click', (event) => {
-    const group = (event.target as Element | null)?.closest?.('.edge-group')
-    if (group) showLink(group)
-  })
-  graphHost.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    const group = (event.target as Element | null)?.closest?.('.edge-group')
-    if (!group) return
-    event.preventDefault()
-    showLink(group)
-  })
-
-  function clearViews(): void {
-    for (const host of viewHosts) {
-      host.hidden = true
-      host.replaceChildren()
-    }
-  }
-
-  function showMessageChrome(): void {
-    clearViews()
-    copy.hidden = false
-    jsonRow.hidden = false
-  }
-
-  /** A view with no payload: no JSON row, no Copy. */
-  function showViewChrome(host: HTMLElement): void {
-    copy.hidden = true
-    jsonRow.hidden = true
-    toggle.hidden = true
-    expandBtn.hidden = true
-    pre.hidden = true
-    pre.textContent = ''
-    lead.hidden = true
-    clearViews()
-    host.hidden = false
-  }
-
-  function close(): void {
-    if (panel!.hidden) return
-    generation += 1
-    json.stop()
-    const back = invoker
-    invoker = null
-    setOpen(false)
-    options.onClose(back)
-  }
-
-  function begin(next: InspectorInvoker | null, label = 'JSON', focus = true): number {
-    generation += 1
-    invoker = next
-    // Which view is showing. The panel never prints; main.ts prints a copy of this view in its scenario.
-    panel!.dataset.view = next ? (next.kind ?? 'message') : 'error'
-    json.reset(label)
-    expandBtn.hidden = false
-    lead.hidden = true
-    lead.textContent = ''
-    showMessageChrome()
-    width.reload()
-    setOpen(true, focus)
-    return generation
-  }
-
-  const controller: InspectorController = {
-    isOpen: () => !panel.hidden,
-    close,
-    printView() {
-      if (panel.hidden) return null
-      return {
-        view: (panel.dataset.view ?? 'message') as PanelPrintView['view'],
-        title: title.textContent ?? '',
-        metaHtml: meta.innerHTML.trim(),
-        lead: lead.hidden ? null : lead.textContent,
-        text: pre.hidden ? null : pre.textContent,
-      }
-    },
-    refreshFind() {
-      if (!panel.hidden) json.refreshMarks()
-    },
-    openMessage(scenarioId, message, open = {}) {
-      const token = begin({ scenarioId, messageId: message.id, kind: 'message' }, 'JSON', open.focus ?? true)
-      json.revealWhenShown()
-      title.textContent = message.label
-      meta.innerHTML = messageMetaHtml(scenarioId, message)
-      const payload = message.payloadId ? options.loadPayload(scenarioId, message.id) : Promise.resolve(message.data)
-      json.load(payload, token, () => {
-        lead.hidden = false
-        lead.textContent = 'Could not load the payload.'
-      })
-    },
-    openComponents(scenarioId, graph, heading) {
-      begin({ scenarioId, kind: 'components' })
-      json.stop()
-      title.textContent = 'Component diagram'
-      meta.innerHTML = componentsMetaHtml(graph, heading)
-      showViewChrome(graphHost)
-      const drawn = renderComponentDiagram(graph, heading)
-      shownGraph = graph
-      graphHost.innerHTML = componentsBodyHtml(drawn.svg, graph)
-      width.fit(drawn.width)
-      revealOnPhone()
-      bindComponentScroll(graphHost.querySelector<HTMLElement>('.component-scroll'))
-    },
-    openMetrics(scenarioId, view) {
-      begin({ scenarioId, kind: 'metrics' })
-      json.stop()
-      title.textContent = metricsTitle(view)
-      meta.innerHTML = metricsMetaHtml(view)
-      showViewChrome(metricsHost)
-      metricsHost.innerHTML = metricsBodyHtml(scenarioId, view)
-      width.fit(Math.max(naturalWidth(metricsHost), view.timingHtml ? TIMING_VIEW_MIN_PX : 0))
-      const section = view.section
-        ? metricsHost.querySelector<HTMLElement>(`[data-panel-section="${cssEscape(view.section)}"]`)
-        : null
-      if (section) revealSection(section)
-      else {
-        // At the top, even when the panel was already open and scrolled (say to Accuracy by pair
-        // from the Accuracy chip). Stacked, the panel is part of the page and does not scroll.
-        if (viewport() > STACKED_MAX_PX) panel.scrollTop = 0
-        revealOnPhone()
-      }
-    },
-    openError(error) {
-      const token = begin(null, 'stack')
-      title.textContent = error.headline
-      meta.innerHTML = errorMetaHtml(error)
-      lead.hidden = false
-      lead.textContent = error.message
-      if (error.stack) json.loaded(error.stack, token)
-      else json.none()
-    },
-  }
-
-  closeBtn.addEventListener('click', () => close())
-  return controller
 }
 
 /**
@@ -377,67 +124,4 @@ export function delegateMessageOpen(
   if (!found) return false
   open(found.scenarioId, found.message)
   return true
-}
-
-/** Watches the component drawing's box for a rotate or a resize; one drawing is shown at a time. */
-let componentResize: ResizeObserver | null = null
-
-/**
- * The component drawing's sideways scroll (#66). Only a phone-width panel lets it overflow. It
- * opens with its top row centred, so the root is on screen, and marks [scroller] with
- * `data-more-right` and `data-more-left` while part of it lies past that edge, for the cues in
- * narrow.css. The marks follow a scroll, a resize or a rotate. A link that takes focus is
- * scrolled into view.
- */
-const boundScrollers = new WeakSet<HTMLElement>()
-const componentMarks = new WeakMap<HTMLElement, () => void>()
-
-export function bindComponentScroll(scroller: HTMLElement | null): void {
-  componentResize?.disconnect()
-  componentResize = null
-  if (!scroller) return
-  const update = (): void => {
-    const more = scroller.scrollWidth - scroller.clientWidth
-    scroller.toggleAttribute('data-more-right', scroller.scrollLeft < more - 1)
-    scroller.toggleAttribute('data-more-left', more > 1 && scroller.scrollLeft > 1)
-    // A tab stop (and a named region) only while there is something to scroll to: a drawing that
-    // fits, as on a desktop panel, would be an empty stop before its links.
-    if (more > 1) {
-      scroller.tabIndex = 0
-      scroller.setAttribute('role', 'region')
-      scroller.setAttribute('aria-label', 'Component diagram drawing')
-    } else {
-      scroller.removeAttribute('tabindex')
-      scroller.removeAttribute('role')
-      scroller.removeAttribute('aria-label')
-    }
-  }
-  // Each render makes a new scroller, so listeners go on once per element; a second bind of the
-  // same element (a re-bind without a re-render) only re-marks it.
-  if (!boundScrollers.has(scroller)) {
-    boundScrollers.add(scroller)
-    scroller.addEventListener('scroll', () => componentMarks.get(scroller)?.(), { passive: true })
-    scroller.addEventListener('focusin', (ev) => {
-      const target = ev.target as Element
-      if (target !== scroller) target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-    })
-  }
-  componentMarks.set(scroller, update)
-  if (typeof ResizeObserver !== 'undefined') {
-    componentResize = new ResizeObserver(update)
-    componentResize.observe(scroller)
-  }
-  centreTopRow(scroller)
-  update()
-}
-
-/** Scroll an overflowing drawing so the middle of its top row (the root, for one) is centred. */
-export function centreTopRow(scroller: HTMLElement): void {
-  if (scroller.scrollWidth <= scroller.clientWidth + 1) return
-  const boxes = [...scroller.querySelectorAll('.component-node')].map((node) => node.getBoundingClientRect())
-  if (!boxes.length) return
-  const top = Math.min(...boxes.map((box) => box.top))
-  const row = boxes.filter((box) => box.top < top + 1)
-  const middle = (Math.min(...row.map((box) => box.left)) + Math.max(...row.map((box) => box.right))) / 2
-  scroller.scrollLeft += middle - scroller.getBoundingClientRect().left - scroller.clientWidth / 2
 }

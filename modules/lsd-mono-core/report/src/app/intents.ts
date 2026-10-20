@@ -1,10 +1,8 @@
 // What the page's listeners decide, without doing it (#99): each function reads the event and
 // the state it is given and names the action, so the listeners in keys.ts, chrome.ts and nav.ts
 // only carry it out, and the decisions get unit tests that run in seconds.
-import { focusTargetAfterClose } from '../lib/diagram-a11y'
 import type { HashRef } from '../lib/report-hash'
 import type { Scenario } from '../types'
-import type { InspectorInvoker } from '../ui/inspector'
 import { defaultScenarioId } from '../ui/selection'
 
 // Page keys (keys.ts builds the router's page context from this)
@@ -87,34 +85,6 @@ export function mainClick(target: Element | null): MainClick {
 }
 
 // Closing the side panel (chrome.ts)
-
-/** Where focus goes when the side panel closes. */
-export type CloseFocus =
-  | { kind: 'none' }
-  /** Back to the scenario card's toolbar button, or to the timing chip [chip] when one opened Metrics. */
-  | { kind: 'button'; scenarioId: string; selector: string; chip: number | null }
-  | { kind: 'message'; scenarioId: string; messageId: string }
-
-export function closeFocus(
-  opened: InspectorInvoker | null,
-  switchingScenario: boolean,
-  metricsChip: number | null,
-): CloseFocus {
-  // Another scenario is about to show: it decides focus.
-  if (switchingScenario) return { kind: 'none' }
-  if (opened?.kind === 'components' || opened?.kind === 'metrics') {
-    const metrics = opened.kind === 'metrics'
-    return {
-      kind: 'button',
-      scenarioId: opened.scenarioId,
-      selector: `.seq-toolbar ${metrics ? '[data-show-metrics]' : '[data-show-components]'}`,
-      chip: metrics ? metricsChip : null,
-    }
-  }
-  const messageId = focusTargetAfterClose(opened?.messageId ?? null)
-  if (!messageId || !opened?.scenarioId) return { kind: 'none' }
-  return { kind: 'message', scenarioId: opened.scenarioId, messageId }
-}
 
 // Opening a report on the index page (nav.ts)
 

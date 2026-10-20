@@ -32,7 +32,7 @@ import {
 import { counts } from './filters'
 import { writeScenarioHash } from './url-hash'
 import { index, session, state, app } from './context'
-import { closeFocus, mainClick } from './intents'
+import { mainClick } from './intents'
 import { openFromDiagram } from './diagram-keys'
 export function renderShell(): void {
   const c = counts()
@@ -171,9 +171,6 @@ function bindTopbarButtons(): void {
   session.help = bindHelpDialog(document)
 }
 
-/** Which timing chip opened Metrics (its position in the strip), or null when the toolbar button did. */
-let metricsChip: number | null = null
-
 /** The side panel (inspector), and its Timing rows that reveal a message in the diagram. */
 function bindSidePanel(): void {
   setPayloadLoader(() => loadPayloadMap())
@@ -182,14 +179,14 @@ function bindSidePanel(): void {
     loadPayload: (scenarioId, messageId) => loadMessagePayload(scenarioId, messageId),
     findQuery: panelFindQuery,
     onContent: () => syncPrintPanel(),
-    onClose: (opened) => {
+    onClose: (_opened, returned) => {
       writeScenarioHash()
       session.panelScenarioId = null
       syncWithPanel()
-      const focus = closeFocus(opened, session.switchingScenario, metricsChip)
+      // Another scenario is about to show: it decides focus.
+      const focus = session.switchingScenario ? { kind: 'none' as const } : returned
       session.invoker = null
       if (focus.kind === 'button') {
-        metricsChip = null
         // The toolbar button, unless Metrics was opened from a timing chip: those carry
         // data-show-metrics too, and the first of them is far up the page.
         const card = document.querySelector<HTMLElement>(`#card-${cssEscape(focus.scenarioId)}`)
@@ -239,9 +236,8 @@ function onMainClick(ev: MouseEvent): void {
       return
     }
     case 'metrics': {
-      metricsChip = click.chip
       const scenario = scenarioById(click.scenarioId)
-      if (scenario) openMetrics(scenario, click.section)
+      if (scenario) openMetrics(scenario, click.section, click.chip)
       return
     }
     case 'error': {

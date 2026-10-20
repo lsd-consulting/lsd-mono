@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Scenario } from '../types'
-import { closeFocus, keyTarget, mainClick, openingScenario } from './intents'
+import { keyTarget, mainClick, openingScenario } from './intents'
 
 const el = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)!
 
@@ -100,38 +100,6 @@ describe('mainClick', () => {
     expect(mainClick(el('#plain-label'))).toBeNull()
     expect(mainClick(el('#arrow'))).toBeNull()
     expect(mainClick(null)).toBeNull()
-  })
-})
-
-describe('closeFocus', () => {
-  it('leaves focus to the next scenario when one is about to show', () => {
-    expect(closeFocus({ scenarioId: 'a', kind: 'metrics' }, true, 1)).toEqual({ kind: 'none' })
-  })
-
-  it('goes back to the toolbar button, or the timing chip that opened Metrics', () => {
-    expect(closeFocus({ scenarioId: 'a', kind: 'components' }, false, 1)).toEqual({
-      kind: 'button',
-      scenarioId: 'a',
-      selector: '.seq-toolbar [data-show-components]',
-      chip: null,
-    })
-    expect(closeFocus({ scenarioId: 'a', kind: 'metrics' }, false, null)).toEqual({
-      kind: 'button',
-      scenarioId: 'a',
-      selector: '.seq-toolbar [data-show-metrics]',
-      chip: null,
-    })
-    expect(closeFocus({ scenarioId: 'a', kind: 'metrics' }, false, 2)).toMatchObject({ chip: 2 })
-  })
-
-  it('goes back to the message that was open, or nowhere', () => {
-    expect(closeFocus({ scenarioId: 'a', messageId: 'm1', kind: 'message' }, false, null)).toEqual({
-      kind: 'message',
-      scenarioId: 'a',
-      messageId: 'm1',
-    })
-    expect(closeFocus({ scenarioId: 'a' }, false, null)).toEqual({ kind: 'none' })
-    expect(closeFocus(null, false, null)).toEqual({ kind: 'none' })
   })
 })
 
