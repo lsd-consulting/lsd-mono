@@ -27,7 +27,7 @@ import {
   noteCardMetrics,
 } from '../layout'
 import type { LayoutRow } from '../layout'
-import { headActionsHtml, headSlotStyle, headSlots, isCompactHeader, type HeadSlot } from '../participant-filter'
+import { headActionsHtml, headSlotStyle, headSlots, isCompactHeader, type HeadSlot } from '../filter/markup'
 import {
   type ArrowEnd,
   activationBarSvg,
