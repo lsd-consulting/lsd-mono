@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
 import { THEMES, openFixture, pendingReport, scenarioPartTops, seriousViolations, formatViolations } from './ux-helpers'
+import { openReport } from './open-report'
 
 // Layout: Fit, column widths, the collapsed rail and the phone top bar.
 
@@ -28,11 +29,7 @@ test('Fit leaves no horizontal overflow and adds no vertical scrollbar; the stag
   const browser = await playwright.chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] })
   try {
     const page = await browser.newPage({ viewport: { width: 860, height: 700 }, baseURL })
-    await page.addInitScript((report) => {
-      window.__LSD_REPORT__ = report
-    }, shortReport)
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/')
+    await openReport(page, { report: shortReport })
     // Styled scrollbars are classic (they take layout space) on every platform,
     // like a desktop browser with a mouse attached.
     await page.addStyleTag({
@@ -164,12 +161,7 @@ for (const [layout, width] of [
   test(`${layout}: the description and its reason come before the diagram, with the key facts beside or under them`, async ({
     page,
   }) => {
-    await page.setViewportSize({ width, height: 900 })
-    await page.addInitScript((report) => {
-      window.__LSD_REPORT__ = report
-    }, pendingReport)
-    await page.goto('/')
-    await expect(page.locator('.seq-svg')).toBeVisible()
+    await openReport(page, { report: pendingReport, viewport: { width, height: 900 } })
     const at = await scenarioPartTops(page)
     expect(at.description).toBeLessThan(at.error)
     expect(at.facts).toBeGreaterThanOrEqual(at.description)

@@ -1,7 +1,8 @@
 import { devices, expect, test, type Page } from '@playwright/test'
 import type { MessageEvent, Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
-import { THEMES, openFixture, openReport, seriousViolations, formatViolations } from './ux-helpers'
+import { THEMES, openFixture, seriousViolations, formatViolations } from './ux-helpers'
+import { openReport } from './open-report'
 
 // Side panel: axe with each view open, focus return, component links, metrics and fit-to-content sizing.
 
@@ -304,7 +305,7 @@ async function openTiming(page: Page): Promise<void> {
 }
 
 test('the Timing view shows Accuracy by pair and the longer-than-parent warning, and passes axe', async ({ page }) => {
-  await openReport(page, timedFixture)
+  await openReport(page, { report: timedFixture, theme: 'light' })
   await openTiming(page)
   // #95: an H3, the last section of the panel, after the metrics list.
   await expect(page.locator('#inspector h3', { hasText: 'Accuracy by pair' })).toBeVisible()
@@ -332,7 +333,7 @@ test.describe('on a phone', () => {
   test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
 
   test('the Timing view shows Accuracy by pair and the warning inline, and passes axe', async ({ page }) => {
-    await openReport(page, timedFixture)
+    await openReport(page, { report: timedFixture, theme: 'light' })
     await openTiming(page)
     await page.locator('#inspector .pair-accuracy').scrollIntoViewIfNeeded()
     await expect(page.locator('#inspector h3', { hasText: 'Accuracy by pair' })).toBeVisible()

@@ -1,31 +1,20 @@
-import { readFileSync } from 'node:fs'
 import { devices, expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
+import { example, openExample } from './example-report'
 import { formatViolations, seriousViolations } from './ux-helpers'
+import { openReport } from './open-report'
 
 // #95: the Timing and metrics panel reads Time by participant, Swim lanes, Waterfall, Metrics,
 // then Accuracy by pair (drill-down detail) last, all H3 under the panel's H2. More than six
 // pairs fold under a summary, and the card's Accuracy chip opens the panel at that section.
 // Run on the live example report's scenarios.
 
-/** The example report's scenarios 144 (13 pairs), 145 (20), 146 (no pair data) and 147 (8). */
-const example = JSON.parse(readFileSync(new URL('./example-metrics.json', import.meta.url), 'utf8')) as Report
 const SCENARIOS = [
   { id: '144', title: 'Timed checkout (timing API)', pairs: 13 },
   { id: '145', title: 'Happy path: card payment', pairs: 20 },
 ]
 const ORDER = ['Timing and metrics', 'Time by participant', 'Swim lanes', 'Waterfall', 'Metrics', 'Accuracy by pair']
 const shots = process.env.LSD_SHOTS
-
-async function open(page: Page, scenarioId: string) {
-  await page.addInitScript((value) => {
-    window.__LSD_REPORT__ = value
-  }, example)
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  // By link, so it works where the scenario list is a menu (a phone).
-  await page.goto(`/#scenario=${scenarioId}`)
-  await expect(page.locator(`#card-${scenarioId} .seq-svg`)).toBeVisible()
-}
 
 const card = (page: Page, id: string) => page.locator(`#card-${id}`)
 const metricsButton = (page: Page, id: string) => card(page, id).locator('.seq-toolbar [data-show-metrics]')
@@ -73,7 +62,7 @@ for (const viewport of [
       test(`${scenario.title}: the sections read in order, H3 under the H2, Accuracy by pair last`, async ({
         page,
       }) => {
-        await open(page, scenario.id)
+        await openExample(page, scenario.id)
         await metricsButton(page, scenario.id).click()
         await expect(page.locator('#inspector .timing')).toBeVisible()
         const found = await headings(page)
@@ -99,7 +88,7 @@ for (const viewport of [
     test('the Accuracy chip opens the panel at Accuracy by pair, unfolded; other chips open it at the top', async ({
       page,
     }) => {
-      await open(page, '145')
+      await openExample(page, '145')
       await chip(page, '145', 'Wall-clock').click()
       await expect(page.locator('#inspector .timing')).toBeVisible()
       await expect(details(page)).not.toHaveAttribute('open', '')
@@ -146,7 +135,7 @@ test.describe('at 1440×900', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
   test('Tab goes Close, swim-lane bars, waterfall rows, then the folded Accuracy by pair summary', async ({ page }) => {
-    await open(page, '144')
+    await openExample(page, '144')
     await metricsButton(page, '144').click()
     await page.locator('#inspector-close').focus()
     await page.keyboard.press('Tab')
@@ -168,7 +157,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('swim-lane bars and waterfall rows still take the diagram to their message', async ({ page }) => {
-    await open(page, '145')
+    await openExample(page, '145')
     await metricsButton(page, '145').click()
     const onScreen = (id: string) =>
       page.evaluate((messageId) => {
@@ -209,11 +198,7 @@ test.describe('at 1440×900', () => {
         s.id === '147' ? { ...s, pairAccuracy: (s.pairAccuracy ?? []).slice(0, 6) } : s,
       ),
     }
-    await page.addInitScript((value) => {
-      window.__LSD_REPORT__ = value
-    }, six)
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/#scenario=147')
+    await openReport(page, { report: six, path: '/#scenario=147' })
     await metricsButton(page, '147').click()
     await expect(page.locator('#inspector [data-panel-section="pair-accuracy"] .pair-accuracy li')).toHaveCount(6)
     await expect(details(page)).toHaveCount(0)
@@ -228,7 +213,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('the panel opened from the Accuracy chip, unfolded, passes axe', async ({ page }) => {
-    await open(page, '145')
+    await openExample(page, '145')
     await chip(page, '145', 'Accuracy').click()
     await expect(details(page)).toHaveAttribute('open', '')
     const violations = await seriousViolations(page)
@@ -236,7 +221,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('print still has the metrics list only, without the timing sections or Accuracy by pair', async ({ page }) => {
-    await open(page, '145')
+    await openExample(page, '145')
     await metricsButton(page, '145').click()
     await page.emulateMedia({ media: 'print' })
     const printed = page.locator('.print-metrics')
@@ -255,7 +240,7 @@ for (const width of [390, 320, 768]) {
 
     // With smooth scrolling (no reduced motion) and a tap, as on a phone.
     test('after Metrics and Esc, the Accuracy chip still reaches Accuracy by pair', async ({ page }) => {
-      await open(page, '145')
+      await openExample(page, '145')
       await page.emulateMedia({ reducedMotion: 'no-preference' })
       await metricsButton(page, '145').click()
       await expect(page.locator('#inspector .timing')).toBeVisible()
@@ -278,7 +263,7 @@ test.describe('on a phone', () => {
   test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
 
   test('the order is the same as on the desktop', async ({ page }) => {
-    await open(page, '144')
+    await openExample(page, '144')
     await metricsButton(page, '144').click()
     expect((await headings(page)).map((h) => h.text)).toEqual(ORDER)
   })

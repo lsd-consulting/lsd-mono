@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { devices, expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
 import { seriousViolations } from './ux-helpers'
+import { openReport } from './open-report'
 
 // #66: on a phone the component diagram used to shrink to the panel, so the example report's
 // 11px names drew at 7-8px. Below the stacked-panel width it keeps its natural size and scrolls
@@ -11,13 +12,7 @@ import { seriousViolations } from './ux-helpers'
 const example = JSON.parse(readFileSync(new URL('./example-components.json', import.meta.url), 'utf8')) as Report
 
 async function openComponents(page: Page, report: Report | null = example): Promise<void> {
-  if (report)
-    await page.addInitScript((r) => {
-      window.__LSD_REPORT__ = r
-    }, report)
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, report ? { report } : {})
   await page.locator('[data-show-components]').first().click()
   await expect(page.locator('#inspector-graph .component-diagram')).toBeVisible()
 }

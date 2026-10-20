@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openReport } from './open-report'
 import { seriousViolations, formatViolations, threeScenarios } from './ux-helpers'
 
 // Themes: follow the OS, explicit choice, high contrast, Auto.
@@ -6,10 +7,7 @@ import { seriousViolations, formatViolations, threeScenarios } from './ux-helper
 // The default theme follows the OS (prefers-color-scheme, prefers-contrast); a choice wins.
 
 async function openOs(page: Page, colorScheme: 'dark' | 'light', contrast: 'more' | 'no-preference' = 'no-preference') {
-  await page.addInitScript((report) => {
-    window.__LSD_REPORT__ = report
-  }, threeScenarios)
-  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme, contrast })
+  await openReport(page, { report: threeScenarios, media: { colorScheme, contrast }, navigate: false })
 }
 
 test('with no choice stored the theme follows the OS, live, and is never stored', async ({ page }) => {

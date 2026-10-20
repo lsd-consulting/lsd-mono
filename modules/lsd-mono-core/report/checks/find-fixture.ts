@@ -1,7 +1,8 @@
-import { expect, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import type { IndexManifest } from '../src/lib/report-index'
 import { payloadTextScript } from '../src/lib/payloads'
 import type { Report } from '../src/types'
+import { openReport } from './open-report'
 
 /**
  * A report for Find in payloads (#60). It keeps one payload in its sibling script (loaded the first
@@ -72,20 +73,11 @@ function payloadsScript(legacy: boolean): string {
 }
 
 export async function openFindReport(page: Page, theme = 'light'): Promise<void> {
-  await page.addInitScript(
-    ({ report, themeName }) => {
-      window.__LSD_REPORT__ = report
-      window.__LSD_PAYLOADS_SRC__ = 'find-payloads.js'
-      localStorage.setItem('lsd-report-theme', themeName)
-    },
-    { report: findReport, themeName: theme },
-  )
-  await page.route('**/find-payloads.js', (route) =>
-    route.fulfill({ contentType: 'text/javascript', body: payloadsScript(false) }),
-  )
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, {
+    report: findReport,
+    theme,
+    payloads: { src: 'find-payloads.js', body: payloadsScript(false) },
+  })
 }
 
 export async function openFindIndex(page: Page, { legacy = false } = {}): Promise<void> {
@@ -105,19 +97,8 @@ export async function openFindIndex(page: Page, { legacy = false } = {}): Promis
       },
     ],
   }
-  await page.addInitScript((m) => {
-    window.__LSD_INDEX__ = m
-  }, manifest)
-  await page.route('**/find-report.js', (route) =>
-    route.fulfill({
-      contentType: 'text/javascript',
-      body: `(window.__LSD_REPORTS__=window.__LSD_REPORTS__||{}).find={report:${JSON.stringify(findReport)},payloadsSrc:'find-payloads.js'};`,
-    }),
-  )
-  await page.route('**/find-payloads.js', (route) =>
-    route.fulfill({ contentType: 'text/javascript', body: payloadsScript(legacy) }),
-  )
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, {
+    index: { manifest, reports: { find: findReport } },
+    payloads: { src: 'find-payloads.js', body: payloadsScript(legacy) },
+  })
 }

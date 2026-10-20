@@ -1,5 +1,6 @@
 import { devices, expect, test, type Page } from '@playwright/test'
-import { openIndex, openReport, sectionsReport } from './diagram-pages'
+import { PAGES, sectionsReport } from './diagram-pages'
+import { openReport } from './open-report'
 
 /**
  * Find in the diagram the way a phone types: a tap on the field, then text from the soft
@@ -32,14 +33,13 @@ for (const [phone, device] of Object.entries(PHONES)) {
   // Chromium with the phone's screen, touch and mobile viewport (the device's own browser is not installed).
   const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = device
   const context = { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch }
-  for (const [pageName, open] of Object.entries({ report: openReport, index: openIndex })) {
+  for (const [pageName, open] of Object.entries(PAGES)) {
     test.describe(`find on ${phone}, ${pageName} page`, () => {
       test.use(context)
 
       test('typing with the soft keyboard, no Enter, brings the first match on screen above the keyboard', async ({
         page,
       }) => {
-        await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, sectionsReport(30))
         await expect(page.locator('.seq-svg')).toBeVisible()
         const find = page.locator('[data-diagram-find]')
@@ -70,7 +70,6 @@ for (const [phone, device] of Object.entries(PHONES)) {
       })
 
       test('the Next and Previous buttons step through matches with N of M, wrapping, on screen', async ({ page }) => {
-        await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, sectionsReport(30))
         await expect(page.locator('.seq-svg')).toBeVisible()
         const find = page.locator('[data-diagram-find]')
@@ -95,7 +94,6 @@ for (const [phone, device] of Object.entries(PHONES)) {
       })
 
       test('the keyboard Go / Search key closes the keyboard and shows the match', async ({ page }) => {
-        await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, sectionsReport(30))
         await expect(page.locator('.seq-svg')).toBeVisible()
         const find = page.locator('[data-diagram-find]')
@@ -113,8 +111,7 @@ test('desktop: typing without Enter brings the first match on screen, with a hig
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await openReport(page, sectionsReport(30))
+  await openReport(page, { report: sectionsReport(30) })
   await expect(page.locator('.seq-svg')).toBeVisible()
   await page.locator('[data-diagram-find]').click()
   await page.keyboard.type('call 3.20', { delay: 20 })
@@ -128,8 +125,7 @@ test('desktop: Enter, Shift+Enter, F3 and Ctrl+G step through matches, wrapping,
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await openReport(page, sectionsReport(30))
+  await openReport(page, { report: sectionsReport(30) })
   await expect(page.locator('.seq-svg')).toBeVisible()
   const find = page.locator('[data-diagram-find]')
   const count = page.locator('.diagram-find-count')

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { wideReport } from './wide-sample'
+import { openReport } from './open-report'
 
 // #65: the "More lanes →" cue on a wide diagram is a button that scrolls one screen right, so a
 // click on it no longer falls through to the arrow underneath, and a screen reader hears it.
@@ -7,15 +8,7 @@ import { wideReport } from './wide-sample'
 
 async function openWide(page: Page, width: number): Promise<void> {
   await page.setViewportSize({ width, height: width < 600 ? 844 : 800 })
-  await page.addInitScript(
-    (report) => {
-      window.__LSD_REPORT__ = report
-    },
-    wideReport(100, 400),
-  )
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, { report: wideReport(100, 400) })
 }
 
 const scrollLeft = (page: Page) => page.locator('.seq-scroll').evaluate((el) => el.scrollLeft)

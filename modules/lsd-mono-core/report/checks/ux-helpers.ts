@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import type { MessageEvent, Participant, Report, Scenario } from '../src/types'
+import { openReport } from './open-report'
 import { uxFixture } from './ux-fixture'
 
 // Shared by the ux-*.spec.ts files.
@@ -17,22 +18,9 @@ export const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
 export const THEMES = ['dark', 'light', 'contrast'] as const
 
+/** The small UX fixture in [theme], settled for axe and screenshots. */
 export async function openFixture(page: Page, theme: (typeof THEMES)[number]): Promise<void> {
-  await page.addInitScript(
-    ({ report, themeName }) => {
-      window.__LSD_REPORT__ = report
-      localStorage.setItem('lsd-report-theme', themeName)
-    },
-    { report: uxFixture, themeName: theme },
-  )
-  // Context reducedMotion is set in the config, but this Chromium build does not
-  // apply it unless emulateMedia runs on the page. The entrance animation otherwise
-  // sits near opacity 0 and axe reports false contrast.
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
-  await expect(page.locator('.msg-label').first()).toBeVisible()
-  await page.evaluate(() => document.fonts.ready)
+  await openReport(page, { report: uxFixture, theme, wait: 'labels' })
 }
 
 /**
@@ -97,16 +85,6 @@ export function formatViolations(violations: Result[]): string {
     .join('\n')
 }
 
-export async function openReport(page: Page, report: Report): Promise<void> {
-  await page.addInitScript((value) => {
-    window.__LSD_REPORT__ = value
-    localStorage.setItem('lsd-report-theme', 'light')
-  }, report)
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
-}
-
 /** What the browser does around window.print(): beforeprint paints every diagram row. */
 export async function startPrint(page: Page): Promise<void> {
   await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')))
@@ -143,12 +121,7 @@ const wideReport: Report = {
 }
 
 export async function openWide(page: Page, hash = ''): Promise<void> {
-  await page.addInitScript((report) => {
-    window.__LSD_REPORT__ = report
-  }, wideReport)
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto(`/${hash}`)
-  await expect(page.locator('.seq-svg').first()).toBeVisible()
+  await openReport(page, { report: wideReport, path: `/${hash}` })
 }
 
 /** Zoom readout as a number (85 for "85%") and sideways overflow, for one scenario's diagram. */

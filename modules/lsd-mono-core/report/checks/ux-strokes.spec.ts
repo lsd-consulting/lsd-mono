@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { MessageEvent, MessageType, Report } from '../src/types'
+import { openReport } from './open-report'
 import { THEMES, contrastRatio } from './ux-helpers'
 
 // axe does not score SVG strokes, so compute them: every kind of arrow, in every theme, with the
@@ -54,17 +55,7 @@ for (const theme of THEMES) {
   test(`arrows, tips, participant outlines and the {} marker keep their contrast in the ${theme} theme`, async ({
     page,
   }) => {
-    await page.addInitScript(
-      ({ r, t }) => {
-        window.__LSD_REPORT__ = r
-        localStorage.setItem('lsd-report-theme', t)
-      },
-      { r: report, t: theme },
-    )
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.setViewportSize({ width: 1400, height: 4000 })
-    await page.goto('/')
-    await expect(page.locator('.seq-svg')).toBeVisible()
+    await openReport(page, { report, theme, viewport: { width: 1400, height: 4000 } })
     const measured = await page.evaluate(() => {
       const canvas = document.createElement('canvas')
       canvas.width = canvas.height = 1

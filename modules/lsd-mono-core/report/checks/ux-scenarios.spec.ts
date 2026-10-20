@@ -1,15 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 import { THEMES, seriousViolations, formatViolations, startPrint, endPrint, threeScenarios } from './ux-helpers'
+import { openReport } from './open-report'
 
 // One scenario at a time, chosen from the sidebar (#39).
 
 async function openThree(page: Page, hash = ''): Promise<void> {
-  await page.addInitScript((report) => {
-    window.__LSD_REPORT__ = report
-  }, threeScenarios)
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto(`/${hash}`)
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, { report: threeScenarios, path: `/${hash}` })
 }
 
 const shown = (page: Page) =>

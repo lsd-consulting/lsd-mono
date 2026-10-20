@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test'
 import type { Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
-import { openReport, startPrint, endPrint } from './ux-helpers'
+import { startPrint, endPrint } from './ux-helpers'
+import { openReport } from './open-report'
 
 // Print: what prints from an open panel, diagrams at page width.
 
@@ -28,7 +29,7 @@ const longPayloadReport: Report = {
 test('print leaves out the scenario list and toolbars, prints nothing from a closed panel, and draws diagrams at page width', async ({
   page,
 }) => {
-  await openReport(page, uxFixture)
+  await openReport(page, { report: uxFixture, theme: 'light' })
   await startPrint(page)
   for (const chrome of ['.topbar', '.sidebar', '.seq-toolbar', '#inspector']) {
     await expect(page.locator(chrome), chrome).toBeHidden()
@@ -53,7 +54,7 @@ test('print leaves out the scenario list and toolbars, prints nothing from a clo
 })
 
 test('print shows the open message JSON in full, in its scenario after the diagram', async ({ page }) => {
-  await openReport(page, longPayloadReport)
+  await openReport(page, { report: longPayloadReport, theme: 'light' })
   await page.locator('button.msg-open[data-message-id="m1"]').click()
   await expect(page.locator('#inspector-pre')).toBeVisible()
   await expect(page.locator('#inspector-pre')).toContainText('line 69')
@@ -99,7 +100,7 @@ test('print shows the open message JSON in full, in its scenario after the diagr
 })
 
 test('print shows the open component diagram whole, at page width, after the sequence diagram', async ({ page }) => {
-  await openReport(page, uxFixture)
+  await openReport(page, { report: uxFixture, theme: 'light' })
   await page.getByRole('button', { name: 'Component diagram' }).click()
   await expect(page.locator('#inspector-graph svg.component-diagram')).toBeVisible()
   const printed = page.locator('#card-ux .print-components')
@@ -147,7 +148,7 @@ test('print shows the open component diagram whole, at page width, after the seq
 test('the {} payload marker and its legend show on screen, not in print, and use CanvasText in forced colours', async ({
   page,
 }) => {
-  await openReport(page, uxFixture)
+  await openReport(page, { report: uxFixture, theme: 'light' })
   const marker = page.locator('.msg-payload').first()
   const legend = page.locator('.payload-legend')
   await expect(marker).toBeVisible()
@@ -204,7 +205,7 @@ const fourteenLanes: Report = {
 test('a wide diagram prints at full size in strips of lanes that cover the whole drawing', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await openReport(page, fourteenLanes)
+  await openReport(page, { report: fourteenLanes, theme: 'light' })
   await expect(page.locator('.seq-svg')).toBeVisible()
   await startPrint(page)
   await expect(page.locator('.print-slices')).toBeVisible()

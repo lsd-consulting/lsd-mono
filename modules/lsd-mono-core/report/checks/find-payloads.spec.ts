@@ -1,5 +1,6 @@
 import { devices, expect, test, type Page } from '@playwright/test'
 import { findReport, openFindIndex, openFindReport } from './find-fixture'
+import { openReport } from './open-report'
 import { THEMES, computedColours, contrastRatio, formatViolations, seriousViolations } from './ux-helpers'
 
 // Find in payloads (#60): the arrows whose payload matches count and step like label matches.
@@ -290,15 +291,7 @@ test('the Payloads toggle turns payloads out of Find and back in', async ({ page
 })
 
 test('a diagram without payloads has no Payloads toggle', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 })
-  await page.addInitScript(
-    (report) => {
-      window.__LSD_REPORT__ = report
-    },
-    { ...findReportWithoutPayloads },
-  )
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, { report: findReportWithoutPayloads, viewport: { width: 1280, height: 800 } })
   await expect(page.locator('[data-find-payloads]')).toHaveCount(0)
   await expect(page.locator('[data-diagram-find]')).toHaveAccessibleName('Find messages and notes in this diagram')
 })

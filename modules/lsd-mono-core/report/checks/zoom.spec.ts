@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs'
 import { devices, expect, test, type Locator, type Page } from '@playwright/test'
-import type { Report } from '../src/types'
+import { openExample } from './example-report'
+import { openReport } from './open-report'
 import { openFixture, THEMES } from './ux-helpers'
 import { wideReport } from './wide-sample'
 
@@ -9,28 +9,9 @@ import { wideReport } from './wide-sample'
 // whole width down to 10%. Run on the live example report's "Timed checkout" (14 lanes) and
 // "Payment declined" (4 lanes) scenarios, and the 100-participant perf sample.
 
-/** The example report's scenarios 144 (Timed checkout, 14 lanes) and 146 (Payment declined, 4). */
-const example = JSON.parse(readFileSync(new URL('./example-zoom.json', import.meta.url), 'utf8')) as Report
 // Timed checkout (144) is the first scenario, so it opens without a scenarioId.
 const DECLINED = '146'
 const shots = process.env.LSD_SHOTS
-
-async function open(page: Page, report: Report, scenarioId?: string, storage: Record<string, string> = {}) {
-  await page.addInitScript(
-    ([value, items]) => {
-      window.__LSD_REPORT__ = value
-      for (const [key, item] of Object.entries(items)) localStorage.setItem(key, item)
-    },
-    [report, storage] as const,
-  )
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg').first()).toBeVisible()
-  if (scenarioId) {
-    await page.locator(`#scenario-nav [data-nav="${scenarioId}"]`).click()
-    await expect(page.locator(`#card-${scenarioId} .seq-svg`)).toBeVisible()
-  }
-}
 
 const card = (page: Page) => page.locator('.scenario-card').first()
 const zoomOut = (page: Page) => card(page).getByRole('button', { name: 'Zoom out', exact: true })
@@ -78,7 +59,7 @@ test.describe('at 1440×900', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
   test('the Zoom group has − , the % reset, + and Overview, with their tooltips, and no Fit', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     const group = card(page).getByRole('group', { name: 'Zoom' })
     const names = await group
       .getByRole('button')
@@ -103,7 +84,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('95% + gives 100%, − from 100% gives 90%, and the ends are 250% and 25%, disabled there', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     await expectZoom(page, '95')
     await zoomIn(page).click()
     await expectZoom(page, 100)
@@ -128,7 +109,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('the % readout puts back the opening scale and scroll position', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     const opened = await scrollState(page)
     await expectZoom(page, '95')
     await zoomIn(page).click()
@@ -144,7 +125,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('Overview on Timed checkout shows the whole width at about 48%, and says so', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     const changes = await statusChanges(page, () => overview(page).click())
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
     expect((await scrollState(page)).overflowX).toBeLessThanOrEqual(0)
@@ -158,7 +139,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('Overview again, or Esc, puts back the zoom and scroll position from before', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     await zoomIn(page).click()
     await zoomIn(page).click()
     await expectZoom(page, 110)
@@ -181,7 +162,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('Overview and back puts the page where it was, scrolled down the diagram', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     await zoomIn(page).click()
     await expectZoom(page, 100)
     // The diagram scrolls with the page: scroll the page down into it.
@@ -203,7 +184,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('a click in Overview goes to the default view centred on that spot', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     await overview(page).click()
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
     const target = card(page).locator('button.msg-open').nth(8)
@@ -239,7 +220,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('Enter on a focused message in Overview goes to the default view on that message', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     await overview(page).click()
     const target = card(page).locator('button.msg-open').nth(5)
     const id = await target.getAttribute('data-message-id')
@@ -254,7 +235,7 @@ test.describe('at 1440×900', () => {
   test('the 4-lane scenario opens at 100%, the reset keeps it there, and Overview has nothing to do', async ({
     page,
   }) => {
-    await open(page, example, DECLINED)
+    await openExample(page, DECLINED)
     await expectZoom(page, 100)
     await zoomIn(page).click()
     await expectZoom(page, 110)
@@ -266,7 +247,7 @@ test.describe('at 1440×900', () => {
   })
 
   test('each zoom change says one thing in the status line, with its context', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     expect(await statusChanges(page, () => zoomIn(page).click())).toEqual(['Zoom 100%'])
     expect(await statusChanges(page, () => reset(page).click())).toEqual(['Default zoom, 95%'])
   })
@@ -274,7 +255,7 @@ test.describe('at 1440×900', () => {
 
 test('at 2560 wide the 4-lane scenario still opens and resets to 100%', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1200 })
-  await open(page, example, DECLINED)
+  await openExample(page, DECLINED)
   await expectZoom(page, 100)
   await zoomOut(page).click()
   await reset(page).click()
@@ -285,7 +266,7 @@ test('on the 100-participant sample at 1440, Overview stops at 10%, keeps the cu
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, wideReport(100, 400))
+  await openReport(page, { report: wideReport(100, 400) })
   await overview(page).click()
   await expectZoom(page, 10)
   await expect(card(page).getByRole('button', { name: 'More lanes to the right: scroll right' })).toBeVisible()
@@ -311,7 +292,7 @@ test('on the 100-participant sample at 1440, Overview stops at 10%, keeps the cu
 
 test('on the 100-participant sample at 1280, default, + and Overview each say what they show', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  await open(page, wideReport(100, 400))
+  await openReport(page, { report: wideReport(100, 400) })
   await expectZoom(page, '95')
   if (shots) await page.screenshot({ path: `${shots}/q-94-1280-100p-default.png` })
   await zoomIn(page).click()
@@ -329,7 +310,7 @@ test.describe('zoom keys', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
   test('on a focused message +, =, -, 0, Shift+1 and Esc do what the controls do', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     await card(page).locator('button.msg-open').first().focus()
     await page.keyboard.press('+')
     await expectZoom(page, 100)
@@ -350,7 +331,7 @@ test.describe('zoom keys', () => {
   })
 
   test('in Find and the page search they type, and outside the diagram card they do nothing', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     const find = card(page).locator('[data-diagram-find]')
     await find.focus()
     await page.keyboard.type('+-0=')
@@ -368,7 +349,7 @@ test.describe('zoom keys', () => {
   })
 
   test('with single-key shortcuts off the keys do nothing, and the buttons still work', async ({ page }) => {
-    await open(page, example, undefined, { 'lsd-report-single-keys': 'off' })
+    await openExample(page, undefined, { storage: { 'lsd-report-single-keys': 'off' } })
     await card(page).locator('button.msg-open').first().focus()
     for (const key of ['+', '=', '-', '0', 'Shift+Digit1']) await page.keyboard.press(key)
     await expectZoom(page, '95')
@@ -378,7 +359,7 @@ test.describe('zoom keys', () => {
   })
 
   test('Ctrl/Cmd with +, - and 0 are left to the browser', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     await card(page).locator('button.msg-open').first().focus()
     const prevented = await page.evaluate(() =>
       ['=', '+', '-', '0'].flatMap((key) =>
@@ -394,7 +375,7 @@ test.describe('zoom keys', () => {
   })
 
   test('the ? help lists the zoom keys', async ({ page }) => {
-    await open(page, example)
+    await openExample(page)
     await expect(page.locator('#help')).toContainText('+/− zoom, 0 default zoom, Shift+1 overview')
   })
 })
@@ -429,7 +410,7 @@ test('in a card beside the panel (under 880px) the toolbar keeps one row, Overvi
 
 test('the zoom icons draw in the text colour in every theme', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, example)
+  await openExample(page)
   for (const theme of THEMES) {
     await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
     for (const button of [zoomOut(page), zoomIn(page), overview(page)]) {
@@ -457,7 +438,7 @@ test.describe('forced colours', () => {
 
   test('the icons follow the system button colour and the pressed Overview is highlighted', async ({ page }) => {
     await page.emulateMedia({ forcedColors: 'active' })
-    await open(page, example)
+    await openExample(page)
     await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' })
     for (const button of [zoomOut(page), zoomIn(page), overview(page)]) {
       const drawn = await iconColour(button)
@@ -483,7 +464,7 @@ for (const viewport of [
     test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
 
     test('has all four zoom controls at 44×44 or more, on one row, without overlap', async ({ page }) => {
-      await open(page, example)
+      await openExample(page)
       const boxes = await card(page)
         .getByRole('group', { name: 'Zoom' })
         .getByRole('button')

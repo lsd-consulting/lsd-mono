@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Request } from '@playwright/test'
 import type { IndexManifest } from '../src/lib/report-index'
 import type { Report } from '../src/types'
+import { openReport } from './open-report'
 import { uxFixture } from './ux-fixture'
 
 /**
@@ -32,17 +33,11 @@ async function open(page: Page, data: Report, path = OPT_IN, failWith = 'blocked
   page.on('console', (m) => {
     if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) opened.errors.push(m.text())
   })
-  await page.addInitScript((r) => {
-    window.__LSD_REPORT__ = r
-  }, data)
   await page.route('https://cdn.jsdelivr.net/**', (route) => {
     opened.pings.push(route.request())
     return route.abort(failWith)
   })
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto(path)
-  await expect(page.locator('.seq-svg')).toBeVisible()
-  await expect(page.locator('.msg-label').first()).toBeVisible()
+  await openReport(page, { report: data, path, wait: 'labels' })
   return opened
 }
 
@@ -121,27 +116,12 @@ test('usage ping: the index page pings on open and counts each opened report sou
       scenarios: [{ id: 'ux', title: 'Checkout', status: 'success' as const, messages: 14 }],
     })),
   }
-  await page.addInitScript((m) => {
-    window.__LSD_INDEX__ = m
-  }, manifest)
   await page.route('https://cdn.jsdelivr.net/**', (route) => {
     pings.push(route.request().url().replace(CDN, ''))
     return route.abort()
   })
-  for (const id of ['a', 'b']) {
-    const data = {
-      report: { ...report({ source: 'cucumber' }), title: id === 'a' ? 'Alpha' : 'Beta' },
-      payloadsSrc: null,
-    }
-    await page.route(`**/${id}-report.js`, (route) =>
-      route.fulfill({
-        contentType: 'text/javascript',
-        body: `(window.__LSD_REPORTS__=window.__LSD_REPORTS__||{})[${JSON.stringify(id)}]=${JSON.stringify(data)};`,
-      }),
-    )
-  }
-  await page.goto(OPT_IN)
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  const titled = (title: string) => ({ ...report({ source: 'cucumber' }), title })
+  await openReport(page, { index: { manifest, reports: { a: titled('Alpha'), b: titled('Beta') } }, path: OPT_IN })
   await page.goto(`${OPT_IN}#report=b&scenario=ux`)
   await expect(page).toHaveTitle('Beta · LSD reports')
   await expect.poll(() => pings).toEqual(['report-open.txt', 'source-cucumber.txt'])

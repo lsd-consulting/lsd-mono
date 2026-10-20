@@ -1,6 +1,7 @@
 import { devices, expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
-import { openIndex, sectionsReport } from './diagram-pages'
+import { PAGES, sectionsReport } from './diagram-pages'
+import { openReport } from './open-report'
 import { uxFixture } from './ux-fixture'
 import { pendingReport, scenarioPartTops } from './ux-helpers'
 
@@ -29,17 +30,9 @@ const shownNavItems = (page: Page) =>
     )
 
 async function open(page: Page, which: 'report' | 'index', hash = '', report: Report = phoneReport): Promise<void> {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  if (which === 'report') {
-    await page.addInitScript((r) => {
-      window.__LSD_REPORT__ = r
-    }, report)
-    await page.goto(`/${hash}`)
-  } else {
-    // The index fixture lists one report with one scenario, id "sections".
-    await openIndex(page, { ...phoneReport, scenarios: [{ ...base, id: 'sections', title: 'Sections' }] })
-  }
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  if (which === 'report') await openReport(page, { report, path: `/${hash}` })
+  // The index fixture lists one report with one scenario, id "sections".
+  else await PAGES.index(page, { ...phoneReport, scenarios: [{ ...base, id: 'sections', title: 'Sections' }] })
 }
 
 for (const [phone, device] of Object.entries(PHONES)) {

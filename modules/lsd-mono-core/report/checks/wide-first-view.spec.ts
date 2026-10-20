@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { wideReport } from './wide-sample'
+import { openReport } from './open-report'
 
 // #65: on the 100-participant perf sample, the first view used to be Fit at 50% with tiny labels
 // and mostly empty lanes. Fit now stops at 95% (#81), so the first rows' labels are readable on
@@ -29,15 +30,7 @@ test('the 100-participant sample opens at 1280px with message labels in view and
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  await page.addInitScript(
-    (report) => {
-      window.__LSD_REPORT__ = report
-    },
-    wideReport(100, 400),
-  )
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, { report: wideReport(100, 400) })
   await expect(page.locator('.zoom-readout')).toHaveText('95%')
 
   // Above the fold, under the scenario header.
@@ -62,15 +55,7 @@ test('the 100-participant sample opens at 1280px with message labels in view and
 // near its 535 nodes from before the participant filter (1,536 with buttons on every header).
 test('the 100-participant header has one set of Hide and More buttons, which follows the pointer', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  await page.addInitScript(
-    (report) => {
-      window.__LSD_REPORT__ = report
-    },
-    wideReport(100, 400),
-  )
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, { report: wideReport(100, 400) })
   const header = page.locator('.seq-sticky-header')
   expect(await header.evaluate((el) => el.getElementsByTagName('*').length)).toBeLessThanOrEqual(700)
   await expect(header.locator('.participant-heads button')).toHaveCount(2)
@@ -83,15 +68,7 @@ test('moving along the header from the keyboard keeps the focused button inside 
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  await page.addInitScript(
-    (report) => {
-      window.__LSD_REPORT__ = report
-    },
-    wideReport(100, 400),
-  )
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, { report: wideReport(100, 400) })
   await page.locator('.participant-heads [data-hide-participant]').focus()
   await expect(page.locator('.participant-heads button:focus')).toHaveCount(1)
   const inside = () =>

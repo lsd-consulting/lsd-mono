@@ -5,12 +5,12 @@ import {
   openFixture,
   seriousViolations,
   formatViolations,
-  openReport,
   startPrint,
   endPrint,
   openWide,
   zoomOf,
 } from './ux-helpers'
+import { openReport } from './open-report'
 
 // Participant filter (#8): Hide (×) and More (⋯) on each header, a chip while anything is
 // hidden, and a menu with "Hide all but this one".
@@ -196,7 +196,7 @@ test('hiding refits a diagram the user has not zoomed, and keeps a zoom they cho
 })
 
 test('print keeps hidden participants hidden and leaves out the header buttons and the chip', async ({ page }) => {
-  await openReport(page, uxFixture)
+  await openReport(page, { report: uxFixture, theme: 'light' })
   await page.locator('[data-participant-head="db"]').hover()
   await page.getByRole('button', { name: 'Hide Database' }).click()
   await page.locator('[data-participant-head="bus"]').click({ button: 'right' })

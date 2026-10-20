@@ -1,6 +1,7 @@
 import { devices, expect, test, type CDPSession, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
-import { openIndex, openReport, sectionsReport } from './diagram-pages'
+import { PAGES, sectionsReport } from './diagram-pages'
+import { openReport } from './open-report'
 
 /**
  * The Timing and metrics panel on a phone, swiped with real touch (CDP touch events, so the
@@ -106,12 +107,11 @@ function state(page: Page) {
 for (const [phone, device] of Object.entries(PHONES)) {
   const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = device
   const context = { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch }
-  for (const [pageName, open] of Object.entries({ report: openReport, index: openIndex })) {
+  for (const [pageName, open] of Object.entries(PAGES)) {
     test.describe(`timing and metrics panel on ${phone}, ${pageName} page`, () => {
       test.use(context)
 
       test('a swipe on the open panel scrolls the page, down to the end and back up', async ({ page }) => {
-        await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, timedReport())
         await expect(page.locator('.seq-svg')).toBeVisible()
         await page.locator('[data-show-metrics]').first().tap()
@@ -153,7 +153,6 @@ for (const [phone, device] of Object.entries(PHONES)) {
       test('the component diagram: swipes on it scroll the page, a tap picks a link, Close stays in reach', async ({
         page,
       }) => {
-        await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, timedReport())
         await expect(page.locator('.seq-svg')).toBeVisible()
         await page.locator('[data-show-components]').first().tap()
@@ -185,7 +184,6 @@ for (const [phone, device] of Object.entries(PHONES)) {
         ['metrics', '[data-show-metrics]', '#inspector-metrics'],
       ] as const) {
         test(`opening the ${what} scrolls its heading just below the top bar`, async ({ page }) => {
-          await page.emulateMedia({ reducedMotion: 'reduce' })
           await open(page, timedReport())
           await expect(page.locator('.seq-svg')).toBeVisible()
           await page.locator(opener).first().tap()
@@ -206,8 +204,7 @@ for (const [phone, device] of Object.entries(PHONES)) {
         test(`tapping an arrow low on the screen scrolls its JSON into view below the top bar (${reducedMotion})`, async ({
           page,
         }) => {
-          await page.emulateMedia({ reducedMotion })
-          await open(page, payloadReport())
+          await open(page, payloadReport(), { media: { reducedMotion } })
           await expect(page.locator('.seq-svg')).toBeVisible()
           const arrow = page.locator('.msg-open[aria-label^="Open call 1.2,"]')
           await expect(page.locator('.msg-payload')).not.toHaveCount(0)
@@ -229,7 +226,6 @@ for (const [phone, device] of Object.entries(PHONES)) {
       test('a long, wide JSON payload: the page scrolls through it, lines wrap, no dead Expand, Close stays in reach', async ({
         page,
       }) => {
-        await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, payloadReport())
         await expect(page.locator('.seq-svg')).toBeVisible()
         await page.locator('.msg-open[aria-label^="Open call 1.2,"]').tap()
@@ -257,7 +253,7 @@ for (const [phone, device] of Object.entries(PHONES)) {
 
 test('desktop keeps the side panel as its own scroll column', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  await openReport(page, timedReport())
+  await openReport(page, { report: timedReport() })
   await page.locator('[data-show-metrics]').first().click()
   const panel = page.locator('.inspector')
   await expect(panel).toBeVisible()

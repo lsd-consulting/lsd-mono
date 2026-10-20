@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { openIndex, openReport, sectionsReport } from './diagram-pages'
+import { PAGES, sectionsReport } from './diagram-pages'
 
 /**
  * The section jump list above a diagram brings that section to the top of the diagram, in the
@@ -19,7 +19,6 @@ async function sectionOffset(page: Page, id: string): Promise<number | null> {
   }, id)
 }
 
-const PAGES = { report: openReport, index: openIndex } as const
 const SIZES = { desktop: { width: 1280, height: 800 }, phone: { width: 390, height: 844 } } as const
 
 for (const [pageName, open] of Object.entries(PAGES)) {
@@ -30,7 +29,6 @@ for (const [pageName, open] of Object.entries(PAGES)) {
     ] as const) {
       test(`section jump: ${pageName} page, ${sizeName}, ${drawing} drawing`, async ({ page }) => {
         await page.setViewportSize(viewport)
-        await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, sectionsReport(perSection))
         await expect(page.locator('.seq-svg')).toBeVisible()
         for (const id of ['s2', 's3', 's1']) {
@@ -61,7 +59,6 @@ for (const [pageName, open] of Object.entries(PAGES)) {
         page,
       }) => {
         await page.setViewportSize(viewport)
-        await page.emulateMedia({ reducedMotion: 'reduce' })
         await open(page, sectionsReport(perSection))
         await expect(page.locator('.seq-svg')).toBeVisible()
         for (const label of [`call 3.${perSection - 2}`, 'call 1.2']) {

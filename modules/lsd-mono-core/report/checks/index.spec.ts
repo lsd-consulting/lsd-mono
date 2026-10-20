@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import type { IndexManifest } from '../src/lib/report-index'
 import type { Report } from '../src/types'
+import { openReport } from './open-report'
 import { AXE_TAGS } from './ux-helpers'
 import { uxFixture } from './ux-fixture'
 
@@ -40,32 +41,13 @@ const manifest: IndexManifest = {
   ],
 }
 
-function dataScript(id: string, report: Report): string {
-  return `(window.__LSD_REPORTS__=window.__LSD_REPORTS__||{})[${JSON.stringify(id)}]={report:${JSON.stringify(report)},payloadsSrc:null};`
-}
-
+/** Opens the index in [theme] and returns the ids of the reports whose data loaded, in order. */
 async function openIndex(page: Page, theme: string, hash = ''): Promise<string[]> {
-  const loaded: string[] = []
-  await page.addInitScript(
-    ({ index, themeName }) => {
-      window.__LSD_INDEX__ = index
-      localStorage.setItem('lsd-report-theme', themeName)
-    },
-    { index: manifest, themeName: theme },
-  )
-  for (const [id, report] of [
-    ['orders', failing],
-    ['checkout', passing],
-  ] as const) {
-    await page.route(`**/${id}-report.js`, (route) => {
-      loaded.push(id)
-      return route.fulfill({ contentType: 'text/javascript', body: dataScript(id, report) })
-    })
-  }
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto(`/${hash}`)
-  await expect(page.locator('.seq-svg')).toBeVisible()
-  await page.evaluate(() => document.fonts.ready)
+  const { loaded } = await openReport(page, {
+    index: { manifest, reports: { orders: failing, checkout: passing } },
+    theme,
+    path: `/${hash}`,
+  })
   return loaded
 }
 

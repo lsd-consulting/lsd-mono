@@ -13,6 +13,7 @@ import {
   seriousViolations,
   zoomOf,
 } from './ux-helpers'
+import { openReport } from './open-report'
 
 // Diagram drawing: note colours, labels, long names, zoom and fit, deep links, tall diagrams.
 
@@ -122,11 +123,7 @@ const longNamesReport: Report = {
 
 test('long participant names stay inside their shapes and clear of their neighbours', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 })
-  await page.addInitScript((report) => {
-    window.__LSD_REPORT__ = report
-  }, longNamesReport)
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
+  await openReport(page, { report: longNamesReport })
   await expect(page.locator('.seq-header-svg')).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
 
@@ -360,12 +357,7 @@ for (const [name, viewport] of [
 }
 
 test('section titles are headings in the text view, and axe stays clean with sections', async ({ page }) => {
-  await page.addInitScript((report) => {
-    window.__LSD_REPORT__ = report
-  }, sectionsReport(6))
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  await expect(page.locator('.seq-svg')).toBeVisible()
+  await openReport(page, { report: sectionsReport(6) })
   const list = page.getByRole('list', { name: 'Messages in order' })
   await expect(list.getByRole('heading', { level: 4 }).first()).toBeAttached()
   expect(await list.getByRole('heading', { level: 4 }).count()).toBeGreaterThan(0)
