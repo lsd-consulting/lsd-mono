@@ -3,8 +3,10 @@ import { defineConfig } from '@playwright/test'
 /** Headless Chromium, same Playwright major as docs/perf/measure.mjs (1.55). */
 export default defineConfig({
   testDir: './checks',
-  fullyParallel: false,
-  workers: 1,
+  // Every test opens its own page (report, routes, storage) against the read-only dev server, so
+  // tests run in parallel, within a file too (#97). Half the cores locally; CI runners have four.
+  fullyParallel: true,
+  workers: process.env.CI ? 3 : '50%',
   retries: 0,
   // The @screenshot tests compare against macOS baselines; Linux renders fonts differently, so CI
   // leaves them out. Everything else runs in both places. See docs/ci.md.

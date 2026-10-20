@@ -51,6 +51,10 @@ usage ping. It needs no Gradle build, so it runs alongside
   with baselines taken on macOS. Linux draws fonts differently, so `playwright.config.ts` leaves
   them out (`grepInvert`) when `CI` is set, which GitHub Actions does. Locally they run as usual;
   `CI=1 npm run check:ux` runs the CI set. Keep layout assertions in untagged tests so CI checks them.
+- **Parallel.** The checks run fully parallel: three workers on CI, half the cores locally
+  (`playwright.config.ts`). Each test opens its own page, so none may depend on another's state;
+  `npx playwright test --repeat-each 2` finds one that does. CI runs the phone swipe matrix in
+  `checks/sheet-mobile.spec.ts` on the iPhone only; a local run adds the Pixel.
 - **On failure** the job uploads the HTML report (`playwright-report/`) and the traces of the
   failed tests (`test-results/`) as the `playwright-report` artifact. Open a trace with
   `npx playwright show-trace <trace.zip>`.

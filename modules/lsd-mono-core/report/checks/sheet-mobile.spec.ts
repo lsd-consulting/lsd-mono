@@ -10,20 +10,27 @@ import { openIndex, openReport, sectionsReport } from './diagram-pages'
  */
 const PHONES = {
   iPhone: devices['iPhone 13'],
-  Pixel: devices['Pixel 7'],
-} as const
+  // The same Chromium on both, so CI runs the matrix on one phone and a local run on both (#97).
+  ...(process.env.CI ? {} : { Pixel: devices['Pixel 7'] }),
+}
 
-/** One finger swipe from y0 to y1 at x, in CSS px, then a pause for the scroll to settle. */
+/** Resolves on the browser's next frame, so each touch move lands in a frame of its own. */
+const nextFrame = (page: Page) => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)))
+
+/**
+ * One finger swipe from y0 to y1 at x, in CSS px. It returns when the finger lifts: the page may
+ * still be flinging, so the checks poll scrollY instead of sleeping for the scroll to settle (#97).
+ */
 async function swipe(page: Page, cdp: CDPSession, x: number, y0: number, y1: number): Promise<void> {
-  const steps = 12
+  const steps = 6
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] })
+  // Each move resolves once the browser has handled it, so no pause is needed between them.
   for (let i = 1; i <= steps; i++) {
     const y = y0 + ((y1 - y0) * i) / steps
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] })
-    await page.waitForTimeout(16)
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
-  await page.waitForTimeout(300)
+  await nextFrame(page)
 }
 
 /** The sections fixture with timed calls and metrics, so the panel holds a long Timing view. */
@@ -123,20 +130,24 @@ for (const [phone, device] of Object.entries(PHONES)) {
 
         // Up-swipes that start on the panel move the page until its end.
         await swipe(page, cdp, x, Math.max(before.panelTop + 20, low), high)
-        const once = await state(page)
-        expect(once.pageY, 'the first swipe on the panel moves the page').toBeGreaterThan(before.pageY + 100)
-        for (let i = 0; i < 12 && (await state(page)).pageY < once.pageMax - 1; i++)
-          await swipe(page, cdp, x, low, high)
-        const end = await state(page)
-        expect(end.pageY).toBeGreaterThanOrEqual(end.pageMax - 1)
-        expect(end.panelScrolled).toBe(0)
+        await expect
+          .poll(async () => (await state(page)).pageY, { message: 'the first swipe on the panel moves the page' })
+          .toBeGreaterThan(before.pageY + 100)
+        const toEnd = async () => {
+          const now = await state(page)
+          return now.pageMax - now.pageY
+        }
+        for (let i = 0; i < 12 && (await toEnd()) > 1; i++) await swipe(page, cdp, x, low, high)
+        await expect.poll(toEnd, { message: 'the page reached its end' }).toBeLessThanOrEqual(1)
+        expect((await state(page)).panelScrolled).toBe(0)
 
         // Down-swipes on the panel bring the page back above the panel.
         for (let i = 0; i < 12 && (await state(page)).panelTop < viewport.height; i++) {
           await swipe(page, cdp, x, high, low)
         }
-        const back = await state(page)
-        expect(back.panelTop, 'the page scrolled back up past the panel').toBeGreaterThanOrEqual(viewport.height)
+        await expect
+          .poll(async () => (await state(page)).panelTop, { message: 'the page scrolled back up past the panel' })
+          .toBeGreaterThanOrEqual(viewport.height)
       })
 
       test('the component diagram: swipes on it scroll the page, a tap picks a link, Close stays in reach', async ({
@@ -158,7 +169,9 @@ for (const [phone, device] of Object.entries(PHONES)) {
         const box = (await graph.boundingBox())!
         const before = await state(page)
         await swipe(page, cdp, x, Math.min(box.y + box.height - 10, viewport.height - 40), Math.max(box.y + 10, 120))
-        expect((await state(page)).pageY, 'a swipe on the drawing scrolls the page').toBeGreaterThan(before.pageY + 50)
+        await expect
+          .poll(async () => (await state(page)).pageY, { message: 'a swipe on the drawing scrolls the page' })
+          .toBeGreaterThan(before.pageY + 50)
         expect(await closeInReach(page)).toBe('in reach')
         const edge = panel.locator('.edge-group').first()
         await edge.scrollIntoViewIfNeeded()
@@ -233,7 +246,9 @@ for (const [phone, device] of Object.entries(PHONES)) {
         await pre.scrollIntoViewIfNeeded()
         const before = await state(page)
         await swipe(page, cdp, x, viewport.height - 60, 140)
-        expect((await state(page)).pageY, 'a swipe on the payload scrolls the page').toBeGreaterThan(before.pageY + 100)
+        await expect
+          .poll(async () => (await state(page)).pageY, { message: 'a swipe on the payload scrolls the page' })
+          .toBeGreaterThan(before.pageY + 100)
         expect(await closeInReach(page)).toBe('in reach')
       })
     })
