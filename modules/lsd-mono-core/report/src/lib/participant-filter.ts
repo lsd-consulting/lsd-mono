@@ -113,13 +113,24 @@ export function headActionsHtml(slots: HeadSlot[], height: number, focusKey: str
   const heads = slots
     .map((s) => {
       const actions = s.id === activeId ? headActionButtonsHtml(s.id, s.name, kind === 'more' ? 'more' : 'hide') : ''
-      return `<div class="participant-head" data-participant-head="${escapeAttr(s.id)}" data-name="${escapeAttr(s.name)}" title="${escapeAttr(`${s.name}, ${s.typeLabel}`)}" style="left:${round(s.left)}px;width:${round(s.width)}px;height:${round(height)}px;--pill-x:${round(s.pillX)}px">${actions}</div>`
+      return `<div class="participant-head" data-participant-head="${escapeAttr(s.id)}" data-name="${escapeAttr(s.name)}" title="${escapeAttr(`${s.name}, ${s.typeLabel}`)}" style="${headSlotStyle(s, height)}">${actions}</div>`
     })
     .join('')
-  // A header drawn small (a fitted wide diagram, a phone) puts the buttons under it,
-  // so they do not cover the name of the participant they act on.
-  const compact = height < COMPACT_HEADER_PX ? ' data-compact' : ''
+  const compact = isCompactHeader(height) ? ' data-compact' : ''
   return `<div class="participant-heads" role="toolbar" aria-label="Participants: ← and → move between Hide and More buttons, Shift+F10 for more actions"${compact}>${heads}</div>`
+}
+
+/** A header slot's place and size, as its style attribute: what a zoom changes. */
+export function headSlotStyle(slot: HeadSlot, height: number): string {
+  return `left:${round(slot.left)}px;width:${round(slot.width)}px;height:${round(height)}px;--pill-x:${round(slot.pillX)}px`
+}
+
+/**
+ * A header drawn small (a fitted wide diagram, a phone) puts the buttons under it, so they do not
+ * cover the name of the participant they act on.
+ */
+export function isCompactHeader(height: number): boolean {
+  return height < COMPACT_HEADER_PX
 }
 
 /** Hide and More for participant [id], with the tab stop on [tabStop]. */

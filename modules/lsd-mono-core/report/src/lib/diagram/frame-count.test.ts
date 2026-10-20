@@ -1,21 +1,21 @@
 // @vitest-environment happy-dom
 // One frame drawn per zoom change (#100): the fit's trial scales only resize, and every change
-// ends with the header drawn for the final zoom.
+// ends with the header drawn (or resized in place) for the final zoom.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Participant, Scenario } from '../../types'
 import { bindDiagramScroll, diagramView, renderDiagramHtml } from '../sequence-diagram'
 import { frameOf } from './geometry'
-import { headActionKey, headerHtml } from './rows'
+import { headActionKey, headerHtml, resizeHeader } from './rows'
 import { diagramState } from './state'
+import { applyDiagramFrame } from './window'
 import { refitDiagram } from './zoom'
 import { WHEEL_STEP_PX, zoomByWheel } from './zoom-controls'
 
-// headerHtml draws the frame's header: applyDiagramFrame is its only caller once a diagram is
-// rendered. Each pass of settleFitWidth's callback is one trial scale.
-vi.mock('./rows', async (importOriginal) => {
-  const real = await importOriginal<typeof import('./rows')>()
-  return { ...real, headerHtml: vi.fn(real.headerHtml) }
-})
+// applyDiagramFrame is the only code that sets --seq-print-max, once a call: counting those sets
+// counts the frames drawn, however the header was brought up to date (in place since #101).
+// Each pass of settleFitWidth's callback is one trial scale.
+const setProperty = vi.spyOn(CSSStyleDeclaration.prototype, 'setProperty')
+const frames = () => setProperty.mock.calls.filter(([name]) => name === '--seq-print-max').length
 vi.mock('../diagram-view', async (importOriginal) => {
   const real = await importOriginal<typeof import('../diagram-view')>()
   return {
@@ -33,7 +33,6 @@ vi.mock('../diagram-view', async (importOriginal) => {
   }
 })
 let trials = 0
-const realHeaderHtml = (await vi.importActual<typeof import('./rows')>('./rows')).headerHtml
 
 let n = 0
 function scenario(lanes: number, messages = lanes - 1): Scenario {
@@ -91,11 +90,11 @@ function mount(lanes: number, width: number, { messages = lanes - 1, scrollbar =
   const click = (zoom: string) => root().querySelector<HTMLButtonElement>(`[data-zoom="${zoom}"]`)!.click()
   /** Run [change], check the frame it leaves is drawn for the final zoom, and count. */
   const count = (change: () => void): Counts => {
-    vi.mocked(headerHtml).mockClear()
+    setProperty.mockClear()
     trials = 0
     change()
     expectRedrawn()
-    return { applied: vi.mocked(headerHtml).mock.calls.length, trials }
+    return { applied: frames(), trials }
   }
   /** The header is the one applyDiagramFrame draws at the current zoom and lanes, unclipped. */
   const expectRedrawn = () => {
@@ -105,7 +104,7 @@ function mount(lanes: number, width: number, { messages = lanes - 1, scrollbar =
     expect(header.querySelector<HTMLElement>('.participant-heads')!.style.overflow).toBe('')
     const stop = header.querySelector<HTMLElement>('.participant-heads button[tabindex="0"]')
     const fresh = document.createElement('div')
-    fresh.innerHTML = realHeaderHtml(
+    fresh.innerHTML = headerHtml(
       s,
       frameOf(diagram, view.hidden),
       view.hidden,
@@ -232,5 +231,36 @@ describe('one frame per zoom change (#100)', () => {
     expect(z.count(() => z.hide('p5')).applied).toBe(1)
     z.click('in')
     expect(z.count(() => z.hide('p6'))).toEqual({ applied: 1, trials: 0 })
+  })
+})
+
+describe('the header across lane changes (#101)', () => {
+  it('is drawn afresh, not resized in place, when as many lanes show but different ones', () => {
+    const z = mount(4, 1200)
+    const header = z.scroll().querySelector<HTMLElement>('.seq-sticky-header')!
+    const diagram = diagramState.mounted.get(z.s.id)!
+    z.view().hidden.add('p3')
+    applyDiagramFrame(z.scroll())
+    const zoom = z.view().zoom
+    // p0 p1 p2 drawn; p0 p2 p3 asked for: the same count, so only the ids tell them apart.
+    const swapped = new Set(['p1'])
+    expect(resizeHeader(header, z.s, frameOf(diagram, swapped), swapped, zoom)).toBe(false)
+    expect(resizeHeader(header, z.s, frameOf(diagram, z.view().hidden), z.view().hidden, zoom)).toBe(true)
+  })
+
+  it('keeps the row’s tab stop on the same button when a lane change draws the header afresh', () => {
+    const z = mount(4, 1200)
+    const row = () => z.scroll().querySelector<HTMLElement>('.participant-heads')!
+    const stop = () => headActionKey(row().querySelector<HTMLElement>('button[tabindex="0"]')!)
+    // The row's one set of actions, with the tab stop, on p2's More.
+    const header = z.scroll().querySelector<HTMLElement>('.seq-sticky-header')!
+    const diagram = diagramState.mounted.get(z.s.id)!
+    header.innerHTML = headerHtml(z.s, frameOf(diagram, z.view().hidden), z.view().hidden, z.view().zoom, 'more:p2')
+    expect(stop()).toBe('more:p2')
+    const before = row()
+    z.view().hidden.add('p3')
+    applyDiagramFrame(z.scroll())
+    expect(row()).not.toBe(before)
+    expect(stop()).toBe('more:p2')
   })
 })

@@ -27,7 +27,7 @@ import {
   noteCardMetrics,
 } from '../layout'
 import type { LayoutRow } from '../layout'
-import { headActionsHtml, headSlots } from '../participant-filter'
+import { headActionsHtml, headSlotStyle, headSlots, isCompactHeader, type HeadSlot } from '../participant-filter'
 import {
   type ArrowEnd,
   activationBarSvg,
@@ -67,9 +67,46 @@ export function headerHtml(
   zoom: number,
   focusKey: string | null,
 ): string {
+  const slots = headerSlots(scenario, frame, hiddenIds, zoom)
+  return headerSvg(scenario, frame, hiddenIds, zoom) + headActionsHtml(slots, HEADER_BLOCK_H * zoom, focusKey)
+}
+
+/**
+ * Bring a drawn header to [zoom] in place (#101): the same nodes, resized, so focus, the row's tab
+ * stop and the buttons' state stay as they are. False, changing nothing, when its lanes are not the
+ * ones [hiddenIds] leaves (lanes hidden or shown): then it is drawn afresh with headerHtml.
+ */
+export function resizeHeader(
+  header: HTMLElement,
+  scenario: Scenario,
+  frame: DiagramFrame,
+  hiddenIds: ReadonlySet<string>,
+  zoom: number,
+): boolean {
+  const svg = header.querySelector('.seq-header-svg')
+  const row = header.querySelector<HTMLElement>('.participant-heads')
+  const heads = row ? [...row.querySelectorAll<HTMLElement>(':scope > [data-participant-head]')] : []
+  const slots = headerSlots(scenario, frame, hiddenIds, zoom)
+  if (!svg || !row || heads.length !== slots.length) return false
+  if (slots.some((slot, i) => heads[i].dataset.participantHead !== slot.id)) return false
+  const height = HEADER_BLOCK_H * zoom
+  svg.setAttribute('viewBox', `${-frame.left} 0 ${frame.total} ${HEADER_BLOCK_H}`)
+  svg.setAttribute('width', String(frame.total * zoom))
+  svg.setAttribute('height', String(height))
+  heads.forEach((head, i) => head.setAttribute('style', headSlotStyle(slots[i], height)))
+  row.toggleAttribute('data-compact', isCompactHeader(height))
+  return true
+}
+
+function headerSlots(
+  scenario: Scenario,
+  frame: DiagramFrame,
+  hiddenIds: ReadonlySet<string>,
+  zoom: number,
+): HeadSlot[] {
   const visible = visibleParticipants(scenario.participants, hiddenIds)
   const index = laneIndex(visible)
-  const slots = headSlots(
+  return headSlots(
     visible.map((p, i) => ({
       id: p.id,
       name: p.alias ?? p.name,
@@ -78,7 +115,6 @@ export function headerHtml(
     })),
     frame.total * zoom,
   )
-  return headerSvg(scenario, frame, hiddenIds, zoom) + headActionsHtml(slots, HEADER_BLOCK_H * zoom, focusKey)
 }
 
 function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlySet<string>, zoom: number): string {

@@ -5,7 +5,7 @@ import { scrollportXFor, unscaledViewport } from '../diagram-view'
 import { cssEscape } from '../escape'
 import { DEFAULT_OVERSCAN, DEFAULT_VIEWPORT, HEADER_BLOCK_H, virtualRowRange } from '../layout'
 import { PRINT_MAX_UPSCALE, frameOf, messageLabelBox, paintedMessageIds, sliceViewTop } from './geometry'
-import { headActionKey, headerHtml, windowSvg } from './rows'
+import { headActionKey, headerHtml, resizeHeader, windowSvg } from './rows'
 import { sizeStage } from './page-scroll'
 import { diagramState, diagramView } from './state'
 import { syncZoomControls } from './zoom-readout'
@@ -97,11 +97,11 @@ export function withTrialFrames<T>(scrollport: HTMLElement, trials: (resize: () 
 }
 
 /**
- * Size the header and body for the current zoom and visible lanes without drawing the header
- * again: enough to measure the width a fit has left (settleFit, fitOverview try a scale, look at
- * the scrollbar, and try again). The header's lane buttons are still the last drawing's, so they
- * are clipped to stop them widening the scroll; withTrialFrames draws them again, once the scale
- * is settled and before anything paints.
+ * Size the header and body for the current zoom and visible lanes: enough to measure the width a
+ * fit has left (settleFit, fitOverview try a scale, look at the scrollbar, and try again). The
+ * header is resized in place (resizeHeader). After lanes are hidden or shown its heads are the old
+ * lanes' until it is drawn again, so they are clipped, not to widen the scroll; withTrialFrames
+ * draws it, once the scale is settled and before anything paints.
  */
 function resizeDiagram(scrollport: HTMLElement): void {
   unredrawn.add(scrollport)
@@ -116,11 +116,15 @@ function resizeDiagram(scrollport: HTMLElement): void {
   const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
   if (header) {
     header.style.width = `${width * zoom}px`
-    const svg = header.querySelector('.seq-header-svg')
-    svg?.setAttribute('viewBox', `${-frame.left} 0 ${width} ${HEADER_BLOCK_H}`)
-    svg?.setAttribute('width', String(width * zoom))
-    svg?.setAttribute('height', String(HEADER_BLOCK_H * zoom))
-    header.querySelector<HTMLElement>('.participant-heads')?.style.setProperty('overflow', 'hidden')
+    // Lanes hidden or shown: the heads are the old lanes' until the header is drawn again, so they
+    // are clipped, not to widen the scroll.
+    if (!resizeHeader(header, diagram.scenario, frame, view.hidden, zoom)) {
+      const svg = header.querySelector('.seq-header-svg')
+      svg?.setAttribute('viewBox', `${-frame.left} 0 ${width} ${HEADER_BLOCK_H}`)
+      svg?.setAttribute('width', String(width * zoom))
+      svg?.setAttribute('height', String(HEADER_BLOCK_H * zoom))
+      header.querySelector<HTMLElement>('.participant-heads')?.style.setProperty('overflow', 'hidden')
+    }
   }
   const spacer = scrollport.querySelector<HTMLElement>('.seq-spacer')
   if (spacer) {
@@ -147,13 +151,13 @@ export function applyDiagramFrame(scrollport: HTMLElement): void {
   const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
   if (header) {
     header.style.width = `${width * zoom}px`
-    // Keep the header's tab stop, and its focus, across the redraw.
-    const stop = header.querySelector<HTMLElement>('.participant-heads button[tabindex="0"]')
-    const key = stop ? headActionKey(stop) : null
-    const focused = Boolean(stop && stop === document.activeElement)
-    header.innerHTML = headerHtml(diagram.scenario, frame, view.hidden, zoom, key)
-    if (focused)
-      header.querySelector<HTMLElement>('.participant-heads button[tabindex="0"]')?.focus({ preventScroll: true })
+    // A zoom resizes the header in place, so focus and the buttons stay put. Lanes hidden or shown
+    // draw it afresh, the row's tab stop kept on the button that had it; the filter moves focus
+    // after the change itself (bindParticipantFilter's focusAfter).
+    if (!resizeHeader(header, diagram.scenario, frame, view.hidden, zoom)) {
+      const stop = header.querySelector<HTMLElement>('.participant-heads button[tabindex="0"]')
+      header.innerHTML = headerHtml(diagram.scenario, frame, view.hidden, zoom, stop ? headActionKey(stop) : null)
+    }
   }
   const spacer = scrollport.querySelector<HTMLElement>('.seq-spacer')
   if (spacer) {

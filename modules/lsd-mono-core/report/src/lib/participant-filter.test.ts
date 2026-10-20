@@ -374,14 +374,29 @@ describe('participant filter in the diagram', () => {
     expect(chip(again.root)!.textContent).toBe('1 hidden')
   })
 
-  it('keeps the header tab stop and focus when zoom redraws the header', () => {
+  it('keeps the header nodes across zoom (#101), so focus and the tab stop stay without restoring', () => {
     const { root } = mount()
+    const head = root.querySelector<HTMLElement>('[data-participant-head="db"]')!
     const db = hideBtn(root, 'db')
     db.focus()
-    root.querySelector<HTMLButtonElement>('[data-zoom="in"]')!.click()
-    db.focus()
-    root.querySelector<HTMLButtonElement>('[data-zoom="out"]')!.click()
-    expect(hideBtn(root, 'db').tabIndex).toBe(0)
+    const left = head.style.left
+    for (const step of ['in', 'out', 'out']) {
+      root.querySelector<HTMLButtonElement>(`[data-zoom="${step}"]`)!.click()
+      expect(head.isConnected).toBe(true)
+      expect(root.querySelector('[data-participant-head="db"]')).toBe(head)
+      expect(db.isConnected).toBe(true)
+      expect(document.activeElement).toBe(db)
+      expect(db.tabIndex).toBe(0)
+    }
+    expect(head.style.left).not.toBe(left)
+  })
+
+  it('draws the header afresh when lanes change, and moves focus on itself', () => {
+    const { root } = mount()
+    const before = root.querySelector('[data-participant-head="api"]')
+    hideBtn(root, 'db').click()
+    expect(before?.isConnected).toBe(false)
+    expect(document.activeElement).toBe(root.querySelector('[data-hide-participant="bus"]'))
   })
 
   it('counts find hits on a hidden column', () => {
