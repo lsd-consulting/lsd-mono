@@ -18,22 +18,23 @@ export default defineConfig({
       exclude: ['src/**/*.test.ts', 'src/**/*.test-util.ts', 'src/data/**'],
       reporter: ['text-summary', 'html', 'json-summary'],
       reportsDirectory: '../build/reports/coverage/report-ui',
-      // A little under the coverage when these were last raised (19 October 2026): statements 83.1%,
-      // branches 73.3%, functions 89.2%, lines 86.8%. The globs hold each folder to its own floor, so a
+      // A little under the coverage when these were last raised (20 October 2026, #99): statements
+      // 86.1%, branches 77.4%, functions 90.2%, lines 89.6%. The globs hold each folder to its own floor, so a
       // new untested file shows up instead of being averaged away (#76). A ratchet:
       // scripts/coverage-ratchet.mjs (run by `npm test`) fails when any metric, overall or for a glob,
       // rises more than 3 points above its threshold, and lists files under 50% of lines.
       thresholds: {
-        statements: 83,
-        branches: 73,
-        functions: 88,
-        lines: 86,
-        // src/lib 91.5 / 81.3 / 95.7 / 95.3
+        statements: 85,
+        branches: 76,
+        functions: 89,
+        lines: 88,
+        // src/lib 92.3 / 82.4 / 95.6 / 96.1
         'src/lib/**': { statements: 90, branches: 80, functions: 94, lines: 94 },
-        // src/ui 91.3 / 82.1 / 96.8 / 94.0
+        // src/ui 91.5 / 82.2 / 97.1 / 94.0
         'src/ui/**': { statements: 90, branches: 80, functions: 95, lines: 92 },
-        // src/app 39.2 / 34.5 / 52.9 / 42.7: wiring, covered end to end by check:ux, which does not count here.
-        'src/app/**': { statements: 38, branches: 33, functions: 50, lines: 41 },
+        // src/app 50.4 / 51.2 / 57.3 / 53.5: the decisions are pure functions with unit tests (intents.ts,
+        // #99); the listeners that carry them out are covered end to end by check:ux, which does not count here.
+        'src/app/**': { statements: 49, branches: 50, functions: 56, lines: 52 },
       },
     },
   },

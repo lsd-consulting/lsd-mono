@@ -4,7 +4,7 @@ import type { Status } from '../types'
 import { scenarioHaystack } from '../ui/scenario-summary'
 import { loadReportData, type IndexManifest, type ReportData } from '../lib/report-index'
 import { type HashRef } from '../lib/report-hash'
-import { defaultScenarioId, stepSelection } from '../ui/selection'
+import { stepSelection } from '../ui/selection'
 import { forgetDiagrams } from '../lib/sequence-diagram'
 import { navFoldLabel, navItemTooltip } from '../ui/sidebar'
 import { isStacked } from '../lib/media'
@@ -15,6 +15,7 @@ import { filtered, indexEntry } from './filters'
 import { index, session, state } from './context'
 import { focusScenarioHeading, renderMain, scrollToScenario } from './main-view'
 import { applyRef } from './routing'
+import { openingScenario } from './intents'
 export function renderNav(): void {
   paintNavFold()
   if (index) {
@@ -170,13 +171,9 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
     session.renderedId = null
     document.title = `${session.report.title} · ${index?.title ?? 'LSD reports'}`
   }
-  const wanted =
-    ref?.scenarioId && session.report.scenarios.some((s) => s.id === ref.scenarioId) ? ref.scenarioId : null
-  // A failed report opens at its first failure.
-  state.selectedId =
-    wanted ??
-    session.report.scenarios.find((s) => s.status === 'error')?.id ??
-    defaultScenarioId(session.report.scenarios)
+  // The linked scenario, else a failed report's first failure, else the first scenario.
+  const { wanted, selectedId } = openingScenario(session.report.scenarios, ref)
+  state.selectedId = selectedId
   if (wanted) revealFiltered(wanted)
   renderNav()
   renderMain()
