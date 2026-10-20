@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Participant, Scenario } from '../../types'
 import { SINGLE_KEYS_KEY } from '../../ui/shortcuts'
 import { bindDiagramScroll, diagramView, renderDiagramHtml, syncDiagramWindow } from '../sequence-diagram'
-import { WHEEL_STEP_PX, onZoomKey, zoomByWheel, zoomKeyAction } from './zoom-controls'
+import { WHEEL_STEP_PX, zoomByWheel } from './zoom-controls'
+import { onZoomKey, zoomKeyAction } from './zoom-keys'
 
 let n = 0
 /** A fresh scenario per test, [lanes] wide: views live per scenario id for the page's life. */

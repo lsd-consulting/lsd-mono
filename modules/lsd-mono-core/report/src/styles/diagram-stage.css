@@ -73,7 +73,7 @@
   display: none;
 }
 /* Fit stops at a readable scale, so a wide diagram runs past the right edge. This says so while
-   lanes remain there (viewport.ts sets data-more-right), and the edge is shaded. */
+   lanes remain there (window.ts sets data-more-right), and the edge is shaded. */
 .seq-more {
   position: sticky;
   left: 0;

@@ -9,7 +9,7 @@ import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspe
 import { diagramKeyAction, messagePlaces, sidewaysScrollLeft } from '../lib/diagram-a11y'
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
 import { setPayloadLoader } from '../lib/diagram/payload-find'
-import { onZoomKey } from '../lib/diagram/zoom-controls'
+import { onZoomKey } from '../lib/diagram/zoom-keys'
 import {
   diagramView,
   findMessage,
