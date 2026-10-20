@@ -3,7 +3,7 @@
 import type { MessageEvent, Scenario } from '../types'
 import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 import { hasComponentDiagram } from './component-graph'
-import { focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
+import { drawnFocusTarget, focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
 import { unscaledViewport } from './diagram-view'
 import { headerHtml } from './diagram/rows'
 import { textViewHtml } from './diagram/text-view'
@@ -180,12 +180,18 @@ function printWidthStyle(width: number): string {
 }
 
 /** Scroll the arrow into view if needed, then focus its button. One tab stop. */
-export function focusDiagramMessage(scrollport: HTMLElement, messageId: string): void {
+export function focusDiagramMessage(scrollport: HTMLElement, wanted: string): void {
   const scenarioId = scrollport.dataset.scenarioId
   if (!scenarioId) return
   const view = diagramView(scenarioId)
-  view.activeMessageId = messageId
   const diagram = diagramState.mounted.get(scenarioId)
+  // A hidden lane takes its arrows with it: focus the nearest drawn one, or the diagram itself.
+  const messageId = diagram ? drawnFocusTarget(diagram.scenario.events, view.hidden, wanted) : wanted
+  if (!messageId) {
+    scrollport.focus({ preventScroll: true })
+    return
+  }
+  view.activeMessageId = messageId
   const row = diagram?.rows.find((item) => item.event.kind === 'message' && item.event.id === messageId)
   diagramState.movingFocus = true
   try {

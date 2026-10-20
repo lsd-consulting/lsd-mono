@@ -5,6 +5,7 @@ import { messageLabelRect } from './diagram-view'
 import {
   circleClearsCenter,
   diagramKeyAction,
+  drawnFocusTarget,
   focusScrollTop,
   focusTargetAfterClose,
   hitBoxContains,
@@ -80,6 +81,29 @@ describe('diagram keyboard', () => {
     expect(replacementFocus('m1', places, new Set(['m3']))).toBe('m3')
     expect(replacementFocus('m1', places, new Set(['m1', 'm3']))).toBe('m1')
     expect(replacementFocus('m3', places, new Set())).toBe('m3')
+  })
+})
+
+describe('focus for a message whose lane is hidden', () => {
+  const lanes: DiagramEvent[] = [
+    { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'one', type: 'SYNCHRONOUS', data: 1 },
+    { kind: 'message', id: 'm2', from: 'a', to: 'c', label: 'two', type: 'SYNCHRONOUS', data: 2 },
+    { kind: 'message', id: 'm3', from: 'b', to: 'a', label: 'three', type: 'SYNCHRONOUS' },
+    { kind: 'message', id: 'm4', from: 'b', to: 'a', label: 'four', type: 'SYNCHRONOUS', data: 4 },
+  ]
+
+  it('keeps a drawn, focusable message', () => {
+    expect(drawnFocusTarget(lanes, new Set(), 'm2')).toBe('m2')
+  })
+
+  it('moves to the next drawn arrow that can take focus, else the previous one', () => {
+    expect(drawnFocusTarget(lanes, new Set(['c']), 'm2')).toBe('m4')
+    expect(drawnFocusTarget(lanes, new Set(['b']), 'm4')).toBe('m2')
+  })
+
+  it('gives null when no drawn arrow can take focus, or the message is unknown', () => {
+    expect(drawnFocusTarget(lanes, new Set(['a']), 'm1')).toBeNull()
+    expect(drawnFocusTarget(lanes, new Set(), 'gone')).toBeNull()
   })
 })
 

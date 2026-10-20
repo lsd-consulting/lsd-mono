@@ -152,6 +152,32 @@ export function replacementFocus(
   return stops[Math.min(index + 1, stops.length - 1)].id
 }
 
+/**
+ * The arrow focus should go to for [messageId]: the message itself while it is drawn and
+ * focusable, otherwise the nearest that is, the next one first (its lane was hidden, say, while
+ * the side panel showed it). Null when no drawn arrow can take focus.
+ */
+export function drawnFocusTarget(
+  events: DiagramEvent[],
+  hiddenIds: ReadonlySet<string>,
+  messageId: string,
+): string | null {
+  const stops = new Set(focusablePlaces(messagePlaces(events, hiddenIds)).map((place) => place.id))
+  if (stops.has(messageId)) return messageId
+  const messages = events.filter((event) => event.kind === 'message').map((event) => event.id)
+  const at = messages.indexOf(messageId)
+  if (at < 0) return null
+  const next = messages.slice(at + 1).find((id) => stops.has(id))
+  return (
+    next ??
+    messages
+      .slice(0, at)
+      .reverse()
+      .find((id) => stops.has(id)) ??
+    null
+  )
+}
+
 /** Dialog close puts focus back on the arrow that opened it. */
 export function focusTargetAfterClose(invokerId: string | null): string | null {
   return invokerId
