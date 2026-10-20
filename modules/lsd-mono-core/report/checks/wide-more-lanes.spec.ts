@@ -16,7 +16,8 @@ const scrollLeft = (page: Page) => page.locator('.seq-scroll').evaluate((el) => 
 for (const width of [1280, 390]) {
   test(`at ${width}px the More lanes cue is a button that scrolls right and opens nothing`, async ({ page }) => {
     await openWide(page, width)
-    const cue = page.getByRole('button', { name: 'More lanes to the right: scroll right' })
+    // On a phone it is the toolbar's button, first of the two (the edge tab is the other, #93).
+    const cue = page.getByRole('button', { name: 'Show more lanes to the right' }).first()
     await expect(cue).toBeVisible()
     await expect(cue).toContainText('More lanes')
     if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/q-65-more-lanes-${width}.png` })
@@ -29,7 +30,7 @@ for (const width of [1280, 390]) {
 
 test('pressing More lanes until the right edge leaves focus on the diagram, not the page', async ({ page }) => {
   await openWide(page, 1280)
-  const cue = page.getByRole('button', { name: 'More lanes to the right: scroll right' })
+  const cue = page.getByRole('button', { name: 'Show more lanes to the right' })
   // Half a screen from the right edge, so one press reaches it.
   await page.locator('.seq-scroll').evaluate((el) => {
     el.scrollLeft = el.scrollWidth - el.clientWidth * 1.5
@@ -49,7 +50,7 @@ test('Shift+arrows scroll the diagram a screen sideways, Home and End go to its 
   expect(await scrollLeft(page)).toBe(port.width - 48)
   await page.keyboard.press('End')
   expect(await scrollLeft(page)).toBe(port.max)
-  await expect(page.getByRole('button', { name: 'More lanes to the right: scroll right' })).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Show more lanes to the right' })).toBeHidden()
   await page.keyboard.press('Shift+ArrowLeft')
   expect(await scrollLeft(page)).toBe(port.max - (port.width - 48))
   await page.keyboard.press('Home')

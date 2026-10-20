@@ -64,7 +64,12 @@
   /* The rows above Find are stuck out of sight under the top bar. When the keyboard takes focus to
      one of their controls (Shift+Tab from Find), the whole toolbar drops below the bar so the
      control can be seen (WCAG 2.4.11), and goes back when focus leaves. */
-  .seq-toolbar:has(.zoom-controls :focus-visible, .participant-filter :focus-visible, .panel-controls :focus-visible) {
+  .seq-toolbar:has(
+    .zoom-controls :focus-visible,
+    .participant-filter :focus-visible,
+    .panel-controls :focus-visible,
+    .seq-more-lanes:focus-visible
+  ) {
     top: var(--topbar-h, 0px);
   }
   .seq-toolbar .zoom-controls {
@@ -86,6 +91,81 @@
   }
   .seq-toolbar .panel-btn {
     flex: 1 1 auto;
+  }
+  /* #93: no pill over the drawing, where it covered message labels. While lanes remain to the
+     right, More lanes shares Metrics' row, and a slim tab marks the edge in the participant
+     header row only. Below the header the drawing keeps its full width, with the scrollport's
+     thin edge shade (diagram-stage.css) as the only cue there. */
+  .seq-scroll[data-more-right] .seq-more {
+    display: none;
+  }
+  .seq-diagram:has(.seq-scroll[data-more-right]) .seq-toolbar .panel-controls {
+    flex-basis: calc(100% - 136px);
+  }
+  .seq-diagram:has(.seq-scroll[data-more-right]) .seq-toolbar .seq-more-lanes {
+    display: inline-flex;
+    order: 3;
+    flex: 1 0 auto;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  /* The tab shares the scrollport's grid cell, over the right end of the sticky header. */
+  .seq-stage > .seq-scroll {
+    grid-area: 1 / 1;
+  }
+  .seq-stage[data-wide] .seq-edge-tab {
+    all: unset;
+    box-sizing: border-box;
+    grid-area: 1 / 1;
+    justify-self: end;
+    position: sticky;
+    /* Level with the header, under the scrollport's 1 px top border. */
+    top: calc(var(--topbar-h, 0px) + var(--seq-toolbar-h, 0px) + 1px);
+    margin-top: 1px;
+    z-index: 5;
+    display: grid;
+    justify-items: end;
+    align-items: center;
+    width: 24px;
+    height: var(--seq-header-h, 56px);
+    color: var(--text);
+    cursor: pointer;
+    visibility: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* What shows of it is an 18 px tab on the edge; the rest of the target is transparent, over
+     the end of the last name in view, so it hides as little of the header as it can. */
+  .seq-stage[data-wide] .seq-edge-tab::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    right: 0;
+    width: 18px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-strong);
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+    background: var(--surface-2, var(--surface));
+    box-shadow: var(--shadow);
+  }
+  .seq-stage[data-wide]:has(.seq-scroll[data-more-right]) .seq-edge-tab {
+    visibility: visible;
+  }
+  .seq-edge-tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .seq-edge-tab svg {
+    position: relative;
+    margin-right: 3px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .seq-toolbar .diagram-find {
     order: 4;
@@ -122,5 +202,30 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+}
+/* #93 on a touch screen: the edge tab's target is 44 px wide (TOUCH_HIT_CSS), its visible part
+   still 18 px, and More lanes is 44 px tall on a row of its own too (a scenario with no metrics
+   has no Metrics beside it). */
+@media (max-width: 560px) and (pointer: coarse) {
+  .seq-toolbar .seq-more-lanes {
+    min-height: 44px;
+  }
+  .seq-stage[data-wide] .seq-edge-tab {
+    width: 44px;
+  }
+}
+/* Forced colours drop the tab's fill and the edge shade: a ButtonText border keeps the tab a
+   visible button, and a line on the scrollport's right edge says more lies that way. */
+@media (max-width: 560px) and (forced-colors: active) {
+  .seq-stage[data-wide] .seq-edge-tab::before {
+    border: 1px solid ButtonText;
+    background: ButtonFace;
+  }
+  .seq-stage[data-wide] .seq-edge-tab {
+    color: ButtonText;
+  }
+  .seq-scroll[data-more-right] {
+    border-right: 2px solid CanvasText;
   }
 }

@@ -22,9 +22,9 @@ const actionsOpacity = (page: Page, id: string) =>
     return bar ? getComputedStyle(bar).opacity : null
   }, id)
 
-/** The sequence toolbar's last control, the tab stop just before the header row. */
+/** The sequence toolbar's last shown control, the tab stop just before the header row. */
 const lastToolbarControl = (page: Page) =>
-  page.locator('.diagram-pane[data-pane="sequence"] .seq-toolbar button:not([disabled])').last()
+  page.locator('.diagram-pane[data-pane="sequence"] .seq-toolbar button:not([disabled]):visible').last()
 
 const headerNames = (page: Page) =>
   page

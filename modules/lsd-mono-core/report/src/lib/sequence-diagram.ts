@@ -99,6 +99,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
         <button type="button" data-find-step="next" aria-label="Next match" title="Next match (Enter)"${steppable}>↓</button>
       </div>
       ${panelControlsHtml(scenario)}
+      <button type="button" class="seq-more-lanes" data-more-lanes aria-label="Show more lanes to the right">More lanes<span aria-hidden="true">&nbsp;→</span></button>
     </div>`
 }
 
@@ -152,14 +153,19 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
       <div class="seq-stage">
         <div class="seq-scroll" data-scenario-id="${escapeAttr(scenario.id)}" tabindex="${diagramTab}" role="group" aria-label="Sequence diagram for ${escapeAttr(scenario.title)}">
           <div class="seq-sticky-header" style="width:${width * zoom}px">${headerHtml(scenario, frame, view.hidden, zoom, null)}</div>
-          <div class="seq-more"><button type="button" class="seq-more-btn" data-more-lanes tabindex="-1" aria-label="More lanes to the right: scroll right"><span>More lanes →</span></button></div>
+          <div class="seq-more"><button type="button" class="seq-more-btn" data-more-lanes tabindex="-1" aria-label="Show more lanes to the right"><span>More lanes →</span></button></div>
           <div class="seq-spacer" style="height:${diagram.height * zoom}px;width:${width * zoom}px">
             <div class="seq-window"></div>
           </div>
         </div>
+        <button type="button" class="seq-edge-tab" data-more-lanes tabindex="-1" aria-label="Show more lanes to the right" title="Show more lanes to the right">${EDGE_TAB_SVG}</button>
       </div>
     </div>`
 }
+
+/** The phone's edge tab: a chevron on the right end of the participant header row (#93). */
+const EDGE_TAB_SVG =
+  '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M4.5 2.5 L8 6 L4.5 9.5"/></svg>'
 
 /** Upper bound for the printed width, from the unzoomed drawing width. */
 function printWidthStyle(width: number): string {

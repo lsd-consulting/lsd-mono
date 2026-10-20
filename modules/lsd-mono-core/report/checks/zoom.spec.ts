@@ -136,7 +136,7 @@ test.describe('at 1440×900', () => {
     expect(level).toBeLessThanOrEqual(52)
     expect(changes).toEqual([`Overview, ${level}%, whole diagram`])
     // Nothing lies to the right any more, so the More lanes cue goes.
-    await expect(card(page).getByRole('button', { name: 'More lanes to the right: scroll right' })).toBeHidden()
+    await expect(card(page).getByRole('button', { name: 'Show more lanes to the right' })).toBeHidden()
     if (shots) await page.screenshot({ path: `${shots}/q-94-1440-timed-overview.png` })
   })
 
@@ -273,7 +273,7 @@ test('on the 100-participant sample at 1440, Overview stops at 10%, keeps the cu
   await openReport(page, { report: wideReport(100, 400) })
   await overview(page).click()
   await expectZoom(page, 10)
-  await expect(card(page).getByRole('button', { name: 'More lanes to the right: scroll right' })).toBeVisible()
+  await expect(card(page).getByRole('button', { name: 'Show more lanes to the right' })).toBeVisible()
   // A lane is shown when its participant box is wholly inside the scrollport.
   const shown = await page.evaluate(() => {
     const scroll = document.querySelector<HTMLElement>('.seq-scroll')!

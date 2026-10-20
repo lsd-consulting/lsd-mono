@@ -119,6 +119,11 @@
 .seq-scroll[data-more-right] .seq-more {
   display: block;
 }
+/* A phone's cues instead (diagram-media.css, #93): the edge tab, and More lanes in the toolbar. */
+.seq-edge-tab,
+.seq-toolbar .seq-more-lanes {
+  display: none;
+}
 .seq-window {
   position: absolute;
   top: 0;

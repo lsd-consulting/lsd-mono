@@ -32,8 +32,12 @@ function announce(scrollport: HTMLElement, change: ZoomChange): void {
 
 /** Say [change] in [status], a polite status line; the same words again after a short gap. */
 export function announceZoom(status: Element | null, change: ZoomChange): void {
+  announceStatus(status, zoomAnnouncement(change))
+}
+
+/** Say [text] in [status], a polite status line; the same words again after a short gap. */
+export function announceStatus(status: Element | null, text: string): void {
   if (!status) return
-  const text = zoomAnnouncement(change)
   const pending = repeats.get(status)
   if (pending !== undefined) clearTimeout(pending)
   repeats.delete(status)

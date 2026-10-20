@@ -1,6 +1,6 @@
 // Binding a mounted diagram: its frame and fit, scrolling, the width observer, Ctrl/Cmd+wheel,
 // the zoom controls, the participant filter and Find. Each part lives in its own module.
-import { focusablePlaces, messagePlaces, sidewaysScrollLeft } from '../diagram-a11y'
+import { focusablePlaces, messagePlaces } from '../diagram-a11y'
 import { bindParticipantFilter } from '../participant-filter'
 import { bindPageScroll } from './page-scroll'
 import { flushDiagramPaints, invalidate } from './invalidate'
@@ -8,6 +8,7 @@ import { diagramState, diagramView } from './state'
 import { zoomModeAfter } from './zoom-mode'
 import { bindFind } from './find-binding'
 import { ensurePrintHooks } from './print-hooks'
+import { showMoreLanes } from './more-lanes'
 import { syncDiagramWindow, withTrialFrames } from './window'
 import { bindZoomControls, zoomByWheel } from './zoom-controls'
 import { syncZoomControls } from './zoom-readout'
@@ -68,9 +69,6 @@ function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string
   invalidate(id, ['window', 'find'])
 }
 
-/** What the "More lanes →" button does: what Shift+→ does from the keyboard. */
-const SCREEN_RIGHT = { key: 'ArrowRight', shiftKey: true, metaKey: false, ctrlKey: false, altKey: false }
-
 export function bindDiagramScroll(root: ParentNode): void {
   ensurePrintHooks()
   root.querySelectorAll<HTMLElement>('.seq-diagram').forEach((diagram) => {
@@ -91,13 +89,14 @@ export function bindDiagramScroll(root: ParentNode): void {
     bindPageScroll(scroll)
     scroll.addEventListener('wheel', (ev) => onDiagramWheel(scroll, ev), { passive: false })
     bindZoomControls(diagram, scroll)
-    // The "More lanes →" cue is a button: it scrolls one screen right, and a click on it never
-    // reaches the arrow underneath (#65).
-    diagram.querySelector<HTMLButtonElement>('[data-more-lanes]')?.addEventListener('click', (ev) => {
-      ev.stopPropagation()
-      const left = sidewaysScrollLeft(SCREEN_RIGHT, scroll)
-      if (left != null) scroll.scrollLeft = left
-    })
+    // The "More lanes" cues (the pill, and on a phone the edge tab and the toolbar button) are
+    // buttons: each scrolls one screen right, and a click never reaches the arrow underneath (#65).
+    diagram.querySelectorAll<HTMLButtonElement>('[data-more-lanes]').forEach((button) =>
+      button.addEventListener('click', (ev) => {
+        ev.stopPropagation()
+        showMoreLanes(scroll)
+      }),
+    )
     bindParticipantFilter(diagram, {
       participants: () => diagramState.mounted.get(id)?.scenario.participants ?? [],
       hidden: () => diagramView(id).hidden,

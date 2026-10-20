@@ -45,7 +45,8 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   const viewTop = slice.length && !diagramState.printAllRows ? sliceViewTop(offset) : 0
   windowEl.style.transform = `translateY(${viewTop * zoom}px)`
   const frame = frameOf(diagram, view.hidden)
-  scrollport.style.setProperty('--seq-header-h', `${cssHeader}px`)
+  // On the stage, so the phone's edge tab beside the scrollport is exactly as tall as the header.
+  ;(scrollport.parentElement ?? scrollport).style.setProperty('--seq-header-h', `${cssHeader}px`)
   const prior = document.activeElement
   const priorBtn = prior instanceof Element ? prior.closest('button.msg-open') : null
   const hadFocus = Boolean(priorBtn && scrollport.contains(priorBtn) && !diagramState.movingFocus)
@@ -200,15 +201,20 @@ export function revealMessageX(scrollport: HTMLElement, messageId: string): void
 }
 
 /**
- * Mark a scrollport that has lanes beyond its right edge, for the "more lanes" cue. When the cue
+ * Mark a scrollport that has lanes beyond its right edge, for the "more lanes" cues, and its stage
+ * while the drawing is wider than it at all (a phone shows the edge tab over its header then,
+ * #93). Neither mark changes the scrollport's width, so neither toggles itself. When a cue
  * hides under focus (pressed until the right edge), focus moves to the scrollport, not <body>.
  * Safari doesn't focus a clicked button, so there the handoff never runs (and isn't needed).
  */
 export function syncMoreCue(scrollport: HTMLElement): void {
-  const more = scrollport.scrollWidth - scrollport.clientWidth - scrollport.scrollLeft > 4
+  const overflow = scrollport.scrollWidth - scrollport.clientWidth
+  const more = overflow - scrollport.scrollLeft > 4
   const active = scrollport.ownerDocument.activeElement
-  if (!more && active?.matches('[data-more-lanes]') && scrollport.contains(active)) {
+  const diagram = scrollport.closest('.seq-diagram') ?? scrollport
+  if (!more && active?.matches('[data-more-lanes]') && diagram.contains(active)) {
     scrollport.focus({ preventScroll: true })
   }
   scrollport.toggleAttribute('data-more-right', more)
+  scrollport.parentElement?.toggleAttribute('data-wide', overflow > 4)
 }

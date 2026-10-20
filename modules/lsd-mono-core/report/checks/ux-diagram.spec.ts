@@ -329,14 +329,16 @@ for (const [name, viewport] of [
     expect(smallest, 'message label size in CSS px').toBeGreaterThanOrEqual(10)
 
     // Lanes beyond the right edge are announced, and Find brings a label from there into view.
+    // A phone says so in the toolbar instead of over the drawing (#93).
     const scroll = page.locator('.seq-scroll')
+    const cue = page.locator(viewport.width <= 560 ? '.seq-toolbar .seq-more-lanes' : '.seq-more span')
     const overflow = await scroll.evaluate((el) => el.scrollWidth - el.clientWidth)
     if (overflow <= 0) {
-      await expect(page.locator('.seq-more span')).toBeHidden()
+      await expect(cue).toBeHidden()
       return
     }
-    await expect(page.locator('.seq-more span')).toBeVisible()
-    await expect(page.locator('.seq-more span')).toContainText('More lanes')
+    await expect(cue).toBeVisible()
+    await expect(cue).toContainText('More lanes')
     const far = await page.evaluate(() => {
       const port = document.querySelector('.seq-scroll')!.getBoundingClientRect()
       const labels = [...document.querySelectorAll<SVGTextElement>('.seq-svg .msg-label')]
