@@ -322,6 +322,8 @@ describe('zoom keys (#94)', () => {
     expect(zoomKeyAction(key('1', { shiftKey: true, code: 'Digit1' }), on)).toBe('overview')
     expect(zoomKeyAction(key('Escape'), on)).toBeNull()
     expect(zoomKeyAction(key('Escape'), { ...on, overview: true })).toBe('leave')
+    // The side panel takes Esc first (#102): one Esc, one thing closed.
+    expect(zoomKeyAction(key('Escape'), { ...on, overview: true, panelOpen: true })).toBeNull()
   })
 
   it('leaves Ctrl/Cmd with them to the browser, and the character keys alone when shortcuts are off', () => {

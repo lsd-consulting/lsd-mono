@@ -278,7 +278,7 @@ function openFromDiagram(node: Element, messageId: string | null): void {
 
 /** Keys in the main column: diagram zoom, stepping in diagram find, diagram message navigation, and Enter on an arrow. */
 function onMainKey(ev: KeyboardEvent): void {
-  if (onZoomKey(ev)) return
+  if (onZoomKey(ev, Boolean(session.inspector?.isOpen()))) return
   const key = mainKey(ev, ev.target as Element | null)
   if (key?.kind === 'find-step') onFindKey(ev, key.input, key.step)
   else if (key?.kind === 'diagram') onDiagramKey(ev, key.scroll, key.openBtn)
@@ -333,6 +333,7 @@ function onDiagramKey(ev: KeyboardEvent, scrollKey: HTMLElement, openBtn: HTMLBu
       if (msg) openMessage(scenario, msg)
       return
     }
-    if (openBtn) ev.stopPropagation()
+    // Escape goes on to the side panel, which closes on it (#102).
+    if (openBtn && ev.key !== 'Escape') ev.stopPropagation()
   }
 }

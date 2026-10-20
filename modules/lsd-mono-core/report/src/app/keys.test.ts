@@ -37,6 +37,15 @@ beforeEach(() => {
 })
 
 describe('onKey', () => {
+  it('leaves an Escape the side panel has already taken, so the help stays open (#102)', () => {
+    ctx.state.helpOpen = true
+    document.querySelector('#help')!.setAttribute('data-open', 'true')
+    document.body.addEventListener('keydown', (e) => e.preventDefault(), { once: true, capture: true })
+    press(document.body, 'Escape')
+    expect(help()).toBe('true')
+    expect(ctx.state.helpOpen).toBe(true)
+  })
+
   it('focuses search with /', () => {
     const ev = press(document.body, '/')
     expect(document.activeElement?.id).toBe('search')

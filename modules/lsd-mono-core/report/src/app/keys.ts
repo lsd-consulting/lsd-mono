@@ -9,6 +9,8 @@ import { keyTarget, pageKeyIntent } from './intents'
 
 export function onKey(e: KeyboardEvent): void {
   const target = e.target as HTMLElement
+  // One Escape closes one thing (#102): the side panel's own listener runs first and takes it.
+  if (e.key === 'Escape' && e.defaultPrevented) return
   // j/k anywhere outside a text box; arrows only on the list, the page or the scenario
   // heading, so they keep their own meaning in the diagram toolbar and its popovers.
   // On the list, focus follows the selection. Enter on a focused button presses that

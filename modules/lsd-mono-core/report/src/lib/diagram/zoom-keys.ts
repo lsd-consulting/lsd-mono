@@ -8,11 +8,15 @@ type ZoomKeyEvent = Pick<KeyboardEvent, 'key' | 'code' | 'shiftKey' | 'metaKey' 
 /**
  * The zoom action a key asks for, or null. + or =, -, 0 and Shift+1 (by key position, so it works
  * where Shift+1 is not "!") are single-key shortcuts and follow the toggle (#82, WCAG 2.1.4). Esc
- * leaves Overview. Ctrl/Cmd with any of them stays the browser's zoom (WCAG 1.4.4).
+ * leaves Overview, unless the side panel is open: Esc closes that first, and only that (#102).
+ * Ctrl/Cmd with any of them stays the browser's zoom (WCAG 1.4.4).
  */
-export function zoomKeyAction(e: ZoomKeyEvent, ctx: { singleKeys: boolean; overview: boolean }): ZoomAction | null {
+export function zoomKeyAction(
+  e: ZoomKeyEvent,
+  ctx: { singleKeys: boolean; overview: boolean; panelOpen?: boolean },
+): ZoomAction | null {
   if (e.metaKey || e.ctrlKey || e.altKey) return null
-  if (e.key === 'Escape') return ctx.overview ? 'leave' : null
+  if (e.key === 'Escape') return ctx.overview && !ctx.panelOpen ? 'leave' : null
   if (!ctx.singleKeys) return null
   if (e.key === '+' || e.key === '=') return 'in'
   if (e.key === '-' || e.key === '−') return 'out'
@@ -29,9 +33,9 @@ function isTextField(el: HTMLElement): boolean {
 /**
  * Zoom keys, while focus is in a diagram card (toolbar, participant header, scrollport or a
  * message) and not in a text field or a menu. True when the key was used. In Overview, Enter on
- * a message zooms to it instead of opening it.
+ * a message zooms to it instead of opening it. [panelOpen]: the side panel is open, so Esc is its.
  */
-export function onZoomKey(ev: KeyboardEvent): boolean {
+export function onZoomKey(ev: KeyboardEvent, panelOpen = false): boolean {
   const target = ev.target as HTMLElement | null
   if (!target?.closest || isTextField(target) || target.closest('[role="menu"]')) return false
   const scrollport = target.closest('.seq-diagram')?.querySelector<HTMLElement>('.seq-scroll')
@@ -46,7 +50,11 @@ export function onZoomKey(ev: KeyboardEvent): boolean {
     zoomToMessage(scrollport, message.dataset.messageId)
     return true
   }
-  const action = zoomKeyAction(ev, { singleKeys: singleKeysEnabled(), overview: view.mode.kind === 'overview' })
+  const action = zoomKeyAction(ev, {
+    singleKeys: singleKeysEnabled(),
+    overview: view.mode.kind === 'overview',
+    panelOpen,
+  })
   if (!action) return false
   ev.preventDefault()
   ev.stopPropagation()
