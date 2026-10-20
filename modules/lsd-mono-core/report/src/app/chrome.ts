@@ -10,6 +10,7 @@ import { setPayloadLoader } from '../lib/diagram/payload-find'
 import { focusDiagramMessage, setFindHooks, syncDiagramWindow } from '../lib/sequence-diagram'
 import { currentMode, getPreferredTheme } from '../ui/theme'
 import { bindThemeMenu, themeControlHtml } from '../ui/theme-menu'
+import { bindHelpDialog, helpDialogHtml } from '../ui/help-dialog'
 import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSidebarCollapsed } from '../ui/sidebar'
 import { statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
@@ -39,6 +40,9 @@ export function renderShell(): void {
   const theme = getPreferredTheme()
   const mode = currentMode()
 
+  // The keyboard help comes right after the top bar, whose last control is ?, so Tab goes from ?
+  // into the help and on to the sidebar (#112). Not inside the bar: its backdrop filter would make
+  // it the box the fixed dialog is placed in.
   app.innerHTML = `
     <header class="topbar" role="banner">
       <div class="brand" title="Living Sequence Diagrams">
@@ -68,6 +72,9 @@ export function renderShell(): void {
         <button type="button" class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Show keyboard help">?</button>
       </div>
     </header>
+    ${helpDialogHtml(`
+      <p class="help-keys">${keyHelpHtml()}</p>
+      <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> <span class="help-setting-text">${singleKeysLabelHtml()}</span></label>`)}
     <div class="shell${state.sidebarCollapsed ? ' sidebar-collapsed' : ''}">
       <aside class="sidebar" id="sidebar" aria-label="${index ? 'Reports' : 'Scenarios'}">
         <div class="sidebar-head">
@@ -86,11 +93,6 @@ export function renderShell(): void {
       </aside>
       <main class="main" id="main"></main>
       ${inspectorMarkup()}
-    </div>
-    <div class="help-toast" id="help" data-open="false" role="note">
-      <strong style="color:var(--text)">Keyboard</strong><br/>
-      ${keyHelpHtml()}
-      <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> ${singleKeysLabelHtml()}</label>
     </div>
   `
 
@@ -166,10 +168,7 @@ function bindTopbarButtons(): void {
     setSingleKeys((ev.currentTarget as HTMLInputElement).checked)
   })
 
-  document.querySelector('#btn-help')!.addEventListener('click', () => {
-    state.helpOpen = !state.helpOpen
-    document.querySelector('#help')!.setAttribute('data-open', String(state.helpOpen))
-  })
+  session.help = bindHelpDialog(document)
 }
 
 /** Which timing chip opened Metrics (its position in the strip), or null when the toolbar button did. */

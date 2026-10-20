@@ -27,7 +27,7 @@ const scenario = {
   ],
 }
 let diagram: DiagramKeyContext
-const router = createKeyRouter(() => ({ panel: null, page: null, diagram }))
+const router = createKeyRouter(() => ({ dialog: null, panel: null, page: null, diagram }))
 registerDiagramKeys(router)
 const press = (key: string, init: KeyboardEventInit = {}) =>
   router.dispatch(new KeyboardEvent('keydown', { key, cancelable: true, ...init }))

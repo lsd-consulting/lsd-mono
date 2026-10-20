@@ -1,14 +1,18 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { bindHelpDialog, helpDialogHtml, type HelpDialog } from '../ui/help-dialog'
 
-// The page and side panel keys through the router (lib/keys/bindings.test.ts covers the decisions).
+// The page, help and side panel keys through the router (lib/keys/bindings.test.ts covers the decisions).
 const nav = vi.hoisted(() => ({ moveSelection: vi.fn(), focusedNavId: vi.fn(() => 'b') }))
 const view = vi.hoisted(() => ({ focusSelectedDiagram: vi.fn() }))
 const themeMenu = vi.hoisted(() => ({ paintThemeControl: vi.fn() }))
 const theme = vi.hoisted(() => ({ toggleTheme: vi.fn(() => ({ mode: 'light', theme: 'light' })) }))
 const ctx = vi.hoisted(() => ({
-  session: { renderedId: 'a', inspector: { isOpen: (): boolean => false, close: vi.fn() } },
-  state: { helpOpen: false },
+  session: {
+    renderedId: 'a',
+    inspector: { isOpen: (): boolean => false, close: vi.fn() },
+    help: null as HelpDialog | null,
+  },
 }))
 
 vi.mock('./nav', () => nav)
@@ -36,21 +40,12 @@ const help = () => document.querySelector('#help')!.getAttribute('data-open')
 
 beforeEach(() => {
   vi.clearAllMocks()
-  ctx.state.helpOpen = false
   ctx.session.inspector.isOpen = () => false
-  document.body.innerHTML = `<input id="search"><div id="help" data-open="false"></div><button id="btn">B</button>`
+  document.body.innerHTML = `<input id="search"><button id="btn-help">?</button><button id="btn">B</button>${helpDialogHtml('<input type="checkbox" id="single-keys">')}`
+  ctx.session.help = bindHelpDialog(document)
 })
 
-describe('onKey', () => {
-  it('leaves an Escape the side panel has already taken, so the help stays open (#102)', () => {
-    ctx.state.helpOpen = true
-    document.querySelector('#help')!.setAttribute('data-open', 'true')
-    document.body.addEventListener('keydown', (e) => e.preventDefault(), { once: true, capture: true })
-    press(document.body, 'Escape')
-    expect(help()).toBe('true')
-    expect(ctx.state.helpOpen).toBe(true)
-  })
-
+describe('page keys', () => {
   it('focuses search with /', () => {
     const ev = press(document.body, '/')
     expect(document.activeElement?.id).toBe('search')
@@ -76,10 +71,19 @@ describe('onKey', () => {
   it('toggles the help with ?, and Escape closes it', () => {
     press(document.body, '?')
     expect(help()).toBe('true')
-    expect(ctx.state.helpOpen).toBe(true)
-    const esc = press(document.body, 'Escape')
+    const esc = press(document.activeElement!, 'Escape')
     expect(help()).toBe('false')
     expect(esc.defaultPrevented).toBe(true)
+  })
+
+  it('closes the help before the side panel, one Escape each (#112)', () => {
+    ctx.session.inspector.isOpen = () => true
+    press(document.body, '?')
+    press(document.activeElement!, 'Escape')
+    expect(help()).toBe('false')
+    expect(ctx.session.inspector.close).not.toHaveBeenCalled()
+    press(document.body, 'Escape')
+    expect(ctx.session.inspector.close).toHaveBeenCalledOnce()
   })
 
   it('lets go of a text field on Escape, and gives Escape to an open side panel first, and only to it', () => {
@@ -89,11 +93,16 @@ describe('onKey', () => {
     expect(document.activeElement).not.toBe(search)
     search.focus()
     ctx.session.inspector.isOpen = () => true
-    ctx.state.helpOpen = true
     expect(press(search, 'Escape').defaultPrevented).toBe(true)
     expect(ctx.session.inspector.close).toHaveBeenCalledOnce()
-    expect(ctx.state.helpOpen).toBe(true)
     expect(document.activeElement).toBe(search)
+  })
+
+  it('leaves an Escape a widget has already taken', () => {
+    ctx.session.inspector.isOpen = () => true
+    document.body.addEventListener('keydown', (e) => e.preventDefault(), { once: true, capture: true })
+    press(document.body, 'Escape')
+    expect(ctx.session.inspector.close).not.toHaveBeenCalled()
   })
 
   it('does nothing for a key with no page action, and leaves the event alone', () => {

@@ -12,7 +12,6 @@ export interface State {
   status: Record<Status, boolean>
   /** The scenario shown in the main column (#39). Kept while filters hide it all. */
   selectedId: string | null
-  helpOpen: boolean
   sidebarCollapsed: boolean
   /** Index page: reports whose scenarios are listed in the sidebar. */
   expanded: Set<string>
@@ -35,7 +34,6 @@ export const state: State = {
   query: '',
   status: { success: true, warn: true, error: true },
   selectedId: initialSelection(),
-  helpOpen: false,
   sidebarCollapsed: getSidebarCollapsed(),
   expanded: new Set(),
   navOpen: false,

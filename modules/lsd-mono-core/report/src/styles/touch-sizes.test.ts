@@ -56,6 +56,13 @@ describe('sizes shared by the CSS and the TypeScript', () => {
     expect(2 * TOUCH_HIT_CSS + 2 + 2 * 2).toBe(PILL_W_TOUCH)
   })
 
+  it('makes the keyboard help close button 28px, and TOUCH_HIT_CSS square on a touch screen (#112)', () => {
+    const css = read('inspector.css')
+    expect(px(css, '.help-toast .help-close', 'width')).toBeGreaterThanOrEqual(24)
+    expect(px(coarse(css), '.help-toast .help-close', 'width')).toBe(TOUCH_HIT_CSS)
+    expect(px(coarse(css), '.help-toast .help-close', 'height')).toBe(TOUCH_HIT_CSS)
+  })
+
   it('gives the zoom buttons a TOUCH_HIT_CSS target on a touch screen', () => {
     const touch = coarse(zoom)
     expect(px(touch, '.seq-toolbar .zoom-btn,\n  .seq-toolbar .zoom-readout', 'min-width')).toBe(TOUCH_HIT_CSS)

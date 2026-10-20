@@ -8,12 +8,13 @@ import { findStepKey } from '../diagram/search-reveal'
  * Who a key goes to, innermost first. The menu and the participant header keep their own
  * listeners for their own widget (arrows along a menu, along a header row) and stop the keys
  * they use; their entries here are for the help and the conflict test. The router takes the
- * rest, in ROUTED_SCOPES order.
+ * rest, in ROUTED_SCOPES order: the keyboard help, a transient dialog like a menu (#112), then
+ * the side panel, a diagram and the page.
  */
-export type KeyScope = 'menu' | 'header' | 'panel' | 'diagram' | 'page'
-export const KEY_SCOPES: readonly KeyScope[] = ['menu', 'header', 'panel', 'diagram', 'page']
-export type RoutedScope = 'panel' | 'diagram' | 'page'
-export const ROUTED_SCOPES: readonly RoutedScope[] = ['panel', 'diagram', 'page']
+export type KeyScope = 'menu' | 'header' | 'dialog' | 'panel' | 'diagram' | 'page'
+export const KEY_SCOPES: readonly KeyScope[] = ['menu', 'header', 'dialog', 'panel', 'diagram', 'page']
+export type RoutedScope = 'dialog' | 'panel' | 'diagram' | 'page'
+export const ROUTED_SCOPES: readonly RoutedScope[] = ['dialog', 'panel', 'diagram', 'page']
 
 export interface KeyEvent {
   key: string
@@ -22,6 +23,8 @@ export interface KeyEvent {
   metaKey?: boolean
   ctrlKey?: boolean
   altKey?: boolean
+  /** Held down: the key auto-repeats. */
+  repeat?: boolean
 }
 
 /** The page: the scenario list, the toolbar, the help. */
@@ -34,11 +37,17 @@ export interface PageKeyContext {
   arrows: boolean
   /** A button, link or slider has focus, so Enter presses it instead. */
   onControl: boolean
+  /** An open menu or popover with keys of its own: ? keeps off, so one transient opens at a time. */
+  inMenu: boolean
   /** A scenario is shown, so Enter has a diagram to go to. */
   hasScenario: boolean
   /** The one-character shortcuts (/ j k d ? + − 0 Shift+1) are on. A person can turn them off (WCAG 2.1.4). */
   singleKeys: boolean
-  helpOpen: boolean
+}
+
+/** The keyboard help. */
+export interface DialogKeyContext {
+  open: boolean
 }
 
 export interface PanelKeyContext {
@@ -71,6 +80,7 @@ export type WidgetKeyContext = Record<string, never>
 export interface ScopeContexts {
   menu: WidgetKeyContext
   header: WidgetKeyContext
+  dialog: DialogKeyContext
   panel: PanelKeyContext
   diagram: DiagramKeyContext
   page: PageKeyContext
@@ -97,6 +107,12 @@ interface Binding<S extends KeyScope> {
 export type KeyBinding = { [S in KeyScope]: Binding<S> }[KeyScope]
 
 const noMods = (e: KeyEvent) => !e.metaKey && !e.ctrlKey && !e.altKey
+
+/**
+ * Escape that closes one layer: one press, not held down (a held Escape would close the help, the
+ * panel and Overview in turn), and without Ctrl, Cmd or Alt, like leaving Overview.
+ */
+const closingEscape = (e: KeyEvent) => e.key === 'Escape' && noMods(e) && !e.repeat
 
 /** A key typed alone: no Ctrl, Cmd or Alt. These are the shortcuts the toggle switches off. */
 function alone(e: KeyEvent, ctx: { singleKeys: boolean }, key: string): boolean {
@@ -126,12 +142,13 @@ function event(e: KeyEvent) {
     metaKey: Boolean(e.metaKey),
     ctrlKey: Boolean(e.ctrlKey),
     altKey: Boolean(e.altKey),
+    repeat: Boolean(e.repeat),
   }
 }
 
 export const KEY_BINDINGS: readonly KeyBinding[] = [
   // The side panel.
-  { id: 'close-panel', scope: 'panel', matches: (e, c) => e.key === 'Escape' && c.open },
+  { id: 'close-panel', scope: 'panel', matches: (e, c) => closingEscape(e) && c.open },
 
   // A diagram card.
   {
@@ -272,17 +289,19 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
     kbd: '<kbd>?</kbd>',
     single: true,
     help: (kbdHtml) => `${kbdHtml('help')} help`,
-    matches: (e, c) => free(c) && alone(e, c, '?'),
+    // From anywhere, an arrow and the side panel too: only text fields and open menus keep it.
+    matches: (e, c) => !c.typing && !c.inMenu && alone(e, c, '?'),
   },
-  // Escape, after a menu, the side panel and Overview: the help, then a text field lets go.
+  // Escape closes the innermost open thing: a menu, the help, the side panel, Overview. It is
+  // listed here so the help shows it after ?. Then a text field lets go.
   {
     id: 'close-help',
-    scope: 'page',
+    scope: 'dialog',
     line: 3,
     help: '<kbd>Esc</kbd> close',
-    matches: (e, c) => e.key === 'Escape' && c.helpOpen,
+    matches: (e, c) => closingEscape(e) && c.open,
   },
-  { id: 'blur', scope: 'page', matches: (e, c) => e.key === 'Escape' && !c.helpOpen && c.typing },
+  { id: 'blur', scope: 'page', matches: (e, c) => e.key === 'Escape' && c.typing },
 ]
 
 /** The binding with [id]. Throws for an id the table does not have. */

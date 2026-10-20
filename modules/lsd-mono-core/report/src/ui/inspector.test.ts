@@ -16,7 +16,12 @@ import { createKeyRouter } from '../lib/keys/router'
 import type { InspectorController } from './inspector'
 /** Escape as the page's key router gives it to the side panel (#102). */
 function pressEscape(controller: InspectorController): void {
-  const router = createKeyRouter(() => ({ panel: { open: controller.isOpen() }, diagram: null, page: null }))
+  const router = createKeyRouter(() => ({
+    dialog: null,
+    panel: { open: controller.isOpen() },
+    diagram: null,
+    page: null,
+  }))
   router.on('panel', 'close-panel', () => controller.close())
   router.dispatch(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
 }

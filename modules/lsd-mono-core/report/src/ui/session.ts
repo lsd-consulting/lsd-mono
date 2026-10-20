@@ -1,4 +1,5 @@
 import type { Report } from '../types'
+import type { HelpDialog } from './help-dialog'
 import type { InspectorController, InspectorInvoker } from './inspector'
 
 /**
@@ -22,6 +23,8 @@ export interface Session {
   /** Arrow, Metrics or Component diagram button that opened the inspector. Close returns focus here. */
   invoker: InspectorInvoker | null
   inspector: InspectorController | null
+  /** The keyboard help (#112). */
+  help: HelpDialog | null
   /** Scenario the side panel is showing, for its print copy. Errors have no invoker, so it is kept here. */
   panelScenarioId: string | null
   /** Suppress hashchange while we write the hash ourselves. */
@@ -42,6 +45,7 @@ export function createSession(report: Report): Session {
     booted: false,
     invoker: null,
     inspector: null,
+    help: null,
     panelScenarioId: null,
     writingHash: false,
     stopTopbarTracking: () => {},

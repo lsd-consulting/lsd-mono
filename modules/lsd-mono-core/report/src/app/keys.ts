@@ -5,7 +5,7 @@ import { moveSelection, focusedNavId } from './nav'
 import { toggleTheme } from '../ui/theme'
 import { paintThemeControl } from '../ui/theme-menu'
 import { singleKeysEnabled } from '../ui/shortcuts'
-import { session, state } from './context'
+import { session } from './context'
 import { keyTarget } from './intents'
 import { diagramKeyContext } from '../lib/diagram/diagram-keys'
 import { registerZoomKeys } from '../lib/diagram/zoom-keys'
@@ -18,19 +18,20 @@ export function keyContexts(e: KeyboardEvent): KeyContexts {
   const panelOpen = Boolean(session.inspector?.isOpen())
   const singleKeys = singleKeysEnabled()
   return {
+    dialog: { open: Boolean(session.help?.isOpen()) },
     panel: { open: panelOpen },
     diagram: diagramKeyContext(target, { singleKeys, panelOpen }),
     page: {
       ...keyTarget(target),
       hasScenario: Boolean(session.renderedId),
       singleKeys,
-      helpOpen: state.helpOpen,
     },
   }
 }
 
-/** The side panel's key: Escape closes it. */
+/** Escape closes the keyboard help first, then the side panel. */
 export function registerPanelKeys(router: KeyRouter): void {
+  router.on('dialog', 'close-help', () => session.help?.close(true))
   router.on('panel', 'close-panel', () => session.inspector?.close())
 }
 
@@ -41,18 +42,13 @@ export function registerPanelKeys(router: KeyRouter): void {
  * filters, theme…); anywhere else it goes into the shown diagram.
  */
 export function registerPageKeys(router: KeyRouter): void {
-  const setHelp = (open: boolean) => {
-    state.helpOpen = open
-    document.querySelector('#help')!.setAttribute('data-open', String(open))
-  }
-  router.on('page', 'close-help', () => setHelp(false))
   router.on('page', 'blur', (e) => (e.target as HTMLInputElement).blur())
   router.on('page', 'search', () => document.querySelector<HTMLInputElement>('#search')?.focus())
   router.on('page', 'next', (e) => moveSelection(1, focusedNavId(e.target as HTMLElement)))
   router.on('page', 'prev', (e) => moveSelection(-1, focusedNavId(e.target as HTMLElement)))
   router.on('page', 'diagram', () => focusSelectedDiagram())
   router.on('page', 'theme', () => paintThemeControl(toggleTheme()))
-  router.on('page', 'help', () => setHelp(!state.helpOpen))
+  router.on('page', 'help', () => session.help?.toggle())
 }
 
 /** The one keydown listener for the page, the side panel and the diagrams. */

@@ -240,3 +240,23 @@
     border-left-style: dashed;
   }
 }
+
+/* Phones and narrow windows: the keyboard help is a bottom sheet (#112). It scrolls inside
+   itself, and its head (with the close button) stays at the top, so it can be closed after the
+   top bar's ? has scrolled away. */
+@media (max-width: 860px) {
+  .help-toast {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    max-width: none;
+    max-height: 70vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .help-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+}

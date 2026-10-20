@@ -2,7 +2,9 @@
 // (bindings.ts) and the help drawn from it do not load the diagram's zoom code.
 import type { ZoomAction } from '../diagram/zoom-controls'
 
-export type ZoomKeyEvent = Pick<KeyboardEvent, 'key' | 'code' | 'shiftKey' | 'metaKey' | 'ctrlKey' | 'altKey'>
+export type ZoomKeyEvent = Pick<KeyboardEvent, 'key' | 'code' | 'shiftKey' | 'metaKey' | 'ctrlKey' | 'altKey'> & {
+  repeat?: boolean
+}
 
 /**
  * The zoom action a key asks for, or null. + or =, -, 0 and Shift+1 (by key position, so it works
@@ -15,7 +17,8 @@ export function zoomKeyAction(
   ctx: { singleKeys: boolean; overview: boolean; panelOpen?: boolean },
 ): ZoomAction | null {
   if (e.metaKey || e.ctrlKey || e.altKey) return null
-  if (e.key === 'Escape') return ctx.overview && !ctx.panelOpen ? 'leave' : null
+  // Held down, Escape leaves Overview only on its first press.
+  if (e.key === 'Escape') return ctx.overview && !ctx.panelOpen && !e.repeat ? 'leave' : null
   if (!ctx.singleKeys) return null
   if (e.key === '+' || e.key === '=') return 'in'
   if (e.key === '-' || e.key === '−') return 'out'

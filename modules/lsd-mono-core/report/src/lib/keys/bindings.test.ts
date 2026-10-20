@@ -18,9 +18,9 @@ const page: PageKeyContext = {
   ownKeys: false,
   arrows: true,
   onControl: false,
+  inMenu: false,
   hasScenario: true,
   singleKeys: true,
-  helpOpen: false,
 }
 const key = (k: string, mods: Omit<KeyEvent, 'key'> = {}): KeyEvent => ({ key: k, ...mods })
 /** The page binding [e] runs, or null. */
@@ -44,11 +44,23 @@ describe('page key bindings', () => {
     expect(pageAction(key('x'))).toBeNull()
   })
 
-  it('closes the help on Escape, else lets go of a text field, else does nothing', () => {
-    expect(pageAction(key('Escape'), { ...page, typing: true, helpOpen: true })).toBe('close-help')
-    expect(pageAction(key('Escape'), { ...page, helpOpen: true })).toBe('close-help')
+  it('lets go of a text field on Escape, else does nothing; the help closes before (dialog scope)', () => {
     expect(pageAction(key('Escape'), { ...page, typing: true })).toBe('blur')
     expect(pageAction(key('Escape'))).toBeNull()
+    expect(matchingBindings('dialog', key('Escape'), { open: true }).map((b) => b.id)).toEqual(['close-help'])
+    expect(matchingBindings('dialog', key('Escape'), { open: false })).toEqual([])
+  })
+
+  it('closes one layer per Escape press: not while it is held down, and not with Ctrl, Cmd or Alt', () => {
+    for (const [scope, ctx] of [
+      ['dialog', { open: true }],
+      ['panel', { open: true }],
+    ] as const) {
+      expect(matchingBindings(scope, key('Escape'), ctx).length, scope).toBe(1)
+      expect(matchingBindings(scope, key('Escape', { shiftKey: true }), ctx).length, scope).toBe(1)
+      for (const mods of [{ repeat: true }, { ctrlKey: true }, { metaKey: true }, { altKey: true }])
+        expect(matchingBindings(scope, key('Escape', mods), ctx), `${scope} ${Object.keys(mods)[0]}`).toEqual([])
+    }
   })
 
   it('keeps off text fields and controls with keys of their own', () => {
@@ -56,6 +68,14 @@ describe('page key bindings', () => {
     expect(pageAction(key('k', { metaKey: true }), { ...page, typing: true })).toBeNull()
     expect(pageAction(key('j'), { ...page, ownKeys: true })).toBeNull()
     expect(pageAction(key('k', { metaKey: true }), { ...page, onControl: true })).toBe('search')
+  })
+
+  it('opens the help from anywhere but a text field or an open menu, an arrow and the side panel too', () => {
+    expect(pageAction(key('?'), { ...page, ownKeys: true })).toBe('help')
+    expect(pageAction(key('?'), { ...page, onControl: true })).toBe('help')
+    expect(pageAction(key('?'), { ...page, typing: true })).toBeNull()
+    expect(pageAction(key('?'), { ...page, inMenu: true })).toBeNull()
+    expect(pageAction(key('?'), { ...page, ownKeys: true, singleKeys: false })).toBeNull()
   })
 
   it('leaves arrows and Enter alone where they mean something else', () => {
@@ -74,7 +94,7 @@ describe('page key bindings', () => {
     expect(pageAction(key('ArrowDown'), off)).toBe('next')
     expect(pageAction(key('ArrowUp'), off)).toBe('prev')
     expect(pageAction(key('Enter'), off)).toBe('diagram')
-    expect(pageAction(key('Escape'), { ...off, helpOpen: true })).toBe('close-help')
+    expect(pageAction(key('Escape'), { ...off, typing: true })).toBe('blur')
   })
 
   it('does not take j, d or / with Ctrl, Cmd or Alt held, so browser shortcuts stay theirs', () => {
@@ -170,6 +190,7 @@ describe('key conflicts', () => {
   const contexts: { [S in KeyScope]: ScopeContexts[S][] } = {
     menu: [{}],
     header: [{}],
+    dialog: [{ open: true }, { open: false }],
     panel: [{ open: true }, { open: false }],
     diagram: (['find', 'arrow', 'scrollport', 'link', 'card'] as const).flatMap((on) =>
       flags(4).map(([zoomable, overview, panelOpen, singleKeys]) => ({
@@ -183,14 +204,14 @@ describe('key conflicts', () => {
         target: null as unknown as HTMLElement,
       })),
     ),
-    page: flags(7).map(([typing, ownKeys, arrows, onControl, hasScenario, singleKeys, helpOpen]) => ({
+    page: flags(7).map(([typing, ownKeys, arrows, onControl, inMenu, hasScenario, singleKeys]) => ({
       typing,
       ownKeys,
       arrows,
       onControl,
+      inMenu,
       hasScenario,
       singleKeys,
-      helpOpen,
     })),
   }
 

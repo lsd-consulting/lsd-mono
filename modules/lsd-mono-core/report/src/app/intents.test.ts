@@ -33,6 +33,12 @@ describe('keyTarget', () => {
     for (const id of ['#item', '#plain', '#link']) expect(keyTarget(el(id)).ownKeys, id).toBe(false)
   })
 
+  it('knows an open menu or popover, where ? keeps off', () => {
+    expect(keyTarget(el('#dark-item')).inMenu).toBe(true)
+    expect(keyTarget(el('#theme-menu')).inMenu).toBe(true)
+    for (const id of ['#arrow', '#close', '#item']) expect(keyTarget(el(id)).inMenu, id).toBe(false)
+  })
+
   it('moves the selection with the arrows only on the page, the list or the heading', () => {
     expect(keyTarget(document.body).arrows).toBe(true)
     expect(keyTarget(el('#item')).arrows).toBe(true)

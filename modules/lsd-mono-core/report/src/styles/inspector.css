@@ -379,21 +379,55 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
   box-shadow: var(--shadow);
   font-size: 12px;
   color: var(--text-muted);
   z-index: 50;
-  max-width: 280px;
+  max-width: 300px;
   display: none;
 }
 .help-toast[data-open="true"] {
   display: block;
   animation: rise 0.25s ease;
 }
-.help-setting {
+/* The keyboard help's title and close button (#112). */
+.help-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 6px 2px 14px;
+  background: var(--surface);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.help-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.help-toast .help-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+.help-close-icon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+.help-body {
+  padding: 0 14px 12px;
+}
+.help-keys {
+  margin: 0;
+}
+.help-setting {
+  display: flex;
+  align-items: flex-start;
   gap: 6px;
   margin-top: 8px;
   padding-top: 8px;
@@ -402,13 +436,36 @@
   cursor: pointer;
 }
 .help-setting input {
+  flex: none;
+  margin: 2px 0 0;
   accent-color: var(--accent);
 }
+/* One run of text, so it wraps between words at 320px instead of shrinking item by item. */
+.help-setting-text {
+  flex: 1;
+  min-width: 0;
+}
 .help-toast kbd {
+  white-space: nowrap;
   font-family: var(--mono);
   font-size: 11px;
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 0 4px;
   background: var(--surface-2);
+}
+
+@media (pointer: coarse) {
+  .help-toast .help-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (forced-colors: active) {
+  .help-toast {
+    border-color: CanvasText;
+  }
+  .help-toast .help-close {
+    border-color: ButtonText;
+  }
 }

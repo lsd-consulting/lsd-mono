@@ -19,6 +19,8 @@ export interface KeyTarget {
   arrows: boolean
   /** A button, link or slider, where Enter presses it. */
   onControl: boolean
+  /** An open menu or popover with keys of its own (theme, participant actions, hidden participants): ? keeps off. */
+  inMenu: boolean
 }
 
 export function keyTarget(target: HTMLElement): KeyTarget {
@@ -33,6 +35,7 @@ export function keyTarget(target: HTMLElement): KeyTarget {
       target === target.ownerDocument.body || target.closest('#scenario-nav') || target.matches('#scenario-title'),
     ),
     onControl: Boolean(target.closest('button, a, [role="slider"]')),
+    inMenu: Boolean(target.closest('[role="menu"], [role^="menuitem"], .hidden-popover')),
   }
 }
 

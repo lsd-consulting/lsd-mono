@@ -72,6 +72,7 @@ const press = (el: Element, key: string, init: KeyboardEventInit = {}) => {
 
 /** The page's key router, with the zoom keys only. */
 const router = createKeyRouter((e) => ({
+  dialog: null,
   panel: null,
   page: null,
   diagram: diagramKeyContext(e.target, { singleKeys: singleKeysEnabled(), panelOpen: false }),
@@ -333,6 +334,8 @@ describe('zoom keys (#94)', () => {
     expect(zoomKeyAction(key('Escape'), { ...on, overview: true })).toBe('leave')
     // The side panel takes Esc first (#102): one Esc, one thing closed.
     expect(zoomKeyAction(key('Escape'), { ...on, overview: true, panelOpen: true })).toBeNull()
+    // Held down, Esc does not go on to leave Overview after closing something else.
+    expect(zoomKeyAction(key('Escape', { repeat: true }), { ...on, overview: true })).toBeNull()
   })
 
   it('leaves Ctrl/Cmd with them to the browser, and the character keys alone when shortcuts are off', () => {
