@@ -69,10 +69,11 @@ test('a payload match bands the {} marker, not the label, with AA contrast and n
     await expect(
       page.locator('.msg-open[aria-label^="Open reserve stock,"][aria-label$=", search match in payload"]'),
     ).toHaveCount(1)
-    const label = await page
-      .locator('.seq-svg .search-current .msg-label')
-      .evaluate((el) => getComputedStyle(el).stroke)
-    expect(label, `${theme}: the label of a payload-only match is not banded`).toBe('none')
+    // Retried: Find's reveal can repaint the rows (new nodes) just after the count shows.
+    await expect(
+      page.locator('.seq-svg .search-current .msg-label'),
+      `${theme}: the label of a payload-only match is not banded`,
+    ).toHaveCSS('stroke', 'none')
     for (const state of ['current', 'match'] as const) {
       const [text, band] = await computedColours(page, [
         [payloadMarker(state), 'fill'],
@@ -82,10 +83,10 @@ test('a payload match bands the {} marker, not the label, with AA contrast and n
     }
     // A label match leaves its {} as it was.
     await page.locator('[data-diagram-find]').fill('applied')
-    const marker = await page
-      .locator('.seq-svg .search-current .msg-payload')
-      .evaluate((el) => getComputedStyle(el).stroke)
-    expect(marker, `${theme}: a label match does not band the {} marker`).toBe('none')
+    await expect(
+      page.locator('.seq-svg .search-current .msg-payload'),
+      `${theme}: a label match does not band the {} marker`,
+    ).toHaveCSS('stroke', 'none')
     await page.locator('[data-diagram-find]').fill('snowdrop')
     const violations = await seriousViolations(page)
     expect(violations, formatViolations(violations)).toEqual([])
