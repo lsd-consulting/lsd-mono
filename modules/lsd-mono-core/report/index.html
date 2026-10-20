@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
     <script data-theme-boot>
-      // Before first paint, so there is no flash of the wrong theme. Mirrors resolveTheme in src/ui/theme.ts.
+      // Before first paint, so there is no flash of the wrong theme. Mirrors resolveTheme in src/ui/theme.ts,
+      // and drops the pre-#106 key (forgetLegacyTheme), so everyone starts on Auto once.
       try {
-        var t = localStorage.getItem('lsd-report-theme')
+        localStorage.removeItem('lsd-report-theme')
+        var t = localStorage.getItem('lsd-report-theme-v2')
         if (t !== 'dark' && t !== 'light' && t !== 'contrast') {
           t = matchMedia('(prefers-contrast: more)').matches
             ? 'contrast'

@@ -15,11 +15,12 @@ test('with single-key shortcuts off, / j k d and ? do nothing, Ctrl+K still sear
   const title = () => page.locator('#scenario-title').textContent()
   const start = await theme()
   await page.locator('#scenario-title').click()
-  // The cycle is Auto, dark, light, high contrast: two presses always change what is shown.
-  await page.keyboard.press('d')
-  await page.keyboard.press('d')
-  expect(await theme()).not.toBe(start)
-  await page.keyboard.press('d')
+  // Every press changes what is shown (#106); four go round to Auto again.
+  for (let press = 0; press < 3; press++) {
+    const before = await theme()
+    await page.keyboard.press('d')
+    expect(await theme()).not.toBe(before)
+  }
   await page.keyboard.press('d')
   expect(await theme()).toBe(start)
 

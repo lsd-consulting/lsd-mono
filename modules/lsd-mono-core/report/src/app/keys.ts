@@ -1,8 +1,8 @@
 // Page-wide keyboard shortcuts.
-import { paintThemeButton } from './chrome'
 import { focusSelectedDiagram } from './main-view'
 import { moveSelection, focusedNavId } from './nav'
 import { toggleTheme } from '../ui/theme'
+import { paintThemeControl } from '../ui/theme-menu'
 import { singleKeysEnabled } from '../ui/shortcuts'
 import { session, state } from './context'
 import { keyTarget, pageKeyIntent } from './intents'
@@ -42,7 +42,7 @@ export function onKey(e: KeyboardEvent): void {
       focusSelectedDiagram()
       return
     case 'theme':
-      paintThemeButton(toggleTheme())
+      paintThemeControl(toggleTheme())
       return
     case 'help':
       state.helpOpen = !state.helpOpen

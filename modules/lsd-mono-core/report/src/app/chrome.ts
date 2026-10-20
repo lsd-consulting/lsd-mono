@@ -18,15 +18,8 @@ import {
   stepFind,
   syncDiagramWindow,
 } from '../lib/sequence-diagram'
-import {
-  currentMode,
-  getPreferredTheme,
-  themeButtonLabel,
-  themeGlyph,
-  toggleTheme,
-  type Theme,
-  type ThemeMode,
-} from '../ui/theme'
+import { currentMode, getPreferredTheme } from '../ui/theme'
+import { bindThemeMenu, themeControlHtml } from '../ui/theme-menu'
 import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSidebarCollapsed } from '../ui/sidebar'
 import { statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
@@ -50,17 +43,6 @@ import { counts } from './filters'
 import { writeScenarioHash } from './url-hash'
 import { index, session, state, app } from './context'
 import { closeFocus, mainClick, mainKey } from './intents'
-export function paintThemeButton(
-  { mode, theme }: { mode: ThemeMode; theme: Theme },
-  btn: Element | null = document.querySelector('#btn-theme'),
-): void {
-  if (!btn) return
-  const label = themeButtonLabel(mode, theme)
-  btn.textContent = themeGlyph(mode)
-  btn.setAttribute('aria-label', label)
-  btn.setAttribute('title', label)
-}
-
 export function renderShell(): void {
   const c = counts()
   const total = c.success + c.warn + c.error
@@ -92,7 +74,7 @@ export function renderShell(): void {
           .join('')}
       </div>
       <div class="top-actions">
-        <button type="button" class="icon-btn" id="btn-theme" title="${escapeAttr(themeButtonLabel(mode, theme))}" aria-label="${escapeAttr(themeButtonLabel(mode, theme))}">${escapeHtml(themeGlyph(mode))}</button>
+        ${themeControlHtml(mode, theme)}
         <button type="button" class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Show keyboard help">?</button>
       </div>
     </header>
@@ -171,9 +153,7 @@ function bindFilters(): void {
 
 /** Theme, collapse-sidebar and help buttons in the top bar. */
 function bindTopbarButtons(): void {
-  document.querySelector('#btn-theme')!.addEventListener('click', () => {
-    paintThemeButton(toggleTheme())
-  })
+  bindThemeMenu()
 
   document.querySelector('#btn-sidebar')!.addEventListener('click', () => {
     state.sidebarCollapsed = !state.sidebarCollapsed

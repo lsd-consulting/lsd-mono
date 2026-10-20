@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // onKey carries out what pageKeyIntent decides (intents.test.ts covers the decisions).
 const nav = vi.hoisted(() => ({ moveSelection: vi.fn(), focusedNavId: vi.fn(() => 'b') }))
 const view = vi.hoisted(() => ({ focusSelectedDiagram: vi.fn() }))
-const chrome = vi.hoisted(() => ({ paintThemeButton: vi.fn() }))
+const themeMenu = vi.hoisted(() => ({ paintThemeControl: vi.fn() }))
 const theme = vi.hoisted(() => ({ toggleTheme: vi.fn(() => ({ mode: 'light', theme: 'light' })) }))
 const ctx = vi.hoisted(() => ({
   session: { renderedId: 'a', inspector: { isOpen: (): boolean => false } },
@@ -13,7 +13,7 @@ const ctx = vi.hoisted(() => ({
 
 vi.mock('./nav', () => nav)
 vi.mock('./main-view', () => view)
-vi.mock('./chrome', () => chrome)
+vi.mock('../ui/theme-menu', () => themeMenu)
 vi.mock('../ui/theme', () => theme)
 vi.mock('../ui/shortcuts', () => ({ singleKeysEnabled: () => true }))
 vi.mock('./context', () => ctx)
@@ -56,7 +56,7 @@ describe('onKey', () => {
     press(document.body, 'Enter')
     press(document.body, 'd')
     expect(view.focusSelectedDiagram).toHaveBeenCalledOnce()
-    expect(chrome.paintThemeButton).toHaveBeenCalledWith({ mode: 'light', theme: 'light' })
+    expect(themeMenu.paintThemeControl).toHaveBeenCalledWith({ mode: 'light', theme: 'light' })
   })
 
   it('toggles the help with ?, and Escape closes it', () => {

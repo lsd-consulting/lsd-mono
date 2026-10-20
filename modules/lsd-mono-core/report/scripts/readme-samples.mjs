@@ -319,8 +319,11 @@ async function recordTour(page, file) {
   await caption('Light and high-contrast themes, or Auto to follow the OS')
   await page.evaluate(() => window.scrollTo(0, 0))
   await snap(200)
-  await click(page.locator('#btn-theme'), { hold: 800 })
-  await click(page.locator('#btn-theme'), { hold: 1100 })
+  // The theme menu: high contrast, then Auto.
+  await click(page.locator('#btn-theme'), { hold: 500 })
+  await click(page.locator('#theme-menu [data-theme-mode="contrast"]'), { hold: 800 })
+  await click(page.locator('#btn-theme'), { hold: 500 })
+  await click(page.locator('#theme-menu [data-theme-mode="auto"]'), { hold: 1100 })
 
   // 10. Collapse the scenario list.
   await caption('Collapse the scenario list to an icon rail')
@@ -374,7 +377,7 @@ const browser = await chromium.launch({ headless: true })
 try {
   if (mode === 'tour') {
     const storage = [
-      ['local', 'lsd-report-theme', 'light'],
+      ['local', 'lsd-report-theme-v2', 'light'],
       ['local', 'lsd-report-sidebar', null],
       ['session', 'lsd-report-inspector-width', null],
     ]
@@ -387,7 +390,7 @@ try {
     )
   } else {
     const storage = [
-      ['local', 'lsd-report-theme', 'dark'],
+      ['local', 'lsd-report-theme-v2', 'dark'],
       ['local', 'lsd-report-sidebar', 'collapsed'],
     ]
     await withReportPage(

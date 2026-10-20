@@ -46,7 +46,7 @@ export interface Opened {
 export async function openReport(page: Page, options: OpenOptions): Promise<Opened> {
   const { report, index, theme, storage = {}, path = '/', payloads, media, viewport } = options
   const opened: Opened = { loaded: [] }
-  const items = theme === undefined ? storage : { 'lsd-report-theme': theme, ...storage }
+  const items = theme === undefined ? storage : { 'lsd-report-theme-v2': theme, ...storage }
   if (viewport) await page.setViewportSize(viewport)
   await page.addInitScript(
     ({ single, manifest, payloadsSrc, stored }) => {

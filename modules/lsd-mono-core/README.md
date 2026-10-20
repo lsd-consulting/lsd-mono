@@ -387,7 +387,7 @@ Settings made in code rather than by property:
 | `LsdContext.payloads` | Payload converters and redaction rules (see [Message data](#message-data)); `clear()` re-reads the payload properties |
 
 The report page remembers a few choices in the reader's browser, not in the report: the theme
-(`lsd-report-theme`, local storage), the collapsed scenario list (`lsd-report-sidebar`, local storage) and the side
+(`lsd-report-theme-v2`, local storage), the collapsed scenario list (`lsd-report-sidebar`, local storage) and the side
 panel width (`lsd-report-inspector-width`, session storage).
 
 ### Threads and parallel tests

@@ -2,12 +2,13 @@ import './styles/app.css'
 import './styles/timing.css'
 import './styles/diagram.css'
 import { onKey } from './app/keys'
-import { paintThemeButton, renderShell } from './app/chrome'
+import { renderShell } from './app/chrome'
 import { applyHash } from './app/routing'
 import type { Report } from './types'
 import { type IndexManifest, type ReportData } from './lib/report-index'
 import { syncDiagramWindow } from './lib/sequence-diagram'
-import { applyTheme, followOsTheme, getPreferredTheme } from './ui/theme'
+import { applyTheme, followOsTheme, followOtherTabs, forgetLegacyTheme, getPreferredTheme } from './ui/theme'
+import { paintThemeControl } from './ui/theme-menu'
 import { index, session } from './app/context'
 import { pingSource, usage } from './lib/usage-ping'
 
@@ -29,8 +30,10 @@ declare global {
 }
 
 // The head script already set it before first paint; this keeps the two in step.
+forgetLegacyTheme()
 applyTheme(getPreferredTheme())
-followOsTheme((theme) => paintThemeButton({ mode: 'auto', theme }))
+followOsTheme((theme) => paintThemeControl({ mode: 'auto', theme }))
+followOtherTabs(paintThemeControl)
 if (index) document.title = index.title
 renderShell()
 applyHash()

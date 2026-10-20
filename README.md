@@ -175,7 +175,7 @@ The report shows one scenario at a time, chosen from the sidebar, and the choice
 - a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are redacted when captured), the component diagram, and timing and metrics;
 - a timing summary (wall-clock, calls, slowest call, accuracy) with swim lanes and a waterfall, when the scenario has timing.
 
-The theme follows the operating system (dark, light, or more contrast) until you choose one with the theme button or `d`.
+The theme follows the operating system (dark, light, or more contrast) until you choose one from the theme menu in the top bar, or step through them with `d`.
 
 ### Find in the diagram
 

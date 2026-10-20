@@ -69,7 +69,7 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { line: 2, help: 'Find also searches payloads (<b>{}</b> in the field turns that off)' },
   {
     line: 3,
-    help: '<kbd>d</kbd> theme (Auto follows the OS, dark, light, high contrast)',
+    help: '<kbd>d</kbd> theme (Auto follows the OS, light, dark, high contrast)',
     action: 'theme',
     matches: (e, ctx) => alone(e, ctx, 'd'),
   },

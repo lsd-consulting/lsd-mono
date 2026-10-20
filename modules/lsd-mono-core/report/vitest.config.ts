@@ -30,8 +30,8 @@ export default defineConfig({
         lines: 88,
         // src/lib 92.3 / 82.4 / 95.6 / 96.1
         'src/lib/**': { statements: 90, branches: 80, functions: 94, lines: 94 },
-        // src/ui 91.5 / 82.2 / 97.1 / 94.0
-        'src/ui/**': { statements: 90, branches: 80, functions: 95, lines: 92 },
+        // src/ui 92.3 / 83.5 / 97.4 / 94.4 (the theme menu tests, #106)
+        'src/ui/**': { statements: 91, branches: 82, functions: 96, lines: 93 },
         // src/app 50.4 / 51.2 / 57.3 / 53.5: the decisions are pure functions with unit tests (intents.ts,
         // #99); the listeners that carry them out are covered end to end by check:ux, which does not count here.
         'src/app/**': { statements: 49, branches: 50, functions: 56, lines: 52 },

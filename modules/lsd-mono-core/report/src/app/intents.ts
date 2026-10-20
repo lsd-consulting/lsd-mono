@@ -15,7 +15,7 @@ import { pageAction, type PageAction } from './key-bindings'
 export interface KeyTarget {
   /** A text field has focus: keys type, and Escape leaves the field. */
   typing: boolean
-  /** A control with keys of its own (an arrow, a panel button, the panel, a diagram): page keys keep off. */
+  /** A control with keys of its own (an arrow, a panel button, the panel, a diagram, the theme menu): page keys keep off. */
   ownKeys: boolean
   /** The arrow keys move the selection here: on the list, the page or the scenario heading. */
   arrows: boolean
@@ -27,7 +27,9 @@ export function keyTarget(target: HTMLElement): KeyTarget {
   return {
     typing: target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable,
     ownKeys: Boolean(
-      target.closest('button.msg-open, [data-show-components], [data-show-metrics], #inspector, .seq-scroll'),
+      target.closest(
+        'button.msg-open, [data-show-components], [data-show-metrics], #inspector, .seq-scroll, #theme-menu',
+      ),
     ),
     arrows: Boolean(
       target === target.ownerDocument.body || target.closest('#scenario-nav') || target.matches('#scenario-title'),

@@ -63,7 +63,7 @@ describe('page key bindings', () => {
         '<kbd>/</kbd> search · <kbd>j</kbd>/<kbd>k</kbd> or <kbd>↓</kbd>/<kbd>↑</kbd> next/prev scenario · <kbd>Enter</kbd> go to its diagram',
         'In a diagram, <kbd>↑</kbd>/<kbd>↓</kbd> move between messages · <kbd>Enter</kbd> opens the side panel · In participant headers, <kbd>←</kbd>/<kbd>→</kbd> move between Hide and More, <kbd>Shift</kbd>+<kbd>F10</kbd> more actions',
         'In Find, <kbd>Enter</kbd>/<kbd>Shift</kbd>+<kbd>Enter</kbd> (or <kbd>F3</kbd>) next/previous match · Find also searches payloads (<b>{}</b> in the field turns that off)',
-        '<kbd>d</kbd> theme (Auto follows the OS, dark, light, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close',
+        '<kbd>d</kbd> theme (Auto follows the OS, light, dark, high contrast) · <kbd>?</kbd> help · <kbd>Esc</kbd> close',
         'In a diagram, <kbd>+</kbd>/<kbd>−</kbd> zoom, <kbd>0</kbd> default zoom, <kbd>Shift</kbd>+<kbd>1</kbd> overview (<kbd>Esc</kbd> leaves it) · In a wide diagram, <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> scroll a screen sideways, <kbd>Home</kbd>/<kbd>End</kbd> go to its edges',
       ].join('\n'),
     )

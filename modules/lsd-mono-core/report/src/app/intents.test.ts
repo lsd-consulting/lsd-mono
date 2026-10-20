@@ -33,7 +33,8 @@ describe('keyTarget', () => {
       <a id="link" href="#x">x</a><div id="slider" role="slider" tabindex="0"></div><p id="plain">text</p>
       <div class="seq-scroll" tabindex="0"><button class="msg-open" id="arrow"></button></div>
       <button data-show-components="a" id="components"></button><button data-show-metrics="a" id="metrics"></button>
-      <aside id="inspector"><button id="close">Close</button></aside>`
+      <aside id="inspector"><button id="close">Close</button></aside>
+      <div id="theme-menu" role="menu"><button role="menuitemradio" id="dark-item">Dark</button></div>`
   })
 
   it('knows a text field, however it takes text', () => {
@@ -45,8 +46,8 @@ describe('keyTarget', () => {
     expect(keyTarget(el('#item')).typing).toBe(false)
   })
 
-  it('leaves the arrows, the panel buttons, the panel and the diagram their own keys', () => {
-    for (const id of ['#arrow', '#components', '#metrics', '#close', '.seq-scroll'])
+  it('leaves the arrows, the panel buttons, the panel, the diagram and the theme menu their own keys', () => {
+    for (const id of ['#arrow', '#components', '#metrics', '#close', '.seq-scroll', '#dark-item'])
       expect(keyTarget(el(id)).ownKeys, id).toBe(true)
     for (const id of ['#item', '#plain', '#link']) expect(keyTarget(el(id)).ownKeys, id).toBe(false)
   })

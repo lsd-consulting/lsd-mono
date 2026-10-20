@@ -8,15 +8,20 @@ import {
   chooseTheme,
   currentMode,
   followOsTheme,
+  followOtherTabs,
+  forgetLegacyTheme,
   getPreferredTheme,
+  LEGACY_THEME_KEY,
+  modeOf,
   nextMode,
   osTheme,
   resolveTheme,
   THEME_KEY,
+  THEME_MODES,
   themeButtonLabel,
-  themeGlyph,
+  themeIcon,
   toggleTheme,
-  type ThemeMode,
+  type Theme,
 } from './theme'
 
 /** A fake OS: flip `light` / `moreContrast` and fire change events like a browser does. */
@@ -59,30 +64,53 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('theme cycle', () => {
-  it('cycles Auto, dark, light, high contrast, then back to Auto', () => {
-    expect(nextMode('auto')).toBe('dark')
-    expect(nextMode('dark')).toBe('light')
-    expect(nextMode('light')).toBe('contrast')
-    expect(nextMode('contrast')).toBe('auto')
+describe('theme cycle (`d`)', () => {
+  it('steps Auto, light, dark, high contrast, skipping a step that shows the same theme (#106)', () => {
+    // Auto showing dark: dark would change nothing on screen but stop following the OS.
+    expect(nextMode('auto', 'dark')).toBe('light')
+    expect(nextMode('auto', 'light')).toBe('dark')
+    expect(nextMode('auto', 'contrast')).toBe('light')
+    expect(nextMode('light', 'dark')).toBe('dark')
+    expect(nextMode('dark', 'dark')).toBe('contrast')
+    expect(nextMode('contrast', 'dark')).toBe('auto')
+    // High contrast from the OS: from a pinned high contrast, Auto would show it again.
+    expect(nextMode('dark', 'contrast')).toBe('contrast')
+    expect(nextMode('contrast', 'contrast')).toBe('light')
   })
 
-  it('names the mode in text, not colour alone, with the theme Auto resolved to', () => {
-    expect(themeGlyph('auto')).toBe('A')
-    expect(themeGlyph('contrast')).toBe('HC')
-    expect(themeButtonLabel('auto', 'dark')).toBe('A. Theme: Auto (dark). Switch to dark')
-    expect(themeButtonLabel('auto', 'contrast')).toBe('A. Theme: Auto (high contrast). Switch to dark')
-    expect(themeButtonLabel('dark', 'dark')).toBe('Theme: dark. Switch to light')
-    expect(themeButtonLabel('light', 'light')).toBe('Theme: light. Switch to high contrast')
-    expect(themeButtonLabel('contrast', 'contrast')).toBe('HC. Theme: high contrast. Switch to Auto (follow the OS)')
+  it('never steps to a mode that leaves the page as it was', () => {
+    for (const os of ['dark', 'light', 'contrast'] as Theme[]) {
+      for (const mode of THEME_MODES) {
+        const next = nextMode(mode, os)
+        const show = (m: typeof mode) => (m === 'auto' ? os : m)
+        expect(show(next), `${mode} on ${os}`).not.toBe(show(mode))
+      }
+    }
+  })
+})
+
+describe('theme button', () => {
+  it('shows the current mode: A, a sun for light, a moon for dark, HC (#106)', () => {
+    expect(themeIcon('auto')).toBe('A')
+    expect(themeIcon('light')).toBe('sun')
+    expect(themeIcon('dark')).toBe('moon')
+    expect(themeIcon('contrast')).toBe('HC')
   })
 
-  it('starts the accessible name with the visible text when the glyph is text', () => {
-    const modes: ThemeMode[] = ['auto', 'dark', 'light', 'contrast']
-    for (const mode of modes) {
-      const glyph = themeGlyph(mode)
+  it('names the current mode in text, with the theme Auto shows', () => {
+    expect(themeButtonLabel('auto', 'dark')).toBe('A. Theme: Auto (dark)')
+    expect(themeButtonLabel('auto', 'contrast')).toBe('A. Theme: Auto (high contrast)')
+    expect(themeButtonLabel('dark', 'dark')).toBe('Theme: dark')
+    expect(themeButtonLabel('light', 'light')).toBe('Theme: light')
+    expect(themeButtonLabel('contrast', 'contrast')).toBe('HC. Theme: high contrast')
+  })
+
+  it('starts the accessible name with the visible text when the icon is text', () => {
+    for (const mode of THEME_MODES) {
+      const icon = themeIcon(mode)
       const label = themeButtonLabel(mode, mode === 'auto' ? 'dark' : mode)
-      expect(label.startsWith(glyph), `${mode}: ${label}`).toBe(/[A-Za-z]/.test(glyph))
+      const text = icon === 'A' || icon === 'HC'
+      expect(label.startsWith(`${icon}. `), `${mode}: ${label}`).toBe(text)
     }
   })
 })
@@ -122,7 +150,6 @@ describe('OS default and explicit choice', () => {
     expect(currentMode()).toBe('auto')
     expect(toggleTheme()).toEqual({ mode: 'dark', theme: 'dark' })
     expect(localStorage.getItem(THEME_KEY)).toBe('dark')
-    expect(toggleTheme()).toEqual({ mode: 'light', theme: 'light' })
     expect(toggleTheme()).toEqual({ mode: 'contrast', theme: 'contrast' })
     expect(shown()).toBe('contrast')
     expect(currentMode()).toBe('contrast')
@@ -144,6 +171,53 @@ describe('OS default and explicit choice', () => {
     os.set({ moreContrast: true })
     expect(shown()).toBe('contrast')
     expect(seen).toEqual(['contrast'])
+  })
+})
+
+describe('stored key (#106)', () => {
+  it('is versioned, and the pre-#106 key is dropped, not read', () => {
+    expect(THEME_KEY).not.toBe(LEGACY_THEME_KEY)
+    localStorage.setItem(LEGACY_THEME_KEY, 'dark')
+    expect(currentMode()).toBe('auto')
+    forgetLegacyTheme()
+    expect(localStorage.getItem(LEGACY_THEME_KEY)).toBeNull()
+  })
+
+  it('reads anything but a theme as Auto', () => {
+    expect(modeOf('light')).toBe('light')
+    expect(modeOf(null)).toBe('auto')
+    expect(modeOf('auto')).toBe('auto')
+  })
+
+  it('survives storage that throws when forgetting the old key', () => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    expect(() => forgetLegacyTheme()).not.toThrow()
+  })
+})
+
+describe('followOtherTabs', () => {
+  const fire = (key: string | null) => window.dispatchEvent(new StorageEvent('storage', { key }))
+
+  it('repaints when another tab stores or clears a choice, and ignores other keys', () => {
+    fakeOs({ light: true })
+    const seen: unknown[] = []
+    const stop = followOtherTabs((c) => seen.push(c))
+    localStorage.setItem(THEME_KEY, 'contrast')
+    fire(THEME_KEY)
+    expect(shown()).toBe('contrast')
+    fire('something-else')
+    localStorage.removeItem(THEME_KEY)
+    fire(null)
+    expect(shown()).toBe('light')
+    expect(seen).toEqual([
+      { mode: 'contrast', theme: 'contrast' },
+      { mode: 'auto', theme: 'light' },
+    ])
+    stop()
+    fire(THEME_KEY)
+    expect(seen).toHaveLength(2)
   })
 })
 
@@ -228,5 +302,13 @@ describe('pre-paint script in index.html', () => {
     if (stored) localStorage.setItem(THEME_KEY, stored)
     run()
     expect(shown()).toBe(resolveTheme(stored, os))
+  })
+
+  it('drops the pre-#106 key before first paint, so an old choice gives Auto', () => {
+    fakeOs({ light: true })
+    localStorage.setItem(LEGACY_THEME_KEY, 'dark')
+    run()
+    expect(shown()).toBe('light')
+    expect(localStorage.getItem(LEGACY_THEME_KEY)).toBeNull()
   })
 })
