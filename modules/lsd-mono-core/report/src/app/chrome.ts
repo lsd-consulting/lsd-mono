@@ -9,6 +9,7 @@ import { bindInspector, delegateMessageOpen, inspectorMarkup } from '../ui/inspe
 import { diagramKeyAction, focusTargetAfterClose, messagePlaces, sidewaysScrollLeft } from '../lib/diagram-a11y'
 import { scrollDiagramTo } from '../lib/diagram/page-scroll'
 import { setPayloadLoader } from '../lib/diagram/payload-find'
+import { onZoomKey } from '../lib/diagram/zoom-controls'
 import { findStepKey } from '../lib/diagram/search-reveal'
 import {
   diagramView,
@@ -117,7 +118,7 @@ export function renderShell(): void {
     <div class="help-toast" id="help" data-open="false" role="note">
       <strong style="color:var(--text)">Keyboard</strong><br/>
       ${keyHelpHtml()}
-      <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> Single-key shortcuts (<kbd>/</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>d</kbd> <kbd>?</kbd>)</label>
+      <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> Single-key shortcuts (<kbd>/</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>d</kbd> <kbd>?</kbd>, and <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd> <kbd>Shift</kbd>+<kbd>1</kbd> in a diagram)</label>
     </div>
   `
 
@@ -309,8 +310,9 @@ function onMainClick(ev: MouseEvent): void {
   if (msg) openMessage(scenario, msg)
 }
 
-/** Keys in the main column: stepping in diagram find, diagram message navigation, and Enter on an arrow. */
+/** Keys in the main column: diagram zoom, stepping in diagram find, diagram message navigation, and Enter on an arrow. */
 function onMainKey(ev: KeyboardEvent): void {
+  if (onZoomKey(ev)) return
   const target = ev.target as HTMLElement | null
   const step = target?.matches('[data-diagram-find]') ? findStepKey(ev) : null
   if (step) {

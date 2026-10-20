@@ -47,7 +47,7 @@ async function zoomScrollThenFit(page: Page): Promise<void> {
   await page.locator('.seq-scroll').evaluate((el) => {
     el.scrollTop = el.scrollHeight
   })
-  await page.getByRole('button', { name: 'Fit to screen' }).click()
+  await page.getByRole('button', { name: /^Reset zoom/ }).click()
 }
 
 // Pixel comparisons against the macOS baselines in checks/snapshots. Font rendering differs on
@@ -199,7 +199,7 @@ test('a wide diagram opens fitted, refits on resize until the user zooms, then k
 
   // Fit hands it back to automatic fitting.
   await page.setViewportSize({ width: 1250, height: 800 })
-  await card.getByRole('button', { name: 'Fit to screen' }).click()
+  await card.getByRole('button', { name: /^Reset zoom/ }).click()
   const fitted = (await zoomOf(page, 'wide-a')).percent
   await page.setViewportSize({ width: 1235, height: 800 })
   await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBeLessThan(fitted)

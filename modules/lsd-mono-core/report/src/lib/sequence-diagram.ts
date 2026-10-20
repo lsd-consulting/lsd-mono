@@ -4,7 +4,7 @@ import type { DiagramEvent, MessageEvent, Participant, Scenario } from '../types
 import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
 import { hasComponentDiagram } from './component-graph'
 import { focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
-import { eventHiddenByColumns, unscaledViewport, visibleParticipants, zoomLabel } from './diagram-view'
+import { eventHiddenByColumns, unscaledViewport, visibleParticipants } from './diagram-view'
 import { headerHtml } from './diagram/rows'
 import { textViewHtml } from './diagram/text-view'
 import {
@@ -20,6 +20,7 @@ import {
 import { type DiagramFrame, type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
 import { scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
 import { revealMessageX, syncDiagramWindow } from './diagram/viewport'
+import { zoomControlsHtml } from './diagram/zoom-controls'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
 import {
   ACT_NEST_DX,
@@ -211,12 +212,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   // something is hidden. The status line announces each hide and show.
   return `
     <div class="seq-toolbar" role="toolbar" aria-label="Diagram view">
-      <div class="zoom-controls" role="group" aria-label="Zoom">
-        <button type="button" data-zoom="out" aria-label="Zoom out">Out</button>
-        <button type="button" data-zoom="fit" aria-label="Fit to screen">Fit</button>
-        <span class="zoom-readout" aria-live="polite">${escapeHtml(zoomLabel(view.zoom))}</span>
-        <button type="button" data-zoom="in" aria-label="Zoom in">In</button>
-      </div>
+      ${zoomControlsHtml(view)}
       <div class="participant-filter" data-participant-filter></div>
       <span class="participant-filter-status visually-hidden" role="status"></span>
       <label class="diagram-find">

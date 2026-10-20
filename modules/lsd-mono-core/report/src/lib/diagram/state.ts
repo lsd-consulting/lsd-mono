@@ -1,7 +1,7 @@
 // Diagram state: one controller for everything the sequence diagram keeps between renders.
 import type { Scenario } from '../../types'
 import type { MessagePlace } from '../diagram-a11y'
-import { AUTO_FIT_MAX_ZOOM, DEFAULT_ZOOM } from '../diagram-view'
+import { DEFAULT_ZOOM } from '../diagram-view'
 import type { ActivationSpan, LayoutRow } from '../layout'
 import type { PayloadFind } from './payload-find'
 
@@ -55,15 +55,13 @@ export interface MountedDiagram {
 export interface DiagramView {
   zoom: number
   /**
-   * True until the user zooms in or out. While it is true the diagram fits its panel: on
-   * first render, and again when the panel width changes. Fit makes it true again.
+   * True until the user zooms in or out. While it is true the diagram keeps the default view
+   * (see fittedView): on first render, and again when the panel width changes. The % readout
+   * (reset) makes it true again.
    */
   autoFit: boolean
-  /**
-   * Largest scale a refit may use: AUTO_FIT_MAX_ZOOM until the user presses Fit, then
-   * MAX_ZOOM, so later refits fill the width the way Fit does.
-   */
-  fitLimit: number
+  /** While Overview is on, the view to go back to when it is turned off (#94). */
+  overview: SavedView | null
   /** Scrollport width the last fit used, so a resize to the same width does not refit. */
   fittedWidth: number
   hidden: Set<string>
@@ -76,6 +74,15 @@ export interface DiagramView {
   searchStepped?: boolean
   /** Whether Find also searches message payloads. On unless the user turns it off. */
   includePayloads: boolean
+}
+
+/** A zoom and scroll position to restore, with the fit state that went with it. */
+export interface SavedView {
+  zoom: number
+  top: number
+  left: number
+  autoFit: boolean
+  fittedWidth: number
 }
 
 export interface RowPaint {
@@ -106,7 +113,7 @@ export function diagramView(scenarioId: string): DiagramView {
     view = {
       zoom: DEFAULT_ZOOM,
       autoFit: true,
-      fitLimit: AUTO_FIT_MAX_ZOOM,
+      overview: null,
       fittedWidth: 0,
       hidden: new Set(),
       query: '',

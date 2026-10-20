@@ -171,7 +171,8 @@ for (const spec of pages) {
 
     const zoomBefore = await page.locator('.zoom-readout').innerText()
     const fit0 = Date.now()
-    await page.locator('[data-zoom="fit"]').click()
+    // The % readout: back to the default view (Fit before #94).
+    await page.locator('[data-zoom="reset"]').click()
     await page.waitForFunction((prev) => {
       const el = document.querySelector('.zoom-readout')
       return el && el.textContent && el.textContent !== prev

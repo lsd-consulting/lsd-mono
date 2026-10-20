@@ -19,10 +19,10 @@ export default defineConfig({
       // scripts/coverage-ratchet.mjs (run by `npm test`) fails when any metric, overall or for a glob,
       // rises more than 3 points above its threshold, and lists files under 50% of lines.
       thresholds: {
-        statements: 81,
-        branches: 71,
+        statements: 83,
+        branches: 73,
         functions: 88,
-        lines: 84,
+        lines: 86,
         // src/lib 91.5 / 81.3 / 95.7 / 95.3
         'src/lib/**': { statements: 90, branches: 80, functions: 94, lines: 94 },
         // src/ui 91.3 / 82.1 / 96.8 / 94.0

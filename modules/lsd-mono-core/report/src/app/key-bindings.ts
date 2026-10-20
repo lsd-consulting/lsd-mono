@@ -77,6 +77,10 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { line: 3, help: '<kbd>Esc</kbd> close', action: 'close', matches: (e) => e.key === 'Escape' },
   {
     line: 4,
+    help: 'In a diagram, <kbd>+</kbd>/<kbd>−</kbd> zoom, <kbd>0</kbd> default zoom, <kbd>Shift</kbd>+<kbd>1</kbd> overview (<kbd>Esc</kbd> leaves it)',
+  },
+  {
+    line: 4,
     help: 'In a wide diagram, <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> scroll a screen sideways, <kbd>Home</kbd>/<kbd>End</kbd> go to its edges',
   },
 ]

@@ -185,7 +185,7 @@ async function recordTour(page, file) {
   })
 
   // 2. Zoom.
-  await caption('Zoom in and out, or Fit the diagram to the panel')
+  await caption('Zoom in and out, then back to the default view')
   await page.evaluate(() => {
     const toolbar = document.querySelector('.seq-diagram .seq-toolbar')
     const top = toolbar.getBoundingClientRect().top + window.scrollY - 70
@@ -196,7 +196,7 @@ async function recordTour(page, file) {
   await click(button('Zoom in'), { hold: 300 })
   await click(button('Zoom in'), { hold: 400 })
   await click(button('Zoom out'), { hold: 300 })
-  await click(button('Fit to screen'), { hold: 800 })
+  await click(diagram.getByRole('button', { name: /^Reset zoom/ }), { hold: 800 })
 
   // 3. Find.
   await caption('Find messages and notes in the diagram')
@@ -301,11 +301,13 @@ async function recordTour(page, file) {
 
   // 7. Hide a participant.
   await caption('Hover a participant and press × to hide it')
-  const hideX = button('Hide Order events', true)
-  const head = hideX.locator('xpath=ancestor::div[@data-participant-head][1]')
+  // One set of Hide and More buttons moves onto the header in use (#62), so hover the header first.
+  const head = diagram.locator('[data-participant-head][data-name="Order events"]')
   const headAt = await centre(head)
   await moveTo(headAt.x, headAt.y)
   await page.mouse.move(headAt.x, headAt.y)
+  const hideX = button('Hide Order events', true)
+  await hideX.waitFor()
   await snap(700)
   await click(hideX, { hold: 900 })
   // The chip lists what is hidden, with Show and Show all.
@@ -332,19 +334,15 @@ async function recordTour(page, file) {
 
 /**
  * diagram.png: the scenario card and its diagram, dark theme, the scenario list folded to its
- * icon rail so the diagram gets the width. Fit, then zoomed back to about normal label size.
+ * icon rail so the diagram gets the width. At the default view, which never goes past 100%.
  */
 async function shootDiagram(page, file) {
-  const zoomOut = page.locator('.seq-diagram').getByRole('button', { name: 'Zoom out' })
-  await page.locator('.seq-diagram').getByRole('button', { name: 'Fit to screen' }).click()
-  // The readout settles after the next frame; read it only then. Fit can land as high as 250%.
+  await page
+    .locator('.seq-diagram')
+    .getByRole('button', { name: /^Reset zoom/ })
+    .click()
+  // The readout settles after the next frame.
   await page.waitForTimeout(150)
-  for (let i = 0; i < 16; i++) {
-    const pct = Number.parseInt((await page.locator('.zoom-readout').innerText()).trim(), 10)
-    if (!Number.isFinite(pct) || pct <= 140) break
-    await zoomOut.click()
-    await page.waitForTimeout(150)
-  }
   await page.locator('.seq-scroll').evaluate((el) => {
     el.scrollTop = 0
   })

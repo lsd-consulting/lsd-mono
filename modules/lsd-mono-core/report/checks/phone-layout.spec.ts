@@ -264,7 +264,13 @@ for (const [name, viewport] of [
             ),
           )
         }
-        expect(seenNames.has('Zoom in'), 'the walk reached the zoom buttons').toBe(true)
+        for (const name of ['Zoom out', 'Zoom in', 'Overview']) {
+          expect(seenNames.has(name), `the walk reached ${name}`).toBe(true)
+        }
+        expect(
+          [...seenNames].some((name) => name.startsWith('Reset zoom, now')),
+          'the walk reached the % reset',
+        ).toBe(true)
         expect(covered).toEqual([])
       })
     }

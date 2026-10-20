@@ -15,8 +15,17 @@ import {
   stepZoom,
   unscaledViewport,
   visibleColumnIds,
-  zoomFromWheel,
   settleFitWidth,
+  ZOOM_LEVELS,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  OVERVIEW_MIN_ZOOM,
+  canStepZoom,
+  lanesInView,
+  overviewNeeded,
+  overviewScale,
+  zoomAnnouncement,
+  zoomLabel,
 } from './diagram-view'
 
 const participants: Participant[] = [
@@ -104,16 +113,84 @@ describe('fitted view includes the top message label', () => {
   })
 })
 
-describe('zoom steps', () => {
-  it('zooms out on a positive wheel delta and in on a negative one', () => {
-    expect(zoomFromWheel(1, 120)).toBe(0.9)
-    expect(zoomFromWheel(1, -1)).toBe(1.1)
-    expect(zoomFromWheel(1, 0)).toBe(1)
+describe('zoom steps (#94)', () => {
+  it('steps along the preset ladder, from 25% to 250%', () => {
+    expect(ZOOM_LEVELS).toEqual([0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5])
+    expect(ZOOM_LEVELS[0]).toBe(MIN_ZOOM)
+    expect(ZOOM_LEVELS.at(-1)).toBe(MAX_ZOOM)
+    expect(stepZoom(1, 1)).toBe(1.1)
+    expect(stepZoom(1, -1)).toBe(0.9)
+    expect(stepZoom(1.25, 1)).toBe(1.5)
   })
 
-  it('clamps button steps', () => {
-    expect(stepZoom(2.5, 1)).toBe(2.5)
-    expect(stepZoom(0.25, -1)).toBe(0.25)
+  it('snaps from a level off the ladder to the nearest preset that way: 95% + gives 100%', () => {
+    expect(stepZoom(0.95, 1)).toBe(1)
+    expect(stepZoom(0.95, -1)).toBe(0.9)
+    // An overview scale.
+    expect(stepZoom(0.48, 1)).toBe(0.5)
+    expect(stepZoom(0.48, -1)).toBe(0.33)
+    expect(stepZoom(OVERVIEW_MIN_ZOOM, 1)).toBe(0.25)
+  })
+
+  it('stops at exactly 250% and 25%, and says so', () => {
+    let up = 0.95
+    for (let i = 0; i < 30; i++) up = stepZoom(up, 1)
+    expect(up).toBe(2.5)
+    let down = 0.95
+    for (let i = 0; i < 30; i++) down = stepZoom(down, -1)
+    expect(down).toBe(0.25)
+    expect(canStepZoom(2.5, 1)).toBe(false)
+    expect(canStepZoom(0.25, -1)).toBe(false)
+    expect(canStepZoom(OVERVIEW_MIN_ZOOM, -1)).toBe(false)
+    expect(canStepZoom(0.95, 1)).toBe(true)
+  })
+
+  it('treats a level within half a point of a preset as that preset', () => {
+    expect(stepZoom(0.9999, 1)).toBe(1.1)
+    expect(stepZoom(1.0001, -1)).toBe(0.9)
+  })
+})
+
+describe('Overview (#94)', () => {
+  it('fits the whole width, down to 10% and never above 100%', () => {
+    expect(overviewScale(2000, 1000)).toBe(0.5)
+    expect(overviewScale(100_000, 1000)).toBe(OVERVIEW_MIN_ZOOM)
+    expect(overviewScale(400, 1000)).toBe(1)
+    expect(overviewScale(0, 1000)).toBe(1)
+    expect(overviewScale(1000, 0)).toBe(1)
+  })
+
+  it('has nothing to show when the default view (never below 95%) already shows the whole width', () => {
+    expect(overviewNeeded(1000, 1000)).toBe(false)
+    expect(overviewNeeded(1050, 1000)).toBe(false)
+    expect(overviewNeeded(1100, 1000)).toBe(true)
+    expect(overviewNeeded(1100, 0)).toBe(false)
+  })
+
+  it('counts the lanes whose lifeline is in view', () => {
+    expect(lanesInView([10, 150, 290, 430], 0, 300)).toBe(3)
+    expect(lanesInView([10, 150, 290, 430], 140, 300)).toBe(3)
+    expect(lanesInView([10, 150, 290, 430], 0, 1000)).toBe(4)
+  })
+
+  it('reads its level down to 10%', () => {
+    expect(zoomLabel(0.1)).toBe('10%')
+    expect(zoomLabel(0.05)).toBe('10%')
+    expect(zoomLabel(0.476)).toBe('48%')
+  })
+})
+
+describe('zoom announcements (#94)', () => {
+  it('says what changed, with its context', () => {
+    expect(zoomAnnouncement({ kind: 'step', zoom: 1.1 })).toBe('Zoom 110%')
+    expect(zoomAnnouncement({ kind: 'default', zoom: 0.95 })).toBe('Default zoom, 95%')
+    expect(zoomAnnouncement({ kind: 'overview', zoom: 0.48, shown: 14, total: 14 })).toBe(
+      'Overview, 48%, whole diagram',
+    )
+    expect(zoomAnnouncement({ kind: 'overview', zoom: 0.1, shown: 72, total: 100 })).toBe(
+      'Overview, 10%, 72 of 100 lanes shown',
+    )
+    expect(zoomAnnouncement({ kind: 'overview-off', zoom: 0.95 })).toBe('Overview off, zoom 95%')
   })
 })
 

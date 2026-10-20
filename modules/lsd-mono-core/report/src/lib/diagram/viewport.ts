@@ -1,18 +1,15 @@
-// The diagram viewport: windowed painting, zoom, fit, width observation and scroll binding.
+// The diagram viewport: windowed painting, zoom, the default view, width observation and scroll
+// binding. The zoom buttons and keys are in zoom-controls.ts.
 import type { MessageEvent } from '../../types'
 import { focusablePlaces, messagePlaces, replacementFocus, sidewaysScrollLeft } from '../diagram-a11y'
 import {
-  MAX_ZOOM,
   eventHiddenByColumns,
   fittedView,
   messageLabelRect,
   scrollportXFor,
   settleFitWidth,
-  stepZoom,
   unscaledViewport,
   visibleParticipants,
-  zoomFromWheel,
-  zoomLabel,
 } from '../diagram-view'
 import type { FittedView, Rect } from '../diagram-view'
 import { cssEscape } from '../escape'
@@ -34,6 +31,7 @@ import {
   updateSearchCurrent,
 } from './search-reveal'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './state'
+import { bindZoomControls, fitOverview, syncZoomControls, zoomByWheel } from './zoom-controls'
 
 /** Paint only the rows inside the scrollport (plus overscan). Row units stay unscaled; zoom is display-only. */
 export function syncDiagramWindow(scrollport: HTMLElement): void {
@@ -93,6 +91,9 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
   // One tab stop: the active arrow when it is painted, otherwise the scrollport.
   scrollport.tabIndex = tabTarget && painted.has(tabTarget) ? -1 : 0
   windowEl.innerHTML = slice.length ? windowSvg(diagram, slice, view, frame, viewTop) : ''
+  // Again now the rows are drawn at this zoom: the rows from before a zoom change still set the
+  // scroll width above, so a zoom out to the whole width could leave the cue showing.
+  syncMoreCue(scrollport)
   if (hadFocus) {
     const target = view.activeMessageId ?? priorId
     if (target) {
@@ -108,7 +109,7 @@ export function sliceViewTop(firstRowY: number): number {
 }
 
 /** Resize the sticky header and body to the current zoom and visible columns. */
-function applyDiagramFrame(scrollport: HTMLElement): void {
+export function applyDiagramFrame(scrollport: HTMLElement): void {
   const id = scrollport.dataset.scenarioId
   if (!id) return
   const diagram = diagramState.mounted.get(id)
@@ -136,8 +137,7 @@ function applyDiagramFrame(scrollport: HTMLElement): void {
   const root = scrollport.closest<HTMLElement>('.seq-diagram')
   if (!root) return
   root.style.setProperty('--seq-print-max', `${Math.round(width * PRINT_MAX_UPSCALE)}px`)
-  const readout = root.querySelector('.zoom-readout')
-  if (readout) readout.textContent = zoomLabel(zoom)
+  syncZoomControls(scrollport)
 }
 
 /** Bring the current Find match on screen, down the page and sideways. False when there is none. */
@@ -160,7 +160,8 @@ export function stepFind(scrollport: HTMLElement, step: 1 | -1): void {
   diagramState.findHooks.stepped?.(scenarioId, row.event.id)
 }
 
-function commitZoom(
+/** Zoom to [next], keeping the scroll position in proportion unless [pin] gives one. */
+export function commitZoom(
   scrollport: HTMLElement,
   next: number,
   pin?: { top: number; left: number },
@@ -182,52 +183,43 @@ function commitZoom(
 function onDiagramWheel(scrollport: HTMLElement, ev: WheelEvent): void {
   if (!ev.ctrlKey && !ev.metaKey) return
   ev.preventDefault()
-  const id = scrollport.dataset.scenarioId
-  if (!id) return
-  const view = diagramView(id)
-  const next = zoomFromWheel(view.zoom, ev.deltaY)
-  if (next === view.zoom) return
-  view.autoFit = false
-  commitZoom(scrollport, next)
-}
-
-function onZoomClick(scrollport: HTMLElement, action: string | undefined): void {
-  const id = scrollport.dataset.scenarioId
-  if (!id || !action) return
-  const diagram = diagramState.mounted.get(id)
-  if (!diagram) return
-  const view = diagramView(id)
-  if (action === 'fit') {
-    const prev = view.zoom
-    const fitted = settleFit(scrollport, diagram, view)
-    view.zoom = prev
-    view.autoFit = true
-    view.fitLimit = MAX_ZOOM
-    view.fittedWidth = 0
-    commitZoom(
-      scrollport,
-      fitted.scale,
-      {
-        top: Math.max(0, fitted.originY) * fitted.scale,
-        left: Math.max(0, fitted.originX) * fitted.scale,
-      },
-      scrollBehavior(),
-    )
-    view.fittedWidth = scrollport.clientWidth
-    return
-  }
-  if (action !== 'in' && action !== 'out') return
-  const next = stepZoom(view.zoom, action === 'in' ? 1 : -1)
-  view.autoFit = false
-  commitZoom(scrollport, next, undefined, scrollBehavior())
+  zoomByWheel(scrollport, ev.deltaY)
 }
 
 /**
- * Fit the diagram to its scrollport width. Zooming can add or drop the vertical
- * scrollbar, which changes the width there is to fit, so this settles on a width that
+ * Show the default view (the one the diagram opens at): scrolled to the top message, or centred
+ * on [centre] (drawn px, from the top of the body) when given. The diagram then keeps it on
+ * resizes until the user zooms. Returns the zoom, or null when there is no diagram.
+ */
+export function showDefaultView(scrollport: HTMLElement, centre?: { x: number; y: number }): number | null {
+  const id = scrollport.dataset.scenarioId
+  const diagram = id ? diagramState.mounted.get(id) : undefined
+  if (!id || !diagram) return null
+  const view = diagramView(id)
+  const prev = view.zoom
+  const fitted = settleFit(scrollport, diagram, view)
+  view.zoom = prev
+  view.autoFit = true
+  view.fittedWidth = 0
+  const scale = fitted.scale
+  const header = HEADER_BLOCK_H * scale
+  const pin = centre
+    ? {
+        top: Math.max(0, centre.y * scale - Math.max(0, scrollport.clientHeight - header) / 2),
+        left: Math.max(0, centre.x * scale - scrollport.clientWidth / 2),
+      }
+    : { top: Math.max(0, fitted.originY) * scale, left: Math.max(0, fitted.originX) * scale }
+  commitZoom(scrollport, scale, pin, scrollBehavior())
+  view.fittedWidth = scrollport.clientWidth
+  return scale
+}
+
+/**
+ * Fit the diagram to its scrollport width, for the default view. Zooming can add or drop the
+ * vertical scrollbar, which changes the width there is to fit, so this settles on a width that
  * still fits once zoomed. Leaves view.zoom at the fitted scale and the frame applied.
  */
-function settleFit(scrollport: HTMLElement, diagram: MountedDiagram, view: DiagramView, maxScale?: number): FittedView {
+function settleFit(scrollport: HTMLElement, diagram: MountedDiagram, view: DiagramView): FittedView {
   const contentWidth = frameOf(diagram, view.hidden).total
   const mustInclude = topMessageLabelRect(diagram, view.hidden)
   const fitAt = (viewportWidth: number) =>
@@ -236,7 +228,6 @@ function settleFit(scrollport: HTMLElement, diagram: MountedDiagram, view: Diagr
       viewportWidth,
       viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
       mustInclude,
-      maxScale,
     })
   const width = settleFitWidth(scrollport.clientWidth, (w) => {
     view.zoom = fitAt(w).scale
@@ -251,23 +242,27 @@ function printing(): boolean {
 }
 
 /**
- * Fit a diagram the user has not zoomed (see [DiagramView.autoFit]). Does nothing while
- * its card is collapsed (no width yet), while printing, or when the width is the one it
- * last fitted. `first` scrolls to the top message like Fit; a refit keeps the scroll
- * position in proportion.
+ * Fit a diagram the user has not zoomed (see [DiagramView.autoFit]) to the default view, or
+ * refit Overview while it is on. Does nothing while its card is collapsed (no width yet), while
+ * printing, or when the width is the one it last fitted. `first` scrolls to the top message like
+ * the % readout; a refit keeps the scroll position in proportion.
  */
 function autoFitDiagram(scrollport: HTMLElement, first: boolean): void {
   const id = scrollport.dataset.scenarioId
   const diagram = id ? diagramState.mounted.get(id) : undefined
   if (!id || !diagram) return
   const view = diagramView(id)
-  if (!view.autoFit || printing()) return
+  if ((!view.autoFit && !view.overview) || printing()) return
   const width = scrollport.clientWidth
   if (width <= 0 || Math.abs(width - view.fittedWidth) <= 1) return
+  if (view.overview) {
+    fitOverview(scrollport)
+    return
+  }
   const prev = view.zoom || 1
   const top = scrollport.scrollTop
   const left = scrollport.scrollLeft
-  const fitted = settleFit(scrollport, diagram, view, view.fitLimit)
+  const fitted = settleFit(scrollport, diagram, view)
   view.zoom = fitted.scale
   applyDiagramFrame(scrollport)
   if (first) {
@@ -286,7 +281,12 @@ function autoFitDiagram(scrollport: HTMLElement, first: boolean): void {
 function observeWidth(scrollport: HTMLElement): void {
   if (typeof ResizeObserver === 'undefined') return
   diagramState.widthObserver ??= new ResizeObserver((entries) => {
-    for (const entry of entries) autoFitDiagram(entry.target as HTMLElement, false)
+    for (const entry of entries) {
+      const scrollport = entry.target as HTMLElement
+      autoFitDiagram(scrollport, false)
+      // Whether Overview has anything to show depends on the width.
+      syncZoomControls(scrollport)
+    }
   })
   for (const old of diagramState.observedScrollports) {
     if (!old.isConnected) {
@@ -309,7 +309,7 @@ export function messageLabelBox(diagram: MountedDiagram, hiddenIds: ReadonlySet<
   return { ...rect, x: rect.x + frame.left }
 }
 
-/** Label box of the uppermost message still drawn. Fit scrolls this into view. */
+/** Label box of the uppermost message still drawn. The default view scrolls this into view. */
 function topMessageLabelRect(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): Rect {
   for (const row of diagram.rows) {
     const box = messageLabelBox(diagram, hiddenIds, row)
@@ -319,9 +319,9 @@ function topMessageLabelRect(diagram: MountedDiagram, hiddenIds: ReadonlySet<str
 }
 
 /**
- * Scroll sideways, only as far as needed, so a message's label is inside the scrollport. Fit can
- * stop at a readable scale with lanes beyond the right edge; Find and keyboard focus use this to
- * bring a match or an arrow out of them.
+ * Scroll sideways, only as far as needed, so a message's label is inside the scrollport. The
+ * default view can stop at a readable scale with lanes beyond the right edge; Find and keyboard
+ * focus use this to bring a match or an arrow out of them.
  */
 export function revealMessageX(scrollport: HTMLElement, messageId: string): void {
   const id = scrollport.dataset.scenarioId
@@ -380,7 +380,10 @@ function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string
   }
   applyDiagramFrame(scrollport)
   syncFindControls(scrollport)
-  if (view.autoFit) {
+  if (view.overview) {
+    // Overview stays on, fitted to the lanes that are left.
+    fitOverview(scrollport)
+  } else if (view.autoFit) {
     // Hiding or showing a participant changes the width to fit.
     view.fittedWidth = 0
     autoFitDiagram(scrollport, false)
@@ -454,9 +457,7 @@ export function bindDiagramScroll(root: ParentNode): void {
     scroll.addEventListener('scroll', () => syncDiagramWindow(scroll), { passive: true })
     bindPageScroll(scroll)
     scroll.addEventListener('wheel', (ev) => onDiagramWheel(scroll, ev), { passive: false })
-    diagram.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((btn) => {
-      btn.addEventListener('click', () => onZoomClick(scroll, btn.dataset.zoom))
-    })
+    bindZoomControls(diagram, scroll)
     // The "More lanes →" cue is a button: it scrolls one screen right, and a click on it never
     // reaches the arrow underneath (#65).
     diagram.querySelector<HTMLButtonElement>('[data-more-lanes]')?.addEventListener('click', (ev) => {

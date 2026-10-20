@@ -1,0 +1,1011 @@
+{
+  "title": "Example report",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "check fixture",
+  "status": "error",
+  "scenarios": [
+    {
+      "id": "144",
+      "title": "Timed checkout (timing API)",
+      "status": "success",
+      "description": "Given every call is measured and carries trace and span ids\nWhen two events are captured out of order on the same clock\nThen they are put back in time order and marked clock-ordered\nAnd a consume on another service's clock stays after its publish\nAnd a failed relay status is counted in the Errors metric",
+      "facts": [
+        {
+          "key": "traceId",
+          "value": "4bf92f3577b34da6a3ce929d0e0e4736"
+        },
+        {
+          "key": "clock ordering",
+          "value": "same source (default)"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "24"
+        },
+        {
+          "key": "Captured duration",
+          "value": "2200.25 ms"
+        },
+        {
+          "key": "Errors",
+          "value": "1"
+        }
+      ],
+      "participants": [
+        {
+          "id": "web-ui",
+          "name": "Web UI",
+          "type": "BOUNDARY"
+        },
+        {
+          "id": "api-gateway",
+          "name": "API Gateway",
+          "type": "BOUNDARY",
+          "alias": "Public API Gateway (rate limited)"
+        },
+        {
+          "id": "order-service",
+          "name": "Order Service",
+          "type": "PARTICIPANT",
+          "colour": "#2563eb"
+        },
+        {
+          "id": "basket",
+          "name": "Basket",
+          "type": "ENTITY",
+          "alias": "Shopping Basket Aggregate"
+        },
+        {
+          "id": "inventory-service",
+          "name": "Inventory Service",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "orders-db",
+          "name": "Orders DB",
+          "type": "DATABASE",
+          "alias": "Orders DB (PostgreSQL primary)"
+        },
+        {
+          "id": "payment-service",
+          "name": "Payment Service",
+          "type": "PARTICIPANT",
+          "colour": "#16a34a"
+        },
+        {
+          "id": "fraud-check",
+          "name": "Fraud Check",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "payment-provider",
+          "name": "Payment Provider",
+          "type": "PARTICIPANT",
+          "alias": "Payment Provider (ext)"
+        },
+        {
+          "id": "kafka",
+          "name": "Kafka order-events",
+          "type": "QUEUE",
+          "alias": "Kafka topic order-events.v2"
+        },
+        {
+          "id": "notification-service",
+          "name": "Notification Service",
+          "type": "PARTICIPANT",
+          "alias": "Customer Notification Preferences and Delivery Orchestration Service"
+        },
+        {
+          "id": "email",
+          "name": "Email",
+          "type": "ENTITY"
+        },
+        {
+          "id": "warehouse",
+          "name": "Warehouse",
+          "type": "PARTICIPANT",
+          "colour": "#ea580c"
+        },
+        {
+          "id": "smtp-relay",
+          "name": "SMTP Relay",
+          "type": "PARTICIPANT"
+        }
+      ],
+      "events": [
+        {
+          "kind": "section",
+          "id": "1",
+          "title": "Measured and traced"
+        },
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "web-ui",
+          "to": "api-gateway",
+          "label": "POST /checkout",
+          "type": "SYNCHRONOUS",
+          "durationMs": 586,
+          "data": {
+            "method": "POST",
+            "path": "/checkout",
+            "headers": {
+              "content-type": "application/json",
+              "x-request-id": "req-942bae75",
+              "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+            },
+            "body": {
+              "basketId": "bsk-9"
+            }
+          },
+          "seq": 1,
+          "callId": "2",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "a1"
+          },
+          "startedAt": "2026-10-14T09:00:00Z",
+          "timing": "MEASURED",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE"
+        },
+        {
+          "kind": "message",
+          "id": "3",
+          "from": "api-gateway",
+          "to": "order-service",
+          "label": "create order",
+          "type": "SYNCHRONOUS",
+          "durationMs": 581.25,
+          "seq": 2,
+          "callId": "3",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "b1",
+            "parentSpanId": "a1"
+          },
+          "startedAt": "2026-10-14T09:00:00.003Z",
+          "timing": "MEASURED",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "parentId": "2"
+        },
+        {
+          "kind": "message",
+          "id": "4",
+          "from": "order-service",
+          "to": "basket",
+          "label": "load basket",
+          "type": "SYNCHRONOUS",
+          "durationMs": 17.625,
+          "seq": 3,
+          "callId": "4",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "c1",
+            "parentSpanId": "b1"
+          },
+          "startedAt": "2026-10-14T09:00:00.006Z",
+          "timing": "MEASURED",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "parentId": "3"
+        },
+        {
+          "kind": "message",
+          "id": "5",
+          "from": "basket",
+          "to": "order-service",
+          "label": "2 lines",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "lines": ["SOCK-1", "HAT-3"]
+            }
+          },
+          "seq": 4,
+          "replyTo": "4",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "c1",
+            "parentSpanId": "b1"
+          },
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "4"
+        },
+        {
+          "kind": "message",
+          "id": "6",
+          "from": "order-service",
+          "to": "inventory-service",
+          "label": "reserve stock",
+          "type": "SYNCHRONOUS",
+          "durationMs": 61.5,
+          "seq": 5,
+          "callId": "6",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "c2",
+            "parentSpanId": "b1"
+          },
+          "startedAt": "2026-10-14T09:00:00.025Z",
+          "timing": "MEASURED",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "parentId": "3"
+        },
+        {
+          "kind": "message",
+          "id": "7",
+          "from": "inventory-service",
+          "to": "orders-db",
+          "label": "upsert reservation",
+          "type": "SYNCHRONOUS",
+          "durationMs": 32.75,
+          "seq": 6,
+          "callId": "7",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "d1",
+            "parentSpanId": "c2"
+          },
+          "startedAt": "2026-10-14T09:00:00.031Z",
+          "timing": "MEASURED",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "parentId": "6"
+        },
+        {
+          "kind": "message",
+          "id": "8",
+          "from": "orders-db",
+          "to": "inventory-service",
+          "label": "1 row",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "rowsAffected": 1
+          },
+          "seq": 7,
+          "replyTo": "7",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "d1",
+            "parentSpanId": "c2"
+          },
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "7"
+        },
+        {
+          "kind": "message",
+          "id": "9",
+          "from": "inventory-service",
+          "to": "order-service",
+          "label": "reserved",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 201,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "reservationId": "rsv-80"
+            }
+          },
+          "seq": 8,
+          "replyTo": "6",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "c2",
+            "parentSpanId": "b1"
+          },
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "6"
+        },
+        {
+          "kind": "message",
+          "id": "10",
+          "from": "order-service",
+          "to": "payment-service",
+          "label": "authorise £42.00",
+          "type": "SYNCHRONOUS",
+          "durationMs": 470.5,
+          "seq": 9,
+          "callId": "10",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "c3",
+            "parentSpanId": "b1"
+          },
+          "startedAt": "2026-10-14T09:00:00.090Z",
+          "timing": "MEASURED",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "parentId": "3"
+        },
+        {
+          "kind": "message",
+          "id": "11",
+          "from": "payment-service",
+          "to": "fraud-check",
+          "label": "score",
+          "type": "SYNCHRONOUS",
+          "durationMs": 48.25,
+          "seq": 10,
+          "callId": "11",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "e1",
+            "parentSpanId": "c3"
+          },
+          "startedAt": "2026-10-14T09:00:00.096Z",
+          "timing": "MEASURED",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "parentId": "10"
+        },
+        {
+          "kind": "message",
+          "id": "12",
+          "from": "fraud-check",
+          "to": "payment-service",
+          "label": "low risk",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "score": 0.03,
+              "decision": "ALLOW"
+            }
+          },
+          "seq": 11,
+          "replyTo": "11",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "e1",
+            "parentSpanId": "c3"
+          },
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "11"
+        },
+        {
+          "kind": "message",
+          "id": "13",
+          "from": "payment-service",
+          "to": "payment-provider",
+          "label": "POST /authorise",
+          "type": "SYNCHRONOUS",
+          "durationMs": 402.375,
+          "seq": 12,
+          "callId": "13",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "e2",
+            "parentSpanId": "c3"
+          },
+          "startedAt": "2026-10-14T09:00:00.150Z",
+          "timing": "MEASURED",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "parentId": "10"
+        },
+        {
+          "kind": "message",
+          "id": "14",
+          "from": "payment-provider",
+          "to": "payment-service",
+          "label": "approved",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "authCode": "Z9Y8",
+              "status": "AUTHORISED"
+            }
+          },
+          "seq": 13,
+          "replyTo": "13",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "e2",
+            "parentSpanId": "c3"
+          },
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "13"
+        },
+        {
+          "kind": "message",
+          "id": "15",
+          "from": "payment-service",
+          "to": "order-service",
+          "label": "authorised",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "paymentId": "pay-600"
+            }
+          },
+          "seq": 14,
+          "replyTo": "10",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "c3",
+            "parentSpanId": "b1"
+          },
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "10"
+        },
+        {
+          "kind": "section",
+          "id": "16",
+          "title": "Captured out of order, put back by the clock"
+        },
+        {
+          "kind": "message",
+          "id": "18",
+          "from": "order-service",
+          "to": "kafka",
+          "label": "order.placed",
+          "type": "ASYNCHRONOUS",
+          "data": {
+            "topic": "order-events.v2",
+            "key": "ord-2100",
+            "headers": {
+              "ce-type": "order.placed",
+              "ce-source": "order-service",
+              "ce-specversion": "1.0"
+            },
+            "value": {
+              "total": 4200
+            }
+          },
+          "seq": 16,
+          "callId": "18",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "c4",
+            "parentSpanId": "b1"
+          },
+          "startedAt": "2026-10-14T09:00:00.566Z",
+          "timing": "TIMESTAMPED",
+          "order": "CLOCK",
+          "parentId": "3"
+        },
+        {
+          "kind": "message",
+          "id": "17",
+          "from": "order-service",
+          "to": "warehouse",
+          "label": "pick list",
+          "type": "ASYNCHRONOUS",
+          "data": {
+            "orderId": "ord-2100",
+            "lines": 2
+          },
+          "seq": 15,
+          "callId": "17",
+          "startedAt": "2026-10-14T09:00:00.575Z",
+          "timing": "TIMESTAMPED",
+          "order": "CLOCK",
+          "parentId": "3"
+        },
+        {
+          "kind": "message",
+          "id": "19",
+          "from": "order-service",
+          "to": "api-gateway",
+          "label": "201 Created",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 201,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "orderId": "ord-2100",
+              "status": "CONFIRMED"
+            }
+          },
+          "seq": 17,
+          "replyTo": "3",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "b1",
+            "parentSpanId": "a1"
+          },
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "3"
+        },
+        {
+          "kind": "message",
+          "id": "20",
+          "from": "api-gateway",
+          "to": "web-ui",
+          "label": "201",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 201,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "orderId": "ord-2100"
+            }
+          },
+          "seq": 18,
+          "replyTo": "2",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "a1"
+          },
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "2"
+        },
+        {
+          "kind": "section",
+          "id": "21",
+          "title": "Another service's clock"
+        },
+        {
+          "kind": "message",
+          "id": "22",
+          "from": "kafka",
+          "to": "notification-service",
+          "label": "consume order.placed",
+          "type": "ASYNCHRONOUS",
+          "seq": 19,
+          "callId": "22",
+          "causedBy": "18",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "f1",
+            "parentSpanId": "c4"
+          },
+          "source": "notification-service",
+          "startedAt": "2026-10-14T09:00:00.560Z",
+          "timing": "TIMESTAMPED",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "message",
+          "id": "23",
+          "from": "notification-service",
+          "to": "email",
+          "label": "send receipt",
+          "type": "ASYNCHRONOUS",
+          "seq": 20,
+          "callId": "23",
+          "source": "notification-service",
+          "startedAt": "2026-10-14T09:00:00.640Z",
+          "timing": "TIMESTAMPED",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "message",
+          "id": "24",
+          "from": "email",
+          "to": "smtp-relay",
+          "label": "deliver receipt",
+          "type": "SYNCHRONOUS",
+          "data": {
+            "headers": {
+              "content-type": "message/rfc822",
+              "x-request-id": "smtp-1"
+            },
+            "body": {
+              "to": "customer@example.test",
+              "template": "receipt"
+            }
+          },
+          "seq": 21,
+          "callId": "smtp-1",
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE"
+        },
+        {
+          "kind": "message",
+          "id": "25",
+          "from": "smtp-relay",
+          "to": "email",
+          "label": "421 try again later",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 22,
+          "replyTo": "smtp-1",
+          "status": "421",
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "24"
+        },
+        {
+          "kind": "message",
+          "id": "26",
+          "from": "email",
+          "to": "smtp-relay",
+          "label": "deliver receipt (retry)",
+          "type": "SYNCHRONOUS",
+          "seq": 23,
+          "callId": "smtp-2",
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE"
+        },
+        {
+          "kind": "message",
+          "id": "27",
+          "from": "smtp-relay",
+          "to": "email",
+          "label": "250 queued",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 24,
+          "replyTo": "smtp-2",
+          "status": "250",
+          "timing": "NONE",
+          "pairing": "CALL_ID",
+          "order": "STRUCTURE",
+          "replyOf": "26"
+        }
+      ],
+      "accuracy": "TRACED",
+      "measuredCoverage": 0.8,
+      "pairingCoverage": 1,
+      "sources": ["local", "notification-service"],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 2,
+      "reorderedByClock": ["16 -> 15", "15 -> 16"],
+      "pairAccuracy": [
+        {
+          "from": "web-ui",
+          "to": "api-gateway",
+          "accuracy": "TRACED"
+        },
+        {
+          "from": "api-gateway",
+          "to": "order-service",
+          "accuracy": "TRACED"
+        },
+        {
+          "from": "order-service",
+          "to": "basket",
+          "accuracy": "TRACED"
+        },
+        {
+          "from": "order-service",
+          "to": "inventory-service",
+          "accuracy": "TRACED"
+        },
+        {
+          "from": "inventory-service",
+          "to": "orders-db",
+          "accuracy": "TRACED"
+        },
+        {
+          "from": "order-service",
+          "to": "payment-service",
+          "accuracy": "TRACED"
+        },
+        {
+          "from": "payment-service",
+          "to": "fraud-check",
+          "accuracy": "TRACED"
+        },
+        {
+          "from": "payment-service",
+          "to": "payment-provider",
+          "accuracy": "TRACED"
+        },
+        {
+          "from": "order-service",
+          "to": "kafka",
+          "accuracy": "TIMESTAMPED"
+        },
+        {
+          "from": "order-service",
+          "to": "warehouse",
+          "accuracy": "TIMESTAMPED"
+        },
+        {
+          "from": "kafka",
+          "to": "notification-service",
+          "accuracy": "TIMESTAMPED"
+        },
+        {
+          "from": "notification-service",
+          "to": "email",
+          "accuracy": "TIMESTAMPED"
+        },
+        {
+          "from": "email",
+          "to": "smtp-relay",
+          "accuracy": "STRUCTURE_ONLY"
+        }
+      ]
+    },
+    {
+      "id": "146",
+      "title": "Payment declined (captured out of order)",
+      "status": "warn",
+      "description": "Given a card the issuer will decline\nWhen the customer pays\nThen the order is confirmed",
+      "error": {
+        "headline": "AssertionFailedError",
+        "message": "expected: <CONFIRMED> but was: <PAYMENT_DECLINED>",
+        "stack": "org.opentest4j.AssertionFailedError: expected: <CONFIRMED> but was: <PAYMENT_DECLINED>\n\tat com.example.shop.PlaceOrderTest.paysByCard(PlaceOrderTest.kt:88)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:580)"
+      },
+      "facts": [
+        {
+          "key": "orderId",
+          "value": "ord-2002"
+        },
+        {
+          "key": "card",
+          "value": "**** 0002"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "6"
+        }
+      ],
+      "participants": [
+        {
+          "id": "order-service",
+          "name": "Order Service",
+          "type": "PARTICIPANT",
+          "colour": "#2563eb"
+        },
+        {
+          "id": "payment-service",
+          "name": "Payment Service",
+          "type": "PARTICIPANT",
+          "colour": "#16a34a"
+        },
+        {
+          "id": "fraud-check",
+          "name": "Fraud Check",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "payment-provider",
+          "name": "Payment Provider",
+          "type": "PARTICIPANT",
+          "alias": "Payment Provider (ext)"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "98",
+          "from": "order-service",
+          "to": "payment-service",
+          "label": "authorise £42.00",
+          "type": "SYNCHRONOUS",
+          "data": {
+            "method": "POST",
+            "path": "/payments/authorise",
+            "headers": {
+              "content-type": "application/json",
+              "x-request-id": "req-5c4e791d",
+              "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+            },
+            "body": {
+              "amount": 4200,
+              "card": "**** 0002"
+            }
+          },
+          "seq": 58,
+          "startedAt": "2026-10-08T09:00:01Z",
+          "timing": "TIMESTAMPED",
+          "pairing": "GUESSED",
+          "order": "CLOCK"
+        },
+        {
+          "kind": "activate",
+          "id": "103",
+          "participantId": "payment-service",
+          "startedAt": "2026-10-08T09:00:01Z"
+        },
+        {
+          "kind": "message",
+          "id": "100",
+          "from": "payment-service",
+          "to": "fraud-check",
+          "label": "score transaction",
+          "type": "SYNCHRONOUS",
+          "data": {
+            "method": "POST",
+            "path": "/score",
+            "headers": {
+              "content-type": "application/json",
+              "x-request-id": "req-56b703c3",
+              "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+            },
+            "body": {
+              "amount": 4200
+            }
+          },
+          "seq": 60,
+          "startedAt": "2026-10-08T09:00:02Z",
+          "timing": "TIMESTAMPED",
+          "pairing": "GUESSED",
+          "order": "CLOCK",
+          "parentId": "98"
+        },
+        {
+          "kind": "activate",
+          "id": "104",
+          "participantId": "fraud-check",
+          "startedAt": "2026-10-08T09:00:02Z"
+        },
+        {
+          "kind": "message",
+          "id": "101",
+          "from": "fraud-check",
+          "to": "payment-service",
+          "label": "score 0.41",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "score": 0.41,
+              "decision": "REVIEW"
+            }
+          },
+          "seq": 61,
+          "startedAt": "2026-10-08T09:00:03Z",
+          "timing": "TIMESTAMPED",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "100"
+        },
+        {
+          "kind": "deactivate",
+          "id": "105",
+          "participantId": "fraud-check",
+          "startedAt": "2026-10-08T09:00:03Z"
+        },
+        {
+          "kind": "message",
+          "id": "99",
+          "from": "payment-service",
+          "to": "payment-provider",
+          "label": "authorise",
+          "type": "SYNCHRONOUS",
+          "data": {
+            "amount": 4200,
+            "card": "**** 0002"
+          },
+          "seq": 59,
+          "startedAt": "2026-10-08T09:00:04Z",
+          "timing": "TIMESTAMPED",
+          "pairing": "GUESSED",
+          "order": "CLOCK",
+          "parentId": "98"
+        },
+        {
+          "kind": "activate",
+          "id": "106",
+          "participantId": "payment-provider",
+          "colour": "#dc2626",
+          "startedAt": "2026-10-08T09:00:04Z"
+        },
+        {
+          "kind": "message",
+          "id": "102",
+          "from": "payment-provider",
+          "to": "payment-service",
+          "label": "do_not_honour",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "code": "05",
+            "reason": "do_not_honour"
+          },
+          "seq": 62,
+          "startedAt": "2026-10-08T09:00:06Z",
+          "timing": "TIMESTAMPED",
+          "pairing": "GUESSED",
+          "order": "CLOCK",
+          "replyOf": "99"
+        },
+        {
+          "kind": "deactivate",
+          "id": "107",
+          "participantId": "payment-provider",
+          "startedAt": "2026-10-08T09:00:06Z"
+        },
+        {
+          "kind": "message",
+          "id": "97",
+          "from": "payment-service",
+          "to": "order-service",
+          "label": "402 declined",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 402,
+            "headers": {
+              "content-type": "application/problem+json"
+            },
+            "body": {
+              "type": "https://shop.example.com/problems/payment-declined",
+              "title": "Payment declined",
+              "status": 402,
+              "detail": "Issuer declined: do_not_honour"
+            }
+          },
+          "seq": 57,
+          "startedAt": "2026-10-08T09:00:07Z",
+          "timing": "TIMESTAMPED",
+          "pairing": "GUESSED",
+          "order": "CLOCK",
+          "replyOf": "98"
+        },
+        {
+          "kind": "deactivate",
+          "id": "108",
+          "participantId": "payment-service",
+          "startedAt": "2026-10-08T09:00:07Z"
+        }
+      ],
+      "accuracy": "TIMESTAMPED",
+      "measuredCoverage": 0,
+      "pairingCoverage": 0,
+      "sources": ["local"],
+      "wallClockMs": 6000,
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 10,
+      "reorderedByClock": [
+        "58 -> 57",
+        "7 -> 58",
+        "60 -> 59",
+        "8 -> 60",
+        "9 -> 62",
+        "59 -> 7",
+        "10 -> 8",
+        "62 -> 9",
+        "11 -> 10",
+        "57 -> 11"
+      ]
+    }
+  ],
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  }
+}

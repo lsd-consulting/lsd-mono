@@ -2,23 +2,43 @@ import type { DiagramEvent, MessageEvent, NoteEvent, Participant } from '../type
 import { escapeHtml } from './escape'
 import { HEADER_BLOCK_H, MESSAGE_LABEL_RISE } from './layout'
 
-const MIN_ZOOM = 0.25
+/** Lowest level − and the wheel reach. */
+export const MIN_ZOOM = 0.25
 export const MAX_ZOOM = 2.5
 export const DEFAULT_ZOOM = 1
 /**
- * Automatic fit (first render, and later resizes until the user zooms) shrinks a diagram
- * that is wider than its panel, but never enlarges one past 100%: a narrow diagram would
- * otherwise open with oversized text. The Fit button fills the width either way.
+ * The default view (first render, the % readout, and later resizes until the user zooms) shrinks
+ * a diagram that is wider than its panel, but never enlarges one past 100%: a narrow diagram would
+ * otherwise open with oversized text (#94).
  */
 export const AUTO_FIT_MAX_ZOOM = 1
 /**
- * Fit (automatic or the button) never goes below this: message labels are 11px in the drawing,
- * so 95% keeps them above 10 CSS px, and arrow targets keep their size. A wider diagram scrolls
- * sideways, with a cue that more lanes lie to the right. Zoom out still reaches MIN_ZOOM.
+ * The default view never goes below this: message labels are 11px in the drawing, so 95% keeps
+ * them above 10 CSS px, and arrow targets keep their size. A wider diagram scrolls sideways, with
+ * a cue that more lanes lie to the right. − still reaches MIN_ZOOM, and Overview goes lower.
  */
 export const FIT_MIN_ZOOM = 0.95
-/** Button and wheel step, as a fraction of 100%. */
-const ZOOM_STEP = 0.1
+/** Overview fits a wide diagram's whole width, but never below this (#94). */
+export const OVERVIEW_MIN_ZOOM = 0.1
+/** The levels + and − (and Ctrl/Cmd+wheel) step through, from MIN_ZOOM to MAX_ZOOM. */
+export const ZOOM_LEVELS: readonly number[] = [
+  0.25,
+  0.33,
+  0.5,
+  0.67,
+  0.75,
+  0.8,
+  0.9,
+  1,
+  1.1,
+  1.25,
+  1.5,
+  1.75,
+  2,
+  MAX_ZOOM,
+]
+/** Two levels this close are the same level: an overview scale is never exactly a preset. */
+const SAME_LEVEL = 0.005
 
 export interface ZoomViewport {
   scrollTop: number
@@ -26,27 +46,77 @@ export interface ZoomViewport {
   headerHeight: number
 }
 
-function clampZoom(scale: number): number {
+function clampZoom(scale: number, min = MIN_ZOOM): number {
   if (!Number.isFinite(scale)) return DEFAULT_ZOOM
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale))
+  return Math.min(MAX_ZOOM, Math.max(min, scale))
 }
 
-/** One zoom step. Positive deltaY (wheel down) zooms out. */
-export function zoomFromWheel(current: number, deltaY: number): number {
-  if (deltaY > 0) return stepZoom(current, -1)
-  if (deltaY < 0) return stepZoom(current, 1)
-  return clampZoom(current)
-}
-
+/**
+ * The next level on the ladder in [direction]. From a level off the ladder (95%, or an overview
+ * scale) that is the nearest preset that way, so 95% + gives 100%. At either end it is [current].
+ */
 export function stepZoom(current: number, direction: 1 | -1): number {
-  const pct = Math.round(current * 100) + direction * Math.round(ZOOM_STEP * 100)
-  return clampZoom(pct / 100)
+  const next =
+    direction > 0
+      ? ZOOM_LEVELS.find((level) => level > current + SAME_LEVEL)
+      : [...ZOOM_LEVELS].reverse().find((level) => level < current - SAME_LEVEL)
+  return next ?? current
+}
+
+/** Whether + (1) or − (-1) would change [current]: the button is disabled when not. */
+export function canStepZoom(current: number, direction: 1 | -1): boolean {
+  return stepZoom(current, direction) !== current
+}
+
+/**
+ * Overview's scale: the whole drawing's width in [viewportWidth], never below OVERVIEW_MIN_ZOOM,
+ * and never larger than 100%. Unmeasured sizes give DEFAULT_ZOOM, like fitToWidthScale.
+ */
+export function overviewScale(contentWidth: number, viewportWidth: number): number {
+  if (!(contentWidth > 0) || !(viewportWidth > 0)) return DEFAULT_ZOOM
+  return Math.min(DEFAULT_ZOOM, Math.max(OVERVIEW_MIN_ZOOM, viewportWidth / contentWidth))
+}
+
+/**
+ * Whether Overview has anything to show: the default view never goes below FIT_MIN_ZOOM, so a
+ * diagram that fits at that scale is already whole on screen there.
+ */
+export function overviewNeeded(contentWidth: number, viewportWidth: number): boolean {
+  return contentWidth > 0 && viewportWidth > 0 && contentWidth * FIT_MIN_ZOOM > viewportWidth + 0.5
+}
+
+/** How many of the lanes at [laneXs] (lifelines, drawn px) lie within [left, left + width). */
+export function lanesInView(laneXs: readonly number[], left: number, width: number): number {
+  return laneXs.filter((x) => x >= left && x <= left + width).length
+}
+
+/** What a zoom change says in the status line: one message per change, with its context (#94). */
+export type ZoomChange =
+  | { kind: 'step'; zoom: number }
+  | { kind: 'default'; zoom: number }
+  | { kind: 'overview'; zoom: number; shown: number; total: number }
+  | { kind: 'overview-off'; zoom: number }
+
+export function zoomAnnouncement(change: ZoomChange): string {
+  const level = zoomLabel(change.zoom)
+  switch (change.kind) {
+    case 'step':
+      return `Zoom ${level}`
+    case 'default':
+      return `Default zoom, ${level}`
+    case 'overview':
+      return change.shown >= change.total
+        ? `Overview, ${level}, whole diagram`
+        : `Overview, ${level}, ${change.shown} of ${change.total} lanes shown`
+    case 'overview-off':
+      return `Overview off, zoom ${level}`
+  }
 }
 
 /**
  * Scale that fits `contentWidth` into `viewportWidth`.
  * Non-positive sizes stay at 1 so a not-yet-laid-out scrollport does not jump.
- * Result is clamped to the same range as the zoom buttons.
+ * Result is clamped to the same range as + and −.
  */
 export function fitToWidthScale(contentWidth: number, viewportWidth: number): number {
   if (!(contentWidth > 0) || !(viewportWidth > 0)) return DEFAULT_ZOOM
@@ -62,7 +132,7 @@ export interface Rect {
 
 /**
  * Box of the label drawn above an arrow. `arrowY` is the row's arrow line.
- * The box spans the arrow so Fit can require that whole label to stay on screen.
+ * The box spans the arrow so the default view can require that whole label to stay on screen.
  */
 export function messageLabelRect(input: { arrowY: number; x1: number; x2: number }): Rect {
   const left = Math.min(input.x1, input.x2)
@@ -94,8 +164,8 @@ export interface FittedView {
 }
 
 /**
- * Width fit (same scale as the Fit button) plus a scroll origin that keeps
- * `mustInclude` — the top message label — inside the visible body.
+ * The default view: the width fit, between FIT_MIN_ZOOM and AUTO_FIT_MAX_ZOOM, plus a scroll
+ * origin that keeps `mustInclude` — the top message label — inside the visible body.
  * The sticky header height is the unscaled header block times that scale,
  * because the header SVG scales with the diagram.
  */
@@ -105,12 +175,10 @@ export function fittedView(input: {
   viewportHeight: number
   mustInclude: Rect
   headerBlock?: number
-  /** Upper bound on the scale, for the automatic fit ([AUTO_FIT_MAX_ZOOM]). */
-  maxScale?: number
 }): FittedView {
   const scale = Math.max(
     FIT_MIN_ZOOM,
-    Math.min(fitToWidthScale(input.contentWidth, input.viewportWidth), input.maxScale ?? MAX_ZOOM),
+    Math.min(fitToWidthScale(input.contentWidth, input.viewportWidth), AUTO_FIT_MAX_ZOOM),
   )
   const headerCss = (input.headerBlock ?? HEADER_BLOCK_H) * scale
   const visibleW = input.viewportWidth > 0 ? input.viewportWidth / scale : input.contentWidth
@@ -144,7 +212,7 @@ export function scrollportXFor(scrollLeft: number, view: number, left: number, r
 }
 
 export function zoomLabel(zoom: number): string {
-  return `${Math.round(clampZoom(zoom) * 100)}%`
+  return `${Math.round(clampZoom(zoom, OVERVIEW_MIN_ZOOM) * 100)}%`
 }
 
 /**
@@ -295,7 +363,7 @@ export function searchCountHtml(parts: readonly CountPart[]): string {
 }
 
 /**
- * Settle the width Fit should fill. Zooming can add or remove the scrollport's
+ * Settle the width a fit (the default view or Overview) should fill. Zooming can add or remove the scrollport's
  * vertical scrollbar, which changes the width the drawing has, so a fit measured
  * before zooming can overflow by the scrollbar's width. `applyAt(width)` fits the
  * drawing to `width` and returns the scrollport's inner width afterwards. Prefers

@@ -120,7 +120,7 @@ export async function endPrint(page: Page): Promise<void> {
 
 /** Two scenarios too wide for the panel at 100%: twelve lifelines, a chain of 30 calls. */
 function wideScenario(id: string, title: string): Scenario {
-  // Wide enough to fit below 100% at 900-1300px, narrow enough to stay above the 50% Fit floor.
+  // Wide enough to fit below 100% at 900-1300px, narrow enough to stay above the default view's 95% floor.
   const participants = Array.from({ length: 6 }, (_, i): Participant => ({
     id: `p${i}`,
     name: `Service ${i}`,

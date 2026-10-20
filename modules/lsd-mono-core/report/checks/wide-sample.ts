@@ -5,7 +5,7 @@ import type { MessageEvent, NoteEvent, Participant, Report } from '../src/types'
  * and writes the pages) and the check:ux tests that open it. Erasable TypeScript only: the
  * generator runs it with `node --experimental-strip-types`.
  *
- * The first arrow is a short left-hand hop so Fit's top label stays near the origin. Later arrows
+ * The first arrow is a short left-hand hop so the default view's top label stays near the origin. Later arrows
  * hop across the diagram, including a full-width span every 25th message.
  */
 const KINDS: { type: Participant['type']; name: string }[] = [

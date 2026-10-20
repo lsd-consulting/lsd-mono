@@ -45,7 +45,7 @@ test('Fit leaves no horizontal overflow and adds no vertical scrollbar; the stag
       bar: el.offsetWidth - el.clientWidth,
     }))
     expect(before.tall, 'the short scenario starts without a vertical scrollbar').toBe(false)
-    await page.getByRole('button', { name: 'Fit to screen' }).click()
+    await page.getByRole('button', { name: /^Reset zoom/ }).click()
     const after = await scroll.evaluate((el: HTMLElement) => ({
       bar: el.offsetWidth - el.clientWidth,
       overflowX: el.scrollWidth - el.clientWidth,

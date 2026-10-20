@@ -1,44 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { AUTO_FIT_MAX_ZOOM, FIT_MIN_ZOOM, MAX_ZOOM, fittedView, scrollportXFor } from './diagram-view'
+import { FIT_MIN_ZOOM, fittedView, scrollportXFor } from './diagram-view'
 import { diagramView } from './sequence-diagram'
 
 const label = { x: 10, y: 40, width: 80, height: 14 }
 
-describe('automatic fit', () => {
-  it('shrinks a diagram wider than its panel to the readable minimum, like Fit', () => {
-    const fit = fittedView({ contentWidth: 2000, viewportWidth: 1000, viewportHeight: 600, mustInclude: label })
-    const auto = fittedView({
-      contentWidth: 2000,
-      viewportWidth: 1000,
-      viewportHeight: 600,
-      mustInclude: label,
-      maxScale: AUTO_FIT_MAX_ZOOM,
-    })
-    expect(auto.scale).toBe(FIT_MIN_ZOOM)
-    expect(auto.scale).toBe(fit.scale)
+describe('the default view', () => {
+  it('shrinks a diagram wider than its panel to the readable minimum', () => {
+    const view = fittedView({ contentWidth: 2000, viewportWidth: 1000, viewportHeight: 600, mustInclude: label })
+    expect(view.scale).toBe(FIT_MIN_ZOOM)
   })
 
-  it('does not enlarge a narrow diagram past 100%, where Fit fills the width', () => {
-    const fit = fittedView({ contentWidth: 400, viewportWidth: 1000, viewportHeight: 600, mustInclude: label })
-    const auto = fittedView({
-      contentWidth: 400,
-      viewportWidth: 1000,
-      viewportHeight: 600,
-      mustInclude: label,
-      maxScale: AUTO_FIT_MAX_ZOOM,
-    })
-    expect(fit.scale).toBe(MAX_ZOOM)
-    expect(auto.scale).toBe(1)
+  it('never enlarges a narrow diagram past 100%, however wide the panel (#94)', () => {
+    for (const viewportWidth of [1000, 1440, 2560]) {
+      expect(fittedView({ contentWidth: 400, viewportWidth, viewportHeight: 600, mustInclude: label }).scale).toBe(1)
+    }
   })
 
-  it('starts every diagram in automatic fit, before anything has been fitted', () => {
+  it('starts every diagram in it, before anything has been fitted, with Overview off', () => {
     const view = diagramView('auto-fit-test-scenario')
     expect(view.autoFit).toBe(true)
-    expect(view.fitLimit).toBe(AUTO_FIT_MAX_ZOOM)
+    expect(view.overview).toBeNull()
     expect(view.fittedWidth).toBe(0)
   })
 
-  it('stops Fit at a readable minimum and scrolls sideways to keep the top label on screen', () => {
+  it('stops at a readable minimum and scrolls sideways to keep the top label on screen', () => {
     const wide = { x: 3000, y: 20, width: 200, height: 20 }
     const fit = fittedView({ contentWidth: 4000, viewportWidth: 390, viewportHeight: 600, mustInclude: wide })
     expect(fit.scale).toBe(FIT_MIN_ZOOM)
