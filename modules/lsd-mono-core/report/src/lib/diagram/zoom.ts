@@ -8,6 +8,7 @@ import { frameOf, topMessageLabelRect } from './geometry'
 import { scrollDiagramToOffset, scrollsWithPage, sizeStage } from './page-scroll'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './state'
 import { applyDiagramFrame, syncDiagramWindow } from './window'
+import { fittedWidthOf, zoomModeAfter } from './zoom-mode'
 
 /** Zoom to [next], keeping the scroll position in proportion unless [pin] gives one. */
 export function commitZoom(
@@ -49,8 +50,7 @@ export function showDefaultView(scrollport: HTMLElement, centre?: { x: number; y
   const prev = view.zoom
   const fitted = settleFit(scrollport, diagram, view)
   view.zoom = prev
-  view.autoFit = true
-  view.fittedWidth = 0
+  view.mode = zoomModeAfter(view.mode, { kind: 'reset' })
   const scale = fitted.scale
   const header = HEADER_BLOCK_H * scale
   const pin = centre
@@ -60,7 +60,7 @@ export function showDefaultView(scrollport: HTMLElement, centre?: { x: number; y
       }
     : { top: Math.max(0, fitted.originY) * scale, left: Math.max(0, fitted.originX) * scale }
   commitZoom(scrollport, scale, pin, scrollBehavior())
-  view.fittedWidth = scrollport.clientWidth
+  view.mode = zoomModeAfter(view.mode, { kind: 'fitted', width: scrollport.clientWidth })
   return scale
 }
 
@@ -91,26 +91,27 @@ function printing(): boolean {
   return diagramState.printAllRows || (typeof matchMedia === 'function' && matchMedia('print').matches)
 }
 
-/**
- * Fit a diagram the user has not zoomed (see [DiagramView.autoFit]) to the default view, or
- * refit Overview while it is on. Does nothing while its card is collapsed (no width yet), while
- * printing, or when the width is the one it last fitted. `first` scrolls to the top message like
- * the % readout; a refit keeps the scroll position in proportion.
- */
 /** Refit a diagram the user has not zoomed, now, if its width changed since it was last fitted. */
 export function refitDiagram(scrollport: HTMLElement): void {
   autoFitDiagram(scrollport, false)
 }
 
+/**
+ * Fit a diagram the user has not zoomed (see [ZoomMode]) to the default view, or refit Overview
+ * while it is on. Does nothing while its card is collapsed (no width yet), while printing, or
+ * when the width is the one it last fitted. `first` scrolls to the top message like the %
+ * readout; a refit keeps the scroll position in proportion.
+ */
 export function autoFitDiagram(scrollport: HTMLElement, first: boolean): void {
   const id = scrollport.dataset.scenarioId
   const diagram = id ? diagramState.mounted.get(id) : undefined
   if (!id || !diagram) return
   const view = diagramView(id)
-  if ((!view.autoFit && !view.overview) || printing()) return
+  const fittedWidth = fittedWidthOf(view.mode)
+  if (fittedWidth == null || printing()) return
   const width = scrollport.clientWidth
-  if (width <= 0 || Math.abs(width - view.fittedWidth) <= 1) return
-  if (view.overview) {
+  if (width <= 0 || Math.abs(width - fittedWidth) <= 1) return
+  if (view.mode.kind === 'overview') {
     fitOverview(scrollport)
     return
   }
@@ -129,7 +130,7 @@ export function autoFitDiagram(scrollport: HTMLElement, first: boolean): void {
     const ratio = fitted.scale / prev
     scrollport.scrollTo({ top: top * ratio, left: left * ratio })
   }
-  view.fittedWidth = scrollport.clientWidth
+  view.mode = zoomModeAfter(view.mode, { kind: 'fitted', width: scrollport.clientWidth })
   syncDiagramWindow(scrollport)
 }
 
@@ -154,5 +155,5 @@ export function fitOverview(scrollport: HTMLElement): void {
   const scale = overviewScale(contentWidth, width)
   view.zoom = prev
   commitZoom(scrollport, scale, { top: (top * scale) / prev, left: 0 }, scrollBehavior())
-  view.fittedWidth = scrollport.clientWidth
+  view.mode = zoomModeAfter(view.mode, { kind: 'fitted', width: scrollport.clientWidth })
 }

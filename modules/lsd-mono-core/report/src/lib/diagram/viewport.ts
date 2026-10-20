@@ -5,6 +5,7 @@ import { bindParticipantFilter } from '../participant-filter'
 import { bindPageScroll } from './page-scroll'
 import { syncFindControls } from './search-reveal'
 import { diagramState, diagramView } from './state'
+import { zoomModeAfter } from './zoom-mode'
 import { bindFind } from './find-binding'
 import { ensurePrintHooks } from './print-hooks'
 import { applyDiagramFrame, syncDiagramWindow } from './window'
@@ -51,12 +52,12 @@ function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string
   }
   applyDiagramFrame(scrollport)
   syncFindControls(scrollport)
-  if (view.overview) {
+  if (view.mode.kind === 'overview') {
     // Overview stays on, fitted to the lanes that are left.
     fitOverview(scrollport)
-  } else if (view.autoFit) {
+  } else if (view.mode.kind === 'default') {
     // Hiding or showing a participant changes the width to fit.
-    view.fittedWidth = 0
+    view.mode = zoomModeAfter(view.mode, { kind: 'refit' })
     autoFitDiagram(scrollport, false)
   }
   syncDiagramWindow(scrollport)
@@ -75,7 +76,7 @@ export function bindDiagramScroll(root: ParentNode): void {
     // Fit before anything scrolls to a message (deep link, Timing view row), so that scroll uses
     // the fitted zoom. A re-render keeps the fit it already has.
     const view = diagramView(id)
-    if (view.autoFit) view.fittedWidth = 0
+    view.mode = zoomModeAfter(view.mode, { kind: 'refit' })
     autoFitDiagram(scroll, true)
     syncDiagramWindow(scroll)
     observeWidth(scroll)

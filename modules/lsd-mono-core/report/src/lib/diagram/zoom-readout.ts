@@ -33,7 +33,7 @@ function disabledAttr(disabled: boolean): string {
 
 /** The Zoom group in the diagram toolbar. syncZoomControls keeps it up to date. */
 export function zoomControlsHtml(view: DiagramView): string {
-  const overview = view.overview != null
+  const overview = view.mode.kind === 'overview'
   return `<div class="zoom-controls" role="group" aria-label="Zoom">
         <button type="button" class="zoom-btn" data-zoom="out" aria-label="Zoom out" title="Zoom out (−)"${disabledAttr(!canStepZoom(view.zoom, -1))}>${minusSvg}</button>
         <button type="button" class="zoom-readout" data-zoom="reset" aria-label="${escapeAttr(readoutName(view.zoom))}" title="Reset to default zoom (0)">${escapeHtml(zoomLabel(view.zoom))}</button>
@@ -64,7 +64,7 @@ export function syncZoomControls(scrollport: HTMLElement): void {
   setDisabled(group.querySelector('[data-zoom="in"]'), !canStepZoom(view.zoom, 1))
   const overview = group.querySelector('[data-zoom="overview"]')
   if (!overview) return
-  const on = view.overview != null
+  const on = view.mode.kind === 'overview'
   // Unmeasured (a collapsed card) counts as fitting: there is nothing to show yet.
   const useful = on || overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth)
   overview.setAttribute('aria-pressed', String(on))

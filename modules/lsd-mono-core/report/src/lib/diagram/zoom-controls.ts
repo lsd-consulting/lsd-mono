@@ -5,6 +5,7 @@
 import { scrollBehavior } from '../media'
 import { frameOf, messageLabelBox } from './geometry'
 import { diagramState, diagramView } from './state'
+import { zoomModeAfter } from './zoom-mode'
 import {
   lanesInView,
   overviewNeeded,
@@ -53,9 +54,8 @@ function zoomStep(scrollport: HTMLElement, direction: 1 | -1): void {
   const view = diagramView(scrollport.dataset.scenarioId ?? '')
   const next = stepZoom(view.zoom, direction)
   if (next === view.zoom) return
-  const wasOverview = view.overview !== null
-  view.overview = null
-  view.autoFit = false
+  const wasOverview = view.mode.kind === 'overview'
+  view.mode = zoomModeAfter(view.mode, { kind: 'step' })
   commitZoom(scrollport, next, undefined, scrollBehavior())
   announce(scrollport, { kind: wasOverview ? 'overview-off' : 'step', zoom: next })
 }
@@ -90,8 +90,7 @@ export function zoomByWheel(scrollport: HTMLElement, deltaY: number, deltaMode =
 
 /** Back to the default view (see fittedView), centred on [centre] (drawn px) when given. */
 function resetZoom(scrollport: HTMLElement, centre?: { x: number; y: number }): void {
-  const view = diagramView(scrollport.dataset.scenarioId ?? '')
-  view.overview = null
+  // showDefaultView moves the mode on (out of Overview too).
   const zoom = showDefaultView(scrollport, centre)
   if (zoom != null) announce(scrollport, { kind: 'default', zoom })
 }
@@ -127,20 +126,16 @@ function enterOverview(scrollport: HTMLElement): void {
   const id = scrollport.dataset.scenarioId ?? ''
   const diagram = diagramState.mounted.get(id)
   const view = diagramView(id)
-  if (!diagram || view.overview) return
+  if (!diagram || view.mode.kind === 'overview') return
   if (!overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth)) {
     // Shift+1 (the button is disabled then) still gets an answer.
     announce(scrollport, { kind: 'fits', zoom: view.zoom })
     return
   }
-  view.overview = {
-    zoom: view.zoom,
-    top: scrollport.scrollTop,
-    left: scrollport.scrollLeft,
-    autoFit: view.autoFit,
-    fittedWidth: view.fittedWidth,
-  }
-  view.autoFit = false
+  view.mode = zoomModeAfter(view.mode, {
+    kind: 'enter-overview',
+    at: { zoom: view.zoom, top: scrollport.scrollTop, left: scrollport.scrollLeft },
+  })
   fitOverview(scrollport)
   announce(scrollport, { kind: 'overview', zoom: view.zoom, ...lanesShown(scrollport) })
 }
@@ -148,12 +143,11 @@ function enterOverview(scrollport: HTMLElement): void {
 /** Turn Overview off and go back to the zoom and scroll position from before it. */
 function leaveOverview(scrollport: HTMLElement): void {
   const view = diagramView(scrollport.dataset.scenarioId ?? '')
-  const saved = view.overview
-  if (!saved) return
-  view.overview = null
+  if (view.mode.kind !== 'overview') return
+  const saved = view.mode.saved
+  // Back to the saved mode before the commit, so the readout it paints is not Overview's.
+  view.mode = zoomModeAfter(view.mode, { kind: 'leave-overview' })
   commitZoom(scrollport, saved.zoom, { top: saved.top, left: saved.left }, scrollBehavior())
-  view.autoFit = saved.autoFit
-  view.fittedWidth = saved.fittedWidth
   // The panel may have changed width while Overview was on: refit an unzoomed diagram to it.
   refitDiagram(scrollport)
   announce(scrollport, { kind: 'overview-off', zoom: view.zoom })
@@ -186,7 +180,7 @@ export function runZoomAction(scrollport: HTMLElement, action: ZoomAction): void
   if (action === 'in' || action === 'out') zoomStep(scrollport, action === 'in' ? 1 : -1)
   else if (action === 'reset') resetZoom(scrollport)
   else if (action === 'leave') leaveOverview(scrollport)
-  else if (view.overview) leaveOverview(scrollport)
+  else if (view.mode.kind === 'overview') leaveOverview(scrollport)
   else enterOverview(scrollport)
 }
 
@@ -206,7 +200,7 @@ export function bindZoomControls(diagram: HTMLElement, scrollport: HTMLElement):
   scrollport.addEventListener(
     'click',
     (ev) => {
-      if (!diagramView(scrollport.dataset.scenarioId ?? '').overview) return
+      if (diagramView(scrollport.dataset.scenarioId ?? '').mode.kind !== 'overview') return
       const target = ev.target as Element
       if (target.closest('.seq-sticky-header, .seq-more') || !target.closest('.seq-spacer')) return
       ev.preventDefault()

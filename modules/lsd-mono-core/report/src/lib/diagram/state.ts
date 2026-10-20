@@ -4,6 +4,7 @@ import type { MessagePlace } from '../diagram-a11y'
 import { DEFAULT_ZOOM } from '../diagram-view'
 import type { ActivationSpan, LayoutRow } from '../layout'
 import type { PayloadFind } from './payload-find'
+import { defaultMode } from './zoom-mode'
 
 /** Everything the sequence diagram keeps between renders, in one place. */
 export const diagramState = {
@@ -54,16 +55,8 @@ export interface MountedDiagram {
 
 export interface DiagramView {
   zoom: number
-  /**
-   * True until the user zooms in or out. While it is true the diagram keeps the default view
-   * (see fittedView): on first render, and again when the panel width changes. The % readout
-   * (reset) makes it true again.
-   */
-  autoFit: boolean
-  /** While Overview is on, the view to go back to when it is turned off (#94). */
-  overview: SavedView | null
-  /** Scrollport width the last fit used, so a resize to the same width does not refit. */
-  fittedWidth: number
+  /** The default view, a zoom of the user's own, or Overview: see ZoomMode, and zoom-mode.ts. */
+  mode: ZoomMode
   hidden: Set<string>
   query: string
   /** Roving tabindex target. Null means the first focusable message. */
@@ -76,13 +69,24 @@ export interface DiagramView {
   includePayloads: boolean
 }
 
-/** A zoom and scroll position to restore, with the fit state that went with it. */
+/**
+ * How the zoom was chosen. In the default view (see fittedView) the diagram keeps fitting its
+ * width: on first render, and again when the panel width changes, until the user zooms in or out
+ * (zoomed); the % readout goes back to it. Overview fits the whole width until it is turned off
+ * (#94), then goes back to the view it saved. [fittedWidth] is the scrollport width the last fit
+ * used, so a resize to the same width does not refit.
+ */
+export type ZoomMode =
+  | { kind: 'default'; fittedWidth: number }
+  | { kind: 'zoomed' }
+  | { kind: 'overview'; fittedWidth: number; saved: SavedView }
+
+/** A zoom and scroll position to restore, with the mode that went with it. */
 export interface SavedView {
   zoom: number
   top: number
   left: number
-  autoFit: boolean
-  fittedWidth: number
+  mode: Exclude<ZoomMode, { kind: 'overview' }>
 }
 
 export interface RowPaint {
@@ -112,9 +116,7 @@ export function diagramView(scenarioId: string): DiagramView {
   if (!view) {
     view = {
       zoom: DEFAULT_ZOOM,
-      autoFit: true,
-      overview: null,
-      fittedWidth: 0,
+      mode: defaultMode(),
       hidden: new Set(),
       query: '',
       activeMessageId: null,

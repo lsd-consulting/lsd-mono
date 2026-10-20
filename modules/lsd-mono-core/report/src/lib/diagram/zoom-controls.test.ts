@@ -147,10 +147,10 @@ describe('zoom buttons (#94)', () => {
     const z = mount(3, 1400)
     z.button('in').click()
     z.button('in').click()
-    expect(z.view().autoFit).toBe(false)
+    expect(z.view().mode.kind).toBe('zoomed')
     z.button('reset').click()
     expect(z.readout()).toBe('100%')
-    expect(z.view().autoFit).toBe(true)
+    expect(z.view().mode.kind).toBe('default')
     expect(z.status()).toBe('Default zoom, 100%')
   })
 })
@@ -209,8 +209,7 @@ describe('Overview (#94)', () => {
     z.button('overview').click()
     Object.defineProperty(z.scroll, 'clientWidth', { configurable: true, value: 1400 })
     z.button('overview').click()
-    expect(z.view().autoFit).toBe(true)
-    expect(z.view().fittedWidth).toBe(1400)
+    expect(z.view().mode).toEqual({ kind: 'default', fittedWidth: 1400 })
     expect(z.view().zoom).toBeGreaterThanOrEqual(before)
   })
 
@@ -233,7 +232,7 @@ describe('Overview (#94)', () => {
     z.root.querySelector('.seq-window')!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
     expect(reached).toBe(false)
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
-    expect(z.view().autoFit).toBe(true)
+    expect(z.view().mode.kind).toBe('default')
   })
 
   it('stays on, fitted to the lanes left, when a participant is hidden', () => {
@@ -244,7 +243,7 @@ describe('Overview (#94)', () => {
     head.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))
     z.root.querySelector<HTMLButtonElement>('[data-hide-participant="p5"]')!.click()
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('true')
-    expect(z.view().overview).not.toBeNull()
+    expect(z.view().mode.kind).toBe('overview')
   })
 })
 

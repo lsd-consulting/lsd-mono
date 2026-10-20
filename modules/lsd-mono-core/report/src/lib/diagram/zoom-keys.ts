@@ -40,13 +40,13 @@ export function onZoomKey(ev: KeyboardEvent): boolean {
   const view = diagramView(id)
   const message = target.closest<HTMLElement>('button.msg-open')
   const plain = !ev.shiftKey && !ev.metaKey && !ev.ctrlKey && !ev.altKey
-  if (view.overview && message?.dataset.messageId && ev.key === 'Enter' && plain) {
+  if (view.mode.kind === 'overview' && message?.dataset.messageId && ev.key === 'Enter' && plain) {
     ev.preventDefault()
     ev.stopPropagation()
     zoomToMessage(scrollport, message.dataset.messageId)
     return true
   }
-  const action = zoomKeyAction(ev, { singleKeys: singleKeysEnabled(), overview: view.overview != null })
+  const action = zoomKeyAction(ev, { singleKeys: singleKeysEnabled(), overview: view.mode.kind === 'overview' })
   if (!action) return false
   ev.preventDefault()
   ev.stopPropagation()

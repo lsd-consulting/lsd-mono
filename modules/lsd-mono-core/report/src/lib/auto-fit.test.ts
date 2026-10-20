@@ -18,9 +18,7 @@ describe('the default view', () => {
 
   it('starts every diagram in it, before anything has been fitted, with Overview off', () => {
     const view = diagramView('auto-fit-test-scenario')
-    expect(view.autoFit).toBe(true)
-    expect(view.overview).toBeNull()
-    expect(view.fittedWidth).toBe(0)
+    expect(view.mode).toEqual({ kind: 'default', fittedWidth: 0 })
   })
 
   it('stops at a readable minimum and scrolls sideways to keep the top label on screen', () => {
