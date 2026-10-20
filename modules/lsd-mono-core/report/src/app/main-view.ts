@@ -10,6 +10,7 @@ import { syncWithPanel } from './panel'
 import { filtered } from './filters'
 import { dropUnshownView, writeScenarioHash } from './url-hash'
 import { bindComponentViews } from '../lib/component-view'
+import { bindComponentZoom } from '../lib/component-zoom'
 import { bindDiagramTabs, focusComponentView, openLink, pingShownView, showDiagramView } from './diagram-views'
 import { index, session, state } from './context'
 export function focusScenarioHeading(): void {
@@ -77,6 +78,7 @@ export function renderMain(): void {
   bindDiagramScroll(main)
   bindDiagramTabs(main)
   bindComponentViews(main, (scenarioId, edge) => openLink(scenarioId, edge))
+  main.querySelectorAll<HTMLElement>('.comp-scroll').forEach(bindComponentZoom)
   pingShownView(main)
 }
 

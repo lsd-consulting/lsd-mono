@@ -1,5 +1,6 @@
 // The Zoom group in the diagram toolbar (#94): [−] [N%] [+] [Overview], and keeping the readout,
-// the limits and the Overview button in step with the view. What they do is in zoom-controls.ts.
+// the limits and the Overview button in step with the view. What they do is in zoom-controls.ts
+// for the sequence diagram and component-zoom.ts for the Components view (#105).
 import { frameOf } from './geometry'
 import { type DiagramView, diagramState, diagramView } from './state'
 import { canStepZoom, overviewNeeded, zoomLabel } from '../diagram-view'
@@ -31,13 +32,23 @@ function disabledAttr(disabled: boolean): string {
   return disabled ? ' aria-disabled="true"' : ''
 }
 
-/** The Zoom group in the diagram toolbar. syncZoomControls keeps it up to date. */
-export function zoomControlsHtml(view: DiagramView): string {
-  const overview = view.mode.kind === 'overview'
+/** A view's zoom, as its Zoom group shows it. */
+export interface ZoomShown {
+  zoom: number
+  overview: boolean
+}
+
+/** The zoom and Overview of a sequence diagram's view. */
+export function sequenceZoomShown(view: DiagramView): ZoomShown {
+  return { zoom: view.zoom, overview: view.mode.kind === 'overview' }
+}
+
+/** The Zoom group in a diagram toolbar. paintZoomControls keeps it up to date. */
+export function zoomControlsHtml({ zoom, overview }: ZoomShown): string {
   return `<div class="zoom-controls" role="group" aria-label="Zoom">
-        <button type="button" class="zoom-btn" data-zoom="out" aria-label="Zoom out" title="Zoom out (−)"${disabledAttr(!canStepZoom(view.zoom, -1))}>${minusSvg}</button>
-        <button type="button" class="zoom-readout" data-zoom="reset" aria-label="${escapeAttr(readoutName(view.zoom))}" title="Reset to default zoom (0)">${escapeHtml(zoomLabel(view.zoom))}</button>
-        <button type="button" class="zoom-btn" data-zoom="in" aria-label="Zoom in" title="Zoom in (+)"${disabledAttr(!canStepZoom(view.zoom, 1))}>${plusSvg}</button>
+        <button type="button" class="zoom-btn" data-zoom="out" aria-label="Zoom out" title="Zoom out (−)"${disabledAttr(!canStepZoom(zoom, -1))}>${minusSvg}</button>
+        <button type="button" class="zoom-readout" data-zoom="reset" aria-label="${escapeAttr(readoutName(zoom))}" title="Reset to default zoom (0)">${escapeHtml(zoomLabel(zoom))}</button>
+        <button type="button" class="zoom-btn" data-zoom="in" aria-label="Zoom in" title="Zoom in (+)"${disabledAttr(!canStepZoom(zoom, 1))}>${plusSvg}</button>
         <button type="button" class="zoom-btn zoom-overview" data-zoom="overview" aria-label="Overview" aria-pressed="${overview}" title="${escapeAttr(OVERVIEW_TITLE)}">${scanSvg}<span class="zoom-overview-label" aria-hidden="true">Overview</span></button>
       </div>`
 }
@@ -48,26 +59,37 @@ function setDisabled(btn: Element | null, disabled: boolean): void {
   else btn.removeAttribute('aria-disabled')
 }
 
-/** The readout, the limits of − and +, and whether Overview is on or has anything to show. */
+/**
+ * Paint a Zoom [group]: the readout, the limits of − and +, and whether Overview is on or, when
+ * [useful] is false, has nothing to show.
+ */
+export function paintZoomControls(group: Element, shown: ZoomShown, useful: boolean): void {
+  const readout = group.querySelector('[data-zoom="reset"]')
+  if (readout) {
+    readout.textContent = zoomLabel(shown.zoom)
+    readout.setAttribute('aria-label', readoutName(shown.zoom))
+  }
+  setDisabled(group.querySelector('[data-zoom="out"]'), !canStepZoom(shown.zoom, -1))
+  setDisabled(group.querySelector('[data-zoom="in"]'), !canStepZoom(shown.zoom, 1))
+  const overview = group.querySelector('[data-zoom="overview"]')
+  if (!overview) return
+  const enabled = shown.overview || useful
+  overview.setAttribute('aria-pressed', String(shown.overview))
+  setDisabled(overview, !enabled)
+  overview.setAttribute('title', enabled ? OVERVIEW_TITLE : OVERVIEW_FITS_TITLE)
+}
+
+/** The sequence diagram's Zoom group, from its view. */
 export function syncZoomControls(scrollport: HTMLElement): void {
   const id = scrollport.dataset.scenarioId
   const diagram = id ? diagramState.mounted.get(id) : undefined
   const group = scrollport.closest('.seq-diagram')?.querySelector('.zoom-controls')
   if (!id || !diagram || !group) return
   const view = diagramView(id)
-  const readout = group.querySelector('[data-zoom="reset"]')
-  if (readout) {
-    readout.textContent = zoomLabel(view.zoom)
-    readout.setAttribute('aria-label', readoutName(view.zoom))
-  }
-  setDisabled(group.querySelector('[data-zoom="out"]'), !canStepZoom(view.zoom, -1))
-  setDisabled(group.querySelector('[data-zoom="in"]'), !canStepZoom(view.zoom, 1))
-  const overview = group.querySelector('[data-zoom="overview"]')
-  if (!overview) return
-  const on = view.mode.kind === 'overview'
   // Unmeasured (a collapsed card) counts as fitting: there is nothing to show yet.
-  const useful = on || overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth)
-  overview.setAttribute('aria-pressed', String(on))
-  setDisabled(overview, !useful)
-  overview.setAttribute('title', useful ? OVERVIEW_TITLE : OVERVIEW_FITS_TITLE)
+  paintZoomControls(
+    group,
+    sequenceZoomShown(view),
+    overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth),
+  )
 }

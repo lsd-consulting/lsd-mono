@@ -84,6 +84,24 @@ describe('the Components view (#105)', () => {
     expect(scroller.hasAttribute('tabindex')).toBe(false)
   })
 
+  it('keeps the tab stop of a drawing that has focus when it comes to fit, until focus leaves', () => {
+    const scroller = document.createElement('div')
+    document.body.append(scroller)
+    sized(scroller, { scrollWidth: 900, clientWidth: 400, scrollHeight: 300, clientHeight: 300 })
+    markComponentScroll(scroller)
+    scroller.focus()
+    sized(scroller, { scrollWidth: 400 })
+    markComponentScroll(scroller)
+    markComponentScroll(scroller)
+    expect(document.activeElement).toBe(scroller)
+    expect(scroller.tabIndex).toBe(0)
+    expect(scroller.getAttribute('role')).toBe('region')
+    scroller.blur()
+    expect(scroller.hasAttribute('tabindex')).toBe(false)
+    expect(scroller.hasAttribute('data-keep-stop')).toBe(false)
+    scroller.remove()
+  })
+
   it('opens a link that is clicked or pressed with Enter or Space, and marks it selected', () => {
     document.body.innerHTML = componentViewHtml(scenario, '')
     const opened: [string, number][] = []

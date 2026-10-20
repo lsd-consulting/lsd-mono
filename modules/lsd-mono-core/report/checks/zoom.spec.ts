@@ -14,14 +14,16 @@ const DECLINED = '146'
 const shots = process.env.LSD_SHOTS
 
 const card = (page: Page) => page.locator('.scenario-card').first()
-const zoomOut = (page: Page) => card(page).getByRole('button', { name: 'Zoom out', exact: true })
-const zoomIn = (page: Page) => card(page).getByRole('button', { name: 'Zoom in', exact: true })
-const reset = (page: Page) => card(page).getByRole('button', { name: /^Reset zoom, now \d+%$/ })
-const overview = (page: Page) => card(page).getByRole('button', { name: 'Overview', exact: true })
+/** The sequence view of the card: the Components view (#105) has its own Zoom group. */
+const seq = (page: Page) => card(page).locator('.seq-diagram')
+const zoomOut = (page: Page) => seq(page).getByRole('button', { name: 'Zoom out', exact: true })
+const zoomIn = (page: Page) => seq(page).getByRole('button', { name: 'Zoom in', exact: true })
+const reset = (page: Page) => seq(page).getByRole('button', { name: /^Reset zoom, now \d+%$/ })
+const overview = (page: Page) => seq(page).getByRole('button', { name: 'Overview', exact: true })
 const readout = async (page: Page) => Number.parseInt(await reset(page).innerText(), 10)
 /** The % readout says [level]% (retrying until it does). */
 const expectZoom = (page: Page, level: number | string) =>
-  expect(card(page).locator('.zoom-readout')).toHaveText(`${level}%`)
+  expect(seq(page).locator('.zoom-readout')).toHaveText(`${level}%`)
 const status = (page: Page) => card(page).locator('.participant-filter-status')
 
 /** The scroll position and sideways overflow as painted (two frames: see painted in ux-helpers). */
@@ -196,7 +198,7 @@ test.describe('at 1440×900', () => {
     const box = (await target.boundingBox())!
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
-    await expect(card(page).locator('.zoom-readout')).toHaveText('95%')
+    await expect(seq(page).locator('.zoom-readout')).toHaveText('95%')
     await expect(status(page)).toHaveText('Default zoom, 95%')
     // It zoomed instead of opening the arrow.
     await expect(page.locator('#inspector')).toBeHidden()
@@ -484,7 +486,7 @@ for (const viewport of [
 
     test('has all four zoom controls at 44×44 or more, on one row, without overlap', async ({ page }) => {
       await openExample(page)
-      const boxes = await card(page)
+      const boxes = await seq(page)
         .getByRole('group', { name: 'Zoom' })
         .getByRole('button')
         .evaluateAll((els) =>
@@ -501,7 +503,7 @@ for (const viewport of [
       }
       for (let i = 1; i < boxes.length; i++) expect(boxes[i].left).toBeGreaterThanOrEqual(boxes[i - 1].right)
       // Icon only: the Overview label stays out of the way.
-      await expect(card(page).locator('.zoom-overview-label')).toBeHidden()
+      await expect(seq(page).locator('.zoom-overview-label')).toBeHidden()
       if (shots) {
         await card(page)
           .locator('.seq-diagram')

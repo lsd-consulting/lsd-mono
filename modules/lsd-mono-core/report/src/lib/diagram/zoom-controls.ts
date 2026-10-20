@@ -27,7 +27,11 @@ const REPEAT_GAP_MS = 100
  * twice) would be no change to a screen reader, so the line empties first and speaks a moment later.
  */
 function announce(scrollport: HTMLElement, change: ZoomChange): void {
-  const status = scrollport.closest('.seq-diagram')?.querySelector('.participant-filter-status')
+  announceZoom(scrollport.closest('.seq-diagram')?.querySelector('.participant-filter-status') ?? null, change)
+}
+
+/** Say [change] in [status], a polite status line; the same words again after a short gap. */
+export function announceZoom(status: Element | null, change: ZoomChange): void {
   if (!status) return
   const text = zoomAnnouncement(change)
   const pending = repeats.get(status)
@@ -76,16 +80,27 @@ const wheelSums = new WeakMap<HTMLElement, { sum: number; at: number }>()
  * a mouse notch (about 100px) still moves one level. [deltaMode] 1 is lines, 2 pages.
  */
 export function zoomByWheel(scrollport: HTMLElement, deltaY: number, deltaMode = 0, now = Date.now()): void {
-  if (deltaY === 0) return
+  const step = wheelStep(scrollport, deltaY, deltaMode, now)
+  if (step) zoomStep(scrollport, step)
+}
+
+/**
+ * The level Ctrl/Cmd+wheel moves [scrollport] by, if this delta completes one: 1 (in), -1 (out)
+ * or 0. Each scrollport keeps its own count. Used by both views' wheels.
+ */
+export function wheelStep(scrollport: HTMLElement, deltaY: number, deltaMode = 0, now = Date.now()): 1 | -1 | 0 {
+  if (deltaY === 0) return 0
   const px = deltaY * (deltaMode === 1 ? LINE_PX : deltaMode === 2 ? scrollport.clientHeight || 800 : 1)
   const last = wheelSums.get(scrollport)
   const fresh = !last || now - last.at > WHEEL_IDLE_MS || Math.sign(last.sum) !== Math.sign(px)
   let sum = (fresh ? 0 : last.sum) + px
+  let step: 1 | -1 | 0 = 0
   if (Math.abs(sum) >= WHEEL_STEP_PX) {
-    zoomStep(scrollport, sum > 0 ? -1 : 1)
+    step = sum > 0 ? -1 : 1
     sum = 0
   }
   wheelSums.set(scrollport, { sum, at: now })
+  return step
 }
 
 /** Back to the default view (see fittedView), centred on [centre] (drawn px) when given. */

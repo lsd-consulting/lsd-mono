@@ -210,7 +210,7 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
     kbd: '<kbd>+</kbd>',
     single: true,
     help: (kbdHtml) =>
-      `In a diagram, ${kbdHtml('zoom-in')}/${kbdHtml('zoom-out')} zoom, ${kbdHtml('zoom-reset')} default zoom, ${kbdHtml('overview')} overview (${kbdHtml('leave-overview')} leaves it)`,
+      `In a diagram, ${kbdHtml('zoom-in')}/${kbdHtml('zoom-out')} zoom, ${kbdHtml('zoom-reset')} default zoom, ${kbdHtml('overview')} overview (${kbdHtml('leave-overview')} leaves it, a click in it zooms in there)`,
     matches: (e, c) => zoomKey(e, c) === 'in',
   },
   { id: 'zoom-out', scope: 'diagram', kbd: '<kbd>−</kbd>', single: true, matches: (e, c) => zoomKey(e, c) === 'out' },

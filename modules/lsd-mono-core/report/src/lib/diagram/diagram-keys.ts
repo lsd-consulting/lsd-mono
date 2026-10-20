@@ -1,6 +1,8 @@
 // Where in a diagram card a key was pressed (#102), read from the DOM for the key router.
 import type { DiagramKeyContext } from '../keys/bindings'
 import { diagramState, diagramView } from './state'
+import { mountedComponents } from '../component-view'
+import { inComponentOverview } from '../component-zoom'
 
 function isTextField(el: Element): boolean {
   return el.matches('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
@@ -15,6 +17,8 @@ export function diagramKeyContext(
   page: { singleKeys: boolean; panelOpen: boolean },
 ): DiagramKeyContext | null {
   if (!(target instanceof Element)) return null
+  const components = target.closest('.comp-diagram')
+  if (components) return componentKeyContext(components, target, page)
   const card = target.closest('.seq-diagram')
   if (!card) return null
   const on = placeIn(target)
@@ -29,6 +33,31 @@ export function diagramKeyContext(
     panelOpen: page.panelOpen,
     singleKeys: page.singleKeys,
     messageId: messageIdAt(target, on),
+    scrollport,
+    target: target as HTMLElement,
+  }
+}
+
+/**
+ * In the Components view (#105) only the zoom keys apply: there are no messages to move between,
+ * and its links take Enter and Space themselves.
+ */
+function componentKeyContext(
+  view: Element,
+  target: Element,
+  page: { singleKeys: boolean; panelOpen: boolean },
+): DiagramKeyContext | null {
+  if (isTextField(target) || target.closest('[role="menu"]')) return null
+  const scrollport = view.querySelector<HTMLElement>('.comp-scroll')
+  const id = scrollport?.dataset.scenarioId
+  const zoomable = Boolean(id && mountedComponents(id))
+  return {
+    on: 'card',
+    zoomable,
+    overview: zoomable && inComponentOverview(id!),
+    panelOpen: page.panelOpen,
+    singleKeys: page.singleKeys,
+    messageId: null,
     scrollport,
     target: target as HTMLElement,
   }

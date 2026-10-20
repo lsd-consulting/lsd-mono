@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
 import { openReport } from './open-report'
+import { wideReport } from './wide-sample'
 import { seriousViolations } from './ux-helpers'
 
 // #105: the component diagram is the diagram area's other view, behind Sequence | Components tabs.
@@ -69,7 +70,9 @@ test('in Components view the sequence-only controls are gone, and Tab goes tabs,
   ]) {
     await expect(page.locator(selector).filter({ visible: true }), selector).toHaveCount(0)
   }
-  await expect(page.locator('.diagram-hint')).toHaveText('Pick a link to list its messages')
+  await expect(page.locator('.diagram-hint')).toHaveText(
+    'Zoom and overview (a click there zooms in) · links list their messages',
+  )
   await tab(page, 'Components').focus()
   const stops: string[] = []
   for (let i = 0; i < 8 && stops.at(-1) !== 'link'; i++) {
@@ -87,7 +90,7 @@ test('in Components view the sequence-only controls are gone, and Tab goes tabs,
   // There is no Metrics button without metrics; the drawing is a stop (a named region) while it overflows, to scroll it.
   const metrics = (await page.locator('.comp-toolbar [data-show-metrics]').count()) > 0
   const overflows = await page.locator('.comp-scroll').evaluate((el) => el.scrollHeight > el.clientHeight + 1)
-  expect(stops).toEqual([...(metrics ? ['metrics'] : []), ...(overflows ? ['drawing'] : []), 'link'])
+  expect(stops).toEqual(['zoom', ...(metrics ? ['metrics'] : []), ...(overflows ? ['drawing'] : []), 'link'])
 })
 
 test('a link opens the side panel with its interactions, Esc gives focus back to it, and Show in sequence goes to the message', async ({
@@ -220,4 +223,225 @@ test('without links, Components says why to a screen reader, a link to it falls 
   await expect.poll(() => page.evaluate(() => location.hash)).toBe('#scenario=solo')
   await expect(page.locator('[data-show-metrics]')).toHaveCount(0)
   await expect(page.locator('.panel-controls')).toHaveCount(0)
+})
+
+// The same Zoom group as the sequence diagram (#94), for the Components view.
+const zoomGroup = (page: Page) => page.locator('.comp-toolbar .zoom-controls')
+const zoomButton = (page: Page, name: string) => zoomGroup(page).getByRole('button', { name, exact: true })
+const readout = (page: Page) => zoomGroup(page).locator('[data-zoom="reset"]')
+const status = (page: Page) => page.locator('.diagram-view-status')
+
+/** The drawing's scroll range, the smallest name in CSS px, and the components wholly in view. */
+function drawing(page: Page) {
+  return page.locator('.comp-scroll').evaluate((el) => {
+    const box = el.getBoundingClientRect()
+    const nodes = [...el.querySelectorAll('.component-node')].map((node) => node.getBoundingClientRect())
+    const names = [...el.querySelectorAll<SVGTextElement>('.component-node text')].map(
+      (text) => Number.parseFloat(getComputedStyle(text).fontSize) * text.getScreenCTM()!.a,
+    )
+    return {
+      overX: el.scrollWidth - el.clientWidth,
+      overY: el.scrollHeight - el.clientHeight,
+      left: el.scrollLeft,
+      top: el.scrollTop,
+      smallest: Math.min(...names),
+      inView: nodes.filter(
+        (n) => n.left >= box.left - 1 && n.right <= box.right + 1 && n.top >= box.top - 1 && n.bottom <= box.bottom + 1,
+      ).length,
+      total: nodes.length,
+    }
+  })
+}
+
+test('the Components view zooms with the same group: names start at 11px, Overview fits both ways, Esc goes back', async ({
+  page,
+}) => {
+  await openReport(page, { report: example })
+  const sequenceZoom = await page.locator('.seq-toolbar [data-zoom="reset"]').first().textContent()
+  await showComponents(page)
+  await expect(zoomGroup(page).getByRole('button')).toHaveCount(4)
+  await expect(readout(page)).toHaveText('100%')
+  expect((await drawing(page)).smallest).toBeGreaterThanOrEqual(11)
+
+  // The example (1091 × 928) is taller than the room at 1440 × 900: Overview fits it whole.
+  const overview = zoomButton(page, 'Overview')
+  await expect(overview).not.toHaveAttribute('aria-disabled')
+  await page.locator('.comp-scroll').evaluate((el) => el.scrollTo({ left: 40, top: 30 }))
+  const before = await drawing(page)
+  await overview.click()
+  await expect(overview).toHaveAttribute('aria-pressed', 'true')
+  const fitted = await drawing(page)
+  expect(fitted.overX).toBeLessThanOrEqual(0)
+  expect(fitted.overY).toBeLessThanOrEqual(0)
+  expect(fitted.inView).toBe(14)
+  await expect(readout(page)).not.toHaveText('100%')
+  await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram$/)
+  if (process.env.LSD_SHOTS)
+    await page.screenshot({ path: `${process.env.LSD_SHOTS}/105-1440-components-overview.png` })
+
+  // Esc leaves Overview, back to 100% where it was; the side panel is not involved.
+  await overview.focus()
+  await page.keyboard.press('Escape')
+  await expect(overview).toHaveAttribute('aria-pressed', 'false')
+  await expect(readout(page)).toHaveText('100%')
+  const back = await drawing(page)
+  expect(Math.abs(back.left - before.left)).toBeLessThanOrEqual(1)
+  expect(Math.abs(back.top - before.top)).toBeLessThanOrEqual(1)
+  await expect(status(page)).toHaveText('Overview off, zoom 100%')
+
+  // + keeps the middle of the view in place; 0 goes back to 100%.
+  const middle = () =>
+    page.locator('.comp-scroll').evaluate((el) => {
+      const zoom =
+        Number.parseFloat(el.style.getPropertyValue('--comp-w')) /
+        Number.parseFloat(
+          el.style.getPropertyValue('--comp-natural-w') || getComputedStyle(el).getPropertyValue('--comp-natural-w'),
+        )
+      return { x: (el.scrollLeft + el.clientWidth / 2) / zoom, y: (el.scrollTop + el.clientHeight / 2) / zoom }
+    })
+  await page.locator('.comp-scroll').evaluate((el) => el.scrollTo({ left: 60, top: 60 }))
+  const centre = await middle()
+  await zoomButton(page, 'Zoom in').click()
+  await expect(readout(page)).toHaveText('110%')
+  await expect(status(page)).toHaveText('Zoom 110%')
+  const kept = await middle()
+  expect(Math.abs(kept.x - centre.x)).toBeLessThanOrEqual(2)
+  expect(Math.abs(kept.y - centre.y)).toBeLessThanOrEqual(2)
+  await readout(page).click()
+  await expect(readout(page)).toHaveText('100%')
+  await expect(status(page)).toHaveText('Default zoom, 100%')
+
+  // The sequence diagram's zoom did not move.
+  await tab(page, 'Sequence').click()
+  await expect(page.locator('.seq-toolbar [data-zoom="reset"]').first()).toHaveText(sequenceZoom!)
+})
+
+test('in the Components view the zoom keys and Ctrl+wheel zoom it, and a click in Overview goes back to 100% there', async ({
+  page,
+}) => {
+  await openReport(page, { report: example })
+  await showComponents(page)
+  const link = page.locator('.comp-scroll .edge-group').first()
+  await link.focus()
+  await page.keyboard.press('-')
+  await expect(readout(page)).toHaveText('90%')
+  await page.keyboard.press('+')
+  await page.keyboard.press('+')
+  await expect(readout(page)).toHaveText('110%')
+  await page.keyboard.press('0')
+  await expect(readout(page)).toHaveText('100%')
+  // The link keeps focus, and no side panel opened.
+  await expect(link).toBeFocused()
+  await expect(page.locator('#inspector')).toBeHidden()
+
+  const scroller = page.locator('.comp-scroll')
+  const box = (await scroller.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + 100)
+  await page.keyboard.down('Control')
+  await page.mouse.wheel(0, 100)
+  await page.keyboard.up('Control')
+  await expect(readout(page)).toHaveText('90%')
+
+  await link.focus()
+  await page.keyboard.press('Shift+!')
+  await expect(zoomButton(page, 'Overview')).toHaveAttribute('aria-pressed', 'true')
+  // A click on the drawing in Overview: 100%, centred on the point, and no link panel.
+  const node = page.locator('.comp-scroll .component-node').last()
+  // The whole drawing is in its scrollport; the page brings the scrollport's foot on screen.
+  await node.scrollIntoViewIfNeeded()
+  const target = (await node.boundingBox())!
+  await page.mouse.click(target.x + target.width / 2, target.y + target.height / 2)
+  await expect(readout(page)).toHaveText('100%')
+  await expect(page.locator('#inspector')).toBeHidden()
+  const centred = await node.evaluate((el) => {
+    const n = el.getBoundingClientRect()
+    const s = el.closest('.comp-scroll')!.getBoundingClientRect()
+    return n.left >= s.left && n.right <= s.right && n.top >= s.top && n.bottom <= s.bottom
+  })
+  expect(centred).toBe(true)
+})
+
+test('a drawing that already fits has Overview disabled, and Shift+1 says so', async ({ page }) => {
+  await openReport(page, {})
+  await showComponents(page)
+  const overview = zoomButton(page, 'Overview')
+  await expect(overview).toHaveAttribute('aria-disabled', 'true')
+  await expect(overview).toHaveAttribute('title', 'Whole diagram already fits')
+  await zoomButton(page, 'Zoom out').focus()
+  await page.keyboard.press('Shift+!')
+  await expect(status(page)).toHaveText('Whole diagram already fits, zoom 100%')
+  await expect(overview).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('the 100-component sample: Overview stops at 10% and says how many components it shows', async ({ page }) => {
+  await openReport(page, { report: wideReport(100, 400) })
+  await showComponents(page)
+  await zoomButton(page, 'Overview').click()
+  await expect(readout(page)).toHaveText('10%')
+  await expect(status(page)).toHaveText(/^Overview, 10%, \d+ of 100 components shown$/)
+  const shown = await drawing(page)
+  expect(shown.total).toBe(100)
+  expect(shown.inView).toBeLessThan(100)
+  expect(shown.inView).toBeGreaterThan(0)
+})
+
+test('the zoom stays with its scenario: another scenario opens at 100%, and back again keeps it', async ({ page }) => {
+  await openReport(page, {})
+  await showComponents(page)
+  await zoomButton(page, 'Zoom out').click()
+  await expect(readout(page)).toHaveText('90%')
+  await page.locator('#scenario-title').focus()
+  await page.keyboard.press('j')
+  await expect(page.locator('.comp-toolbar [data-zoom="reset"]')).toHaveText('100%')
+  await page.keyboard.press('k')
+  await expect(readout(page)).toHaveText('90%')
+  const width = await page.locator('.comp-scroll svg').evaluate((svg) => svg.getBoundingClientRect().width)
+  const natural = await page
+    .locator('.comp-scroll')
+    .evaluate((el) => Number.parseFloat(getComputedStyle(el).getPropertyValue('--comp-natural-w')))
+  expect(Math.abs(width - natural * 0.9)).toBeLessThanOrEqual(1)
+})
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 })
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+  })
+
+  test('the example opens at 100% with 11px names, and Overview shows all 14 components', async ({ page }) => {
+    await openReport(page, { report: example })
+    await tab(page, 'Components').tap()
+    await expect(pane(page)).toBeVisible()
+    const first = await drawing(page)
+    expect(first.smallest).toBeGreaterThanOrEqual(11)
+    expect(first.inView).toBeLessThan(14)
+    if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/105-390-components.png` })
+    await zoomButton(page, 'Overview').tap()
+    const fitted = await drawing(page)
+    expect(fitted.inView).toBe(14)
+    expect(fitted.overX).toBeLessThanOrEqual(0)
+    expect(fitted.overY).toBeLessThanOrEqual(0)
+    await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram$/)
+    if (process.env.LSD_SHOTS)
+      await page.screenshot({ path: `${process.env.LSD_SHOTS}/105-390-components-overview.png` })
+  })
+})
+
+test('Shift+1 then Esc from the focused drawing: Overview and back, with focus on the drawing all along (#105 UX)', async ({
+  page,
+}) => {
+  await openReport(page, { report: example })
+  await showComponents(page)
+  const drawing = page.locator('.comp-scroll')
+  await expect(drawing).toHaveAttribute('tabindex', '0')
+  await drawing.focus()
+  await page.keyboard.press('Shift+Digit1')
+  await expect(page.locator('.comp-toolbar [data-zoom="overview"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(drawing).toBeFocused()
+  // The keys still reach it: Esc leaves Overview, back to 100%.
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.comp-toolbar [data-zoom="overview"]')).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.locator('.comp-toolbar [data-zoom="reset"]')).toHaveText('100%')
+  await expect(drawing).toBeFocused()
+  await expect(drawing).toHaveAttribute('tabindex', '0')
 })

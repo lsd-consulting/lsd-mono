@@ -10,7 +10,7 @@ import { type DiagramView, type MountedDiagram, diagramState, diagramView } from
 import { findFieldLabel, scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
 import { PRINT_MAX_UPSCALE, frameOf } from './diagram/geometry'
 import { revealMessageX, syncDiagramWindow } from './diagram/window'
-import { zoomControlsHtml } from './diagram/zoom-readout'
+import { sequenceZoomShown, zoomControlsHtml } from './diagram/zoom-readout'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
 import { DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, bodyHeight, diagramWidth, layoutRows } from './layout'
 
@@ -86,7 +86,7 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   // something is hidden. The status line announces each hide and show.
   return `
     <div class="seq-toolbar" role="toolbar" aria-label="Diagram view">
-      ${zoomControlsHtml(view)}
+      ${zoomControlsHtml(sequenceZoomShown(view))}
       <div class="participant-filter" data-participant-filter></div>
       <span class="participant-filter-status visually-hidden" role="status"></span>
       <label class="diagram-find">

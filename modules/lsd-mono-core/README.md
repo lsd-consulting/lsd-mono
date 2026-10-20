@@ -63,6 +63,7 @@ The [feature tour](../../README.md) shows it, and so can you in the [live exampl
 - Links carry no captions, so a busy pair of components stays readable. Sync links are solid and async links are dashed, and the head shows the direction. Repeated calls between the same two components share one link with a small count badge.
 - Hover over a link to see its messages in its tooltip, for example `Orders to Orders DB, 3 interactions:` then `load basket · sync` on the next line. Click a link, or focus it and press Enter, to list them in the side panel. Each one has a **Show in sequence** button that goes back to the Sequence view with that message open. Escape or Close puts focus back on the link.
 - Callers sit above the components they call.
+- The view has the same Zoom group, keys and Ctrl/Cmd+wheel as the sequence diagram, kept per scenario. It opens at 100%, where names are 11px. **Overview** fits the whole drawing both ways, down to 10%, and a click in it goes back to 100% there.
 - The view you pick stays for the next scenario you open, and is in the URL (`&view=components`), so a reload or a shared link opens it again. Printing prints the view that is shown.
 
 ## Kotlin API

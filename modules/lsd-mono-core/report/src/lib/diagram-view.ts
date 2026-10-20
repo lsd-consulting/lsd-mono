@@ -94,7 +94,7 @@ export function lanesInView(laneXs: readonly number[], left: number, width: numb
 export type ZoomChange =
   | { kind: 'step'; zoom: number }
   | { kind: 'default'; zoom: number }
-  | { kind: 'overview'; zoom: number; shown: number; total: number }
+  | { kind: 'overview'; zoom: number; shown: number; total: number; unit?: 'lanes' | 'components' }
   | { kind: 'overview-off'; zoom: number }
   | { kind: 'fits'; zoom: number }
 
@@ -108,7 +108,7 @@ export function zoomAnnouncement(change: ZoomChange): string {
     case 'overview':
       return change.shown >= change.total
         ? `Overview, ${level}, whole diagram`
-        : `Overview, ${level}, ${change.shown} of ${change.total} lanes shown`
+        : `Overview, ${level}, ${change.shown} of ${change.total} ${change.unit ?? 'lanes'} shown`
     case 'overview-off':
       return `Overview off, zoom ${level}`
     case 'fits':

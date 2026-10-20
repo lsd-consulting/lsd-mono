@@ -7,6 +7,6 @@ export function diagramViewHeading(view: DiagramViewName): string {
 
 export function diagramViewHint(view: DiagramViewName): string {
   return view === 'components'
-    ? 'Pick a link to list its messages'
+    ? 'Zoom and overview (a click there zooms in) · links list their messages'
     : 'Zoom and overview · hide participants · find labels · ↑↓ between messages'
 }

@@ -31,7 +31,7 @@ test('the 100-participant sample opens at 1280px with message labels in view and
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await openReport(page, { report: wideReport(100, 400) })
-  await expect(page.locator('.zoom-readout')).toHaveText('95%')
+  await expect(page.locator('.seq-diagram .zoom-readout')).toHaveText('95%')
 
   // Above the fold, under the scenario header.
   await expect.poll(() => labelsInView(page)).toBeGreaterThanOrEqual(3)

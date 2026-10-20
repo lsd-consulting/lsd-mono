@@ -21,9 +21,9 @@ export function mountedComponents(scenarioId: string): MountedComponents | undef
 
 /**
  * The view: its toolbar ([toolbarHtml]: the zoom group and Metrics) and the drawing in its
- * scrollport. The drawing's size at the current scale is --comp-w and --comp-h.
+ * scrollport, at [zoom]. The drawing's size at the current scale is --comp-w and --comp-h.
  */
-export function componentViewHtml(scenario: Scenario, toolbarHtml: string): string {
+export function componentViewHtml(scenario: Scenario, toolbarHtml: string, zoom = 1): string {
   const graph = componentGraph(scenario)
   const drawn = renderComponentDiagram(graph, scenario.title)
   mounted.set(scenario.id, { graph, width: drawn.width, height: drawn.height })
@@ -32,7 +32,7 @@ export function componentViewHtml(scenario: Scenario, toolbarHtml: string): stri
   return `
     <div class="comp-diagram">
       <div class="seq-toolbar comp-toolbar" role="toolbar" aria-label="Diagram view">${toolbarHtml}</div>
-      <div class="comp-scroll" data-scenario-id="${escapeAttr(scenario.id)}" style="--comp-w:${drawn.width}px;--comp-h:${drawn.height}px;--comp-natural-w:${drawn.width}px">${svg}</div>
+      <div class="comp-scroll" data-scenario-id="${escapeAttr(scenario.id)}" style="--comp-w:${drawn.width * zoom}px;--comp-h:${drawn.height * zoom}px;--comp-natural-w:${drawn.width}px">${svg}</div>
     </div>`
 }
 
@@ -70,6 +70,20 @@ export function markComponentScroll(scroller: HTMLElement): void {
     scroller.tabIndex = 0
     scroller.setAttribute('role', 'region')
     scroller.setAttribute('aria-label', 'Component diagram drawing')
+  } else if (scroller.ownerDocument.activeElement === scroller) {
+    // It fits now (Overview, a wider window), but it has focus: taking its tab stop would drop
+    // focus to the page, and the zoom keys with it. It stays a stop until focus leaves.
+    if (!scroller.hasAttribute('data-keep-stop')) {
+      scroller.setAttribute('data-keep-stop', '')
+      scroller.addEventListener(
+        'blur',
+        () => {
+          scroller.removeAttribute('data-keep-stop')
+          markComponentScroll(scroller)
+        },
+        { once: true },
+      )
+    }
   } else {
     scroller.removeAttribute('tabindex')
     scroller.removeAttribute('role')
@@ -86,6 +100,40 @@ export function centreTopRow(scroller: HTMLElement): void {
   const row = boxes.filter((box) => box.top < top + 1)
   const middle = (Math.min(...row.map((box) => box.left)) + Math.max(...row.map((box) => box.right))) / 2
   scroller.scrollLeft += middle - scroller.getBoundingClientRect().left - scroller.clientWidth / 2
+}
+
+/** One observer for every Components scrollport, and what each runs when its size changes. */
+const resize: { observer: ResizeObserver | null; runs: Map<Element, (() => void)[]> } = {
+  observer: null,
+  runs: new Map(),
+}
+
+/**
+ * Run [run] whenever [scroller]'s size changes. All the Components views share one observer,
+ * which lets go of scrollports a redraw has taken out of the page, as the sequence side does.
+ */
+export function onComponentResize(scroller: HTMLElement, run: () => void): void {
+  if (typeof ResizeObserver === 'undefined') return
+  resize.observer ??= new ResizeObserver((entries) => {
+    for (const entry of entries) for (const each of resize.runs.get(entry.target) ?? []) each()
+  })
+  for (const old of resize.runs.keys()) {
+    if (!old.isConnected) {
+      resize.observer.unobserve(old)
+      resize.runs.delete(old)
+    }
+  }
+  const runs = resize.runs.get(scroller)
+  if (runs) runs.push(run)
+  else {
+    resize.runs.set(scroller, [run])
+    resize.observer.observe(scroller)
+  }
+}
+
+/** The scrollports the shared observer is watching (for tests). */
+export function observedComponentScrolls(): Element[] {
+  return [...resize.runs.keys()]
 }
 
 /** What the view does with a link that is clicked, or pressed with Enter or Space. */
@@ -109,7 +157,7 @@ export function bindComponentViews(root: ParentNode, openLink: OpenLink): void {
       markComponentScroll(scroller)
     }
     scroller.addEventListener('scroll', update, { passive: true })
-    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(update).observe(scroller)
+    onComponentResize(scroller, update)
     scroller.addEventListener('focusin', (ev) => {
       const target = ev.target as Element
       if (target !== scroller) target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })

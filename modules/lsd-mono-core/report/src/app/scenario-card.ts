@@ -5,6 +5,8 @@ import { scenarioDescriptionHtml } from '../ui/scenario-summary'
 import { timingStripHtml } from '../ui/timing'
 import { panelControlsHtml, renderDiagramHtml } from '../lib/sequence-diagram'
 import { componentViewHtml } from '../lib/component-view'
+import { componentZoomShown } from '../lib/component-zoom'
+import { zoomControlsHtml } from '../lib/diagram/zoom-readout'
 import { hasComponentDiagram } from '../lib/component-graph'
 import { type DiagramViewName, diagramViewHeading, diagramViewHint } from '../lib/diagram-view-names'
 import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt } from '../ui/format'
@@ -60,11 +62,17 @@ export function scenarioHtml(s: Scenario): string {
         </div>
         <div class="diagram-area" id="diagram-area" role="tabpanel" aria-labelledby="diagram-tab-${shown}">
           <div class="diagram-pane" data-pane="sequence"${shown === 'sequence' ? '' : ' hidden'}>${diagram}</div>
-          ${components ? `<div class="diagram-pane" data-pane="components"${shown === 'components' ? '' : ' hidden'}>${componentViewHtml(s, panelControlsHtml(s))}</div>` : ''}
+          ${components ? `<div class="diagram-pane" data-pane="components"${shown === 'components' ? '' : ' hidden'}>${componentsPaneHtml(s)}</div>` : ''}
         </div>
       </section>
     </div>
   </article>`
+}
+
+/** The Components view, with its Zoom group and Metrics, at the scenario's zoom. */
+function componentsPaneHtml(s: Scenario): string {
+  const zoom = componentZoomShown(s.id)
+  return componentViewHtml(s, `${zoomControlsHtml(zoom)}${panelControlsHtml(s)}`, zoom.zoom)
 }
 
 /**

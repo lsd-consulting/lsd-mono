@@ -108,7 +108,9 @@ describe('showDiagramView', () => {
     expect(pane('sequence').hidden).toBe(true)
     expect(pane('components').hidden).toBe(false)
     expect(document.querySelector('#diagram-title')!.textContent).toBe('Component diagram')
-    expect(document.querySelector('.diagram-hint')!.textContent).toBe('Pick a link to list its messages')
+    expect(document.querySelector('.diagram-hint')!.textContent).toBe(
+      'Zoom and overview (a click there zooms in) · links list their messages',
+    )
     expect(document.querySelector('.diagram-area')!.getAttribute('aria-labelledby')).toBe('diagram-tab-components')
     expect(tab('components').getAttribute('aria-selected')).toBe('true')
     expect(tab('components').tabIndex).toBe(0)
@@ -135,6 +137,18 @@ describe('showDiagramView', () => {
     expect(document.querySelector('.diagram-view-status')!.textContent).toBe(
       'Component diagram, 3 components, 1 link, zoom 100%',
     )
+  })
+
+  it('gives the Components scrollport its place back after a trip to Sequence (M17)', () => {
+    const drawing = document.querySelector<HTMLElement>('.comp-scroll')!
+    views.showDiagramView('components')
+    drawing.scrollTop = 80
+    drawing.scrollLeft = 30
+    views.showDiagramView('sequence', false)
+    drawing.scrollTop = 0
+    drawing.scrollLeft = 0
+    views.showDiagramView('components', false)
+    expect([drawing.scrollTop, drawing.scrollLeft]).toEqual([80, 30])
   })
 
   it('selecting the shown view only writes the URL and says it again', () => {

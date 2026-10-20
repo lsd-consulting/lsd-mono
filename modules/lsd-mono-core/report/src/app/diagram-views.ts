@@ -4,6 +4,7 @@
 import type { MessageEvent, Scenario } from '../types'
 import { type DiagramViewName, diagramViewHeading, diagramViewHint } from '../lib/diagram-view-names'
 import { mountedComponents } from '../lib/component-view'
+import { componentZoom } from '../lib/component-zoom'
 import { diagramState } from '../lib/diagram/state'
 import { scrollDiagramToOffset, sizeStage } from '../lib/diagram/page-scroll'
 import { diagramView, findMessage, focusDiagramMessage, syncDiagramWindow } from '../lib/sequence-diagram'
@@ -14,8 +15,8 @@ import { openMessage, syncWithPanel } from './panel'
 import { writeScenarioHash } from './url-hash'
 import { session } from './context'
 
-/** The sequence scrollport's place while the Components view is shown: hiding it loses its scroll. */
-const sequencePlace = new WeakMap<HTMLElement, { top: number; left: number }>()
+/** Each view's scrollport's place while the other is shown: hiding it loses its scroll. */
+const places = new WeakMap<HTMLElement, { top: number; left: number }>()
 
 function count(n: number, noun: string): string {
   return `${n} ${noun}${n === 1 ? '' : 's'}`
@@ -27,14 +28,11 @@ export function viewAnnouncement(scenario: Scenario, view: DiagramViewName): str
     const drawn = mountedComponents(scenario.id)
     const nodes = drawn?.graph.nodes.length ?? 0
     const links = drawn?.graph.edges.length ?? 0
-    return `Component diagram, ${count(nodes, 'component')}, ${count(links, 'link')}, zoom ${zoomLabel(COMPONENT_ZOOM)}`
+    return `Component diagram, ${count(nodes, 'component')}, ${count(links, 'link')}, zoom ${zoomLabel(componentZoom(scenario.id).zoom)}`
   }
   const messages = scenario.events.filter((event) => event.kind === 'message').length
   return `Sequence diagram, ${count(messages, 'message')}, zoom ${zoomLabel(diagramView(scenario.id).zoom)}`
 }
-
-/** The Components view draws at its natural size. */
-const COMPONENT_ZOOM = 1
 
 function shownCard(): HTMLElement | null {
   return document.querySelector<HTMLElement>('#main .scenario-card')
@@ -59,7 +57,9 @@ export function showDiagramView(view: DiagramViewName, announce = true): void {
   session.diagramView = view
   if (area.dataset.view !== view) {
     const scroll = pane('sequence')?.querySelector<HTMLElement>('.seq-scroll') ?? null
-    if (view === 'components' && scroll) sequencePlace.set(scroll, { top: scroll.scrollTop, left: scroll.scrollLeft })
+    const drawing = pane('components')?.querySelector<HTMLElement>('.comp-scroll') ?? null
+    const leaving = view === 'components' ? scroll : drawing
+    if (leaving) places.set(leaving, { top: leaving.scrollTop, left: leaving.scrollLeft })
     // The side panel shows something of the view being left: a link, or a message.
     closePanelFor(view)
     area.dataset.view = view
@@ -74,6 +74,7 @@ export function showDiagramView(view: DiagramViewName, announce = true): void {
       tab.tabIndex = selected ? 0 : -1
     }
     if (view === 'sequence' && scroll) restoreSequencePlace(scroll)
+    if (view === 'components' && drawing) restoreComponentPlace(drawing)
     if (view === 'components') usage.ping('components-open')
   }
   writeScenarioHash()
@@ -89,8 +90,15 @@ export function pingShownView(root: ParentNode): void {
   if (root.querySelector('.diagram-panel[data-view="components"]')) usage.ping('components-open')
 }
 
+function restoreComponentPlace(drawing: HTMLElement): void {
+  const place = places.get(drawing)
+  if (!place) return
+  drawing.scrollTop = place.top
+  drawing.scrollLeft = place.left
+}
+
 function restoreSequencePlace(scroll: HTMLElement): void {
-  const place = sequencePlace.get(scroll)
+  const place = places.get(scroll)
   if (!place) return
   // The page is as tall as the drawing again before it scrolls to the place.
   sizeStage(scroll)

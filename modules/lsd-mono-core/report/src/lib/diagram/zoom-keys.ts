@@ -2,11 +2,15 @@
 import type { DiagramKeyContext } from '../keys/bindings'
 import type { KeyRouter } from '../keys/router'
 import { type ZoomAction, runZoomAction, zoomToMessage } from './zoom-controls'
+import { isComponentScroll, runComponentZoom } from '../component-zoom'
 
 /** The zoom keys' handlers. Which key is which, and where they apply, is in KEY_BINDINGS. */
 export function registerZoomKeys(router: KeyRouter): void {
   const zoom = (action: ZoomAction) => (_e: KeyboardEvent, c: DiagramKeyContext) => {
-    if (c.scrollport) runZoomAction(c.scrollport, action)
+    if (!c.scrollport) return
+    // The Components view (#105) has the same keys.
+    if (isComponentScroll(c.scrollport)) runComponentZoom(c.scrollport, action)
+    else runZoomAction(c.scrollport, action)
   }
   router.on('diagram', 'zoom-in', zoom('in'))
   router.on('diagram', 'zoom-out', zoom('out'))
