@@ -1,128 +1,27 @@
 // The sequence diagram: mounting, frame and pads, the HTML shell and message focus. Shapes, rows,
 // the viewport lives in ./diagram; their state is one controller, diagramState.
-import type { DiagramEvent, MessageEvent, Participant, Scenario } from '../types'
-import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../ui/format'
+import type { MessageEvent, Scenario } from '../types'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 import { hasComponentDiagram } from './component-graph'
 import { focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
-import { eventHiddenByColumns, unscaledViewport, visibleParticipants } from './diagram-view'
+import { unscaledViewport } from './diagram-view'
 import { headerHtml } from './diagram/rows'
 import { textViewHtml } from './diagram/text-view'
-import {
-  laneIndex,
-  laneWidth,
-  messageArrowSpec,
-  noteLayout,
-  participantHeadFor,
-  shortLabelAnchor,
-  shortMessageEndpoints,
-  xFor,
-} from './diagram/shapes'
-import { type DiagramFrame, type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
-import { scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
+import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
+import { findFieldLabel, scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
+import { PRINT_MAX_UPSCALE, frameOf } from './diagram/geometry'
 import { revealMessageX, syncDiagramWindow } from './diagram/viewport'
 import { zoomControlsHtml } from './diagram/zoom-controls'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
-import {
-  ACT_NEST_DX,
-  ACT_W,
-  DEFAULT_VIEWPORT,
-  EDGE_MARGIN,
-  HEADER_BLOCK_H,
-  MESSAGE_LABEL_RISE,
-  MSG_CHAR_W,
-  NOTE_CARD_W,
-  bodyHeight,
-  diagramWidth,
-  layoutRows,
-} from './layout'
-import type { LayoutRow } from './layout'
+import { DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, bodyHeight, diagramWidth, layoutRows } from './layout'
 
 // The diagram's API for the app and tests; the modules in ./diagram import each other directly.
 export { renderRowSvg } from './diagram/rows'
 export { participantHeadFor, participantLabelSvg } from './diagram/shapes'
 export { diagramView, forgetDiagrams, setFindHooks } from './diagram/state'
-export { bindDiagramScroll, sliceViewTop, stepFind, syncDiagramWindow } from './diagram/viewport'
-
-export function frameOf(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): DiagramFrame {
-  const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
-  const base = laneWidth(laneIndex(visible), visible.length)
-  const pads = diagramPads(diagram.scenario.events, visible, diagram.labelMaxWidth)
-  return { base, ...pads, total: base + pads.left + pads.right }
-}
-
-/** Approximate drawn width of a message label with its type cue and duration. */
-function messageLabelWidth(msg: MessageEvent, labelMaxWidth: number): number {
-  const cue = messageArrowSpec(msg.type).typeCue
-  let text = truncateLabel(msg.label, labelMaxWidth)
-  if (cue) text += ` [${cue}]`
-  if (msg.durationMs != null) text += ` · ${msg.durationMs}ms`
-  if (messageHasPayload(msg)) text += '  {}'
-  return text.length * MSG_CHAR_W
-}
-
-/** Where a self-call label starts, relative to its lifeline (see renderMessageRow). */
-const SELF_LABEL_DX = ACT_W + 36 + 8
-
-/**
- * Extra room needed left and right of the lifeline area so nothing on the
- * outer lifelines is clipped: notes left or right of a lifeline, self-call
- * labels, short-arrow labels, and long labels between the first or last pair.
- * Only content on the given (visible) participants counts.
- */
-export function diagramPads(
-  events: DiagramEvent[],
-  visible: Participant[],
-  labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH,
-): { left: number; right: number } {
-  const index = laneIndex(visible)
-  const width = laneWidth(index, visible.length)
-  let minX = EDGE_MARGIN
-  let maxX = width - EDGE_MARGIN
-  const reach = (from: number, to: number) => {
-    minX = Math.min(minX, from)
-    maxX = Math.max(maxX, to)
-  }
-  // Header shapes and names on the outer lifelines.
-  visible.forEach((p, i) => {
-    const half = participantHeadFor(p).half
-    reach(xFor(i, index) - half, xFor(i, index) + half)
-  })
-  for (const event of events) {
-    if (event.kind === 'note') {
-      if (event.over && !index.has(event.over)) continue
-      const { x } = noteLayout(event.placement, event.over, index, width)
-      reach(x - NOTE_CARD_W / 2, x + NOTE_CARD_W / 2)
-      continue
-    }
-    if (event.kind !== 'message') continue
-    const w = messageLabelWidth(event, labelMaxWidth)
-    if (event.type === 'SHORT_INBOUND' || event.type === 'SHORT_OUTBOUND') {
-      const id = event.type === 'SHORT_INBOUND' ? event.to : event.from
-      const i = index.get(id)
-      if (i === undefined) continue
-      // Nested bars can push the stub right by a few px; allow two levels.
-      const { x1, x2 } = shortMessageEndpoints(event.type, xFor(i, index), width)
-      const label = shortLabelAnchor(event.type, x1, x2)
-      if (label.anchor === 'start') reach(x1, label.x + w + 2 * ACT_NEST_DX)
-      else reach(label.x - w, x2 + 2 * ACT_NEST_DX)
-      continue
-    }
-    const fi = index.get(event.from)
-    const ti = index.get(event.to)
-    if (fi === undefined || ti === undefined) continue
-    if (event.from === event.to) {
-      const x = xFor(fi, index)
-      reach(x, x + SELF_LABEL_DX + 2 * ACT_NEST_DX + w)
-      continue
-    }
-    const mid = (xFor(fi, index) + xFor(ti, index)) / 2
-    reach(mid - w / 2, mid + w / 2)
-  }
-  return {
-    left: Math.ceil(Math.max(0, EDGE_MARGIN - minX)),
-    right: Math.ceil(Math.max(0, maxX - (width - EDGE_MARGIN))),
-  }
-}
+export { bindDiagramScroll, stepFind, syncDiagramWindow } from './diagram/viewport'
+export { PRINT_MAX_UPSCALE, diagramPads, frameOf, paintedMessageIds, sliceViewTop } from './diagram/geometry'
+export { findFieldLabel } from './diagram/search-reveal'
 
 function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): MountedDiagram {
   const rows = layoutRows(scenario.events)
@@ -183,13 +82,6 @@ function metricsControl(scenario: Scenario): string {
     text: 'Metrics',
     disabledReason: scenario.metrics.length > 0 ? null : 'No metrics for this scenario',
   })
-}
-
-/** Find's accessible name: payloads are named only while they are searched. The pressed {} shows it on screen. */
-export function findFieldLabel(searchesPayloads: boolean): string {
-  return searchesPayloads
-    ? 'Find messages, notes and payloads in this diagram'
-    : 'Find messages and notes in this diagram'
 }
 
 /** Turns payloads in or out of Find. Only on a diagram with a payload to search. */
@@ -280,25 +172,9 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LA
     </div>`
 }
 
-/**
- * Print draws the diagram across the page width. A small diagram grows at most
- * this much, so a two-lifeline sequence does not print with huge labels.
- */
-export const PRINT_MAX_UPSCALE = 1.5
-
 /** Upper bound for the printed width, from the unzoomed drawing width. */
 function printWidthStyle(width: number): string {
   return `--seq-print-max:${Math.round(width * PRINT_MAX_UPSCALE)}px`
-}
-
-export function paintedMessageIds(slice: LayoutRow[], hiddenIds: ReadonlySet<string>): Set<string> {
-  const ids = new Set<string>()
-  for (const row of slice) {
-    const event = row.event
-    if (event.kind === 'message' && messageHasPayload(event) && !eventHiddenByColumns(event, hiddenIds))
-      ids.add(event.id)
-  }
-  return ids
 }
 
 /** Scroll the arrow into view if needed, then focus its button. One tab stop. */

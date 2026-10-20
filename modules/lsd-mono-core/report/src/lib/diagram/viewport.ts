@@ -1,30 +1,27 @@
 // The diagram viewport: windowed painting, zoom, the default view, width observation and scroll
 // binding. The zoom buttons and keys are in zoom-controls.ts.
-import type { MessageEvent } from '../../types'
 import { focusablePlaces, messagePlaces, replacementFocus, sidewaysScrollLeft } from '../diagram-a11y'
-import {
-  eventHiddenByColumns,
-  fittedView,
-  messageLabelRect,
-  scrollportXFor,
-  settleFitWidth,
-  unscaledViewport,
-  visibleParticipants,
-} from '../diagram-view'
-import type { FittedView, Rect } from '../diagram-view'
+import { fittedView, scrollportXFor, settleFitWidth, unscaledViewport } from '../diagram-view'
+import type { FittedView } from '../diagram-view'
 import { cssEscape } from '../escape'
-import type { LayoutRow } from '../layout'
-import { DEFAULT_OVERSCAN, DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, virtualRowRange } from '../layout'
+import { DEFAULT_OVERSCAN, DEFAULT_VIEWPORT, HEADER_BLOCK_H, virtualRowRange } from '../layout'
 import { bindParticipantFilter } from '../participant-filter'
 import { scrollBehavior } from '../media'
-import { PRINT_MAX_UPSCALE, findFieldLabel, frameOf, paintedMessageIds } from '../sequence-diagram'
+import {
+  PRINT_MAX_UPSCALE,
+  frameOf,
+  messageLabelBox,
+  paintedMessageIds,
+  sliceViewTop,
+  topMessageLabelRect,
+} from './geometry'
 import { headActionKey, headerHtml, windowSvg } from './rows'
-import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
 import { bindPageScroll, scrollDiagramToOffset, scrollsWithPage, sizeStage } from './page-scroll'
 import { addPrintSlices, removePrintSlices } from './print-slices'
 import { refreshPayloadFind } from './payload-find'
 import {
   SEARCH_REVEAL_DELAY_MS,
+  findFieldLabel,
   revealSearchHit,
   syncFindControls,
   stepSearchCurrent,
@@ -100,11 +97,6 @@ export function syncDiagramWindow(scrollport: HTMLElement): void {
       btn?.focus({ preventScroll: true })
     }
   }
-}
-
-/** SVG viewBox top. Includes the label drawn above the first painted row. */
-export function sliceViewTop(firstRowY: number): number {
-  return Math.max(0, firstRowY - MESSAGE_LABEL_RISE)
 }
 
 /** Resize the sticky header and body to the current zoom and visible columns. */
@@ -309,26 +301,6 @@ function observeWidth(scrollport: HTMLElement): void {
   diagramState.observedScrollports.add(scrollport)
 }
 
-/** Label box of a message row, in drawn coordinates (they start frame.left left of x = 0). */
-export function messageLabelBox(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>, row: LayoutRow): Rect | null {
-  const event = row.event
-  if (event.kind !== 'message' || eventHiddenByColumns(event, hiddenIds)) return null
-  const frame = frameOf(diagram, hiddenIds)
-  const index = laneIndex(visibleParticipants(diagram.scenario.participants, hiddenIds))
-  const ends = messageEndpoints(event, index, frame.base)
-  const rect = messageLabelRect({ arrowY: row.y, x1: ends.x1, x2: ends.x2 })
-  return { ...rect, x: rect.x + frame.left }
-}
-
-/** Label box of the uppermost message still drawn. The default view scrolls this into view. */
-function topMessageLabelRect(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): Rect {
-  for (const row of diagram.rows) {
-    const box = messageLabelBox(diagram, hiddenIds, row)
-    if (box) return box
-  }
-  return { x: 0, y: 0, width: 1, height: 1 }
-}
-
 /**
  * Scroll sideways, only as far as needed, so a message's label is inside the scrollport. The
  * default view can stop at a readable scale with lanes beyond the right edge; Find and keyboard
@@ -361,21 +333,6 @@ export function syncMoreCue(scrollport: HTMLElement): void {
     scrollport.focus({ preventScroll: true })
   }
   scrollport.toggleAttribute('data-more-right', more)
-}
-
-export function messageEndpoints(
-  msg: MessageEvent,
-  index: Map<string, number>,
-  width: number,
-): { x1: number; x2: number } {
-  if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
-    const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
-    const px = xFor(index.get(participantId) ?? 0, index)
-    return shortMessageEndpoints(msg.type, px, width)
-  }
-  const fi = index.get(msg.from) ?? 0
-  const ti = index.get(msg.to) ?? 0
-  return { x1: xFor(fi, index), x2: xFor(ti, index) }
 }
 
 /** Replace a diagram's hidden participants, then redraw, refit and repaint. */

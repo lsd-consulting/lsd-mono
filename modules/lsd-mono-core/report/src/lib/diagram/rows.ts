@@ -45,7 +45,7 @@ import {
 import { payloadMatches } from './payload-find'
 import { messageSpeech } from './text-view'
 import { type DiagramFrame, type DiagramView, EMPTY_PAINT, type MountedDiagram, type RowPaint } from './state'
-import { messageEndpoints } from './viewport'
+import { messageEndpoints } from './geometry'
 
 /** Diagonal hatch so a coloured activation is not colour-only (colour blindness). */
 const ACTIVATION_HATCH =

@@ -15,18 +15,11 @@ import {
 } from '../diagram-view'
 import { escapeAttr, escapeHtml } from '../escape'
 import { scrollBehavior } from '../media'
-import { frameOf } from '../sequence-diagram'
+import { frameOf, messageLabelBox } from './geometry'
 import { singleKeysEnabled } from '../../ui/shortcuts'
 import { laneIndex, xFor } from './shapes'
 import { type DiagramView, diagramState, diagramView } from './state'
-import {
-  applyDiagramFrame,
-  commitZoom,
-  messageLabelBox,
-  refitDiagram,
-  revealMessageX,
-  showDefaultView,
-} from './viewport'
+import { applyDiagramFrame, commitZoom, refitDiagram, revealMessageX, showDefaultView } from './viewport'
 
 const ICON =
   'class="zoom-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor"'

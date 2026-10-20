@@ -176,3 +176,10 @@ export function revealSearchHit(scrollport: HTMLElement): boolean {
   }
   return true
 }
+
+/** Find's accessible name: payloads are named only while they are searched. The pressed {} shows it on screen. */
+export function findFieldLabel(searchesPayloads: boolean): string {
+  return searchesPayloads
+    ? 'Find messages, notes and payloads in this diagram'
+    : 'Find messages and notes in this diagram'
+}
