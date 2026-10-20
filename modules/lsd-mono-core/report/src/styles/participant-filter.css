@@ -12,7 +12,8 @@
 }
 .participant-head-actions {
   position: absolute;
-  top: 2px;
+  /* Just under the header, never on the name of the participant it acts on (#92). */
+  top: calc(100% + 2px);
   left: var(--pill-x, 0);
   box-sizing: border-box;
   width: 54px;
@@ -29,8 +30,11 @@
   opacity: 0;
   pointer-events: none;
 }
-.participant-heads[data-compact] .participant-head-actions {
-  top: calc(100% + 2px);
+/* Bridges the gap under the header, so the pointer keeps the bar open on its way down. */
+.participant-head-actions::before {
+  content: "";
+  position: absolute;
+  inset: -4px 0 100%;
 }
 .participant-head:hover .participant-head-actions,
 .participant-head:has(:focus-visible) .participant-head-actions,

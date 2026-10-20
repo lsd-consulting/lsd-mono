@@ -1,11 +1,12 @@
-import { readAppCss } from './read-css.test-util'
+import { readAppCss, readDiagramCss } from './read-css.test-util'
 import { describe, expect, it } from 'vitest'
 
 const css = readAppCss()
+const diagramCss = readDiagramCss()
 
-/** Body of the first rule whose selector is exactly `selector`. */
-function rule(selector: string): string {
-  const match = new RegExp(`(^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(css)
+/** Body of the first rule whose selector is exactly `selector`, in app.css or [from]. */
+function rule(selector: string, from = css): string {
+  const match = new RegExp(`(^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(from)
   expect(match, `${selector} not found`).not.toBeNull()
   return match![2]
 }
@@ -30,5 +31,20 @@ describe('top bar on a narrow screen', () => {
 
   it('stops in-page jumps below the sticky bar', () => {
     expect(rule('html')).toMatch(/scroll-padding-top:\s*var\(--topbar-h\)/)
+  })
+})
+
+describe('the header buttons (#92)', () => {
+  it('open just under the header, never on the name they act on', () => {
+    expect(rule('.participant-head-actions', diagramCss)).toMatch(/top:\s*calc\(100% \+ 2px\)/)
+  })
+
+  it('bridge the gap under the header, so the pointer keeps the bar open on its way down', () => {
+    expect(rule('.participant-head-actions::before', diagramCss)).toMatch(/inset:\s*-4px 0 100%/)
+  })
+
+  it('sit over the More lanes cue: the header stacks above it', () => {
+    const z = (selector: string) => Number(/z-index:\s*(\d+)/.exec(rule(selector, diagramCss))?.[1])
+    expect(z('.seq-sticky-header')).toBeGreaterThan(z('.seq-more'))
   })
 })

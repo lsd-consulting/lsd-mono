@@ -45,8 +45,7 @@ export function bindHeadActions(header: HTMLElement, hooks: HeadActionsHooks): H
     )!
     roveTo(btn)
     btn.focus({ preventScroll: true })
-    // The More button can sit past the scrollport's right edge: bring the pill into view.
-    btn.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+    showWholeBar(btn)
     return btn
   }
 
@@ -125,7 +124,10 @@ export function bindHeadActions(header: HTMLElement, hooks: HeadActionsHooks): H
 
   header.addEventListener('focusin', (ev) => {
     const btn = (ev.target as Element).closest?.<HTMLButtonElement>('.participant-heads button')
-    if (btn) roveTo(btn)
+    if (!btn) return
+    roveTo(btn)
+    // Tab lands on Hide and the browser scrolls only that into view: bring More along too.
+    showWholeBar(btn)
   })
 
   header.addEventListener('contextmenu', (ev) => {
@@ -186,6 +188,13 @@ function bindLongPress(header: HTMLElement, open: (id: string, at: Point) => voi
       header.addEventListener('pointercancel', cancelPress)
     },
   }
+}
+
+/** The More button can sit past the scrollport's edge while Hide has focus: bring the whole bar
+ * into view, not just the focused button. */
+function showWholeBar(btn: HTMLElement): void {
+  const bar = btn.closest<HTMLElement>('.participant-head-actions') ?? btn
+  bar.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
 }
 
 /** Move the one set of Hide and More buttons onto [head], renamed for its participant. A button

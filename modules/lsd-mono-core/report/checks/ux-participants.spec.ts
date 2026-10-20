@@ -234,7 +234,7 @@ test('on a phone a tap shows a header’s buttons below it, a long press opens t
     expect(await actionsOpacity(page, 'client')).toBe('0')
     expect(await actionsOpacity(page, 'api')).toBeNull()
 
-    // A tap shows the buttons: inside the header, or below it when the header is drawn too small for them.
+    // A tap shows the buttons just under the header (#92).
     await page.locator('[data-participant-head="api"]').tap()
     expect(await actionsOpacity(page, 'api')).toBe('1')
     const placed = await page.evaluate(() => {

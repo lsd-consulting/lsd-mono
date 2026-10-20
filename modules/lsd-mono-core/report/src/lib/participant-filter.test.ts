@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Scenario } from '../types'
 import {
   allBut,
-  COMPACT_HEADER_PX,
   filterStatusText,
   headActionsHtml,
   headSlots,
@@ -113,9 +112,7 @@ describe('participant filter markup', () => {
     expect(host.querySelector('[data-participant-head="a"]')!.children).toHaveLength(0)
     expect(host.querySelector<HTMLElement>('[data-participant-head="b"]')!.dataset.name).toBe('Beta <b>')
     expect(host.querySelector('[data-participant-head="b"]')!.getAttribute('title')).toBe('Beta <b>, queue')
-    expect(host.querySelector('.participant-heads')!.hasAttribute('data-compact')).toBe(false)
-    host.innerHTML = headActionsHtml(slots, COMPACT_HEADER_PX - 1, null)
-    expect(host.querySelector('.participant-heads')!.hasAttribute('data-compact')).toBe(true)
+    host.innerHTML = headActionsHtml(slots, 40, null)
     expect(host.querySelector<HTMLButtonElement>('[data-hide-participant="a"]')!.tabIndex).toBe(0)
   })
 

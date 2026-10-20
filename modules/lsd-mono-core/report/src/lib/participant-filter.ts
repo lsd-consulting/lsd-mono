@@ -9,7 +9,6 @@ import { bindParticipantMenu } from './filter/participant-menu'
 
 export { LONG_PRESS_MS } from './filter/head-actions'
 export {
-  COMPACT_HEADER_PX,
   type FilterHost,
   type HeadSlot,
   type MenuState,
@@ -23,7 +22,6 @@ export {
   headSlots,
   hiddenFilterHtml,
   hiddenInOrder,
-  isCompactHeader,
   participantMenuHtml,
 } from './filter/markup'
 

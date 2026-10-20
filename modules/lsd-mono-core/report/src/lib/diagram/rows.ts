@@ -27,7 +27,7 @@ import {
   noteCardMetrics,
 } from '../layout'
 import type { LayoutRow } from '../layout'
-import { headActionsHtml, headSlotStyle, headSlots, isCompactHeader, type HeadSlot } from '../filter/markup'
+import { headActionsHtml, headSlotStyle, headSlots, type HeadSlot } from '../filter/markup'
 import {
   type ArrowEnd,
   activationBarSvg,
@@ -94,7 +94,6 @@ export function resizeHeader(
   svg.setAttribute('width', String(frame.total * zoom))
   svg.setAttribute('height', String(height))
   heads.forEach((head, i) => head.setAttribute('style', headSlotStyle(slots[i], height)))
-  row.toggleAttribute('data-compact', isCompactHeader(height))
   return true
 }
 

@@ -96,21 +96,12 @@ export function headActionsHtml(slots: HeadSlot[], height: number, focusKey: str
       return `<div class="participant-head" data-participant-head="${escapeAttr(s.id)}" data-name="${escapeAttr(s.name)}" title="${escapeAttr(`${s.name}, ${s.typeLabel}`)}" style="${headSlotStyle(s, height)}">${actions}</div>`
     })
     .join('')
-  const compact = isCompactHeader(height) ? ' data-compact' : ''
-  return `<div class="participant-heads" role="toolbar" aria-label="Participants: ← and → move between Hide and More buttons, Shift+F10 for more actions"${compact}>${heads}</div>`
+  return `<div class="participant-heads" role="toolbar" aria-label="Participants: ← and → move between Hide and More buttons, Shift+F10 for more actions">${heads}</div>`
 }
 
 /** A header slot's place and size, as its style attribute: what a zoom changes. */
 export function headSlotStyle(slot: HeadSlot, height: number): string {
   return `left:${round(slot.left)}px;width:${round(slot.width)}px;height:${round(height)}px;--pill-x:${round(slot.pillX)}px`
-}
-
-/**
- * A header drawn small (a fitted wide diagram, a phone) puts the buttons under it, so they do not
- * cover the name of the participant they act on.
- */
-export function isCompactHeader(height: number): boolean {
-  return height < COMPACT_HEADER_PX
 }
 
 /** Hide and More for participant [id], with the tab stop on [tabStop]. */
@@ -120,9 +111,6 @@ export function headActionButtonsHtml(id: string, name: string, tabStop: 'hide' 
   const tab = (kind: string) => (kind === tabStop ? '0' : '-1')
   return `<span class="participant-head-actions"><button type="button" class="participant-hide" data-hide-participant="${attrId}" aria-label="Hide ${attrName}" aria-keyshortcuts="Shift+F10" tabindex="${tab('hide')}">${CROSS_SVG}</button><button type="button" class="participant-more" data-participant-menu="${attrId}" aria-label="More actions for ${attrName}" aria-haspopup="menu" aria-expanded="false" tabindex="${tab('more')}">${DOTS_SVG}</button></span>`
 }
-
-/** Below this drawn header height the buttons sit under the header, not on it. */
-export const COMPACT_HEADER_PX = 44
 
 /** Chip and its popover. Empty while nothing is hidden, so the toolbar shows nothing. */
 export function hiddenFilterHtml(scenarioId: string, hidden: Participant[], open: boolean): string {

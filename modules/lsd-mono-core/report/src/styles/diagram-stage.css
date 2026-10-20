@@ -61,7 +61,10 @@
 .seq-sticky-header {
   position: sticky;
   top: 0;
-  z-index: 2;
+  /* Over the More lanes cue (3), so a header's open Hide and More bar, which hangs below the
+     header (#92), is never under it. The cue sits wholly below the header, and a closed bar takes
+     no pointer events, so the cue is still seen and pressed. No :has() needed. */
+  z-index: 4;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
