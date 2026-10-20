@@ -15,8 +15,13 @@ export type ZoomEvent =
   | { kind: 'leave-overview' }
   /** A fit to [width] happened. Only the default view and Overview keep it. */
   | { kind: 'fitted'; width: number }
-  /** Forget the default view's fit, so the next one runs (a re-render, a lane hidden or shown). */
+  /** Forget the default view's fit, so the next one runs (a re-render). */
   | { kind: 'refit' }
+  /**
+   * Lanes hidden or shown: the default view's fit no longer stands, and neither does the one
+   * Overview goes back to, so leaving Overview fits the lanes left.
+   */
+  | { kind: 'lanes-changed' }
 
 /** The mode a diagram opens in, and goes back to on reset: the default view, not fitted yet. */
 export function defaultMode(): ZoomMode {
@@ -38,6 +43,11 @@ export function zoomModeAfter(mode: ZoomMode, event: ZoomEvent): ZoomMode {
       return mode.kind === 'zoomed' ? mode : { ...mode, fittedWidth: event.width }
     case 'refit':
       return mode.kind === 'default' ? defaultMode() : mode
+    case 'lanes-changed':
+      if (mode.kind === 'overview' && mode.saved.mode.kind === 'default') {
+        return { ...mode, saved: { ...mode.saved, mode: { kind: 'default', fittedWidth: 0 } } }
+      }
+      return zoomModeAfter(mode, { kind: 'refit' })
   }
 }
 

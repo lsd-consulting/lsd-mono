@@ -60,6 +60,19 @@ describe('zoomModeAfter', () => {
     expect(zoomModeAfter(on, { kind: 'refit' })).toBe(on)
   })
 
+  it('lanes hidden or shown forget the default view’s fit, also the one Overview goes back to', () => {
+    expect(zoomModeAfter(fitted, { kind: 'lanes-changed' })).toEqual(defaultMode())
+    expect(zoomModeAfter(zoomed, { kind: 'lanes-changed' })).toBe(zoomed)
+    const fromFitted = zoomModeAfter(overviewFrom(fitted), { kind: 'fitted', width: 900 })
+    expect(zoomModeAfter(fromFitted, { kind: 'lanes-changed' })).toEqual({
+      kind: 'overview',
+      fittedWidth: 900,
+      saved: { ...at, mode: defaultMode() },
+    })
+    const fromZoomed = overviewFrom(zoomed)
+    expect(zoomModeAfter(fromZoomed, { kind: 'lanes-changed' })).toEqual(fromZoomed)
+  })
+
   it('fittedWidthOf is the last fit width, or null for a zoom of the user’s own', () => {
     expect(fittedWidthOf(fitted)).toBe(1200)
     expect(fittedWidthOf(overviewFrom(fitted))).toBe(0)

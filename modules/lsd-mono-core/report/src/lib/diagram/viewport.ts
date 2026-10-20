@@ -54,14 +54,12 @@ function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string
     // Sized for the lanes left first, so a fit keeps the scroll position they leave.
     resize()
     syncFindControls(scrollport)
+    // Hiding or showing a participant changes the width to fit, now or on leaving Overview.
+    view.mode = zoomModeAfter(view.mode, { kind: 'lanes-changed' })
     if (view.mode.kind === 'overview') {
       // Overview stays on, fitted to the lanes that are left.
       fitOverview(scrollport)
-    } else if (view.mode.kind === 'default') {
-      // Hiding or showing a participant changes the width to fit.
-      view.mode = zoomModeAfter(view.mode, { kind: 'refit' })
-      autoFitDiagram(scrollport, false)
-    }
+    } else if (view.mode.kind === 'default') autoFitDiagram(scrollport, false)
   })
   syncDiagramWindow(scrollport)
 }

@@ -306,6 +306,24 @@ test('on the 100-participant sample at 1280, default, + and Overview each say wh
   await expectZoom(page, 100)
 })
 
+test('lanes hidden in Overview: leaving it fits the lanes left, as the % readout does', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await openReport(page, { report: wideReport(100, 400) })
+  await expectZoom(page, '95')
+  await overview(page).click()
+  await expectZoom(page, 10)
+  await card(page).locator('[data-participant-head="p01"]').dispatchEvent('contextmenu', { button: 2 })
+  await page.getByRole('menuitem', { name: /^Hide all but / }).click()
+  await expect(card(page).locator('.hidden-chip')).toHaveText('99 hidden')
+  await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
+  await overview(page).click()
+  await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
+  const left = await readout(page)
+  await reset(page).click()
+  expect(left).toBe(await readout(page))
+  expect(left).toBe(100)
+})
+
 test.describe('zoom keys', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 

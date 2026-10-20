@@ -235,6 +235,25 @@ describe('Overview (#94)', () => {
     expect(z.view().mode.kind).toBe('default')
   })
 
+  it('leaves for the default view fitted to the lanes left, when lanes were hidden in Overview', () => {
+    const z = mount(40, 1000)
+    const opening = z.view().zoom
+    z.button('overview').click()
+    for (let i = 7; i < 40; i++) {
+      const head = z.root.querySelector(`[data-participant-head="p${i}"]`)!
+      head.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+      head.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))
+      z.root.querySelector<HTMLButtonElement>(`[data-hide-participant="p${i}"]`)!.click()
+    }
+    expect(z.view().hidden.size).toBe(33)
+    z.button('overview').click()
+    const left = z.view().zoom
+    z.button('reset').click()
+    // Seven lanes fit wider than forty: the fit from before Overview no longer stands.
+    expect(left).toBe(z.view().zoom)
+    expect(left).toBeGreaterThan(opening)
+  })
+
   it('stays on, fitted to the lanes left, when a participant is hidden', () => {
     const z = mount(100, 600)
     z.button('overview').click()
