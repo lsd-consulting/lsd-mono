@@ -20,7 +20,7 @@ import { scrollBehavior } from '../media'
 import { PRINT_MAX_UPSCALE, findFieldLabel, frameOf, paintedMessageIds } from '../sequence-diagram'
 import { headActionKey, headerHtml, windowSvg } from './rows'
 import { laneIndex, shortMessageEndpoints, xFor } from './shapes'
-import { bindPageScroll, sizeStage } from './page-scroll'
+import { bindPageScroll, scrollDiagramToOffset, scrollsWithPage, sizeStage } from './page-scroll'
 import { addPrintSlices, removePrintSlices } from './print-slices'
 import { refreshPayloadFind } from './payload-find'
 import {
@@ -176,7 +176,14 @@ export function commitZoom(
   applyDiagramFrame(scrollport)
   const top = pin ? pin.top : scrollport.scrollTop * ratio
   const left = pin ? pin.left : scrollport.scrollLeft * ratio
-  scrollport.scrollTo({ top, left, behavior: motion })
+  if (pin && scrollsWithPage(scrollport)) {
+    // A pinned position (the % readout, Overview in and out, a click in Overview) moves the page
+    // itself, the stage sized for the new zoom first. Left to the scrollport, a page scroll event
+    // still queued (a scroll just before the click) carried the old page position back into it.
+    sizeStage(scrollport)
+    scrollport.scrollTo({ left, behavior: motion })
+    scrollDiagramToOffset(scrollport, top)
+  } else scrollport.scrollTo({ top, left, behavior: motion })
   syncDiagramWindow(scrollport)
 }
 

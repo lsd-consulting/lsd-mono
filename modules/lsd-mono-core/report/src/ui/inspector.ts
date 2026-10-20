@@ -333,7 +333,12 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
         ? metricsHost.querySelector<HTMLElement>(`[data-panel-section="${cssEscape(view.section)}"]`)
         : null
       if (section) revealSection(section)
-      else revealOnPhone()
+      else {
+        // At the top, even when the panel was already open and scrolled (say to Accuracy by pair
+        // from the Accuracy chip). Stacked, the panel is part of the page and does not scroll.
+        if (viewport() > STACKED_MAX_PX) panel.scrollTop = 0
+        revealOnPhone()
+      }
     },
     openError(error) {
       const token = begin(null, 'stack')

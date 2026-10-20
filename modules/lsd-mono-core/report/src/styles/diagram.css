@@ -388,11 +388,15 @@
   /* A size container so the Overview button can drop its word when the row is tight. */
   container: seq-toolbar / inline-size;
 }
-/* Under 800px (a card beside the inspector) the toolbar's usual row no longer fits with the word,
-   so Overview goes icon only, keeping its name (aria-label) and tooltip, rather than wrap
-   Metrics and Component diagram onto a row of their own. */
-@container seq-toolbar (max-width: 800px) {
-  .zoom-overview-label {
+/* Up to 880px (a card beside the inspector) the toolbar's usual row only just fits, and fonts
+   differ by platform (Linux draws these labels about 8% wider than macOS). So Overview goes icon
+   only and the Find field drops its word, both keeping their names (aria-label, placeholder) and
+   Overview its tooltip, as the phone layout does: room to spare on Linux at 757px rather than
+   none, so Metrics and Component diagram keep their row. Below about 700px the row wraps as
+   before (and from 560px down the phone layout takes over). */
+@container seq-toolbar (max-width: 880px) {
+  .zoom-overview-label,
+  .diagram-find-label {
     display: none;
   }
 }

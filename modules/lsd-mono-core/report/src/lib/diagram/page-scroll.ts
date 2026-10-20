@@ -3,7 +3,7 @@
 // past the top of the stage is mirrored into the scrollport's scrollTop, so windowed painting,
 // the sticky participant header and focus keep working from scrollTop. When the
 // diagram moves its own scrollTop (focus, section jump, zoom), the page follows.
-import { isPhone } from '../media'
+import { isPhone, isStacked } from '../media'
 import { stickyLead } from '../topbar-height'
 import { diagramState, diagramView } from './state'
 
@@ -20,6 +20,11 @@ function stickyTop(scrollport: HTMLElement): number {
 }
 
 /** Linked while the stage is laid out as a page-height block (not in print, not detached). */
+/** Whether the diagram scrolls with the page (its sticky scrollport follows the page scroll). */
+export function scrollsWithPage(scrollport: HTMLElement): boolean {
+  return linked(scrollport)
+}
+
 function linked(scrollport: HTMLElement): boolean {
   return scrollport.isConnected && !diagramState.printAllRows && getComputedStyle(scrollport).position === 'sticky'
 }
@@ -95,6 +100,11 @@ function followPage(scrollport: HTMLElement): void {
 function leadPage(scrollport: HTMLElement): void {
   const stage = stageOf(scrollport)
   if (!stage || !linked(scrollport)) return
+  // Stacked (860px and below), an open inspector sits in the page under the report, and the page
+  // scrolls to it (the Accuracy chip to Accuracy by pair, a tapped arrow to its JSON). The
+  // scrollport follows that scroll as it passes the stage; leading the page back from those
+  // scrolls cancelled a smooth scroll to the panel halfway (#95), so the page leads alone then.
+  if (isStacked() && document.querySelector('.with-inspector')) return
   const delta = scrollport.scrollTop - pageScrollTop(scrollport, stage)
   if (Math.abs(delta) <= TOLERANCE_PX) return
   const top = window.scrollY + delta

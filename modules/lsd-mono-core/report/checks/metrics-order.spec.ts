@@ -116,6 +116,21 @@ for (const viewport of [
       // The header, with Close, stays in view.
       await expect(page.locator('#inspector-close')).toBeInViewport()
       if (shots) await page.screenshot({ path: `${shots}/q-95-${viewport.width}-happy-accuracy-chip.png` })
+      // With the panel still open and scrolled down, Wall-clock or the toolbar's Metrics button
+      // opens it at the top again.
+      if (viewport.width > 860) {
+        await chip(page, '145', 'Wall-clock').click()
+        await expect.poll(async () => (await scrolled(page)).panel).toBe(0)
+        await chip(page, '145', 'Accuracy').click()
+        await expect.poll(() => inViewUnderHead(page, '#inspector [data-panel-section="pair-accuracy"] h3')).toBe(true)
+        expect((await scrolled(page)).panel).toBeGreaterThan(0)
+        await metricsButton(page, '145').click()
+        await expect(page.locator('#inspector')).toBeHidden()
+        await metricsButton(page, '145').click()
+        await expect.poll(async () => (await scrolled(page)).panel).toBe(0)
+        await chip(page, '145', 'Accuracy').click()
+        await expect.poll(() => inViewUnderHead(page, '#inspector [data-panel-section="pair-accuracy"] h3')).toBe(true)
+      }
       // Closing gives focus back to the chip that opened it (#86), and reopening behaves the same.
       await page.keyboard.press('Escape')
       await expect(page.locator('#inspector')).toBeHidden()
@@ -233,6 +248,30 @@ test.describe('at 1440×900', () => {
     await expect(page.locator('#inspector')).toBeHidden()
   })
 })
+
+for (const width of [390, 320, 768]) {
+  test.describe(`at ${width} wide`, () => {
+    test.use({ viewport: { width, height: 844 }, isMobile: true, hasTouch: true })
+
+    // With smooth scrolling (no reduced motion) and a tap, as on a phone.
+    test('after Metrics and Esc, the Accuracy chip still reaches Accuracy by pair', async ({ page }) => {
+      await open(page, '145')
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await metricsButton(page, '145').click()
+      await expect(page.locator('#inspector .timing')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.locator('#inspector')).toBeHidden()
+      await chip(page, '145', 'Accuracy').tap()
+      await expect(details(page)).toHaveAttribute('open', '')
+      // The heading lands just under the panel's sticky header, and stays there.
+      const heading = '#inspector [data-panel-section="pair-accuracy"] h3'
+      await expect.poll(() => inViewUnderHead(page, heading), { timeout: 3000 }).toBe(true)
+      await page.waitForTimeout(800)
+      expect(await inViewUnderHead(page, heading)).toBe(true)
+      await expect(page.locator(heading)).toBeInViewport()
+    })
+  })
+}
 
 test.describe('on a phone', () => {
   const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices['iPhone 13']

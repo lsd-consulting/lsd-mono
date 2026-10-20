@@ -170,29 +170,40 @@ test.describe('at 1440×900', () => {
     await expect(status(page)).toHaveText(`Overview off, zoom ${before.zoom}%`)
   })
 
-  test('a click in Overview goes to the default view with that spot on screen', async ({ page }) => {
+  test('a click in Overview goes to the default view centred on that spot', async ({ page }) => {
     await open(page, example)
     await overview(page).click()
+    await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
     const target = card(page).locator('button.msg-open').nth(8)
-    const id = await target.getAttribute('data-message-id')
+    const id = (await target.getAttribute('data-message-id'))!
     await target.scrollIntoViewIfNeeded()
+    // The button covers the arrow and its label.
     const box = (await target.boundingBox())!
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
-    expect(await readout(page)).toBe(95)
+    await expect(card(page).locator('.zoom-readout')).toHaveText('95%')
+    await expect(status(page)).toHaveText('Default zoom, 95%')
     // It zoomed instead of opening the arrow.
     await expect(page.locator('#inspector')).toBeHidden()
-    const onScreen = await page.evaluate((messageId) => {
-      const btn = document.querySelector(`button.msg-open[data-message-id="${messageId}"]`)
-      const scroll = btn?.closest('.seq-scroll')
-      if (!btn || !scroll) return false
-      const b = btn.getBoundingClientRect()
-      const s = scroll.getBoundingClientRect()
-      const view = { top: Math.max(s.top, 0), bottom: Math.min(s.bottom, innerHeight) }
-      return b.right > s.left && b.left < s.right && b.bottom > view.top && b.top < view.bottom
-    }, id)
-    expect(onScreen).toBe(true)
-    await expect(status(page)).toHaveText('Default zoom, 95%')
+    // Once the scroll has landed, the clicked arrow sits in the middle of the diagram's visible
+    // part (within a quarter of its height from the centre), and across it is on screen.
+    const placed = () =>
+      page.evaluate((messageId) => {
+        const btn = document.querySelector(`button.msg-open[data-message-id="${messageId}"]`)
+        const scroll = btn?.closest<HTMLElement>('.seq-scroll')
+        const header = scroll?.querySelector('.seq-sticky-header')
+        if (!btn || !scroll || !header) return { offCentre: 1, across: false }
+        const b = btn.getBoundingClientRect()
+        const s = scroll.getBoundingClientRect()
+        const top = Math.max(header.getBoundingClientRect().bottom, 0)
+        const bottom = Math.min(s.bottom, innerHeight)
+        return {
+          offCentre: Math.abs((b.top + b.bottom) / 2 - (top + bottom) / 2) / (bottom - top),
+          across: b.right > s.left && b.left < s.left + scroll.clientWidth,
+        }
+      }, id)
+    await expect.poll(async () => (await placed()).offCentre).toBeLessThan(0.25)
+    expect((await placed()).across).toBe(true)
   })
 
   test('Enter on a focused message in Overview goes to the default view on that message', async ({ page }) => {
@@ -356,17 +367,32 @@ test.describe('zoom keys', () => {
   })
 })
 
-test('in a card under 800px wide Overview goes icon only, so the toolbar keeps Metrics on its row', async ({
-  page,
-}) => {
+test('in a card beside the panel (under 880px) the toolbar keeps one row, Overview icon only', async ({ page }) => {
   await openFixture(page, 'dark')
   const toolbar = page.locator('.seq-toolbar').first()
-  expect((await toolbar.boundingBox())!.width).toBeLessThan(800)
+  expect((await toolbar.boundingBox())!.width).toBeLessThan(880)
   await expect(toolbar.locator('.zoom-overview-label')).toBeHidden()
   await expect(toolbar.getByRole('button', { name: 'Overview' })).toBeVisible()
-  const zoomTop = (await toolbar.getByRole('button', { name: 'Zoom in' }).boundingBox())!.y
-  const metricsTop = (await toolbar.getByRole('button', { name: /Metrics/ }).boundingBox())!.y
-  expect(Math.abs(zoomTop - metricsTop)).toBeLessThan(8)
+  // Zoom, Find and the panel buttons share one row, with room to spare, whatever the platform's
+  // fonts: the row's controls end well inside the toolbar (CI draws on Linux, wider than macOS).
+  const tops = await Promise.all(
+    [
+      toolbar.getByRole('button', { name: 'Zoom in' }),
+      toolbar.locator('[data-diagram-find]'),
+      toolbar.getByRole('button', { name: /Metrics/ }),
+      toolbar.getByRole('button', { name: /Component diagram/ }),
+    ].map(async (control) => (await control.boundingBox())!),
+  )
+  for (const box of tops) expect(Math.abs(box.y + box.height / 2 - (tops[0].y + tops[0].height / 2))).toBeLessThan(8)
+  const spare = await toolbar.evaluate((bar) => {
+    const row = [...bar.children].filter((child) => child.getBoundingClientRect().width > 1)
+    const used = row.reduce((sum, child) => sum + child.getBoundingClientRect().width, 0)
+    const gap = Number.parseFloat(getComputedStyle(bar).columnGap) * (row.length - 1)
+    const padding = Number.parseFloat(getComputedStyle(bar).paddingLeft) * 2
+    return bar.clientWidth - padding - used - gap
+  })
+  // At least 24px to spare (about 50 on Linux at this width), not a row that only just fits.
+  expect(spare).toBeGreaterThanOrEqual(24)
 })
 
 test('the zoom icons draw in the text colour in every theme', async ({ page }) => {

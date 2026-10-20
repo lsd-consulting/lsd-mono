@@ -110,4 +110,11 @@ describe('the Timing and metrics panel', () => {
       scrollTo.mockRestore()
     }
   })
+
+  it('opened without a section (Wall-clock, the Metrics button), starts at the top even if scrolled', () => {
+    const panel = open(timed(20), 'pair-accuracy')
+    panel.scrollTop = 600
+    open(timed(20))
+    expect(panel.scrollTop).toBe(0)
+  })
 })
