@@ -124,9 +124,21 @@ export async function openWide(page: Page, hash = ''): Promise<void> {
   await openReport(page, { report: wideReport, path: `/${hash}` })
 }
 
-/** Zoom readout as a number (85 for "85%") and sideways overflow, for one scenario's diagram. */
+/**
+ * Wait until the diagram has repainted: Find, zoom and the filter paint once per frame (#104).
+ * Two frames, because a refit after a resize paints from the resize observer, which runs after
+ * the first frame's animation callbacks.
+ */
+export function painted(page: Page): Promise<void> {
+  return page.evaluate(
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+  )
+}
+
+/** Zoom readout as a number (85 for "85%") and sideways overflow, for one scenario's diagram, as painted (see painted). */
 export function zoomOf(page: Page, scenarioId: string) {
-  return page.evaluate((id) => {
+  return page.evaluate(async (id) => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
     const card = document.getElementById(`card-${id}`)!
     const scroll = card.querySelector<HTMLElement>('.seq-scroll')!
     return {

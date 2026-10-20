@@ -1,16 +1,16 @@
 // The diagram's Find field: the query, payload search, and Next and Previous.
 import { cssEscape } from '../escape'
 import { refreshPayloadFind } from './payload-find'
+import { invalidate } from './invalidate'
 import {
   SEARCH_REVEAL_DELAY_MS,
   findFieldLabel,
   revealSearchHit,
-  syncFindControls,
   stepSearchCurrent,
   updateSearchCurrent,
 } from './search-reveal'
 import { diagramState, diagramView } from './state'
-import { revealMessageX, syncDiagramWindow } from './window'
+import { revealMessageX } from './window'
 
 /** Bring the current Find match on screen, down the page and sideways. False when there is none. */
 export function revealFindHit(scrollport: HTMLElement): boolean {
@@ -26,10 +26,18 @@ export function stepFind(scrollport: HTMLElement, step: 1 | -1): void {
   const scenarioId = scrollport.dataset.scenarioId
   const row = scenarioId ? stepSearchCurrent(scenarioId, step) : null
   if (!scenarioId || !row) return
-  syncFindControls(scrollport)
-  syncDiagramWindow(scrollport)
-  if (revealFindHit(scrollport)) syncDiagramWindow(scrollport)
+  revealFindHit(scrollport)
+  invalidate(scenarioId, ['window', 'find'])
   diagramState.findHooks.stepped?.(scenarioId, row.event.id)
+}
+
+/**
+ * Find's query, its scope or its payload answers changed: the first match becomes current
+ * (unless [current] is false), then the matches, the count and the side panel's marks repaint.
+ */
+function findChanged(scenarioId: string, current = true): void {
+  if (current) updateSearchCurrent(scenarioId)
+  invalidate(scenarioId, ['window', 'find', 'hooks'])
 }
 
 /** The scenario's mounted scrollport, looked up when an answer arrives (the diagram may have re-rendered). */
@@ -51,11 +59,8 @@ export function refreshPayloads(scenarioId: string): void {
     const view = diagramView(scenarioId)
     const before = view.searchCurrentId ?? null
     // Until Next or Previous moves it, the current match is the first: maybe a payload match above.
-    if (!before || !view.searchStepped) updateSearchCurrent(scenarioId)
-    syncFindControls(scroll)
-    syncDiagramWindow(scroll)
-    if (view.searchCurrentId !== before && revealFindHit(scroll)) syncDiagramWindow(scroll)
-    diagramState.findHooks.changed?.(scenarioId)
+    findChanged(scenarioId, !before || !view.searchStepped)
+    if (view.searchCurrentId !== before) revealFindHit(scroll)
   })
 }
 
@@ -69,14 +74,11 @@ export function bindFind(diagram: Element, scroll: HTMLElement, id: string): voi
   find?.addEventListener('input', () => {
     diagramView(id).query = find.value
     refreshPayloads(id)
-    updateSearchCurrent(id)
-    syncFindControls(scroll)
-    syncDiagramWindow(scroll)
-    diagramState.findHooks.changed?.(id)
+    findChanged(id)
     // Typing on a phone has no Enter: bring the first match on screen once typing pauses.
     clearTimeout(reveal)
     reveal = setTimeout(() => {
-      if (revealFindHit(scroll)) syncDiagramWindow(scroll)
+      if (revealFindHit(scroll)) invalidate(id, ['window'])
     }, SEARCH_REVEAL_DELAY_MS)
   })
   diagram.querySelector<HTMLButtonElement>('[data-find-payloads]')?.addEventListener('click', (ev) => {
@@ -86,10 +88,7 @@ export function bindFind(diagram: Element, scroll: HTMLElement, id: string): voi
     toggle.setAttribute('aria-pressed', String(view.includePayloads))
     find?.setAttribute('aria-label', findFieldLabel(view.includePayloads))
     refreshPayloads(id)
-    updateSearchCurrent(id)
-    syncFindControls(scroll)
-    syncDiagramWindow(scroll)
-    diagramState.findHooks.changed?.(id)
+    findChanged(id)
   })
   diagram.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => {
     btn.addEventListener('click', () => {

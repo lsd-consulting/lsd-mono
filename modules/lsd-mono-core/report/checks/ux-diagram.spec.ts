@@ -12,6 +12,7 @@ import {
   formatViolations,
   seriousViolations,
   zoomOf,
+  painted,
 } from './ux-helpers'
 import { openReport } from './open-report'
 
@@ -49,6 +50,7 @@ async function zoomScrollThenFit(page: Page): Promise<void> {
     el.scrollTop = el.scrollHeight
   })
   await page.getByRole('button', { name: /^Reset zoom/ }).click()
+  await painted(page)
 }
 
 // Pixel comparisons against the macOS baselines in checks/snapshots. Font rendering differs on

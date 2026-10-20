@@ -1,7 +1,7 @@
 import { devices, expect, test, type Locator, type Page } from '@playwright/test'
 import { openExample } from './example-report'
 import { openReport } from './open-report'
-import { openFixture, THEMES } from './ux-helpers'
+import { openFixture, painted, THEMES } from './ux-helpers'
 import { wideReport } from './wide-sample'
 
 // #94: zoom as [−] [N%] [+] [Overview]. − and + step through fixed levels, the % readout goes back
@@ -24,14 +24,14 @@ const expectZoom = (page: Page, level: number | string) =>
   expect(card(page).locator('.zoom-readout')).toHaveText(`${level}%`)
 const status = (page: Page) => card(page).locator('.participant-filter-status')
 
+/** The scroll position and sideways overflow as painted (two frames: see painted in ux-helpers). */
 function scrollState(page: Page) {
   return card(page)
     .locator('.seq-scroll')
-    .evaluate((el) => ({
-      top: el.scrollTop,
-      left: el.scrollLeft,
-      overflowX: el.scrollWidth - el.clientWidth,
-    }))
+    .evaluate(async (el) => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      return { top: el.scrollTop, left: el.scrollLeft, overflowX: el.scrollWidth - el.clientWidth }
+    })
 }
 
 /** How many times the status line changes while [act] runs. */
@@ -187,6 +187,8 @@ test.describe('at 1440×900', () => {
     await openExample(page)
     await overview(page).click()
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
+    // The rows at Overview's scale, not the ones still in place until the frame paints them.
+    await painted(page)
     const target = card(page).locator('button.msg-open').nth(8)
     const id = (await target.getAttribute('data-message-id'))!
     await target.scrollIntoViewIfNeeded()

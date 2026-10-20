@@ -14,6 +14,7 @@ import {
   PILL_W,
 } from './participant-filter'
 import { bindDiagramScroll, diagramView, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
+import { flushDiagramPaints } from './diagram/invalidate'
 
 let n = 0
 /** A fresh scenario id per test: hidden state lives per scenario for the page's life. */
@@ -171,6 +172,7 @@ describe('participant filter in the diagram', () => {
     expect(headIds(root)).toEqual(['client', 'api', 'bus'])
     expect([...diagramView(s.id).hidden]).toEqual(['db'])
     // As before #8: a message or note that needs a hidden column is left out; the rest stay.
+    flushDiagramPaints()
     expect(labels(root)).toEqual(['place order', 'publish'])
     expect(root.querySelector('.note-text')).not.toBeNull()
     expect(chip(root)!.textContent).toBe('1 hidden')
@@ -183,6 +185,7 @@ describe('participant filter in the diagram', () => {
     const { root } = mount()
     expect(labels(root)).toEqual(['place order', 'insert', 'publish'])
     for (const id of ['client', 'api', 'db', 'bus']) hideBtn(root, id).click()
+    flushDiagramPaints()
     expect(labels(root)).toEqual([])
     expect(headIds(root)).toEqual([])
     expect(chip(root)!.textContent).toBe('4 hidden')
@@ -405,6 +408,7 @@ describe('participant filter in the diagram', () => {
     hideBtn(root, 'db').click()
     find.value = 'insert'
     find.dispatchEvent(new Event('input'))
+    flushDiagramPaints()
     expect(root.querySelector('.diagram-find-count')!.textContent).toContain('1 on a hidden column')
   })
 

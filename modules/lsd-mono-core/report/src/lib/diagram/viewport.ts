@@ -3,7 +3,7 @@
 import { focusablePlaces, messagePlaces, sidewaysScrollLeft } from '../diagram-a11y'
 import { bindParticipantFilter } from '../participant-filter'
 import { bindPageScroll } from './page-scroll'
-import { syncFindControls } from './search-reveal'
+import { flushDiagramPaints, invalidate } from './invalidate'
 import { diagramState, diagramView } from './state'
 import { zoomModeAfter } from './zoom-mode'
 import { bindFind } from './find-binding'
@@ -28,6 +28,9 @@ function observeWidth(scrollport: HTMLElement): void {
       // Whether Overview has anything to show depends on the width.
       syncZoomControls(scrollport)
     }
+    // Resize observers run after this frame's animation callbacks, just before it is painted: a
+    // refit painted at the next frame would leave this one showing the rows at the old zoom.
+    flushDiagramPaints()
   })
   for (const old of diagramState.observedScrollports) {
     if (!old.isConnected) {
@@ -53,7 +56,6 @@ function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string
   withTrialFrames(scrollport, (resize) => {
     // Sized for the lanes left first, so a fit keeps the scroll position they leave.
     resize()
-    syncFindControls(scrollport)
     // Hiding or showing a participant changes the width to fit, now or on leaving Overview.
     view.mode = zoomModeAfter(view.mode, { kind: 'lanes-changed' })
     if (view.mode.kind === 'overview') {
@@ -61,7 +63,9 @@ function setHiddenParticipants(scrollport: HTMLElement, next: ReadonlySet<string
       fitOverview(scrollport)
     } else if (view.mode.kind === 'default') autoFitDiagram(scrollport, false)
   })
-  syncDiagramWindow(scrollport)
+  // The header is drawn (withTrialFrames), so the filter can move focus into it; the rows and
+  // Find's count (matches in hidden lanes drop out) repaint with the next frame.
+  invalidate(id, ['window', 'find'])
 }
 
 /** What the "More lanes →" button does: what Shift+→ does from the keyboard. */

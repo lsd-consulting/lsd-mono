@@ -10,6 +10,7 @@ import { diagramState } from './state'
 import { applyDiagramFrame } from './window'
 import { refitDiagram } from './zoom'
 import { WHEEL_STEP_PX, zoomByWheel } from './zoom-controls'
+import { flushDiagramPaints } from './invalidate'
 
 // applyDiagramFrame is the only code that sets --seq-print-max, once a call: counting those sets
 // counts the frames drawn, however the header was brought up to date (in place since #101).
@@ -88,11 +89,16 @@ function mount(lanes: number, width: number, { messages = lanes - 1, scrollbar =
   const scroll = () => host.querySelector<HTMLElement>('.seq-scroll')!
   const root = () => host.querySelector<HTMLElement>('.seq-diagram')!
   const click = (zoom: string) => root().querySelector<HTMLButtonElement>(`[data-zoom="${zoom}"]`)!.click()
-  /** Run [change], check the frame it leaves is drawn for the final zoom, and count. */
+  /**
+   * Run [change], check the frame it leaves is drawn for the final zoom, and count the frames drawn
+   * up to and including its repaint (#104). What was pending before is painted first.
+   */
   const count = (change: () => void): Counts => {
+    flushDiagramPaints()
     setProperty.mockClear()
     trials = 0
     change()
+    flushDiagramPaints()
     expectRedrawn()
     return { applied: frames(), trials }
   }

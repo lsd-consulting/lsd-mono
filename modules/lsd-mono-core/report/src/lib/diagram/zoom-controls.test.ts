@@ -9,6 +9,7 @@ import { zoomKeyAction } from '../keys/zoom-key-map'
 import { diagramKeyContext } from './diagram-keys'
 import { createKeyRouter } from '../keys/router'
 import { singleKeysEnabled } from '../../ui/shortcuts'
+import { flushDiagramPaints } from './invalidate'
 
 let n = 0
 /** A fresh scenario per test, [lanes] wide: views live per scenario id for the page's life. */
@@ -59,8 +60,9 @@ function mount(lanes = 12, width = 600) {
     scroll,
     view: () => diagramView(s.id),
     button,
-    readout: () => button('reset').textContent,
-    status: () => root.querySelector('.participant-filter-status')!.textContent,
+    // What the user sees is painted once per frame (#104): reading it paints what is pending.
+    readout: () => (flushDiagramPaints(), button('reset').textContent),
+    status: () => (flushDiagramPaints(), root.querySelector('.participant-filter-status')!.textContent),
   }
 }
 
@@ -175,6 +177,7 @@ describe('Overview (#94)', () => {
     expect(z.view().zoom).toBeLessThan(0.95)
     expect(z.status()).toMatch(/^Overview, \d+%, whole diagram$/)
     z.button('overview').click()
+    flushDiagramPaints()
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
     expect(z.view().zoom).toBe(1.25)
     expect(z.status()).toBe('Overview off, zoom 125%')
@@ -209,6 +212,7 @@ describe('Overview (#94)', () => {
     const z = mount(12, 600)
     z.button('overview').click()
     z.button('in').click()
+    flushDiagramPaints()
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
     expect(z.status()).toMatch(/^Overview off, zoom \d+%$/)
   })
@@ -387,6 +391,7 @@ describe('zoom keys (#94)', () => {
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('true')
     const esc = press(z.scroll, 'Escape')
     expect(esc.defaultPrevented).toBe(true)
+    flushDiagramPaints()
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
     // Not in Overview, Esc is the page's.
     expect(press(z.scroll, 'Escape').defaultPrevented).toBe(false)

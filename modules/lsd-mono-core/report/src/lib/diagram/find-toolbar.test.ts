@@ -4,6 +4,7 @@ import type { Scenario } from '../../types'
 import { bindDiagramScroll, renderDiagramHtml, setFindHooks, syncDiagramWindow } from '../sequence-diagram'
 import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { forgetDiagrams } from './state'
+import { flushDiagramPaints } from './invalidate'
 
 function scenario(withPayloads = true): Scenario {
   return {
@@ -43,7 +44,8 @@ function mount(s: Scenario) {
   return {
     find: host.querySelector<HTMLInputElement>('[data-diagram-find]')!,
     toggle: host.querySelector<HTMLButtonElement>('[data-find-payloads]'),
-    count: () => host.querySelector('.diagram-find-count')!.textContent,
+    // Painted once per frame (#104): reading the count paints what is pending.
+    count: () => (flushDiagramPaints(), host.querySelector('.diagram-find-count')!.textContent),
     host,
   }
 }

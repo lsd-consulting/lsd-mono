@@ -7,7 +7,8 @@ import { scrollBehavior } from '../media'
 import { frameOf, topMessageLabelRect } from './geometry'
 import { scrollDiagramToOffset, scrollsWithPage, sizeStage } from './page-scroll'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './state'
-import { applyDiagramFrame, syncDiagramWindow, withTrialFrames } from './window'
+import { invalidate } from './invalidate'
+import { sizeDiagramFrame, withTrialFrames } from './window'
 import { fittedWidthOf, zoomModeAfter } from './zoom-mode'
 
 /** Zoom to [next], keeping the scroll position in proportion unless [pin] gives one. */
@@ -23,7 +24,9 @@ export function commitZoom(
   const prev = view.zoom || 1
   const ratio = next / prev
   view.zoom = next
-  applyDiagramFrame(scrollport)
+  // Sized now, so the scroll below has the new extent; the header and readout draw with the rows.
+  sizeDiagramFrame(scrollport)
+  invalidate(id, ['frame'])
   const to = pin ?? { top: scrollport.scrollTop * ratio, left: scrollport.scrollLeft * ratio }
   scrollZoomed(scrollport, to, pin != null, motion)
 }
@@ -43,7 +46,7 @@ function scrollZoomed(
     scrollport.scrollTo({ left, behavior: motion })
     scrollDiagramToOffset(scrollport, top)
   } else scrollport.scrollTo({ top, left, behavior: motion })
-  syncDiagramWindow(scrollport)
+  if (scrollport.dataset.scenarioId) invalidate(scrollport.dataset.scenarioId, ['window'])
 }
 
 /**
@@ -139,7 +142,7 @@ export function autoFitDiagram(scrollport: HTMLElement, first: boolean): void {
     scrollport.scrollTo({ top: top * ratio, left: left * ratio })
   }
   view.mode = zoomModeAfter(view.mode, { kind: 'fitted', width: scrollport.clientWidth })
-  syncDiagramWindow(scrollport)
+  invalidate(id, ['window'])
 }
 
 /**

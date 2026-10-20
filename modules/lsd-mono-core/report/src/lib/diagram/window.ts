@@ -104,6 +104,15 @@ export function withTrialFrames<T>(scrollport: HTMLElement, trials: (resize: () 
  * draws it, once the scale is settled and before anything paints.
  */
 function resizeDiagram(scrollport: HTMLElement): void {
+  sizeDiagramFrame(scrollport)
+}
+
+/**
+ * Size the frame without drawing it, for code that scrolls to the new extent at once and has
+ * the drawing done once with the rows (invalidate's 'frame'). Until then the header keeps its
+ * old lanes, clipped.
+ */
+export function sizeDiagramFrame(scrollport: HTMLElement): void {
   unredrawn.add(scrollport)
   const id = scrollport.dataset.scenarioId
   if (!id) return
