@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.report.ReportWriterSettings
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -17,6 +18,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermission
+import java.time.Instant
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -30,6 +32,8 @@ import kotlin.io.path.writeText
 class ReportWriterTest {
     @TempDir
     lateinit var tempDir: Path
+
+    private val writer = ReportWriter(ReportWriterSettings(generator = "test"))
 
     @Test
     fun `stems are stable, readable and differ for titles that sanitise the same`() {
@@ -55,7 +59,7 @@ class ReportWriterTest {
 
     @Test
     fun `writeReport writes its own files only and leaves no temporary files`() {
-        val files = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
+        val files = writer.writeReport(report("Orders"), tempDir.toFile())
         val stem = ReportWriter.reportFileStem("Orders")
         assertEquals("$stem-diagram.html", files.diagramHtml.name)
         assertEquals("$stem-report.json", files.reportJson.name)
@@ -72,8 +76,8 @@ class ReportWriterTest {
         val expected = Files.getPosixFilePermissions(reference)
         Files.delete(reference)
 
-        val files = ReportWriter.writeReport(report("Orders"), tempDir.toFile())
-        ReportWriter.writeReport(report("Orders"), tempDir.toFile()) // replacing keeps the mode
+        val files = writer.writeReport(report("Orders"), tempDir.toFile())
+        writer.writeReport(report("Orders"), tempDir.toFile()) // replacing keeps the mode
         val written = listOf(files.diagramHtml, files.reportJson)
         for (file in written) assertEquals(expected, Files.getPosixFilePermissions(file), file.name)
         if (PosixFilePermission.OTHERS_READ in expected) {
@@ -84,8 +88,8 @@ class ReportWriterTest {
 
     @Test
     fun `a report key, when given, names the files instead of the title`() {
-        val byTitle = ReportWriter.writeReport(report("Orders"), tempDir.toFile()).diagramHtml
-        val byKey = ReportWriter.writeReport(report("Orders"), tempDir.toFile(), reportKey = "com.example.OrderTest").diagramHtml
+        val byTitle = writer.writeReport(report("Orders"), tempDir.toFile()).diagramHtml
+        val byKey = writer.writeReport(report("Orders"), tempDir.toFile(), reportKey = "com.example.OrderTest").diagramHtml
         assertEquals(ReportWriter.reportFileStem("Orders") + "-diagram.html", byTitle.name)
         assertEquals(ReportWriter.reportFileStem("Orders", "com.example.OrderTest") + "-diagram.html", byKey.name)
         assertNotEquals(byTitle.name, byKey.name)
@@ -94,7 +98,7 @@ class ReportWriterTest {
     @Test
     fun `concurrent writes of one report never leave a partial file`() {
         val big = report("Same", scenarioCount = 200)
-        val expected = ReportWriter.writeReport(big, tempDir.toFile()).reportJson.readText()
+        val expected = writer.writeReport(big, tempDir.toFile()).reportJson.readText()
         val pool = Executors.newFixedThreadPool(8)
         val go = CountDownLatch(1)
         try {
@@ -102,7 +106,7 @@ class ReportWriterTest {
                 .map {
                     pool.submit {
                         go.await()
-                        repeat(10) { ReportWriter.writeReport(big, tempDir.toFile()) }
+                        repeat(10) { writer.writeReport(big, tempDir.toFile()) }
                     }
                 }.also { go.countDown() }
                 .forEach { it.get(60, TimeUnit.SECONDS) }
@@ -138,11 +142,11 @@ class ReportWriterTest {
 
     @Test
     fun `index skips entries whose report was deleted and keeps explicit entries`() {
-        val gone = ReportWriter.writeReport(report("Gone"), tempDir.toFile()).diagramHtml
-        ReportWriter.writeReport(report("Kept"), tempDir.toFile())
+        val gone = writer.writeReport(report("Gone"), tempDir.toFile()).diagramHtml
+        writer.writeReport(report("Kept"), tempDir.toFile())
         Files.delete(gone)
         val extra = ReportFile(filename = "elsewhere.html", title = "Extra", status = "warn")
-        val index = manifest(ReportWriter.writeIndex(listOf(extra), tempDir.toFile()).readText())
+        val index = manifest(writer.writeIndex(listOf(extra), tempDir.toFile()).readText())
         assertFalse(index.contains("Gone"), index)
         assertTrue(index.contains("Kept"), index)
         assertTrue(index.contains(""""id":"elsewhere.html","title":"Extra","status":"warn","href":"elsewhere.html""""), index)
@@ -150,7 +154,7 @@ class ReportWriterTest {
 
     @Test
     fun `index escapes titles`() {
-        val page = ReportWriter.writeIndex(listOf(ReportFile("x.html", "<b>bold</b> </script> & co", "success")), tempDir.toFile()).readText()
+        val page = writer.writeIndex(listOf(ReportFile("x.html", "<b>bold</b> </script> & co", "success")), tempDir.toFile()).readText()
         val index = manifest(page)
         assertFalse(index.contains("</script>") || index.contains("<b>"), index)
         assertTrue(index.contains("bold"), index)
@@ -158,9 +162,9 @@ class ReportWriterTest {
 
     @Test
     fun `index links each report to its diagram, lists failed reports first and counts scenarios`() {
-        ReportWriter.writeReport(report("Alpha", scenarioCount = 2), tempDir.toFile())
-        ReportWriter.writeReport(report("Zulu", scenarioCount = 3, failing = 1), tempDir.toFile())
-        val page = ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText()
+        writer.writeReport(report("Alpha", scenarioCount = 2), tempDir.toFile())
+        writer.writeReport(report("Zulu", scenarioCount = 3, failing = 1), tempDir.toFile())
+        val page = writer.writeIndex(emptyList(), tempDir.toFile()).readText()
         val index = manifest(page)
         val zulu = ReportWriter.reportFileStem("Zulu")
         assertTrue(index.contains(""""id":"$zulu","title":"Zulu","status":"error","href":"$zulu-diagram.html","data":"$zulu-report.js""""), index)
@@ -173,7 +177,7 @@ class ReportWriterTest {
 
     @Test
     fun `each report writes a data script the index can load, and its entry lists the scenarios`() {
-        ReportWriter.writeReport(report("Orders </script>", scenarioCount = 2, failing = 1), tempDir.toFile())
+        writer.writeReport(report("Orders </script>", scenarioCount = 2, failing = 1), tempDir.toFile())
         val stem = ReportWriter.reportFileStem("Orders </script>")
         val data = tempDir.resolve("$stem-report.js").readText()
         assertTrue(data.startsWith("(window.__LSD_REPORTS__=window.__LSD_REPORTS__||{})[\"$stem\"]={report:{"), data)
@@ -189,12 +193,21 @@ class ReportWriterTest {
     }
 
     @Test
+    fun `the index takes its generator, time and ping switch from the settings, not the properties`() {
+        System.setProperty(LsdProperties.USAGE_PING, "false")
+        System.setProperty(LsdProperties.GENERATED_AT, "2020-01-01T00:00:00Z")
+        val settings = ReportWriterSettings(generator = "adapter 1.0", generatedAt = Instant.parse("2026-01-02T03:04:05.678Z"), usagePing = true)
+        val index = manifest(ReportWriter(settings).writeIndex(emptyList(), tempDir.toFile()).readText())
+        assertTrue(index.contains(""""generatedAt":"2026-01-02T03:04:05.678Z","generator":"adapter 1.0","options":{"usagePing":true}"""), index)
+    }
+
+    @Test
     fun `index ignores entries written by an older version`() {
         val dir = tempDir.resolve(".lsd-index")
         Files.createDirectories(dir)
         tempDir.resolve("old-report.html").writeText("old")
         dir.resolve("old-report.properties").writeText("filename=old-report.html\ntitle=Old\nstatus=success\n")
-        val index = manifest(ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText())
+        val index = manifest(writer.writeIndex(emptyList(), tempDir.toFile()).readText())
         assertTrue(index.contains(""""reports":[]"""), index)
     }
 

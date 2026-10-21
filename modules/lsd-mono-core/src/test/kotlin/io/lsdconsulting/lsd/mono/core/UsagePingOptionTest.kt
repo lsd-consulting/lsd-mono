@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.model.ReportSource
 import io.lsdconsulting.lsd.mono.core.properties.LsdConfig
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.report.reportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -46,7 +47,7 @@ class UsagePingOptionTest {
         assertTrue(json.contains(""""usagePing": false"""), json)
         val diagram = tempDir.resolve(ReportWriter.reportFileStem("Ping") + "-diagram.html").readText()
         assertTrue(Regex(""""usagePing"\s*:\s*false""").containsMatchIn(diagram), "the page decides from the report it carries")
-        val manifest = ReportWriter.writeIndex(emptyList(), tempDir.toFile()).readText().substringAfter("window.__LSD_INDEX__=")
+        val manifest = reportWriter().writeIndex(emptyList(), tempDir.toFile()).readText().substringAfter("window.__LSD_INDEX__=")
         assertTrue(Regex(""""options"\s*:\s*\{\s*"usagePing"\s*:\s*false\s*}""").containsMatchIn(manifest), manifest.take(300))
     }
 

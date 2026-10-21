@@ -11,7 +11,7 @@ import io.lsdconsulting.lsd.mono.core.model.ReportJson
 import io.lsdconsulting.lsd.mono.core.model.ReportSource
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportJsonMapper
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
+import io.lsdconsulting.lsd.mono.core.report.reportWriter
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -361,8 +361,9 @@ public class LsdContext :
                 reports.take(reportKey)
             }
         val report = jsonMapper.toReportJson(title, taken, source)
-        val files = ReportWriter.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey, fileTitle = fileTitle)
-        reports.written(ReportWriter.indexEntry(report, reportKey, fileTitle))
+        val writer = reportWriter()
+        val files = writer.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey, fileTitle = fileTitle)
+        reports.written(writer.indexEntry(report, reportKey, fileTitle))
         return files
     }
 
@@ -370,7 +371,7 @@ public class LsdContext :
      * Write `index.html` listing every report in the output directory, including
      * reports written by other test JVMs (Gradle forks) or modules sharing it.
      */
-    public fun createIndex(): Path = ReportWriter.writeIndex(reports.writtenSoFar(), outputDirectory)
+    public fun createIndex(): Path = reportWriter().writeIndex(reports.writtenSoFar(), outputDirectory)
 
     /**
      * Forget everything: participants, running and completed scenarios, the default scenario's

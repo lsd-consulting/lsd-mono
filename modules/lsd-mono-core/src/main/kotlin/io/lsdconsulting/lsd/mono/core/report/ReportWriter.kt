@@ -1,6 +1,5 @@
 package io.lsdconsulting.lsd.mono.core.report
 
-import io.lsdconsulting.lsd.mono.core.LsdVersion
 import io.lsdconsulting.lsd.mono.core.ReportFiles
 import io.lsdconsulting.lsd.mono.core.html.Html
 import io.lsdconsulting.lsd.mono.core.json.JsonArray
@@ -20,7 +19,6 @@ import io.lsdconsulting.lsd.mono.core.model.ScenarioCounts
 import io.lsdconsulting.lsd.mono.core.model.forShell
 import io.lsdconsulting.lsd.mono.core.model.shellPayloadScript
 import io.lsdconsulting.lsd.mono.core.model.toJson
-import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import java.io.File
 import java.io.StringWriter
 import java.nio.channels.FileChannel
@@ -55,26 +53,14 @@ import kotlin.concurrent.withLock
  *   every entry in the directory, under a file lock, so the index from any writer
  *   includes the reports of all the others.
  * - There are no shared "latest" files (`report.json`, `lsd-report.single.html`).
+ *
+ * The writer reads no properties: what it adds itself, the index page's generator, time and
+ * usage-ping switch, comes in [settings]. The index lock and the parsed index entries are shared
+ * by every writer in the JVM.
  */
-internal object ReportWriter {
-    private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report.single.html"
-    private const val INDEX_DIR = ".lsd-index"
-    private const val INDEX_LOCK = ".lock"
-    private const val INDEX_FORMAT = "2"
-    private const val INDEX_TITLE = "LSD reports"
-    private const val MAX_TITLE_CHARS = 80
-    private val jvmIndexLock = ReentrantLock()
-
-    /**
-     * File-name stem for a report: `<sanitised title>-<8 hex chars>`. The hash is of
-     * [reportKey] when given, else of [title], so it is stable across runs and two
-     * titles that sanitise to the same text still get different files.
-     */
-    @JvmStatic
-    @JvmOverloads
-    fun reportFileStem(title: String, reportKey: String? = null): String =
-        "${sanitizeFilename(title)}-${shortHash(reportKey ?: title)}"
-
+internal class ReportWriter(
+    private val settings: ReportWriterSettings,
+) {
     /**
      * Write one report. File names are [reportFileStem]: the title plus a hash of
      * [reportKey] (a test class or feature id) when given, else of the title, so
@@ -82,8 +68,6 @@ internal object ReportWriter {
      * file names when an integration names its files apart from the title it shows.
      * @return the diagram, listing and JSON files.
      */
-    @JvmStatic
-    @JvmOverloads
     fun writeReport(
         report: ReportJson,
         outputDir: File,
@@ -138,7 +122,6 @@ internal object ReportWriter {
      * [outputDir] by any writer: failed reports first, then by title. Safe to call from several threads
      * and processes at once.
      */
-    @JvmStatic
     fun writeIndex(
         reportFiles: List<ReportFile>,
         outputDir: File,
@@ -162,8 +145,6 @@ internal object ReportWriter {
             .thenBy { it.title.lowercase() }
             .thenBy { it.filename }
 
-    private val STATUS_ORDER = listOf("error", "warn", "success")
-
     /**
      * The index page: the report shell with a manifest of every report in
      * `window.__LSD_INDEX__`. Each report's data loads from its `<stem>-report.js` when it is
@@ -175,9 +156,9 @@ internal object ReportWriter {
                 listOf(
                     "schemaVersion" to JsonString(ReportSchema.VERSION),
                     "title" to JsonString(INDEX_TITLE),
-                    "generatedAt" to JsonString((LsdProperties.generatedAt() ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString()),
-                    "generator" to JsonString(LsdVersion.generator),
-                    "options" to JsonObject(listOf("usagePing" to JsonBool(LsdProperties.usagePing()))),
+                    "generatedAt" to JsonString((settings.generatedAt ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString()),
+                    "generator" to JsonString(settings.generator),
+                    "options" to JsonObject(listOf("usagePing" to JsonBool(settings.usagePing))),
                     "reports" to JsonArray(reportFiles.map(::manifestEntry)),
                 ),
             )
@@ -247,19 +228,6 @@ internal object ReportWriter {
         // A rewrite in the same second with the same size would otherwise look unchanged.
         jvmIndexLock.withLock { entryCache.remove(file.toFile().absolutePath) }
     }
-
-    /**
-     * Parsed index entries, per entry file, kept while the file's size and modified time are
-     * unchanged. `createIndex` runs once per test class, so without this a suite of N classes
-     * would parse N entries N times. Only read and written under [withIndexLock].
-     */
-    private val entryCache = HashMap<String, CachedEntry>()
-
-    private class CachedEntry(
-        val modified: Long,
-        val size: Long,
-        val entry: ReportFile?,
-    )
 
     private fun readIndexEntries(outputDir: File): List<ReportFile> {
         val dir = outputDir.resolve(INDEX_DIR)
@@ -402,18 +370,52 @@ internal object ReportWriter {
         return raw
     }
 
-    internal fun sanitizeFilename(title: String): String =
-        title
-            .replace(Regex("[^A-Za-z0-9._-]+"), "-")
-            .trim('-', '.')
-            .take(MAX_TITLE_CHARS)
-            .trim('-', '.')
-            .ifBlank { "lsd-report" }
+    companion object {
+        private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report.single.html"
+        private const val INDEX_DIR = ".lsd-index"
+        private const val INDEX_LOCK = ".lock"
+        private const val INDEX_FORMAT = "2"
+        private const val INDEX_TITLE = "LSD reports"
+        private const val MAX_TITLE_CHARS = 80
+        private val jvmIndexLock = ReentrantLock()
+        private val STATUS_ORDER = listOf("error", "warn", "success")
 
-    internal fun shortHash(text: String): String =
-        MessageDigest
-            .getInstance("SHA-256")
-            .digest(text.toByteArray(Charsets.UTF_8))
-            .take(4)
-            .joinToString("") { "%02x".format(it) }
+        /**
+         * Parsed index entries, per entry file, kept while the file's size and modified time are
+         * unchanged. `createIndex` runs once per test class, so without this a suite of N classes
+         * would parse N entries N times. Only read and written under [withIndexLock].
+         */
+        private val entryCache = HashMap<String, CachedEntry>()
+
+        private class CachedEntry(
+            val modified: Long,
+            val size: Long,
+            val entry: ReportFile?,
+        )
+
+        /**
+         * File-name stem for a report: `<sanitised title>-<8 hex chars>`. The hash is of
+         * [reportKey] when given, else of [title], so it is stable across runs and two
+         * titles that sanitise to the same text still get different files.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun reportFileStem(title: String, reportKey: String? = null): String =
+            "${sanitizeFilename(title)}-${shortHash(reportKey ?: title)}"
+
+        internal fun sanitizeFilename(title: String): String =
+            title
+                .replace(Regex("[^A-Za-z0-9._-]+"), "-")
+                .trim('-', '.')
+                .take(MAX_TITLE_CHARS)
+                .trim('-', '.')
+                .ifBlank { "lsd-report" }
+
+        internal fun shortHash(text: String): String =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest(text.toByteArray(Charsets.UTF_8))
+                .take(4)
+                .joinToString("") { "%02x".format(it) }
+    }
 }
