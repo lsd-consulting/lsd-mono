@@ -117,8 +117,14 @@ jobs:
           for f in $(grep -ohE 'Example-report-[0-9a-f]{8}-(report|payloads)\.js' "$site/index.html" "$site/example-report.html" "$site"/*-report.js | sort -u); do
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
           done
+      # One artifact name per attempt (#108). Each attempt of a run uploads into that same run, so
+      # with the default name a rerun of a failed deploy found two github-pages artifacts and
+      # failed every time. See "Pages reruns" in docs/ci.md.
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: modules/lsd-mono-core/build/pages
+          name: github-pages-${{ github.run_attempt }}
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}

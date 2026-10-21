@@ -85,6 +85,20 @@ was skipped, so it is the one check to require on `main`: a docs-only pull reque
 - **Concurrency.** A new push to a pull request cancels that pull request's running build. Runs on
   `main` always finish, and Pages deploys one at a time.
 
+## Pages reruns
+
+Each attempt of a Pages run uploads its site as its own artifact, `github-pages-<attempt>`, and
+deploys that one (#108). Before, every attempt uploaded `github-pages` into the same run, so once a
+deploy failed (as in the v0.6.2 release, when `deploy-pages` briefly could not find the artifact it
+had just been given), a rerun found two artifacts of that name and failed, and so did every rerun
+after it. Now **Re-run failed jobs** on the `deploy` job deploys.
+
+If a rerun still fails, start a fresh run for the release tag instead; that is how v0.6.2 deployed:
+
+```
+gh workflow run pages.yml -f ref=vX.Y.Z
+```
+
 ## Runner image
 
 Every job in both workflows runs on `ubuntu-26.04`, not `ubuntu-latest`. GitHub moves
