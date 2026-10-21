@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { ComponentGraph } from './component-graph'
-import { layoutComponents, renderComponentDiagram, renderComponentSvg } from './component-diagram'
+import { componentGraph } from './component-graph'
+import { conformanceReport } from './conformance.test-util'
+import {
+  WRAP_RATIO,
+  layoutComponents,
+  renderComponentDiagram,
+  renderComponentSvg,
+  wrapRanks,
+} from './component-diagram'
 
 const checkout: ComponentGraph = {
   nodes: [
@@ -42,6 +50,70 @@ describe('layoutComponents', () => {
     })
     expect(ranks).toEqual([['a'], ['b'], ['c']])
     expect(places.size).toBe(3)
+  })
+})
+
+/** A call chain n long: c00 → c01 → … , one component per rank. */
+function chain(n: number): ComponentGraph {
+  const id = (i: number) => `c${String(i).padStart(2, '0')}`
+  return {
+    nodes: Array.from({ length: n }, (_, i) => ({ id: id(i), name: id(i), type: 'PARTICIPANT' })),
+    edges: Array.from({ length: n - 1 }, (_, i) => ({ from: id(i), to: id(i + 1), types: ['SYNCHRONOUS'], count: 1 })),
+  }
+}
+
+describe('very tall graphs wrap into columns (#115)', () => {
+  it('keeps one column up to WRAP_RATIO times taller than wide', () => {
+    // 3 ranks of a 150 px row: 3 × 140 − 84 = 336 px tall, under 3 × 150; 4 ranks of a 180 px row too.
+    expect(wrapRanks([150, 150, 150])).toEqual([[0, 1, 2]])
+    expect(wrapRanks([180, 150, 150, 150])).toEqual([[0, 1, 2, 3]])
+    expect(wrapRanks([150])).toEqual([[0]])
+    expect(wrapRanks([])).toEqual([[]])
+    expect(WRAP_RATIO).toBe(3)
+  })
+
+  it('splits a deeper run of ranks into equal runs for a drawing about as wide as tall', () => {
+    // 12 ranks: 1596 px over 150 px, 10.6 times; √10.6 rounds to 3 columns of 4 ranks.
+    expect(wrapRanks(Array<number>(12).fill(150))).toEqual([
+      [0, 1, 2, 3],
+      [4, 5, 6, 7],
+      [8, 9, 10, 11],
+    ])
+    // Just over the ratio: still at least two columns.
+    expect(wrapRanks(Array<number>(5).fill(150))).toEqual([
+      [0, 1, 2],
+      [3, 4],
+    ])
+  })
+
+  it('lays a long chain out in columns, left to right, each read top-down', () => {
+    const { places, columns } = layoutComponents(chain(12))
+    expect(columns).toHaveLength(3)
+    const at = (i: number) => places.get(`c${String(i).padStart(2, '0')}`)!
+    expect([0, 4, 8].map((i) => at(i).y)).toEqual([0, 0, 0])
+    expect(at(0).x).toBeLessThan(at(4).x)
+    expect(at(4).x).toBeLessThan(at(8).x)
+    expect(at(3).y).toBeGreaterThan(at(0).y)
+    expect(at(3).x).toBe(at(0).x)
+    expect([at(0).column, at(5).column, at(11).column]).toEqual([0, 1, 2])
+    expect(at(5).rank).toBe(5)
+    const drawn = renderComponentDiagram(chain(12), 'Chain')
+    expect(drawn.height / drawn.width).toBeLessThan(WRAP_RATIO)
+    expect(drawn.height).toBeLessThan(4 * 140 + 100)
+    // Every link is still drawn and focusable, in the same order.
+    const links = [...drawn.svg.matchAll(/data-edge-index="(\d+)"[^>]*tabindex="0"/g)].map((m) => Number(m[1]))
+    expect(links).toEqual(Array.from({ length: 11 }, (_, i) => i))
+  })
+
+  it('wraps the 100-component perf sample to about square, and leaves every example scenario as it was', async () => {
+    const { wideReport } = await import('../../checks/wide-sample')
+    const wide = renderComponentDiagram(componentGraph(wideReport(100, 400).scenarios[0]), 'Wide')
+    // Was 888 × 9048 px in one column.
+    expect(wide.height / wide.width).toBeGreaterThan(0.5)
+    expect(wide.height / wide.width).toBeLessThan(2)
+    const example = conformanceReport('example-report')
+    for (const scenario of example.scenarios)
+      expect(layoutComponents(componentGraph(scenario)).columns, scenario.id).toHaveLength(1)
   })
 })
 

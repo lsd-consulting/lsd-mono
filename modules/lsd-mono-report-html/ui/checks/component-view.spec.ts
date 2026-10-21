@@ -372,16 +372,54 @@ test('a drawing that already fits has Overview disabled, and Shift+1 says so', a
   await expect(overview).toHaveAttribute('aria-pressed', 'false')
 })
 
-test('the 100-component sample: Overview stops at 10% and says how many components it shows', async ({ page }) => {
+test('the 100-component sample wraps into columns: Overview shows all of it at 1440, with no scroll (#115)', async ({
+  page,
+}) => {
   await openReport(page, { report: wideReport(100, 400) })
   await showComponents(page)
+  // The drawing is about as wide as tall now, not an 888 × 9048 px spire.
+  const natural = await page.locator('.comp-scroll svg').evaluate((svg) => ({
+    w: Number(svg.getAttribute('width')),
+    h: Number(svg.getAttribute('height')),
+  }))
+  expect(natural.h / natural.w).toBeLessThan(2)
   await zoomButton(page, 'Overview').click()
-  await expect(readout(page)).toHaveText('10%')
-  await expect(status(page)).toHaveText(/^Overview, 10%, \d+ of 100 components shown$/)
+  await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram$/)
+  const zoom = Number.parseInt((await readout(page).textContent())!, 10)
+  expect(zoom).toBeGreaterThan(10)
   const shown = await drawing(page)
   expect(shown.total).toBe(100)
-  expect(shown.inView).toBeLessThan(100)
-  expect(shown.inView).toBeGreaterThan(0)
+  expect(shown.inView).toBe(100)
+  expect(shown.overX).toBeLessThanOrEqual(0)
+  expect(shown.overY).toBeLessThanOrEqual(0)
+  if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/115-1440-overview.png` })
+})
+
+test('the 100-component sample at 100%: 11px names, and a link between columns opens its panel from the keyboard (#115)', async ({
+  page,
+}) => {
+  await openReport(page, { report: wideReport(100, 400) })
+  await showComponents(page)
+  await expect(readout(page)).toHaveText('100%')
+  expect((await drawing(page)).smallest).toBeGreaterThanOrEqual(11)
+  // A link whose ends sit in different columns: it runs up and across, from the foot of one column.
+  const across = await page.locator('.comp-scroll .edge-group').evaluateAll((groups) => {
+    const x = (id: string) => {
+      const node = document.querySelector(`.component-node[data-component="${id}"]`)!
+      return node.getBoundingClientRect().left
+    }
+    const i = groups.findIndex(
+      (g) => Math.abs(x(g.getAttribute('data-edge-from')!) - x(g.getAttribute('data-edge-to')!)) > 600,
+    )
+    return i
+  })
+  expect(across).toBeGreaterThanOrEqual(0)
+  const link = page.locator('.comp-scroll .edge-group').nth(across)
+  await link.focus()
+  await expect(link).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('#inspector')).toBeVisible()
+  await expect(page.locator('#inspector-title')).toContainText(' → ')
 })
 
 test('the zoom stays with its scenario: another scenario opens at 100%, and back again keeps it', async ({ page }) => {
@@ -405,6 +443,24 @@ test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 })
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
+  })
+
+  test('the 100-component sample in Overview needs at most two screens of scroll (#115)', async ({ page }) => {
+    await openReport(page, { report: wideReport(100, 400) })
+    await tab(page, 'Components').tap()
+    await expect(pane(page)).toBeVisible()
+    await zoomButton(page, 'Overview').tap()
+    // Two screens was the issue's bar; wrapped, it is one: the whole drawing, above the 10% floor.
+    await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram$/)
+    expect(Number.parseInt((await readout(page).textContent())!, 10)).toBeGreaterThan(10)
+    const fitted = await page.locator('.comp-scroll').evaluate((el) => ({
+      scroll: el.scrollHeight,
+      client: el.clientHeight,
+      wide: el.scrollWidth - el.clientWidth,
+    }))
+    expect(fitted.scroll).toBeLessThanOrEqual(2 * fitted.client)
+    expect(fitted.wide).toBeLessThanOrEqual(0)
+    if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/115-390-overview.png` })
   })
 
   test('the example opens at 100% with 11px names, and Overview shows all 14 components', async ({ page }) => {

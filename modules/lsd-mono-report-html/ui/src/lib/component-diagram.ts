@@ -9,6 +9,13 @@ const NODE_H = 56
 const GAP_X = 36
 const GAP_Y = 84
 const PAD = 20
+/**
+ * A top-down layout this many times taller than wide wraps its ranks into side-by-side columns
+ * (#115): a deep call chain otherwise draws as a thin spire that scrolls even at Overview's floor.
+ */
+export const WRAP_RATIO = 3
+/** Between wrapped columns: wider than the gap between nodes, so the columns read apart. */
+const COLUMN_GAP = 96
 /** Count badge: digit width at 10px, height, and how far along its link it sits. */
 const BADGE_DIGIT_W = 6.4
 const BADGE_H = 16
@@ -25,12 +32,16 @@ export interface NodePlace {
   /** Top of the node, in the same units as the participant header. */
   y: number
   rank: number
+  /** Which wrapped column the node's rank is in, 0 when the layout does not wrap. */
+  column: number
 }
 
 export interface ComponentLayout {
   places: Map<string, NodePlace>
   /** Rows top to bottom. Callers sit above the components they call. */
   ranks: string[][]
+  /** Ranks per column, left to right: one column unless the layout wraps (WRAP_RATIO). */
+  columns: number[][]
 }
 
 export interface ComponentDiagram {
@@ -44,6 +55,11 @@ export interface ComponentDiagram {
  * Callers above callees. Rank is the longest path from a component nothing calls,
  * after dropping the edges that close a cycle (found depth-first in first-seen order).
  * Each row is ordered by the mean x of the row above (one barycentre pass), then centred.
+ *
+ * A layout more than WRAP_RATIO times taller than wide (a long rank chain) wraps like newspaper
+ * columns: consecutive ranks fill a column top-down, then the next column starts at the top, for a
+ * drawing about as wide as it is tall (#115). Rank order, and so callers before callees, reads
+ * down each column then on to the next.
  */
 export function layoutComponents(graph: ComponentGraph): ComponentLayout {
   const ids = graph.nodes.map((node) => node.id)
@@ -89,12 +105,23 @@ export function layoutComponents(graph: ComponentGraph): ComponentLayout {
   const places = new Map<string, NodePlace>()
   const parents = new Map<string, string[]>(ids.map((id) => [id, []]))
   for (const [from, targets] of forward) for (const to of targets) parents.get(to)!.push(from)
-  const widest = Math.max(...ranks.map((row) => row.length))
   // Slots widen together for a long name, so wide nodes never touch their neighbours.
   const slot = Math.max(SLOT_W, ...graph.nodes.map((node) => Math.ceil(participantHeadFor(node).half * 2)))
   const rowWidth = (count: number) => count * slot + (count - 1) * GAP_X
-  const full = rowWidth(widest)
+  const columns = wrapRanks(ranks.map((row) => rowWidth(row.length)))
+  const columnOf: number[] = []
+  const columnLeft: number[] = []
+  const columnWidth: number[] = []
+  let x0 = 0
+  columns.forEach((rows, c) => {
+    for (const r of rows) columnOf[r] = c
+    columnWidth[c] = Math.max(...rows.map((r) => rowWidth(ranks[r].length)))
+    columnLeft[c] = x0
+    x0 += columnWidth[c] + COLUMN_GAP
+  })
   ranks.forEach((row, r) => {
+    const c = columnOf[r]
+    const top = columns[c][0]
     if (r > 0) {
       const centre = (id: string): number => {
         const xs = parents.get(id)!.flatMap((p) => (places.has(p) ? [places.get(p)!.x] : []))
@@ -102,12 +129,31 @@ export function layoutComponents(graph: ComponentGraph): ComponentLayout {
       }
       row.sort((a, b) => centre(a) - centre(b) || index.get(a)! - index.get(b)!)
     }
-    const left = (full - rowWidth(row.length)) / 2
+    const left = columnLeft[c] + (columnWidth[c] - rowWidth(row.length)) / 2
     row.forEach((id, i) => {
-      places.set(id, { x: left + i * (slot + GAP_X) + slot / 2, y: r * (NODE_H + GAP_Y), rank: r })
+      places.set(id, { x: left + i * (slot + GAP_X) + slot / 2, y: (r - top) * (NODE_H + GAP_Y), rank: r, column: c })
     })
   })
-  return { places, ranks }
+  return { places, ranks, columns }
+}
+
+/**
+ * Splits rank indexes into columns (#115), given each rank's row width. One column while the
+ * top-down drawing is at most WRAP_RATIO times taller than its widest row; otherwise as many
+ * equal runs of ranks as make it about square (the square root of its height over width), at
+ * least two.
+ */
+export function wrapRanks(rowWidths: number[]): number[][] {
+  const all = rowWidths.map((_, r) => r)
+  if (all.length < 2) return [all]
+  const width = Math.max(...rowWidths)
+  const height = all.length * (NODE_H + GAP_Y) - GAP_Y
+  if (height <= WRAP_RATIO * width) return [all]
+  const want = Math.max(2, Math.round(Math.sqrt(height / width)))
+  const per = Math.ceil(all.length / want)
+  const columns: number[][] = []
+  for (let r = 0; r < all.length; r += per) columns.push(all.slice(r, r + per))
+  return columns
 }
 
 interface Box {
