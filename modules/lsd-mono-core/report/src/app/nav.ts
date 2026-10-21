@@ -2,7 +2,8 @@
 import { pingSource } from '../lib/usage-ping'
 import type { Status } from '../types'
 import { scenarioHaystack } from '../ui/scenario-summary'
-import { loadReportData, type IndexManifest, type ReportData } from '../lib/report-index'
+import { loadReportData, UnreadableReportError, type IndexManifest, type ReportData } from '../lib/report-index'
+import { upgradeHtml } from '../lib/schema-version'
 import { type HashRef } from '../lib/report-hash'
 import { stepSelection } from '../ui/selection'
 import { forgetDiagrams } from '../lib/sequence-diagram'
@@ -149,9 +150,13 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
   let data: ReportData
   try {
     data = await loadReportData(entry)
-  } catch {
+  } catch (error) {
     if (session.loadingReportId !== id) return
     session.loadingReportId = null
+    if (error instanceof UnreadableReportError) {
+      main.innerHTML = upgradeHtml(error.fit, 'report', 'h2')
+      return
+    }
     main.innerHTML = `<div class="empty" role="alert"><p>Could not load ${escapeHtml(entry.title)}. Its data file, <code>${escapeHtml(entry.data)}</code>, should be next to this page.</p></div>`
     return
   }

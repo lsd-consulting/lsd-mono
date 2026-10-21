@@ -1,6 +1,7 @@
 import type { IndexManifest, IndexReport, IndexScenario } from '../generated/lsd-index'
 import type { Report, ReportJson, Status } from '../types'
 import { normaliseReport } from './report-normalise'
+import { unreadableFit, type UnreadableFit } from './schema-version'
 import { cssEscape } from './escape.ts'
 
 /**
@@ -29,7 +30,20 @@ export interface ReportData {
 // One loaded value per registered one, so opening a report again gives the same objects.
 const loadedByData = new WeakMap<ReportDataJson, ReportData>()
 
+/** A report the index cannot open: its schema version is of a newer major version, or not a version. */
+export class UnreadableReportError extends Error {
+  constructor(readonly fit: UnreadableFit) {
+    super(
+      fit.kind === 'newer-major'
+        ? `report format ${fit.version} is newer than this page reads`
+        : `report format ${fit.version} is not a version`,
+    )
+  }
+}
+
 function loadedData(data: ReportDataJson): ReportData {
+  const unreadable = unreadableFit(data.report)
+  if (unreadable) throw new UnreadableReportError(unreadable)
   let result = loadedByData.get(data)
   if (!result) {
     result = { ...data, report: normaliseReport(data.report) }
@@ -92,7 +106,7 @@ export function loadReportData(report: IndexReport): Promise<ReportData> {
   const src = report.data
   if (!src) return Promise.reject(new Error(`${report.title} has no data script`))
   const ready = window.__LSD_REPORTS__?.[report.id]
-  if (ready) return Promise.resolve(loadedData(ready))
+  if (ready) return Promise.resolve().then(() => loadedData(ready))
   let pending = loaded.get(report.id)
   if (!pending) {
     pending = addScript(src, 'data-lsd-report').then(() => {

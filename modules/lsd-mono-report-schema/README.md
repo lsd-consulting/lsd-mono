@@ -50,6 +50,12 @@ version still validates it:
 - **A newer major version** may break any of this, so a reader says it cannot show the report
   rather than guess.
 
+The report UI (`src/lib/schema-version.ts`) shows a report or index of a newer minor version
+with a small notice that anything new in it is not shown. For a newer major version it shows a
+page saying to upgrade lsd-mono instead of the report (on the index page, instead of that one
+report), and for a `schemaVersion` that is not a major.minor.patch version a page saying it cannot
+be opened. A report without `schemaVersion` is from before the schema and is shown as usual.
+
 ## Who uses it
 
 - **lsd-mono-core** writes `schemaVersion` and validates real output against both schemas in

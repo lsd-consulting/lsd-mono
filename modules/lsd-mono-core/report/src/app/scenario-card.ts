@@ -10,6 +10,7 @@ import { zoomControlsHtml } from '../lib/diagram/zoom-readout'
 import { hasComponentDiagram } from '../lib/component-graph'
 import { type DiagramViewName, diagramViewHeading, diagramViewHint } from '../lib/diagram-view-names'
 import { formatGeneratedAt } from '../ui/format'
+import { newerMinorNoticeHtml } from '../lib/schema-version'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { index, session } from './context'
 export function heroHtml(): string {
@@ -19,6 +20,8 @@ export function heroHtml(): string {
   return `
     <div class="report-hero">
       ${back}
+      ${index ? newerMinorNoticeHtml(index.schemaVersion, 'index') : ''}
+      ${newerMinorNoticeHtml(session.report.schemaVersion)}
       <h1>${escapeHtml(session.report.title)}</h1>
       <div class="meta">
         <span>Generated ${escapeHtml(formatGeneratedAt(session.report.generatedAt))}</span>

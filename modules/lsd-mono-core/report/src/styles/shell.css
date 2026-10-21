@@ -263,3 +263,34 @@
   border-radius: var(--radius);
   background: var(--surface);
 }
+
+/* A report of a newer minor version: shown, with this note (lib/schema-version.ts). */
+.schema-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--warn-soft);
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+}
+
+/* A report or index of a newer major version: this instead of the report. */
+.schema-upgrade {
+  max-width: 40rem;
+  margin: 48px auto;
+  padding: 24px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.schema-upgrade h1,
+.schema-upgrade h2 {
+  margin: 0 0 12px;
+  font-size: 1.4rem;
+}
+.schema-upgrade p {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}

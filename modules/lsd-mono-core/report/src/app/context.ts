@@ -1,11 +1,12 @@
 // The page's state: the index manifest, the report session, filters and selection, and the #app root.
 import { sampleReport } from '../data/sample-report'
-import type { Report, Status } from '../types'
+import { REPORT_SCHEMA_VERSION, type Report, type Status } from '../types'
 import { type IndexManifest } from '../lib/report-index'
 import { parseReportHash } from '../lib/report-hash'
 import { defaultScenarioId } from '../ui/selection'
 import { getSidebarCollapsed } from '../ui/sidebar'
 import { normaliseReport } from '../lib/report-normalise'
+import { unreadableFit } from '../lib/schema-version'
 import { createSession } from '../ui/session'
 
 export interface State {
@@ -23,10 +24,38 @@ export interface State {
 /** The index page's manifest. Null on a single report's page. */
 export const index: IndexManifest | null = window.__LSD_REPORT__ ? null : (window.__LSD_INDEX__ ?? null)
 
+/**
+ * The page's report or index when it is of a newer major version, which this page cannot show:
+ * main.ts then shows only the upgrade page. Read before anything else, as such data may not
+ * have the shape this page expects.
+ */
+export const unreadable = (() => {
+  const fit = unreadableFit(window.__LSD_REPORT__ ?? index)
+  return fit && { ...fit, what: window.__LSD_REPORT__ ? ('report' as const) : ('index' as const) }
+})()
+
 /** Everything else the page changes as it runs. */
 export const session = createSession(
-  window.__LSD_REPORT__ ? normaliseReport(window.__LSD_REPORT__) : index ? indexPlaceholder(index) : sampleReport,
+  unreadable
+    ? emptyReport()
+    : window.__LSD_REPORT__
+      ? normaliseReport(window.__LSD_REPORT__)
+      : index
+        ? indexPlaceholder(index)
+        : sampleReport,
 )
+
+/** The report behind the upgrade page: nothing to show. */
+function emptyReport(): Report {
+  return normaliseReport({
+    schemaVersion: REPORT_SCHEMA_VERSION,
+    title: 'LSD report',
+    generatedAt: '',
+    generator: '',
+    status: 'success',
+    scenarios: [],
+  })
+}
 
 /** The index page's report until one is opened: no scenarios, and it never pings. */
 function indexPlaceholder(manifest: IndexManifest): Report {

@@ -13,6 +13,7 @@ import { bindComponentViews } from '../lib/component-view'
 import { bindComponentZoom } from '../lib/component-zoom'
 import { bindDiagramTabs, focusComponentView, openLink, pingShownView, showDiagramView } from './diagram-views'
 import { index, session, state } from './context'
+import { newerMinorNoticeHtml } from '../lib/schema-version'
 export function focusScenarioHeading(): void {
   document.querySelector<HTMLElement>('#main .scenario-head h2')?.focus({ preventScroll: true })
 }
@@ -37,7 +38,7 @@ export function renderMain(): void {
   const main = document.querySelector('#main')!
   if (index && !session.reportId) {
     if (!session.loadingReportId) {
-      main.innerHTML = `<div class="empty" role="status"><p>${index.reports.length ? 'Choose a report.' : 'No reports have been written to this directory yet.'}</p></div>`
+      main.innerHTML = `${newerMinorNoticeHtml(index.schemaVersion, 'index')}<div class="empty" role="status"><p>${index.reports.length ? 'Choose a report.' : 'No reports have been written to this directory yet.'}</p></div>`
     }
     return
   }

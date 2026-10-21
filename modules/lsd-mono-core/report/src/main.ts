@@ -9,7 +9,8 @@ import { type IndexManifest, type ReportDataJson } from './lib/report-index'
 import { syncDiagramWindow } from './lib/sequence-diagram'
 import { applyTheme, followOsTheme, followOtherTabs, forgetLegacyTheme, getPreferredTheme } from './ui/theme'
 import { paintThemeControl } from './ui/theme-menu'
-import { index, session } from './app/context'
+import { app, index, session, unreadable } from './app/context'
+import { upgradeHtml } from './lib/schema-version'
 import { pingSource, usage } from './lib/usage-ping'
 
 declare global {
@@ -34,18 +35,30 @@ forgetLegacyTheme()
 applyTheme(getPreferredTheme())
 followOsTheme((theme) => paintThemeControl({ mode: 'auto', theme }))
 followOtherTabs(paintThemeControl)
-if (index) document.title = index.title
-renderShell()
-applyHash()
-session.booted = true
-// After first render. A page with neither a report nor an index (the built-in demo) never pings.
-usage.configure(window.__LSD_REPORT__ ?? index)
-usage.ping('report-open')
-if (window.__LSD_REPORT__) pingSource(window.__LSD_REPORT__)
-window.addEventListener('hashchange', () => applyHash())
-listenForKeys(document)
-window.addEventListener('resize', () => {
-  document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => {
-    syncDiagramWindow(el)
+if (unreadable) showUpgradePage(unreadable)
+else boot()
+
+/** The page: the shell, the report or index in it, and what keeps them up to date. */
+function boot(): void {
+  if (index) document.title = index.title
+  renderShell()
+  applyHash()
+  session.booted = true
+  // After first render. A page with neither a report nor an index (the built-in demo) never pings.
+  usage.configure(window.__LSD_REPORT__ ?? index)
+  usage.ping('report-open')
+  if (window.__LSD_REPORT__) pingSource(window.__LSD_REPORT__)
+  window.addEventListener('hashchange', () => applyHash())
+  listenForKeys(document)
+  window.addEventListener('resize', () => {
+    document.querySelectorAll<HTMLElement>('.seq-scroll').forEach((el) => {
+      syncDiagramWindow(el)
+    })
   })
-})
+}
+
+/** A report or index of a newer major version: say so, and do nothing else (it never pings). */
+function showUpgradePage(fit: NonNullable<typeof unreadable>): void {
+  document.title = `Upgrade lsd-mono · LSD ${fit.what}`
+  app.innerHTML = `<main class="main schema-upgrade-page" id="main">${upgradeHtml(fit, fit.what)}</main>`
+}
