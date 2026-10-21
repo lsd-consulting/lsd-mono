@@ -3,7 +3,7 @@ package io.lsdconsulting.lsd.mono.cucumber
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
-import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

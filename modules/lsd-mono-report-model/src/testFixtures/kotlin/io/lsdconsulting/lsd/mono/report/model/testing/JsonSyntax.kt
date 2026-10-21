@@ -1,7 +1,7 @@
-package io.lsdconsulting.lsd.mono.report.html
+package io.lsdconsulting.lsd.mono.report.model.testing
 
-/** A strict JSON (RFC 8259) syntax check, enough to prove the output parses. The same as lsd-mono-core's tests use. */
-fun assertValidJson(text: String) {
+/** A strict JSON (RFC 8259) syntax check, enough to prove the output parses. */
+public fun assertValidJson(text: String) {
     var i = 0
 
     fun fail(why: String): Nothing = throw AssertionError("invalid JSON at $i ($why): ${text.take(300)}")

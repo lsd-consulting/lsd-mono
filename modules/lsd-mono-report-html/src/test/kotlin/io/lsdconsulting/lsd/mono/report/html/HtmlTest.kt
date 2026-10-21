@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.report.html
 
+import io.lsdconsulting.lsd.mono.report.model.testing.assertValidJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

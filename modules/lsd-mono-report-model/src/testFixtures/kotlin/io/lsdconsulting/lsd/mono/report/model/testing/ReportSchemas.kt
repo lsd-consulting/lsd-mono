@@ -1,4 +1,4 @@
-package io.lsdconsulting.lsd.mono.core.testing
+package io.lsdconsulting.lsd.mono.report.model.testing
 
 import com.networknt.schema.InputFormat
 import com.networknt.schema.Schema
@@ -16,23 +16,36 @@ import kotlin.io.path.readText
 
 /**
  * The report and index JSON Schemas in `modules/lsd-mono-report-schema`, for tests that check
- * what lsd-mono writes: the core writer's and each integration module's. Formats are asserted
- * (2020-12 treats them as annotations by default), so a time must be a date-time. Each module's
- * tests run in its own directory, a sibling of the schema directory.
+ * what lsd-mono writes: the core writer's, each integration module's and an adapter's. Formats
+ * are asserted (2020-12 treats them as annotations by default), so a time must be a date-time.
+ *
+ * The schemas come from the classpath ([RESOURCES]), where these test fixtures put them, so a
+ * test that uses them reruns when a schema changes, whichever module and directory it runs in.
  */
 public object ReportSchemas {
+    /** Where the schema directory is on the classpath: the schemas, and the corpus under `conformance/`. */
+    public const val RESOURCES: String = "/lsd-mono-report-schema"
+
     /** What a schema describes. */
     public enum class Document(
-        /** The schema's file in [DIR]. */
+        /** The schema's file in the schema directory. */
         public val file: String,
     ) {
         REPORT("lsd-report.schema.json"),
         INDEX("lsd-index.schema.json"),
     }
 
-    public val DIR: Path = Path.of("../lsd-mono-report-schema")
+    /** The text of [path] in the schema directory, such as `lsd-report.schema.json`, read from the classpath. */
+    public fun read(path: String): String =
+        ReportSchemas::class.java
+            .getResource("$RESOURCES/$path")
+            ?.readText()
+            ?: error("$RESOURCES/$path is not on the classpath: does this module's test classpath have the report-model test fixtures?")
 
-    private val texts: Map<Document, String> = Document.entries.associateWith { DIR.resolve(it.file).readText() }
+    /** [document]'s schema, as its file has it. */
+    public fun text(document: Document): String = texts.getValue(document)
+
+    private val texts: Map<Document, String> = Document.entries.associateWith { read(it.file) }
 
     /** Each schema's `$id`, as its file has it. */
     public val ids: Map<Document, String> =

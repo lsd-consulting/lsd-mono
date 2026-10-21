@@ -1,16 +1,13 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { MessageEvent } from '../types'
 import { messageMetaHtml } from '../ui/inspector-views'
+import { conformanceText } from './conformance.test-util'
 import { isErrorStatus } from './status'
 
 describe('isErrorStatus', () => {
   it('matches the Errors metric: 4xx and 5xx codes, or an error word with no code', () => {
-    // Shared with lsd-mono-core's ScenarioMetricsTest, so the two rules cannot drift.
-    const vectors = JSON.parse(
-      readFileSync(join(process.cwd(), '../../lsd-mono-core/src/test/resources/status-vectors.json'), 'utf8'),
-    ) as {
+    // Shared with lsd-mono-core's ScenarioMetricsTest through the shared test reports, so the two rules cannot drift.
+    const vectors = JSON.parse(conformanceText('vectors/status-vectors.json')) as {
       error: string[]
       notError: string[]
     }

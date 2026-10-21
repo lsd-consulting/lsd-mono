@@ -42,8 +42,9 @@ dependencies {
 
     testFixturesImplementation(platform(libs.junit.bom))
     testFixturesImplementation(libs.junit.jupiter.api)
-    // ReportSchemas: the integration modules' tests validate their output too.
-    testFixturesImplementation(libs.json.schema.validator)
+    // ReportSchemas and ReportCorpus (the schemas and shared test reports, from the classpath):
+    // this module's tests and the integration modules' validate their output with them.
+    testFixturesApi(testFixtures(project(":modules:lsd-mono-report-model")))
 }
 
 // The test fixtures are for this repository's tests: keep them out of the published component, so
@@ -67,11 +68,6 @@ tasks.test {
         .files(layout.projectDirectory.file("README.md"), rootProject.layout.projectDirectory.file("README.md"))
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("readmes")
-    // ReportSchemaTest validates real output against the report JSON Schema.
-    inputs
-        .dir(rootProject.layout.projectDirectory.dir("modules/lsd-mono-report-schema"))
-        .withPathSensitivity(PathSensitivity.RELATIVE)
-        .withPropertyName("reportSchema")
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
     systemProperty("lsd.mono.test.projectVersion", project.version.toString())
 }

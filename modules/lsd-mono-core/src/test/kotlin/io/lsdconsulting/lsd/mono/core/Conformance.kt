@@ -1,28 +1,24 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
-import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import org.junit.jupiter.api.Assertions.assertEquals
 import tools.jackson.databind.json.JsonMapper
-import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 /**
  * The shared test reports in `modules/lsd-mono-report-schema/conformance`, which the report UI's
- * tests read too. Gradle runs the tests in the module directory, and the directory is one of the
- * test task's inputs.
+ * tests read too. They are read from the classpath ([ReportCorpus]), so a change to one reruns
+ * these tests.
  *
  * A report lsd-mono-core writes for the corpus has its time and generator set to [GENERATED_AT]
  * and [GENERATOR], the only parts that change from run to run, and no usage ping ([produce]).
  * Everything else must match the corpus file byte for byte.
  */
 internal object Conformance {
-    val DIR: Path = Path("../lsd-mono-report-schema/conformance")
-
     const val GENERATED_AT = "2026-01-01T12:00:00Z"
     const val GENERATOR = "lsd-mono-core (conformance)"
 
@@ -55,7 +51,7 @@ internal object Conformance {
         }
     }
 
-    fun read(file: String): String = DIR.resolve(file).readText()
+    fun read(file: String): String = ReportCorpus.read(file)
 
     /** Settings for a report written for the corpus: no usage ping, so the page makes no request. */
     fun produce() {
@@ -87,13 +83,13 @@ internal object Conformance {
         file: String,
         actual: String,
     ) {
-        val expected = DIR.resolve(file).takeIf { it.exists() }?.readText()
+        val expected = file.takeIf { ReportCorpus.has(it) }?.let { ReportCorpus.read(it) }
         if (expected != actual) {
             val out = Path("build/conformance-actual").resolve(file)
             out.parent.createDirectories()
             out.writeText(actual)
         }
-        assertEquals(expected, actual, "copy build/conformance-actual/$file to ${DIR.resolve(file).normalize()} when the change is intended")
+        assertEquals(expected, actual, "copy build/conformance-actual/$file to modules/lsd-mono-report-schema/conformance/$file when the change is intended")
     }
 
     /** [json]'s errors against the schema file [schema], as `location: message` lines, formats asserted. */

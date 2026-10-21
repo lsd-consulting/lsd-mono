@@ -6,6 +6,7 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.isErrorStatus
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -58,8 +59,8 @@ class ScenarioMetricsTest {
 
     @Test
     fun `an error status is a 4xx or 5xx code, or an error word with no code`() {
-        // Shared with the report UI's status.test.ts.
-        val vectors = javaClass.getResource("/status-vectors.json")!!.readText()
+        // Shared with the report UI's status.test.ts, in the shared test reports.
+        val vectors = ReportCorpus.read("vectors/status-vectors.json")
 
         fun list(key: String) =
             Regex(""""$key":\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)

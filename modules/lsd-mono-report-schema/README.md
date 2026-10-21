@@ -63,6 +63,10 @@ be opened. A report without `schemaVersion` is from before the schema and is sho
   test also checks that each enum lists exactly the writer's values, and that the writer writes
   only known values: its output follows a copy of the schema with every open enum closed to its
   `Known*` list, so a typo such as `QUEU` fails there though the schema itself takes it.
+- **The Kotlin tests** read the schemas and the shared test reports from the classpath:
+  lsd-mono-report-model's test fixtures (`ReportSchemas`, `ReportCorpus`) put this directory on
+  it as `/lsd-mono-report-schema`. A test that validates with them (core's, the integration
+  modules', the writer's) reruns when a schema or a corpus file changes, cache or not.
 - **The report UI** (`modules/lsd-mono-report-html/ui`) generates its TypeScript types from the
   schemas into `src/generated/` with `npm run types:generate` (json-schema-to-typescript). The
   generated files are committed, and `npm run types:check`, on Gradle's `check` through

@@ -3,7 +3,7 @@ package io.lsdconsulting.lsd.mono.coroutines
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
-import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

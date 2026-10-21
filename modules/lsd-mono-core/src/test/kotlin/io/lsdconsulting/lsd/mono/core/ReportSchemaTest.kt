@@ -14,12 +14,12 @@ import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.WarningKind
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
-import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
-import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas.Document
-import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas.between
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import io.lsdconsulting.lsd.mono.report.model.ReportSchema
 import io.lsdconsulting.lsd.mono.report.model.ReportSource
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas.Document
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas.between
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -117,7 +117,7 @@ class ReportSchemaTest {
 
     @Test
     fun `the schema's enums are the writer's`() {
-        val defs = MAPPER.readTree(SCHEMA_DIR.resolve(REPORT_FILE).readText()).get("\$defs")
+        val defs = MAPPER.readTree(ReportSchemas.read(REPORT_FILE)).get("\$defs")
         val writer = mapOf(
             "Status" to Status.entries.map { it.name.lowercase() },
             "KnownParticipantType" to ParticipantType.entries.map { it.name },
@@ -162,7 +162,7 @@ class ReportSchemaTest {
     fun `the writer's schema version is the schema files'`() {
         listOf(REPORT_FILE, INDEX_FILE).forEach { file ->
             assertTrue(
-                SCHEMA_DIR.resolve(file).readText().contains("\"\$id\": \"${idOf(file)}\""),
+                ReportSchemas.read(file).contains("\"\$id\": \"${idOf(file)}\""),
                 "$file has \$id ${idOf(file)}: raise ReportSchema.VERSION and the \$ids together",
             )
         }
@@ -248,13 +248,12 @@ class ReportSchemaTest {
         const val TITLE = "Schema"
         const val REPORT_FILE = "lsd-report.schema.json"
         const val INDEX_FILE = "lsd-index.schema.json"
-        val SCHEMA_DIR: Path = ReportSchemas.DIR
         val MAPPER: JsonMapper = JsonMapper.builder().build()
         const val STRICT_ID = "https://lsd-consulting.github.io/lsd-mono/schema/test/lsd-report.closed.schema.json"
 
         /** The report schema with each `anyOf: [Known*, string]` replaced by its `Known*` list. */
         val STRICT: Schema by lazy {
-            val root = MAPPER.readTree(SCHEMA_DIR.resolve(REPORT_FILE).readText()) as ObjectNode
+            val root = MAPPER.readTree(ReportSchemas.read(REPORT_FILE)) as ObjectNode
             val defs = root.get("\$defs") as ObjectNode
             val open =
                 defs.properties().mapNotNull { (name, node) ->

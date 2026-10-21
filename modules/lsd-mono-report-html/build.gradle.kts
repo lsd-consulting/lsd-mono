@@ -30,6 +30,8 @@ dependencies {
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
+    // assertValidJson, and the report schemas and shared test reports from the classpath.
+    testImplementation(testFixtures(project(":modules:lsd-mono-report-model")))
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

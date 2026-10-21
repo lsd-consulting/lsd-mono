@@ -14,6 +14,7 @@ page it gets (`page`: `report`, `upgrade` or `cannot-open`).
 | `indexes/` | Index manifests (`window.__LSD_INDEX__`) |
 | `payloads/` | A `-payloads.js` sidecar, which the page runs |
 | `generated/` | `large.mjs`, which makes the large report instead of committing it |
+| `vectors/` | Not reports: `status-vectors.json`, the error-status rule core's metrics and the page share |
 
 ## Who checks what
 

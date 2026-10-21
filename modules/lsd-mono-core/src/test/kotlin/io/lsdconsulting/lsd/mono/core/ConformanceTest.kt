@@ -7,19 +7,14 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
-import kotlin.io.path.extension
-import kotlin.io.path.invariantSeparatorsPathString
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.name
 import kotlin.io.path.readText
-import kotlin.io.path.relativeTo
-import kotlin.io.path.walk
 
 /**
  * The shared test reports (`modules/lsd-mono-report-schema/conformance`) from the producer's side:
@@ -188,10 +183,8 @@ class ConformanceTest {
     @Test
     fun `the manifest lists every corpus file, and lsd-mono-core writes the ones it says it does`() {
         val files =
-            Conformance.DIR
-                .walk()
-                .filter { it.isRegularFile() && it.name != "README.md" && it.name != "manifest.json" && it.extension != "mts" }
-                .map { it.relativeTo(Conformance.DIR).invariantSeparatorsPathString }
+            ReportCorpus.files
+                .filter { it.substringAfterLast('/') !in setOf("README.md", "manifest.json", "files.txt") && !it.endsWith(".mts") }
                 .toSortedSet()
         assertEquals(files, Conformance.fixtures.map { it.file }.toSortedSet())
         assertEquals(

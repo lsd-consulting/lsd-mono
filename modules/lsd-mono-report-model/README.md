@@ -35,3 +35,7 @@ There is no binary-compatibility promise until the marker goes:
   ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)).
 
 The ABI dump (`api/lsd-mono-report-model.api`) is kept, so that every change shows in review.
+
+Its test fixtures, for this repository's tests and not published, put the report schemas and the
+shared test reports on the classpath: `ReportSchemas` validates written output against the schemas
+and `ReportCorpus` reads the test reports in `modules/lsd-mono-report-schema/conformance`.

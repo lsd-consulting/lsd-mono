@@ -7,7 +7,8 @@ import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
 // ratchet: koverVerify also fails when coverage rises more than ratchetMargin points above it
 // (reported as a breached maximum), so a module that gains tests must raise its floor too.
 // The `readme` source set, where a module has one, holds programs that build the README and
-// example reports, not library code, so it is not counted.
+// example reports, not library code, so it is not counted. Nor are the test fixtures
+// (`testFixtures`): they are test code for other modules' tests, not published.
 plugins {
     id("org.jetbrains.kotlinx.kover")
 }
@@ -21,6 +22,7 @@ kover {
     currentProject {
         sources {
             excludedSourceSets.add("readme")
+            excludedSourceSets.add("testFixtures")
         }
     }
     reports {

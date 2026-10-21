@@ -127,6 +127,11 @@
       "about": "A -payloads.js sidecar with awkward payloads: markup, U+2028/U+2029, emoji, a lone surrogate, plain-string bodies, doubles and big decimals. Not JSON: the page runs it."
     },
     {
+      "file": "vectors/status-vectors.json",
+      "source": "hand-written",
+      "about": "Not a report: message statuses that are and are not errors, the rule both the Errors metric (lsd-mono-core) and the page's error marks (the report UI) follow."
+    },
+    {
       "file": "invalid/missing-schema-version.json",
       "schema": "lsd-report.schema.json",
       "valid": false,

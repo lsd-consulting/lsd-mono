@@ -18,6 +18,7 @@ import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.report.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.report.model.TraceJson
 import io.lsdconsulting.lsd.mono.report.model.WarningJson
+import io.lsdconsulting.lsd.mono.report.model.testing.assertValidJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
