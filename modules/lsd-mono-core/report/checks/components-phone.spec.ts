@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
 import { devices, expect, test, type Page } from '@playwright/test'
+import { conformanceReport } from '../src/lib/conformance.test-util'
 import type { Report } from '../src/types'
 import { seriousViolations } from './ux-helpers'
 import { openReport } from './open-report'
@@ -9,7 +9,7 @@ import { openReport } from './open-report'
 // opens with its top row centred and marks each edge with more past it.
 
 /** The live example report's first scenario (14 components), as kitchenSinkSample writes it. */
-const example = JSON.parse(readFileSync(new URL('./example-components.json', import.meta.url), 'utf8')) as Report
+const example = conformanceReport('example-components')
 
 async function openComponents(page: Page, report: Report | null = example): Promise<void> {
   await openReport(page, report ? { report } : {})

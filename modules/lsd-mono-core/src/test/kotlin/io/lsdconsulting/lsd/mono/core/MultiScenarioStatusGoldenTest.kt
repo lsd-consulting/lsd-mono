@@ -5,7 +5,6 @@ import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
@@ -46,12 +45,7 @@ class MultiScenarioStatusGoldenTest {
                 GENERATED_AT.replace(json, """"generatedAt": "SCRUBBED""""),
                 """"generator": "SCRUBBED"""",
             )
-        val golden =
-            javaClass
-                .getResource("/golden/multi-scenario-status.json")
-                ?.readText()
-                ?: error("missing golden/multi-scenario-status.json")
-        assertEquals(golden, scrubbed)
+        Conformance.assertMatches("reports/multi-scenario-status.json", scrubbed)
 
         assertEquals(1, count(scrubbed, """"status": "success""""))
         assertEquals(1, count(scrubbed, """"status": "warn""""))

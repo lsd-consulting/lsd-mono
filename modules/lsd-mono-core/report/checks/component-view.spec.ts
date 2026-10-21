@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import type { Report } from '../src/types'
+import { conformanceReport } from '../src/lib/conformance.test-util'
 import { openReport } from './open-report'
 import { wideReport } from './wide-sample'
 import { seriousViolations } from './ux-helpers'
@@ -8,7 +7,7 @@ import { seriousViolations } from './ux-helpers'
 // #105: the component diagram is the diagram area's other view, behind Sequence | Components tabs.
 
 /** The live example report's first scenario (14 components), as kitchenSinkSample writes it. */
-const example = JSON.parse(readFileSync(new URL('./example-components.json', import.meta.url), 'utf8')) as Report
+const example = conformanceReport('example-components')
 
 const tab = (page: Page, name: 'Sequence' | 'Components') => page.getByRole('tab', { name, exact: true })
 const pane = (page: Page) => page.locator('.diagram-pane[data-pane="components"]')

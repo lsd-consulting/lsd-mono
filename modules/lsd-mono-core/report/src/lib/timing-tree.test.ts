@@ -1,13 +1,10 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { MessageEvent, Report, Scenario } from '../types'
+import type { MessageEvent, Scenario } from '../types'
+import { conformanceReport } from './conformance.test-util'
 import { timeline } from './timing'
 
 // Written by the library (TimingTreeGoldenTest): the Timing view must follow its tree.
-const report = JSON.parse(
-  readFileSync(join(process.cwd(), '../src/test/resources/golden/timing-tree.json'), 'utf8'),
-) as Report
+const report = conformanceReport('timing-tree')
 const scenario = (title: string): Scenario => report.scenarios.find((s) => s.title === title)!
 const rows = (s: Scenario) => timeline(s).rows
 const row = (s: Scenario, label: string) => rows(s).find((r) => r.message.label === label)!

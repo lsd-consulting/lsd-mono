@@ -1,27 +1,26 @@
 // The JSON Schema in modules/lsd-mono-report-schema against the reports the UI is tested with:
-// lsd-mono-core's golden files, the example reports the checks open, and the report builders the
-// checks share. lsd-mono-core's own ReportSchemaTest validates what the writer produces.
-import { readFileSync } from 'node:fs'
+// lsd-mono-core's golden files and the example reports the checks open, in the shared corpus,
+// and the report builders the checks share. lsd-mono-core's own ReportSchemaTest validates what the writer produces.
 import { describe, expect, it } from 'vitest'
 import { findReport } from '../../checks/find-fixture'
 import { sectionsIndex, sectionsReport } from '../../checks/diagram-pages'
 import { uxFixture } from '../../checks/ux-fixture'
 import { wideReport } from '../../checks/wide-sample'
 import { REPORT_SCHEMA_VERSION } from '../types'
+import { conformanceText } from './conformance.test-util'
 import { reportSchema, schemaErrors as errors } from './report-schema.test-util'
-
-const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
 
 /** A golden file with its scrubbed time and generator put back, as lsd-mono-core writes them. */
 function golden(file: string): unknown {
   return JSON.parse(
-    read(`../../../src/test/resources/golden/${file}`)
+    conformanceText(`reports/${file}`)
       .replace('"generatedAt": "SCRUBBED"', '"generatedAt": "2026-01-01T12:00:00Z"')
       .replace('"generator": "SCRUBBED"', '"generator": "lsd-mono-core 0.7.0"'),
   )
 }
 
-const example = (file: string) => JSON.parse(read(`../../checks/${file}`)) as Record<string, unknown> & ExampleReport
+const example = (file: string) =>
+  JSON.parse(conformanceText(`reports/${file}`)) as Record<string, unknown> & ExampleReport
 
 interface ExampleReport {
   scenarios: ({ events: Record<string, unknown>[]; participants: Record<string, unknown>[] } & Record<

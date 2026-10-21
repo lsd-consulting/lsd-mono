@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
+import { conformanceText } from './conformance.test-util'
 import { lazyPayloads, payloadTextScript } from './payloads'
 
 // Written by the library (PayloadScriptGoldenTest): the browser must read what the core writes (#63).
-const golden = readFileSync(new URL('../../../src/test/resources/golden/payload-script.js', import.meta.url), 'utf8')
+const golden = conformanceText('payloads/payload-script.js')
 
 /** Run a payload script as the page would, in a window of its own, and read every payload. */
 function run(script: string): Record<string, unknown> {

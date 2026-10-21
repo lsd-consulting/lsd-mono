@@ -3,15 +3,11 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.math.BigDecimal
 import java.nio.file.Path
-import kotlin.io.path.Path
-import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
 /**
  * The `-payloads.js` the writer leaves next to a report, with payloads that are easy to get
@@ -74,12 +70,6 @@ class PayloadScriptGoldenTest {
 
         lsd.completeReport("Payload script")
         val script = tempDir.resolve(ReportWriter.reportFileStem("Payload script") + "-payloads.js").readText()
-        val golden = javaClass.getResource("/golden/payload-script.js")?.readText()
-        if (golden != script) {
-            val actual = Path("build/golden-actual/payload-script.js")
-            actual.parent.createDirectories()
-            actual.writeText(script)
-        }
-        assertEquals(golden, script, "copy build/golden-actual/payload-script.js to src/test/resources/golden/ when the change is intended")
+        Conformance.assertMatches("payloads/payload-script.js", script)
     }
 }

@@ -4,17 +4,11 @@ import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.time.Instant
-import kotlin.io.path.Path
-import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
 /**
  * The call tree the library works out (`parentId`, `replyOf`, event order) for span nesting,
@@ -61,13 +55,7 @@ class TimingTreeGoldenTest {
             json
                 .replace(Regex(""""generatedAt": "[^"]*""""), """"generatedAt": "SCRUBBED"""")
                 .replace(Regex(""""generator": "[^"]*""""), """"generator": "SCRUBBED"""")
-        val golden = javaClass.getResource("/golden/timing-tree.json")?.readText()
-        if (golden != scrubbed) {
-            val actual = Path("build/golden-actual/timing-tree.json")
-            actual.parent.createDirectories()
-            actual.writeText(scrubbed)
-        }
-        assertEquals(golden, scrubbed, "copy build/golden-actual/timing-tree.json to src/test/resources/golden/ when the change is intended")
+        Conformance.assertMatches("reports/timing-tree.json", scrubbed)
     }
 
     private fun t(ms: Long): Instant = Instant.parse("2026-01-01T00:00:00Z").plusMillis(ms)

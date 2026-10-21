@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs'
 import { expect, type Page } from '@playwright/test'
-import type { Report } from '../src/types'
+import { conformanceReport } from '../src/lib/conformance.test-util'
 import { openReport, type OpenOptions } from './open-report'
 
 /**
@@ -8,7 +7,7 @@ import { openReport, type OpenOptions } from './open-report'
  * 14 lanes, 13 pairs, first in the list), 145 (Happy path: card payment, 20 pairs), 146 (Payment
  * declined, 4 lanes, no pair data) and 147 (8 pairs). Shared by the zoom and Metrics checks.
  */
-export const example = JSON.parse(readFileSync(new URL('./example-report.json', import.meta.url), 'utf8')) as Report
+export const example = conformanceReport('example-report')
 
 /**
  * Opens the example report, at [scenarioId] when given. It goes by link, so it works where the

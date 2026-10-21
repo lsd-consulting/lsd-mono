@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { Accuracy, MessageEvent, Report, Scenario } from '../types'
+import type { Accuracy, MessageEvent, Scenario } from '../types'
+import { conformanceReport } from '../lib/conformance.test-util'
 import { hasTiming } from '../lib/timing'
 import {
   axisHtml,
@@ -274,9 +273,7 @@ describe('waterfall axis', () => {
 
 describe('timing view of the library golden', () => {
   // Written by the library (TimingTreeGoldenTest).
-  const report = JSON.parse(
-    readFileSync(join(process.cwd(), '../src/test/resources/golden/timing-tree.json'), 'utf8'),
-  ) as Report
+  const report = conformanceReport('timing-tree')
 
   it('renders every scenario without undefined or NaN, with a waterfall row per message row', () => {
     for (const s of report.scenarios.filter(hasTiming)) {
