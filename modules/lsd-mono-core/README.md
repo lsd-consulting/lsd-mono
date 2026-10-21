@@ -40,7 +40,7 @@ lsd-mono-core/
     `ReportJson` injected (the shell falls back to sample data when opened without one)
   - `*-payloads.js` — message bodies, loaded when the inspector opens
   - `*-report.js` — the same report data as a script, which the index page loads when the report is opened
-  - `*-report.json` — ReportJson-shaped payload (aligned with `report/src/types.ts`)
+  - `*-report.json` — the report data, as the [report schema](../lsd-mono-report-schema/README.md) describes it, with its `schemaVersion`
   - `index.html` from `createIndex`: the report app for every report in the directory. Reports
     are listed failed first with scenario counts; a report's `*-report.js` loads when it is opened,
     so the page stays small for large suites. `index.html#report=<stem>` opens one report, and

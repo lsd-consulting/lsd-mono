@@ -15,6 +15,7 @@ import io.lsdconsulting.lsd.mono.core.model.IndexScenario
 import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
 import io.lsdconsulting.lsd.mono.core.model.ReportJson
+import io.lsdconsulting.lsd.mono.core.model.ReportSchema
 import io.lsdconsulting.lsd.mono.core.model.ScenarioCounts
 import io.lsdconsulting.lsd.mono.core.model.forShell
 import io.lsdconsulting.lsd.mono.core.model.shellPayloadScript
@@ -172,6 +173,7 @@ internal object ReportWriter {
         val manifest =
             JsonObject(
                 listOf(
+                    "schemaVersion" to JsonString(ReportSchema.VERSION),
                     "title" to JsonString(INDEX_TITLE),
                     "generatedAt" to JsonString((LsdProperties.generatedAt() ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString()),
                     "generator" to JsonString(LsdVersion.generator),

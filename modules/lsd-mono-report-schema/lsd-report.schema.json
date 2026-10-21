@@ -1,0 +1,868 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lsd-consulting.github.io/lsd-mono/schema/0.1.0/lsd-report.schema.json",
+  "title": "Report",
+  "description": "One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-core as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version: 0.x minor versions only add. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "title",
+    "generatedAt",
+    "generator",
+    "status",
+    "scenarios"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "description": "The version of this schema the report follows: semver, apart from the lsd-mono version. 0.1.0 for this schema."
+    },
+    "title": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the report was written: an RFC 3339 date-time, with Z or a UTC offset. lsd-mono-core writes UTC with Z, to the millisecond or less (the seconds alone when they are whole)."
+    },
+    "generator": {
+      "type": "string",
+      "description": "The producer and its version, such as `lsd-mono 0.7.0`. The usage ping matches this text, so it does not change shape."
+    },
+    "status": {
+      "$ref": "#/$defs/Status"
+    },
+    "options": {
+      "$ref": "#/$defs/ReportOptions"
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Scenario"
+      }
+    }
+  },
+  "$defs": {
+    "Status": {
+      "title": "Status",
+      "description": "A scenario's or report's outcome, in lower case.",
+      "enum": [
+        "success",
+        "warn",
+        "error"
+      ]
+    },
+    "KnownParticipantType": {
+      "title": "KnownParticipantType",
+      "enum": [
+        "ACTOR",
+        "PARTICIPANT",
+        "DATABASE",
+        "QUEUE",
+        "ENTITY",
+        "BOUNDARY"
+      ]
+    },
+    "ParticipantType": {
+      "title": "ParticipantType",
+      "description": "How a participant is drawn. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as PARTICIPANT.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KnownParticipantType"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "tsType": "KnownParticipantType | (string & {})"
+    },
+    "KnownMessageType": {
+      "title": "KnownMessageType",
+      "enum": [
+        "SYNCHRONOUS",
+        "SYNCHRONOUS_RESPONSE",
+        "ASYNCHRONOUS",
+        "LOST",
+        "BI_DIRECTIONAL",
+        "SHORT_INBOUND",
+        "SHORT_OUTBOUND"
+      ]
+    },
+    "MessageType": {
+      "title": "MessageType",
+      "description": "How a message's arrow is drawn. SHORT_INBOUND comes in from the diagram's edge and SHORT_OUTBOUND leaves to it. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as a SYNCHRONOUS arrow.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KnownMessageType"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "tsType": "KnownMessageType | (string & {})"
+    },
+    "NotePlacement": {
+      "title": "NotePlacement",
+      "enum": [
+        "over",
+        "left",
+        "right"
+      ]
+    },
+    "KnownTimingSource": {
+      "title": "KnownTimingSource",
+      "enum": [
+        "NONE",
+        "TIMESTAMPED",
+        "MEASURED",
+        "DERIVED"
+      ]
+    },
+    "TimingSource": {
+      "title": "TimingSource",
+      "description": "Where a message's duration came from. Open: a newer producer may send a value not listed here. Readers show a value they do not know as it is.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KnownTimingSource"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "tsType": "KnownTimingSource | (string & {})"
+    },
+    "KnownPairingSource": {
+      "title": "KnownPairingSource",
+      "enum": [
+        "NONE",
+        "GUESSED",
+        "CALL_ID",
+        "TRACE"
+      ]
+    },
+    "PairingSource": {
+      "title": "PairingSource",
+      "description": "How a reply was paired with its call. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as NONE.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KnownPairingSource"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "tsType": "KnownPairingSource | (string & {})"
+    },
+    "KnownOrderSource": {
+      "title": "KnownOrderSource",
+      "enum": [
+        "SEQUENCE",
+        "STRUCTURE",
+        "CLOCK"
+      ]
+    },
+    "OrderSource": {
+      "title": "OrderSource",
+      "description": "What put a message where it is. CLOCK: moved by clock ordering (startedAt), shown with a badge. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as SEQUENCE.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KnownOrderSource"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "tsType": "KnownOrderSource | (string & {})"
+    },
+    "KnownWarningKind": {
+      "title": "KnownWarningKind",
+      "enum": [
+        "REPLY_WITHOUT_CALL",
+        "DURATION_ON_REPLY_DROPPED",
+        "LONGER_THAN_PARENT",
+        "DUPLICATE_SPAN",
+        "SKEW"
+      ]
+    },
+    "WarningKind": {
+      "title": "WarningKind",
+      "description": "What a timing warning is about; the Timing view labels its pill from it. Open: a newer producer may send a value not listed here. Readers show a kind they do not know with its message only.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KnownWarningKind"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "tsType": "KnownWarningKind | (string & {})"
+    },
+    "Accuracy": {
+      "title": "Accuracy",
+      "enum": [
+        "STRUCTURE_ONLY",
+        "TIMESTAMPED",
+        "MEASURED",
+        "TRACED"
+      ],
+      "description": "Optional on a scenario; see Scenario for the default."
+    },
+    "ClockOrdering": {
+      "title": "ClockOrdering",
+      "enum": [
+        "OFF",
+        "SAME_SOURCE",
+        "ALL_SOURCES"
+      ],
+      "description": "Optional on a scenario; default SAME_SOURCE."
+    },
+    "KnownReportSource": {
+      "title": "KnownReportSource",
+      "enum": [
+        "junit",
+        "cucumber",
+        "api"
+      ]
+    },
+    "ReportSource": {
+      "title": "ReportSource",
+      "description": "The integration that wrote the report, counted by the usage ping. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as no known source (the usage ping counts no source).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KnownReportSource"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "tsType": "KnownReportSource | (string & {})"
+    },
+    "ReportOptions": {
+      "title": "ReportOptions",
+      "type": "object",
+      "properties": {
+        "metricsEnabled": {
+          "type": "boolean",
+          "description": "When false, every scenario's metrics are empty. Default true."
+        },
+        "labelMaxWidth": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Characters diagram labels and metric summaries are cut to. Default 200."
+        },
+        "usagePing": {
+          "type": "boolean",
+          "description": "Whether the page may request the usage ping files. The page also needs a release generator. Default false."
+        },
+        "source": {
+          "$ref": "#/$defs/ReportSource"
+        }
+      },
+      "description": "Settings the producer wrote the report with. Optional, as is each field: a reader uses the default each field names."
+    },
+    "ScenarioError": {
+      "title": "ScenarioError",
+      "description": "Why a failed or aborted scenario did not pass.",
+      "type": "object",
+      "required": [
+        "headline",
+        "message"
+      ],
+      "properties": {
+        "headline": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "stack": {
+          "type": "string",
+          "description": "Absent when the producer hid stack traces. Shown in the inspector as text."
+        }
+      }
+    },
+    "Fact": {
+      "title": "Fact",
+      "description": "A key fact shown on the scenario card.",
+      "type": "object",
+      "required": [
+        "key",
+        "value"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "Metric": {
+      "title": "Metric",
+      "description": "A metric line. Absent when metrics are off.",
+      "type": "object",
+      "required": [
+        "key",
+        "value"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "TimingWarning": {
+      "title": "TimingWarning",
+      "type": "object",
+      "required": [
+        "kind",
+        "message"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/WarningKind"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "PairAccuracy": {
+      "title": "PairAccuracy",
+      "description": "The accuracy of the messages between two participants.",
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "accuracy"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Sender id; an empty string for the diagram's edge, as on a message."
+        },
+        "to": {
+          "type": "string",
+          "description": "Receiver id; an empty string for the diagram's edge, as on a message."
+        },
+        "accuracy": {
+          "$ref": "#/$defs/Accuracy"
+        }
+      }
+    },
+    "Participant": {
+      "title": "Participant",
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "$ref": "#/$defs/ParticipantType"
+        },
+        "alias": {
+          "type": "string",
+          "description": "The participant's display name (displayName in the Kotlin API), drawn instead of name. Absent when it has none."
+        },
+        "colour": {
+          "type": "string",
+          "description": "A CSS colour for the participant's header."
+        }
+      }
+    },
+    "Trace": {
+      "title": "Trace",
+      "description": "Trace ids on a message.",
+      "type": "object",
+      "required": [
+        "traceId"
+      ],
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "spanId": {
+          "type": "string"
+        },
+        "parentSpanId": {
+          "type": "string"
+        }
+      }
+    },
+    "MessageEvent": {
+      "title": "MessageEvent",
+      "description": "A message between two participants. data is its payload: any JSON value, absent when it has none. In the diagram page's copy, when payloadId is set, only the payload's method, path and status (or nothing) stay in data.",
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "from",
+        "to",
+        "label",
+        "type"
+      ],
+      "properties": {
+        "kind": {
+          "const": "message"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the scenario."
+        },
+        "from": {
+          "type": "string",
+          "description": "Sender id. An empty string, not an absent field, for a diagram edge: SHORT_INBOUND."
+        },
+        "to": {
+          "type": "string",
+          "description": "Receiver id. An empty string, not an absent field, for a diagram edge: SHORT_OUTBOUND."
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/MessageType"
+        },
+        "colour": {
+          "type": "string"
+        },
+        "durationMs": {
+          "type": "number",
+          "description": "Milliseconds, to the microsecond, without trailing zeros."
+        },
+        "data": true,
+        "payloadId": {
+          "type": "string",
+          "description": "Key into the payload sidecar (<scenarioId>/<messageId>), set in the diagram page's copy when the payload loads on open. Never in <stem>-report.json."
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Capture order. Absent when not counted."
+        },
+        "callId": {
+          "type": "string"
+        },
+        "replyTo": {
+          "type": "string",
+          "description": "On a reply: the call it answers."
+        },
+        "causedBy": {
+          "type": "string",
+          "description": "On a consume: the publish that caused it."
+        },
+        "trace": {
+          "$ref": "#/$defs/Trace"
+        },
+        "source": {
+          "type": "string",
+          "description": "Clock domain, such as a service name. Absent means local."
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Wall-clock time of capture. Left out of reproducible reports."
+        },
+        "status": {
+          "type": "string",
+          "description": "The message's status, such as an HTTP status, as text even when it is a number."
+        },
+        "timing": {
+          "$ref": "#/$defs/TimingSource"
+        },
+        "pairing": {
+          "$ref": "#/$defs/PairingSource"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderSource"
+        },
+        "parentId": {
+          "type": "string",
+          "description": "Id of the call this message runs inside, as the library nested it (span link, else innermost open call)."
+        },
+        "replyOf": {
+          "type": "string",
+          "description": "On a paired reply: id of the call it answers."
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one."
+        }
+      }
+    },
+    "NoteEvent": {
+      "title": "NoteEvent",
+      "description": "A note.",
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "text",
+        "placement"
+      ],
+      "properties": {
+        "kind": {
+          "const": "note"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the scenario."
+        },
+        "text": {
+          "type": "string"
+        },
+        "over": {
+          "type": "string",
+          "description": "Anchor participant. Set for placement over; optional for left and right."
+        },
+        "placement": {
+          "$ref": "#/$defs/NotePlacement"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one."
+        }
+      }
+    },
+    "DividerEvent": {
+      "title": "DividerEvent",
+      "description": "A labelled line across the diagram.",
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "label"
+      ],
+      "properties": {
+        "kind": {
+          "const": "divider"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the scenario."
+        },
+        "label": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one."
+        }
+      }
+    },
+    "SectionEvent": {
+      "title": "SectionEvent",
+      "description": "A titled row in one continuous diagram. Does not split the drawing or end activations.",
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "title"
+      ],
+      "properties": {
+        "kind": {
+          "const": "section"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the scenario."
+        },
+        "title": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one."
+        }
+      }
+    },
+    "DelayEvent": {
+      "title": "DelayEvent",
+      "description": "A time-delay ellipsis (...label...).",
+      "type": "object",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "const": "delay"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the scenario."
+        },
+        "label": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one."
+        }
+      }
+    },
+    "SpacerEvent": {
+      "title": "SpacerEvent",
+      "description": "Vertical space.",
+      "type": "object",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "const": "spacer"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the scenario."
+        },
+        "heightPx": {
+          "type": "integer",
+          "description": "Height in CSS pixels."
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one."
+        }
+      }
+    },
+    "ActivateEvent": {
+      "title": "ActivateEvent",
+      "description": "Starts or ends a participant's activation bar.",
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "participantId"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "activate",
+            "deactivate"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the scenario."
+        },
+        "participantId": {
+          "type": "string"
+        },
+        "colour": {
+          "type": "string",
+          "description": "Activation bar colour. Only on activate, and only when the caller set one."
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one."
+        }
+      }
+    },
+    "UnknownEvent": {
+      "title": "UnknownEvent",
+      "description": "An event of a kind this version does not know, from a newer producer. Event kinds are open: readers drop an event of a kind they do not know.",
+      "type": "object",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "not": {
+            "enum": [
+              "message",
+              "note",
+              "divider",
+              "section",
+              "delay",
+              "spacer",
+              "activate",
+              "deactivate"
+            ]
+          }
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "DiagramEvent": {
+      "title": "DiagramEvent",
+      "description": "One row of a sequence diagram, by kind. The generated TypeScript type leaves out UnknownEvent: the report UI drops those when it loads a report.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/MessageEvent"
+        },
+        {
+          "$ref": "#/$defs/NoteEvent"
+        },
+        {
+          "$ref": "#/$defs/DividerEvent"
+        },
+        {
+          "$ref": "#/$defs/SectionEvent"
+        },
+        {
+          "$ref": "#/$defs/DelayEvent"
+        },
+        {
+          "$ref": "#/$defs/SpacerEvent"
+        },
+        {
+          "$ref": "#/$defs/ActivateEvent"
+        },
+        {
+          "$ref": "#/$defs/UnknownEvent"
+        }
+      ],
+      "tsType": "MessageEvent | NoteEvent | DividerEvent | SectionEvent | DelayEvent | SpacerEvent | ActivateEvent"
+    },
+    "Scenario": {
+      "title": "Scenario",
+      "description": "One scenario: a test or a feature's scenario. The timing summary (accuracy to pairAccuracy) sits flat on the scenario, not in an object of its own. accuracy says how the scenario's timings were captured. The timing summary (accuracy, sources, clockOrdering, clockOrdered and the optional fields after them) is optional for a producer without timing analysis. A reader's defaults: accuracy MEASURED when a message has a duration or start time, else STRUCTURE_ONLY; sources as described; clockOrdering SAME_SOURCE; clockOrdered 0.",
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "status",
+        "description",
+        "facts",
+        "metrics",
+        "participants",
+        "events"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the report."
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "description": {
+          "type": "string",
+          "description": "Plain text; Given, When, Then and And lines are highlighted."
+        },
+        "error": {
+          "$ref": "#/$defs/ScenarioError"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Fact"
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Metric"
+          }
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Participant"
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DiagramEvent"
+          }
+        },
+        "accuracy": {
+          "$ref": "#/$defs/Accuracy"
+        },
+        "measuredCoverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Share of calls with a measured duration, 0 to 1. Absent when there are no calls."
+        },
+        "pairingCoverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Share of calls paired with their reply by call id or trace, 0 to 1. Absent when there are no calls."
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Distinct clock domains of the messages, local included (local is the name for a message with no source). Optional: a reader's default is [\"local\"] when the scenario has messages, else []."
+        },
+        "wallClockMs": {
+          "type": "number",
+          "description": "From the first start to the last end. Only for a single clock domain whose measured calls all have a start. Milliseconds, to the microsecond, without trailing zeros."
+        },
+        "clockOrdering": {
+          "$ref": "#/$defs/ClockOrdering"
+        },
+        "clockOrdered": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many messages clock ordering placed. Default 0."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TimingWarning"
+          },
+          "description": "Absent, rather than empty, when there are none."
+        },
+        "reorderedByClock": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of the messages clock ordering moved. Absent, rather than empty, when there are none."
+        },
+        "pairAccuracy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PairAccuracy"
+          },
+          "description": "Accuracy per participant pair, present only when the pairs differ."
+        }
+      }
+    }
+  }
+}

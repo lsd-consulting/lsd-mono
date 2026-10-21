@@ -21,6 +21,7 @@ description =
 dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.json.schema.validator)
     testRuntimeOnly(libs.junit.platform.launcher)
 
     testFixturesImplementation(platform(libs.junit.bom))
@@ -48,6 +49,11 @@ tasks.test {
         .files(layout.projectDirectory.file("README.md"), rootProject.layout.projectDirectory.file("README.md"))
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("readmes")
+    // ReportSchemaTest validates real output against the report JSON Schema.
+    inputs
+        .dir(rootProject.layout.projectDirectory.dir("modules/lsd-mono-report-schema"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("reportSchema")
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
     systemProperty("lsd.mono.test.projectVersion", project.version.toString())
 }

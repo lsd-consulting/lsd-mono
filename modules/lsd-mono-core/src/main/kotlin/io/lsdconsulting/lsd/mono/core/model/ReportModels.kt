@@ -12,7 +12,8 @@ import io.lsdconsulting.lsd.mono.core.json.render
 import io.lsdconsulting.lsd.mono.core.json.renderCompact
 
 /**
- * Report JSON aligned with report `src/types.ts` (`Report` / `Scenario` / `DiagramEvent`).
+ * The report JSON, as the report schema (`modules/lsd-mono-report-schema/lsd-report.schema.json`)
+ * describes it. The report UI's types are generated from that schema.
  */
 internal data class ReportFile(
     /** The page the index links to: the report's interactive diagram. */
@@ -351,6 +352,7 @@ internal data class LifelineEventJson(
 internal fun ReportJson.toJson(): String =
     obj(
         listOf(
+            "schemaVersion" to JsonString(ReportSchema.VERSION),
             "title" to JsonString(title),
             "generatedAt" to JsonString(generatedAt),
             "generator" to JsonString(generator),
