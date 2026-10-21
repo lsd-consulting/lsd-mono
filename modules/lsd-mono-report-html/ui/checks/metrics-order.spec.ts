@@ -1,7 +1,7 @@
 import { devices, expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
 import { example, openExample } from './example-report'
-import { formatViolations, seriousViolations } from './ux-helpers'
+import { expectStable, formatViolations, seriousViolations } from './ux-helpers'
 import { openReport } from './open-report'
 
 // #95: the Timing and metrics panel reads Time by participant, Swim lanes, Waterfall, Metrics,
@@ -252,7 +252,12 @@ for (const width of [390, 320, 768]) {
       // The heading lands just under the panel's sticky header, and stays there.
       const heading = '#inspector [data-panel-section="pair-accuracy"] h3'
       await expect.poll(() => inViewUnderHead(page, heading), { timeout: 3000 }).toBe(true)
-      await page.waitForTimeout(800)
+      // Stays: once the smooth scroll has come to rest (ten frames without a move), it is still there.
+      await expectStable(
+        page,
+        () => page.evaluate(() => [scrollY, document.querySelector('#inspector')!.scrollTop, innerHeight]),
+        { frames: 10 },
+      )
       expect(await inViewUnderHead(page, heading)).toBe(true)
       await expect(page.locator(heading)).toBeInViewport()
     })

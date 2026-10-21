@@ -1,13 +1,14 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { uxFixture } from './ux-fixture'
 import {
-  THEMES,
-  openFixture,
-  seriousViolations,
-  formatViolations,
-  startPrint,
   endPrint,
+  expectStable,
+  formatViolations,
+  openFixture,
   openWide,
+  seriousViolations,
+  startPrint,
+  THEMES,
   zoomOf,
 } from './ux-helpers'
 import { openReport } from './open-report'
@@ -199,8 +200,9 @@ test('hiding refits a diagram the user has not zoomed, and keeps a zoom they cho
   const chosen = (await zoomOf(page, 'wide-a')).percent
   await hoverHead(card.locator('[data-participant-head="p4"]'))
   await card.getByRole('button', { name: 'Hide Service 4', exact: true }).click()
-  await page.waitForTimeout(200)
-  expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
+  // The hide has painted (the lane is gone), then the zoom holds still: a refit would show here.
+  await expect(card.locator('[data-participant-head="p4"]')).toHaveCount(0)
+  expect(await expectStable(page, async () => (await zoomOf(page, 'wide-a')).percent)).toBe(chosen)
   // Per scenario: the other diagram keeps all its participants.
   await page.locator('#scenario-nav [data-nav="wide-b"]').click()
   await expect(page.locator('#card-wide-b .seq-header-svg .participant-box')).toHaveCount(6)
@@ -395,6 +397,7 @@ test('on a phone a tap shows a header’s buttons below it, a long press opens t
     const cdp = await context.newCDPSession(page)
     const point = { x: head.x + head.width / 2, y: head.y + head.height / 2 }
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+    // eslint-disable-next-line no-restricted-syntax -- the hold is what is under test, not a wait for something to settle
     await page.waitForTimeout(800)
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     const menu = page.getByRole('menu', { name: 'Actions for Database' })

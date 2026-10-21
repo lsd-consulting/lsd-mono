@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { conformanceReport } from '../src/lib/conformance.test-util'
 import { openReport } from './open-report'
 import { wideReport } from './wide-sample'
-import { seriousViolations } from './ux-helpers'
+import { expectStable, seriousViolations } from './ux-helpers'
 
 // #105: the component diagram is the diagram area's other view, behind Sequence | Components tabs.
 
@@ -159,7 +159,6 @@ test('switching views keeps the sequence diagram where it was: zoom, scroll, hid
   await page.locator('[data-diagram-find]').fill('order')
   await page.locator('button.msg-open').nth(2).focus()
   await page.mouse.wheel(0, 300)
-  await page.waitForTimeout(100)
   const place = () =>
     seq.evaluate((el) => ({
       top: el.scrollTop,
@@ -169,7 +168,8 @@ test('switching views keeps the sequence diagram where it was: zoom, scroll, hid
       stop: el.querySelector('button.msg-open[tabindex="0"]')?.getAttribute('data-message-id'),
       hidden: document.querySelectorAll('.participant-heads .participant-head').length,
     }))
-  const before = await place()
+  // The wheel scroll has come to rest.
+  const before = await expectStable(page, place)
   // A plain click would first scroll the page up to the tabs, and the diagram, which scrolls
   // with the page, would rightly follow it back to its top: switch where the page is.
   await tab(page, 'Components').dispatchEvent('click')

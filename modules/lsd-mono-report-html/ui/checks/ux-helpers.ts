@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import type { MessageEvent, Participant, Report, Scenario } from '../src/types'
 import { openReport } from './open-report'
 import { uxFixture } from './ux-fixture'
@@ -133,6 +133,55 @@ export function painted(page: Page): Promise<void> {
   return page.evaluate(
     () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
   )
+}
+
+/** Wait for `n` animation frames: what a scroll, focus or resize lands within (#110). */
+export function frames(page: Page, n = 2): Promise<void> {
+  return page.evaluate(
+    (count) =>
+      new Promise<void>((resolve) => {
+        const step = (left: number) => (left <= 0 ? resolve() : requestAnimationFrame(() => step(left - 1)))
+        step(count)
+      }),
+    n,
+  )
+}
+
+/**
+ * Read `read` once a frame until it gives the same value `frames` reads in a row, and return that
+ * value (#110). For "has it settled" and "did nothing change": a scroll still moving, or a late
+ * refit, shows as a change and the reading goes on, up to `timeout` ms, when it fails.
+ */
+export async function expectStable<T>(
+  page: Page,
+  read: () => Promise<T>,
+  { frames: needed = 3, timeout = 5000 }: { frames?: number; timeout?: number } = {},
+): Promise<T> {
+  const end = Date.now() + timeout
+  let last = JSON.stringify(await read())
+  let same = 1
+  for (;;) {
+    await frames(page, 1)
+    const value = await read()
+    const now = JSON.stringify(value)
+    same = now === last ? same + 1 : 1
+    last = now
+    if (same >= needed) return value
+    if (Date.now() > end) throw new Error(`not stable after ${timeout}ms: last ${now}`)
+  }
+}
+
+/**
+ * Wait until every request the page made before this call has reached `route` (#110): fetch
+ * `url`, which the route records like any other, and wait for it to arrive. Requests the page
+ * makes in order reach the route in order, so once the sentinel is in, nothing earlier is still
+ * on its way. The caller's route must answer (abort or fulfil) the sentinel too.
+ */
+export async function requestsFlushed(page: Page, seen: () => string[], url: string): Promise<void> {
+  await page.evaluate((u) => {
+    void fetch(u, { mode: 'no-cors' }).catch(() => {})
+  }, url)
+  await expect.poll(() => seen().includes(url)).toBe(true)
 }
 
 /** Zoom readout as a number (85 for "85%") and sideways overflow, for one scenario's diagram, as painted (see painted). */

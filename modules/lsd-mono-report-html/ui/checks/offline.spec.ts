@@ -5,6 +5,7 @@ import type { IndexManifest, ReportData } from '../src/lib/report-index'
 import type { Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
 import { indexBase } from '../src/lib/report-fixture.test-util'
+import { frames, requestsFlushed } from './ux-helpers'
 
 /**
  * The production report (dist/lsd-report.html, opened from file:// as a written report is) makes
@@ -13,6 +14,8 @@ import { indexBase } from '../src/lib/report-fixture.test-util'
  */
 
 const shell = fileURLToPath(new URL('../dist/lsd-report.html', import.meta.url))
+/** Sent by the check after the page's own requests (requestsFlushed); never a real host. */
+const SENTINEL = 'https://sentinel.invalid/flushed'
 const PING = /^https:\/\/cdn\.jsdelivr\.net\/gh\/lsd-consulting\/lsd-mono@0\.2\.0\/ping\/[a-z-]+\.txt$/
 
 /** A report with [usagePing], or, when it is undefined, one from before the option existed. */
@@ -58,9 +61,11 @@ async function requestsWhile(page: Page, globals: Record<string, unknown>): Prom
   await page.locator('button.msg-open').first().click()
   await expect(page.locator('#inspector')).toBeVisible()
   await page.keyboard.press('d')
-  await page.waitForTimeout(300)
+  // The theme change has painted, and every request the page made has reached the route.
+  await frames(page)
+  await requestsFlushed(page, () => requests, SENTINEL)
   expect(errors).toEqual([])
-  return requests
+  return requests.filter((url) => url !== SENTINEL)
 }
 
 test.beforeAll(() => {

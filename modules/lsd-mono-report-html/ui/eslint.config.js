@@ -29,8 +29,12 @@ const handRolledEscaping = [
   },
 ]
 
+const SLEEP = 'No fixed sleeps in check:ux: use expect.poll, frames or expectStable (checks/ux-helpers.ts).'
+
 export default defineConfig(
   { ignores: ['dist/', 'coverage/', 'test-results/', 'playwright-report/', 'node_modules/'] },
+  // A disable comment that no longer silences anything fails lint instead of lingering (#110).
+  { linterOptions: { reportUnusedDisableDirectives: 'error' } },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   {
@@ -60,6 +64,26 @@ export default defineConfig(
   {
     files: ['*.config.ts', 'checks/**/*.ts', 'src/**/*.test.ts', 'src/**/*.test-util.ts'],
     languageOptions: { globals: { ...globals.node } },
+  },
+  {
+    // check:ux runs in parallel: a fixed sleep races what it waits for or proves nothing (#110).
+    // Wait with expect.poll, frames or expectStable (checks/ux-helpers.ts). Any mention of
+    // waitForTimeout (a call, page['waitForTimeout'], a destructured or aliased one) and any
+    // setTimeout or setInterval (in Node or inside page.evaluate) is rejected. A sleep that is the
+    // thing being tested (a long press) takes an eslint-disable comment whose `-- reason` says so.
+    files: ['checks/**/*.ts'],
+    plugins: { lsd },
+    rules: {
+      'lsd/disable-reason': 'error',
+      'no-restricted-syntax': [
+        'error',
+        { selector: "Identifier[name='waitForTimeout']", message: SLEEP },
+        { selector: "Literal[value='waitForTimeout']", message: SLEEP },
+        { selector: "TemplateElement[value.cooked='waitForTimeout']", message: SLEEP },
+        { selector: 'Identifier[name=/^set(Timeout|Interval)$/]', message: SLEEP },
+        { selector: 'Literal[value=/^set(Timeout|Interval)$/]', message: SLEEP },
+      ],
+    },
   },
   {
     // Test doubles implement async interfaces (loadPayload, clipboard.writeText) with

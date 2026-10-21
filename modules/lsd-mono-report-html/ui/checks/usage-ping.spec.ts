@@ -4,6 +4,7 @@ import type { Report } from '../src/types'
 import { openReport } from './open-report'
 import { uxFixture } from './ux-fixture'
 import { indexBase } from '../src/lib/report-fixture.test-util'
+import { requestsFlushed } from './ux-helpers'
 
 /**
  * The usage ping (src/lib/usage-ping.ts). The dev server never pings, so these pages opt in with
@@ -13,6 +14,8 @@ import { indexBase } from '../src/lib/report-fixture.test-util'
 
 const CDN = 'https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@0.2.0/ping/'
 const OPT_IN = '/?lsd-usage-ping-check'
+/** Sent by the check itself, after the page's own requests (requestsFlushed). */
+const SENTINEL = 'sentinel.txt'
 
 function report(options: Partial<NonNullable<Report['options']>>, generator = 'lsd-mono-core 0.2.0'): Report {
   return {
@@ -95,9 +98,9 @@ for (const [what, data, path] of [
     await page.keyboard.press('Escape')
     await page.locator('#diagram-tab-components').click()
     await expect(page.locator('.comp-scroll')).toBeVisible()
-    // Give a stray request time to show up.
-    await page.waitForTimeout(200)
-    expect(opened.pings).toEqual([])
+    // Every request made so far has reached the route once a sentinel sent after them has.
+    await requestsFlushed(page, () => opened.pings.map((r) => r.url()), `${CDN}${SENTINEL}`)
+    expect(files(opened.pings)).toEqual([SENTINEL])
     expect(opened.errors).toEqual([])
   })
 }

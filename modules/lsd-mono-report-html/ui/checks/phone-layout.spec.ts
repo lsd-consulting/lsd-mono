@@ -3,7 +3,7 @@ import type { Report } from '../src/types'
 import { PAGES, sectionsReport } from './diagram-pages'
 import { openReport } from './open-report'
 import { uxFixture } from './ux-fixture'
-import { pendingReport, scenarioPartTops } from './ux-helpers'
+import { expectStable, pendingReport, scenarioPartTops } from './ux-helpers'
 
 /**
  * The phone layout: the scenario list folds to the selected item under an "N scenarios"
@@ -131,8 +131,7 @@ for (const [phone, device] of Object.entries(PHONES)) {
         const panelTop = before.panelDocTop
         // Well into the diagram, past where its toolbar starts.
         await page.evaluate((y) => scrollTo(0, y + 300), before.toolbarDocTop)
-        await page.waitForTimeout(100)
-        const after = await measure()
+        const after = await expectStable(page, measure)
         expect(after.barBottom).toBeLessThanOrEqual(64)
         expect(Math.abs(after.barBottom - after.stuck)).toBeLessThanOrEqual(1)
         expect(after.brandBottom).toBeLessThanOrEqual(1)
@@ -200,8 +199,7 @@ for (const [name, viewport] of [
       const end = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)
       for (const y of [start, start + 200, (start + end) / 2, end - 50, end]) {
         await page.evaluate((to) => scrollTo(0, to), y)
-        await page.waitForTimeout(80)
-        const m = await stuckHeader()
+        const m = await expectStable(page, stuckHeader)
         // Once the diagram's top has reached the toolbar the header is never under it.
         if (y > start) {
           expect(m.top, `header top at scroll ${y}`).toBeGreaterThanOrEqual(m.toolbarBottom - 1)
@@ -253,14 +251,12 @@ for (const [name, viewport] of [
       expect(room).toBeGreaterThan(0)
       for (const y of [start + 200, (start + end) / 2, end - room - 20]) {
         await page.evaluate((to) => scrollTo(0, to), y)
-        await page.waitForTimeout(80)
-        const m = await drawing()
+        const m = await expectStable(page, drawing)
         expect(m.bottom, `drawing bottom at scroll ${y}`).toBeGreaterThanOrEqual(viewport.height - 1)
         expect(m.drawnAtScreenBottom, `drawing at the screen bottom at scroll ${y}`).toBe(true)
       }
       await page.evaluate((to) => scrollTo(0, to), end)
-      await page.waitForTimeout(80)
-      const m = await drawing()
+      const m = await expectStable(page, drawing)
       expect(Math.abs(m.bottom - m.stageBottom)).toBeLessThanOrEqual(1)
       expect(m.bottom).toBeLessThanOrEqual(viewport.height)
       expect(m.atDrawingEnd).toBe(true)
@@ -287,7 +283,7 @@ for (const [name, viewport] of [
         document.querySelector<HTMLElement>('.seq-scroll button.msg-open')!.focus({ preventScroll: true })
         scrollTo(0, 0)
       })
-      await page.waitForTimeout(80)
+      await expectStable(page, () => page.evaluate(() => scrollY))
       const focused = () =>
         page.evaluate(async () => {
           await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
@@ -308,8 +304,7 @@ for (const [name, viewport] of [
         expect(m.top, `${step}: ${m.id} top at scroll ${m.scrollY}`).toBeGreaterThanOrEqual(m.below - 1)
         expect(m.bottom, `${step}: ${m.id} bottom at scroll ${m.scrollY}`).toBeLessThanOrEqual(viewport.height)
         // One move per press: the page does not follow on a frame later.
-        await page.waitForTimeout(50)
-        expect(await page.evaluate(() => scrollY), `${step}: page settled`).toBe(m.scrollY)
+        expect(await expectStable(page, () => page.evaluate(() => scrollY)), `${step}: page settled`).toBe(m.scrollY)
         return m
       }
       const steps = 24
@@ -355,7 +350,7 @@ for (const [name, viewport] of [
         // Start with the page scrolled to its end, where the toolbar's upper rows are stuck out of
         // sight: Shift+Tab from Find goes up into them, Tab from the scenario list comes down to them.
         await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
-        await page.waitForTimeout(100)
+        await expectStable(page, () => page.evaluate(() => scrollY))
         await page
           .locator(direction === 'Tab' ? '#btn-nav-fold' : '[data-diagram-find]')
           .evaluate((el) => (el as HTMLElement).focus({ preventScroll: true }))
@@ -363,7 +358,10 @@ for (const [name, viewport] of [
         const seenNames = new Set<string>()
         for (let i = 0; i < 14; i++) {
           await page.keyboard.press(direction)
-          await page.waitForTimeout(30)
+          // Focus has moved and its scroll into view has come to rest.
+          await expectStable(page, () =>
+            page.evaluate(() => [scrollY, document.activeElement?.getBoundingClientRect().top ?? null]),
+          )
           const issue = await hidden(page)
           if (issue) covered.push(issue)
           seenNames.add(

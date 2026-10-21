@@ -2,6 +2,7 @@ import { devices, expect, test, type CDPSession, type Page } from '@playwright/t
 import type { Report } from '../src/types'
 import { PAGES, sectionsReport } from './diagram-pages'
 import { openReport } from './open-report'
+import { frames } from './ux-helpers'
 
 /**
  * The Timing and metrics panel on a phone, swiped with real touch (CDP touch events, so the
@@ -14,9 +15,6 @@ const PHONES = {
   // The same Chromium on both, so CI runs the matrix on one phone and a local run on both (#97).
   ...(process.env.CI ? {} : { Pixel: devices['Pixel 7'] }),
 }
-
-/** Resolves on the browser's next frame, so each touch move lands in a frame of its own. */
-const nextFrame = (page: Page) => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)))
 
 /**
  * One finger swipe from y0 to y1 at x, in CSS px. It returns when the finger lifts: the page may
@@ -31,7 +29,7 @@ async function swipe(page: Page, cdp: CDPSession, x: number, y0: number, y1: num
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] })
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
-  await nextFrame(page)
+  await frames(page, 1)
 }
 
 /** The sections fixture with timed calls and metrics, so the panel holds a long Timing view. */

@@ -1,7 +1,7 @@
 import { RuleTester } from 'eslint'
 import tseslint from 'typescript-eslint'
 import { afterAll, describe, it } from 'vitest'
-import { escapedMarkup } from './eslint-plugin-lsd.js'
+import { disableReason, escapedMarkup } from './eslint-plugin-lsd.js'
 
 RuleTester.afterAll = afterAll
 RuleTester.describe = describe
@@ -41,5 +41,22 @@ tester.run('lsd/escaped-markup', escapedMarkup, {
     { code: 'const a = (xs: string[]) => `<ul>${xs.map((x) => x).join("")}</ul>`', errors: [unescaped] },
     { code: 'const a = (t: string) => { let s = escapeHtml(t); s = t; return `<p>${s}</p>` }', errors: [unescaped] },
     { code: 'const a = (on: boolean, t: string) => `<b>${on ? escapeHtml(t) : t}</b>`', errors: [unescaped] },
+  ],
+})
+
+const noReason = { messageId: 'noReason' }
+
+tester.run('lsd/disable-reason', disableReason, {
+  valid: [
+    '// eslint-disable-next-line no-console -- printing is the point\nconsole.log(1)',
+    '/* eslint-disable no-console -- a CLI script */\nconsole.log(1)',
+    'console.log(1) // eslint-disable-line no-console -- printing is the point',
+    '// eslint-enable no-console\nconst a = 1',
+    '// a comment that mentions eslint-disable in passing\nconst a = 1',
+  ],
+  invalid: [
+    { code: '// eslint-disable-next-line no-console\nconsole.log(1)', errors: [noReason] },
+    { code: '/* eslint-disable no-console */\nconsole.log(1)', errors: [noReason] },
+    { code: 'console.log(1) // eslint-disable-line no-console', errors: [noReason] },
   ],
 })

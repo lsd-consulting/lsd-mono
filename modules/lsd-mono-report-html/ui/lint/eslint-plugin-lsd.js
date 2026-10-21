@@ -249,7 +249,35 @@ export const escapedMarkup = {
   },
 }
 
+/**
+ * `lsd/disable-reason`: an `eslint-disable` comment has to say why, after ` -- ` (#110), so
+ * switching a rule off is a decision a reviewer can read, not a silent escape hatch. A blanket
+ * `/* eslint-disable *\/` that names no rule also switches this rule off, so review has to catch
+ * that one.
+ */
+const DISABLE = /^\s*eslint-disable(?:-next-line|-line)?(?:\s|$)/
+const REASON = /\s--\s*\S/
+
+export const disableReason = {
+  meta: {
+    type: 'problem',
+    docs: { description: 'Require a reason (`-- why`) on every eslint-disable comment' },
+    schema: [],
+    messages: { noReason: 'Say why the rule is off: `eslint-disable... <rule> -- <reason>`.' },
+  },
+  create(context) {
+    return {
+      Program() {
+        for (const comment of context.sourceCode.getAllComments()) {
+          if (DISABLE.test(comment.value) && !REASON.test(comment.value))
+            context.report({ loc: comment.loc, messageId: 'noReason' })
+        }
+      },
+    }
+  },
+}
+
 export default {
   meta: { name: 'eslint-plugin-lsd' },
-  rules: { 'escaped-markup': escapedMarkup },
+  rules: { 'escaped-markup': escapedMarkup, 'disable-reason': disableReason },
 }

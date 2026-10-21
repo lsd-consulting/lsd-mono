@@ -3,16 +3,18 @@ import type { Report } from '../src/types'
 import { sectionsReport } from './diagram-pages'
 import { uxFixture } from './ux-fixture'
 import {
-  THEMES,
   computedColours,
   contrastRatio,
-  openFixture,
   diagramOnScreen,
-  openWide,
+  expectStable,
   formatViolations,
-  seriousViolations,
-  zoomOf,
+  frames,
+  openFixture,
+  openWide,
   painted,
+  seriousViolations,
+  THEMES,
+  zoomOf,
 } from './ux-helpers'
 import { openReport } from './open-report'
 
@@ -192,9 +194,15 @@ test('a wide diagram opens fitted, refits on resize until the user zooms, then k
   const card = page.locator('#card-wide-a')
   await card.getByRole('button', { name: 'Zoom in' }).click()
   const chosen = (await zoomOf(page, 'wide-a')).percent
+  const panel = () => card.locator('.seq-scroll').evaluate((el) => el.clientWidth)
+  const narrow = await panel()
   await page.setViewportSize({ width: 1300, height: 800 })
-  await page.waitForTimeout(250)
-  expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
+  // The panel has taken the new width, so its resize observer has run (within the next frames):
+  // the zoom then holds still. A refit that lands within the few frames expectStable watches
+  // (about 150 ms) shows as a change; a later one would not.
+  await expect.poll(panel).toBeGreaterThan(narrow)
+  await frames(page)
+  expect(await expectStable(page, async () => (await zoomOf(page, 'wide-a')).percent)).toBe(chosen)
 
   // Fit hands it back to automatic fitting.
   await page.setViewportSize({ width: 1250, height: 800 })
