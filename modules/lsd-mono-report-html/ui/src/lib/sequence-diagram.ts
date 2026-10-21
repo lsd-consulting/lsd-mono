@@ -9,6 +9,7 @@ import { type DiagramView, type MountedDiagram, diagramState, diagramView } from
 import { findFieldLabel, scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
 import { PRINT_MAX_UPSCALE, frameOf } from './diagram/geometry'
 import { revealMessageX, syncDiagramWindow } from './diagram/window'
+import { keepOnPage, scrollDiagramToOffset, shownHeight } from './diagram/page-scroll'
 import { sequenceZoomShown, zoomControlsHtml } from './diagram/zoom-readout'
 import { cssEscape, escapeAttr, escapeHtml } from './escape'
 import { DEFAULT_VIEWPORT, HEADER_BLOCK_H, MESSAGE_LABEL_RISE, bodyHeight, diagramWidth, layoutRows } from './layout'
@@ -171,6 +172,9 @@ function printWidthStyle(width: number): string {
   return `--seq-print-max:${Math.round(width * PRINT_MAX_UPSCALE)}px`
 }
 
+/** CSS pixels between the sticky header and a message brought into view for focus. */
+const FOCUS_CLEARANCE_PX = 8
+
 /** Scroll the arrow into view if needed, then focus its button. One tab stop. */
 export function focusDiagramMessage(scrollport: HTMLElement, wanted: string): void {
   const scenarioId = scrollport.dataset.scenarioId
@@ -190,25 +194,36 @@ export function focusDiagramMessage(scrollport: HTMLElement, wanted: string): vo
     if (row) {
       const header = scrollport.querySelector<HTMLElement>('.seq-sticky-header')
       const cssHeader = header?.offsetHeight || HEADER_BLOCK_H * view.zoom
+      // What of the drawing is on screen: before the diagram sticks to the page, not all of it.
       const unscaled = unscaledViewport({
         scrollTop: scrollport.scrollTop,
-        viewportHeight: scrollport.clientHeight || DEFAULT_VIEWPORT,
+        viewportHeight: scrollport.clientHeight ? shownHeight(scrollport) : DEFAULT_VIEWPORT,
         headerHeight: cssHeader,
         zoom: view.zoom,
       })
       const labelY = row.y - MESSAGE_LABEL_RISE
       const viewBottom = unscaled.scrollTop + Math.max(0, unscaled.viewportHeight - unscaled.headerHeight)
+      // The page moves with the drawing (page-scroll.ts): moving it here, at once, keeps the two in
+      // step, so the message is on screen when it is focused and the page does not follow later.
       if (labelY < unscaled.scrollTop || row.y > viewBottom) {
-        scrollport.scrollTop = focusScrollTop(row.y, view.zoom)
+        // A little clear of the sticky header: the focus ring sits outside the label's box.
+        scrollDiagramToOffset(scrollport, Math.max(0, focusScrollTop(row.y, view.zoom) - FOCUS_CLEARANCE_PX))
       }
     }
     revealMessageX(scrollport, messageId)
     syncDiagramWindow(scrollport)
+    // Its button reaches past the arrow and the label (the hit area), and before the diagram
+    // sticks the drawing runs on below the window: move the page the rest of the way if needed.
+    const placed = messageButton(scrollport, messageId)
+    if (placed && keepOnPage(scrollport, placed, FOCUS_CLEARANCE_PX)) syncDiagramWindow(scrollport)
   } finally {
     diagramState.movingFocus = false
   }
-  const btn = scrollport.querySelector<HTMLButtonElement>(`button.msg-open[data-message-id="${cssEscape(messageId)}"]`)
-  btn?.focus({ preventScroll: true })
+  messageButton(scrollport, messageId)?.focus({ preventScroll: true })
+}
+
+function messageButton(scrollport: HTMLElement, messageId: string): HTMLButtonElement | null {
+  return scrollport.querySelector<HTMLButtonElement>(`button.msg-open[data-message-id="${cssEscape(messageId)}"]`)
 }
 
 /** Y of a message row in the mounted diagram, for the Timing view's rows. */

@@ -164,7 +164,40 @@ export function scrollDiagramToOffset(scrollport: HTMLElement, offset: number): 
   }
   const top = Math.max(0, window.scrollY + stage.getBoundingClientRect().top - stickyTop(scrollport) + offset)
   window.scrollTo({ top, behavior: 'instant' })
+  // Fitted to the page position it has now, so it follows to a scrollTop it can reach.
+  fitToPage(scrollport)
   followPage(scrollport)
+}
+
+/**
+ * Scroll the page just enough that [el], in the drawing, is wholly on screen: below the sticky
+ * header, above the window's bottom and the scrollport's, with [clearance] px to spare (#113).
+ * The drawing scrolls with the page, so this moves both at once. Returns whether it moved.
+ */
+export function keepOnPage(scrollport: HTMLElement, el: HTMLElement, clearance: number): boolean {
+  if (!linked(scrollport) || undrawn(scrollport)) return false
+  const box = el.getBoundingClientRect()
+  const port = scrollport.getBoundingClientRect()
+  const top = scrollport.querySelector('.seq-sticky-header')?.getBoundingClientRect().bottom ?? port.top
+  const bottom = Math.min(window.innerHeight, port.bottom)
+  let by = 0
+  if (box.bottom > bottom + TOLERANCE_PX) by = box.bottom - bottom + clearance
+  else if (box.top < top - TOLERANCE_PX) by = box.top - top - clearance
+  if (by === 0) return false
+  window.scrollTo({ top: Math.max(0, window.scrollY + by), behavior: 'instant' })
+  fitToPage(scrollport)
+  followPage(scrollport)
+  return true
+}
+
+/**
+ * How much of the scrollport's height is on screen, in CSS pixels. Until the diagram sticks its
+ * top is lower on the page than the sticky line, so its lower part can be below the window (#113).
+ */
+export function shownHeight(scrollport: HTMLElement): number {
+  if (!linked(scrollport)) return scrollport.clientHeight
+  const onScreen = window.innerHeight - scrollport.getBoundingClientRect().top
+  return Math.max(0, Math.min(scrollport.clientHeight, Math.floor(onScreen)))
 }
 
 const scrollports = new Set<HTMLElement>()

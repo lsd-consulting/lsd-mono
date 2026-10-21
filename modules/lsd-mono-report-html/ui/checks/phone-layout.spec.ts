@@ -268,6 +268,66 @@ for (const [name, viewport] of [
   })
 }
 
+// WCAG 2.4.11 Focus Not Obscured (#113): from the top of the page, before the diagram sticks, its
+// lower part is below the window. Arrowing through the messages keeps the focused one wholly on
+// screen, below the sticky header and the bars, on the way down and back up.
+for (const [name, viewport] of [
+  ['360x780', { width: 360, height: 780 }],
+  ['412x915', { width: 412, height: 915 }],
+] as const) {
+  test.describe(`arrowing through messages on a ${name} phone`, () => {
+    const { userAgent, deviceScaleFactor, isMobile, hasTouch } = PHONES.Pixel
+    test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
+
+    test('the focused message stays on screen below the sticky header, down from the page top and back', async ({
+      page,
+    }) => {
+      await open(page, 'report')
+      await page.evaluate(() => {
+        document.querySelector<HTMLElement>('.seq-scroll button.msg-open')!.focus({ preventScroll: true })
+        scrollTo(0, 0)
+      })
+      await page.waitForTimeout(80)
+      const focused = () =>
+        page.evaluate(async () => {
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+          const el = document.activeElement as HTMLElement
+          const box = el.getBoundingClientRect()
+          const bottomOf = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().bottom
+          return {
+            id: el.matches('button.msg-open') ? el.dataset.messageId : `not a message: ${el.tagName}`,
+            top: box.top,
+            bottom: box.bottom,
+            below: Math.max(bottomOf('.seq-sticky-header'), bottomOf('.seq-toolbar'), bottomOf('.topbar')),
+            scrollY,
+          }
+        })
+      const check = async (step: string) => {
+        const m = await focused()
+        expect(m.id, step).not.toMatch(/^not a message/)
+        expect(m.top, `${step}: ${m.id} top at scroll ${m.scrollY}`).toBeGreaterThanOrEqual(m.below - 1)
+        expect(m.bottom, `${step}: ${m.id} bottom at scroll ${m.scrollY}`).toBeLessThanOrEqual(viewport.height)
+        // One move per press: the page does not follow on a frame later.
+        await page.waitForTimeout(50)
+        expect(await page.evaluate(() => scrollY), `${step}: page settled`).toBe(m.scrollY)
+        return m
+      }
+      const steps = 24
+      const ids: string[] = []
+      for (let i = 1; i <= steps; i++) {
+        await page.keyboard.press('ArrowDown')
+        ids.push((await check(`ArrowDown ${i}`)).id!)
+      }
+      // Every press moved on to a new message.
+      expect(new Set(ids).size).toBe(steps)
+      for (let i = 1; i < steps; i++) {
+        await page.keyboard.press('ArrowUp')
+        expect((await check(`ArrowUp ${i}`)).id).toBe(ids[steps - 1 - i])
+      }
+    })
+  })
+}
+
 // WCAG 2.4.11 Focus Not Obscured: on a phone the toolbar's upper rows slide under the top bar, so
 // a focused Zoom button could sit entirely beneath it. Walk the whole tab order both ways.
 for (const [name, viewport] of [

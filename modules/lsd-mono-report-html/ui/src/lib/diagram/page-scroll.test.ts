@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { bindPageScroll, scrollDiagramTo, sizeStage } from './page-scroll'
+import { bindPageScroll, keepOnPage, scrollDiagramTo, shownHeight, sizeStage } from './page-scroll'
 import { diagramState, diagramView } from './state'
 
 /** A diagram whose drawing is [content] px tall in a scrollport [port] px tall, stage top at [stageTop]. */
@@ -144,6 +144,56 @@ describe('room below the stage on a phone (#80, #113)', () => {
     const { scroll } = mount(5000, 800, 300)
     bindPageScroll(scroll)
     expect(scroll.closest<HTMLElement>('.seq-diagram')!.style.getPropertyValue('--seq-below')).toBe('0px')
+  })
+})
+
+describe('a focused message on the page (#113)', () => {
+  /** A scrollport [port] px tall with its top [portTop] px down the window and its header 56px tall. */
+  function mountPort(portTop: number, port = 800) {
+    const mounted = mount(5000, port, portTop)
+    const header = document.createElement('div')
+    header.className = 'seq-sticky-header'
+    mounted.scroll.append(header)
+    header.getBoundingClientRect = () => ({ bottom: portTop + 56 }) as DOMRect
+    mounted.scroll.getBoundingClientRect = () => ({ top: portTop, bottom: portTop + port }) as DOMRect
+    const el = document.createElement('button')
+    mounted.scroll.append(el)
+    const place = (top: number, height = 44) => {
+      el.getBoundingClientRect = () => ({ top, bottom: top + height }) as DOMRect
+    }
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    return { ...mounted, el, place, scrollTo }
+  }
+
+  it('counts only the part of the scrollport above the window bottom as shown', () => {
+    expect(shownHeight(mountPort(innerHeight - 300).scroll)).toBe(300)
+    expect(shownHeight(mountPort(56, 400).scroll)).toBe(400)
+    expect(shownHeight(mountPort(innerHeight + 10).scroll)).toBe(0)
+  })
+
+  it('moves the page up just enough, and a little more, for a message below the window', () => {
+    const { scroll, el, place, scrollTo } = mountPort(300)
+    place(innerHeight - 20)
+    expect(keepOnPage(scroll, el, 8)).toBe(true)
+    expect(scrollTo).toHaveBeenCalledWith({ top: window.scrollY + 24 + 8, behavior: 'instant' })
+  })
+
+  it('moves the page down for a message under the sticky header', () => {
+    const { scroll, el, place, scrollTo } = mountPort(56)
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(500)
+    place(100)
+    expect(keepOnPage(scroll, el, 8)).toBe(true)
+    expect(scrollTo).toHaveBeenCalledWith({ top: 500 - 12 - 8, behavior: 'instant' })
+  })
+
+  it('leaves the page alone for a message on screen, and in print', () => {
+    const { scroll, el, place, scrollTo } = mountPort(56, 600)
+    place(300)
+    expect(keepOnPage(scroll, el, 8)).toBe(false)
+    diagramState.printAllRows = true
+    place(innerHeight + 50)
+    expect(keepOnPage(scroll, el, 8)).toBe(false)
+    expect(scrollTo).not.toHaveBeenCalled()
   })
 })
 
