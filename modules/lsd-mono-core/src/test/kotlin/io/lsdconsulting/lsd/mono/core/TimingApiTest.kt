@@ -10,6 +10,8 @@ import io.lsdconsulting.lsd.mono.core.domain.WarningKind
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
+import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -23,7 +25,6 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
-import kotlin.io.path.readText
 
 /** The timing API, slice 1: accuracy, pairing, clock ordering with structural guards, JSON. */
 @LsdTestConfig(deterministicIds = true)
@@ -360,10 +361,11 @@ class TimingApiTest {
         lsd.call("web", "api", "GET", timing = Timing.tookMs(5.0)).reply("ok")
         lsd.message("api", "bus", "event")
         lsd.completeScenario("pairs", status = Status.SUCCESS)
-        val json = report(lsd, "Pairs")
-        assertTrue(json.contains("\"pairAccuracy\""), json)
-        val compact = json.replace(Regex("\\s"), "")
-        assertTrue(compact.contains("{\"from\":\"api\",\"to\":\"bus\",\"accuracy\":\"STRUCTURE_ONLY\"}"), json)
+        val scenario = report(lsd, "Pairs")
+        assertTrue(
+            scenario.obj.objects("pairAccuracy").any { it.toMap() == mapOf("from" to "api", "to" to "bus", "accuracy" to "STRUCTURE_ONLY") },
+            scenario.json,
+        )
     }
 
     @Test
@@ -463,15 +465,20 @@ class TimingApiTest {
         Thread.sleep(2)
         call.reply("200")
         lsd.completeScenario("measured", status = Status.SUCCESS)
-        val json = report(lsd, "Measured")
-        assertTrue(json.contains("\"accuracy\": \"TRACED\""), json)
-        assertTrue(json.contains("\"timing\": \"MEASURED\""), json)
-        assertTrue(json.contains("\"pairing\": \"CALL_ID\""), json)
-        assertTrue(json.contains("\"replyTo\": \"${call.callId}\""), json)
-        assertTrue(json.contains("\"traceId\": \"t1\""), json)
-        assertTrue(Regex("\"durationMs\": \\d+\\.\\d+").containsMatchIn(json), json)
-        assertTrue(json.contains("\"clockOrdering\": \"SAME_SOURCE\""), json)
-        assertFalse(json.contains("capturedAt"), "reproducible reports leave capturedAt out")
+        val scenario = report(lsd, "Measured")
+        assertEquals("TRACED", scenario["accuracy"])
+        assertEquals("SAME_SOURCE", scenario["clockOrdering"])
+        // The call is the measured one, paired by its call id; the reply names it and carries no duration.
+        val sent = scenario.message("GET /x")
+        val reply = scenario.message("200")
+        assertEquals(listOf("MEASURED", "CALL_ID"), listOf(sent["timing"], sent["pairing"]))
+        assertEquals(listOf("NONE", "CALL_ID"), listOf(reply["timing"], reply["pairing"]))
+        assertEquals(call.callId, reply["replyTo"])
+        assertEquals(listOf("t1", "t1"), listOf(sent, reply).map { it.obj("trace")?.get("traceId") })
+        val took = sent["durationMs"] as Double
+        assertTrue(took > 0 && took != Math.floor(took), "a fractional duration: $took")
+        assertNull(reply["durationMs"])
+        assertTrue(scenario.events.none { "capturedAt" in it }, "reproducible reports leave capturedAt out")
     }
 
     @Test
@@ -479,10 +486,9 @@ class TimingApiTest {
         val lsd = LsdContext()
         lsd.call("A", "B", "x", timing = Timing.at(t(0))).reply("ok", timing = Timing.at(t(40)))
         lsd.completeScenario("derived", status = Status.SUCCESS)
-        val json = report(lsd, "Derived")
-        assertTrue(json.contains("\"timing\": \"DERIVED\""), json)
-        assertTrue(json.contains("\"accuracy\": \"TIMESTAMPED\""), json)
-        assertTrue(json.contains("\"durationMs\": 40"), json)
+        val scenario = report(lsd, "Derived")
+        assertEquals("TIMESTAMPED", scenario["accuracy"])
+        assertEquals(listOf("DERIVED", 40.0), scenario.message("x").let { listOf(it["timing"], it["durationMs"]) })
     }
 
     @Test
@@ -492,12 +498,11 @@ class TimingApiTest {
         val published = lsd.async("orders", "kafka", "order.placed", timing = Timing.at(t(10)).withSource("orders"))
         lsd.async("kafka", "billing", "consume", timing = Timing.at(t(5)).withSource("orders"), causedBy = published)
         lsd.completeScenario("linked", status = Status.SUCCESS)
-        val json = report(lsd, "Linked")
-        assertTrue(json.contains("\"durationMs\": 652.25"), json)
-        assertTrue(json.contains("\"causedBy\": \"${published.callId}\""), json)
-        assertTrue(json.contains("\"source\": \"orders\""), json)
-        val publish = json.indexOf("order.placed")
-        assertTrue(publish in 0 until json.indexOf("\"label\": \"consume\""), "consume stays after its publish")
+        val scenario = report(lsd, "Linked")
+        assertEquals(652.25, scenario.message("authorise")["durationMs"])
+        assertEquals(published.callId, scenario.message("consume")["causedBy"])
+        assertEquals(listOf("orders", "orders"), listOf("order.placed", "consume").map { scenario.message(it)["source"] })
+        assertTrue(scenario.labels.indexOf("order.placed") < scenario.labels.indexOf("consume"), "consume stays after its publish")
     }
 
     @Test
@@ -507,11 +512,10 @@ class TimingApiTest {
         lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "orders", "201", replyTo = "c1", durationMs = 30.5))
         lsd.accept(Interaction(InteractionKind.PUBLISH, "orders", "kafka", "paid", durationMs = 2.0))
         lsd.completeScenario("moved", status = Status.SUCCESS)
-        val json = report(lsd, "Moved")
-        val events = Regex("\\{[^{}]*\"label\": \"([^\"]+)\"[^{}]*\\}").findAll(json).associate { it.groupValues[1] to it.value }
-        assertTrue(events.getValue("POST /pay").contains("\"durationMs\": 30.5"), json)
-        assertFalse(events.getValue("201").contains("durationMs"), json)
-        assertTrue(events.getValue("paid").contains("\"durationMs\": 2"), "an unpaired message keeps its own")
+        val scenario = report(lsd, "Moved")
+        assertEquals(30.5, scenario.message("POST /pay")["durationMs"])
+        assertFalse("durationMs" in scenario.message("201"), scenario.json)
+        assertEquals(2.0, scenario.message("paid")["durationMs"], "an unpaired message keeps its own")
     }
 
     @Test
@@ -525,8 +529,8 @@ class TimingApiTest {
         a.reply("ok")
         b.reply("ok")
         lsd.completeScenario("spans", status = Status.SUCCESS)
-        val json = report(lsd, "Spans")
-        assertFalse(json.contains("LONGER_THAN_PARENT"), "the child is inside A (300 ms), not B (50 ms): $json")
+        val scenario = report(lsd, "Spans")
+        assertEquals(emptyList<Any?>(), warnings(scenario, "LONGER_THAN_PARENT"), "the child is inside A (300 ms), not B (50 ms)")
     }
 
     @Test
@@ -538,11 +542,9 @@ class TimingApiTest {
         a.reply("ok")
         b.reply("ok")
         lsd.completeScenario("stack", status = Status.SUCCESS)
-        assertTrue(
-            report(lsd, "Stack").replace(Regex("\\s+"), " ").contains(
-                """"kind": "LONGER_THAN_PARENT", "message": "'child' took 100 ms, more than 'B'""",
-            ),
-        )
+        val longer = warnings(report(lsd, "Stack"), "LONGER_THAN_PARENT")
+        assertEquals(1, longer.size, longer.toString())
+        assertTrue(longer.single()!!.startsWith("'child' took 100 ms, more than 'B'"), longer.toString())
     }
 
     @Test
@@ -553,12 +555,11 @@ class TimingApiTest {
         lsd.call("api", "db", "insert", timing = Timing.tookMs(20.0)).reply("1 row")
         outer.reply("201")
         lsd.completeScenario("longer", status = Status.SUCCESS)
-        val json = report(lsd, "Longer")
-        assertTrue(
-            json.contains("\"message\": \"'authorise' took 250.5 ms, more than 'POST /orders' (100 ms) that it runs inside\""),
-            json,
+        // Only the longer child is a warning; a shorter child is fine.
+        assertEquals(
+            listOf("'authorise' took 250.5 ms, more than 'POST /orders' (100 ms) that it runs inside"),
+            warnings(report(lsd, "Longer"), "LONGER_THAN_PARENT"),
         )
-        assertFalse(json.contains("'insert' took"), "a shorter child is fine")
     }
 
     @Test
@@ -569,12 +570,21 @@ class TimingApiTest {
         lsd.accept(Interaction(InteractionKind.PUBLISH, "api", "kafka", "order.placed", headers = mapOf("lsd-scenario" to "abc")))
         lsd.accept(Interaction(InteractionKind.MESSAGE, "api", "db", "plain", data = "body only"))
         lsd.completeScenario("headers", status = Status.SUCCESS)
-        val json = report(lsd, "Headers")
-        assertTrue(json.contains("\"content-type\": \"application/json\""), json)
-        assertTrue(json.contains("\"body\": {"), json)
-        assertFalse(json.contains("Bearer secret"), "authorization is redacted")
-        assertTrue(json.contains("\"lsd-scenario\": \"abc\""), json)
-        assertTrue(json.contains("\"data\": \"body only\""), "no headers: the body as before")
+        val scenario = report(lsd, "Headers")
+        val posted = scenario.message("POST /orders").obj("data")!!
+        assertEquals("application/json", posted.obj("headers")?.get("content-type"))
+        assertEquals(mapOf("id" to 7.0), posted.obj("body")?.toMap())
+        assertFalse(posted.obj("headers")!!.values.contains("Bearer secret"), "authorization is redacted: $posted")
+        assertFalse(scenario.json.contains("Bearer secret"), "nor anywhere else")
+        assertEquals(
+            "abc",
+            scenario
+                .message("order.placed")
+                .obj("data")
+                ?.obj("headers")
+                ?.get("lsd-scenario"),
+        )
+        assertEquals("body only", scenario.message("plain")["data"], "no headers: the body as before")
     }
 
     @Test
@@ -586,10 +596,10 @@ class TimingApiTest {
         )
         lsd.accept(Interaction(InteractionKind.PUBLISH, "orders", "kafka", "paid", durationMs = 0.0))
         lsd.completeScenario("distributed", status = Status.SUCCESS)
-        val json = report(lsd, "Distributed")
-        assertTrue(json.contains("\"pairing\": \"GUESSED\""), json)
-        assertTrue(json.contains("\"accuracy\": \"MEASURED\""), json)
-        assertTrue(json.contains("\"pairingCoverage\": 0"), json)
+        val scenario = report(lsd, "Distributed")
+        assertEquals(listOf("GUESSED", "GUESSED"), listOf("POST /pay", "200").map { scenario.message(it)["pairing"] })
+        assertEquals("MEASURED", scenario["accuracy"])
+        assertEquals(0.0, scenario["pairingCoverage"])
     }
 
     @Test
@@ -603,9 +613,9 @@ class TimingApiTest {
         lsd.message("A", "B", "late", timing = Timing.at(t(50)))
         lsd.message("A", "B", "early", timing = Timing.at(t(0)))
         lsd.completeScenario("off", status = Status.SUCCESS)
-        val json = report(lsd, "Configured")
-        assertTrue(json.contains("\"clockOrdering\": \"OFF\""), json)
-        assertTrue(json.indexOf("\"late\"") < json.indexOf("\"early\""), "OFF keeps capture order")
+        val scenario = report(lsd, "Configured")
+        assertEquals("OFF", scenario["clockOrdering"])
+        assertEquals(listOf("late", "early"), scenario.labels, "OFF keeps capture order")
         lsd.configure { it.orderByStartedAt(null) }
         assertNull(lsd.timingConfig.orderByStartedAt())
         assertEquals(ClockOrdering.ALL_SOURCES, lsd.timingConfig.effectiveOrderByStartedAt())
@@ -633,8 +643,16 @@ class TimingApiTest {
         assertThrows<IllegalArgumentException> { Timing.tookMs(-1.0) }
     }
 
-    private fun report(lsd: LsdContext, title: String): String {
+    /** The report's one scenario, parsed (#109). */
+    private fun report(lsd: LsdContext, title: String): ScenarioJson {
         lsd.completeReport(title)
-        return tempDir.resolve(ReportFileNames.stem(title) + "-report.json").readText()
+        return ReportJson.single(tempDir, ReportFileNames.stem(title) + "-report.json").scenarios.single()
     }
+
+    /** The messages of the scenario's timing warnings of [kind]. */
+    private fun warnings(scenario: ScenarioJson, kind: String): List<String?> =
+        scenario.obj
+            .objects("warnings")
+            .filter { it["kind"] == kind }
+            .map { it.string("message") }
 }

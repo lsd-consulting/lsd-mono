@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -44,42 +45,41 @@ class CaptureToJsonTest {
         val files = lsd.completeReport("Orders flow")
         lsd.createIndex()
 
-        val json = tempDir.resolve(ReportFileNames.stem("Orders flow") + "-report.json").readText()
-        assertTrue(json.contains("\"title\": \"Orders flow\""))
-        assertTrue(json.contains("\"key\": \"orderId\""))
-        assertTrue(json.contains("\"value\": \"ord-1\""))
-        assertTrue(json.contains("\"id\": \"customer\""))
-        assertTrue(json.contains("\"type\": \"ACTOR\""))
-        assertTrue(json.contains("\"colour\": \"#38bdf8\""))
-        assertTrue(json.contains("\"id\": \"api\""))
-        assertTrue(json.contains("\"name\": \"Checkout API\""))
-        assertTrue(json.contains("\"id\": \"orders-db\""))
-        assertTrue(json.contains("\"kind\": \"activate\""))
-        assertTrue(json.contains("\"participantId\": \"api\""))
-        assertTrue(json.contains("\"kind\": \"message\""))
-        assertTrue(json.contains("\"label\": \"POST /checkout\""))
-        assertTrue(json.contains("\"from\": \"customer\""))
-        assertTrue(json.contains("\"to\": \"api\""))
-        assertTrue(json.contains("\"type\": \"SYNCHRONOUS\""))
-        assertTrue(json.contains("\"cartId\": \"cart-1\""))
-        assertTrue(json.contains("\"label\": \"INSERT orders\""))
-        assertTrue(json.contains("\"from\": \"api\""))
-        assertTrue(json.contains("\"to\": \"orders-db\""))
-        assertTrue(json.contains("\"durationMs\": 12"))
-        assertTrue(json.contains("\"type\": \"SYNCHRONOUS_RESPONSE\""))
-        assertTrue(json.contains("\"label\": \"ok\""))
-        assertTrue(json.contains("\"type\": \"ASYNCHRONOUS\""))
-        assertTrue(json.contains("\"label\": \"201 Created\""))
-        assertTrue(json.contains("\"kind\": \"divider\""))
-        assertTrue(json.contains("\"label\": \"done\""))
-        assertTrue(json.contains("\"kind\": \"note\""))
-        assertTrue(json.contains("\"text\": \"email queued\""))
-        assertTrue(json.contains("\"over\": \"orders-db\""))
-        assertTrue(json.contains("\"kind\": \"deactivate\""))
-        assertTrue(json.contains("\"key\": \"Messages\""))
-        assertTrue(json.contains("\"value\": \"4\""))
-        assertTrue(json.contains("\"key\": \"Captured duration\""))
-        assertTrue(json.contains("\"value\": \"12 ms\""), "only the explicit 12 ms counts")
+        val report = ReportJson.single(tempDir, ReportFileNames.stem("Orders flow") + "-report.json")
+        assertEquals("Orders flow", report.root["title"])
+        val scenario = report.scenario("checkout happy path")
+        assertEquals(listOf("orderId" to "ord-1"), scenario.facts)
+        assertEquals(
+            listOf(
+                mapOf("id" to "customer", "name" to "Customer", "type" to "ACTOR", "colour" to "#38bdf8"),
+                mapOf("id" to "api", "name" to "Checkout API", "type" to "PARTICIPANT"),
+                mapOf("id" to "orders-db", "name" to "Orders DB", "type" to "DATABASE"),
+            ),
+            scenario.participants.map { it.toMap() },
+        )
+        // Every event, in order, each with its own fields (#109: not a value found anywhere in the file).
+        assertEquals(
+            listOf("activate", "message", "message", "message", "message", "divider", "note", "deactivate"),
+            scenario.events.map { it["kind"] },
+        )
+        assertEquals("api", scenario.eventsOf("activate").single()["participantId"])
+        assertEquals("api", scenario.eventsOf("deactivate").single()["participantId"])
+
+        fun line(label: String) = scenario.message(label).let { listOf(it["from"], it["to"], it["type"]) }
+        assertEquals(listOf("customer", "api", "SYNCHRONOUS"), line("POST /checkout"))
+        assertEquals(mapOf("cartId" to "cart-1"), scenario.message("POST /checkout").obj("data")?.toMap())
+        assertEquals(listOf("api", "orders-db", "SYNCHRONOUS"), line("INSERT orders"))
+        assertEquals(12.0, scenario.message("INSERT orders")["durationMs"])
+        assertEquals(listOf("orders-db", "api", "SYNCHRONOUS_RESPONSE"), line("ok"))
+        assertEquals(listOf("api", "customer", "ASYNCHRONOUS"), line("201 Created"))
+        assertEquals(mapOf("orderId" to "ord-1"), scenario.message("201 Created").obj("data")?.toMap())
+        assertEquals("done", scenario.eventsOf("divider").single()["label"])
+        val note = scenario.eventsOf("note").single()
+        assertEquals(listOf("email queued", "orders-db"), listOf(note["text"], note["over"]))
+        assertEquals(listOf("Messages" to "4", "Captured duration" to "12 ms"), scenario.metrics, "only the explicit 12 ms counts")
+        assertEquals("<p>ok</p>", scenario.description)
+        // The raw text is the point here: the description is escaped so it cannot close the shell's script.
+        val json = report.text
         assertTrue(json.contains("\\u003cp\\u003eok\\u003c/p\\u003e"))
         assertFalse(json.contains("</script>"))
 

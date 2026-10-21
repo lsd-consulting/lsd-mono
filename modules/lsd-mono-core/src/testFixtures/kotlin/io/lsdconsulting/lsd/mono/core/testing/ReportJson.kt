@@ -16,6 +16,9 @@ public class ReportJson(
 
     public val titles: List<String> = scenarios.map { it.title }
 
+    /** The report's `options` (metricsEnabled, labelMaxWidth, usagePing, source), empty when absent. */
+    public val options: JsonObject get() = root.obj("options") ?: JsonObject(emptyMap(), "{}")
+
     /** The one scenario titled [title]; fails naming the titles there are when there is none, or more than one. */
     public fun scenario(title: String): ScenarioJson {
         val matches = scenarios.filter { it.title == title }
@@ -60,6 +63,37 @@ public class ScenarioJson(
     public val facts: List<Pair<String, String?>> get() = obj.objects("facts").map { (it.string("key") ?: "") to it.string("value") }
 
     public val error: JsonObject? get() = obj.obj("error")
+
+    public val participants: List<JsonObject> get() = obj.objects("participants")
+
+    /** The one participant with [id]; fails naming the ids there are. */
+    public fun participant(id: String): JsonObject = one(participants, "participant with id '$id'", participants.map { it["id"] }) { it["id"] == id }
+
+    /** The message events, in order. */
+    public val messages: List<JsonObject> get() = events.filter { it["kind"] == "message" }
+
+    /** The one message labelled [label]; fails naming the labels there are (#109). */
+    public fun message(label: String): JsonObject = one(messages, "message labelled '$label'", labels) { it["label"] == label }
+
+    /** The events of [kind] (activate, divider, note, section and so on), in order. */
+    public fun eventsOf(kind: String): List<JsonObject> = events.filter { it["kind"] == kind }
+
+    /** The metrics, key to value, in order. */
+    public val metrics: List<Pair<String, String?>> get() = obj.objects("metrics").map { (it.string("key") ?: "") to it.string("value") }
+
+    /** The value of the metric [key], or null when the scenario has no such metric. */
+    public fun metric(key: String): String? = metrics.firstOrNull { it.first == key }?.second
+
+    private fun one(
+        from: List<JsonObject>,
+        what: String,
+        there: List<Any?>,
+        match: (JsonObject) -> Boolean,
+    ): JsonObject {
+        val matches = from.filter(match)
+        check(matches.size == 1) { "expected one $what in '$title', found ${matches.size} in $there" }
+        return matches.single()
+    }
 
     public operator fun get(key: String): Any? = obj[key]
 

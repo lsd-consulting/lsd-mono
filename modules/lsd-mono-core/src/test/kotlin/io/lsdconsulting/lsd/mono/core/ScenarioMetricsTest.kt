@@ -4,19 +4,22 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.formatMs
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.isErrorStatus
+import io.lsdconsulting.lsd.mono.core.testing.Json
+import io.lsdconsulting.lsd.mono.core.testing.JsonObject
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.time.Instant
-import kotlin.io.path.readText
 
 /**
  * Scenario metrics: message count and captured duration. `lsd.mono.metrics.enabled` defaults on
@@ -35,8 +38,7 @@ class ScenarioMetricsTest {
         lsd.message("A", "C", "event", type = io.lsdconsulting.lsd.mono.core.domain.MessageType.ASYNCHRONOUS, timing = Timing.tookMs(5.0))
         lsd.completeScenario("once", "ok", Status.SUCCESS)
         lsd.completeReport("Once")
-        val json = tempDir.resolve(ReportFileNames.stem("Once") + "-report.json").readText()
-        assertTrue(json.contains("\"value\": \"105 ms\""), json)
+        assertEquals("105 ms", report("Once").scenario("once").metric("Captured duration"))
     }
 
     @Test
@@ -51,25 +53,23 @@ class ScenarioMetricsTest {
         lsd.message("A", "B", "untagged")
         lsd.completeScenario("none", status = Status.SUCCESS)
         lsd.completeReport("Errors")
-        val json = tempDir.resolve(ReportFileNames.stem("Errors") + "-report.json").readText()
-        assertTrue(Regex("\"Errors\",\\s*\"value\": \"2\"").containsMatchIn(json), json)
-        assertEquals(1, Regex("\"key\": \"Errors\"").findAll(json).count(), "no statuses, no Errors metric")
-        assertTrue(json.contains("\"status\": \"503\""), json)
+        val report = report("Errors")
+        val errors = report.scenario("errors")
+        assertEquals("2", errors.metric("Errors"))
+        assertNull(report.scenario("none").metric("Errors"), "no statuses, no Errors metric")
+        assertEquals("503", errors.message("503")["status"])
     }
 
     @Test
     fun `an error status is a 4xx or 5xx code, or an error word with no code`() {
         // Shared with the report UI's status.test.ts, in the shared test reports.
-        val vectors = ReportCorpus.read("vectors/status-vectors.json")
+        val vectors = Json.parse(ReportCorpus.read("vectors/status-vectors.json")) as JsonObject
 
-        fun list(key: String) =
-            Regex(""""$key":\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)
-                .find(vectors)!!
-                .groupValues[1]
-                .let { Regex(""""((?:[^"\\]|\\.)*)"""").findAll(it).map { m -> m.groupValues[1] }.toList() }
+        @Suppress("UNCHECKED_CAST")
+        fun list(key: String) = vectors[key] as List<String>
         val errors = list("error")
         val fine = list("notError")
-        assertTrue(errors.size > 5 && fine.size > 5, vectors)
+        assertTrue(errors.size > 5 && fine.size > 5, vectors.source)
         errors.forEach { assertTrue(isErrorStatus(it), it) }
         fine.forEach { assertFalse(isErrorStatus(it), it) }
     }
@@ -86,16 +86,16 @@ class ScenarioMetricsTest {
         lsd.completeScenario("timed", "ok", Status.SUCCESS)
         lsd.completeReport("Metrics")
 
-        val json = tempDir.resolve(ReportFileNames.stem("Metrics") + "-report.json").readText()
-        assertTrue(json.contains("\"metricsEnabled\": true"))
-        assertTrue(json.contains("\"labelMaxWidth\": 12"))
-        assertTrue(json.contains("\"key\": \"Messages\""))
-        assertTrue(json.contains("\"key\": \"Captured duration\""))
-        assertTrue(json.contains("\"value\": \"180 ms\""))
-        assertTrue(json.contains("\"label\": \"$longLabel\""), "event labels stay full")
-        assertFalse(json.contains("\"insights\""))
-        assertFalse(json.contains("Bottleneck"))
-        assertFalse(json.contains("Time to generate"))
+        val report = report("Metrics")
+        assertEquals(true, report.options["metricsEnabled"])
+        assertEquals(12.0, report.options["labelMaxWidth"])
+        val scenario = report.scenario("timed")
+        assertEquals(listOf("Messages", "Captured duration"), scenario.metrics.map { it.first })
+        assertEquals("180 ms", scenario.metric("Captured duration"))
+        assertTrue(longLabel in scenario.labels, "event labels stay full: ${scenario.labels}")
+        // No ranked duration insights, anywhere (#109: absent keys, not missing text).
+        assertFalse("insights" in report.root, report.root.keys.toString())
+        assertTrue(report.scenarios.none { "insights" in it.obj }, "no scenario has insights")
     }
 
     @Test
@@ -106,15 +106,14 @@ class ScenarioMetricsTest {
         lsd.completeScenario("quiet", "", Status.SUCCESS)
         lsd.completeReport("No metrics")
 
-        val json = tempDir.resolve(ReportFileNames.stem("No metrics") + "-report.json").readText()
-        assertTrue(json.contains("\"metricsEnabled\": false"))
-        assertTrue(json.contains("\"metrics\": []"))
-        assertFalse(json.contains("\"insights\""))
-        assertFalse(json.contains("\"key\": \"Messages\""))
-        assertFalse(json.contains("\"key\": \"Captured duration\""))
-        assertFalse(json.contains("Bottleneck"))
-        assertFalse(json.contains("Slowest"))
-        assertTrue(json.contains("\"label\": \"ping\""))
+        val report = report("No metrics")
+        assertEquals(false, report.options["metricsEnabled"])
+        val scenario = report.scenario("quiet")
+        // Present and empty, not missing: an absent list would pass a "no metrics" check vacuously.
+        assertEquals(emptyList<Any?>(), scenario["metrics"])
+        assertFalse("insights" in report.root)
+        assertFalse("insights" in scenario.obj)
+        assertEquals(listOf("ping"), scenario.labels)
     }
 
     private fun capturedDuration(name: String, capture: (LsdContext) -> Unit): String? {
@@ -122,8 +121,7 @@ class ScenarioMetricsTest {
         capture(lsd)
         lsd.completeScenario(name, "", Status.SUCCESS)
         lsd.completeReport(name)
-        val json = tempDir.resolve(ReportFileNames.stem(name) + "-report.json").readText()
-        return Regex(""""key": "Captured duration",\s*"value": "([^"]+)"""").find(json)?.groupValues?.get(1)
+        return report(name).scenario(name).metric("Captured duration")
     }
 
     @Test
@@ -172,4 +170,7 @@ class ScenarioMetricsTest {
         assertEquals("100", formatMs(100.0))
         assertEquals("0.001", formatMs(0.0005))
     }
+
+    /** The written report titled [title], parsed (#109). */
+    private fun report(title: String): ReportJson = ReportJson.single(tempDir, ReportFileNames.stem(title) + "-report.json")
 }

@@ -3,10 +3,13 @@ package io.lsdconsulting.lsd.mono.cucumber
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
+import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -34,15 +37,18 @@ class LsdCucumberPluginOutcomesTest {
         LsdContext.instance.clear()
     }
 
-    private fun runOutcomes(): Map<String, String> {
+    /** The report's scenarios by title, parsed (#109). */
+    private fun runOutcomes(): Map<String, ScenarioJson> {
         val summary = runFeatures("outcomes/outcomes.feature")
         assertEquals(7, summary.testsFoundCount.toInt())
-        return scenariosByTitle(reportJson(tempDir, "outcomes"))
+        val scenarios = ReportJson.single(tempDir, "outcomes-*-report.json").scenarios
+        check(scenarios.map { it.title }.toSet().size == scenarios.size) { "duplicate titles: ${scenarios.map { it.title }}" }
+        return scenarios.associateBy { it.title }
     }
 
     @Test
     fun `each Cucumber result becomes a scenario status`() {
-        val statuses = runOutcomes().mapValues { (_, json) -> Regex(""""status": "(\w+)"""").find(json)!!.groupValues[1] }
+        val statuses = runOutcomes().mapValues { (_, scenario) -> scenario.status }
 
         assertEquals(
             mapOf(
@@ -60,18 +66,18 @@ class LsdCucumberPluginOutcomesTest {
 
     @Test
     fun `a scenario that did not pass says why under its description`() {
-        val errors = runOutcomes().mapValues { (_, json) -> errorOf(json) }
+        val errors = runOutcomes().mapValues { (_, scenario) -> errorOf(scenario) }
 
         assertEquals(null, errors["passes"])
         assertEquals(null, errors["hooked"])
         assertEquals("Failed", errors.getValue("fails")!!.first)
         assertTrue(errors.getValue("fails")!!.second.startsWith("card declined"))
-        assertEquals("Pending" to "refunds come later\\nStep: When the refund is not written yet", errors["pending"])
-        assertEquals("Skipped" to "payment provider offline\\nStep: When the payment provider is offline", errors["skipped"])
+        assertEquals("Pending" to "refunds come later\nStep: When the refund is not written yet", errors["pending"])
+        assertEquals("Skipped" to "payment provider offline\nStep: When the payment provider is offline", errors["skipped"])
         val (ambiguous, ambiguity) = errors.getValue("ambiguous")!!
         assertEquals("Ambiguous step", ambiguous)
         assertTrue(ambiguity.contains("matches more than one step definition"), ambiguity)
-        assertTrue(ambiguity.endsWith("\\nStep: When a coupon SAVE10 applies"), ambiguity)
+        assertTrue(ambiguity.endsWith("\nStep: When a coupon SAVE10 applies"), ambiguity)
     }
 
     @Test
@@ -79,16 +85,19 @@ class LsdCucumberPluginOutcomesTest {
         val (headline, message) = errorOf(runOutcomes().getValue("undefined"))!!
 
         assertEquals("Undefined step", headline)
-        assertTrue(message.startsWith("""When nobody wrote this step\n\nImplement it with:\nWhen(\"nobody wrote this step\""""), message)
+        assertTrue(message.startsWith("When nobody wrote this step\n\nImplement it with:\nWhen(\"nobody wrote this step\""), message)
     }
 
     @Test
     fun `only a failure keeps its stack trace`() {
         val scenarios = runOutcomes()
 
-        assertTrue(scenarios.getValue("fails").contains(""""stack": "java.lang.IllegalStateException: card declined"""))
+        val failed = scenarios.getValue("fails").error!!
+        assertTrue(failed.string("stack")!!.startsWith("java.lang.IllegalStateException: card declined"), failed.toString())
         listOf("pending", "undefined", "skipped", "ambiguous").forEach { title ->
-            assertFalse(scenarios.getValue(title).contains(""""stack":"""), "$title has no stack")
+            val error = scenarios.getValue(title).error
+            assertNotNull(error, "$title has an error")
+            assertFalse("stack" in error!!, "$title has no stack: $error")
         }
     }
 
@@ -96,16 +105,11 @@ class LsdCucumberPluginOutcomesTest {
     fun `the description lists every step and marks the ones that did not pass`() {
         val scenarios = runOutcomes()
 
-        assertTrue(
-            scenarios.getValue("fails").contains(
-                """"description": "Given the shop is open\nWhen the card is declined (failed)\nThen the basket is checked out (skipped)"""",
-            ),
-            scenarios.getValue("fails"),
+        assertEquals(
+            "Given the shop is open\nWhen the card is declined (failed)\nThen the basket is checked out (skipped)",
+            scenarios.getValue("fails").description,
         )
-        assertTrue(
-            scenarios.getValue("passes").contains(""""description": "Given the shop is open\nThen the basket is checked out""""),
-            scenarios.getValue("passes"),
-        )
+        assertEquals("Given the shop is open\nThen the basket is checked out", scenarios.getValue("passes").description)
     }
 
     @Test
@@ -113,12 +117,9 @@ class LsdCucumberPluginOutcomesTest {
         val scenarios = runOutcomes()
 
         val hooked = scenarios.getValue("hooked")
-        assertEquals(
-            listOf("audit opened", "open basket", "check out", "audit closed"),
-            Regex(""""label": "([^"]+)"""").findAll(hooked).map { it.groupValues[1] }.toList(),
-        )
-        assertTrue(hooked.contains(""""description": "Given the shop is open\nThen the basket is checked out""""), hooked)
-        scenarios.forEach { (title, json) -> assertFalse(json.contains(""""kind": "section""""), "$title has a section") }
+        assertEquals(listOf("audit opened", "open basket", "check out", "audit closed"), hooked.labels)
+        assertEquals("Given the shop is open\nThen the basket is checked out", hooked.description)
+        scenarios.forEach { (title, scenario) -> assertEquals(emptyList<Any?>(), scenario.eventsOf("section"), "$title has a section") }
     }
 
     @Test
@@ -172,16 +173,17 @@ class LsdCucumberPluginOutcomesTest {
         assertTrue(ReportSchemas.assertOutputValid(tempDir) >= 4, "the report JSON, its page, its data script and the index")
     }
 
-    /** The scenario's error as (headline, message), JSON escapes left in; null when it has none. */
-    private fun errorOf(json: String): Pair<String, String>? =
-        Regex(""""error": \{\s*"headline": "([^"]*)",\s*"message": "((?:[^"\\]|\\.)*)"""")
-            .find(json)
-            ?.let { it.groupValues[1] to it.groupValues[2] }
+    /** The scenario's error as (headline, message); null when it has none. */
+    private fun errorOf(scenario: ScenarioJson): Pair<String, String>? =
+        scenario.error?.let { (it.string("headline") ?: "") to (it.string("message") ?: "") }
 
-    /** The scenario's events in order: `section <title>` or `message <label>`. */
-    private fun eventsOf(json: String): List<String> =
-        Regex(""""kind": "(\w+)",\s*"id": "\d+",\s*(?:"title"|"from": "\w+",\s*"to": "\w+",\s*"label"): "([^"]+)"""")
-            .findAll(json)
-            .map { "${it.groupValues[1]} ${it.groupValues[2]}" }
-            .toList()
+    /** The scenario's sections and messages in order: `section <title>` or `message <label>`. */
+    private fun eventsOf(scenario: ScenarioJson): List<String> =
+        scenario.events.mapNotNull {
+            when (it["kind"]) {
+                "section" -> "section ${it["title"]}"
+                "message" -> "message ${it["label"]}"
+                else -> null
+            }
+        }
 }
