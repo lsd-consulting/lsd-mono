@@ -290,12 +290,20 @@ export function markerSet(): {
   }
 }
 
+/** A message drawn as a stub from one lifeline toward the diagram edge. */
+export type ShortMessageType = Extract<MessageType, 'SHORT_INBOUND' | 'SHORT_OUTBOUND'>
+
+/** Whether [type] is a short arrow. A type guard, since MessageType is open (any other string). */
+export function isShortMessage(type: MessageType): type is ShortMessageType {
+  return type === 'SHORT_INBOUND' || type === 'SHORT_OUTBOUND'
+}
+
 /**
  * Geometry for short arrows: stub toward the diagram edge from the real lifeline.
  * Does not invent a phantom participant column.
  */
 export function shortMessageEndpoints(
-  type: 'SHORT_INBOUND' | 'SHORT_OUTBOUND',
+  type: ShortMessageType,
   participantX: number,
   width: number,
 ): { x1: number; x2: number } {
@@ -317,7 +325,7 @@ const SHORT_LABEL_GAP = 4
  * run toward the diagram edge; inbound labels end just before it.
  */
 export function shortLabelAnchor(
-  type: 'SHORT_INBOUND' | 'SHORT_OUTBOUND',
+  type: ShortMessageType,
   x1: number,
   x2: number,
 ): { x: number; anchor: 'start' | 'end' } {

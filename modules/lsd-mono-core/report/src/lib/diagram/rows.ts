@@ -41,6 +41,7 @@ import {
   shortLabelAnchor,
   shortMessageEndpoints,
   xFor,
+  isShortMessage,
 } from './shapes'
 import { payloadMatches } from './payload-find'
 import { messageSpeech } from './text-view'
@@ -127,7 +128,7 @@ function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlyS
       const head = participantHeadFor(p)
       const colour = escapeAttr(p.colour ?? '#94a3b8')
       return `
-      <g class="participant-box" data-participant="${escapeAttr(p.id)}" data-participant-type="${head.type}" transform="translate(${x}, 0)" style="--pc:${colour}">
+      <g class="participant-box" data-participant="${escapeAttr(p.id)}" data-participant-type="${escapeAttr(head.type)}" transform="translate(${x}, 0)" style="--pc:${colour}">
         <title>${escapeHtml(name)}, ${head.typeLabel}</title>
         ${head.shapeSvg}
         ${participantLabelSvg(head, head.name)}
@@ -388,7 +389,7 @@ function renderMessageRow(
   const nest = (participantId: string, at: number) =>
     Math.max(activationDepthAt(paint.activations ?? [], participantId, at), 0) * ACT_NEST_DX
 
-  if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
+  if (isShortMessage(msg.type)) {
     const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
     const pi = index.get(participantId) ?? 0
     const px = xFor(pi, index) + nest(participantId, y)

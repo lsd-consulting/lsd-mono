@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import type { IndexManifest } from '../src/lib/report-index'
 import type { DiagramEvent, Report } from '../src/types'
 import { openReport, type OpenOptions } from './open-report'
+import { indexBase, reportBase, untimed } from '../src/lib/report-fixture.test-util'
 
 /** Three titled sections of [perSection] calls each, every call with a body. */
 export function sectionsReport(perSection: number): Report {
@@ -20,11 +21,13 @@ export function sectionsReport(perSection: number): Report {
       })
   }
   return {
+    ...reportBase(),
     title: 'Sections',
     generatedAt: '2026-01-15T12:00:00+00:00',
     generator: 'ux-fixture',
     scenarios: [
       {
+        ...untimed(),
         id: 'sections',
         title: 'Sections',
         status: 'success',
@@ -44,6 +47,7 @@ export function sectionsReport(perSection: number): Report {
 /** An index page listing [report] as its one report, id "sections", loaded when opened. */
 export function sectionsIndex(report: Report): NonNullable<OpenOptions['index']> {
   const manifest: IndexManifest = {
+    ...indexBase(),
     title: 'LSD reports',
     generatedAt: report.generatedAt,
     generator: 'ux-fixture',

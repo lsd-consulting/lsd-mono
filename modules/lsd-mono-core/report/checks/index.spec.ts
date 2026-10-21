@@ -5,6 +5,7 @@ import type { Report } from '../src/types'
 import { openReport } from './open-report'
 import { AXE_TAGS } from './ux-helpers'
 import { uxFixture } from './ux-fixture'
+import { indexBase } from '../src/lib/report-fixture.test-util'
 
 /** The index page: the report shell with a manifest, each report's data loaded when it opens. */
 
@@ -16,6 +17,7 @@ const failing: Report = {
 const passing: Report = { ...uxFixture, title: 'Checkout' }
 
 const manifest: IndexManifest = {
+  ...indexBase(),
   title: 'LSD reports',
   generatedAt: '2026-01-15T12:00:00+00:00',
   generator: 'ux-fixture',

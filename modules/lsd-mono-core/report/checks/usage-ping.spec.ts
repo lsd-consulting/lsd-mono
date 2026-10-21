@@ -3,6 +3,7 @@ import type { IndexManifest } from '../src/lib/report-index'
 import type { Report } from '../src/types'
 import { openReport } from './open-report'
 import { uxFixture } from './ux-fixture'
+import { indexBase } from '../src/lib/report-fixture.test-util'
 
 /**
  * The usage ping (src/lib/usage-ping.ts). The dev server never pings, so these pages opt in with
@@ -104,6 +105,7 @@ for (const [what, data, path] of [
 test('usage ping: the index page pings on open and counts each opened report source once', async ({ page }) => {
   const pings: string[] = []
   const manifest: IndexManifest = {
+    ...indexBase(),
     title: 'LSD reports',
     generatedAt: '2026-01-15T12:00:00+00:00',
     generator: 'lsd-mono-core 0.2.0',

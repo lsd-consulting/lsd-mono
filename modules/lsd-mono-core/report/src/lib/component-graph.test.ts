@@ -8,9 +8,11 @@ import {
   hasComponentDiagram,
   typeCue,
 } from './component-graph'
+import { untimed } from './report-fixture.test-util'
 
 function scenario(events: DiagramEvent[], participants: Participant[] = []): Scenario {
   return {
+    ...untimed(),
     id: 's',
     title: 'Sample',
     status: 'success',
@@ -82,7 +84,7 @@ describe('componentGraph', () => {
             label: 'probe',
             type: 'SHORT_INBOUND',
           },
-          { kind: 'note', id: 'n1', text: 'ignored' },
+          { kind: 'note', id: 'n1', text: 'ignored', placement: 'over' },
         ],
         participants,
       ),

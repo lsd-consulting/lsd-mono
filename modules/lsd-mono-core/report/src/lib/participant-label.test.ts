@@ -14,6 +14,7 @@ import {
 } from './sequence-diagram'
 import { layoutComponents, renderComponentDiagram } from './component-diagram'
 import { componentGraph } from './component-graph'
+import { untimed } from './report-fixture.test-util'
 
 const TYPES: ParticipantType[] = ['ACTOR', 'PARTICIPANT', 'DATABASE', 'QUEUE', 'ENTITY', 'BOUNDARY']
 const LONG = 'Customer Notification Preferences and Delivery Orchestration Service'
@@ -137,6 +138,7 @@ describe('lanes', () => {
 
 describe('sequence header with long names', () => {
   const scenario: Scenario = {
+    ...untimed(),
     id: 'long-names',
     title: 'Long names',
     status: 'success',

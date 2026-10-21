@@ -1,4 +1,6 @@
-import type { Report, Status } from '../types'
+import type { IndexManifest, IndexReport, IndexScenario } from '../generated/lsd-index'
+import type { Report, ReportJson, Status } from '../types'
+import { normaliseReport } from './report-normalise'
 import { cssEscape } from './escape.ts'
 
 /**
@@ -7,41 +9,33 @@ import { cssEscape } from './escape.ts'
  * data is a sibling script (`<stem>-report.js`) that is added only when the report is opened,
  * so the first paint does not grow with the size of the suite.
  */
-export interface IndexManifest {
-  title: string
-  generatedAt: string
-  generator: string
-  /** `usagePing` as for a report (src/lib/usage-ping.ts). Missing on older indexes, which never ping. */
-  options?: { usagePing?: boolean }
-  /** Failed reports first, then warnings, then the rest; by title within each. */
-  reports: IndexReport[]
-}
 
-export interface IndexReport {
-  /** File-name stem of the report: unique in the directory. */
-  id: string
-  title: string
-  status: Status
-  /** The report's own page. Used when there is no data script. */
-  href: string
-  /** `<stem>-report.js`. Absent for an entry that is only a link. */
-  data?: string
-  counts: Record<Status, number>
-  scenarios: IndexScenario[]
-}
-
-export interface IndexScenario {
-  id: string
-  title: string
-  status: Status
-  messages: number
-}
+// The manifest's shapes are generated from modules/lsd-mono-report-schema/lsd-index.schema.json.
+export type { IndexCounts, IndexManifest, IndexOptions, IndexReport, IndexScenario } from '../generated/lsd-index'
 
 /** What `<stem>-report.js` adds to `window.__LSD_REPORTS__` under the report's id. */
-export interface ReportData {
-  report: Report
+export interface ReportDataJson {
+  report: ReportJson
   /** `<stem>-payloads.js`, or null when every payload is already on its message. */
   payloadsSrc: string | null
+}
+
+/** A loaded report's data, its report normalised (lib/report-normalise.ts). */
+export interface ReportData {
+  report: Report
+  payloadsSrc: string | null
+}
+
+// One loaded value per registered one, so opening a report again gives the same objects.
+const loadedByData = new WeakMap<ReportDataJson, ReportData>()
+
+function loadedData(data: ReportDataJson): ReportData {
+  let result = loadedByData.get(data)
+  if (!result) {
+    result = { ...data, report: normaliseReport(data.report) }
+    loadedByData.set(data, result)
+  }
+  return result
 }
 
 const STATUSES: Status[] = ['success', 'warn', 'error']
@@ -98,13 +92,13 @@ export function loadReportData(report: IndexReport): Promise<ReportData> {
   const src = report.data
   if (!src) return Promise.reject(new Error(`${report.title} has no data script`))
   const ready = window.__LSD_REPORTS__?.[report.id]
-  if (ready) return Promise.resolve(ready)
+  if (ready) return Promise.resolve(loadedData(ready))
   let pending = loaded.get(report.id)
   if (!pending) {
     pending = addScript(src, 'data-lsd-report').then(() => {
       const data = window.__LSD_REPORTS__?.[report.id]
       if (!data) throw new Error(`${src} did not register report ${report.id}`)
-      return data
+      return loadedData(data)
     })
     pending.catch(() => loaded.delete(report.id))
     loaded.set(report.id, pending)

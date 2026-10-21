@@ -3,7 +3,7 @@ import type { DiagramEvent } from '../types'
 import { SELF_RETURN_DY, layoutRows, noteCardMetrics } from './layout'
 
 function msg(id: string, from: string, to: string, label: string, type: string = 'SYNCHRONOUS'): DiagramEvent {
-  return { kind: 'message', id, from, to, label, type } as DiagramEvent
+  return { kind: 'message', id, from, to, label, type }
 }
 
 describe('(c) notes keep clear of the arrow above them', () => {

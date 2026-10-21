@@ -9,7 +9,7 @@ import { componentZoomShown } from '../lib/component-zoom'
 import { zoomControlsHtml } from '../lib/diagram/zoom-readout'
 import { hasComponentDiagram } from '../lib/component-graph'
 import { type DiagramViewName, diagramViewHeading, diagramViewHint } from '../lib/diagram-view-names'
-import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt } from '../ui/format'
+import { formatGeneratedAt } from '../ui/format'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { index, session } from './context'
 export function heroHtml(): string {
@@ -28,7 +28,7 @@ export function heroHtml(): string {
 }
 
 export function scenarioHtml(s: Scenario): string {
-  const labelMaxWidth = session.report.options?.labelMaxWidth ?? DEFAULT_LABEL_MAX_WIDTH
+  const labelMaxWidth = session.report.options.labelMaxWidth
   const diagram = renderDiagramHtml(s, labelMaxWidth)
   // The chosen view sticks across scenarios (#105); one without component links shows Sequence.
   const components = hasComponentDiagram(s)

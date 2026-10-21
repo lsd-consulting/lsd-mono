@@ -13,7 +13,7 @@ const participants: Participant[] = [
 const base = LEFT_PAD * 2 + 2 * COL_GAP
 
 function msg(id: string, from: string, to: string, label: string, type: string = 'SYNCHRONOUS'): DiagramEvent {
-  return { kind: 'message', id, from, to, label, type } as DiagramEvent
+  return { kind: 'message', id, from, to, label, type }
 }
 
 describe('(d) short arrow labels stay off the lifeline and its bar', () => {

@@ -1,0 +1,51 @@
+// A newer producer may send a participant type, message type or event kind this UI does not know
+// (the schema's open enums): the diagram falls back as the schema says, and markup stays escaped.
+import { describe, expect, it } from 'vitest'
+import { messageArrowSpec, participantHeadFor } from './diagram/shapes'
+import { messageKind } from './diagram/text-view'
+import { normaliseScenario } from './report-normalise'
+import { renderDiagramHtml } from './sequence-diagram'
+import type { DiagramEvent, MessageEvent, Scenario } from '../types'
+
+const newer = '"><img src=x onerror=alert(1)>'
+const message: MessageEvent = { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'ping', type: 'BROADCAST' }
+
+function scenario(events: DiagramEvent[]): Scenario {
+  return normaliseScenario({
+    id: 's1',
+    title: 'Newer',
+    status: 'success',
+    description: '',
+    facts: [],
+    metrics: [],
+    participants: [
+      { id: 'a', name: 'A', type: newer },
+      { id: 'b', name: 'B', type: 'ROBOT' },
+    ],
+    events,
+  })
+}
+
+describe('values from a newer producer', () => {
+  it('draws an unknown message type as a call', () => {
+    expect(messageArrowSpec('BROADCAST')).toEqual(messageArrowSpec('SYNCHRONOUS'))
+    expect(messageKind(message)).toBe('message')
+  })
+
+  it('draws an unknown participant type as a plain participant, and never as markup', () => {
+    expect(participantHeadFor({ name: 'B', type: 'ROBOT' })).toMatchObject({
+      type: 'PARTICIPANT',
+      typeLabel: 'component',
+    })
+    const html = renderDiagramHtml(scenario([message]))
+    expect(html).not.toContain('ROBOT')
+    expect(html).not.toContain('<img')
+  })
+
+  it('leaves out an event of an unknown kind', () => {
+    const hologram = { kind: 'hologram', id: 'h1', label: 'never drawn' } as unknown as DiagramEvent
+    const html = renderDiagramHtml(scenario([message, hologram]))
+    expect(html).not.toContain('never drawn')
+    expect(html).toContain('ping')
+  })
+})

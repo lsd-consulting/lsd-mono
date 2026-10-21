@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Scenario } from '../types'
 import { HEADER_BLOCK_H } from './layout'
 import { PRINT_MAX_UPSCALE, bindDiagramScroll, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
+import { untimed } from './report-fixture.test-util'
 
 /** Long enough that the screen window paints only some of the rows. */
 const scenario: Scenario = {
+  ...untimed(),
   id: 'sc-print',
   title: 'Print',
   status: 'success',

@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Scenario } from '../types'
 import { ACT_W, COL_GAP, HEADER_BLOCK_H, LEFT_PAD } from './layout'
 import { bindDiagramScroll, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
+import { untimed } from './report-fixture.test-util'
 
 /**
  * Nested bars on a later lifeline (refs #2). The nested bar was drawn at the same x
  * as its parent and painted underneath it, so nesting was invisible.
  */
 const scenario: Scenario = {
+  ...untimed(),
   id: 'sc-nested',
   title: 'Nested',
   status: 'success',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MessageEvent, Scenario } from '../types'
 import { formatMs, timeline } from './timing'
+import { untimed } from './report-fixture.test-util'
 
 const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> = {}): MessageEvent => ({
   kind: 'message',
@@ -13,6 +14,7 @@ const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> 
 })
 
 const scenario = (events: MessageEvent[], extra: Partial<Scenario> = {}): Scenario => ({
+  ...untimed(),
   id: 's1',
   title: 'T',
   status: 'success',

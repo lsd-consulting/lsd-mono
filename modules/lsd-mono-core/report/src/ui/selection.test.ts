@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Scenario, Status } from '../types'
 import { defaultScenarioId, reselect, stepSelection } from './selection'
+import { untimed } from '../lib/report-fixture.test-util'
 
 const s = (id: string, status: Status = 'success'): Scenario => ({
+  ...untimed([]),
   id,
   title: id,
   status,

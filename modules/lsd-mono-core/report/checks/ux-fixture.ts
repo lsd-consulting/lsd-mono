@@ -1,15 +1,18 @@
 import type { MessageEvent, Report } from '../src/types'
+import { reportBase, untimed } from '../src/lib/report-fixture.test-util'
 
 /**
  * Small static report for axe and screenshots. Not the perf payload pages.
  * generatedAt is fixed. Screenshots crop the diagram and do not include the hero.
  */
 export const uxFixture: Report = {
+  ...reportBase(),
   title: 'UX fixture',
   generatedAt: '2026-01-15T12:00:00+00:00',
   generator: 'ux-fixture',
   scenarios: [
     {
+      ...untimed(),
       id: 'ux',
       title: 'Checkout',
       status: 'success',

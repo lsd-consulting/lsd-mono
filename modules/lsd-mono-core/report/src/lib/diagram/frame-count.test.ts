@@ -11,6 +11,7 @@ import { applyDiagramFrame } from './window'
 import { refitDiagram } from './zoom'
 import { WHEEL_STEP_PX, zoomByWheel } from './zoom-controls'
 import { flushDiagramPaints } from './invalidate'
+import { untimed } from '../report-fixture.test-util'
 
 // applyDiagramFrame is the only code that sets --seq-print-max, once a call: counting those sets
 // counts the frames drawn, however the header was brought up to date (in place since #101).
@@ -44,6 +45,7 @@ function scenario(lanes: number, messages = lanes - 1): Scenario {
     type: 'PARTICIPANT',
   }))
   return {
+    ...untimed(),
     id: `frame-count-${n}`,
     title: 'Frame count',
     status: 'success',

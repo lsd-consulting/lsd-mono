@@ -22,6 +22,8 @@ npm run lint        # ESLint, then prettier --check
 npm run format      # prettier --write
 ```
 
+The report and index types (`src/generated/`) are generated from the JSON Schemas in `modules/lsd-mono-report-schema`; `src/types.ts` and `src/lib/report-index.ts` re-export them beside the UI's own types. The generated `Report` is a report as written, with optional options and timing summary; the UI's `Report` (in `src/types.ts`) is one after `normaliseReport` (`src/lib/report-normalise.ts`) has filled those in and dropped events of unknown kinds, which it does once for every report it loads. After changing a schema, run `npm run types:generate` and commit the result. `npm run types:check` fails when the committed files differ from what the schemas give.
+
 Markup is built from strings, so ESLint's `lsd/escaped-markup` rule (`lint/eslint-plugin-lsd.js`) requires every value interpolated into markup, `innerHTML` or `insertAdjacentHTML` to go through `src/lib/escape.ts`, be markup by name (`*Html`, `*Svg`), or be proven safe by its type (a number, or a string literal union such as `Status`). Escaping entities and markup-character replacements are rejected outside `escape.ts`.
 
 Axe and screenshot checks are separate from vitest (Playwright downloads nothing extra when the 1.55 Chromium cache is already present):

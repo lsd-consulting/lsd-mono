@@ -1,6 +1,6 @@
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { formatMs, hasTiming, timeline, type Timeline } from '../lib/timing'
-import type { Accuracy, Scenario, WarningKind } from '../types'
+import type { Accuracy, KnownWarningKind, Scenario } from '../types'
 
 const ACCURACY_LABEL: Record<Accuracy, string> = {
   STRUCTURE_ONLY: 'structure only',
@@ -9,7 +9,8 @@ const ACCURACY_LABEL: Record<Accuracy, string> = {
   TRACED: 'traced',
 }
 
-const WARNING_LABEL: Record<WarningKind, string> = {
+// A kind this UI does not know (from a newer producer) shows as it is.
+const WARNING_LABEL: Record<KnownWarningKind, string> & Partial<Record<string, string>> = {
   REPLY_WITHOUT_CALL: 'reply without call',
   DURATION_ON_REPLY_DROPPED: 'duration on reply dropped',
   LONGER_THAN_PARENT: 'longer than parent',
@@ -42,10 +43,10 @@ export function timingStripHtml(scenario: Scenario): string {
   const t = timeline(scenario)
   const slowest = t.rows.filter((r) => r.spanMs > 0).sort((a, b) => b.spanMs - a.spanMs || a.depth - b.depth)
   const top = slowest.find((r) => r.depth > 0) ?? slowest[0]
-  const accuracy = accuracyLabel(scenario.accuracy ?? 'MEASURED')
+  const accuracy = accuracyLabel(scenario.accuracy)
   const wall = Math.max(scenario.wallClockMs ?? 0, t.totalMs)
   const derivedWall = scenario.wallClockMs == null || scenario.wallClockMs < t.totalMs
-  const clock = scenario.clockOrdered ?? 0
+  const clock = scenario.clockOrdered
   const id = escapeAttr(scenario.id)
   // A chip with a [section] opens the panel at that section (the Accuracy chip: Accuracy by pair).
   const chip = (key: string, value: string, hint: string, extra = '', section = '') =>
@@ -53,7 +54,7 @@ export function timingStripHtml(scenario: Scenario): string {
       <span class="k">${escapeHtml(key)}</span><span class="v">${escapeHtml(value)}</span><span class="h">${escapeHtml(hint)}</span>
     </button></li>`
   return `<ul class="timing-strip" aria-label="Timing summary">
-    ${chip('Wall-clock', `${derivedWall ? '≈' : ''}${formatMs(wall)}`, derivedWall ? 'from durations' : sourcesHint(scenario.sources?.length ?? 1))}
+    ${chip('Wall-clock', `${derivedWall ? '≈' : ''}${formatMs(wall)}`, derivedWall ? 'from durations' : sourcesHint(scenario.sources.length))}
     ${chip('Calls', String(t.calls), `${t.timedCalls} timed`)}
     ${chip('Slowest', top ? formatMs(top.spanMs) : '—', top?.message.label ?? 'nothing timed')}
     ${chip('Accuracy', accuracy, clock ? `${clock} clock-ordered` : pairingHint(scenario), clock ? ' clock' : '', scenario.pairAccuracy?.length ? PAIR_ACCURACY_SECTION : '')}
@@ -111,7 +112,7 @@ export function timingPanelHtml(scenario: Scenario): string {
     )
     .join('')
   const notesHtml = [
-    `<span class="pill">${escapeHtml(accuracyLabel(scenario.accuracy ?? 'MEASURED'))}</span>`,
+    `<span class="pill">${escapeHtml(accuracyLabel(scenario.accuracy))}</span>`,
     t.approximate ? '<span class="pill">approximate start times</span>' : '',
     scenario.clockOrdered ? `<span class="pill clock">${scenario.clockOrdered} clock-ordered</span>` : '',
     ...(scenario.warnings ?? []).map(

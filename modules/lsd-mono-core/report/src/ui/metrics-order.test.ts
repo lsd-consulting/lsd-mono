@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Accuracy, MessageEvent, Scenario } from '../types'
 import { bindInspector, inspectorMarkup } from './inspector'
 import { pairAccuracySectionHtml, timingPanelHtml } from './timing'
+import { untimed } from '../lib/report-fixture.test-util'
 
 const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> = {}): MessageEvent => ({
   kind: 'message',
@@ -19,6 +20,7 @@ const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> 
 function timed(pairs: number): Scenario {
   const levels: Accuracy[] = ['TRACED', 'TIMESTAMPED', 'STRUCTURE_ONLY']
   return {
+    ...untimed(),
     id: 'pay',
     title: 'Happy path',
     status: 'success',

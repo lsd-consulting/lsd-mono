@@ -71,7 +71,7 @@ function buildTimeline(scenario: Scenario): Timeline {
   const root: Node = { kids: [], own: 0, timed: false, span: 0, self: 0, start: 0, childSum: 0 }
   const nodes = new Map<string, Node>()
   // Start offsets only within one clock: the scenario's first source.
-  const clock = scenario.sources?.[0] ?? 'local'
+  const clock = scenario.sources[0] ?? 'local'
   const onClock = (e: MessageEvent) => (e.source ?? 'local') === clock
   let t0: number | undefined
   for (const e of scenario.events) {
@@ -161,6 +161,5 @@ export function formatMs(ms: number): string {
 
 /** Whether the scenario has any timing worth a Timing view. */
 export function hasTiming(scenario: Scenario): boolean {
-  if (scenario.accuracy) return scenario.accuracy !== 'STRUCTURE_ONLY'
-  return scenario.events.some((e) => e.kind === 'message' && (e.durationMs != null || e.startedAt != null))
+  return scenario.accuracy !== 'STRUCTURE_ONLY'
 }

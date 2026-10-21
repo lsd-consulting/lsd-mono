@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { MessageEvent, MessageType, Report } from '../src/types'
 import { openReport } from './open-report'
 import { THEMES, contrastRatio } from './ux-helpers'
+import { reportBase, untimed } from '../src/lib/report-fixture.test-util'
 
 // axe does not score SVG strokes, so compute them: every kind of arrow, in every theme, with the
 // pale colours producers send (the sample palette) and with none (replies take the default).
@@ -18,11 +19,13 @@ const TYPES: MessageType[] = [
 ]
 
 const report: Report = {
+  ...reportBase(),
   title: 'Strokes',
   generatedAt: '2026-01-15T12:00:00+00:00',
   generator: 'ux-strokes',
   scenarios: [
     {
+      ...untimed(),
       id: 's',
       title: 'Strokes',
       status: 'success',

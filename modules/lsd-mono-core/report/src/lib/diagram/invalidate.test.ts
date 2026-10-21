@@ -5,6 +5,7 @@ import { bindDiagramScroll, renderDiagramHtml, setFindHooks, syncDiagramWindow }
 import { createInvalidator, flushDiagramPaints, type DiagramPainters } from './invalidate'
 import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { forgetDiagrams } from './state'
+import { untimed } from '../report-fixture.test-util'
 
 function fakePainters() {
   const calls: string[] = []
@@ -82,6 +83,7 @@ describe('createInvalidator', () => {
 
 function scenario(): Scenario {
   return {
+    ...untimed(),
     id: 'paints',
     title: 'Paints',
     status: 'success',

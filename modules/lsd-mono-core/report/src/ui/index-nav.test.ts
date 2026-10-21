@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import type { IndexManifest, IndexReport } from '../lib/report-index'
 import { indexNavHtml, orEmptyNavHtml, outcomeSummary, type IndexNavState } from './index-nav'
+import { indexBase } from '../lib/report-fixture.test-util'
 
 const failed: IndexReport = {
   id: 'checkout',
@@ -33,6 +34,7 @@ const link: IndexReport = {
   scenarios: [],
 }
 const manifest: IndexManifest = {
+  ...indexBase(),
   title: 'LSD reports',
   generatedAt: '',
   generator: '',

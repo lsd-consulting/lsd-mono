@@ -1,7 +1,16 @@
-import type { Report } from '../types'
+import { normaliseReport } from '../lib/report-normalise'
+import type { ReportJson } from '../types'
 
-/** Demo report. Method, path, and status stay here. JSON bodies load from sample-payloads.ts when the inspector opens. */
-export const sampleReport = {
+/**
+ * Demo report. Method, path, and status stay here. JSON bodies load from sample-payloads.ts when
+ * the inspector opens.
+ *
+ * Hand-written before the report schema, and cast rather than checked: it has no schemaVersion,
+ * options or timing summary, an offset time, HTML in descriptions and notes without a placement.
+ * It is normalised here, as the page normalises a report from before the schema, so the page
+ * holds this very object (panel.ts knows the demo by it). Replaced by the shared test reports.
+ */
+export const sampleReport = normaliseReport({
   title: 'Checkout Service — Living Sequence Diagrams',
   generatedAt: '2026-09-30T07:42:11+01:00',
   generator: 'lsd-mono-core 0.0.1-SNAPSHOT',
@@ -554,4 +563,4 @@ export const sampleReport = {
       ],
     },
   ],
-} as Report
+} as ReportJson)

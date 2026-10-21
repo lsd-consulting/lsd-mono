@@ -11,6 +11,7 @@ import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { SEARCH_REVEAL_DELAY_MS } from './search-reveal'
 import { diagramState, forgetDiagrams } from './state'
 import { refitDiagram } from './zoom'
+import { untimed } from '../report-fixture.test-util'
 
 let n = 0
 function scenario(messages: number): Scenario {
@@ -21,6 +22,7 @@ function scenario(messages: number): Scenario {
     type: 'PARTICIPANT',
   }))
   return {
+    ...untimed(),
     id: `repaint-${n}`,
     title: 'Repaint',
     status: 'success',

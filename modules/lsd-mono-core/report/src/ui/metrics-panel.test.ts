@@ -6,6 +6,7 @@ import { bindInspector, inspectorMarkup } from './inspector'
 import { metricsPanelHtml } from './metrics'
 import { createKeyRouter } from '../lib/keys/router'
 import type { InspectorController } from './inspector'
+import { untimed } from '../lib/report-fixture.test-util'
 /** Escape as the page's key router gives it to the side panel (#102). */
 function pressEscape(controller: InspectorController): void {
   const router = createKeyRouter(() => ({
@@ -24,6 +25,7 @@ const metrics: Metric[] = [
 ]
 function scenario(overrides: Partial<Scenario> = {}): Scenario {
   return {
+    ...untimed(),
     id: 'pay',
     title: 'Happy path',
     status: 'success',

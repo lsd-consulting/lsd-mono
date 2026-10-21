@@ -14,6 +14,7 @@ import {
 } from './inspector-width'
 import { createKeyRouter } from '../lib/keys/router'
 import type { InspectorController } from './inspector'
+import { reportBase, untimed } from '../lib/report-fixture.test-util'
 /** Escape as the page's key router gives it to the side panel (#102). */
 function pressEscape(controller: InspectorController): void {
   const router = createKeyRouter(() => ({
@@ -30,11 +31,13 @@ const bodyMarker = 'arrow-payload-SOCK'
 
 function fullReport(): Report {
   return {
+    ...reportBase(),
     title: 'perf',
     generatedAt: '2026-10-03T12:00:00Z',
     generator: 'test',
     scenarios: [
       {
+        ...untimed(),
         id: 's',
         title: 'Large',
         status: 'success',

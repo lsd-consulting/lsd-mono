@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 import type { IndexManifest, ReportData } from '../src/lib/report-index'
 import type { Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
+import { indexBase } from '../src/lib/report-fixture.test-util'
 
 /**
  * The production report (dist/lsd-report.html, opened from file:// as a written report is) makes
@@ -14,8 +15,10 @@ import { uxFixture } from './ux-fixture'
 const shell = fileURLToPath(new URL('../dist/lsd-report.html', import.meta.url))
 const PING = /^https:\/\/cdn\.jsdelivr\.net\/gh\/lsd-consulting\/lsd-mono@0\.2\.0\/ping\/[a-z-]+\.txt$/
 
+/** A report with [usagePing], or, when it is undefined, one from before the option existed. */
 function report(usagePing: boolean | undefined, generator = 'lsd-mono-core 0.2.0'): Report {
-  return { ...uxFixture, generator, options: { metricsEnabled: true, labelMaxWidth: 200, usagePing, source: 'junit' } }
+  const options = { metricsEnabled: true, labelMaxWidth: 200, usagePing, source: 'junit' } as Report['options']
+  return { ...uxFixture, generator, options }
 }
 
 /** Open the shell with [globals] set, use the page, and return every request that is not file: or data:. */
@@ -86,6 +89,7 @@ test('offline: the built-in demo makes no request at all', async ({ page }) => {
 
 test('offline: the index page with the usage ping off makes no request at all', async ({ page }) => {
   const manifest: IndexManifest = {
+    ...indexBase(),
     title: 'LSD reports',
     generatedAt: '2026-01-15T12:00:00+00:00',
     generator: 'lsd-mono-core 0.2.0',

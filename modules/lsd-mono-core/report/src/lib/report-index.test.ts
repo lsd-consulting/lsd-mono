@@ -12,6 +12,7 @@ import {
   type IndexManifest,
   type IndexReport,
 } from './report-index'
+import { indexBase, reportBase } from './report-fixture.test-util'
 
 const ALL = { success: true, warn: true, error: true }
 
@@ -34,6 +35,7 @@ const checkout = entry('checkout', 'Checkout tests', [
 const shipping = entry('shipping', 'Shipping tests', [{ id: 's1', title: 'Track parcel', status: 'warn', messages: 1 }])
 const link = entry('legacy', 'Elsewhere', [], null)
 const manifest: IndexManifest = {
+  ...indexBase(),
   title: 'LSD reports',
   generatedAt: '',
   generator: 'test',
@@ -98,7 +100,7 @@ describe('index manifest', () => {
 })
 
 describe('loading a report', () => {
-  const report: Report = { title: 'Checkout tests', generatedAt: '', generator: 'test', scenarios: [] }
+  const report: Report = { ...reportBase(), title: 'Checkout tests', generatedAt: '', generator: 'test', scenarios: [] }
 
   it('adds the data script once and returns what it registered', async () => {
     serveScripts({

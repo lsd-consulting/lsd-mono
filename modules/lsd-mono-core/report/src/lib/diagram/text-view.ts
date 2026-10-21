@@ -1,10 +1,11 @@
-import type { DiagramEvent, MessageEvent, MessageType, Scenario } from '../../types'
+import type { DiagramEvent, KnownMessageType, MessageEvent, Scenario } from '../../types'
 import { escapeHtml } from '../escape'
 import { eventHiddenByColumns } from '../diagram-view'
 import { messageHasPayload } from '../diagram-a11y'
 import { isErrorStatus } from '../status'
 
-const KIND: Record<MessageType, string> = {
+// A type this UI does not know (from a newer producer) reads as a message.
+const KIND: Record<KnownMessageType, string> & Partial<Record<string, string>> = {
   SYNCHRONOUS: 'call',
   SYNCHRONOUS_RESPONSE: 'reply',
   ASYNCHRONOUS: 'async',

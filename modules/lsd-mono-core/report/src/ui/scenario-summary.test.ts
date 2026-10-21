@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Scenario } from '../types'
 import { scenarioDescriptionHtml, scenarioHaystack } from './scenario-summary'
+import { untimed } from '../lib/report-fixture.test-util'
 
 function scenario(partial: Partial<Scenario>): Scenario {
   return {
+    ...untimed([]),
     id: 'sc-1',
     title: 'blows up',
     status: 'error',

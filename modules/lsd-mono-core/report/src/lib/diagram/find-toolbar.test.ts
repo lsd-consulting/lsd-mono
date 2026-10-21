@@ -5,9 +5,11 @@ import { bindDiagramScroll, renderDiagramHtml, setFindHooks, syncDiagramWindow }
 import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { forgetDiagrams } from './state'
 import { flushDiagramPaints } from './invalidate'
+import { untimed } from '../report-fixture.test-util'
 
 function scenario(withPayloads = true): Scenario {
   return {
+    ...untimed(),
     id: 'toolbar',
     title: 'Toolbar',
     status: 'success',

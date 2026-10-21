@@ -17,6 +17,7 @@ import {
   shortLabelAnchor,
   shortMessageEndpoints,
   xFor,
+  isShortMessage,
 } from './shapes'
 import type { DiagramFrame, MountedDiagram } from './state'
 
@@ -73,7 +74,7 @@ export function diagramPads(
     }
     if (event.kind !== 'message') continue
     const w = messageLabelWidth(event, labelMaxWidth)
-    if (event.type === 'SHORT_INBOUND' || event.type === 'SHORT_OUTBOUND') {
+    if (isShortMessage(event.type)) {
       const id = event.type === 'SHORT_INBOUND' ? event.to : event.from
       const i = index.get(id)
       if (i === undefined) continue
@@ -122,7 +123,7 @@ export function messageEndpoints(
   index: Map<string, number>,
   width: number,
 ): { x1: number; x2: number } {
-  if (msg.type === 'SHORT_INBOUND' || msg.type === 'SHORT_OUTBOUND') {
+  if (isShortMessage(msg.type)) {
     const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
     const px = xFor(index.get(participantId) ?? 0, index)
     return shortMessageEndpoints(msg.type, px, width)

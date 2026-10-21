@@ -199,7 +199,7 @@ function nodeSvg(
   const bottom = Math.max(48, head.labelYs[head.labelYs.length - 1] + 6)
   grow(at.x - half, at.y, at.x + half, at.y + bottom)
   const colour = node.colour ? ` style="--pc:${escapeAttr(node.colour)}"` : ''
-  return `<g class="component-node participant-box" data-component="${escapeAttr(node.id)}" data-participant-type="${head.type}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${colour}>
+  return `<g class="component-node participant-box" data-component="${escapeAttr(node.id)}" data-participant-type="${escapeAttr(head.type)}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${colour}>
       <title>${escapeHtml(node.name)}, ${head.typeLabel}</title>
       ${head.shapeSvg}
       ${participantLabelSvg(head, head.name)}

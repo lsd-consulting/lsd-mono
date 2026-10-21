@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Scenario } from '../types'
 import { bindInspector, inspectorMarkup } from '../ui/inspector'
 import { parseReportHash, writeReportHash } from './report-hash'
+import { untimed } from './report-fixture.test-util'
 
 const scenario: Scenario = {
+  ...untimed(),
   id: 'sc-happy',
   title: 'Happy',
   status: 'success',

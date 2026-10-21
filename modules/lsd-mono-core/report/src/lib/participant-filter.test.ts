@@ -14,12 +14,14 @@ import {
 } from './participant-filter'
 import { bindDiagramScroll, diagramView, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
 import { flushDiagramPaints } from './diagram/invalidate'
+import { untimed } from './report-fixture.test-util'
 
 let n = 0
 /** A fresh scenario id per test: hidden state lives per scenario for the page's life. */
 function scenario(): Scenario {
   n++
   return {
+    ...untimed(),
     id: `filter-${n}`,
     title: 'Filter',
     status: 'success',

@@ -10,6 +10,7 @@ import { diagramKeyContext } from './diagram-keys'
 import { createKeyRouter } from '../keys/router'
 import { singleKeysEnabled } from '../../ui/shortcuts'
 import { flushDiagramPaints } from './invalidate'
+import { untimed } from '../report-fixture.test-util'
 
 let n = 0
 /** A fresh scenario per test, [lanes] wide: views live per scenario id for the page's life. */
@@ -21,6 +22,7 @@ function scenario(lanes: number): Scenario {
     type: 'PARTICIPANT',
   }))
   return {
+    ...untimed(),
     id: `zoom-${n}`,
     title: 'Zoom',
     status: 'success',

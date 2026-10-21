@@ -1,202 +1,30 @@
-/** Domain-shaped report model (mirrors lsd-core ScenarioModel / SequenceEvent ideas). */
+// The report's shapes. They are generated from the JSON Schema in modules/lsd-mono-report-schema
+// into src/generated/lsd-report.ts (`npm run types:generate`); this module keeps the import path
+// the UI uses.
+//
+// The generated Report, Scenario and ReportOptions are the report as a producer writes it, where
+// the options and a scenario's timing summary are optional. Report, Scenario and ReportOptions
+// here are the report as the UI holds it, after normaliseReport (lib/report-normalise.ts) has
+// filled those in: the rest of the UI never applies a default of its own.
+import type {
+  Report as ReportJson,
+  ReportOptions as ReportOptionsJson,
+  Scenario as ScenarioJson,
+} from './generated/lsd-report'
 
-export type Status = 'success' | 'warn' | 'error'
+export type * from './generated/lsd-report'
+export { REPORT_SCHEMA_VERSION } from './generated/lsd-report'
+export type { ReportJson, ReportOptionsJson, ScenarioJson }
 
-export type ParticipantType = 'ACTOR' | 'PARTICIPANT' | 'DATABASE' | 'QUEUE' | 'ENTITY' | 'BOUNDARY'
+/** A report's options with their defaults filled in. `source` stays optional: absent is no known source. */
+export type ReportOptions = Required<Omit<ReportOptionsJson, 'source'>> & Pick<ReportOptionsJson, 'source'>
 
-export type MessageType =
-  | 'SYNCHRONOUS'
-  | 'SYNCHRONOUS_RESPONSE'
-  | 'ASYNCHRONOUS'
-  | 'LOST'
-  | 'BI_DIRECTIONAL'
-  | 'SHORT_INBOUND'
-  | 'SHORT_OUTBOUND'
+/** A scenario with its timing summary filled in, and without events of a kind the UI does not know. */
+export type Scenario = ScenarioJson &
+  Required<Pick<ScenarioJson, 'accuracy' | 'sources' | 'clockOrdering' | 'clockOrdered'>>
 
-export type NotePlacement = 'over' | 'left' | 'right'
-
-export interface Participant {
-  id: string
-  name: string
-  alias?: string
-  type: ParticipantType
-  colour?: string
-}
-
-export interface NoteEvent {
-  kind: 'note'
-  id: string
-  /** ISO-8601 instant. Sorted before layout when any event in the list has one. */
-  startedAt?: string
-  text: string
-  /** Anchor participant. Required for placement `over`; optional for left/right. */
-  over?: string
-  placement?: NotePlacement
-}
-
-export interface DividerEvent {
-  kind: 'divider'
-  id: string
-  startedAt?: string
-  label: string
-}
-
-/** Titled row in one continuous diagram. Does not split the SVG or end activations. */
-export interface SectionEvent {
-  kind: 'section'
-  id: string
-  startedAt?: string
-  title: string
-}
-
-/** Time-delay ellipsis (`...label...`). */
-export interface DelayEvent {
-  kind: 'delay'
-  id: string
-  startedAt?: string
-  label?: string
-}
-
-/** Vertical spacer. Optional height in CSS pixels. */
-export interface SpacerEvent {
-  kind: 'spacer'
-  id: string
-  startedAt?: string
-  heightPx?: number
-}
-
-export interface ActivateEvent {
-  kind: 'activate' | 'deactivate'
-  id: string
-  participantId: string
-  startedAt?: string
-  /** Optional activation-bar colour. Only meaningful for kind `activate`. */
-  colour?: string
-}
-
-export interface MessageEvent {
-  kind: 'message'
-  id: string
-  /** Empty for SHORT_INBOUND (phantom edge). */
-  from: string
-  /** Empty for SHORT_OUTBOUND (phantom edge). */
-  to: string
-  label: string
-  type: MessageType
-  colour?: string
-  durationMs?: number
-  /**
-   * First-paint summary. Method, path, and status stay here.
-   * When `payloadId` is set, this is only those fields (or absent) and the JSON body loads on open.
-   */
-  data?: unknown
-  /** Key into the payload sidecar (`scenarioId/messageId`). Absent when `data` is the whole payload. */
-  payloadId?: string
-  /** Capture order. */
-  seq?: number
-  callId?: string
-  /** On a reply: the call it answers. */
-  replyTo?: string
-  /** On a consume: the publish that caused it. */
-  causedBy?: string
-  trace?: { traceId: string; spanId?: string; parentSpanId?: string }
-  /** Clock domain. Absent means `local`. */
-  source?: string
-  /** When it started, by its source's clock. */
-  startedAt?: string
-  capturedAt?: string
-  status?: string
-  timing?: TimingSource
-  pairing?: PairingSource
-  order?: OrderSource
-  /** Id of the call this message runs inside, as the library nested it (span link, else innermost open call). */
-  parentId?: string
-  /** On a paired reply: id of the call it answers. */
-  replyOf?: string
-}
-
-export type TimingSource = 'NONE' | 'TIMESTAMPED' | 'MEASURED' | 'DERIVED'
-export type PairingSource = 'NONE' | 'GUESSED' | 'CALL_ID' | 'TRACE'
-/** `CLOCK`: moved by clock ordering (startedAt). Shown with a badge. */
-export type OrderSource = 'SEQUENCE' | 'STRUCTURE' | 'CLOCK'
-/** What a timing warning is about; the Timing view labels its pill from it. */
-export type WarningKind =
-  'REPLY_WITHOUT_CALL' | 'DURATION_ON_REPLY_DROPPED' | 'LONGER_THAN_PARENT' | 'DUPLICATE_SPAN' | 'SKEW'
-
-export interface TimingWarning {
-  kind: WarningKind
-  message: string
-}
-
-export type Accuracy = 'STRUCTURE_ONLY' | 'TIMESTAMPED' | 'MEASURED' | 'TRACED'
-export type ClockOrdering = 'OFF' | 'SAME_SOURCE' | 'ALL_SOURCES'
-
-export type DiagramEvent =
-  MessageEvent | NoteEvent | DividerEvent | SectionEvent | DelayEvent | SpacerEvent | ActivateEvent
-
-export interface Fact {
-  key: string
-  value: string
-}
-
-export interface Metric {
-  key: string
-  value: string
-}
-
-export interface ReportOptions {
-  /** Default true. When false, metrics are empty. */
-  metricsEnabled: boolean
-  /** Character budget for diagram labels and metric summaries. Default 200. */
-  labelMaxWidth: number
-  /**
-   * `lsd.mono.report.usagePing`: true lets a release build's page request jsDelivr's ping files
-   * (src/lib/usage-ping.ts). Missing on older reports, which never ping.
-   */
-  usagePing?: boolean
-  /** The integration that wrote the report: `junit`, `cucumber` or `api`. Missing on older reports. */
-  source?: string
-}
-
-export interface ScenarioError {
-  headline: string
-  message: string
-  /** Omitted when the producer hid the stacktrace. Shown in the inspector, not inline HTML. */
-  stack?: string
-}
-
-export interface Scenario {
-  id: string
-  title: string
-  status: Status
-  description: string
-  /** Structured failure. Prefer this over legacy overlay HTML in description. */
-  error?: ScenarioError
-  facts: Fact[]
-  metrics: Metric[]
-  participants: Participant[]
-  events: DiagramEvent[]
-  /** Timing summary. Absent on older reports, which are treated as structure only. */
-  accuracy?: Accuracy
-  measuredCoverage?: number
-  pairingCoverage?: number
-  sources?: string[]
-  wallClockMs?: number
-  clockOrdering?: ClockOrdering
-  clockOrdered?: number
-  warnings?: TimingWarning[]
-  reorderedByClock?: string[]
-  /** Accuracy per participant pair, present only when the pairs differ. */
-  pairAccuracy?: { from: string; to: string; accuracy: Accuracy }[]
-}
-
-export interface Report {
-  title: string
-  generatedAt: string
-  generator: string
-  /** Worst scenario status (error > warn > success). Present on mono-core reports. */
-  status?: Status
-  /** Metrics gate and label truncation width. Absent on older sample reports. */
-  options?: ReportOptions
+/** A report as the UI holds it: see normaliseReport. */
+export interface Report extends Omit<ReportJson, 'options' | 'scenarios'> {
+  options: ReportOptions
   scenarios: Scenario[]
 }

@@ -43,6 +43,7 @@ function timedReport(): Report {
     { key: 'Captured duration', value: '4,095 ms' },
   ]
   scenario.events = scenario.events.map((e, i) => (e.kind === 'message' ? { ...e, durationMs: 5 + i } : e))
+  scenario.accuracy = 'MEASURED'
   return report
 }
 

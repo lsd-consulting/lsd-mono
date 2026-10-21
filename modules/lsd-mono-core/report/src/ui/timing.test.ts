@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { Accuracy, MessageEvent, Report, Scenario, WarningKind } from '../types'
+import type { Accuracy, MessageEvent, Report, Scenario } from '../types'
 import { hasTiming } from '../lib/timing'
 import {
   axisHtml,
@@ -13,6 +13,7 @@ import {
   timingPanelHtml,
   timingStripHtml,
 } from './timing'
+import { untimed } from '../lib/report-fixture.test-util'
 const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> = {}): MessageEvent => ({
   kind: 'message',
   id,
@@ -24,6 +25,7 @@ const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> 
 })
 
 const scenario = (events: MessageEvent[], extra: Partial<Scenario> = {}): Scenario => ({
+  ...untimed(),
   id: 's1',
   title: 'T',
   status: 'success',
@@ -67,12 +69,15 @@ describe('timing view', () => {
   })
 
   it('says in words when the calls inside take longer than the call', () => {
-    const over = scenario([
-      msg('outer', 'web', 'api', { callId: 'c1', durationMs: 10 }),
-      msg('inner', 'api', 'db', { callId: 'c2', durationMs: 25, parentId: 'outer' }),
-      msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2' }),
-      msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
-    ])
+    const over = scenario(
+      [
+        msg('outer', 'web', 'api', { callId: 'c1', durationMs: 10 }),
+        msg('inner', 'api', 'db', { callId: 'c2', durationMs: 25, parentId: 'outer' }),
+        msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2' }),
+        msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
+      ],
+      { accuracy: 'MEASURED' },
+    )
     const panel = timingPanelHtml(over)
     expect(panel).toContain('Calls inside took longer: 25 ms &gt; 10 ms')
     expect(panel).toContain('longer than this call&#39;s measured 10 ms')
@@ -217,7 +222,7 @@ describe('timing strip', () => {
   it('shows an accuracy or warning kind from a newer core as it was sent', () => {
     const newer = timed({
       accuracy: 'SAMPLED' as Accuracy,
-      warnings: [{ kind: 'CLOCK_JUMP' as WarningKind, message: 'the clock went back' }],
+      warnings: [{ kind: 'CLOCK_JUMP', message: 'the clock went back' }],
     })
     expect(chip(timingStripHtml(newer), 'Accuracy')).toBe('Accuracy SAMPLED no calls')
     const panel = timingPanelHtml(newer)

@@ -3,6 +3,7 @@ import type { IndexManifest } from '../src/lib/report-index'
 import { payloadTextScript } from '../src/lib/payloads'
 import type { Report } from '../src/types'
 import { openReport } from './open-report'
+import { indexBase, reportBase, untimed } from '../src/lib/report-fixture.test-util'
 
 /**
  * A report for Find in payloads (#60). It keeps one payload in its sibling script (loaded the first
@@ -14,11 +15,13 @@ const deferred = {
 }
 
 export const findReport: Report = {
+  ...reportBase(),
   title: 'Find',
   generatedAt: '2026-01-15T12:00:00+00:00',
   generator: 'ux-fixture',
   scenarios: [
     {
+      ...untimed(),
       id: 'find',
       title: 'Find in payloads',
       status: 'success',
@@ -82,6 +85,7 @@ export async function openFindReport(page: Page, theme = 'light'): Promise<void>
 
 export async function openFindIndex(page: Page, { legacy = false } = {}): Promise<void> {
   const manifest: IndexManifest = {
+    ...indexBase(),
     title: 'LSD reports',
     generatedAt: findReport.generatedAt,
     generator: 'ux-fixture',

@@ -1,10 +1,11 @@
 // The page's state: the index manifest, the report session, filters and selection, and the #app root.
 import { sampleReport } from '../data/sample-report'
-import type { Status } from '../types'
+import type { Report, Status } from '../types'
 import { type IndexManifest } from '../lib/report-index'
 import { parseReportHash } from '../lib/report-hash'
 import { defaultScenarioId } from '../ui/selection'
 import { getSidebarCollapsed } from '../ui/sidebar'
+import { normaliseReport } from '../lib/report-normalise'
 import { createSession } from '../ui/session'
 
 export interface State {
@@ -24,11 +25,20 @@ export const index: IndexManifest | null = window.__LSD_REPORT__ ? null : (windo
 
 /** Everything else the page changes as it runs. */
 export const session = createSession(
-  window.__LSD_REPORT__ ??
-    (index
-      ? { title: index.title, generatedAt: index.generatedAt, generator: index.generator, scenarios: [] }
-      : sampleReport),
+  window.__LSD_REPORT__ ? normaliseReport(window.__LSD_REPORT__) : index ? indexPlaceholder(index) : sampleReport,
 )
+
+/** The index page's report until one is opened: no scenarios, and it never pings. */
+function indexPlaceholder(manifest: IndexManifest): Report {
+  return normaliseReport({
+    schemaVersion: manifest.schemaVersion,
+    title: manifest.title,
+    generatedAt: manifest.generatedAt,
+    generator: manifest.generator,
+    status: 'success',
+    scenarios: [],
+  })
+}
 
 // A link or a reload names the view too (#105).
 const initialRef = index ? null : parseReportHash(window.location.hash)

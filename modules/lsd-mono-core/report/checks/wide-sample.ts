@@ -1,4 +1,5 @@
-import type { MessageEvent, NoteEvent, Participant, Report } from '../src/types'
+import { REPORT_SCHEMA_VERSION, type MessageEvent, type NoteEvent, type Participant, type Report } from '../src/types'
+import { untimed } from '../src/lib/report-fixture.test-util'
 
 /**
  * The wide-participant perf sample, shared by docs/perf/generate-wide.mjs (which adds the payloads
@@ -69,13 +70,17 @@ export function wideReport(
     placement: 'over',
   })
   return {
+    schemaVersion: REPORT_SCHEMA_VERSION,
     title: `mono-p${count}-m${size}`,
     generatedAt: new Date().toISOString(),
     generator: 'lsd-mono-core wide perf fixture',
     status: 'success',
-    options: { metricsEnabled: true, labelMaxWidth: 200 },
+    options: { metricsEnabled: true, labelMaxWidth: 200, usagePing: false, source: 'api' },
     scenarios: [
       {
+        ...untimed(),
+        // Every fourth message has a duration, so the Timing view has something to show.
+        accuracy: 'MEASURED',
         id: `wide-p${count}-m${size}`,
         title: `${count} participants, ${size} messages`,
         status: 'success',

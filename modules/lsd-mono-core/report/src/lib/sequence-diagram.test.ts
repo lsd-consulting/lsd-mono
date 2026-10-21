@@ -23,6 +23,7 @@ import {
 } from './diagram/shapes'
 import { renderDiagramHtml, renderRowSvg } from './sequence-diagram'
 import type { DiagramEvent, Participant, Scenario } from '../types'
+import { untimed } from './report-fixture.test-util'
 
 const participants: Participant[] = [
   { id: 'api', name: 'Api', type: 'PARTICIPANT', colour: '#34d399' },
@@ -565,6 +566,7 @@ describe('activationBarSvg', () => {
 
 function headerHtml(participants: Participant[], id: string): string {
   const scenario: Scenario = {
+    ...untimed(),
     id,
     title: 'Shapes',
     status: 'success',
@@ -675,6 +677,7 @@ describe('participantHead', () => {
 describe('side panel buttons', () => {
   function scenarioWith(events: DiagramEvent[]): Scenario {
     return {
+      ...untimed(),
       id: 'comp',
       title: 'Components',
       status: 'success',

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { DiagramEvent, Participant, Scenario } from '../types'
 import { COL_GAP, HEADER_BLOCK_H, LEFT_PAD, NOTE_CARD_W } from './layout'
 import { bindDiagramScroll, diagramPads, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
+import { untimed } from './report-fixture.test-util'
 
 const lane = (i: number) => LEFT_PAD + i * COL_GAP
 
@@ -14,7 +15,7 @@ const participants: Participant[] = [
 const base = LEFT_PAD * 2 + 2 * COL_GAP
 
 function msg(id: string, from: string, to: string, label: string, type: string = 'SYNCHRONOUS'): DiagramEvent {
-  return { kind: 'message', id, from, to, label, type } as DiagramEvent
+  return { kind: 'message', id, from, to, label, type }
 }
 
 describe('diagram bounds include content on the outer lifelines', () => {
@@ -56,6 +57,7 @@ describe('diagram bounds include content on the outer lifelines', () => {
 
 describe('padded diagram frame', () => {
   const scenario: Scenario = {
+    ...untimed(),
     id: 'sc-bounds',
     title: 'Bounds',
     status: 'success',
