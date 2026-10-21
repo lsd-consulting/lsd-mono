@@ -1,7 +1,7 @@
 # Generated files
 
-Build outputs are not committed. The generated files in git are the public API dumps, which `check`
-verifies, and images: README pictures, the check:ux baselines, and the perf screenshots. A Linux CI
+Build outputs are not committed. The generated files in git are the report UI's types and the public
+API dumps, which `check` verifies, and images: README pictures, the check:ux baselines, and the perf screenshots. A Linux CI
 runner cannot reproduce the images byte for byte, so CI does not verify them. Retake them on a Mac
 with the commands below.
 
@@ -22,6 +22,22 @@ notes, are not checked. Run it locally on a tree with no uncommitted changes.
 | `modules/lsd-mono-core/report/dist/lsd-report-payloads.js` | `reportSingle` | The shell's built-in demo when you open `dist/lsd-report.html` with no captured report |
 | `modules/lsd-mono-core/build/pages/` (`index.html`, `example-report.html` and the example report's `-diagram.html`, `-report.js`, `-payloads.js`, `-report.json`) | `./gradlew :modules:lsd-mono-core:kitchenSinkSample` | The [Pages workflow](../.github/workflows/pages.yml) builds and publishes it on pushes to `main`. `index.html` is the report index that `createIndex()` writes for the example report |
 | `docs/perf-samples/` | `docs/perf/generate-*.mjs` | Local perf runs (gitignored) |
+
+## Committed report types (verified by `check`)
+
+| File | How to update |
+|------|----------|
+| `modules/lsd-mono-core/report/src/generated/lsd-report.ts` | In `modules/lsd-mono-core/report`: `npm run types:generate` |
+| `modules/lsd-mono-core/report/src/generated/lsd-index.ts` | In `modules/lsd-mono-core/report`: `npm run types:generate` |
+
+The report UI's types for the report and index data are generated from the JSON Schemas in
+[`modules/lsd-mono-report-schema`](../modules/lsd-mono-report-schema/README.md) by
+`scripts/report-types.mjs` (json-schema-to-typescript, pinned in `package.json`). Do not edit them by
+hand: change the schema and regenerate. `npm run types:check` generates them in memory and fails when
+they differ from the committed files. It runs in `reportLint`, so `./gradlew build` (and CI's build
+job, which runs for any change outside the docs) fails on a hand edit or a schema change without
+regenerated types. The build never writes these files, so `verifyGenerated` does not need to know
+about them.
 
 ## Committed API dumps (verified by `check`)
 

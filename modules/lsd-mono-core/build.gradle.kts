@@ -109,10 +109,12 @@ tasks.register<Exec>("reportTest") {
 
 tasks.register<Exec>("reportLint") {
     group = "verification"
-    description = "Type-check the report UI with its tests (npm run typecheck), then lint it (npm run lint)."
+    description =
+        "Type-check the report UI with its tests (npm run typecheck), check its generated types match the " +
+        "report schema (npm run types:check), then lint it (npm run lint)."
     dependsOn(reportSingle)
     workingDir = reportDir.asFile
-    commandLine("sh", "-c", "npm run typecheck && npm run lint")
+    commandLine("sh", "-c", "npm run typecheck && npm run types:check && npm run lint")
     withNodeOnPath()
 }
 
