@@ -63,8 +63,8 @@ usage ping. It needs no Gradle build, so it runs alongside
 
 `gradle.yml` runs on every push and pull request. A `changes` job decides whether anything the
 build reads changed (everything except Markdown, `docs/` and `modules/*/docs/`). If not, `build`
-and `jvm-tests` are skipped. It also decides whether the report UI changed; if not, `check-ux` is
-skipped. A `commits` job checks that every pushed commit, and a pull request's title, is a conventional commit (commitlint,
+and `jvm-tests` are skipped. It also decides whether the report UI, or the shared test reports its checks open
+(`modules/lsd-mono-report-schema/conformance/`), changed; if not, `check-ux` is skipped. A `commits` job checks that every pushed commit, and a pull request's title, is a conventional commit (commitlint,
 `tools/release/commitlint.config.mjs`; see [releasing.md](releasing.md)). The `gate` job always runs and passes only when every job passed or
 was skipped, so it is the one check to require on `main`: a docs-only pull request gets a green
 `gate` instead of waiting for a build that never starts.

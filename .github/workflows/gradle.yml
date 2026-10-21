@@ -52,8 +52,9 @@ jobs:
           changed=$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '(\.md$|^docs/|^modules/[^/]+/docs/)' || true)
           echo "Build-relevant changes:"; echo "${changed:-none}"
           if [ -n "$changed" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
-          # The report UI, the Node version it runs on, or this workflow.
-          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-core/report/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
+          # The report UI, the shared test reports its checks open, the Node version it runs on, or
+          # this workflow.
+          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-core/report/|modules/lsd-mono-report-schema/conformance/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
             echo "report=true" >> "$GITHUB_OUTPUT"
           else
             echo "report=false" >> "$GITHUB_OUTPUT"
