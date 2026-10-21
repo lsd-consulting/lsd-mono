@@ -16,6 +16,10 @@ writer.writeReport(report, File("build/reports/lsd"))
 writer.writeIndex(File("build/reports/lsd"))
 ```
 
+`AdapterReportTest` (in `src/test/kotlin/io/lsdconsulting/lsd/mono/example/adapter`) does this with
+this module and lsd-mono-report-model only, no lsd-mono-core: its minimal report is the shared test
+report `reports/minimal.json` byte for byte, and what it writes follows the report and index schemas.
+
 | | |
 | --- | --- |
 | **Is** | `ReportWriter`, its `ReportWriterSettings` and `WrittenReport`, in `io.lsdconsulting.lsd.mono.report.html` |
