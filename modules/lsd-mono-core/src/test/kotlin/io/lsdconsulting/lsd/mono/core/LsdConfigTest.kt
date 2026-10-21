@@ -42,7 +42,7 @@ class LsdConfigTest {
             override fun close() = Unit
         }
     private val logger = Logger.getLogger(LsdConfig::class.java.name)
-    private val keys = listOf(LsdProperties.LABEL_MAX_WIDTH, "lsd.core.label.maxWidth", LsdProperties.METRICS_ENABLED, LsdProperties.PAYLOAD_REDACT)
+    private val keys = listOf(LsdProperties.LABEL_MAX_WIDTH, LsdProperties.METRICS_ENABLED, LsdProperties.PAYLOAD_REDACT)
 
     @BeforeEach
     fun setUp() {
@@ -77,14 +77,9 @@ class LsdConfigTest {
     }
 
     @Test
-    fun `a key set in the file beats its legacy name set as a system property`() {
-        file(LsdProperties.LABEL_MAX_WIDTH to "120")
-        System.setProperty("lsd.core.label.maxWidth", "80")
-        assertEquals(120, LsdProperties.labelMaxWidth())
-
+    fun `lsd-core's name for a key is not read from the file`() {
         file("lsd.core.label.maxWidth" to "70")
-        System.clearProperty("lsd.core.label.maxWidth")
-        assertEquals(70, LsdProperties.labelMaxWidth(), "the legacy name is read from the file too")
+        assertEquals(200, LsdProperties.labelMaxWidth())
     }
 
     @Test

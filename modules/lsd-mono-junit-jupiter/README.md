@@ -98,7 +98,7 @@ build/reports/lsd/PlaceOrderTest-<hash>-diagram.html
 
 `<hash>` is 8 hex characters from the class's unique id, so two classes with the same simple name in different packages get separate reports. It is the same on every run. Open the `-diagram.html` file: it is the interactive diagram. Next to it, `PlaceOrderTest-<hash>-report.json` holds the data. `createIndex()` (called by the extension) writes `index.html`, which shows every report in the directory in one page, failed first, including ones written by other Gradle test forks.
 
-Override the directory with `lsd.mono.report.outputDir` (the legacy `lsd.core.report.outputDir` key is still honoured; every property is listed in the [core README](../lsd-mono-core/README.md#configuration-reference)). In this module's own tests that is `build/reports/lsd-test`.
+Override the directory with `lsd.mono.report.outputDir` (every property is listed in the [core README](../lsd-mono-core/README.md#configuration-reference)). In this module's own tests that is `build/reports/lsd-test`.
 
 Any `lsd.mono.*` property can also go in `src/test/resources/junit-platform.properties`, next to
 your JUnit settings. JUnit configuration parameters come after system properties and

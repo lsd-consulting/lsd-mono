@@ -9,8 +9,8 @@ import java.time.format.DateTimeParseException
  * property; the environment variable (`LSD_MONO_REPORT_OUTPUTDIR`); JUnit configuration
  * parameters such as `junit-platform.properties` (with lsd-mono-junit-jupiter); an
  * `lsd-mono.properties` file at the root of the classpath; and the default. The
- * lsd-mono-core README lists each one with its default and the legacy `lsd.core.*` /
- * `lsd.junit.*` name that is still accepted. Booleans accept `true/false`, `yes/no`, `on/off`
+ * lsd-mono-core README lists each one with its default; lsd-core's `lsd.core.*` /
+ * `lsd.junit.*` names are not read. Booleans accept `true/false`, `yes/no`, `on/off`
  * and `1/0`; any other value is warned about and the default used.
  */
 public object LsdProperties {

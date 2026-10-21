@@ -6,13 +6,11 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
  * Greenfield report switches. Not a port of PlantUML [com.lsd.core.ReportOptions]:
  * no diagram theme and no `maxEventsPerDiagram` split.
  *
- * [metricsEnabled] defaults **on** (`lsd.mono.metrics.enabled`, legacy
- * `lsd.core.metrics.enabled` fallback) so the existing message-count metrics stay
- * unless a caller turns them off.
+ * [metricsEnabled] defaults **on** (`lsd.mono.metrics.enabled`) so the existing
+ * message-count metrics stay unless a caller turns them off.
  *
- * [labelMaxWidth] defaults to 200 (`lsd.mono.label.maxWidth`, legacy
- * `lsd.core.label.maxWidth` fallback). Full labels stay on events; summaries and
- * the SVG shell truncate to this width.
+ * [labelMaxWidth] defaults to 200 (`lsd.mono.label.maxWidth`). Full labels stay on
+ * events; summaries and the SVG shell truncate to this width.
  */
 internal data class ReportOptions(
     val metricsEnabled: Boolean = true,

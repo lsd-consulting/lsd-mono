@@ -13,35 +13,51 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import kotlin.io.path.readLines
 
-/** The [LsdKey] table: legacy fallbacks, defaults, and the README table that documents it. */
+/** The [LsdKey] table: keys, defaults, and the README table that documents it. */
 @LsdTestConfig
 class LsdPropertiesTest {
     @Test
-    fun `every key prefers its mono name, then its legacy name, then its default`() {
+    fun `every key prefers its set value, then its default`() {
         LsdKey.entries.forEach { key ->
             System.clearProperty(key.key)
-            key.legacy?.let(System::clearProperty)
             assertEquals(key.default, key.value(), key.key)
-            key.legacy?.let { legacy ->
-                System.setProperty(legacy, "legacy")
-                assertEquals("legacy", key.value(), legacy)
-            }
             System.setProperty(key.key, "mono")
             assertEquals("mono", key.value(), key.key)
         }
     }
 
     @Test
-    fun `the README lists every key with its legacy name and default`() {
+    fun `lsd-core's names for the keys are not read`() {
+        val lsdCoreNames =
+            mapOf(
+                LsdKey.OUTPUT_DIR to "lsd.core.report.outputDir",
+                LsdKey.DETERMINISTIC_IDS to "lsd.core.ids.deterministic",
+                LsdKey.HIDE_STACKTRACE to "lsd.junit.hideStacktrace",
+                LsdKey.METRICS_ENABLED to "lsd.core.metrics.enabled",
+                LsdKey.LABEL_MAX_WIDTH to "lsd.core.label.maxWidth",
+            )
+        lsdCoreNames.forEach { (key, name) ->
+            System.clearProperty(key.key)
+            System.setProperty(name, "7")
+            try {
+                assertEquals(key.default, key.value(), name)
+            } finally {
+                System.clearProperty(name)
+            }
+        }
+    }
+
+    @Test
+    fun `the README lists every key with its default`() {
         val rows =
             Path
                 .of("README.md")
                 .readLines()
                 .filter { it.startsWith("| `lsd.mono.") }
                 .map { line -> line.split('|').map { it.trim().removeSurrounding("`") } }
-                .filter { it.size == 6 }
-                .map { Triple(it[1], it[2].ifEmpty { null }, it[3].takeUnless { cell -> cell == "unset" }) }
-        assertEquals(LsdKey.entries.map { Triple(it.key, it.legacy, it.default) }, rows)
+                .filter { it.size == 5 }
+                .map { it[1] to it[2].takeUnless { cell -> cell == "unset" } }
+        assertEquals(LsdKey.entries.map { it.key to it.default }, rows)
     }
 
     @Test
@@ -71,17 +87,16 @@ class LsdPropertiesTest {
     @Test
     fun `a scenario error carries the cause's message and stack unless stack traces are hidden`() {
         System.clearProperty(LsdProperties.HIDE_STACKTRACE)
-        System.clearProperty("lsd.junit.hideStacktrace")
         val cause = IllegalStateException("boom")
         val shown = ScenarioError.of("Failed", cause)
         assertEquals("Failed", shown.headline)
         assertEquals("boom", shown.message)
         assertEquals(cause.stackTraceToString(), shown.stack)
 
-        System.setProperty("lsd.junit.hideStacktrace", "true")
+        System.setProperty(LsdProperties.HIDE_STACKTRACE, "true")
         assertEquals(ScenarioError("Failed", "boom", ScenarioError.HIDDEN_STACK), ScenarioError.of("Failed", cause))
 
-        System.clearProperty("lsd.junit.hideStacktrace")
+        System.clearProperty(LsdProperties.HIDE_STACKTRACE)
         assertEquals(ScenarioError("Test aborted", "", ScenarioError.HIDDEN_STACK), ScenarioError.of("Test aborted", null))
     }
 

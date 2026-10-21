@@ -57,19 +57,15 @@ class CoreHelpersTest {
     }
 
     @Test
-    fun `properties prefer the mono key, then the legacy key, then the default`() {
+    fun `properties prefer the key, then the default`() {
         System.clearProperty(LsdProperties.OUTPUT_DIR)
-        System.clearProperty("lsd.core.report.outputDir")
         assertEquals("build/reports/lsd", LsdProperties.outputDirectory())
-        System.setProperty("lsd.core.report.outputDir", "legacy")
-        assertEquals("legacy", LsdProperties.outputDirectory())
         System.setProperty(LsdProperties.OUTPUT_DIR, "mono")
         assertEquals("mono", LsdProperties.outputDirectory())
 
         System.clearProperty(LsdProperties.METRICS_ENABLED)
-        System.clearProperty("lsd.core.metrics.enabled")
         assertTrue(LsdProperties.metricsEnabled())
-        System.setProperty("lsd.core.metrics.enabled", "false")
+        System.setProperty(LsdProperties.METRICS_ENABLED, "false")
         assertFalse(LsdProperties.metricsEnabled())
 
         System.setProperty(LsdProperties.HIDE_STACKTRACE, "true")
@@ -79,9 +75,8 @@ class CoreHelpersTest {
     @Test
     fun `label width falls back to 200 for missing, invalid or non-positive values`() {
         System.clearProperty(LsdProperties.LABEL_MAX_WIDTH)
-        System.clearProperty("lsd.core.label.maxWidth")
         assertEquals(200, LsdProperties.labelMaxWidth())
-        System.setProperty("lsd.core.label.maxWidth", "120")
+        System.setProperty(LsdProperties.LABEL_MAX_WIDTH, "120")
         assertEquals(120, LsdProperties.labelMaxWidth())
         System.setProperty(LsdProperties.LABEL_MAX_WIDTH, "wide")
         assertEquals(200, LsdProperties.labelMaxWidth())

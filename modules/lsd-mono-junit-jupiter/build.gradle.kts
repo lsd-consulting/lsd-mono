@@ -36,8 +36,6 @@ tasks.test {
         excludeTags("lsd-fixture")
     }
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
-    // Legacy key still honoured by mono LsdProperties fallbacks
-    systemProperty("lsd.core.report.outputDir", "build/reports/lsd-test")
 }
 
 // README samples (captureReadmeReport, readmeSamples). Same titles LsdExtension would use.

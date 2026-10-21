@@ -352,33 +352,34 @@ code. Each property is read from the first of these that sets it:
    `src/test/resources`), read once;
 5. the default below.
 
-A property with a legacy name falls back to that name, looked up the same way, when the
-`lsd.mono.*` one is set nowhere, to ease migration from lsd-core. `LsdProperties` has a
-constant for each name.
+`LsdProperties` has a constant for each name. lsd-core's names are not read: coming from
+lsd-core, rename `lsd.core.report.outputDir`, `lsd.core.ids.deterministic`,
+`lsd.junit.hideStacktrace`, `lsd.core.metrics.enabled` and `lsd.core.label.maxWidth` to the
+`lsd.mono.*` names below.
 
 A boolean accepts `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0`, in any case. Any other
 value is logged as a warning (once) and the default is used, so a typo never quietly turns
 a feature off.
 
-| Property | Legacy name | Default | Effect |
-| --- | --- | --- | --- |
-| `lsd.mono.report.outputDir` | `lsd.core.report.outputDir` | `build/reports/lsd` | Directory the reports are written to |
-| `lsd.mono.ids.deterministic` | `lsd.core.ids.deterministic` | `false` | `true` numbers ids 1, 2, 3… instead of random ones, for reproducible reports |
-| `lsd.mono.hideStacktrace` | `lsd.junit.hideStacktrace` | `false` | `true` leaves the stack trace out of a failed scenario's error (JUnit and Cucumber) |
-| `lsd.mono.metrics.enabled` | `lsd.core.metrics.enabled` | `true` | Message count and captured duration in the Metrics view |
-| `lsd.mono.label.maxWidth` | `lsd.core.label.maxWidth` | `200` | Width labels are cut to in summaries and the diagram. Not a positive number: the default |
-| `lsd.mono.report.generatedAt` | | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |
-| `lsd.mono.report.usagePing` | | `true` | `false` stops the report page requesting the usage ping file from jsDelivr when it is opened, see [Usage ping](../../README.md#usage-ping) |
-| `lsd.mono.cucumber.splitBySteps` | | `false` | `true` makes the Cucumber plugin start a section at each step |
-| `lsd.mono.payload.maxDepth` | | `32` | Payload limit, see [Message data](#message-data) |
-| `lsd.mono.payload.maxStringLength` | | `100000` | Payload limit, see [Message data](#message-data) |
-| `lsd.mono.payload.maxItems` | | `1000` | Payload limit, see [Message data](#message-data) |
-| `lsd.mono.payload.maxTotalSize` | | `1000000` | Payload limit, see [Message data](#message-data) |
-| `lsd.mono.payload.redact` | | `true` | `false` turns off the built-in secret key names, see [Redaction](#redaction) |
-| `lsd.mono.payload.redactKeys` | | unset | Comma-separated key names to redact as well, see [Redaction](#redaction) |
-| `lsd.mono.propagation.allowedHosts` | | `localhost,127.0.0.1,::1` | Hosts `scenarioHeaderValue` gives the scenario header for: names, `*.domain` or `*`. See [Interceptors](#interceptors) |
-| `lsd.mono.scenario.inheritBinding` | | `true` | `false` stops threads inheriting the scenario of the thread that started them, see [Threads](#threads-and-parallel-tests) |
-| `lsd.mono.timing.orderByStartedAt` | | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
+| Property | Default | Effect |
+| --- | --- | --- |
+| `lsd.mono.report.outputDir` | `build/reports/lsd` | Directory the reports are written to |
+| `lsd.mono.ids.deterministic` | `false` | `true` numbers ids 1, 2, 3… instead of random ones, for reproducible reports |
+| `lsd.mono.hideStacktrace` | `false` | `true` leaves the stack trace out of a failed scenario's error (JUnit and Cucumber) |
+| `lsd.mono.metrics.enabled` | `true` | Message count and captured duration in the Metrics view |
+| `lsd.mono.label.maxWidth` | `200` | Width labels are cut to in summaries and the diagram. Not a positive number: the default |
+| `lsd.mono.report.generatedAt` | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |
+| `lsd.mono.report.usagePing` | `true` | `false` stops the report page requesting the usage ping file from jsDelivr when it is opened, see [Usage ping](../../README.md#usage-ping) |
+| `lsd.mono.cucumber.splitBySteps` | `false` | `true` makes the Cucumber plugin start a section at each step |
+| `lsd.mono.payload.maxDepth` | `32` | Payload limit, see [Message data](#message-data) |
+| `lsd.mono.payload.maxStringLength` | `100000` | Payload limit, see [Message data](#message-data) |
+| `lsd.mono.payload.maxItems` | `1000` | Payload limit, see [Message data](#message-data) |
+| `lsd.mono.payload.maxTotalSize` | `1000000` | Payload limit, see [Message data](#message-data) |
+| `lsd.mono.payload.redact` | `true` | `false` turns off the built-in secret key names, see [Redaction](#redaction) |
+| `lsd.mono.payload.redactKeys` | unset | Comma-separated key names to redact as well, see [Redaction](#redaction) |
+| `lsd.mono.propagation.allowedHosts` | `localhost,127.0.0.1,::1` | Hosts `scenarioHeaderValue` gives the scenario header for: names, `*.domain` or `*`. See [Interceptors](#interceptors) |
+| `lsd.mono.scenario.inheritBinding` | `true` | `false` stops threads inheriting the scenario of the thread that started them, see [Threads](#threads-and-parallel-tests) |
+| `lsd.mono.timing.orderByStartedAt` | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
 
 Settings made in code rather than by property:
 
@@ -471,10 +472,10 @@ past one of these limits (defaults in the [configuration reference](#configurati
 
 | Limit | Marker |
 | --- | --- |
-| `lsd.mono.payload.maxDepth` | `[lsd: max depth 32 reached]` |
-| `lsd.mono.payload.maxStringLength` | `… [lsd: truncated N characters]` |
-| `lsd.mono.payload.maxItems` | `[lsd: N more items]`, or a `"[lsd: truncated]"` key |
-| `lsd.mono.payload.maxTotalSize` | `[lsd: payload larger than N characters, rest dropped]` |
+| `lsd.mono.payload.maxDepth` |
+| `lsd.mono.payload.maxStringLength` |
+| `lsd.mono.payload.maxItems` |
+| `lsd.mono.payload.maxTotalSize` |
 
 To copy a type differently (a JSON tree, say), register a converter. Its result
 is copied in turn:

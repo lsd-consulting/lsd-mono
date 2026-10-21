@@ -73,7 +73,6 @@ dependencies {
 
 tasks.test {
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
-    systemProperty("lsd.core.report.outputDir", "build/reports/lsd-test")
     systemProperty("cucumber.publish.enabled", "false")
 }
 
