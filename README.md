@@ -211,12 +211,14 @@ The [example report](https://lsd-consulting.github.io/lsd-mono/example-report.ht
 ./gradlew build
 ```
 
-The Java baseline is 17, set once as `jvm` in `gradle/libs.versions.toml`: the code compiles for it and the tests run on a JDK 17 toolchain (found locally or provisioned by foojay; your default JDK is not changed). `./gradlew test -Plsd.test.jvm=21` runs the tests on another JDK. `:modules:lsd-mono-core:build` runs the Vite shell build (`npm ci`, then `npm run build:single`) and vitest is on `check`. Those tasks prepend the nvm Node named in `.nvmrc` (the one CI uses) and leave the default alias alone.
+The Java baseline is 17, set once as `jvm` in `gradle/libs.versions.toml`: the code compiles for it and the tests run on a JDK 17 toolchain (found locally or provisioned by foojay; your default JDK is not changed). `./gradlew test -Plsd.test.jvm=21` runs the tests on another JDK. `:modules:lsd-mono-report-html:build` runs the Vite shell build (`npm ci`, then `npm run build:single`) and vitest is on `check`. Those tasks prepend the nvm Node named in `.nvmrc` (the one CI uses) and leave the default alias alone.
 
 `check` also lints and measures coverage: ktlint for the Kotlin (`./gradlew spotlessApply` fixes formatting), Kover line-coverage floors per module, and for the report UI a type-check of the code and its tests, ESLint, Prettier and Vitest coverage thresholds. See [lint, format and coverage](docs/ci.md#lint-format-and-coverage).
 
 ```
-modules/lsd-mono-core/            lsd-mono-core, report UI in report/
+modules/lsd-mono-core/            lsd-mono-core: capture, timing, the report model mapping
+modules/lsd-mono-report-model/    the report as plain Kotlin values
+modules/lsd-mono-report-html/     the report writer, report UI in ui/
 modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
 modules/lsd-mono-cucumber-8/      Cucumber 8 plugin
 modules/lsd-mono-coroutines/      keeps a scenario bound across coroutine thread hops

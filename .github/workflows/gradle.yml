@@ -54,7 +54,7 @@ jobs:
           if [ -n "$changed" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
           # The report UI, the shared test reports its checks open, the Node version it runs on, or
           # this workflow.
-          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-core/report/|modules/lsd-mono-report-schema/conformance/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-report-html/ui/|modules/lsd-mono-report-schema/conformance/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
             echo "report=true" >> "$GITHUB_OUTPUT"
           else
             echo "report=false" >> "$GITHUB_OUTPUT"
@@ -121,7 +121,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: modules/lsd-mono-core/report/package-lock.json
+          cache-dependency-path: modules/lsd-mono-report-html/ui/package-lock.json
       # Validates the Gradle wrapper jar and caches the Gradle user home (dependencies, wrapper,
       # build cache). "basic" is the MIT-licensed provider on actions/cache; the default provider
       # is a proprietary component under Gradle's terms of use. Pull requests only read the cache.
@@ -171,7 +171,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: modules/lsd-mono-core/report/package-lock.json
+          cache-dependency-path: modules/lsd-mono-report-html/ui/package-lock.json
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
@@ -199,7 +199,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: modules/lsd-mono-core/report
+        working-directory: modules/lsd-mono-report-html/ui
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -208,7 +208,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: modules/lsd-mono-core/report/package-lock.json
+          cache-dependency-path: modules/lsd-mono-report-html/ui/package-lock.json
       - run: npm ci
       # The browser build belongs to the Playwright version, so the lockfile's version keys the cache.
       - name: Playwright version
@@ -236,8 +236,8 @@ jobs:
         with:
           name: playwright-report
           path: |
-            modules/lsd-mono-core/report/playwright-report/
-            modules/lsd-mono-core/report/test-results/
+            modules/lsd-mono-report-html/ui/playwright-report/
+            modules/lsd-mono-report-html/ui/test-results/
           if-no-files-found: ignore
           retention-days: 14
 

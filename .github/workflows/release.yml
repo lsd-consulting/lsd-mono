@@ -64,7 +64,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             tools/release/package-lock.json
-            modules/lsd-mono-core/report/package-lock.json
+            modules/lsd-mono-report-html/ui/package-lock.json
       - name: Install semantic-release
         if: github.event_name != 'workflow_dispatch'
         working-directory: tools/release

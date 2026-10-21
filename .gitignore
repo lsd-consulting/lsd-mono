@@ -27,7 +27,7 @@ local.properties
 
 # report UI / Node (optional local Vite builds)
 **/node_modules/
-modules/lsd-mono-core/report/dist/
+modules/lsd-mono-report-html/ui/dist/
 
 # Local large-diagram HTML from the perf check (viewable, not committed)
 docs/perf-samples/

@@ -11,7 +11,7 @@
  *
  * Usage: node measure-timing.mjs /path/to/docs/perf-samples [timed-2000:4]
  */
-import { chromium } from '../../modules/lsd-mono-core/report/node_modules/playwright/index.mjs'
+import { chromium } from '../../modules/lsd-mono-report-html/ui/node_modules/playwright/index.mjs'
 import path from 'node:path'
 import { heap, percentile, recordLongTasks, writeResults } from './perf-kit.mjs'
 

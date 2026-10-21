@@ -4,10 +4,10 @@
  * Usage: node --experimental-strip-types generate-wide.mjs <shell.html> <out-dir>
  *
  * Cases: 20 / 50 / 100 participants at 400 messages, plus 100 participants at 2000.
- * The participants and arrows come from report/checks/wide-sample.ts, which the check:ux tests
+ * The participants and arrows come from the report UI's checks/wide-sample.ts, which the check:ux tests
  * also open (without payloads).
  */
-import { wideReport } from '../../modules/lsd-mono-core/report/checks/wide-sample.ts'
+import { wideReport } from '../../modules/lsd-mono-report-html/ui/checks/wide-sample.ts'
 import { arrowPayload, generatorArgs, writeSample } from './sample-kit.mjs'
 
 const { shell, outDir } = generatorArgs('node --experimental-strip-types generate-wide.mjs <shell.html> <out-dir>')

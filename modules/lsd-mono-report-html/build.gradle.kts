@@ -36,10 +36,10 @@ dependencies {
 // Node helpers (withNodeOnPath, nodeCommandLine) live in build-logic NodeToolchain.kt.
 // When a task runs, they put the .nvmrc Node from nvm first for it and do not change the nvm default alias.
 
-// The report UI's sources. They are still under lsd-mono-core until they move here.
-val reportDir = rootProject.layout.projectDirectory.dir("modules/lsd-mono-core/report")
+// The report UI: its own npm package, built into the single-file shell this jar bundles.
+val reportDir = layout.projectDirectory.dir("ui")
 val generatedResourcesDir = layout.buildDirectory.dir("generated/resources")
-// Built by `npm run build:single` into report/dist (gitignored), then packaged from there.
+// Built by `npm run build:single` into ui/dist (gitignored), then packaged from there.
 val reportShell = reportDir.file("dist/lsd-report.html")
 
 val reportSingle = tasks.register<Exec>("reportSingle") {
@@ -71,7 +71,7 @@ val reportSingle = tasks.register<Exec>("reportSingle") {
 val copyReportShell = tasks.register<Copy>("copyReportShell") {
     group = "build"
     description =
-        "Copy report/dist/lsd-report.html into build/generated/resources as the classpath shell."
+        "Copy ui/dist/lsd-report.html into build/generated/resources as the classpath shell."
     dependsOn(reportSingle)
     from(reportShell) { rename { "lsd-report.single.html" } }
     into(generatedResourcesDir.map { it.dir("lsd-mono-report-html") })

@@ -1,4 +1,4 @@
-import { chromium } from '../../modules/lsd-mono-core/report/node_modules/playwright/index.mjs'
+import { chromium } from '../../modules/lsd-mono-report-html/ui/node_modules/playwright/index.mjs'
 import { resolve } from 'node:path'
 // Usage: node docs/perf/measure-index.mjs <report directory with index.html>
 const url = 'file://' + resolve(process.argv[2], 'index.html')

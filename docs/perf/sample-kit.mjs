@@ -5,7 +5,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { shellParts } from '../../modules/lsd-mono-core/report/src/lib/payloads.ts'
+import { shellParts } from '../../modules/lsd-mono-report-html/ui/src/lib/payloads.ts'
 
 /** A few KB of HTTP-like popup payload for message [n]; bodies go to the sibling payloads script. */
 export function arrowPayload(label, n, { method = 'POST', path: route = `/v1/hop/${n}`, status = 200 } = {}) {

@@ -2,7 +2,7 @@
   "name": "lsd-report",
   "version": "0.1.0",
   "private": true,
-  "description": "Living Sequence Diagrams HTML report UI for lsd-mono-core",
+  "description": "Living Sequence Diagrams HTML report UI, bundled by lsd-mono-report-html",
   "type": "module",
   "engines": {
     "node": ">=22.6"

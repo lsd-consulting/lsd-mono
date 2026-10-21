@@ -75,7 +75,7 @@
       "groupSlug": "java-jdk"
     },
     {
-      "description": "Node in .nvmrc, the single source for CI (node-version-file) and the Gradle Node lookup (NodeToolchain.kt). A new major needs approval and a check that the report build still runs (engines in report/package.json).",
+      "description": "Node in .nvmrc, the single source for CI (node-version-file) and the Gradle Node lookup (NodeToolchain.kt). A new major needs approval and a check that the report build still runs (engines in modules/lsd-mono-report-html/ui/package.json).",
       "matchDatasources": [
         "node-version"
       ],

@@ -5,7 +5,7 @@ import java.io.File
 
 /*
  * The report build (Vite, Vitest, Playwright, `--experimental-strip-types`) needs Node 22.6 or
- * later (`engines` in report/package.json). CI uses the Node major in the repo's `.nvmrc`
+ * later (`engines` in lsd-mono-report-html/ui/package.json). CI uses the Node major in the repo's `.nvmrc`
  * (`node-version-file` in the workflows), so these helpers prefer the newest nvm-installed Node
  * of that major, and otherwise the newest installed Node of at least 22.6, and put it first on
  * an Exec task's PATH. They never change the nvm default alias, and fall back to whatever
@@ -14,7 +14,7 @@ import java.io.File
 
 private val NODE_VERSION = Regex("""v(\d+)\.(\d+)\.(\d+)""")
 
-/** The oldest Node the report build runs on, as in `engines` in report/package.json. */
+/** The oldest Node the report build runs on, as in `engines` in lsd-mono-report-html/ui/package.json. */
 private val MINIMUM = Triple(22, 6, 0)
 
 private fun File.version(): Triple<Int, Int, Int>? =

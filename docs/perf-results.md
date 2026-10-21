@@ -205,9 +205,9 @@ Same machine (Apple M3 Max), headless Chromium **156.0.8078.4**, viewport 1440×
 Commands, run from the repository root with Node 22 and no loader:
 
 ```
-cd modules/lsd-mono-core/report && npm run build:single && cd -
-node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
-node --experimental-strip-types docs/perf/generate-wide.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
+cd modules/lsd-mono-report-html/ui && npm run build:single && cd -
+node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-report-html/ui/dist/lsd-report.html docs/perf-samples
+node --experimental-strip-types docs/perf/generate-wide.mjs modules/lsd-mono-report-html/ui/dist/lsd-report.html docs/perf-samples
 node docs/perf/measure.mjs "$PWD/docs/perf-samples"
 node docs/perf/measure-wide.mjs "$PWD/docs/perf-samples"
 ```
@@ -262,7 +262,7 @@ Each participant header used to carry its own Hide and More buttons (ten nodes e
 
 At 100 participants the header is 645 nodes against 535 before the participant filter: one slot per participant (100) plus the one set of buttons. p95 frame time stays at 16.7–16.8 ms. The 100-participant pages still show one 50–75 ms long task; this change did not look into it. The 100×2000 popup is [#63](https://github.com/lsd-consulting/lsd-mono/issues/63).
 
-Regenerate with the commands in the Chromium 156 rerun above (`generate-wide.mjs` now takes its participants and arrows from `report/checks/wide-sample.ts`, which the check:ux tests also open).
+Regenerate with the commands in the Chromium 156 rerun above (`generate-wide.mjs` now takes its participants and arrows from `ui/checks/wide-sample.ts`, which the check:ux tests also open).
 
 ## Payloads parsed when opened (19 Oct 2026, 21:41 BST)
 
@@ -353,9 +353,9 @@ node docs/perf/measure-index.mjs /tmp/lsd-index-200
 Find matches message payloads as well as labels and notes (#60). The payloads load the first time Find is used, are indexed as the side panel shows them (indented JSON, case folded), and are indexed and searched in slices of about 8 ms, so typing never waits for a large report. Same machine (Apple M3 Max), headless Chromium **156.0.8078.4**, viewport 1440×900, `file://`. Samples regenerated from the current shell, as in the Chromium 156 rerun above. [`measure-find.mjs`](perf/measure-find.mjs), 3 runs per row, medians (ranges where they matter).
 
 ```
-cd modules/lsd-mono-core/report && npm run build:single && cd -
-node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
-node --experimental-strip-types docs/perf/generate-wide.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
+cd modules/lsd-mono-report-html/ui && npm run build:single && cd -
+node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-report-html/ui/dist/lsd-report.html docs/perf-samples
+node --experimental-strip-types docs/perf/generate-wide.mjs modules/lsd-mono-report-html/ui/dist/lsd-report.html docs/perf-samples
 node docs/perf/measure-find.mjs "$PWD/docs/perf-samples"
 ```
 
@@ -420,8 +420,8 @@ The Timing view (summary strip, accuracy by pair, time by participant, swim lane
 `generate-mono.mjs` now also writes `timed-100`, `timed-500` and `timed-2000` (calls). Each request is a call tree five calls deep in places: place order → check token, create order → insert order, charge. Every call has `durationMs` and its reply (`replyOf`), and nested calls carry `parentId`. The api's calls have `startedAt` on the scenario's clock. The orders service's calls come from a second source, so they are packed inside their parent. Each request ends with an untimed async publish. That gives 2,400 waterfall rows and 2,000 swim-lane bars at 2,000 calls (4,400 events).
 
 ```
-cd modules/lsd-mono-core/report && npm run build:single && cd -
-node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-core/report/dist/lsd-report.html docs/perf-samples
+cd modules/lsd-mono-report-html/ui && npm run build:single && cd -
+node --experimental-strip-types docs/perf/generate-mono.mjs modules/lsd-mono-report-html/ui/dist/lsd-report.html docs/perf-samples
 node docs/perf/measure-timing.mjs "$PWD/docs/perf-samples"            # or e.g. timed-2000:4 for one case
 ```
 

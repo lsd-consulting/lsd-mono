@@ -8,10 +8,10 @@ The report UI draws three Lucide icons, inlined as SVG paths and from there in e
 report:
 
 - [`scan`](https://lucide.dev/icons/scan), the Overview button, in
-  [`modules/lsd-mono-core/report/src/lib/diagram/zoom-controls.ts`](modules/lsd-mono-core/report/src/lib/diagram/zoom-controls.ts);
+  [`modules/lsd-mono-report-html/ui/src/lib/diagram/zoom-controls.ts`](modules/lsd-mono-report-html/ui/src/lib/diagram/zoom-controls.ts);
 - [`sun`](https://lucide.dev/icons/sun) and [`moon`](https://lucide.dev/icons/moon), the light and
   dark theme icons, in
-  [`modules/lsd-mono-core/report/src/ui/theme-menu.ts`](modules/lsd-mono-core/report/src/ui/theme-menu.ts).
+  [`modules/lsd-mono-report-html/ui/src/ui/theme-menu.ts`](modules/lsd-mono-report-html/ui/src/ui/theme-menu.ts).
 
 Lucide's ISC License below applies to all three. `moon` is also one of the icons Lucide derives
 from Feather, so Feather's MIT License, after it, applies to `moon` as well.

@@ -15,6 +15,6 @@ published `lsd-consulting` libraries (e.g. Maven Central `lsd-core`,
 | `lsd-mono-report-html/` | `lsd-mono-report-html` | Writes a report model as `<stem>-report.json` and the interactive HTML page, and the index of a directory's reports; bundles the single-file report shell → depends on `:modules:lsd-mono-report-model`. lsd-mono-core depends on it |
 | `lsd-mono-report-schema/` | none (not a Gradle project) | JSON Schemas for the report and index data, which lsd-mono-core's tests validate against and the report UI's types are generated from |
 
-`lsd-mono-core` is the core artifact; its report UI is `modules/lsd-mono-core/report`. For
+`lsd-mono-core` is the core artifact. The report UI is `modules/lsd-mono-report-html/ui`. For
 the behaviour of the earlier libraries, see the upstream
 [lsd-core](https://github.com/lsd-consulting/lsd-core) repository. It is not part of this tree.

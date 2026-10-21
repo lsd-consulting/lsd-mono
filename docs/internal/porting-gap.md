@@ -35,10 +35,10 @@ These are **implemented**, not stubs, unless noted.
 | Lifeline activate / deactivate | `Lifeline` + DSL `LifelineAction.lifeline`. Activation bars are pinned to the opening and closing message rows (those keyword events have no row height). **Landed 2026-10-03.** |
 | Kotlin capture DSL (`lsd.capture { "A" calls "B" label … }`) | `CaptureBlock.kt` (#3) |
 | Scenario / report / index / clear | `LsdContext.kt` |
-| `ReportJson` + `window.__LSD_REPORT__` injection into shell | `report/ReportWriter.renderShell`; locked by `CaptureToJsonTest` |
+| `ReportJson` + `window.__LSD_REPORT__` injection into shell | `ReportWriter.renderShell` (lsd-mono-report-html); locked by `CaptureToJsonTest` |
 | Minimal listing HTML + `*-report.json` (per report, `<title>-<hash>` names, atomic writes) | `ReportWriter.writeReport` |
-| report chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, message deep links, and reduced-motion support | `report/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
-| Custom SVG sequence (participants, activations, notes, dividers, message hits) | `report/src/lib/sequence-diagram.ts` |
+| report chrome: sticky topbar + sticky sidebar, search (title/description/facts), status chips, dark/light/high-contrast themes, keyboard (`/ j k Enter d ? Esc` plus diagram message navigation), side inspector with lazy payloads + copy, message deep links, and reduced-motion support | `ui/src/main.ts`, `ui/theme.ts`, `styles/app.css` |
+| Custom SVG sequence (participants, activations, notes, dividers, message hits) | `ui/src/lib/sequence-diagram.ts` |
 | JUnit Jupiter 6 extension + `LsdScenario` parameter | `LsdExtension.kt` — success / fail / disabled / aborted / nested / `@AfterEach` capture; `@LsdPostTestProcessing` was removed in favour of `@AfterEach`; failures are `error` JSON (`headline`, `message`, `stack`), not overlay HTML. Locked by `LsdExtensionOutcomesTest`. |
 | Cucumber 8 plugin | `modules/lsd-mono-cucumber-8`, `LsdCucumberPlugin`. Completes a scenario per Cucumber scenario. The description is the Given/When/Then lines. The report highlights Given, When, Then, and And in the Description card. Logging and HTTP interceptors are still not in the tree. |
 | Properties: output dir, deterministic ids, hide stacktrace, metrics gate (default **on**), label max width (`lsd.mono.*` names only; lsd-core's `lsd.core.*` / `lsd.junit.*` names are not read) | `properties/LsdKey.kt` (one table of keys and defaults), `properties/LsdProperties.kt`, `ReportOptions.kt` |
@@ -68,7 +68,7 @@ Each item: legacy behaviour → why it matters → suggested LSD Mono shape → 
 | | |
 |--|--|
 | **Legacy** | Caps events per diagram (`ReportOptions.maxEventsPerDiagram`) and splits — a workaround for PlantUML SVG size / browser pain. |
-| **Shipped** | `report/src/lib/layout.ts` lays out rows in CSS pixels. `virtualRowRange` paints only the scroll window plus overscan. The diagram grows with the page instead of scrolling inside its own panel; page scroll drives the row window, and the sticky participant header sticks to the top of the page so names stay visible. Full event list stays in JSON. |
+| **Shipped** | `ui/src/lib/layout.ts` lays out rows in CSS pixels. `virtualRowRange` paints only the scroll window plus overscan. The diagram grows with the page instead of scrolling inside its own panel; page scroll drives the row window, and the sticky participant header sticks to the top of the page so names stay visible. Full event list stays in JSON. |
 | **Still open** | Density modes. Zoom and fit landed in the diagram UX slice; horizontal scroll is the pan. |
 | **Test** | `layout.test.ts` (`npm test` in `report`) — scrollTop + viewport → row range, including sticky-header inset and overscan. |
 
@@ -221,7 +221,7 @@ Each item: legacy behaviour → why it matters → suggested LSD Mono shape → 
 | | |
 |--|--|
 | **Legacy** | Per-scenario component SVG via PlantUML (`ComponentDiagramGenerator`) + combined `completeComponentsReport` over `combinedEvents`. Filters message types to SYNCHRONOUS / ASYNCHRONOUS / BI_DIRECTIONAL / LOST; distinct edges by from→to. |
-| **Shipped** | A **Components** view beside each scenario's sequence diagram (a side-panel button before #105). When shown, `report/src/lib/component-graph.ts` builds the graph from that scenario's messages (same type filter as legacy, duplicate from→to pairs folded with a count and the first label), and `component-diagram.ts` draws it in the diagram area with the participant header shapes, callers above callees. Nothing is computed on the JVM, and there is no separate file. Issue #4. |
+| **Shipped** | A **Components** view beside each scenario's sequence diagram (a side-panel button before #105). When shown, `ui/src/lib/component-graph.ts` builds the graph from that scenario's messages (same type filter as legacy, duplicate from→to pairs folded with a count and the first label), and `component-diagram.ts` draws it in the diagram area with the participant header shapes, callers above callees. Nothing is computed on the JVM, and there is no separate file. Issue #4. |
 | **Test** | `component-graph.test.ts`, `component-diagram.test.ts`, the inspector and toolbar vitest cases, and an axe pass with the diagram open in `checks/ux.spec.ts`. |
 
 ---
@@ -235,7 +235,7 @@ The large-diagram UX baseline is shipped: sticky participant header, scenario an
 | Large diagrams | Density modes; the virtual window SVG is rebuilt on scroll rather than recycling nodes. | P2 |
 | Message payloads | Pretty-print / size limits for payloads; browser check that the inspector copy button works. | P1 |
 
-**Themes and accessibility.** Dark, light, and high contrast persist in `report/src/ui/theme.ts`. Status, message types, and coloured activation use text, border, hatch, or shape cues in addition to colour. Print CSS forces a light page and paints every row so virtualisation does not clip printed output.
+**Themes and accessibility.** Dark, light, and high contrast persist in `ui/src/ui/theme.ts`. Status, message types, and coloured activation use text, border, hatch, or shape cues in addition to colour. Print CSS forces a light page and paints every row so virtualisation does not clip printed output.
 
 ### 3.5 Integrations beyond JUnit smoke
 
@@ -331,8 +331,8 @@ Open implementation work is tracked in `docs/internal/next-steps.md` and the **S
 | Legacy HTML report | [lsd-core `html-report.hbs`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/resources/templates/html-report.hbs) |
 | Mono context | `modules/lsd-mono-core/src/main/kotlin/.../LsdContext.kt` |
 | Mono events | `modules/lsd-mono-core/src/main/kotlin/.../domain/SequenceEvent.kt` |
-| Mono writer | `modules/lsd-mono-core/src/main/kotlin/.../report/ReportWriter.kt` |
-| Report types / UI / SVG | `modules/lsd-mono-core/report/src/{types.ts,main.ts,lib/sequence-diagram.ts}` |
+| Mono writer | `modules/lsd-mono-report-html/src/main/kotlin/.../report/html/ReportWriter.kt` |
+| Report types / UI / SVG | `modules/lsd-mono-report-html/ui/src/{types.ts,main.ts,lib/sequence-diagram.ts}` |
 | JUnit extension | `modules/lsd-mono-junit-jupiter/src/main/kotlin/.../LsdExtension.kt` |
 | Cucumber plugin | `modules/lsd-mono-cucumber-8/src/main/kotlin/.../LsdCucumberPlugin.kt` |
 

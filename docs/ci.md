@@ -32,7 +32,7 @@ supports TypeScript 7.
 
 ## Report UI checks (`check:ux`)
 
-The `check-ux` job runs `npm run check:ux` in `modules/lsd-mono-core/report`: the Playwright checks
+The `check-ux` job runs `npm run check:ux` in `modules/lsd-mono-report-html/ui`: the Playwright checks
 in `checks/` (layout, keyboard, axe, print and forced colours, themes, phone layouts) in headless
 Chromium against the Vite dev server on port 4179, plus `checks/offline.spec.ts`, which opens the
 single-file report that `check:ux` builds first and fails on any network request other than the
@@ -124,7 +124,7 @@ the image (1.64 is the first to support Ubuntu 26.04).
 - **Gradle properties** (`gradle.properties`). Build cache, parallel project execution and
   configuration cache are on. CI does not keep the configuration cache between runs: that needs an
   encryption key, which `setup-gradle` v6 no longer supports. It still saves time locally.
-- **npm cache.** `setup-node` caches npm downloads, keyed on `report/package-lock.json`.
+- **npm cache.** `setup-node` caches npm downloads, keyed on `ui/package-lock.json` (in modules/lsd-mono-report-html).
 - **Daemon.** No `--no-daemon`. A single build on CI uses one daemon either way, and this avoids
   starting a second JVM for the build's JVM settings.
 

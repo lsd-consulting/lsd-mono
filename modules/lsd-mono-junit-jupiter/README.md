@@ -147,7 +147,7 @@ Regenerate it from the current UI:
 ./gradlew :modules:lsd-mono-junit-jupiter:readmeSamples
 ```
 
-The task captures the same scenario the README shows (with the titles `LsdExtension` would use), then screenshots the packaged shell with headless Chromium via the core report's `readme-samples.mjs`. It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
+The task captures the same scenario the README shows (with the titles `LsdExtension` would use), then screenshots the packaged shell with headless Chromium via the report UI's `readme-samples.mjs` (lsd-mono-report-html/ui). It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
 
 ## Build
 

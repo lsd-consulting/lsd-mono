@@ -12,7 +12,7 @@ Requires a JDK (the Java baseline is `jvm` in `gradle/libs.versions.toml`; Gradl
 typecheck, lint and Vitest suite. `verifyGenerated` fails if the build changed a tracked file, so
 commit first and then run it. See [docs/ci.md](docs/ci.md) for every check and how to run it alone.
 
-In `modules/lsd-mono-core/report`: `npm run typecheck`, `npm run lint`, `npm test` and
+In `modules/lsd-mono-report-html/ui`: `npm run typecheck`, `npm run lint`, `npm test` and
 `npm run check:ux` (Playwright).
 
 ## Rules

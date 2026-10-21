@@ -18,8 +18,8 @@ notes, are not checked. Run it locally on a tree with no uncommitted changes.
 
 | File | Built by | Used by |
 |------|----------|---------|
-| `modules/lsd-mono-core/report/dist/lsd-report.html` | `reportSingle` (`npm run build:single`), on every build | Packaged into lsd-mono-report-html's jar as `/lsd-mono-report-html/lsd-report.single.html`, the shell every report uses |
-| `modules/lsd-mono-core/report/dist/lsd-report-payloads.js` | `reportSingle` | The shell's built-in demo when you open `dist/lsd-report.html` with no captured report |
+| `modules/lsd-mono-report-html/ui/dist/lsd-report.html` | `reportSingle` (`npm run build:single`), on every build | Packaged into lsd-mono-report-html's jar as `/lsd-mono-report-html/lsd-report.single.html`, the shell every report uses |
+| `modules/lsd-mono-report-html/ui/dist/lsd-report-payloads.js` | `reportSingle` | The shell's built-in demo when you open `dist/lsd-report.html` with no captured report |
 | `modules/lsd-mono-core/build/pages/` (`index.html`, `example-report.html` and the example report's `-diagram.html`, `-report.js`, `-payloads.js`, `-report.json`) | `./gradlew :modules:lsd-mono-core:kitchenSinkSample` | The [Pages workflow](../.github/workflows/pages.yml) builds and publishes it on pushes to `main`. `index.html` is the report index that `createIndex()` writes for the example report |
 | `docs/perf-samples/` | `docs/perf/generate-*.mjs` | Local perf runs (gitignored) |
 
@@ -27,8 +27,8 @@ notes, are not checked. Run it locally on a tree with no uncommitted changes.
 
 | File | How to update |
 |------|----------|
-| `modules/lsd-mono-core/report/src/generated/lsd-report.ts` | In `modules/lsd-mono-core/report`: `npm run types:generate` |
-| `modules/lsd-mono-core/report/src/generated/lsd-index.ts` | In `modules/lsd-mono-core/report`: `npm run types:generate` |
+| `modules/lsd-mono-report-html/ui/src/generated/lsd-report.ts` | In `modules/lsd-mono-report-html/ui`: `npm run types:generate` |
+| `modules/lsd-mono-report-html/ui/src/generated/lsd-index.ts` | In `modules/lsd-mono-report-html/ui`: `npm run types:generate` |
 
 The report UI's types for the report and index data are generated from the JSON Schemas in
 [`modules/lsd-mono-report-schema`](../modules/lsd-mono-report-schema/README.md) by
@@ -65,7 +65,7 @@ files, so `verifyGenerated` does not need to know about them.
 | `modules/lsd-mono-junit-jupiter/docs/readme/diagram.png` | `./gradlew :modules:lsd-mono-junit-jupiter:readmeSamples` |
 | `modules/lsd-mono-cucumber-8/docs/readme/diagram.png` | `./gradlew :modules:lsd-mono-cucumber-8:readmeSamples` |
 | All of the above | `./gradlew readmeSamples` |
-| `modules/lsd-mono-core/report/checks/snapshots/*.png` (check:ux baselines) | In `modules/lsd-mono-core/report`, with port 4179 free: `npm run check:ux -- --update-snapshots`. Review the changed PNGs before you commit them |
+| `modules/lsd-mono-report-html/ui/checks/snapshots/*.png` (check:ux baselines) | In `modules/lsd-mono-report-html/ui`, with port 4179 free: `npm run check:ux -- --update-snapshots`. Review the changed PNGs before you commit them |
 | `docs/perf-results.md`, `docs/perf-screenshots/*.png` | A dated, hand-written measurement record. Redo it by hand when you re-measure (see `docs/perf`) |
 
 Retake README images only when the UI they show changes. Sample reports use a fixed "generated at"

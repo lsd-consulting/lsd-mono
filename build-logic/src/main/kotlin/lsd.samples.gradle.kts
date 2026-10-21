@@ -18,7 +18,8 @@ dependencies {
 // and writer, for lsd-mono-core).
 configurations.named("readmeImplementation") { extendsFrom(configurations.getByName("implementation")) }
 
-val reportDir = layout.projectDirectory.dir("report")
+// The report UI's scripts, which screenshot the sample reports.
+val reportDir = rootProject.layout.projectDirectory.dir("modules/lsd-mono-report-html/ui")
 
 /** Run [mainClass] from the readme source set, writing a deterministic report into [outDir]. */
 fun registerCapture(

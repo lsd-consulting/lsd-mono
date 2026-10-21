@@ -49,7 +49,7 @@ fun Project.registerIntegrationReadmeSamples(
     val reportDir = layout.buildDirectory.dir("readme-report")
     val png = layout.projectDirectory.file("docs/readme/diagram.png")
     val core = project(":modules:lsd-mono-core")
-    val coreReportDir = core.layout.projectDirectory.dir("report")
+    val coreReportDir = project(":modules:lsd-mono-report-html").layout.projectDirectory.dir("ui")
     val capture =
         tasks.register<JavaExec>("captureReadmeReport") {
             description = "$what and write its report HTML."

@@ -1,6 +1,6 @@
 # LSD Report
 
-Report UI for **lsd-mono-core**. Sources live in `modules/lsd-mono-core/report`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `dist/lsd-report.html` into the jar as `lsd-report.single.html`. Build output is not committed. The JVM façade injects captured `ReportJson` as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
+Report UI for **lsd-mono-report-html** (and so for lsd-mono-core, which writes its reports with it). Sources live in `modules/lsd-mono-report-html/ui`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `dist/lsd-report.html` into its jar as `lsd-report.single.html`. Build output is not committed. The Kotlin writer injects the report as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
 
 It is not published on its own.
 
@@ -9,7 +9,7 @@ It is not published on its own.
 Virtualisation math (row window from `scrollTop` + viewport, overscan, sticky header) lives in `src/lib/layout.ts` and is locked by `src/lib/layout.test.ts`.
 
 ```bash
-cd modules/lsd-mono-core/report
+cd modules/lsd-mono-report-html/ui
 npm ci
 npm test
 ```
@@ -29,18 +29,18 @@ Markup is built from strings, so ESLint's `lsd/escaped-markup` rule (`lint/eslin
 Axe and screenshot checks are separate from vitest (Playwright downloads nothing extra when the 1.55 Chromium cache is already present):
 
 ```bash
-cd modules/lsd-mono-core/report
+cd modules/lsd-mono-report-html/ui
 npm run check:ux
 ```
 
-Vitest is also on `./gradlew :modules:lsd-mono-core:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` builds the single-file report first (`checks/offline.spec.ts` opens it from `file://`), then runs the checks. It is not on the Gradle build; CI runs it in its own job, without the `@screenshot` tests, whose baselines are macOS screenshots that Linux renders differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%, and never below 95%, so labels stay readable (a wider diagram scrolls sideways, with a "More lanes" cue while lanes lie to the right; on a phone that cue is a "More lanes →" button in the toolbar and a slim tab at the right end of the participant header, so nothing covers the drawing below it, which keeps its full width). − and + step through fixed levels from 25% to 250%; the % readout between them goes back to that default view. Overview (Shift+1) shrinks a wide diagram to its whole width, down to 10%, says how many lanes it shows when even that is not enough, and Esc or a second press puts back the zoom and scroll from before; a click in Overview opens the default view there. It refits when the panel width changes until you zoom in or out; the readout turns refitting back on. Sections are `kind: "section"` rows with a jump list. A diagram taller than the screen extends the page: the stage is as tall as the drawing, the toolbar and participant header stay in view, and the page scroll drives the windowed painting (`src/lib/diagram/page-scroll.ts`). Horizontal scrolling stays inside the panel.
+Vitest is also on `./gradlew :modules:lsd-mono-report-html:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` builds the single-file report first (`checks/offline.spec.ts` opens it from `file://`), then runs the checks. It is not on the Gradle build; CI runs it in its own job, without the `@screenshot` tests, whose baselines are macOS screenshots that Linux renders differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%, and never below 95%, so labels stay readable (a wider diagram scrolls sideways, with a "More lanes" cue while lanes lie to the right; on a phone that cue is a "More lanes →" button in the toolbar and a slim tab at the right end of the participant header, so nothing covers the drawing below it, which keeps its full width). − and + step through fixed levels from 25% to 250%; the % readout between them goes back to that default view. Overview (Shift+1) shrinks a wide diagram to its whole width, down to 10%, says how many lanes it shows when even that is not enough, and Esc or a second press puts back the zoom and scroll from before; a click in Overview opens the default view there. It refits when the panel width changes until you zoom in or out; the readout turns refitting back on. Sections are `kind: "section"` rows with a jump list. A diagram taller than the screen extends the page: the stage is as tall as the drawing, the toolbar and participant header stay in view, and the page scroll drives the windowed painting (`src/lib/diagram/page-scroll.ts`). Horizontal scrolling stays inside the panel.
 
 ## Open the demo
 
 From the repo root:
 
 ```bash
-cd modules/lsd-mono-core/report
+cd modules/lsd-mono-report-html/ui
 npm ci
 npm run dev          # http://localhost:5173/
 # or
@@ -52,7 +52,7 @@ npm run build && npm run preview   # http://localhost:4173/
 ```bash
 npm run build:single
 # then open:
-#   modules/lsd-mono-core/report/dist/lsd-report.html
+#   modules/lsd-mono-report-html/ui/dist/lsd-report.html
 # (its built-in demo loads dist/lsd-report-payloads.js, written beside it)
 ```
 
@@ -60,21 +60,21 @@ npm run build:single
 
 ```bash
 npm run build
-# then open modules/lsd-mono-core/report/dist/index.html
+# then open modules/lsd-mono-report-html/ui/dist/index.html
 ```
 
 | Mode | Path / URL |
 |------|------------|
 | Dev | `http://localhost:5173/` |
 | Preview | `http://localhost:4173/` |
-| Built static (multi-file) | `modules/lsd-mono-core/report/dist/index.html` |
-| Chrome `file://` | `modules/lsd-mono-core/report/dist/lsd-report.html` |
-| Source entry | `modules/lsd-mono-core/report/index.html` |
+| Built static (multi-file) | `modules/lsd-mono-report-html/ui/dist/index.html` |
+| Chrome `file://` | `modules/lsd-mono-report-html/ui/dist/lsd-report.html` |
+| Source entry | `modules/lsd-mono-report-html/ui/index.html` |
 
 Gradle produces the same shell without a manual npm build:
 
 ```bash
-./gradlew :modules:lsd-mono-core:reportSingle
+./gradlew :modules:lsd-mono-report-html:reportSingle
 ```
 
 ## Stack

@@ -3,8 +3,8 @@
 The core of LSD Mono: a Kotlin capture API (`LsdContext`) and timing analysis. It maps what it
 captured to the report model ([lsd-mono-report-model](../lsd-mono-report-model)) and writes the
 report JSON and the interactive HTML report with [lsd-mono-report-html](../lsd-mono-report-html),
-which it depends on. The report UI lives in `report/` (Vite, TypeScript and a custom SVG
-diagram). The JUnit, Cucumber and coroutines integrations depend on this module only.
+which it depends on. The report UI lives in lsd-mono-report-html's `ui/` (Vite, TypeScript and a
+custom SVG diagram). The JUnit, Cucumber and coroutines integrations depend on this module only.
 
 Depend on `io.github.lsd-consulting:lsd-mono-core` from Maven Central; [Getting started](../../README.md#getting-started) in the root README has the Gradle and Maven snippets and the latest version.
 
@@ -13,7 +13,6 @@ Depend on `io.github.lsd-consulting:lsd-mono-core` from Maven Central; [Getting 
 | | |
 |--|--|
 | **Is** | Mono-owned artifact `lsd-mono-core`, package `io.lsdconsulting.lsd.mono.core` |
-| **Is** | Report UI in `report/` (`modules/lsd-mono-core/report`) |
 | **Is not** | A vendor of legacy Maven `io.github.lsd-consulting:lsd-core` sources |
 | **Earlier library** | Upstream [lsd-core](https://github.com/lsd-consulting/lsd-core), for comparing behaviour |
 
@@ -21,12 +20,15 @@ Depend on `io.github.lsd-consulting:lsd-mono-core` from Maven Central; [Getting 
 
 ```
 lsd-mono-core/
-├── report/                 # Vite+TS report UI (dev with npm)
+├── src/main/kotlin/…/mono/core/ # Kotlin façade (capture, timing, mapping to the report model)
+└── build.gradle.kts             # depends on lsd-mono-report-model and lsd-mono-report-html
+lsd-mono-report-html/
+├── ui/                          # Vite+TS report UI (dev with npm)
 │   ├── src/                     # UI, custom SVG diagram, sample data
 │   ├── dist/                    # build output (gitignored): lsd-report.html and the demo's lsd-report-payloads.js
 │   └── README.md
-├── src/main/kotlin/…/mono/core/ # Kotlin façade (capture + write reports)
-└── build.gradle.kts                 # reportSingle + reportTest; packages dist/lsd-report.html as the jar's shell
+├── src/main/kotlin/…/report/html/ # the writer (JSON, HTML pages, index)
+└── build.gradle.kts             # reportSingle + reportTest; packages ui/dist/lsd-report.html as the jar's shell
 ```
 
 ## What it does
@@ -533,7 +535,7 @@ free text and rarely hold secrets under a recognisable key. Add
 Report text is plain data and is escaped wherever it is written, with one escaper
 per context:
 
-| Context | Kotlin (written files) | Report UI (`report/src/lib/escape.ts`) |
+| Context | Kotlin (written files) | Report UI (`ui/src/lib/escape.ts` in lsd-mono-report-html) |
 | --- | --- | --- |
 | Element text | `Html.text` | `escapeHtml` |
 | Quoted attribute value | `Html.attribute` | `escapeAttr` |
@@ -549,13 +551,13 @@ description that contains `<mark>` keeps only bare `p`, `br`, `mark`, `strong`, 
 ## Report UI (manual)
 
 ```bash
-cd modules/lsd-mono-core/report
+cd modules/lsd-mono-report-html/ui
 npm ci
 npm test             # vitest — layout, diagram view (zoom/fit/columns/search), SVG cues
 npm run dev          # http://localhost:5173/
-npm run build:single # then open report/dist/lsd-report.html in Chrome (file://)
+npm run build:single # then open dist/lsd-report.html in Chrome (file://)
 ```
 
-`./gradlew :modules:lsd-mono-core:build` runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). `build:single` writes `report/dist/lsd-report.html` (gitignored), and the build packages it from `build/generated/resources`; no built shell is committed. Set `lsd.mono.report.generatedAt` (an ISO-8601 instant) to fix the report's "generated at" time, as the sample tasks do for reproducible output. Needs Node 22.6 or later (`engines` in `report/package.json`). The Gradle tasks prepend the nvm Node named in the repo's `.nvmrc` (CI's Node) when it is installed, else the newest nvm Node of at least 22.6 (`build-logic` `NodeToolchain.kt`), and do not change your default Node.
+`./gradlew :modules:lsd-mono-report-html:build` (and so a build of core) runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). `build:single` writes `ui/dist/lsd-report.html` (gitignored), and the build packages it from `build/generated/resources`; no built shell is committed. Set `lsd.mono.report.generatedAt` (an ISO-8601 instant) to fix the report's "generated at" time, as the sample tasks do for reproducible output. Needs Node 22.6 or later (`engines` in `ui/package.json`). The Gradle tasks prepend the nvm Node named in the repo's `.nvmrc` (CI's Node) when it is installed, else the newest nvm Node of at least 22.6 (`build-logic` `NodeToolchain.kt`), and do not change your default Node.
 
-See `report/README.md` for how to run the report UI.
+See [the report UI's README](../lsd-mono-report-html/ui/README.md) for how to run it.
