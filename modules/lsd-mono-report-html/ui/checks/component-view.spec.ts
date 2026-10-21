@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test'
 import { conformanceReport } from '../src/lib/conformance.test-util'
 import { openReport } from './open-report'
 import { wideReport } from './wide-sample'
+import { uxFixture } from './ux-fixture'
+import type { MessageEvent, Report } from '../src/types'
 import { expectStable, seriousViolations } from './ux-helpers'
 
 // #105: the component diagram is the diagram area's other view, behind Sequence | Components tabs.
@@ -238,6 +240,29 @@ const zoomGroup = (page: Page) => page.locator('.comp-toolbar .zoom-controls')
 const zoomButton = (page: Page, name: string) => zoomGroup(page).getByRole('button', { name, exact: true })
 const readout = (page: Page) => zoomGroup(page).locator('[data-zoom="reset"]')
 const status = (page: Page) => page.locator('.diagram-view-status')
+
+/** A call chain [n] services deep: one component per rank, so its single column is one node wide (#121). */
+function chainReport(n: number): Report {
+  const id = (i: number) => `s${i}`
+  return {
+    ...uxFixture,
+    scenarios: [
+      {
+        ...uxFixture.scenarios[0],
+        id: 'chain',
+        title: 'Call chain',
+        participants: Array.from({ length: n }, (_, i) => ({ id: id(i), name: `Service ${i}`, type: 'PARTICIPANT' })),
+        events: Array.from({ length: n - 1 }, (_, i): MessageEvent => ({
+          ...(uxFixture.scenarios[0].events[0] as MessageEvent),
+          id: `c${i}`,
+          from: id(i),
+          to: id(i + 1),
+          label: `call ${i}`,
+        })),
+      },
+    ],
+  }
+}
 
 /** The drawing's scroll range, the smallest name in CSS px, and the components wholly in view. */
 function drawing(page: Page) {
@@ -476,24 +501,57 @@ test.describe('on a phone', () => {
     await page.setViewportSize({ width: 390, height: 844 })
   })
 
-  test('the 100-component sample in Overview needs at most two screens of scroll (#115)', async ({ page }) => {
+  test('the 100-component sample is one column: Overview reaches the floor, and the rest is down, never sideways (#115, #121)', async ({
+    page,
+  }) => {
     await openReport(page, { report: wideReport(100, 400) })
     await tab(page, 'Components').tap()
     await expect(pane(page)).toBeVisible()
-    // #120 opens it fitted; Overview from 1:1 is the issue's path.
+    // One column, the spire it was before #115: many times taller than wide.
+    const natural = await page.locator('.comp-scroll svg').evaluate((svg) => ({
+      w: Number(svg.getAttribute('width')),
+      h: Number(svg.getAttribute('height')),
+    }))
+    expect(natural.h / natural.w).toBeGreaterThan(3)
     await zoomButton(page, '1:1 actual size, readable').tap()
     await zoomButton(page, 'Overview').tap()
-    // Two screens was the issue's bar; wrapped, it is one: the whole drawing, above the 10% floor.
-    await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram\. Too small to read: tap 1:1\.$/)
-    expect(Number.parseInt((await readout(page).textContent())!, 10)).toBeGreaterThan(10)
-    const fitted = await page.locator('.comp-scroll').evaluate((el) => ({
-      scroll: el.scrollHeight,
-      client: el.clientHeight,
-      wide: el.scrollWidth - el.clientWidth,
-    }))
-    expect(fitted.scroll).toBeLessThanOrEqual(2 * fitted.client)
-    expect(fitted.wide).toBeLessThanOrEqual(0)
-    if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/115-390-overview.png` })
+    await expect(status(page)).toHaveText(/^Overview, 10%, \d+ of 100 components shown\. Too small to read: tap 1:1\.$/)
+    await expect(readout(page)).toHaveText('10%')
+    const fitted = await drawing(page)
+    expect(fitted.overX).toBeLessThanOrEqual(0)
+    expect(fitted.overY).toBeGreaterThan(0)
+    expect(fitted.inView).toBeLessThan(100)
+    if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/121-390-overview.png` })
+    // The rest is reached by scrolling down alone.
+    await page.locator('.comp-scroll').evaluate((el) => el.scrollTo({ top: el.scrollHeight }))
+    await expect.poll(async () => (await drawing(page)).top).toBe(fitted.overY)
+    const end = await page.locator('.comp-scroll').evaluate((el) => {
+      const box = el.getBoundingClientRect()
+      const nodes = [...el.querySelectorAll('.component-node')].map((n) => n.getBoundingClientRect())
+      return { lastInView: Math.max(...nodes.map((n) => n.bottom)) <= box.bottom + 1, left: el.scrollLeft }
+    })
+    expect(end).toEqual({ lastInView: true, left: 0 })
+    if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/121-390-overview-end.png` })
+  })
+
+  test('a tall chain is one column that fits the width at 1:1: the rest is down, never sideways (#121)', async ({
+    page,
+  }) => {
+    await openReport(page, { report: chainReport(40) })
+    await tab(page, 'Components').tap()
+    await expect(pane(page)).toBeVisible()
+    await zoomButton(page, '1:1 actual size, readable').tap()
+    await expect(readout(page)).toHaveText('100%')
+    const actual = await drawing(page)
+    expect(actual.overX).toBeLessThanOrEqual(0)
+    expect(actual.overY).toBeGreaterThan(0)
+    expect(actual.smallest).toBeGreaterThanOrEqual(11)
+    await page.locator('.comp-scroll').evaluate((el) => el.scrollTo({ top: el.scrollHeight }))
+    await expect.poll(async () => (await drawing(page)).top).toBe(actual.overY)
+    const end = await drawing(page)
+    expect(end.left).toBe(0)
+    expect(end.inView).toBeGreaterThan(0)
+    if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/121-390-chain-1to1.png` })
   })
 
   test('the example opens with all 14 components, and 1:1 has 11px names (#120)', async ({ page }) => {

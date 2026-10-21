@@ -3,6 +3,7 @@ import type { ComponentGraph } from './component-graph'
 import { componentGraph } from './component-graph'
 import { conformanceReport } from './conformance.test-util'
 import {
+  ONE_COLUMN_BELOW_PX,
   WRAP_RATIO,
   layoutComponents,
   renderComponentDiagram,
@@ -114,6 +115,38 @@ describe('very tall graphs wrap into columns (#115)', () => {
     const example = conformanceReport('example-report')
     for (const scenario of example.scenarios)
       expect(layoutComponents(componentGraph(scenario)).columns, scenario.id).toHaveLength(1)
+  })
+})
+
+describe('the columns fit the room at 1:1 (#121)', () => {
+  it('caps the columns, and keeps them equal runs in rank order', () => {
+    expect(wrapRanks(Array<number>(12).fill(150), 2)).toEqual([
+      [0, 1, 2, 3, 4, 5],
+      [6, 7, 8, 9, 10, 11],
+    ])
+    expect(wrapRanks(Array<number>(12).fill(150), 1)).toEqual([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]])
+    expect(layoutComponents(chain(12), 1).columns).toHaveLength(1)
+  })
+
+  it('draws one column in a scrollport narrower than 600 px, and the squarer layout from there up', async () => {
+    const { wideReport } = await import('../../checks/wide-sample')
+    const graph = componentGraph(wideReport(100, 400).scenarios[0])
+    const free = renderComponentDiagram(graph, 'Wide')
+    expect(free.columns).toBeGreaterThan(2)
+    expect(ONE_COLUMN_BELOW_PX).toBe(600)
+    // A 390 px phone's scrollport: the one column it had before #115.
+    expect(renderComponentDiagram(graph, 'Wide', 360).columns).toBe(1)
+    expect(renderComponentDiagram(graph, 'Wide', 599).columns).toBe(1)
+    // From 600 up the #115 layout, even where it is wider than the room at 1:1 (Overview fits it).
+    expect(renderComponentDiagram(graph, 'Wide', 600)).toEqual(free)
+    expect(free.width).toBeGreaterThan(600)
+    expect(renderComponentDiagram(graph, 'Wide', 1200)).toEqual(free)
+  })
+
+  it('leaves a graph that does not wrap alone in any room', () => {
+    const drawn = renderComponentDiagram(checkout, 'Checkout')
+    expect(renderComponentDiagram(checkout, 'Checkout', 100)).toEqual(drawn)
+    expect(drawn.columns).toBe(1)
   })
 })
 

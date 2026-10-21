@@ -8,14 +8,23 @@ import { escapeAttr, escapeHtml } from './escape'
 import { tooSmallDescription } from './diagram-view'
 import { isCoarsePointer } from './media'
 
-/** A drawn component diagram: its graph, for the links, and its natural size. */
+/** A drawn component diagram: its graph, for the links, its natural size and its columns. */
 export interface MountedComponents {
   graph: ComponentGraph
+  /** The scenario's title, which the drawing's name starts with. */
+  title: string
   width: number
   height: number
+  /** The columns a tall graph wrapped into for the room it was laid out in (#115, #121). */
+  columns: number
 }
 
 const mounted = new Map<string, MountedComponents>()
+/**
+ * The room (scrollport width, CSS px) each scenario's drawing was last laid out for, so a redraw
+ * of the card starts from the layout it had; before the view is first measured, unlimited.
+ */
+const laidOutFor = new Map<string, number>()
 
 export function mountedComponents(scenarioId: string): MountedComponents | undefined {
   return mounted.get(scenarioId)
@@ -27,16 +36,59 @@ export function mountedComponents(scenarioId: string): MountedComponents | undef
  */
 export function componentViewHtml(scenario: Scenario, toolbarHtml: string, zoom = 1): string {
   const graph = componentGraph(scenario)
-  const drawn = renderComponentDiagram(graph, scenario.title)
-  mounted.set(scenario.id, { graph, width: drawn.width, height: drawn.height })
-  // Its size comes from the scrollport's --comp-w and --comp-h, not the drawing's own style.
-  const svg = drawn.svg.replace(/(<svg class="component-diagram"[^>]*?) style="[^"]*"/, '$1')
+  const drawn = renderComponentDiagram(graph, scenario.title, laidOutFor.get(scenario.id))
+  mounted.set(scenario.id, {
+    graph,
+    title: scenario.title,
+    width: drawn.width,
+    height: drawn.height,
+    columns: drawn.columns,
+  })
+  const svg = scrollportSvg(drawn.svg)
   return `
     <div class="comp-diagram">
       <div class="seq-toolbar comp-toolbar" role="toolbar" aria-label="Diagram view">${toolbarHtml}</div>
       <div class="comp-scroll" data-scenario-id="${escapeAttr(scenario.id)}" style="--comp-w:${drawn.width * zoom}px;--comp-h:${drawn.height * zoom}px;--comp-natural-w:${drawn.width}px">${svg}</div>
       <span class="comp-too-small" id="${escapeAttr(tooSmallDescriptionId(scenario.id))}" hidden>${escapeHtml(tooSmallDescription(isCoarsePointer()))}</span>
     </div>`
+}
+
+/** Its size comes from the scrollport's --comp-w and --comp-h, not the drawing's own style. */
+function scrollportSvg(svg: string): string {
+  return svg.replace(/(<svg class="component-diagram"[^>]*?) style="[^"]*"/, '$1')
+}
+
+/**
+ * Lay [scroller]'s drawing out again for [room] (the scrollport's width, CSS px) when that crosses
+ * ONE_COLUMN_BELOW_PX and so changes how many columns a tall graph wraps into (#121): one below
+ * it (a phone), the squarer layout of #115 from it up. The links keep their indexes, so the
+ * selected link stays selected and a focused one keeps focus. True when it redrew; the caller
+ * then fits the new size.
+ */
+export function relayoutComponents(scroller: HTMLElement, room: number): boolean {
+  const id = scroller.dataset.scenarioId ?? ''
+  const drawn = mounted.get(id)
+  const old = scroller.querySelector('svg.component-diagram')
+  if (!drawn || !old || room <= 0) return false
+  const fresh = renderComponentDiagram(drawn.graph, drawn.title, room)
+  laidOutFor.set(id, room)
+  if (fresh.columns === drawn.columns) return false
+  const selected = [...old.querySelectorAll('.edge-group.is-selected')].map((el) => el.getAttribute('data-edge-index'))
+  const focused = old.contains(document.activeElement)
+    ? document.activeElement?.closest('.edge-group')?.getAttribute('data-edge-index')
+    : undefined
+  const describedBy = old.getAttribute('aria-describedby')
+  old.outerHTML = scrollportSvg(fresh.svg)
+  mounted.set(id, { ...drawn, width: fresh.width, height: fresh.height, columns: fresh.columns })
+  const svg = scroller.querySelector('svg.component-diagram')!
+  if (describedBy) svg.setAttribute('aria-describedby', describedBy)
+  const links = [...svg.querySelectorAll<SVGElement>('.edge-group')]
+  const link = (index: string | null | undefined) =>
+    index == null ? undefined : links.find((el) => el.getAttribute('data-edge-index') === index)
+  for (const index of selected) link(index)?.classList.add('is-selected')
+  link(focused)?.focus({ preventScroll: true })
+  scroller.style.setProperty('--comp-natural-w', `${fresh.width}px`)
+  return true
 }
 
 /** The id of the text that describes [scenarioId]'s drawing while it is too small to read (#120). */

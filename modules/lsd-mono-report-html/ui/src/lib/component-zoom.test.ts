@@ -112,6 +112,82 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
+/** A call chain [n] deep: tall enough to wrap into columns (#115). */
+function tallScenario(n = 40): Scenario {
+  const base = scenario()
+  const id = (i: number) => `p${i}`
+  return {
+    ...base,
+    participants: Array.from({ length: n }, (_, i) => ({ id: id(i), name: `Service ${i}`, type: 'PARTICIPANT' })),
+    events: Array.from({ length: n - 1 }, (_, i) => ({
+      kind: 'message',
+      id: `m${i}`,
+      from: id(i),
+      to: id(i + 1),
+      label: `call ${i}`,
+      type: 'SYNCHRONOUS',
+    })),
+  } as unknown as Scenario
+}
+
+describe('the wrapped columns follow the width (#121)', () => {
+  it('lays a tall graph out again in one column when a resize leaves room for one, and back', () => {
+    const { scroller, id } = view({ width: 1400, height: 800 }, tallScenario())
+    bindComponentViews(document, () => {})
+    bindComponentZoom(scroller)
+    const observer = observers.at(-1)!
+    const wide = mountedComponents(id)!
+    expect(wide.columns).toBeGreaterThan(1)
+    // A link the side panel showed stays selected through the redraw.
+    scroller.querySelector('.edge-group[data-edge-index="3"]')!.classList.add('is-selected')
+    setRoom(scroller, { width: 360, height: 600 })
+    observer.fire(scroller)
+    const phone = mountedComponents(id)!
+    expect(phone.columns).toBe(1)
+    expect(phone.height).toBeGreaterThan(wide.height)
+    expect(scroller.style.getPropertyValue('--comp-h')).toBe(`${phone.height * componentZoom(id).zoom}px`)
+    expect(scroller.querySelector('.edge-group.is-selected')?.getAttribute('data-edge-index')).toBe('3')
+    expect(componentZoom(id).mode.kind).toBe('default')
+    // A resize that keeps one column does not draw again.
+    const svg = scroller.querySelector('svg')
+    setRoom(scroller, { width: 599, height: 600 })
+    observer.fire(scroller)
+    expect(scroller.querySelector('svg')).toBe(svg)
+    // 600 px is the wide side again, and a resize that stays on it does not draw again.
+    setRoom(scroller, { width: 600, height: 800 })
+    observer.fire(scroller)
+    const wideSvg = scroller.querySelector('svg')
+    expect(mountedComponents(id)!.columns).toBe(wide.columns)
+    setRoom(scroller, { width: 1400, height: 800 })
+    observer.fire(scroller)
+    expect(scroller.querySelector('svg')).toBe(wideSvg)
+  })
+
+  it('holds the layout while the side panel is open, and lays it out once it closes', () => {
+    const { scroller, id } = view({ width: 1400, height: 800 }, tallScenario())
+    bindComponentZoom(scroller)
+    const observer = observers.at(-1)!
+    const wide = mountedComponents(id)!.columns
+    const shell = document.querySelector('.shell')!
+    shell.classList.add('with-inspector')
+    setRoom(scroller, { width: 360, height: 600 })
+    observer.fire(scroller)
+    expect(mountedComponents(id)!.columns).toBe(wide)
+    shell.classList.remove('with-inspector')
+    observer.fire(scroller)
+    expect(mountedComponents(id)!.columns).toBe(1)
+  })
+
+  it('a redraw of the card starts from the layout last fitted to its width', () => {
+    const tall = tallScenario()
+    const first = view({ width: 360, height: 600 }, tall)
+    bindComponentZoom(first.scroller)
+    expect(mountedComponents(tall.id)!.columns).toBe(1)
+    view({ width: 360, height: 600 }, tall)
+    expect(mountedComponents(tall.id)!.columns).toBe(1)
+  })
+})
+
 describe('Components Overview sizes (#105)', () => {
   it('fits both ways, between 10% and 100%, and needs a drawing bigger than its room', () => {
     expect(componentOverviewScale(1000, 500, 500, 500)).toBe(0.5)

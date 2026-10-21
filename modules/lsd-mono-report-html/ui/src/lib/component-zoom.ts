@@ -22,7 +22,7 @@ import {
   type ZoomChange,
 } from './diagram-view'
 import { isCoarsePointer } from './media'
-import { mountedComponents, onComponentResize, tooSmallDescriptionId } from './component-view'
+import { mountedComponents, onComponentResize, relayoutComponents, tooSmallDescriptionId } from './component-view'
 import type { ZoomMode } from './diagram/state'
 import { announceZoom, type ZoomAction, wheelStep } from './diagram/zoom-controls'
 import { defaultMode, fittedWidthOf, zoomModeAfter } from './diagram/zoom-mode'
@@ -365,7 +365,14 @@ const measured = new WeakSet<HTMLElement>()
 export function refitComponentZoom(scroller: HTMLElement): void {
   if (scroller.clientWidth === 0) return
   const state = componentZoom(scroller.dataset.scenarioId ?? '')
-  if (state.mode.kind !== 'zoomed') {
+  // A tall graph keeps one column in a scrollport narrower than ONE_COLUMN_BELOW_PX, and wraps
+  // from there up (#121). Not while the side panel is open: that would redraw the drawing under
+  // its open item, as a refit would shrink it.
+  const open = scroller.closest('.shell')?.classList.contains('with-inspector') ?? false
+  if (!open && relayoutComponents(scroller, roomOf(scroller).width)) {
+    if (state.mode.kind === 'zoomed') applyZoom(scroller, state.zoom)
+    else fitOverview(scroller)
+  } else if (state.mode.kind !== 'zoomed') {
     const fitted = measured.has(scroller) ? (fittedWidthOf(state.mode) ?? 0) : 0
     const room = roomOf(scroller)
     if (overviewRoomChanged(fitted, state.fittedHeight, room) && !heldWhilePanelOpen(scroller, room)) {

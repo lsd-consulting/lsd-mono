@@ -49,6 +49,8 @@ export interface ComponentDiagram {
   /** Natural size of the drawing, in CSS pixels. */
   width: number
   height: number
+  /** How many columns the ranks wrapped into: 1 when they did not (#115, #121). */
+  columns: number
 }
 
 /**
@@ -59,9 +61,9 @@ export interface ComponentDiagram {
  * A layout more than WRAP_RATIO times taller than wide (a long rank chain) wraps like newspaper
  * columns: consecutive ranks fill a column top-down, then the next column starts at the top, for a
  * drawing about as wide as it is tall (#115). Rank order, and so callers before callees, reads
- * down each column then on to the next.
+ * down each column then on to the next, in at most [maxColumns] columns (#121).
  */
-export function layoutComponents(graph: ComponentGraph): ComponentLayout {
+export function layoutComponents(graph: ComponentGraph, maxColumns = Number.POSITIVE_INFINITY): ComponentLayout {
   const ids = graph.nodes.map((node) => node.id)
   const index = new Map(ids.map((id, i) => [id, i]))
   const out = new Map<string, string[]>(ids.map((id) => [id, []]))
@@ -108,7 +110,10 @@ export function layoutComponents(graph: ComponentGraph): ComponentLayout {
   // Slots widen together for a long name, so wide nodes never touch their neighbours.
   const slot = Math.max(SLOT_W, ...graph.nodes.map((node) => Math.ceil(participantHeadFor(node).half * 2)))
   const rowWidth = (count: number) => count * slot + (count - 1) * GAP_X
-  const columns = wrapRanks(ranks.map((row) => rowWidth(row.length)))
+  const columns = wrapRanks(
+    ranks.map((row) => rowWidth(row.length)),
+    maxColumns,
+  )
   const columnOf: number[] = []
   const columnLeft: number[] = []
   const columnWidth: number[] = []
@@ -141,16 +146,18 @@ export function layoutComponents(graph: ComponentGraph): ComponentLayout {
  * Splits rank indexes into columns (#115), given each rank's row width. One column while the
  * top-down drawing is at most WRAP_RATIO times taller than its widest row; otherwise as many
  * equal runs of ranks as make it about square (the square root of its height over width), at
- * least two.
+ * least two, and at most [maxColumns] (#121).
  */
-export function wrapRanks(rowWidths: number[]): number[][] {
+export function wrapRanks(rowWidths: number[], maxColumns = Number.POSITIVE_INFINITY): number[][] {
   const all = rowWidths.map((_, r) => r)
   if (all.length < 2) return [all]
   const width = Math.max(...rowWidths)
   const height = all.length * (NODE_H + GAP_Y) - GAP_Y
   if (height <= WRAP_RATIO * width) return [all]
   const want = Math.max(2, Math.round(Math.sqrt(height / width)))
-  const per = Math.ceil(all.length / want)
+  const cols = Math.min(want, maxColumns)
+  if (cols < 2) return [all]
+  const per = Math.ceil(all.length / cols)
   const columns: number[][] = []
   for (let r = 0; r < all.length; r += per) columns.push(all.slice(r, r + per))
   return columns
@@ -167,19 +174,40 @@ interface Box {
  * SVG for the inspector panel. Edge type is in the line (solid or dashed) and the arrow head,
  * never colour alone. Each link is a focusable group whose title lists its interactions.
  */
-export function renderComponentDiagram(graph: ComponentGraph, title: string): ComponentDiagram {
+export function renderComponentDiagram(
+  graph: ComponentGraph,
+  title: string,
+  room = Number.POSITIVE_INFINITY,
+): ComponentDiagram {
+  return drawComponents(graph, title, columnsFor(room))
+}
+
+/**
+ * Below this width of the Components scrollport (CSS px), a tall graph stays in one column (#121):
+ * a phone reads it by scrolling down, never sideways. From here up it wraps into the squarer
+ * columns of #115, which a desktop fits with Overview.
+ */
+export const ONE_COLUMN_BELOW_PX = 600
+
+/** The most columns a tall graph may wrap into in a scrollport [room] CSS px wide (#121). */
+export function columnsFor(room: number): number {
+  return room < ONE_COLUMN_BELOW_PX ? 1 : Number.POSITIVE_INFINITY
+}
+
+function drawComponents(graph: ComponentGraph, title: string, maxColumns: number): ComponentDiagram {
   const summary = `${title} component diagram, ${count(graph.nodes.length, 'component')}, ${count(graph.edges.length, 'link')}`
   if (graph.nodes.length === 0) {
     return {
       width: 240,
       height: 48,
+      columns: 1,
       svg: `<svg class="component-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 48" width="240" height="48" role="img" aria-label="Nothing to draw">
       <title>Nothing to draw</title>
       <text class="empty" x="8" y="28">No messages between components.</text>
     </svg>`,
     }
   }
-  const { places } = layoutComponents(graph)
+  const { places, columns } = layoutComponents(graph, maxColumns)
   const box: Box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
   const grow = (x1: number, y1: number, x2: number, y2: number): void => {
     box.minX = Math.min(box.minX, x1)
@@ -225,7 +253,7 @@ export function renderComponentDiagram(graph: ComponentGraph, title: string): Co
     <g class="edges">${edges}</g>
     <g class="nodes">${nodes}</g>
   </svg>`
-  return { svg, width, height }
+  return { svg, width, height, columns: columns.length }
 }
 
 /** String-only form for callers that do not need the natural size. */
