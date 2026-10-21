@@ -227,6 +227,115 @@ test('print keeps hidden participants hidden and leaves out the header buttons a
   await endPrint(page)
 })
 
+/**
+ * Scroll the page so the participant headers end 20 px above the bottom of the window: no room
+ * there for a header's bar below it. Returns the page's scroll, which opening the bar keeps.
+ */
+async function headerNearBottom(page: Page): Promise<number> {
+  const head = page.locator('[data-participant-head]').first()
+  await head.evaluate(async (el) => {
+    scrollBy(0, el.getBoundingClientRect().bottom - (innerHeight - 20))
+    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))
+  })
+  const room = await head.evaluate((el) => innerHeight - el.getBoundingClientRect().bottom)
+  expect(room, 'the header sits near the bottom of the window').toBeLessThan(30)
+  expect(room).toBeGreaterThan(0)
+  return page.evaluate(() => scrollY)
+}
+
+/** [id]'s bar in window px, whether it opened above its header, and whether it is on top there. */
+const barPlace = (page: Page, id: string) =>
+  page.evaluate((head) => {
+    const bar = document.querySelector(`[data-participant-head="${head}"] .participant-head-actions`)!
+    const box = bar.getBoundingClientRect()
+    const header = document.querySelector(`[data-participant-head="${head}"]`)!.getBoundingClientRect()
+    const hit = document.elementFromPoint(box.left + 12, box.top + box.height / 2)
+    return {
+      top: box.top,
+      bottom: box.bottom,
+      left: box.left,
+      right: box.right,
+      headerTop: header.top,
+      width: innerWidth,
+      height: innerHeight,
+      scrollY,
+      onTop: !!hit?.closest('.participant-head-actions'),
+    }
+  }, id)
+
+const onScreen = (place: Awaited<ReturnType<typeof barPlace>>) => {
+  expect(place.top).toBeGreaterThanOrEqual(0)
+  expect(place.left).toBeGreaterThanOrEqual(0)
+  expect(place.bottom).toBeLessThanOrEqual(place.height)
+  expect(place.right).toBeLessThanOrEqual(place.width)
+  expect(place.bottom, 'the bar opens above its header').toBeLessThanOrEqual(place.headerTop)
+  expect(place.onTop, 'the bar is on top and takes the pointer').toBe(true)
+}
+
+test('with no room below it in the window, a header’s bar opens above it, on screen, and still works (#92)', async ({
+  page,
+}) => {
+  await openFixture(page, 'dark')
+  const scrolled = await headerNearBottom(page)
+  // The pointer: the bar opens above without the page scrolling, and its Hide works from there.
+  await page.locator('[data-participant-head="db"]').hover()
+  expect(await actionsOpacity(page, 'db')).toBe('1')
+  const hovered = await barPlace(page, 'db')
+  onScreen(hovered)
+  expect(hovered.scrollY, 'without scrolling the page').toBe(scrolled)
+  await page.getByRole('button', { name: 'Hide Database' }).click()
+  expect(await headerNames(page)).toEqual(['client', 'api', 'bus'])
+
+  // The keyboard: Tab into the row opens it above too.
+  // (A fresh page: the tab stop otherwise stays on the header next to the hidden one.)
+  await openFixture(page, 'dark')
+  await headerNearBottom(page)
+  await lastToolbarControl(page).focus()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Hide Client' })).toBeFocused()
+  onScreen(await barPlace(page, 'client'))
+  await page.keyboard.press('ArrowRight')
+  const more = page.getByRole('button', { name: 'More actions for Client' })
+  await expect(more).toBeFocused()
+  onScreen(await barPlace(page, 'client'))
+  // Its menu opens from there, and Escape closes the menu first, back on More, the bar still up.
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('menuitem', { name: 'Hide all but Client' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+  await expect(more).toBeFocused()
+  onScreen(await barPlace(page, 'client'))
+})
+
+test('on a phone, with no room below it, a tapped header’s bar opens above it, on screen (#92)', async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 390, height: 664 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 1,
+    reducedMotion: 'reduce',
+    colorScheme: 'dark',
+  })
+  try {
+    const page = await context.newPage()
+    await openFixture(page, 'dark')
+    const scrolled = await headerNearBottom(page)
+    await page.locator('[data-participant-head="api"]').tap()
+    expect(await actionsOpacity(page, 'api')).toBe('1')
+    const tapped = await barPlace(page, 'api')
+    onScreen(tapped)
+    expect(tapped.scrollY, 'without scrolling the page').toBe(scrolled)
+    await page.getByRole('button', { name: 'Hide Api' }).tap()
+    expect(await headerNames(page)).toEqual(['client', 'db', 'bus'])
+  } finally {
+    await context.close()
+  }
+})
+
 test('on a phone a tap shows a header’s buttons below it, a long press opens the menu, and the chip list fits', async ({
   browser,
   baseURL,

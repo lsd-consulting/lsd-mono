@@ -36,6 +36,20 @@
   position: absolute;
   inset: -4px 0 100%;
 }
+/* No room below it in the window (bar-place.ts): above the header. The scrollport clips anything
+   above the header, so the bar is placed against the window, and the scrollport, a stacking
+   context of its own, comes above the toolbar it then overlaps. */
+.participant-head[data-bar-above] .participant-head-actions {
+  position: fixed;
+  top: var(--bar-top, 0px);
+  left: var(--bar-left, 0px);
+}
+.participant-head[data-bar-above] .participant-head-actions::before {
+  inset: 100% 0 -4px;
+}
+.seq-scroll:has(.participant-head[data-bar-above]) {
+  z-index: 4;
+}
 .participant-head:hover .participant-head-actions,
 .participant-head:has(:focus-visible) .participant-head-actions,
 .participant-head[data-revealed] .participant-head-actions {

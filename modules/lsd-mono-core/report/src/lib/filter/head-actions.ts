@@ -2,6 +2,7 @@
 // the header in use; the row's roving tab stop; keys; whether the pointer or the keyboard is using
 // the row; and long-press and tap for touch screens.
 import { cssEscape } from '../escape'
+import { barShown, placeBar } from './bar-place'
 import { pressedIn, trackLastInput } from './input'
 import { headActionButtonsHtml } from './markup'
 
@@ -36,7 +37,27 @@ export function bindHeadActions(header: HTMLElement, hooks: HeadActionsHooks): H
   const heads = () => Array.from(header.querySelectorAll<HTMLElement>('[data-participant-head]'))
   const headOf = (id: string) => header.querySelector<HTMLElement>(`[data-participant-head="${cssEscape(id)}"]`)
 
-  const actionsOn = (head: HTMLElement) => moveActionsOnto(header, head)
+  // Moved onto a header, the bar opens under it, or above it when the window has no room below.
+  const actionsOn = (head: HTMLElement) => {
+    const bar = moveActionsOnto(header, head)
+    placeBar(head, bar)
+    return bar
+  }
+
+  // While a bar shows, the page can scroll or the window change size under it: place it again.
+  const win = doc.defaultView
+  const replace = () => {
+    if (!header.isConnected) {
+      win?.removeEventListener('scroll', replace)
+      win?.removeEventListener('resize', replace)
+      return
+    }
+    const bar = header.querySelector<HTMLElement>('.participant-head-actions')
+    const head = bar?.parentElement
+    if (bar && head && (head.hasAttribute('data-bar-above') || barShown(head))) placeBar(head, bar)
+  }
+  win?.addEventListener('scroll', replace, { passive: true })
+  win?.addEventListener('resize', replace, { passive: true })
 
   function focusHead(head: HTMLElement, kind: 'hide' | 'more'): HTMLButtonElement {
     const bar = actionsOn(head)
@@ -126,6 +147,8 @@ export function bindHeadActions(header: HTMLElement, hooks: HeadActionsHooks): H
     const btn = (ev.target as Element).closest?.<HTMLButtonElement>('.participant-heads button')
     if (!btn) return
     roveTo(btn)
+    const bar = btn.closest<HTMLElement>('.participant-head-actions')
+    if (bar?.parentElement) placeBar(bar.parentElement, bar)
     // Tab lands on Hide and the browser scrolls only that into view: bring More along too.
     showWholeBar(btn)
   })
