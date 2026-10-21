@@ -20,7 +20,7 @@ The source is at https://github.com/lsd-consulting/lsd-mono.
 
 ## Getting started
 
-The artifacts are on Maven Central under `io.github.lsd-consulting`, all four on one version. Releases are automatic, so the snippets below say `X.Y.Z` instead of a version: use the latest, which the Maven Central badge above shows. The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
+The artifacts are on Maven Central under `io.github.lsd-consulting`, all six on one version. Releases are automatic, so the snippets below say `X.Y.Z` instead of a version: use the latest, which the Maven Central badge above shows. The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
 
 | Artifact | Use it for |
 | --- | --- |
@@ -28,6 +28,8 @@ The artifacts are on Maven Central under `io.github.lsd-consulting`, all four on
 | `lsd-mono-junit-jupiter` | A scenario per JUnit Jupiter 6 test ([README](modules/lsd-mono-junit-jupiter/README.md)). |
 | `lsd-mono-cucumber-8` | A scenario per Cucumber 8 scenario ([README](modules/lsd-mono-cucumber-8/README.md)). |
 | `lsd-mono-coroutines` | Captures from coroutines that change threads, with kotlinx.coroutines 1 ([README](modules/lsd-mono-coroutines/README.md)). |
+| `lsd-mono-report-model` | The report as plain Kotlin values, for a producer that writes reports without lsd-mono-core ([README](modules/lsd-mono-report-model/README.md)). lsd-mono-core brings it. |
+| `lsd-mono-report-html` | Writes a report as JSON and as the HTML page, with the report UI bundled ([README](modules/lsd-mono-report-html/README.md)). lsd-mono-core brings it. |
 
 Gradle (Kotlin DSL), with the integrations you use:
 

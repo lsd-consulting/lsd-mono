@@ -4,11 +4,11 @@ How lsd-mono is versioned. How a release happens is in [releasing.md](releasing.
 
 ## How it is versioned today
 
-Group is `io.github.lsd-consulting`, the Maven Central namespace lsd-core is published under (packages stay `io.lsdconsulting.lsd.mono`). The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), and coroutines-integration (`lsd-mono-coroutines`).
+Group is `io.github.lsd-consulting`, the Maven Central namespace lsd-core is published under (packages stay `io.lsdconsulting.lsd.mono`). The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), coroutines-integration (`lsd-mono-coroutines`), and the report model (`lsd-mono-report-model`) and writer (`lsd-mono-report-html`) that core writes its reports with and that a producer without core can use.
 
-The train version is set once on the root project, from git (`TrainVersion.kt` in build-logic): `-Plsd.version=X.Y.Z` if given, else `X.Y.Z` on a commit tagged `vX.Y.Z`, else a snapshot of the next patch after the latest `v` tag (`0.0.1-SNAPSHOT` before the first tag, or in a shallow checkout without tags). `./gradlew -q printVersion` shows it. The report's `generator` field and the jar manifest follow it. Every module inherits it (`lsd.common`), and there is no per-module override: all four artifacts always have the train version.
+The train version is set once on the root project, from git (`TrainVersion.kt` in build-logic): `-Plsd.version=X.Y.Z` if given, else `X.Y.Z` on a commit tagged `vX.Y.Z`, else a snapshot of the next patch after the latest `v` tag (`0.0.1-SNAPSHOT` before the first tag, or in a shallow checkout without tags). `./gradlew -q printVersion` shows it. The report's `generator` field and the jar manifest follow it. Every module inherits it (`lsd.common`), and there is no per-module override: all six artifacts always have the train version.
 
-Releases go to Maven Central with semantic-release from conventional commits, after `gate` on `main` ([releasing.md](releasing.md)). Each release publishes all four artifacts together, at one version; the first was `0.1.0` (17 October 2026).
+Releases go to Maven Central with semantic-release from conventional commits, after `gate` on `main` ([releasing.md](releasing.md)). Each release publishes all six artifacts together, at one version; the first was `0.1.0` (17 October 2026).
 
 `gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`, kotlinx.coroutines `1.11.0`). It is not the version of these libraries.
 
@@ -18,11 +18,11 @@ junit-integration, cucumber-integration and coroutines-integration depend on cor
 
 ## The train
 
-One shared version across core, junit-integration, cucumber-integration, and coroutines-integration is the compatibility promise. Matching numbers mean those artifacts were released together and are meant to be used together.
+One shared version across core, the integrations and the report model and writer is the compatibility promise. Matching numbers mean those artifacts were released together and are meant to be used together.
 
-- **Lockstep.** Every release publishes all four at the same version, even when only one changed. No artifact is released on its own, and none has a version of its own.
+- **Lockstep.** Every release publishes all six at the same version, even when only one changed. No artifact is released on its own, and none has a version of its own.
 - **One decision.** semantic-release picks the version from all the commits since the last tag, whichever module they touch ([releasing.md](releasing.md#commit-messages)). A Renovate bump to one integration's dependency releases the train like any other `fix`.
-- **Majors move together.** A change that breaks one integration (say a new JUnit or Cucumber major) is a breaking change of the train. While the version is `0.y.z` that is a minor release of all four; from v1 it is a major of all four.
+- **Majors move together.** A change that breaks one integration (say a new JUnit or Cucumber major) is a breaking change of the train. While the version is `0.y.z` that is a minor release of all six; from v1 it is a major of all six. A breaking change to the report model or the writer counts the same way.
 
 Releases are `0.y.z` until the API is ready for v1 (see [releasing.md](releasing.md)). [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): while the version is `0.y.z`, the API is not stable. A released version is immutable. Maven Central will not take a version that ends in `-SNAPSHOT`.
 

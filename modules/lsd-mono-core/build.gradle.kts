@@ -63,10 +63,15 @@ tasks.test {
                 .matching { include("*/src/main/**/*.kt") },
         ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("guardedSources")
-    // LsdPropertiesTest reads this module's README, RootReadmeExampleTest the root one (#68).
+    // LsdPropertiesTest reads this module's README, RootReadmeExampleTest the root one (#68), and
+    // the release docs and the module list against it.
     inputs
-        .files(layout.projectDirectory.file("README.md"), rootProject.layout.projectDirectory.file("README.md"))
-        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .files(
+            layout.projectDirectory.file("README.md"),
+            rootProject.layout.projectDirectory.file("README.md"),
+            rootProject.layout.projectDirectory.file("docs/releasing.md"),
+            rootProject.layout.projectDirectory.file("settings.gradle.kts"),
+        ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("readmes")
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
     systemProperty("lsd.mono.test.projectVersion", project.version.toString())

@@ -115,6 +115,29 @@ class RootReadmeExampleTest {
         assertTrue(withVersions.isEmpty(), "a release version in the Getting started snippets: $withVersions")
     }
 
+    /**
+     * Every module the build includes is published at the train version, so the root README's
+     * artifact table and docs/releasing.md's list each one, and both say how many there are.
+     */
+    @Test
+    fun `the release docs list every published module`() {
+        val modules =
+            Path
+                .of("../../settings.gradle.kts")
+                .readLines()
+                .mapNotNull { Regex("""^include\("modules:([\w-]+)"\)""").find(it.trim())?.groupValues?.get(1) }
+        assertTrue(modules.size >= 6, "the modules in settings.gradle.kts: $modules")
+        val count = listOf("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")[modules.size]
+        val readmeText = readme.readText()
+        val releasing = Path.of("../../docs/releasing.md").readText()
+        modules.forEach { module ->
+            assertTrue("| `$module` |" in readmeText, "the root README's artifact table lists $module")
+            assertTrue("| `io.github.lsd-consulting:$module` | `modules/$module` |" in releasing, "docs/releasing.md lists $module")
+        }
+        assertTrue("all $count on one version" in readmeText, "the root README says all $count on one version")
+        assertTrue("one train version for all $count:" in releasing, "docs/releasing.md says all $count")
+    }
+
     @Test
     fun `the example writes the files the README names`() {
         System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())
