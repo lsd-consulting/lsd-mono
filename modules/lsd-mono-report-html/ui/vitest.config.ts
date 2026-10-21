@@ -29,8 +29,8 @@ export default defineConfig({
         branches: 81,
         functions: 92,
         lines: 92,
-        // src/lib 93.5 / 84.3 / 97.0 / 97.0 (the repaint path tests, #104)
-        'src/lib/**': { statements: 92, branches: 82, functions: 95, lines: 95 },
+        // src/lib 93.8 / 85.2 / 96.3 / 97.0 (the repaint path tests, #104; column wrap and 1:1, #115, #120)
+        'src/lib/**': { statements: 92, branches: 84, functions: 95, lines: 95 },
         // src/ui 92.7 / 85.6 / 97.6 / 94.6 (the link panel tests, #105)
         'src/ui/**': { statements: 91, branches: 84, functions: 96, lines: 93 },
         // src/app 77.9 / 73.3 / 79.6 / 81.7 (src/conformance.test.ts boots the page): the decisions are pure functions with unit tests (intents.ts,

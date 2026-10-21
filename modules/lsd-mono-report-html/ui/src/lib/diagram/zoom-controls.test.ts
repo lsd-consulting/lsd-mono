@@ -15,7 +15,7 @@ import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
 
 let n = 0
 /** A fresh scenario per test, [lanes] wide: views live per scenario id for the page's life. */
-function scenario(lanes: number): Scenario {
+function scenario(lanes: number, messages = true): Scenario {
   n++
   const participants: Participant[] = Array.from({ length: lanes }, (_, i) => ({
     id: `p${i}`,
@@ -31,7 +31,7 @@ function scenario(lanes: number): Scenario {
     facts: [],
     metrics: [],
     participants,
-    events: participants.slice(1).map((p, i) => ({
+    events: participants.slice(messages ? 1 : participants.length).map((p, i) => ({
       kind: 'message',
       id: `m${i}`,
       from: 'p0',
@@ -45,8 +45,8 @@ function scenario(lanes: number): Scenario {
 }
 
 /** Mount a diagram in a scrollport [width] px wide. */
-function mount(lanes = 12, width = 600) {
-  const s = scenario(lanes)
+function mount(lanes = 12, width = 600, { messages = true } = {}) {
+  const s = scenario(lanes, messages)
   const host = document.createElement('div')
   host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
   document.body.append(host)
@@ -91,7 +91,7 @@ afterEach(() => {
 })
 
 describe('zoom controls markup (#94)', () => {
-  it('has, in order, Zoom out, Reset zoom (with the level), Zoom in and Overview, and no Fit', () => {
+  it('has, in order, Zoom out, Reset zoom (with the level), Zoom in, Overview and 1:1, and no Fit', () => {
     const { root } = mount()
     const group = root.querySelector('.zoom-controls[role="group"][aria-label="Zoom"]')!
     const buttons = [...group.querySelectorAll('button')]
@@ -100,14 +100,21 @@ describe('zoom controls markup (#94)', () => {
       `Reset zoom, now ${buttons[1].textContent}`,
       'Zoom in',
       'Overview',
+      '1:1 actual size, readable',
     ])
     expect(buttons.map((b) => b.title)).toEqual([
       'Zoom out (−)',
       'Reset to default zoom (0)',
       'Zoom in (+)',
       'Overview: whole diagram (Shift+1)',
+      '1:1 actual size, readable (Shift+0)',
     ])
     expect(buttons[3].getAttribute('aria-pressed')).toBe('false')
+    // 1:1 (#120) is a plain command that reads "1:1"; Overview, a mode, keeps aria-pressed.
+    expect(buttons[4].hasAttribute('aria-pressed')).toBe(false)
+    expect(buttons[4].textContent).toBe('1:1')
+    // The sequence view opens readable (95%), and has no too-small cue.
+    expect(root.querySelector('.zoom-hint')).toBeNull()
     expect(root.querySelector('.seq-toolbar')!.innerHTML).not.toMatch(/\bFit\b/)
   })
 
@@ -167,6 +174,59 @@ describe('zoom buttons (#94)', () => {
     expect(z.readout()).toBe('100%')
     expect(z.view().mode.kind).toBe('default')
     expect(z.status()).toBe('Default zoom, 100%')
+  })
+})
+
+describe('1:1 (#120)', () => {
+  it('sets 100% from the 95% default as a zoom of your own, and says so', () => {
+    const z = mount(12, 600)
+    expect(z.readout()).toBe('95%')
+    z.button('actual').click()
+    expect(z.readout()).toBe('100%')
+    expect(z.view().mode.kind).toBe('zoomed')
+    expect(z.status()).toBe('Zoom 1:1, 100%')
+  })
+
+  it('centres the focused arrow, and Shift+0 from it does the same', async () => {
+    const z = mount(12, 600)
+    const last = [...z.root.querySelectorAll<HTMLButtonElement>('button.msg-open')].at(-1)!
+    last.focus()
+    const ev = press(last, ')', { shiftKey: true, code: 'Digit0' })
+    expect(ev.defaultPrevented).toBe(true)
+    expect(z.readout()).toBe('100%')
+    expect(z.status()).toBe('Zoom 1:1, 100%')
+    // The last message runs from p0 to p11: its label, mid-drawing, is in the middle (the scroll
+    // is smooth, so it lands a moment later).
+    await vi.waitFor(() => expect(z.scroll.scrollLeft).toBeGreaterThan(400))
+  })
+
+  it('keeps the middle of the view with nothing focused', () => {
+    const z = mount(12, 600)
+    z.button('out').click()
+    z.scroll.scrollLeft = 200
+    const middle = (200 + 300) / z.view().zoom
+    z.button('actual').click()
+    expect(z.scroll.scrollLeft + 300).toBeCloseTo(middle, 0)
+  })
+
+  it('keeps the middle of the view in a diagram with no messages', () => {
+    const z = mount(12, 600, { messages: false })
+    z.button('out').click()
+    z.scroll.scrollLeft = 150
+    const middle = (150 + 300) / z.view().zoom
+    z.button('actual').click()
+    expect(z.readout()).toBe('100%')
+    expect(z.scroll.scrollLeft + 300).toBeCloseTo(middle, 0)
+  })
+
+  it('leaves Overview for 100%, not back to the zoom from before', () => {
+    const z = mount(12, 600)
+    z.button('overview').click()
+    z.button('actual').click()
+    flushDiagramPaints()
+    expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
+    expect(z.readout()).toBe('100%')
+    expect(z.status()).toBe('Zoom 1:1, 100%')
   })
 })
 
@@ -241,15 +301,18 @@ describe('Overview (#94)', () => {
     expect(z.status()).toMatch(/^Default zoom, \d+%$/)
   })
 
-  it('leaves for the default view when the drawing is clicked, without opening what is under it', () => {
+  it('leaves for 1:1 when the drawing is clicked, without opening what is under it (#120)', () => {
     const z = mount(12, 600)
     z.button('overview').click()
     let reached = false
     document.body.addEventListener('click', () => (reached = true), { once: true })
     z.root.querySelector('.seq-window')!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+    flushDiagramPaints()
     expect(reached).toBe(false)
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
-    expect(z.view().mode.kind).toBe('default')
+    expect(z.view().mode.kind).toBe('zoomed')
+    expect(z.readout()).toBe('100%')
+    expect(z.status()).toBe('Zoom 1:1, 100%')
   })
 
   it('leaves for the default view fitted to the lanes left, when lanes were hidden in Overview', () => {

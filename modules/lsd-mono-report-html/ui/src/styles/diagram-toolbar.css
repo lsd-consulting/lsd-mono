@@ -28,6 +28,14 @@
     display: none;
   }
 }
+/* In a tight row the too-small cue (#120) takes a line of its own under the Zoom group, so it
+   never squeezes a control (down to 320px, where it is one short line). */
+@container seq-toolbar (max-width: 720px) {
+  .seq-toolbar .zoom-hint {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
 .zoom-controls,
 .find-steps,
 .diagram-find {

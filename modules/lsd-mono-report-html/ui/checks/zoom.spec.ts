@@ -4,7 +4,7 @@ import { openReport } from './open-report'
 import { openFixture, painted, THEMES } from './ux-helpers'
 import { wideReport } from './wide-sample'
 
-// #94: zoom as [−] [N%] [+] [Overview]. − and + step through fixed levels, the % readout goes back
+// #94: zoom as [−] [N%] [+] [Overview] [1:1 (#120)]. − and + step through fixed levels, the % readout goes back
 // to the default view (which never enlarges a narrow diagram past 100%), and Overview fits the
 // whole width down to 10%. Run on the live example report's "Timed checkout" (14 lanes) and
 // "Payment declined" (4 lanes) scenarios, and the 100-participant perf sample.
@@ -60,7 +60,9 @@ async function statusChanges(page: Page, act: () => Promise<void>): Promise<stri
 test.describe('at 1440×900', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('the Zoom group has − , the % reset, + and Overview, with their tooltips, and no Fit', async ({ page }) => {
+  test('the Zoom group has − , the % reset, + , Overview and 1:1, with their tooltips, and no Fit', async ({
+    page,
+  }) => {
     await openExample(page)
     const group = card(page).getByRole('group', { name: 'Zoom' })
     const names = await group
@@ -71,8 +73,11 @@ test.describe('at 1440×900', () => {
       [`Reset zoom, now ${await readout(page)}%`, 'Reset to default zoom (0)'],
       ['Zoom in', 'Zoom in (+)'],
       ['Overview', 'Overview: whole diagram (Shift+1)'],
+      ['1:1 actual size, readable', '1:1 actual size, readable (Shift+0)'],
     ])
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
+    // 1:1 is a plain command; Overview, a mode, is pressed while on.
+    await expect(group.getByRole('button', { name: '1:1 actual size, readable' })).not.toHaveAttribute('aria-pressed')
     await expect(card(page).getByRole('button', { name: /Fit/ })).toHaveCount(0)
     // The readout looks like a control: at least 12px, in the text colour.
     const readoutStyle = await reset(page).evaluate((el) => {
@@ -185,7 +190,7 @@ test.describe('at 1440×900', () => {
     expect(Math.abs((await where()).page - before.page)).toBeLessThanOrEqual(2)
   })
 
-  test('a click in Overview goes to the default view centred on that spot', async ({ page }) => {
+  test('a click in Overview goes to 1:1 centred on that spot (#120)', async ({ page }) => {
     await openExample(page)
     await overview(page).click()
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
@@ -198,8 +203,8 @@ test.describe('at 1440×900', () => {
     const box = (await target.boundingBox())!
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
-    await expect(seq(page).locator('.zoom-readout')).toHaveText('95%')
-    await expect(status(page)).toHaveText('Default zoom, 95%')
+    await expect(seq(page).locator('.zoom-readout')).toHaveText('100%')
+    await expect(status(page)).toHaveText('Zoom 1:1, 100%')
     // It zoomed instead of opening the arrow.
     await expect(page.locator('#inspector')).toBeHidden()
     // Once the scroll has landed, the clicked arrow sits in the middle of the diagram's visible
@@ -484,7 +489,9 @@ for (const viewport of [
     const { userAgent, deviceScaleFactor, isMobile, hasTouch } = devices['iPhone 13']
     test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
 
-    test('has all four zoom controls at 44×44 or more, on one row, without overlap', async ({ page }) => {
+    test('has all five zoom controls at 44×44 or more, without overlap, 1:1 on a row of its own at 320', async ({
+      page,
+    }) => {
       await openExample(page)
       const boxes = await seq(page)
         .getByRole('group', { name: 'Zoom' })
@@ -495,13 +502,20 @@ for (const viewport of [
             return { left: b.left, right: b.right, top: b.top, width: b.width, height: b.height }
           }),
         )
-      expect(boxes).toHaveLength(4)
+      expect(boxes).toHaveLength(5)
       for (const box of boxes) {
         expect(box.width).toBeGreaterThanOrEqual(44)
         expect(box.height).toBeGreaterThanOrEqual(44)
-        expect(Math.abs(box.top - boxes[0].top)).toBeLessThanOrEqual(1)
       }
-      for (let i = 1; i < boxes.length; i++) expect(boxes[i].left).toBeGreaterThanOrEqual(boxes[i - 1].right)
+      // −, the level, + and Overview share a row; five do not fit in 320 (#120), so 1:1 wraps under.
+      for (const box of boxes.slice(0, 4)) expect(Math.abs(box.top - boxes[0].top)).toBeLessThanOrEqual(1)
+      for (let i = 1; i < 4; i++) expect(boxes[i].left).toBeGreaterThanOrEqual(boxes[i - 1].right)
+      const actual = boxes[4]
+      if (viewport.width === 320) expect(actual.top).toBeGreaterThanOrEqual(boxes[0].top + boxes[0].height)
+      else {
+        expect(Math.abs(actual.top - boxes[0].top)).toBeLessThanOrEqual(1)
+        expect(actual.left).toBeGreaterThanOrEqual(boxes[3].right)
+      }
       // Icon only: the Overview label stays out of the way.
       await expect(seq(page).locator('.zoom-overview-label')).toBeHidden()
       if (shots) {

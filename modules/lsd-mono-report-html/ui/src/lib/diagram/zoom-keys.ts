@@ -17,6 +17,7 @@ export function registerZoomKeys(router: KeyRouter): void {
   router.on('diagram', 'zoom-reset', zoom('reset'))
   router.on('diagram', 'overview', zoom('overview'))
   router.on('diagram', 'leave-overview', zoom('leave'))
+  router.on('diagram', 'actual-size', zoom('actual'))
   router.on('diagram', 'zoom-to-message', (_e, c) => {
     if (c.scrollport && c.messageId) zoomToMessage(c.scrollport, c.messageId)
   })

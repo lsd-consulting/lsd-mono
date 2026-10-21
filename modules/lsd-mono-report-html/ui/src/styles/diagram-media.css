@@ -63,9 +63,11 @@
   }
   /* The rows above Find are stuck out of sight under the top bar. When the keyboard takes focus to
      one of their controls (Shift+Tab from Find), the whole toolbar drops below the bar so the
-     control can be seen (WCAG 2.4.11), and goes back when focus leaves. */
+     control can be seen (WCAG 2.4.11), and goes back when focus leaves. A tapped zoom button
+     counts too (:focus, not only :focus-visible): its zoom can scroll the page so far that the
+     toolbar would stick with the button under the bar (#120). */
   .seq-toolbar:has(
-    .zoom-controls :focus-visible,
+    .zoom-controls :focus,
     .participant-filter :focus-visible,
     .panel-controls :focus-visible,
     .seq-more-lanes:focus-visible
@@ -227,5 +229,13 @@
   }
   .seq-scroll[data-more-right] {
     border-right: 2px solid CanvasText;
+  }
+}
+/* Five 44 px zoom targets and the readout need 248 px (#120): on the narrowest phones (320 px) the
+   group wraps, 1:1 on a row of its own under −, the level, + and Overview, rather than overflow
+   the card or shrink a target. */
+@container seq-toolbar (max-width: 249.98px) {
+  .seq-toolbar .zoom-controls {
+    flex-wrap: wrap;
   }
 }

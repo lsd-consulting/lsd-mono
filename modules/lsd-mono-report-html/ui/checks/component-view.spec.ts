@@ -44,7 +44,12 @@ test('the tabs name the view, select with Enter or Space, and only the selected 
   await expect(tab(page, 'Components')).toBeFocused()
   await expect(page.locator('.diagram-panel h3')).toHaveText('Component diagram')
   await expect(panel).toHaveAttribute('aria-labelledby', 'diagram-tab-components')
-  await expect(page.locator('.diagram-view-status')).toHaveText('Component diagram, 14 components, 13 links, zoom 100%')
+  // The zoom it is shown at: the whole graph fitted (#120).
+  const shownAt = await page.locator('.comp-toolbar [data-zoom="reset"]').textContent()
+  await expect(page.locator('.diagram-view-status')).toHaveText(
+    `Component diagram, 14 components, 13 links, zoom ${shownAt}. Too small to read: press Shift+0.`,
+  )
+  expect(shownAt).not.toBe('100%')
   await expect(tab(page, 'Components')).toHaveAttribute('tabindex', '0')
   await expect(tab(page, 'Sequence')).toHaveAttribute('tabindex', '-1')
   await page.keyboard.press('ArrowLeft')
@@ -97,6 +102,8 @@ test('a link opens the side panel with its interactions, Esc gives focus back to
 }) => {
   await openReport(page, { report: example })
   await showComponents(page)
+  // At 1:1: in the fit, too small to read, Enter zooms to the link instead (#120, actual-size.spec).
+  await zoomButton(page, '1:1 actual size, readable').click()
   const link = page.locator('.comp-scroll .edge-group').first()
   await link.focus()
   await page.keyboard.press('Enter')
@@ -178,7 +185,9 @@ test('switching views keeps the sequence diagram where it was: zoom, scroll, hid
   await expect(page.locator('[data-diagram-find]')).toHaveValue('order')
   // And the Components view is where it was left.
   await showComponents(page)
-  await expect(page.locator('.diagram-view-status')).toContainText('zoom 100%')
+  await expect(page.locator('.diagram-view-status')).toContainText(
+    `zoom ${await page.locator('.comp-toolbar [data-zoom="reset"]').textContent()}`,
+  )
 })
 
 test('printing with Components selected prints the component diagram instead of the sequence diagram', async ({
@@ -252,29 +261,40 @@ function drawing(page: Page) {
   })
 }
 
-test('the Components view zooms with the same group: names start at 11px, Overview fits both ways, Esc goes back', async ({
+test('the Components view zooms with the same group: it opens whole, 1:1 has 11px names, Overview fits both ways, Esc goes back', async ({
   page,
 }) => {
   await openReport(page, { report: example })
   const sequenceZoom = await page.locator('.seq-toolbar [data-zoom="reset"]').first().textContent()
   await showComponents(page)
-  await expect(zoomGroup(page).getByRole('button')).toHaveCount(4)
+  await expect(zoomGroup(page).getByRole('button')).toHaveCount(5)
+  // The example (1091 × 928) is taller than the room at 1440 × 900: it opens fitted whole (#120).
+  const opened = await drawing(page)
+  expect(opened.overX).toBeLessThanOrEqual(0)
+  expect(opened.overY).toBeLessThanOrEqual(0)
+  expect(opened.inView).toBe(14)
+  const fitText = (await readout(page).textContent())!
+  expect(Number.parseInt(fitText, 10)).toBeLessThan(100)
+  const overview = zoomButton(page, 'Overview')
+  await expect(overview).toHaveAttribute('aria-disabled', 'true')
+
+  // 1:1: names at 11px (#91), and Overview has something to do.
+  await zoomButton(page, '1:1 actual size, readable').click()
   await expect(readout(page)).toHaveText('100%')
   expect((await drawing(page)).smallest).toBeGreaterThanOrEqual(11)
-
-  // The example (1091 × 928) is taller than the room at 1440 × 900: Overview fits it whole.
-  const overview = zoomButton(page, 'Overview')
   await expect(overview).not.toHaveAttribute('aria-disabled')
   await page.locator('.comp-scroll').evaluate((el) => el.scrollTo({ left: 40, top: 30 }))
   const before = await drawing(page)
   await overview.click()
   await expect(overview).toHaveAttribute('aria-pressed', 'true')
+  // On, it stays enabled: a mode the button (or Esc) leaves.
+  await expect(overview).not.toHaveAttribute('aria-disabled')
   const fitted = await drawing(page)
   expect(fitted.overX).toBeLessThanOrEqual(0)
   expect(fitted.overY).toBeLessThanOrEqual(0)
   expect(fitted.inView).toBe(14)
-  await expect(readout(page)).not.toHaveText('100%')
-  await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram$/)
+  await expect(readout(page)).toHaveText(fitText)
+  await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram\. Too small to read: press Shift\+0\.$/)
   if (process.env.LSD_SHOTS)
     await page.screenshot({ path: `${process.env.LSD_SHOTS}/105-1440-components-overview.png` })
 
@@ -288,7 +308,7 @@ test('the Components view zooms with the same group: names start at 11px, Overvi
   expect(Math.abs(back.top - before.top)).toBeLessThanOrEqual(1)
   await expect(status(page)).toHaveText('Overview off, zoom 100%')
 
-  // + keeps the middle of the view in place; 0 goes back to 100%.
+  // + keeps the middle of the view in place; 0 goes back to the fit.
   const middle = () =>
     page.locator('.comp-scroll').evaluate((el) => {
       const zoom =
@@ -307,27 +327,32 @@ test('the Components view zooms with the same group: names start at 11px, Overvi
   expect(Math.abs(kept.x - centre.x)).toBeLessThanOrEqual(2)
   expect(Math.abs(kept.y - centre.y)).toBeLessThanOrEqual(2)
   await readout(page).click()
-  await expect(readout(page)).toHaveText('100%')
-  await expect(status(page)).toHaveText('Default zoom, 100%')
+  await expect(readout(page)).toHaveText(fitText)
+  await expect(status(page)).toHaveText(`Default zoom, ${fitText}. Too small to read: press Shift+0.`)
 
   // The sequence diagram's zoom did not move.
   await tab(page, 'Sequence').click()
   await expect(page.locator('.seq-toolbar [data-zoom="reset"]').first()).toHaveText(sequenceZoom!)
 })
 
-test('in the Components view the zoom keys and Ctrl+wheel zoom it, and a click in Overview goes back to 100% there', async ({
+test('in the Components view the zoom keys and Ctrl+wheel zoom it, and a click in Overview goes to 1:1 there', async ({
   page,
 }) => {
   await openReport(page, { report: example })
   await showComponents(page)
+  const fitText = (await readout(page).textContent())!
   const link = page.locator('.comp-scroll .edge-group').first()
   await link.focus()
+  await page.keyboard.press('Shift+Digit0')
+  await expect(readout(page)).toHaveText('100%')
   await page.keyboard.press('-')
   await expect(readout(page)).toHaveText('90%')
   await page.keyboard.press('+')
   await page.keyboard.press('+')
   await expect(readout(page)).toHaveText('110%')
   await page.keyboard.press('0')
+  await expect(readout(page)).toHaveText(fitText)
+  await page.keyboard.press('Shift+Digit0')
   await expect(readout(page)).toHaveText('100%')
   // The link keeps focus, and no side panel opened.
   await expect(link).toBeFocused()
@@ -344,7 +369,7 @@ test('in the Components view the zoom keys and Ctrl+wheel zoom it, and a click i
   await link.focus()
   await page.keyboard.press('Shift+!')
   await expect(zoomButton(page, 'Overview')).toHaveAttribute('aria-pressed', 'true')
-  // A click on the drawing in Overview: 100%, centred on the point, and no link panel.
+  // A click on the drawing in Overview: 1:1, centred on the point, and no link panel.
   const node = page.locator('.comp-scroll .component-node').last()
   // The whole drawing is in its scrollport; the page brings the scrollport's foot on screen.
   await node.scrollIntoViewIfNeeded()
@@ -372,7 +397,7 @@ test('a drawing that already fits has Overview disabled, and Shift+1 says so', a
   await expect(overview).toHaveAttribute('aria-pressed', 'false')
 })
 
-test('the 100-component sample wraps into columns: Overview shows all of it at 1440, with no scroll (#115)', async ({
+test('the 100-component sample wraps into columns: it opens whole at 1440, and Overview shows all of it (#115, #120)', async ({
   page,
 }) => {
   await openReport(page, { report: wideReport(100, 400) })
@@ -383,8 +408,12 @@ test('the 100-component sample wraps into columns: Overview shows all of it at 1
     h: Number(svg.getAttribute('height')),
   }))
   expect(natural.h / natural.w).toBeLessThan(2)
+  // #120 opens Components fitted: here that is the whole drawing, above the 10% floor.
+  expect(Number.parseInt((await readout(page).textContent())!, 10)).toBeGreaterThan(10)
+  expect((await drawing(page)).inView).toBe(100)
+  await zoomButton(page, '1:1 actual size, readable').click()
   await zoomButton(page, 'Overview').click()
-  await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram$/)
+  await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram\. Too small to read: press Shift\+0\.$/)
   const zoom = Number.parseInt((await readout(page).textContent())!, 10)
   expect(zoom).toBeGreaterThan(10)
   const shown = await drawing(page)
@@ -400,6 +429,8 @@ test('the 100-component sample at 100%: 11px names, and a link between columns o
 }) => {
   await openReport(page, { report: wideReport(100, 400) })
   await showComponents(page)
+  // #120 opens it fitted; 1:1 is the readable size.
+  await zoomButton(page, '1:1 actual size, readable').click()
   await expect(readout(page)).toHaveText('100%')
   expect((await drawing(page)).smallest).toBeGreaterThanOrEqual(11)
   // A link whose ends sit in different columns: it runs up and across, from the foot of one column.
@@ -449,9 +480,11 @@ test.describe('on a phone', () => {
     await openReport(page, { report: wideReport(100, 400) })
     await tab(page, 'Components').tap()
     await expect(pane(page)).toBeVisible()
+    // #120 opens it fitted; Overview from 1:1 is the issue's path.
+    await zoomButton(page, '1:1 actual size, readable').tap()
     await zoomButton(page, 'Overview').tap()
     // Two screens was the issue's bar; wrapped, it is one: the whole drawing, above the 10% floor.
-    await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram$/)
+    await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram\. Too small to read: tap 1:1\.$/)
     expect(Number.parseInt((await readout(page).textContent())!, 10)).toBeGreaterThan(10)
     const fitted = await page.locator('.comp-scroll').evaluate((el) => ({
       scroll: el.scrollHeight,
@@ -463,31 +496,36 @@ test.describe('on a phone', () => {
     if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/115-390-overview.png` })
   })
 
-  test('the example opens at 100% with 11px names, and Overview shows all 14 components', async ({ page }) => {
+  test('the example opens with all 14 components, and 1:1 has 11px names (#120)', async ({ page }) => {
     await openReport(page, { report: example })
     await tab(page, 'Components').tap()
     await expect(pane(page)).toBeVisible()
-    const first = await drawing(page)
-    expect(first.smallest).toBeGreaterThanOrEqual(11)
-    expect(first.inView).toBeLessThan(14)
-    if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/105-390-components.png` })
-    await zoomButton(page, 'Overview').tap()
     const fitted = await drawing(page)
     expect(fitted.inView).toBe(14)
     expect(fitted.overX).toBeLessThanOrEqual(0)
     expect(fitted.overY).toBeLessThanOrEqual(0)
-    await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram$/)
+    if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/105-390-components.png` })
+    await zoomButton(page, '1:1 actual size, readable').tap()
+    const first = await drawing(page)
+    expect(first.smallest).toBeGreaterThanOrEqual(11)
+    expect(first.inView).toBeLessThan(14)
+    await zoomButton(page, 'Overview').tap()
+    expect((await drawing(page)).inView).toBe(14)
+    await expect(status(page)).toHaveText(/^Overview, \d+%, whole diagram\. Too small to read: tap 1:1\.$/)
     if (process.env.LSD_SHOTS)
       await page.screenshot({ path: `${process.env.LSD_SHOTS}/105-390-components-overview.png` })
   })
 })
 
-test('Shift+1 then Esc from the focused drawing: Overview and back, with focus on the drawing all along (#105 UX)', async ({
+test('Shift+0, Shift+1 then Esc from the focused drawing: 1:1, Overview and back, with focus on the drawing all along (#105 UX)', async ({
   page,
 }) => {
   await openReport(page, { report: example })
   await showComponents(page)
   const drawing = page.locator('.comp-scroll')
+  // Fitted whole it has nothing to scroll, so it is no tab stop (#120); at 1:1 it is.
+  await expect(drawing).not.toHaveAttribute('tabindex')
+  await zoomButton(page, '1:1 actual size, readable').click()
   await expect(drawing).toHaveAttribute('tabindex', '0')
   await drawing.focus()
   await page.keyboard.press('Shift+Digit1')

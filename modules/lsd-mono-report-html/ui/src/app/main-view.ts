@@ -11,7 +11,14 @@ import { filtered } from './filters'
 import { dropUnshownView, writeScenarioHash } from './url-hash'
 import { bindComponentViews } from '../lib/component-view'
 import { bindComponentZoom } from '../lib/component-zoom'
-import { bindDiagramTabs, focusComponentView, openLink, pingShownView, showDiagramView } from './diagram-views'
+import {
+  announceOpenedView,
+  bindDiagramTabs,
+  focusComponentView,
+  openLink,
+  pingShownView,
+  showDiagramView,
+} from './diagram-views'
 import { index, session, state } from './context'
 import { newerMinorNoticeHtml } from '../lib/schema-version'
 export function focusScenarioHeading(): void {
@@ -81,6 +88,7 @@ export function renderMain(): void {
   bindComponentViews(main, (scenarioId, edge) => openLink(scenarioId, edge))
   main.querySelectorAll<HTMLElement>('.comp-scroll').forEach(bindComponentZoom)
   pingShownView(main)
+  announceOpenedView(main)
 }
 
 /** Scroll a scenario's diagram to a message. Shows that scenario first. */

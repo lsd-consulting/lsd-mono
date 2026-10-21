@@ -6,7 +6,7 @@ import { timingStripHtml } from '../ui/timing'
 import { panelControlsHtml, renderDiagramHtml } from '../lib/sequence-diagram'
 import { componentViewHtml } from '../lib/component-view'
 import { componentZoomShown } from '../lib/component-zoom'
-import { zoomControlsHtml } from '../lib/diagram/zoom-readout'
+import { zoomControlsHtml, zoomHintHtml } from '../lib/diagram/zoom-readout'
 import { hasComponentDiagram } from '../lib/component-graph'
 import { type DiagramViewName, diagramViewHeading, diagramViewHint } from '../lib/diagram-view-names'
 import { formatGeneratedAt } from '../ui/format'
@@ -75,7 +75,7 @@ export function scenarioHtml(s: Scenario): string {
 /** The Components view, with its Zoom group and Metrics, at the scenario's zoom. */
 function componentsPaneHtml(s: Scenario): string {
   const zoom = componentZoomShown(s.id)
-  return componentViewHtml(s, `${zoomControlsHtml(zoom)}${panelControlsHtml(s)}`, zoom.zoom)
+  return componentViewHtml(s, `${zoomControlsHtml(zoom)}${zoomHintHtml(zoom)}${panelControlsHtml(s)}`, zoom.zoom)
 }
 
 /**

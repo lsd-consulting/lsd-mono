@@ -4,7 +4,7 @@
 import type { MessageEvent, Scenario } from '../types'
 import { type DiagramViewName, diagramViewHeading, diagramViewHint } from '../lib/diagram-view-names'
 import { mountedComponents } from '../lib/component-view'
-import { componentZoom } from '../lib/component-zoom'
+import { componentTooSmallSaid, componentZoom, refitComponentZoom } from '../lib/component-zoom'
 import { diagramState } from '../lib/diagram/state'
 import { scrollDiagramToOffset, sizeStage } from '../lib/diagram/page-scroll'
 import { diagramView, findMessage, focusDiagramMessage, syncDiagramWindow } from '../lib/sequence-diagram'
@@ -28,7 +28,7 @@ export function viewAnnouncement(scenario: Scenario, view: DiagramViewName): str
     const drawn = mountedComponents(scenario.id)
     const nodes = drawn?.graph.nodes.length ?? 0
     const links = drawn?.graph.edges.length ?? 0
-    return `Component diagram, ${count(nodes, 'component')}, ${count(links, 'link')}, zoom ${zoomLabel(componentZoom(scenario.id).zoom)}`
+    return `Component diagram, ${count(nodes, 'component')}, ${count(links, 'link')}, zoom ${zoomLabel(componentZoom(scenario.id).zoom)}${componentTooSmallSaid(scenario.id)}`
   }
   const messages = scenario.events.filter((event) => event.kind === 'message').length
   return `Sequence diagram, ${count(messages, 'message')}, zoom ${zoomLabel(diagramView(scenario.id).zoom)}`
@@ -74,7 +74,11 @@ export function showDiagramView(view: DiagramViewName, announce = true): void {
       tab.tabIndex = selected ? 0 : -1
     }
     if (view === 'sequence' && scroll) restoreSequencePlace(scroll)
-    if (view === 'components' && drawing) restoreComponentPlace(drawing)
+    if (view === 'components' && drawing) {
+      // Fitted now it has a width (#120), so the status line says the zoom it is shown at.
+      refitComponentZoom(drawing)
+      restoreComponentPlace(drawing)
+    }
     if (view === 'components') usage.ping('components-open')
   }
   writeScenarioHash()
@@ -88,6 +92,25 @@ export function showDiagramView(view: DiagramViewName, announce = true): void {
  */
 export function pingShownView(root: ParentNode): void {
   if (root.querySelector('.diagram-panel[data-view="components"]')) usage.ping('components-open')
+}
+
+/** Whether this page load has said a view it opened on (announceOpenedView). */
+let openingSaid = false
+
+/**
+ * A page that opens on Components (a link with &view=components, a reload) says the view once, as
+ * a tab press does, so a screen reader hears its zoom and, when the fit is too small to read, what
+ * to do (#120 round 2). On the next frame, so the new status line is in the page before it speaks.
+ */
+export function announceOpenedView(root: ParentNode): void {
+  if (openingSaid) return
+  openingSaid = true
+  const area = root.querySelector('.diagram-panel[data-view="components"]')
+  const scenario = shownScenario()
+  if (!area || !scenario) return
+  requestAnimationFrame(() => {
+    if (area.isConnected) say(area, viewAnnouncement(scenario, 'components'))
+  })
 }
 
 function restoreComponentPlace(drawing: HTMLElement): void {

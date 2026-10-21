@@ -1,7 +1,8 @@
-// Zoom controls (#94): what − and +, the readout, Overview and Ctrl/Cmd+wheel do, and the one
-// status message each change makes. − and + step through ZOOM_LEVELS, the % readout goes back to
-// the default view, and Overview fits the whole drawing's width (down to OVERVIEW_MIN_ZOOM) until
-// it is turned off. The buttons are drawn in zoom-readout.ts; the keys are in zoom-keys.ts.
+// Zoom controls (#94, #120): what − and +, the readout, Overview, 1:1 and Ctrl/Cmd+wheel do, and
+// the one status message each change makes. − and + step through ZOOM_LEVELS, the % readout goes
+// back to the default view, Overview fits the whole drawing's width (down to OVERVIEW_MIN_ZOOM)
+// until it is turned off, and 1:1 shows the readable size, 100%, centred on the focused message. The buttons
+// are drawn in zoom-readout.ts; the keys are in zoom-keys.ts.
 import { scrollBehavior } from '../media'
 import { frameOf, messageLabelBox } from './geometry'
 import { diagramState, diagramView } from './state'
@@ -12,12 +13,13 @@ import {
   stepZoom,
   visibleParticipants,
   zoomAnnouncement,
+  type ZoomAnnouncementOptions,
   type ZoomChange,
 } from '../diagram-view'
 import { laneIndex, xFor } from './shapes'
 import { revealMessageX } from './window'
 import { syncZoomControls } from './zoom-readout'
-import { commitZoom, fitOverview, refitDiagram, showDefaultView } from './zoom'
+import { commitZoom, fitOverview, refitDiagram, showActualSize, showDefaultView } from './zoom'
 
 /** How long the status line stays empty before it says again what it last said. */
 const REPEAT_GAP_MS = 100
@@ -31,8 +33,8 @@ function announce(scrollport: HTMLElement, change: ZoomChange): void {
 }
 
 /** Say [change] in [status], a polite status line; the same words again after a short gap. */
-export function announceZoom(status: Element | null, change: ZoomChange): void {
-  announceStatus(status, zoomAnnouncement(change))
+export function announceZoom(status: Element | null, change: ZoomChange, options?: ZoomAnnouncementOptions): void {
+  announceStatus(status, zoomAnnouncement(change, options))
 }
 
 /** Say [text] in [status], a polite status line; the same words again after a short gap. */
@@ -146,7 +148,7 @@ function enterOverview(scrollport: HTMLElement): void {
   const diagram = diagramState.mounted.get(id)
   const view = diagramView(id)
   if (!diagram || view.mode.kind === 'overview') return
-  if (!overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth)) {
+  if (!overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth, view.zoom)) {
     // Shift+1 (the button is disabled then) still gets an answer.
     announce(scrollport, { kind: 'fits', zoom: view.zoom })
     return
@@ -172,46 +174,73 @@ function leaveOverview(scrollport: HTMLElement): void {
   announce(scrollport, { kind: 'overview-off', zoom: view.zoom })
 }
 
-/** From Overview, the default view centred on a message (Enter on it). */
-export function zoomToMessage(scrollport: HTMLElement, messageId: string): void {
+/** A message's label centre (drawn px, from the top of the body), or null when it is not drawn. */
+function messageCentre(scrollport: HTMLElement, messageId: string): { x: number; y: number } | null {
   const id = scrollport.dataset.scenarioId ?? ''
   const diagram = diagramState.mounted.get(id)
   const row = diagram?.rows.find((item) => item.event.kind === 'message' && item.event.id === messageId)
   const box = diagram && row ? messageLabelBox(diagram, diagramView(id).hidden, row) : null
-  if (!box) return
-  resetZoom(scrollport, { x: box.x + box.width / 2, y: row!.y })
+  return box && row ? { x: box.x + box.width / 2, y: row.y } : null
+}
+
+/**
+ * Where 1:1 centres (#120): the message with focus, else nothing, so the middle of the screen
+ * stays put.
+ */
+function actualSizeCentre(scrollport: HTMLElement): { x: number; y: number } | undefined {
+  const focused = document.activeElement?.closest<HTMLElement>('button.msg-open')
+  const focusedId = focused && scrollport.contains(focused) ? focused.dataset.messageId : undefined
+  return (focusedId && messageCentre(scrollport, focusedId)) || undefined
+}
+
+/** 1:1: the readable size, centred as actualSizeCentre says. */
+function actualSize(scrollport: HTMLElement): void {
+  const zoom = showActualSize(scrollport, actualSizeCentre(scrollport))
+  if (zoom != null) announce(scrollport, { kind: 'actual', zoom })
+}
+
+/** From Overview, the default view centred on a message (Enter on it). */
+export function zoomToMessage(scrollport: HTMLElement, messageId: string): void {
+  const centre = messageCentre(scrollport, messageId)
+  if (!centre) return
+  resetZoom(scrollport, centre)
   revealMessageX(scrollport, messageId)
 }
 
-/** From Overview, the default view centred on the point clicked or tapped. */
+/**
+ * From Overview, 1:1 centred on the point clicked or tapped, as in the Components view (#120
+ * round 2): the place looked at comes up at the readable size.
+ */
 function zoomToPoint(scrollport: HTMLElement, ev: MouseEvent): void {
   const spacer = scrollport.querySelector<HTMLElement>('.seq-spacer')
   if (!spacer) return
   const zoom = diagramView(scrollport.dataset.scenarioId ?? '').zoom || 1
   const box = spacer.getBoundingClientRect()
-  resetZoom(scrollport, { x: (ev.clientX - box.left) / zoom, y: (ev.clientY - box.top) / zoom })
+  const shown = showActualSize(scrollport, { x: (ev.clientX - box.left) / zoom, y: (ev.clientY - box.top) / zoom })
+  if (shown != null) announce(scrollport, { kind: 'actual', zoom: shown })
 }
 
-export type ZoomAction = 'in' | 'out' | 'reset' | 'overview' | 'leave'
+export type ZoomAction = 'in' | 'out' | 'reset' | 'overview' | 'actual' | 'leave'
+
+const ACTIONS: readonly string[] = ['in', 'out', 'reset', 'overview', 'actual']
 
 export function runZoomAction(scrollport: HTMLElement, action: ZoomAction): void {
   const view = diagramView(scrollport.dataset.scenarioId ?? '')
   if (action === 'in' || action === 'out') zoomStep(scrollport, action === 'in' ? 1 : -1)
   else if (action === 'reset') resetZoom(scrollport)
   else if (action === 'leave') leaveOverview(scrollport)
+  else if (action === 'actual') actualSize(scrollport)
   else if (view.mode.kind === 'overview') leaveOverview(scrollport)
   else enterOverview(scrollport)
 }
 
-/** The four buttons, and a click or tap on the drawing while Overview is on. */
+/** The five buttons, and a click or tap on the drawing while Overview is on. */
 export function bindZoomControls(diagram: HTMLElement, scrollport: HTMLElement): void {
   diagram.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (btn.getAttribute('aria-disabled') === 'true') return
       const action = btn.dataset.zoom
-      if (action === 'in' || action === 'out' || action === 'reset' || action === 'overview') {
-        runZoomAction(scrollport, action)
-      }
+      if (action && ACTIONS.includes(action)) runZoomAction(scrollport, action as ZoomAction)
     })
   })
   // Capture, so the click neither opens the arrow under it nor reaches the page's handlers. The

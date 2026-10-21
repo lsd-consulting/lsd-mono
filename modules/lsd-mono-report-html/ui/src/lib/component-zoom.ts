@@ -1,13 +1,27 @@
 // Zoom for the Components view (#105), with the same controls, keys and status messages as the
-// sequence diagram's (#94). Each scenario keeps its own: the default is 100%, where names are
-// 11px, and − and + step through the same ladder, keeping the middle of the view in place.
-// Overview fits the whole drawing both ways (a component graph has no time axis to scroll along),
-// down to OVERVIEW_MIN_ZOOM, and a click or tap in it goes back to 100% centred there.
+// sequence diagram's (#94). Each scenario keeps its own. The default is a true overview (#120):
+// the whole graph both ways (a component graph has no time axis to scroll along), never above
+// 100% and never below OVERVIEW_MIN_ZOOM, fitted again as its room changes until the user zooms.
+// − and + step through the same ladder, keeping the middle of the view in place. Overview is the
+// same fit from a zoom of the user's own, with Esc (or Overview again) back to it, and 1:1 (Shift+0) is the readable
+// 100%, centred on the selected or focused link, the point clicked, or the busiest component.
+// While a fit is below the readable size it says so (a cue, and the status line), and a tap,
+// click or Enter on the drawing goes to 1:1 there rather than hitting a tiny target.
 // The mode (default, the user's own zoom, or Overview and where it goes back to) is the sequence
 // diagram's ZoomMode, moved on by the same zoomModeAfter (#100). Like the sequence side, Overview
-// fits again whenever its room changes (the side panel opening, a resize, a phone turned).
-import { DEFAULT_ZOOM, OVERVIEW_MIN_ZOOM, stepZoom, type ZoomChange } from './diagram-view'
-import { mountedComponents, onComponentResize } from './component-view'
+// fits again whenever its room changes (a resize, a phone turned, the side panel opening); the
+// default view does too, but never smaller while the side panel is open (#120).
+import {
+  DEFAULT_ZOOM,
+  OVERVIEW_MIN_ZOOM,
+  READABLE_ZOOM,
+  belowReadable,
+  stepZoom,
+  tooSmallHint,
+  type ZoomChange,
+} from './diagram-view'
+import { isCoarsePointer } from './media'
+import { mountedComponents, onComponentResize, tooSmallDescriptionId } from './component-view'
 import type { ZoomMode } from './diagram/state'
 import { announceZoom, type ZoomAction, wheelStep } from './diagram/zoom-controls'
 import { defaultMode, fittedWidthOf, zoomModeAfter } from './diagram/zoom-mode'
@@ -17,15 +31,15 @@ export interface ComponentZoom {
   zoom: number
   mode: ZoomMode
   /**
-   * The room height Overview was fitted to. The mode keeps the width; a component graph fits
-   * both ways, so the height is kept here.
+   * The room height the default view or Overview was fitted to. The mode keeps the width; a
+   * component graph fits both ways, so the height is kept here.
    */
   fittedHeight: number
 }
 
 const zooms = new Map<string, ComponentZoom>()
 
-/** The scenario's Components zoom; 100% and no Overview until it changes. */
+/** The scenario's Components zoom: the default view (fitted once measured) until it changes. */
 export function componentZoom(scenarioId: string): ComponentZoom {
   let state = zooms.get(scenarioId)
   if (!state) {
@@ -37,7 +51,7 @@ export function componentZoom(scenarioId: string): ComponentZoom {
 
 export function componentZoomShown(scenarioId: string): ZoomShown {
   const state = componentZoom(scenarioId)
-  return { zoom: state.zoom, overview: state.mode.kind === 'overview' }
+  return { zoom: state.zoom, overview: state.mode.kind === 'overview', fitted: state.mode.kind !== 'zoomed' }
 }
 
 /** Whether [id]'s Components view is in Overview. */
@@ -66,10 +80,40 @@ export function componentOverviewScale(width: number, height: number, roomWidth:
   return Math.min(DEFAULT_ZOOM, Math.max(OVERVIEW_MIN_ZOOM, Math.min(roomWidth / width, roomHeight / height)))
 }
 
-/** Whether Overview has anything to show: the drawing does not fit its room at 100%. */
-export function componentOverviewNeeded(width: number, height: number, roomWidth: number, roomHeight: number): boolean {
+/**
+ * Whether Overview (the fit) has anything to do at [zoom]: the drawing does not fit its room
+ * there, and the fit's scale is smaller (at the floor it cannot fit any more).
+ */
+export function componentOverviewNeeded(
+  width: number,
+  height: number,
+  roomWidth: number,
+  roomHeight: number,
+  zoom = DEFAULT_ZOOM,
+): boolean {
   if (!(roomWidth > 0) || !(roomHeight > 0)) return false
-  return width > roomWidth + 0.5 || height > roomHeight + 0.5
+  const fits = width * zoom <= roomWidth + 0.5 && height * zoom <= roomHeight + 0.5
+  return !fits && componentOverviewScale(width, height, roomWidth, roomHeight) < zoom - 0.005
+}
+
+/**
+ * The node with the most links to or from it (the first such, in graph order): where 1:1
+ * centres a fitted view with nothing selected or focused (#120).
+ */
+export function busiestNode(graph: {
+  nodes: readonly { id: string }[]
+  edges: readonly { from: string; to: string }[]
+}): string | null {
+  const counts = new Map<string, number>()
+  for (const edge of graph.edges) {
+    counts.set(edge.from, (counts.get(edge.from) ?? 0) + 1)
+    if (edge.to !== edge.from) counts.set(edge.to, (counts.get(edge.to) ?? 0) + 1)
+  }
+  let best: string | null = null
+  for (const node of graph.nodes) {
+    if (best == null || (counts.get(node.id) ?? 0) > (counts.get(best) ?? 0)) best = node.id
+  }
+  return best
 }
 
 /**
@@ -91,7 +135,30 @@ function statusOf(scroller: HTMLElement): Element | null {
 }
 
 function say(scroller: HTMLElement, change: ZoomChange): void {
-  announceZoom(statusOf(scroller), change)
+  announceZoom(statusOf(scroller), change, { tooSmall: true, coarse: isCoarsePointer() })
+}
+
+/** Whether [id]'s Components view is a fit (the default view or Overview) below the readable size. */
+export function componentTooSmall(scenarioId: string): boolean {
+  const state = componentZoom(scenarioId)
+  return state.mode.kind !== 'zoomed' && belowReadable(state.zoom)
+}
+
+/** What the view says after its zoom when it is too small to read, else nothing (#120). */
+export function componentTooSmallSaid(scenarioId: string): string {
+  return componentTooSmall(scenarioId) ? `. ${tooSmallHint(isCoarsePointer())}.` : ''
+}
+
+/**
+ * While the fit is too small to read, the drawing is described by the hidden text that says what
+ * to do (the visible cue is aria-hidden), so a screen reader hears it on reaching the drawing,
+ * also on a page that opens on Components (#120 round 2). Otherwise it has no description.
+ */
+function describeTooSmall(scroller: HTMLElement, scenarioId: string): void {
+  const svg = scroller.querySelector('svg.component-diagram')
+  if (!svg) return
+  if (componentTooSmall(scenarioId)) svg.setAttribute('aria-describedby', tooSmallDescriptionId(scenarioId))
+  else svg.removeAttribute('aria-describedby')
 }
 
 /** The Zoom group's readout, limits and Overview button, from the scenario's state. */
@@ -101,10 +168,13 @@ export function syncComponentZoomControls(scroller: HTMLElement): void {
   const group = scroller.closest('.comp-diagram')?.querySelector('.zoom-controls')
   if (!drawn || !group) return
   const room = roomOf(scroller)
+  const state = componentZoom(id)
+  describeTooSmall(scroller, id)
   paintZoomControls(
     group,
     componentZoomShown(id),
-    componentOverviewNeeded(drawn.width, drawn.height, room.width, room.height),
+    state.mode.kind === 'overview' ||
+      componentOverviewNeeded(drawn.width, drawn.height, room.width, room.height, state.zoom),
   )
 }
 
@@ -158,12 +228,51 @@ function step(scroller: HTMLElement, direction: 1 | -1): void {
   say(scroller, { kind: wasOverview ? 'overview-off' : 'step', zoom: next })
 }
 
-function reset(scroller: HTMLElement, centre?: { x: number; y: number }): void {
+/** Back to the default view: the whole graph fitted afresh (#120). */
+function reset(scroller: HTMLElement): void {
   const state = componentZoom(scroller.dataset.scenarioId ?? '')
-  const at = centre ?? middleOf(scroller, state.zoom)
   state.mode = zoomModeAfter(state.mode, { kind: 'reset' })
-  applyZoom(scroller, DEFAULT_ZOOM, at)
-  say(scroller, { kind: 'default', zoom: DEFAULT_ZOOM })
+  fitOverview(scroller)
+  say(scroller, { kind: 'default', zoom: state.zoom })
+}
+
+/** The middle of [el] in drawn px (unscaled, from the drawing's top left). */
+function centreOf(scroller: HTMLElement, el: Element, zoom: number): { x: number; y: number } | null {
+  const svg = scroller.querySelector('.component-diagram')
+  if (!svg) return null
+  const at = svg.getBoundingClientRect()
+  const box = el.getBoundingClientRect()
+  if (!(box.width > 0) && !(box.height > 0)) return null
+  return { x: (box.left + box.width / 2 - at.left) / zoom, y: (box.top + box.height / 2 - at.top) / zoom }
+}
+
+/**
+ * Where 1:1 centres (#120): the link with focus, else the selected one, else the point clicked,
+ * else (in a fitted view) the busiest component, else the middle of what is on screen.
+ */
+function actualSizeCentre(scroller: HTMLElement, point?: { x: number; y: number }): { x: number; y: number } {
+  const id = scroller.dataset.scenarioId ?? ''
+  const state = componentZoom(id)
+  const focused = document.activeElement?.closest('.edge-group')
+  const link = focused && scroller.contains(focused) ? focused : scroller.querySelector('.edge-group.is-selected')
+  const atLink = link ? centreOf(scroller, link, state.zoom) : null
+  if (atLink) return atLink
+  if (point) return point
+  const graph = mountedComponents(id)?.graph
+  const busiest = state.mode.kind !== 'zoomed' && graph ? busiestNode(graph) : null
+  const node = busiest
+    ? [...scroller.querySelectorAll<SVGGElement>('.component-node')].find((el) => el.dataset.component === busiest)
+    : undefined
+  return (node && centreOf(scroller, node, state.zoom)) ?? middleOf(scroller, state.zoom)
+}
+
+/** 1:1: the readable size, as a zoom of the user's own (out of Overview without going back). */
+function actualSize(scroller: HTMLElement, point?: { x: number; y: number }): void {
+  const state = componentZoom(scroller.dataset.scenarioId ?? '')
+  const centre = actualSizeCentre(scroller, point)
+  state.mode = zoomModeAfter(state.mode, { kind: 'step' })
+  applyZoom(scroller, READABLE_ZOOM, centre)
+  say(scroller, { kind: 'actual', zoom: READABLE_ZOOM })
 }
 
 /** Fit the whole drawing, from its top left, and keep the room it was fitted to. */
@@ -186,7 +295,7 @@ function enterOverview(scroller: HTMLElement): void {
   const state = componentZoom(id)
   if (!drawn || state.mode.kind === 'overview') return
   const room = roomOf(scroller)
-  if (!componentOverviewNeeded(drawn.width, drawn.height, room.width, room.height)) {
+  if (!componentOverviewNeeded(drawn.width, drawn.height, room.width, room.height, state.zoom)) {
     // Shift+1 (the button is disabled then) still gets an answer.
     say(scroller, { kind: 'fits', zoom: state.zoom })
     return
@@ -208,14 +317,57 @@ function leaveOverview(scroller: HTMLElement): void {
   say(scroller, { kind: 'overview-off', zoom: saved.zoom })
 }
 
+/** In Overview, or a default view too small to read: a click, tap or Enter goes to 1:1 there. */
+function tooSmallOrOverview(scenarioId: string): boolean {
+  return componentZoom(scenarioId).mode.kind === 'overview' || componentTooSmall(scenarioId)
+}
+
 /** What a Zoom button or key does to the Components view in [scroller]. */
 export function runComponentZoom(scroller: HTMLElement, action: ZoomAction): void {
   const state = componentZoom(scroller.dataset.scenarioId ?? '')
   if (action === 'in' || action === 'out') step(scroller, action === 'in' ? 1 : -1)
   else if (action === 'reset') reset(scroller)
   else if (action === 'leave') leaveOverview(scroller)
+  else if (action === 'actual') actualSize(scroller)
   else if (state.mode.kind === 'overview') leaveOverview(scroller)
   else enterOverview(scroller)
+}
+
+/**
+ * The side panel opening narrows the default view's room; fitting that would shrink the drawing
+ * under the panel's open item (#120), so the zoom holds while the panel is open, and the room it
+ * was fitted to is kept so that closing the panel finds it unchanged. A larger fit still happens,
+ * and Overview, which the user asked for, still fits.
+ */
+function heldWhilePanelOpen(scroller: HTMLElement, room: { width: number; height: number }): boolean {
+  const state = componentZoom(scroller.dataset.scenarioId ?? '')
+  const drawn = mountedComponents(scroller.dataset.scenarioId ?? '')
+  if (state.mode.kind !== 'default' || !drawn || !measured.has(scroller)) return false
+  if (!scroller.closest('.shell')?.classList.contains('with-inspector')) return false
+  return componentOverviewScale(drawn.width, drawn.height, room.width, room.height) < state.zoom - 0.005
+}
+
+/** Scrollports whose fit has been measured once since they were drawn. */
+const measured = new WeakSet<HTMLElement>()
+
+/**
+ * The default view and an Overview kept from before this drawing was made fit once first
+ * measured, and again whenever their room changes; a zoom of the user's own is kept as it is.
+ * A hidden view (width 0) waits until it is shown. Called on resize, and by the view switch so
+ * that what it says has the zoom the view is shown at.
+ */
+export function refitComponentZoom(scroller: HTMLElement): void {
+  if (scroller.clientWidth === 0) return
+  const state = componentZoom(scroller.dataset.scenarioId ?? '')
+  if (state.mode.kind !== 'zoomed') {
+    const fitted = measured.has(scroller) ? (fittedWidthOf(state.mode) ?? 0) : 0
+    const room = roomOf(scroller)
+    if (overviewRoomChanged(fitted, state.fittedHeight, room) && !heldWhilePanelOpen(scroller, room)) {
+      fitOverview(scroller)
+    }
+  }
+  measured.add(scroller)
+  syncComponentZoomControls(scroller)
 }
 
 export function isComponentScroll(el: Element): boolean {
@@ -223,8 +375,8 @@ export function isComponentScroll(el: Element): boolean {
 }
 
 /**
- * The Zoom group's buttons, Ctrl/Cmd+wheel, and a click or tap in Overview, for [scroller], and
- * Overview fitted again when its room changes.
+ * The Zoom group's buttons, Ctrl/Cmd+wheel, and a click, tap or Enter in Overview or a fit too
+ * small to read, for [scroller], and the fit kept up with its room.
  */
 export function bindComponentZoom(scroller: HTMLElement): void {
   const id = scroller.dataset.scenarioId ?? ''
@@ -233,7 +385,7 @@ export function bindComponentZoom(scroller: HTMLElement): void {
     btn.addEventListener('click', () => {
       if (btn.getAttribute('aria-disabled') === 'true') return
       const action = btn.dataset.zoom
-      if (action === 'in' || action === 'out' || action === 'reset' || action === 'overview') {
+      if (action === 'in' || action === 'out' || action === 'reset' || action === 'overview' || action === 'actual') {
         runComponentZoom(scroller, action)
       }
     })
@@ -254,27 +406,28 @@ export function bindComponentZoom(scroller: HTMLElement): void {
     (ev) => {
       const state = componentZoom(id)
       const svg = scroller.querySelector('.component-diagram')
-      if (state.mode.kind !== 'overview' || !svg) return
+      if (!svg || !tooSmallOrOverview(id)) return
       ev.preventDefault()
       ev.stopPropagation()
       const box = svg.getBoundingClientRect()
-      reset(scroller, { x: (ev.clientX - box.left) / state.zoom, y: (ev.clientY - box.top) / state.zoom })
+      actualSize(scroller, { x: (ev.clientX - box.left) / state.zoom, y: (ev.clientY - box.top) / state.zoom })
     },
     true,
   )
-  // An Overview kept from before this drawing was made fits once it is first measured, and again
-  // whenever its room changes. A hidden view (width 0) waits until it is shown.
-  let measured = false
-  const refit = (): void => {
-    if (scroller.clientWidth === 0) return
-    const state = componentZoom(id)
-    if (state.mode.kind === 'overview') {
-      const fitted = measured ? (fittedWidthOf(state.mode) ?? 0) : 0
-      if (overviewRoomChanged(fitted, state.fittedHeight, roomOf(scroller))) fitOverview(scroller)
-    }
-    measured = true
-    syncComponentZoomControls(scroller)
-  }
+  // Enter or Space on a link in a fit too small to read: 1:1 centred on it (actualSizeCentre takes
+  // the focused link), as a click there does, rather than opening the side panel (#120).
+  scroller.addEventListener(
+    'keydown',
+    (ev) => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return
+      if (!(ev.target as Element | null)?.closest?.('.edge-group') || !tooSmallOrOverview(id)) return
+      ev.preventDefault()
+      ev.stopPropagation()
+      actualSize(scroller)
+    },
+    true,
+  )
+  const refit = (): void => refitComponentZoom(scroller)
   onComponentResize(scroller, refit)
   refit()
 }

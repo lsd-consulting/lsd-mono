@@ -1,9 +1,18 @@
-// The Zoom group in the diagram toolbar (#94): [−] [N%] [+] [Overview], and keeping the readout,
-// the limits and the Overview button in step with the view. What they do is in zoom-controls.ts
-// for the sequence diagram and component-zoom.ts for the Components view (#105).
+// The Zoom group in the diagram toolbar (#94): [−] [N%] [+] [Overview] [1:1], and keeping the
+// readout, the limits, the Overview button and the Components too-small cue in step with the
+// view. Overview is a mode (Esc or the button again leaves it), so it keeps aria-pressed; 1:1
+// (#120) is a plain command, with none. What they do is in zoom-controls.ts for the sequence diagram
+// and component-zoom.ts for the Components view (#105).
 import { frameOf } from './geometry'
 import { type DiagramView, diagramState, diagramView } from './state'
-import { canStepZoom, overviewNeeded, zoomLabel } from '../diagram-view'
+import {
+  TOO_SMALL_TEXT,
+  TOO_SMALL_TEXT_TOUCH,
+  belowReadable,
+  canStepZoom,
+  overviewNeeded,
+  zoomLabel,
+} from '../diagram-view'
 import { escapeAttr, escapeHtml } from '../escape'
 
 const ICON =
@@ -24,6 +33,12 @@ const OVERVIEW_TITLE = 'Overview: whole diagram (Shift+1)'
 
 const OVERVIEW_FITS_TITLE = 'Whole diagram already fits'
 
+/**
+ * 1:1's name and tooltip (#120): 100% is the readable size. The name starts with the visible
+ * "1:1", with no brackets, which axe's label-in-name check (WCAG 2.5.3) fails on.
+ */
+export const ACTUAL_SIZE_NAME = '1:1 actual size, readable'
+
 function readoutName(zoom: number): string {
   return `Reset zoom, now ${zoomLabel(zoom)}`
 }
@@ -36,11 +51,26 @@ function disabledAttr(disabled: boolean): string {
 export interface ZoomShown {
   zoom: number
   overview: boolean
+  /**
+   * A Components fit (the default view or Overview, #120), not the user's own zoom: below the
+   * readable size it shows the too-small cue, and a tap or click there goes to 1:1.
+   */
+  fitted?: boolean
 }
 
-/** The zoom and Overview of a sequence diagram's view. */
+/** The zoom and Overview of a sequence diagram's view (which opens readable, at 95%). */
 export function sequenceZoomShown(view: DiagramView): ZoomShown {
   return { zoom: view.zoom, overview: view.mode.kind === 'overview' }
+}
+
+/** Whether the view is a fit below the readable size: the too-small cue shows (#120). */
+export function tooSmallShown(shown: ZoomShown): boolean {
+  return Boolean(shown.fitted) && belowReadable(shown.zoom)
+}
+
+/** The too-small cue, after the Zoom group in the Components toolbar; the status line says it too. */
+export function zoomHintHtml(shown: ZoomShown): string {
+  return `<span class="zoom-hint" aria-hidden="true"${tooSmallShown(shown) ? '' : ' hidden'}><span class="zoom-hint-key">${escapeHtml(TOO_SMALL_TEXT)}</span><span class="zoom-hint-touch">${escapeHtml(TOO_SMALL_TEXT_TOUCH)}</span></span>`
 }
 
 /** The Zoom group in a diagram toolbar. paintZoomControls keeps it up to date. */
@@ -50,6 +80,7 @@ export function zoomControlsHtml({ zoom, overview }: ZoomShown): string {
         <button type="button" class="zoom-readout" data-zoom="reset" aria-label="${escapeAttr(readoutName(zoom))}" title="Reset to default zoom (0)">${escapeHtml(zoomLabel(zoom))}</button>
         <button type="button" class="zoom-btn" data-zoom="in" aria-label="Zoom in" title="Zoom in (+)"${disabledAttr(!canStepZoom(zoom, 1))}>${plusSvg}</button>
         <button type="button" class="zoom-btn zoom-overview" data-zoom="overview" aria-label="Overview" aria-pressed="${overview}" title="${escapeAttr(OVERVIEW_TITLE)}">${scanSvg}<span class="zoom-overview-label" aria-hidden="true">Overview</span></button>
+        <button type="button" class="zoom-btn zoom-actual" data-zoom="actual" aria-label="${escapeAttr(ACTUAL_SIZE_NAME)}" title="${escapeAttr(`${ACTUAL_SIZE_NAME} (Shift+0)`)}"><span class="zoom-actual-label" aria-hidden="true">1:1</span></button>
       </div>`
 }
 
@@ -71,6 +102,8 @@ export function paintZoomControls(group: Element, shown: ZoomShown, useful: bool
   }
   setDisabled(group.querySelector('[data-zoom="out"]'), !canStepZoom(shown.zoom, -1))
   setDisabled(group.querySelector('[data-zoom="in"]'), !canStepZoom(shown.zoom, 1))
+  const hint = [...(group.parentElement?.children ?? [])].find((el) => el.classList.contains('zoom-hint'))
+  if (hint instanceof HTMLElement) hint.hidden = !tooSmallShown(shown)
   const overview = group.querySelector('[data-zoom="overview"]')
   if (!overview) return
   const enabled = shown.overview || useful
@@ -90,6 +123,6 @@ export function syncZoomControls(scrollport: HTMLElement): void {
   paintZoomControls(
     group,
     sequenceZoomShown(view),
-    overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth),
+    overviewNeeded(frameOf(diagram, view.hidden).total, scrollport.clientWidth, view.zoom),
   )
 }

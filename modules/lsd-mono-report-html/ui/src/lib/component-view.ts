@@ -4,7 +4,8 @@
 import type { Scenario } from '../types'
 import { type ComponentGraph, componentGraph } from './component-graph'
 import { renderComponentDiagram } from './component-diagram'
-import { escapeAttr } from './escape'
+import { escapeAttr, escapeHtml } from './escape'
+import { TOO_SMALL_DESCRIPTION } from './diagram-view'
 
 /** A drawn component diagram: its graph, for the links, and its natural size. */
 export interface MountedComponents {
@@ -33,7 +34,13 @@ export function componentViewHtml(scenario: Scenario, toolbarHtml: string, zoom 
     <div class="comp-diagram">
       <div class="seq-toolbar comp-toolbar" role="toolbar" aria-label="Diagram view">${toolbarHtml}</div>
       <div class="comp-scroll" data-scenario-id="${escapeAttr(scenario.id)}" style="--comp-w:${drawn.width * zoom}px;--comp-h:${drawn.height * zoom}px;--comp-natural-w:${drawn.width}px">${svg}</div>
+      <span class="comp-too-small" id="${escapeAttr(tooSmallDescriptionId(scenario.id))}" hidden>${escapeHtml(TOO_SMALL_DESCRIPTION)}</span>
     </div>`
+}
+
+/** The id of the text that describes [scenarioId]'s drawing while it is too small to read (#120). */
+export function tooSmallDescriptionId(scenarioId: string): string {
+  return `comp-too-small-${scenarioId}`
 }
 
 /** Which edges of [scroller] have more of the drawing past them, within a pixel. */

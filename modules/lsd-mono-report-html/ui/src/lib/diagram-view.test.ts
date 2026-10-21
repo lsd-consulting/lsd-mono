@@ -3,6 +3,7 @@ import type { DiagramEvent, Participant } from '../types'
 import { COL_GAP, LEFT_PAD, MESSAGE_LABEL_RISE, bodyHeight, diagramWidth, layoutRows } from './layout'
 import { sliceViewTop } from './sequence-diagram'
 import {
+  belowReadable,
   eventHiddenByColumns,
   fitToWidthScale,
   fittedView,
@@ -167,6 +168,15 @@ describe('Overview (#94)', () => {
     expect(overviewNeeded(1100, 0)).toBe(false)
   })
 
+  it('has something to do at a zoom of your own only while the drawing is wider than its room there (#120)', () => {
+    // In Overview (the fit) already: nothing more to do.
+    expect(overviewNeeded(2000, 1000, 0.5)).toBe(false)
+    expect(overviewNeeded(2000, 1000, 1)).toBe(true)
+    // At the floor it cannot fit any more.
+    expect(overviewNeeded(20000, 1000, 0.1)).toBe(false)
+    expect(overviewNeeded(20000, 1000, 0.25)).toBe(true)
+  })
+
   it('counts the lanes whose lifeline is in view', () => {
     expect(lanesInView([10, 150, 290, 430], 0, 300)).toBe(3)
     expect(lanesInView([10, 150, 290, 430], 140, 300)).toBe(3)
@@ -192,6 +202,27 @@ describe('zoom announcements (#94)', () => {
     )
     expect(zoomAnnouncement({ kind: 'overview-off', zoom: 0.95 })).toBe('Overview off, zoom 95%')
     expect(zoomAnnouncement({ kind: 'fits', zoom: 1 })).toBe('Whole diagram already fits, zoom 100%')
+    expect(zoomAnnouncement({ kind: 'actual', zoom: 1 })).toBe('Zoom 1:1, 100%')
+  })
+
+  it('adds the too-small hint to a Components fit below 100%, worded for touch there (#120)', () => {
+    const keys = 'Too small to read: press Shift+0.'
+    const touch = 'Too small to read: tap 1:1.'
+    expect(zoomAnnouncement({ kind: 'default', zoom: 0.4 }, { tooSmall: true })).toBe(`Default zoom, 40%. ${keys}`)
+    expect(zoomAnnouncement({ kind: 'default', zoom: 0.4 }, { tooSmall: true, coarse: true })).toBe(
+      `Default zoom, 40%. ${touch}`,
+    )
+    expect(
+      zoomAnnouncement({ kind: 'overview', zoom: 0.1, shown: 72, total: 100, unit: 'components' }, { tooSmall: true }),
+    ).toBe(`Overview, 10%, 72 of 100 components shown. ${keys}`)
+    // Not at 100%, not after a zoom of your own, and not in the sequence view (no option).
+    expect(zoomAnnouncement({ kind: 'default', zoom: 1 }, { tooSmall: true })).toBe('Default zoom, 100%')
+    expect(zoomAnnouncement({ kind: 'step', zoom: 0.5 }, { tooSmall: true })).toBe('Zoom 50%')
+    expect(zoomAnnouncement({ kind: 'overview', zoom: 0.48, shown: 14, total: 14 })).toBe(
+      'Overview, 48%, whole diagram',
+    )
+    expect(belowReadable(0.996)).toBe(false)
+    expect(belowReadable(0.99)).toBe(true)
   })
 })
 

@@ -1,6 +1,6 @@
 // Applying a zoom: committing a level with the scroll kept in proportion, the default (fitted)
 // view, the fit that follows the width, and Overview's whole-width fit.
-import { fittedView, settleFitWidth, overviewScale } from '../diagram-view'
+import { READABLE_ZOOM, fittedView, settleFitWidth, overviewScale } from '../diagram-view'
 import type { FittedView } from '../diagram-view'
 import { DEFAULT_VIEWPORT, HEADER_BLOCK_H } from '../layout'
 import { scrollBehavior } from '../media'
@@ -73,6 +73,36 @@ export function showDefaultView(scrollport: HTMLElement, centre?: { x: number; y
   scrollZoomed(scrollport, pin, true, scrollBehavior())
   view.mode = zoomModeAfter(view.mode, { kind: 'fitted', width: scrollport.clientWidth })
   return scale
+}
+
+/**
+ * 1:1 (#120): the readable size, 100%, as a zoom of the user's own (out of Overview without going
+ * back, like − and +). Centred on [centre] (drawn px, from the top of the body) when given; else
+ * the middle of what is on screen stays in the middle. Returns the zoom, or null with no diagram.
+ */
+export function showActualSize(scrollport: HTMLElement, centre?: { x: number; y: number }): number | null {
+  const id = scrollport.dataset.scenarioId
+  if (!id || !diagramState.mounted.get(id)) return null
+  const view = diagramView(id)
+  const prev = view.zoom || 1
+  const middleX = (scrollport.scrollLeft + scrollport.clientWidth / 2) / prev
+  view.mode = zoomModeAfter(view.mode, { kind: 'step' })
+  if (centre) {
+    const header = HEADER_BLOCK_H * READABLE_ZOOM
+    commitZoom(
+      scrollport,
+      READABLE_ZOOM,
+      {
+        top: Math.max(0, centre.y * READABLE_ZOOM - Math.max(0, scrollport.clientHeight - header) / 2),
+        left: Math.max(0, centre.x * READABLE_ZOOM - scrollport.clientWidth / 2),
+      },
+      scrollBehavior(),
+    )
+  } else {
+    commitZoom(scrollport, READABLE_ZOOM, undefined, scrollBehavior())
+    scrollport.scrollTo({ left: Math.max(0, middleX * READABLE_ZOOM - scrollport.clientWidth / 2) })
+  }
+  return READABLE_ZOOM
 }
 
 /**

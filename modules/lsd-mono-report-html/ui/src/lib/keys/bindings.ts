@@ -214,7 +214,7 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
     kbd: '<kbd>+</kbd>',
     single: true,
     help: (kbdHtml) =>
-      `In a diagram, ${kbdHtml('zoom-in')}/${kbdHtml('zoom-out')} zoom, ${kbdHtml('zoom-reset')} default zoom, ${kbdHtml('overview')} overview (${kbdHtml('leave-overview')} leaves it, a click in it zooms in there)`,
+      `In a diagram, ${kbdHtml('zoom-in')}/${kbdHtml('zoom-out')} zoom, ${kbdHtml('zoom-reset')} default zoom, ${kbdHtml('overview')} overview (${kbdHtml('leave-overview')} leaves it, a click in it zooms in there), ${kbdHtml('actual-size')} actual size (1:1, readable)`,
     matches: (e, c) => zoomKey(e, c) === 'in',
   },
   { id: 'zoom-out', scope: 'diagram', kbd: '<kbd>−</kbd>', single: true, matches: (e, c) => zoomKey(e, c) === 'out' },
@@ -233,6 +233,13 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
     matches: (e, c) => zoomKey(e, c) === 'overview',
   },
   { id: 'leave-overview', scope: 'diagram', kbd: '<kbd>Esc</kbd>', matches: (e, c) => zoomKey(e, c) === 'leave' },
+  {
+    id: 'actual-size',
+    scope: 'diagram',
+    kbd: '<kbd>Shift</kbd>+<kbd>0</kbd>',
+    single: true,
+    matches: (e, c) => zoomKey(e, c) === 'actual',
+  },
   {
     id: 'scroll-sideways',
     scope: 'diagram',

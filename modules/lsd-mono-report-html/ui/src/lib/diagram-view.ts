@@ -20,6 +20,16 @@ export const AUTO_FIT_MAX_ZOOM = 1
 export const FIT_MIN_ZOOM = 0.95
 /** Overview fits a wide diagram's whole width, but never below this (#94). */
 export const OVERVIEW_MIN_ZOOM = 0.1
+/** 1:1 (Shift+0, #120): the readable size, 100%, where labels are at their authored size. */
+export const READABLE_ZOOM = 1
+
+/**
+ * Whether [zoom] is below the readable size. A Components fit there (its default view or
+ * Overview) says so and points to 1:1, and a tap, click or Enter on the drawing goes to 1:1 (#120).
+ */
+export function belowReadable(zoom: number): boolean {
+  return zoom < READABLE_ZOOM - 0.005
+}
 /** The levels + and − (and Ctrl/Cmd+wheel) step through, from MIN_ZOOM to MAX_ZOOM. */
 export const ZOOM_LEVELS: readonly number[] = [
   0.25,
@@ -78,11 +88,12 @@ export function overviewScale(contentWidth: number, viewportWidth: number): numb
 }
 
 /**
- * Whether Overview has anything to show: the default view never goes below FIT_MIN_ZOOM, so a
- * diagram that fits at that scale is already whole on screen there.
+ * Whether Overview (the fit) has anything to do at [zoom]: the drawing is wider than the
+ * scrollport there, and Overview's scale is smaller (at the floor it cannot fit any more).
  */
-export function overviewNeeded(contentWidth: number, viewportWidth: number): boolean {
-  return contentWidth > 0 && viewportWidth > 0 && contentWidth * FIT_MIN_ZOOM > viewportWidth + 0.5
+export function overviewNeeded(contentWidth: number, viewportWidth: number, zoom = FIT_MIN_ZOOM): boolean {
+  if (!(contentWidth > 0) || !(viewportWidth > 0)) return false
+  return contentWidth * zoom > viewportWidth + 0.5 && overviewScale(contentWidth, viewportWidth) < zoom - 0.005
 }
 
 /** How many of the lanes at [laneXs] (lifelines, drawn px) lie within [left, left + width], ends included. */
@@ -97,18 +108,48 @@ export type ZoomChange =
   | { kind: 'overview'; zoom: number; shown: number; total: number; unit?: 'lanes' | 'components' }
   | { kind: 'overview-off'; zoom: number }
   | { kind: 'fits'; zoom: number }
+  | { kind: 'actual'; zoom: number }
 
-export function zoomAnnouncement(change: ZoomChange): string {
+/**
+ * What a Components fit below the readable size says (#120), in its cue and its status line
+ * alike: how to get to 1:1 by key, or on touch (a coarse pointer). Short enough for a 320px phone.
+ */
+export const TOO_SMALL_TEXT = 'Too small to read: press Shift+0'
+export const TOO_SMALL_TEXT_TOUCH = 'Too small to read: tap 1:1'
+/**
+ * The drawing's description while a Components fit is too small to read (#120 round 2): the
+ * visible cue is aria-hidden, so a screen reader on a page that opens there hears it from here.
+ */
+export const TOO_SMALL_DESCRIPTION = 'Too small to read. Press Shift+0, or Enter on an item, to view at actual size.'
+
+export function tooSmallHint(coarse: boolean): string {
+  return coarse ? TOO_SMALL_TEXT_TOUCH : TOO_SMALL_TEXT
+}
+
+export interface ZoomAnnouncementOptions {
+  /** A fit below the readable size says so and how to get to 1:1 (the Components view, #120). */
+  tooSmall?: boolean
+  /** A touch screen. */
+  coarse?: boolean
+}
+
+export function zoomAnnouncement(
+  change: ZoomChange,
+  { tooSmall = false, coarse = false }: ZoomAnnouncementOptions = {},
+): string {
   const level = zoomLabel(change.zoom)
+  const hint = tooSmall && belowReadable(change.zoom) ? `. ${tooSmallHint(coarse)}.` : ''
   switch (change.kind) {
     case 'step':
       return `Zoom ${level}`
+    case 'actual':
+      return `Zoom 1:1, ${level}`
     case 'default':
-      return `Default zoom, ${level}`
+      return `Default zoom, ${level}${hint}`
     case 'overview':
       return change.shown >= change.total
-        ? `Overview, ${level}, whole diagram`
-        : `Overview, ${level}, ${change.shown} of ${change.total} ${change.unit ?? 'lanes'} shown`
+        ? `Overview, ${level}, whole diagram${hint}`
+        : `Overview, ${level}, ${change.shown} of ${change.total} ${change.unit ?? 'lanes'} shown${hint}`
     case 'overview-off':
       return `Overview off, zoom ${level}`
     case 'fits':
