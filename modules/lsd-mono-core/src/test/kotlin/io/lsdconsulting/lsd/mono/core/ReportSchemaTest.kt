@@ -1,11 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import com.networknt.schema.InputFormat
-import com.networknt.schema.Schema
-import com.networknt.schema.SchemaLocation
-import com.networknt.schema.SchemaRegistry
-import com.networknt.schema.SchemaRegistryConfig
-import com.networknt.schema.SpecificationVersion
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.Participant
@@ -17,6 +11,9 @@ import io.lsdconsulting.lsd.mono.core.model.ReportSchema
 import io.lsdconsulting.lsd.mono.core.model.ReportSource
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
+import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas.Document
+import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas.between
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -62,6 +59,7 @@ class ReportSchemaTest {
 
         val index = tempDir.resolve("index.html").readText()
         assertValid(this.index, between(index, "window.__LSD_INDEX__=", ";</script>"), "index.html")
+        assertEquals(4, ReportSchemas.assertOutputValid(tempDir), "the JSON, page, data script and index")
     }
 
     @Test
@@ -192,20 +190,19 @@ class ReportSchemaTest {
         lsd.completeScenario("failed", "boom", Status.ERROR, ScenarioError("Failed", "expected 1 but was 2", "at Test.kt:1"))
     }
 
-    // Formats are annotations by default in 2020-12: assert them, so a time must be a date-time.
-    private val registry =
-        SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12) { builder ->
-            builder
-                .schemaRegistryConfig(SchemaRegistryConfig.builder().formatAssertionsEnabled(true).build())
-                .schemas(listOf(REPORT_FILE, INDEX_FILE).associate { idOf(it) to SCHEMA_DIR.resolve(it).readText() })
-        }
-    private val report: Schema = registry.getSchema(SchemaLocation.of(idOf(REPORT_FILE)))
-    private val index: Schema = registry.getSchema(SchemaLocation.of(idOf(INDEX_FILE)))
+    private val report = Document.REPORT
+    private val index = Document.INDEX
 
-    private fun errors(schema: Schema, json: String) = schema.validate(json, InputFormat.JSON)
+    private fun errors(
+        document: Document,
+        json: String,
+    ) = ReportSchemas.errors(document, json)
 
-    private fun assertValid(schema: Schema, json: String, what: String) =
-        assertEquals(emptyList<String>(), errors(schema, json).map { "${it.instanceLocation}: ${it.message}" }, what)
+    private fun assertValid(
+        document: Document,
+        json: String,
+        what: String,
+    ) = ReportSchemas.assertValid(document, json, what)
 
     /** [json] after [change], which edits its parsed root object. */
     private fun edit(
@@ -219,17 +216,11 @@ class ReportSchemaTest {
 
     private fun event(root: JsonNode) = scenario(root).get("events").get(0) as ObjectNode
 
-    /** The text in [text] between [start] and the next [end]. */
-    private fun between(text: String, start: String, end: String): String {
-        val from = text.indexOf(start).also { assertTrue(it >= 0, "no $start") } + start.length
-        return text.substring(from, text.indexOf(end, from).also { assertTrue(it >= 0, "no $end after $start") })
-    }
-
     private companion object {
         const val TITLE = "Schema"
         const val REPORT_FILE = "lsd-report.schema.json"
         const val INDEX_FILE = "lsd-index.schema.json"
-        val SCHEMA_DIR: Path = Path.of("../lsd-mono-report-schema")
+        val SCHEMA_DIR: Path = ReportSchemas.DIR
         val MAPPER: JsonMapper = JsonMapper.builder().build()
 
         fun idOf(file: String) = "https://lsd-consulting.github.io/lsd-mono/schema/${ReportSchema.VERSION}/$file"

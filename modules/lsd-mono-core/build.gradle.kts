@@ -26,6 +26,8 @@ dependencies {
 
     testFixturesImplementation(platform(libs.junit.bom))
     testFixturesImplementation(libs.junit.jupiter.api)
+    // ReportSchemas: the integration modules' tests validate their output too.
+    testFixturesImplementation(libs.json.schema.validator)
 }
 
 // The test fixtures are for this repository's tests: keep them out of the published component, so

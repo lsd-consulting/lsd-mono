@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
+import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -47,6 +48,13 @@ class LsdExtensionOutcomesTest {
     @AfterEach
     fun clearContext() {
         LsdContext.instance.clear()
+    }
+
+    @Test
+    fun `what the extension writes follows the report schema`() {
+        execute(LsdOutcomeFixtures::class.java)
+
+        assertTrue(ReportSchemas.assertOutputValid(tempDir) >= 3, "the report JSON, its page and its data script")
     }
 
     @Test

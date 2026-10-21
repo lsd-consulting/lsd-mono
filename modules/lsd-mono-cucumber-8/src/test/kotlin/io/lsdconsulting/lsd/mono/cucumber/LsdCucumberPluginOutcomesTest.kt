@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.cucumber
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -162,6 +163,13 @@ class LsdCucumberPluginOutcomesTest {
         val index = tempDir.resolve("index.html")
         assertTrue(index.exists())
         assertTrue(index.readText().contains("outcomes-"), "index links the outcomes report")
+    }
+
+    @Test
+    fun `what the plugin writes follows the report schema`() {
+        runOutcomes()
+
+        assertTrue(ReportSchemas.assertOutputValid(tempDir) >= 4, "the report JSON, its page, its data script and the index")
     }
 
     /** The scenario's error as (headline, message), JSON escapes left in; null when it has none. */

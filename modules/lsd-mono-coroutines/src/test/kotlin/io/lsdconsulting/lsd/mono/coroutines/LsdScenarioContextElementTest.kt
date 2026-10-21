@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.coroutines
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -46,11 +47,15 @@ class LsdScenarioContextElementTest {
     /** A running scenario that is not bound to the calling thread. */
     private fun running(reportKey: String): LsdScenario = lsd.beginScenario(reportKey = reportKey, bindCurrentThread = false)
 
-    /** Complete [scenario] and return the labels of the messages in its report, in order. */
+    /**
+     * Complete [scenario] and return the labels of the messages in its report, in order. The
+     * report must follow the report schema.
+     */
     private fun labelsOf(scenario: LsdScenario): List<String> {
         val reportKey = checkNotNull(scenario.reportKey)
         scenario.complete(reportKey)
         val json = lsd.completeReport(reportKey, reportKey).reportJson.readText()
+        ReportSchemas.assertValid(ReportSchemas.Document.REPORT, json, reportKey)
         return Regex(""""label": "([^"]*)"""").findAll(json).map { it.groupValues[1] }.toList()
     }
 
