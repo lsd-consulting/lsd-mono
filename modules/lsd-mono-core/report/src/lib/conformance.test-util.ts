@@ -23,6 +23,11 @@ export interface Fixture {
   /** For an invalid file: the JSON Pointer of one place the schema rejects. */
   rejectedAt?: string
   source: 'lsd-mono-core' | 'captured' | 'hand-written' | 'generated'
+  /**
+   * What the page shows for a report it boots though the schema rejects it or it is not one to
+   * show: the report, the upgrade page or the cannot-open page. Absent: a valid report is shown.
+   */
+  page?: 'report' | 'upgrade' | 'cannot-open'
   about: string
 }
 

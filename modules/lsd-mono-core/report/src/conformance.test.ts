@@ -1,14 +1,17 @@
 // @vitest-environment happy-dom
 // The shared test reports (modules/lsd-mono-report-schema/conformance) from the report UI's side:
 // the schema accepts and rejects what the manifest says, and the whole page boots on every report
-// the schema accepts, showing each scenario in both views and the Metrics panel, with no error and
-// no markup made from report text; on a report of a newer major version, the upgrade page.
+// the schema accepts and on each the manifest gives a `page`, showing each scenario in both views
+// and the Metrics panel, with no error and no markup made from report text; on a report of a newer
+// major version the upgrade page, and on one whose version is not one the cannot-open page. The
+// index page boots on every index manifest and opens its report.
 // lsd-mono-core's ConformanceTest checks the producer's side.
 import { readdirSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CONFORMANCE, fixtureData, fixtures, type Fixture } from './lib/conformance.test-util'
 import { schemaErrors } from './lib/report-schema.test-util'
 import { schemaFit } from './lib/schema-version'
+import type { IndexManifest } from './lib/report-index'
 import type { Report } from './types'
 
 /** [data]'s errors against the fixture's schema, as instance paths. */
@@ -19,10 +22,15 @@ function rejected(fixture: Fixture, data: unknown): string[] {
 }
 
 const checked = fixtures.filter((f) => f.schema)
-const reports = fixtures.filter((f) => f.schema === 'lsd-report.schema.json' && f.valid)
 const fit = (fixture: Fixture) => schemaFit((fixtureData(fixture) as { schemaVersion?: unknown }).schemaVersion)
-const pages = reports.filter((f) => fit(f).kind !== 'newer-major')
-const unreadable = reports.filter((f) => fit(f).kind === 'newer-major')
+/** What the page shows for [fixture]: its manifest's `page`, or the report for a valid one. */
+const pageOf = (fixture: Fixture) => fixture.page ?? 'report'
+/** Every report the page boots on: the valid ones, and the others the manifest gives a page. */
+const booted = fixtures.filter((f) => f.schema === 'lsd-report.schema.json' && (f.valid || f.page))
+const pages = booted.filter((f) => pageOf(f) === 'report')
+const unreadable = booted.filter((f) => pageOf(f) !== 'report')
+const indexes = fixtures.filter((f) => f.schema === 'lsd-index.schema.json' && f.valid)
+const HEADINGS = { upgrade: 'Upgrade lsd-mono to open this report', 'cannot-open': 'This report cannot be opened' }
 
 describe('the shared test reports', () => {
   it('are all in the manifest, and the manifest names no missing file', () => {
@@ -79,9 +87,23 @@ describe('the page on each shared report', () => {
     await import('./main')
   }
 
-  it('include a report of a newer major version, and one of a newer minor version', () => {
-    expect(unreadable.map((f) => f.file)).toEqual(['reports/next-major.json'])
+  it('include a newer major and minor version, a version that is not one, and a report from before versions', () => {
+    expect(unreadable.map((f) => [f.file, pageOf(f)])).toEqual([
+      ['reports/next-major.json', 'upgrade'],
+      ['invalid/malformed-version.json', 'cannot-open'],
+    ])
     expect(pages.filter((f) => fit(f).kind === 'newer-minor').map((f) => f.file)).toEqual(['reports/future-minor.json'])
+    expect(pages.filter((f) => !f.valid).map((f) => f.file)).toEqual(['invalid/missing-schema-version.json'])
+  })
+
+  it.each(booted.map((f) => [f.file, f] as const))('the manifest says what the page shows for %s', (_, fixture) => {
+    const expected = {
+      readable: 'report',
+      'newer-minor': 'report',
+      'newer-major': 'upgrade',
+      'not-a-version': 'cannot-open',
+    }
+    expect(pageOf(fixture)).toBe(expected[fit(fixture).kind])
   })
 
   it.each(pages.map((f) => [f.file, f] as const))('shows every scenario of %s', async (_, fixture) => {
@@ -108,10 +130,47 @@ describe('the page on each shared report', () => {
     expect(errors).toEqual([])
   })
 
-  it.each(unreadable.map((f) => [f.file, f] as const))('shows the upgrade page for %s', async (_, fixture) => {
+  it.each(unreadable.map((f) => [f.file, f] as const))('shows only the version page for %s', async (_, fixture) => {
     await boot(fixture)
-    expect(document.querySelector('h1')?.textContent).toBe('Upgrade lsd-mono to open this report')
+    expect(document.querySelector('h1')?.textContent).toBe(HEADINGS[pageOf(fixture) as keyof typeof HEADINGS])
     expect(document.querySelector('.scenario-card')).toBeNull()
     expect(errors).toEqual([])
   })
+
+  it('include an index manifest', () => {
+    expect(indexes.map((f) => f.file)).toEqual(['indexes/status-mix.json'])
+  })
+
+  // Each index entry's data is the shared report of the same title (status-mix is the index
+  // lsd-mono-core writes for multi-scenario-status).
+  it.each(indexes.map((f) => [f.file, f] as const))(
+    'boots the index page on %s and opens its reports',
+    async (_, fixture) => {
+      vi.resetModules()
+      document.body.innerHTML = '<div id="app"></div>'
+      window.location.hash = ''
+      // The report pages' boots leave their report behind, and a page with one is not an index page.
+      delete window.__LSD_REPORT__
+      const manifest = fixtureData(fixture) as IndexManifest
+      const byTitle = new Map(pages.map((f) => [(fixtureData(f) as Report).title, fixtureData(f) as Report]))
+      window.__LSD_INDEX__ = manifest
+      window.__LSD_REPORTS__ = Object.fromEntries(
+        manifest.reports.map((entry) => [entry.id, { report: byTitle.get(entry.title)!, payloadsSrc: null }]),
+      )
+      const { openReport } = await import('./app/nav')
+      await import('./main')
+      for (const entry of manifest.reports) {
+        expect(byTitle.has(entry.title), `a shared report titled ${entry.title}`).toBe(true)
+        await openReport(entry.id)
+        expect(document.querySelector('.report-hero')?.querySelector('h1')?.textContent).toBe(entry.title)
+        expect(entry.scenarios.map((sc) => sc.title)).toContain(document.querySelector('#scenario-title')?.textContent)
+        const nav = document.querySelector('#scenario-nav')?.textContent ?? ''
+        for (const scenario of entry.scenarios) expect(nav, scenario.id).toContain(scenario.title)
+      }
+      expect(injected(document.body)).toEqual([])
+      expect(errors).toEqual([])
+      delete window.__LSD_INDEX__
+      delete window.__LSD_REPORTS__
+    },
+  )
 })

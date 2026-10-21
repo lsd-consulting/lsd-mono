@@ -1,5 +1,5 @@
 {
-  "$comment": "Every file in the shared test reports: what it is for, which schema it is checked against, whether that schema must accept it, and who writes it. lsd-mono-core's ConformanceTest and the report UI's conformance.test.ts both fail on a file this list does not name. source: lsd-mono-core (its tests write the file and compare their output with it), captured (copied from lsd-mono-core output once and kept for the checks), hand-written, or generated (a script makes it).",
+  "$comment": "Every file in the shared test reports: what it is for, which schema it is checked against, whether that schema must accept it, and who writes it. lsd-mono-core's ConformanceTest and the report UI's conformance.test.ts both fail on a file this list does not name. source: lsd-mono-core (its tests write the file and compare their output with it), captured (copied from lsd-mono-core output once and kept for the checks), hand-written, or generated (a script makes it). page, for a report the UI boots though the schema rejects it or a reader would not show it: what the page shows (report, upgrade or cannot-open).",
   "fixtures": [
     {
       "file": "reports/minimal.json",
@@ -104,6 +104,7 @@
       "schema": "lsd-report.schema.json",
       "valid": true,
       "source": "hand-written",
+      "page": "upgrade",
       "about": "schemaVersion 1.0.0 in a 0.1-shaped report. The 0.x schema does not pin the major, so it accepts it; the UI shows a page saying to upgrade lsd-mono instead of the report."
     },
     {
@@ -131,7 +132,8 @@
       "valid": false,
       "rejectedAt": "",
       "source": "hand-written",
-      "about": "No schemaVersion."
+      "page": "report",
+      "about": "No schemaVersion: a report from before the schema. The schema rejects it, as a report must name its version now; the UI opens it as usual."
     },
     {
       "file": "invalid/unknown-status.json",
@@ -172,6 +174,23 @@
       "rejectedAt": "/scenarios/0/participants/0/name",
       "source": "hand-written",
       "about": "A participant with an empty name. Ids and participant names are never empty."
+    },
+    {
+      "file": "invalid/malformed-version.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/schemaVersion",
+      "source": "hand-written",
+      "page": "cannot-open",
+      "about": "schemaVersion v2, which is not a major.minor.patch version. The schema rejects it; the UI shows a page saying the report cannot be opened, not the upgrade page."
+    },
+    {
+      "file": "invalid/empty-id.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/scenarios/0/id",
+      "source": "hand-written",
+      "about": "A scenario with an empty id. Ids are never empty, as their references and links would not work."
     },
     {
       "file": "invalid/hostile.json",
