@@ -1,5 +1,11 @@
 package io.lsdconsulting.lsd.mono.core
 
+import com.networknt.schema.InputFormat
+import com.networknt.schema.Schema
+import com.networknt.schema.SchemaLocation
+import com.networknt.schema.SchemaRegistry
+import com.networknt.schema.SchemaRegistryConfig
+import com.networknt.schema.SpecificationVersion
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.Participant
@@ -134,6 +140,24 @@ class ReportSchemaTest {
         }
     }
 
+    /**
+     * The schema leaves the type-like enums open (a `Known*` list or any string), so a newer
+     * producer's values fit, and a typo fits too. lsd-mono's own writer is held to the known lists:
+     * everything it writes follows a copy of the schema with each open enum closed to its list.
+     */
+    @Test
+    fun `the writer writes only the values the schema knows`() {
+        val lsd = LsdContext()
+        everything(lsd)
+        lsd.completeReport(TITLE)
+        val json = tempDir.resolve("${ReportWriter.reportFileStem(TITLE)}-report.json").readText()
+        assertEquals(emptyList<String>(), strictErrors(json), "the writer's report follows the closed schema")
+
+        val typo = edit(json) { participant(this).put("type", "QUEU") }
+        assertValid(report, typo, "the open schema takes an unknown participant type")
+        assertTrue(strictErrors(typo).isNotEmpty(), "the closed schema rejects it")
+    }
+
     @Test
     fun `the writer's schema version is the schema files'`() {
         listOf(REPORT_FILE, INDEX_FILE).forEach { file ->
@@ -216,12 +240,39 @@ class ReportSchemaTest {
 
     private fun event(root: JsonNode) = scenario(root).get("events").get(0) as ObjectNode
 
+    /** [json]'s errors against the report schema with every open enum closed to its `Known*` list. */
+    private fun strictErrors(json: String): List<String> =
+        STRICT.validate(json, InputFormat.JSON).map { "${it.instanceLocation}: ${it.message}" }
+
     private companion object {
         const val TITLE = "Schema"
         const val REPORT_FILE = "lsd-report.schema.json"
         const val INDEX_FILE = "lsd-index.schema.json"
         val SCHEMA_DIR: Path = ReportSchemas.DIR
         val MAPPER: JsonMapper = JsonMapper.builder().build()
+        const val STRICT_ID = "https://lsd-consulting.github.io/lsd-mono/schema/test/lsd-report.closed.schema.json"
+
+        /** The report schema with each `anyOf: [Known*, string]` replaced by its `Known*` list. */
+        val STRICT: Schema by lazy {
+            val root = MAPPER.readTree(SCHEMA_DIR.resolve(REPORT_FILE).readText()) as ObjectNode
+            val defs = root.get("\$defs") as ObjectNode
+            val open =
+                defs.properties().mapNotNull { (name, node) ->
+                    node
+                        .get("anyOf")
+                        ?.firstOrNull { it.has("\$ref") && it.get("\$ref").asString().contains("/Known") }
+                        ?.let { name to it.get("\$ref").asString() }
+                }
+            assertTrue(open.size >= 7, "the open enums found: $open")
+            open.forEach { (name, known) -> defs.set(name, MAPPER.createObjectNode().put("\$ref", known)) }
+            root.put("\$id", STRICT_ID)
+            SchemaRegistry
+                .withDefaultDialect(SpecificationVersion.DRAFT_2020_12) { builder ->
+                    builder
+                        .schemaRegistryConfig(SchemaRegistryConfig.builder().formatAssertionsEnabled(true).build())
+                        .schemas(mapOf(STRICT_ID to root.toString()))
+                }.getSchema(SchemaLocation.of(STRICT_ID))
+        }
 
         fun idOf(file: String) = "https://lsd-consulting.github.io/lsd-mono/schema/${ReportSchema.VERSION}/$file"
 

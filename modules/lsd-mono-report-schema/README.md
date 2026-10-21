@@ -60,7 +60,9 @@ be opened. A report without `schemaVersion` is from before the schema and is sho
 
 - **lsd-mono-core** writes `schemaVersion` and validates real output against both schemas in
   `ReportSchemaTest` (networknt json-schema-validator, test scope only, formats asserted). The
-  test also checks that each enum lists exactly the writer's values.
+  test also checks that each enum lists exactly the writer's values, and that the writer writes
+  only known values: its output follows a copy of the schema with every open enum closed to its
+  `Known*` list, so a typo such as `QUEU` fails there though the schema itself takes it.
 - **The report UI** (`modules/lsd-mono-core/report`) generates its TypeScript types from the
   schemas into `src/generated/` with `npm run types:generate` (json-schema-to-typescript). The
   generated files are committed, and `npm run types:check`, on Gradle's `check` through
