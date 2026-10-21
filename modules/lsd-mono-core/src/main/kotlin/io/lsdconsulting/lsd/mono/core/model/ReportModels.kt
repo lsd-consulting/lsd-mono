@@ -10,11 +10,27 @@ import io.lsdconsulting.lsd.mono.core.json.JsonValue
 import io.lsdconsulting.lsd.mono.core.json.anyToJson
 import io.lsdconsulting.lsd.mono.core.json.render
 import io.lsdconsulting.lsd.mono.core.json.renderCompact
+import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
+import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
+import io.lsdconsulting.lsd.mono.report.model.EventJson
+import io.lsdconsulting.lsd.mono.report.model.LifelineEventJson
+import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
+import io.lsdconsulting.lsd.mono.report.model.NoteEventJson
+import io.lsdconsulting.lsd.mono.report.model.ParticipantJson
+import io.lsdconsulting.lsd.mono.report.model.ReportJson
+import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
+import io.lsdconsulting.lsd.mono.report.model.ReportSchema
+import io.lsdconsulting.lsd.mono.report.model.ScenarioErrorJson
+import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
+import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
+import io.lsdconsulting.lsd.mono.report.model.SpacerEventJson
 
-/**
- * The report JSON, as the report schema (`modules/lsd-mono-report-schema/lsd-report.schema.json`)
- * describes it. The report UI's types are generated from that schema.
+/*
+ * The report JSON as text, and the index entries. The report itself is lsd-mono-report-model's
+ * ReportJson, as the schema (`modules/lsd-mono-report-schema/lsd-report.schema.json`) describes it.
  */
+
+/** A report as the index lists it. */
 internal data class ReportFile(
     /** The page the index links to: the report's interactive diagram. */
     val filename: String,
@@ -59,295 +75,8 @@ internal data class ScenarioCounts(
     }
 }
 
-internal data class ReportOptionsJson(
-    /** When false, scenario `metrics` are empty. Default true. */
-    val metricsEnabled: Boolean = true,
-    /** Character width used to truncate labels in the shell and in metric summaries. */
-    val labelMaxWidth: Int = 200,
-    /** Whether the page may send the usage ping. The page also requires a release `generator`. */
-    val usagePing: Boolean = true,
-    /** The integration that wrote the report: one of [ReportSource.ALL]. */
-    val source: String = ReportSource.API,
-)
-
-/** Which integration wrote a report, counted by the usage ping as `source-<name>`. */
-internal object ReportSource {
-    const val JUNIT: String = "junit"
-    const val CUCUMBER: String = "cucumber"
-    const val API: String = "api"
-    val ALL: List<String> = listOf(JUNIT, CUCUMBER, API)
-
-    /** [name] when it is a known source, else [API]. */
-    fun of(name: String?): String = name?.takeIf { it in ALL } ?: API
-}
-
-internal data class ReportJson(
-    val title: String,
-    val generatedAt: String,
-    val generator: String,
-    /**
-     * Worst scenario outcome: `error` > `warn` > `success`
-     * (legacy ERROR > WARN > SUCCESS). `success` when there are no scenarios.
-     */
-    val status: String,
-    val options: ReportOptionsJson = ReportOptionsJson(),
-    val scenarios: List<ScenarioJson>,
-)
-
-internal data class ScenarioErrorJson(
-    val headline: String,
-    val message: String,
-    val stack: String? = null,
-)
-
-internal data class ScenarioJson(
-    val id: String,
-    val title: String,
-    val status: String,
-    val description: String,
-    val facts: List<FactJson>,
-    val metrics: List<MetricJson> = emptyList(),
-    val participants: List<ParticipantJson> = emptyList(),
-    val events: List<EventJson> = emptyList(),
-    /** Present for failed/aborted scenarios. Omitted from JSON when null. */
-    val error: ScenarioErrorJson? = null,
-    val timing: ScenarioTimingJson? = null,
-)
-
-/** Scenario-level timing: accuracy, coverage, sources and clock ordering. */
-internal data class ScenarioTimingJson(
-    val accuracy: String,
-    val measuredCoverage: Double?,
-    val pairingCoverage: Double?,
-    val sources: List<String>,
-    val wallClockMs: Double?,
-    val clockOrdering: String,
-    val clockOrdered: Int,
-    val warnings: List<WarningJson>,
-    val reorderedByClock: List<String>,
-    val pairAccuracy: List<PairAccuracyJson> = emptyList(),
-)
-
-/** A timing warning: `kind` (for example `LONGER_THAN_PARENT`) and its sentence. */
-internal data class WarningJson(
-    val kind: String,
-    val message: String,
-)
-
-/** Accuracy of the messages between two participants. */
-internal data class PairAccuracyJson(
-    val from: String,
-    val to: String,
-    val accuracy: String,
-)
-
-/** Trace ids on a message. */
-internal data class TraceJson(
-    val traceId: String,
-    val spanId: String?,
-    val parentSpanId: String?,
-)
-
 /** Fractional milliseconds, to the microsecond, without trailing zeros ([formatMs]). */
 internal fun msNumber(ms: Double): JsonNumber = JsonNumber(formatMs(ms))
-
-internal data class FactJson(
-    val key: String,
-    val value: String,
-)
-
-internal data class MetricJson(
-    val key: String,
-    val value: String,
-)
-
-internal data class ParticipantJson(
-    val id: String,
-    val name: String,
-    val type: String = "PARTICIPANT",
-    val alias: String? = null,
-    val colour: String? = null,
-)
-
-internal sealed class EventJson {
-    internal abstract fun toJsonValue(): JsonValue
-}
-
-internal data class MessageEventJson(
-    val id: String,
-    val from: String,
-    val to: String,
-    val label: String,
-    val type: String,
-    val colour: String? = null,
-    /** Fractional ms. */
-    val durationMs: Double? = null,
-    val data: Any? = null,
-    /** Set when [data] is only method/path/status and the rest lives in the payload sidecar. */
-    val payloadId: String? = null,
-    val startedAt: String? = null,
-    val seq: Long? = null,
-    val callId: String? = null,
-    val replyTo: String? = null,
-    val causedBy: String? = null,
-    val trace: TraceJson? = null,
-    val source: String? = null,
-    val capturedAt: String? = null,
-    val status: String? = null,
-    val timing: String? = null,
-    val pairing: String? = null,
-    val order: String? = null,
-    /** Id of the call this message runs inside. */
-    val parentId: String? = null,
-    /** On a paired reply: id of the call it answers. */
-    val replyOf: String? = null,
-) : EventJson() {
-    internal override fun toJsonValue(): JsonValue =
-        obj(
-            buildList {
-                add("kind" to JsonString("message"))
-                add("id" to JsonString(id))
-                add("from" to JsonString(from))
-                add("to" to JsonString(to))
-                add("label" to JsonString(label))
-                add("type" to JsonString(type))
-                if (colour != null) add("colour" to JsonString(colour))
-                if (durationMs != null) add("durationMs" to msNumber(durationMs))
-                if (data != null) add("data" to anyToJson(data))
-                if (payloadId != null) add("payloadId" to JsonString(payloadId))
-                if (seq != null) add("seq" to JsonNumber(seq.toString()))
-                if (callId != null) add("callId" to JsonString(callId))
-                if (replyTo != null) add("replyTo" to JsonString(replyTo))
-                if (causedBy != null) add("causedBy" to JsonString(causedBy))
-                if (trace != null) {
-                    add(
-                        "trace" to
-                            obj(
-                                buildList {
-                                    add("traceId" to JsonString(trace.traceId))
-                                    if (trace.spanId != null) add("spanId" to JsonString(trace.spanId))
-                                    if (trace.parentSpanId != null) add("parentSpanId" to JsonString(trace.parentSpanId))
-                                },
-                            ),
-                    )
-                }
-                if (source != null) add("source" to JsonString(source))
-                if (startedAt != null) add("startedAt" to JsonString(startedAt))
-                if (capturedAt != null) add("capturedAt" to JsonString(capturedAt))
-                if (status != null) add("status" to JsonString(status))
-                if (timing != null) add("timing" to JsonString(timing))
-                if (pairing != null) add("pairing" to JsonString(pairing))
-                if (order != null) add("order" to JsonString(order))
-                if (parentId != null) add("parentId" to JsonString(parentId))
-                if (replyOf != null) add("replyOf" to JsonString(replyOf))
-            },
-        )
-}
-
-internal data class NoteEventJson(
-    val id: String,
-    val text: String,
-    /** Anchor participant. Required for placement `over`; optional for left/right. */
-    val over: String? = null,
-    val placement: String = "over",
-    val startedAt: String? = null,
-) : EventJson() {
-    internal override fun toJsonValue(): JsonValue =
-        obj(
-            buildList {
-                add("kind" to JsonString("note"))
-                add("id" to JsonString(id))
-                add("text" to JsonString(text))
-                if (over != null) add("over" to JsonString(over))
-                add("placement" to JsonString(placement))
-                if (startedAt != null) add("startedAt" to JsonString(startedAt))
-            },
-        )
-}
-
-internal data class DelayEventJson(
-    val id: String,
-    val label: String? = null,
-    val startedAt: String? = null,
-) : EventJson() {
-    internal override fun toJsonValue(): JsonValue =
-        obj(
-            buildList {
-                add("kind" to JsonString("delay"))
-                add("id" to JsonString(id))
-                if (label != null) add("label" to JsonString(label))
-                if (startedAt != null) add("startedAt" to JsonString(startedAt))
-            },
-        )
-}
-
-internal data class SpacerEventJson(
-    val id: String,
-    val heightPx: Int? = null,
-    val startedAt: String? = null,
-) : EventJson() {
-    internal override fun toJsonValue(): JsonValue =
-        obj(
-            buildList {
-                add("kind" to JsonString("spacer"))
-                add("id" to JsonString(id))
-                if (heightPx != null) add("heightPx" to JsonNumber(heightPx.toString()))
-                if (startedAt != null) add("startedAt" to JsonString(startedAt))
-            },
-        )
-}
-
-internal data class DividerEventJson(
-    val id: String,
-    val label: String,
-    val startedAt: String? = null,
-) : EventJson() {
-    internal override fun toJsonValue(): JsonValue =
-        obj(
-            buildList {
-                add("kind" to JsonString("divider"))
-                add("id" to JsonString(id))
-                add("label" to JsonString(label))
-                if (startedAt != null) add("startedAt" to JsonString(startedAt))
-            },
-        )
-}
-
-internal data class SectionEventJson(
-    val id: String,
-    val title: String,
-    val startedAt: String? = null,
-) : EventJson() {
-    internal override fun toJsonValue(): JsonValue =
-        obj(
-            buildList {
-                add("kind" to JsonString("section"))
-                add("id" to JsonString(id))
-                add("title" to JsonString(title))
-                if (startedAt != null) add("startedAt" to JsonString(startedAt))
-            },
-        )
-}
-
-internal data class LifelineEventJson(
-    val kind: String,
-    val id: String,
-    val participantId: String,
-    /** Present only on activate, and only when the caller set a colour. */
-    val colour: String? = null,
-    val startedAt: String? = null,
-) : EventJson() {
-    internal override fun toJsonValue(): JsonValue =
-        obj(
-            buildList {
-                add("kind" to JsonString(kind))
-                add("id" to JsonString(id))
-                add("participantId" to JsonString(participantId))
-                if (colour != null) add("colour" to JsonString(colour))
-                if (startedAt != null) add("startedAt" to JsonString(startedAt))
-            },
-        )
-}
 
 internal fun ReportJson.toJson(): String =
     obj(
@@ -369,33 +98,34 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
             add("title" to JsonString(title))
             add("status" to JsonString(status))
             add("description" to JsonString(description))
-            if (error != null) add("error" to error.toJsonValue())
+            error?.let { add("error" to it.toJsonValue()) }
             add("facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
             add("metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
             add("participants" to JsonArray(participants.map { it.toJsonValue() }))
             add("events" to JsonArray(events.map { it.toJsonValue() }))
-            if (timing != null) {
-                add("accuracy" to JsonString(timing.accuracy))
-                if (timing.measuredCoverage != null) add("measuredCoverage" to msNumber(timing.measuredCoverage))
-                if (timing.pairingCoverage != null) add("pairingCoverage" to msNumber(timing.pairingCoverage))
-                add("sources" to JsonArray(timing.sources.map(::JsonString)))
-                if (timing.wallClockMs != null) add("wallClockMs" to msNumber(timing.wallClockMs))
-                add("clockOrdering" to JsonString(timing.clockOrdering))
-                add("clockOrdered" to JsonNumber(timing.clockOrdered.toString()))
-                if (timing.warnings.isNotEmpty()) {
+            val summary = timing
+            if (summary != null) {
+                add("accuracy" to JsonString(summary.accuracy))
+                summary.measuredCoverage?.let { add("measuredCoverage" to msNumber(it)) }
+                summary.pairingCoverage?.let { add("pairingCoverage" to msNumber(it)) }
+                add("sources" to JsonArray(summary.sources.map(::JsonString)))
+                summary.wallClockMs?.let { add("wallClockMs" to msNumber(it)) }
+                add("clockOrdering" to JsonString(summary.clockOrdering))
+                add("clockOrdered" to JsonNumber(summary.clockOrdered.toString()))
+                if (summary.warnings.isNotEmpty()) {
                     add(
                         "warnings" to
-                            JsonArray(timing.warnings.map { obj(listOf("kind" to JsonString(it.kind), "message" to JsonString(it.message))) }),
+                            JsonArray(summary.warnings.map { obj(listOf("kind" to JsonString(it.kind), "message" to JsonString(it.message))) }),
                     )
                 }
-                if (timing.reorderedByClock.isNotEmpty()) {
-                    add("reorderedByClock" to JsonArray(timing.reorderedByClock.map(::JsonString)))
+                if (summary.reorderedByClock.isNotEmpty()) {
+                    add("reorderedByClock" to JsonArray(summary.reorderedByClock.map(::JsonString)))
                 }
-                if (timing.pairAccuracy.isNotEmpty()) {
+                if (summary.pairAccuracy.isNotEmpty()) {
                     add(
                         "pairAccuracy" to
                             JsonArray(
-                                timing.pairAccuracy.map {
+                                summary.pairAccuracy.map {
                                     obj(listOf("from" to JsonString(it.from), "to" to JsonString(it.to), "accuracy" to JsonString(it.accuracy)))
                                 },
                             ),
@@ -410,7 +140,7 @@ private fun ScenarioErrorJson.toJsonValue(): JsonValue =
         buildList {
             add("headline" to JsonString(headline))
             add("message" to JsonString(message))
-            if (stack != null) add("stack" to JsonString(stack))
+            stack?.let { add("stack" to JsonString(it)) }
         },
     )
 
@@ -430,10 +160,113 @@ private fun ParticipantJson.toJsonValue(): JsonValue =
             add("id" to JsonString(id))
             add("name" to JsonString(name))
             add("type" to JsonString(type))
-            if (alias != null) add("alias" to JsonString(alias))
-            if (colour != null) add("colour" to JsonString(colour))
+            alias?.let { add("alias" to JsonString(it)) }
+            colour?.let { add("colour" to JsonString(it)) }
         },
     )
+
+/** The JSON for one event, as the schema's `DiagramEvent` describes it. */
+internal fun EventJson.toJsonValue(): JsonValue =
+    when (this) {
+        is MessageEventJson ->
+            obj(
+                buildList {
+                    add("kind" to JsonString("message"))
+                    add("id" to JsonString(id))
+                    add("from" to JsonString(from))
+                    add("to" to JsonString(to))
+                    add("label" to JsonString(label))
+                    add("type" to JsonString(type))
+                    colour?.let { add("colour" to JsonString(it)) }
+                    durationMs?.let { add("durationMs" to msNumber(it)) }
+                    data?.let { add("data" to anyToJson(it)) }
+                    payloadId?.let { add("payloadId" to JsonString(it)) }
+                    seq?.let { add("seq" to JsonNumber(it.toString())) }
+                    callId?.let { add("callId" to JsonString(it)) }
+                    replyTo?.let { add("replyTo" to JsonString(it)) }
+                    causedBy?.let { add("causedBy" to JsonString(it)) }
+                    val ids = trace
+                    if (ids != null) {
+                        add(
+                            "trace" to
+                                obj(
+                                    buildList {
+                                        add("traceId" to JsonString(ids.traceId))
+                                        ids.spanId?.let { add("spanId" to JsonString(it)) }
+                                        ids.parentSpanId?.let { add("parentSpanId" to JsonString(it)) }
+                                    },
+                                ),
+                        )
+                    }
+                    source?.let { add("source" to JsonString(it)) }
+                    startedAt?.let { add("startedAt" to JsonString(it)) }
+                    capturedAt?.let { add("capturedAt" to JsonString(it)) }
+                    status?.let { add("status" to JsonString(it)) }
+                    timing?.let { add("timing" to JsonString(it)) }
+                    pairing?.let { add("pairing" to JsonString(it)) }
+                    order?.let { add("order" to JsonString(it)) }
+                    parentId?.let { add("parentId" to JsonString(it)) }
+                    replyOf?.let { add("replyOf" to JsonString(it)) }
+                },
+            )
+        is NoteEventJson ->
+            obj(
+                buildList {
+                    add("kind" to JsonString("note"))
+                    add("id" to JsonString(id))
+                    add("text" to JsonString(text))
+                    over?.let { add("over" to JsonString(it)) }
+                    add("placement" to JsonString(placement))
+                    startedAt?.let { add("startedAt" to JsonString(it)) }
+                },
+            )
+        is DelayEventJson ->
+            obj(
+                buildList {
+                    add("kind" to JsonString("delay"))
+                    add("id" to JsonString(id))
+                    label?.let { add("label" to JsonString(it)) }
+                    startedAt?.let { add("startedAt" to JsonString(it)) }
+                },
+            )
+        is SpacerEventJson ->
+            obj(
+                buildList {
+                    add("kind" to JsonString("spacer"))
+                    add("id" to JsonString(id))
+                    heightPx?.let { add("heightPx" to JsonNumber(it.toString())) }
+                    startedAt?.let { add("startedAt" to JsonString(it)) }
+                },
+            )
+        is DividerEventJson ->
+            obj(
+                buildList {
+                    add("kind" to JsonString("divider"))
+                    add("id" to JsonString(id))
+                    add("label" to JsonString(label))
+                    startedAt?.let { add("startedAt" to JsonString(it)) }
+                },
+            )
+        is SectionEventJson ->
+            obj(
+                buildList {
+                    add("kind" to JsonString("section"))
+                    add("id" to JsonString(id))
+                    add("title" to JsonString(title))
+                    startedAt?.let { add("startedAt" to JsonString(it)) }
+                },
+            )
+        is LifelineEventJson ->
+            obj(
+                buildList {
+                    add("kind" to JsonString(kind))
+                    add("id" to JsonString(id))
+                    add("participantId" to JsonString(participantId))
+                    colour?.let { add("colour" to JsonString(it)) }
+                    startedAt?.let { add("startedAt" to JsonString(it)) }
+                },
+            )
+    }
 
 private fun obj(fields: List<Pair<String, JsonValue>>): JsonObject = JsonObject(fields)
 

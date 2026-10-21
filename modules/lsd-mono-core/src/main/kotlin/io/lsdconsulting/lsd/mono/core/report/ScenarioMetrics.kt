@@ -5,7 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioTiming
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.formatMs
-import io.lsdconsulting.lsd.mono.core.model.MetricJson
+import io.lsdconsulting.lsd.mono.report.model.MetricJson
 
 /**
  * A scenario's metrics: its message count, when any message has a duration their sum, and when any

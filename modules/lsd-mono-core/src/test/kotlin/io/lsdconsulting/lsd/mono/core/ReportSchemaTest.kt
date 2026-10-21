@@ -13,13 +13,13 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.WarningKind
-import io.lsdconsulting.lsd.mono.core.model.ReportSchema
-import io.lsdconsulting.lsd.mono.core.model.ReportSource
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas.Document
 import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas.between
+import io.lsdconsulting.lsd.mono.report.model.ReportSchema
+import io.lsdconsulting.lsd.mono.report.model.ReportSource
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

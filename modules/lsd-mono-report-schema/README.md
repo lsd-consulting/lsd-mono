@@ -27,7 +27,7 @@ still open, so it stays 0.x until that is decided.
   value of a closed enum. (This is stricter than semver's "anything goes" for 0.x, so a reader
   can trust a minor version.)
 - To change the format: edit the schema, raise the version in both `$id`s and in
-  `ReportSchema.VERSION` (lsd-mono-core), and regenerate the UI's types (below).
+  `ReportSchema.VERSION` (lsd-mono-report-model), and regenerate the UI's types (below).
 
 ### What a reader does
 

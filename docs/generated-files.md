@@ -47,6 +47,7 @@ about them.
 | `modules/lsd-mono-junit-jupiter/api/lsd-mono-junit-jupiter.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-cucumber-8/api/lsd-mono-cucumber-8.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-coroutines/api/lsd-mono-coroutines.api` | `./gradlew updateKotlinAbi` |
+| `modules/lsd-mono-report-model/api/lsd-mono-report-model.api` | `./gradlew updateKotlinAbi` |
 
 Every published module uses Kotlin's explicit API mode and the Kotlin Gradle plugin's built-in ABI
 validation (the `lsd.kotlin-jvm` convention in `build-logic`). The dump lists the module's public

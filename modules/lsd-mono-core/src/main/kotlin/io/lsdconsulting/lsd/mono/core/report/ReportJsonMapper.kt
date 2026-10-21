@@ -14,26 +14,26 @@ import io.lsdconsulting.lsd.mono.core.domain.Section
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.model.DelayEventJson
-import io.lsdconsulting.lsd.mono.core.model.DividerEventJson
-import io.lsdconsulting.lsd.mono.core.model.EventJson
-import io.lsdconsulting.lsd.mono.core.model.FactJson
-import io.lsdconsulting.lsd.mono.core.model.LifelineEventJson
-import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
-import io.lsdconsulting.lsd.mono.core.model.NoteEventJson
-import io.lsdconsulting.lsd.mono.core.model.PairAccuracyJson
-import io.lsdconsulting.lsd.mono.core.model.ParticipantJson
-import io.lsdconsulting.lsd.mono.core.model.ReportJson
-import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
-import io.lsdconsulting.lsd.mono.core.model.ReportSource
-import io.lsdconsulting.lsd.mono.core.model.ScenarioErrorJson
-import io.lsdconsulting.lsd.mono.core.model.ScenarioJson
-import io.lsdconsulting.lsd.mono.core.model.ScenarioTimingJson
-import io.lsdconsulting.lsd.mono.core.model.SectionEventJson
-import io.lsdconsulting.lsd.mono.core.model.SpacerEventJson
-import io.lsdconsulting.lsd.mono.core.model.TraceJson
-import io.lsdconsulting.lsd.mono.core.model.WarningJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
+import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
+import io.lsdconsulting.lsd.mono.report.model.EventJson
+import io.lsdconsulting.lsd.mono.report.model.FactJson
+import io.lsdconsulting.lsd.mono.report.model.LifelineEventJson
+import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
+import io.lsdconsulting.lsd.mono.report.model.NoteEventJson
+import io.lsdconsulting.lsd.mono.report.model.PairAccuracyJson
+import io.lsdconsulting.lsd.mono.report.model.ParticipantJson
+import io.lsdconsulting.lsd.mono.report.model.ReportJson
+import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
+import io.lsdconsulting.lsd.mono.report.model.ReportSource
+import io.lsdconsulting.lsd.mono.report.model.ScenarioErrorJson
+import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
+import io.lsdconsulting.lsd.mono.report.model.ScenarioTimingJson
+import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
+import io.lsdconsulting.lsd.mono.report.model.SpacerEventJson
+import io.lsdconsulting.lsd.mono.report.model.TraceJson
+import io.lsdconsulting.lsd.mono.report.model.WarningJson
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -61,7 +61,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
             metricsEnabled = metricsEnabled,
             labelMaxWidth = labelMaxWidth,
             usagePing = usagePing,
-            source = ReportSource.of(source),
+            source = knownSource(source),
         )
 
     private fun Scenario.toJsonModel(options: ReportOptions): ScenarioJson = ScenarioJson(
@@ -151,6 +151,9 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     startedAt = startedAt?.toString(),
                 )
         }
+
+    /** [name] when it is one of [ReportSource.ALL], else [ReportSource.API]. */
+    private fun knownSource(name: String?): String = name?.takeIf { it in ReportSource.ALL } ?: ReportSource.API
 
     private fun determineOverallStatus(scenarios: List<Scenario>): String =
         scenarios

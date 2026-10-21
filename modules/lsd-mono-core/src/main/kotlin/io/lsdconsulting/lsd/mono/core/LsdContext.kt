@@ -7,11 +7,11 @@ import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
-import io.lsdconsulting.lsd.mono.core.model.ReportJson
-import io.lsdconsulting.lsd.mono.core.model.ReportSource
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportJsonMapper
 import io.lsdconsulting.lsd.mono.core.report.reportWriter
+import io.lsdconsulting.lsd.mono.report.model.ReportJson
+import io.lsdconsulting.lsd.mono.report.model.ReportSource
 import java.io.File
 import java.net.URI
 import java.nio.file.Path

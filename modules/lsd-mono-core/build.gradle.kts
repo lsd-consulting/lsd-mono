@@ -18,7 +18,18 @@ lsdCoverage {
 description =
     "Living sequence diagrams: capture the interactions in your tests and write an interactive HTML report"
 
+// The report model is experimental (@ExperimentalLsdReportModel); core maps its scenarios to it, as the
+// model and writer move with it in lockstep.
+kotlin {
+    compilerOptions {
+        optIn.add("io.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel")
+    }
+}
+
 dependencies {
+    // The report as plain values (ReportJson and the rest). Not in core's public API.
+    implementation(project(":modules:lsd-mono-report-model"))
+
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.json.schema.validator)

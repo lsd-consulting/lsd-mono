@@ -14,6 +14,10 @@ dependencies {
     "readmeImplementation"(sourceSets.named("main").get().output)
 }
 
+// The samples run the module's main code, so they need its dependencies too (the report model
+// and writer, for lsd-mono-core).
+configurations.named("readmeImplementation") { extendsFrom(configurations.getByName("implementation")) }
+
 val reportDir = layout.projectDirectory.dir("report")
 
 /** Run [mainClass] from the readme source set, writing a deterministic report into [outDir]. */

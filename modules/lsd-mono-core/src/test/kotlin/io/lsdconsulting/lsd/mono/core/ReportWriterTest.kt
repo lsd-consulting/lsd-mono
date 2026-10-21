@@ -1,12 +1,12 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
-import io.lsdconsulting.lsd.mono.core.model.ReportJson
-import io.lsdconsulting.lsd.mono.core.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.ReportWriterSettings
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.model.ReportJson
+import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -228,7 +228,7 @@ class ReportWriterTest {
             options = ReportOptionsJson(metricsEnabled = false, labelMaxWidth = 200),
             scenarios =
                 List(scenarioCount) { n ->
-                    io.lsdconsulting.lsd.mono.core.model.ScenarioJson(
+                    io.lsdconsulting.lsd.mono.report.model.ScenarioJson(
                         id = "s$n",
                         title = "scenario $n",
                         status = if (n < failing) "error" else "success",

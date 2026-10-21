@@ -11,14 +11,14 @@ import io.lsdconsulting.lsd.mono.core.json.JsonValue
 import io.lsdconsulting.lsd.mono.core.json.jsonString
 import io.lsdconsulting.lsd.mono.core.json.render
 import io.lsdconsulting.lsd.mono.core.model.IndexScenario
-import io.lsdconsulting.lsd.mono.core.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.core.model.ReportFile
-import io.lsdconsulting.lsd.mono.core.model.ReportJson
-import io.lsdconsulting.lsd.mono.core.model.ReportSchema
 import io.lsdconsulting.lsd.mono.core.model.ScenarioCounts
 import io.lsdconsulting.lsd.mono.core.model.forShell
 import io.lsdconsulting.lsd.mono.core.model.shellPayloadScript
 import io.lsdconsulting.lsd.mono.core.model.toJson
+import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
+import io.lsdconsulting.lsd.mono.report.model.ReportJson
+import io.lsdconsulting.lsd.mono.report.model.ReportSchema
 import java.io.File
 import java.io.StringWriter
 import java.nio.channels.FileChannel
