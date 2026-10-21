@@ -40,9 +40,11 @@ Both sides fail on a file the manifest does not list, or a listed file that is m
   `./gradlew :modules:lsd-mono-core:test --tests '*ConformanceTest*'`, and copy the file the
   failure names from `modules/lsd-mono-core/build/conformance-actual/` over this one. Review the
   difference like code: it is a change in what the producer writes.
-- **Hand-written, captured or generated:** edit it; both sides re-check it. A captured report is a
-  copy of lsd-mono-core output kept for the checks that depend on its layout. It is not rewritten
-  when the writer changes.
+- **Hand-written, captured or generated:** edit it; both sides re-check it against the schema. A
+  captured report would be a copy of lsd-mono-core output kept as it was; there is none now.
+  `reports/example-report.json` is written from the example report's scenarios like any
+  lsd-mono-core file, and `reports/example-components.json` is kept by hand (its manifest entry
+  says why).
 - **A new file:** add it to `manifest.json`, and to `PRODUCED` in `ConformanceTest` if
   lsd-mono-core writes it.
 

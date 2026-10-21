@@ -75,15 +75,15 @@
       "file": "reports/example-report.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "captured",
-      "about": "Four scenarios of the live example report (kitchenSinkSample), with timings, pairs and payload summaries. The zoom, Metrics and help checks open it."
+      "source": "lsd-mono-core",
+      "about": "The first four scenarios of the live example report (kitchenSinkSample), with timings, pairs and payload summaries, as ExampleReportGoldenTest writes them. The zoom, Metrics and help checks open it."
     },
     {
       "file": "reports/example-components.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "captured",
-      "about": "The live example report's first scenario (14 components), for the component diagram checks."
+      "source": "hand-written",
+      "about": "The first scenario (14 components) of the example report as it was before timings, kept by hand for the component diagram checks and their screenshots. It is not regenerated from the example report, whose first scenario has since changed."
     },
     {
       "file": "reports/sample.json",

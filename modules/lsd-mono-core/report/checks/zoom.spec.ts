@@ -9,8 +9,8 @@ import { wideReport } from './wide-sample'
 // whole width down to 10%. Run on the live example report's "Timed checkout" (14 lanes) and
 // "Payment declined" (4 lanes) scenarios, and the 100-participant perf sample.
 
-// Timed checkout (144) is the first scenario, so it opens without a scenarioId.
-const DECLINED = '146'
+// Timed checkout (131) is the first scenario, so it opens without a scenarioId.
+const DECLINED = '133'
 const shots = process.env.LSD_SHOTS
 
 const card = (page: Page) => page.locator('.scenario-card').first()

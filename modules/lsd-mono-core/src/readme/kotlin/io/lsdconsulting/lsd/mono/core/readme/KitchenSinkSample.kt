@@ -47,6 +47,23 @@ import java.time.Instant
  */
 fun main() {
     val lsd = LsdContext()
+    exampleParticipants(lsd)
+    EXAMPLE_SCENARIOS.forEach { it(lsd) }
+
+    val files = lsd.completeReport("Example report")
+    lsd.createIndex()
+    println(files.diagramHtml)
+}
+
+/**
+ * The example report's scenarios, in order. The first four are also the shared test report
+ * `reports/example-report.json`, which lsd-mono-core's ExampleReportGoldenTest writes and compares.
+ */
+val EXAMPLE_SCENARIOS: List<(LsdContext) -> Unit> =
+    listOf(::timedCheckout, ::happyPath, ::paymentDeclined, ::outOfStock, ::asyncFulfilment)
+
+/** The example report's 14 lifelines. */
+fun exampleParticipants(lsd: LsdContext) {
     lsd.addParticipants(
         ACTOR.called("Customer", displayName = "Signed-in Customer (mobile app)"),
         BOUNDARY.called("Web UI"),
@@ -66,16 +83,6 @@ fun main() {
         ENTITY.called("Email"),
         PARTICIPANT.called("Warehouse", colour = "#ea580c"),
     )
-
-    timedCheckout(lsd)
-    happyPath(lsd)
-    paymentDeclined(lsd)
-    outOfStock(lsd)
-    asyncFulfilment(lsd)
-
-    val files = lsd.completeReport("Example report")
-    lsd.createIndex()
-    println(files.diagramHtml)
 }
 
 private fun CaptureBlock.placeOrderRequest(orderId: String) {

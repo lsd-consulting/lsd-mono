@@ -226,6 +226,7 @@ class ConformanceTest {
                 "reports/escaping.json",
                 "reports/multi-scenario-status.json",
                 "reports/timing-tree.json",
+                "reports/example-report.json",
                 "indexes/status-mix.json",
                 "payloads/payload-script.js",
             )

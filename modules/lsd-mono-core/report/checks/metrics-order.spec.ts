@@ -10,8 +10,8 @@ import { openReport } from './open-report'
 // Run on the live example report's scenarios.
 
 const SCENARIOS = [
-  { id: '144', title: 'Timed checkout (timing API)', pairs: 13 },
-  { id: '145', title: 'Happy path: card payment', pairs: 20 },
+  { id: '131', title: 'Timed checkout (timing API)', pairs: 13 },
+  { id: '132', title: 'Happy path: card payment', pairs: 20 },
 ]
 const ORDER = ['Timing and metrics', 'Time by participant', 'Swim lanes', 'Waterfall', 'Metrics', 'Accuracy by pair']
 const shots = process.env.LSD_SHOTS
@@ -81,7 +81,7 @@ for (const viewport of [
         await expect(details(page).locator('summary')).toHaveText(
           new RegExp(`^${scenario.pairs} pairs · \\d+ \\w+(, \\d+ [\\w ]+)*$`),
         )
-        if (shots && scenario.id === '145')
+        if (shots && scenario.id === '132')
           await page.screenshot({ path: `${shots}/q-95-${viewport.width}-happy-metrics.png` })
       })
     }
@@ -89,17 +89,17 @@ for (const viewport of [
     test('the Accuracy chip opens the panel at Accuracy by pair, unfolded; other chips open it at the top', async ({
       page,
     }) => {
-      await openExample(page, '145')
-      await chip(page, '145', 'Wall-clock').click()
+      await openExample(page, '132')
+      await chip(page, '132', 'Wall-clock').click()
       await expect(page.locator('#inspector .timing')).toBeVisible()
       await expect(details(page)).not.toHaveAttribute('open', '')
       // At the top: the panel is not scrolled and its first lines (the accuracy pills) are on screen.
       expect((await scrolled(page)).panel).toBe(0)
       await expect.poll(() => inViewUnderHead(page, '#inspector .timing-notes')).toBe(true)
       await page.keyboard.press('Escape')
-      await expect(chip(page, '145', 'Wall-clock')).toBeFocused()
+      await expect(chip(page, '132', 'Wall-clock')).toBeFocused()
 
-      await chip(page, '145', 'Accuracy').click()
+      await chip(page, '132', 'Accuracy').click()
       await expect(details(page)).toHaveAttribute('open', '')
       await expect(page.locator('#inspector .pair-accuracy li')).toHaveCount(20)
       await expect.poll(() => inViewUnderHead(page, '#inspector [data-panel-section="pair-accuracy"] h3')).toBe(true)
@@ -109,23 +109,23 @@ for (const viewport of [
       // With the panel still open and scrolled down, Wall-clock or the toolbar's Metrics button
       // opens it at the top again.
       if (viewport.width > 860) {
-        await chip(page, '145', 'Wall-clock').click()
+        await chip(page, '132', 'Wall-clock').click()
         await expect.poll(async () => (await scrolled(page)).panel).toBe(0)
-        await chip(page, '145', 'Accuracy').click()
+        await chip(page, '132', 'Accuracy').click()
         await expect.poll(() => inViewUnderHead(page, '#inspector [data-panel-section="pair-accuracy"] h3')).toBe(true)
         expect((await scrolled(page)).panel).toBeGreaterThan(0)
-        await metricsButton(page, '145').click()
+        await metricsButton(page, '132').click()
         await expect(page.locator('#inspector')).toBeHidden()
-        await metricsButton(page, '145').click()
+        await metricsButton(page, '132').click()
         await expect.poll(async () => (await scrolled(page)).panel).toBe(0)
-        await chip(page, '145', 'Accuracy').click()
+        await chip(page, '132', 'Accuracy').click()
         await expect.poll(() => inViewUnderHead(page, '#inspector [data-panel-section="pair-accuracy"] h3')).toBe(true)
       }
       // Closing gives focus back to the chip that opened it (#86), and reopening behaves the same.
       await page.keyboard.press('Escape')
       await expect(page.locator('#inspector')).toBeHidden()
-      await expect(chip(page, '145', 'Accuracy')).toBeFocused()
-      await chip(page, '145', 'Accuracy').click()
+      await expect(chip(page, '132', 'Accuracy')).toBeFocused()
+      await chip(page, '132', 'Accuracy').click()
       await expect(details(page)).toHaveAttribute('open', '')
       await expect.poll(() => inViewUnderHead(page, '#inspector [data-panel-section="pair-accuracy"] h3')).toBe(true)
     })
@@ -136,8 +136,8 @@ test.describe('at 1440×900', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
   test('Tab goes Close, swim-lane bars, waterfall rows, then the folded Accuracy by pair summary', async ({ page }) => {
-    await openExample(page, '144')
-    await metricsButton(page, '144').click()
+    await openExample(page, '131')
+    await metricsButton(page, '131').click()
     await page.locator('#inspector-close').focus()
     await page.keyboard.press('Tab')
     await expect(page.locator('#inspector .lane-bar').first()).toBeFocused()
@@ -158,11 +158,11 @@ test.describe('at 1440×900', () => {
   })
 
   test('swim-lane bars and waterfall rows still take the diagram to their message', async ({ page }) => {
-    await openExample(page, '145')
-    await metricsButton(page, '145').click()
+    await openExample(page, '132')
+    await metricsButton(page, '132').click()
     const onScreen = (id: string) =>
       page.evaluate((messageId) => {
-        const btn = document.querySelector(`#card-145 .seq-window [data-message-id="${messageId}"]`)
+        const btn = document.querySelector(`#card-132 .seq-window [data-message-id="${messageId}"]`)
         if (!btn) return false
         const b = btn.getBoundingClientRect()
         return b.bottom > 0 && b.top < innerHeight
@@ -174,7 +174,7 @@ test.describe('at 1440×900', () => {
     await expect.poll(() => onScreen(laneId)).toBe(true)
     // A message with a payload has a button to look for in the diagram.
     const withPayload = example.scenarios
-      .find((s) => s.id === '145')!
+      .find((s) => s.id === '132')!
       .events.filter((e) => e.kind === 'message' && e.data !== undefined)
       .map((e) => e.id)
     const row = page
@@ -196,34 +196,34 @@ test.describe('at 1440×900', () => {
     const six: Report = {
       ...example,
       scenarios: example.scenarios.map((s) =>
-        s.id === '147' ? { ...s, pairAccuracy: (s.pairAccuracy ?? []).slice(0, 6) } : s,
+        s.id === '134' ? { ...s, pairAccuracy: (s.pairAccuracy ?? []).slice(0, 6) } : s,
       ),
     }
-    await openReport(page, { report: six, path: '/#scenario=147' })
-    await metricsButton(page, '147').click()
+    await openReport(page, { report: six, path: '/#scenario=134' })
+    await metricsButton(page, '134').click()
     await expect(page.locator('#inspector [data-panel-section="pair-accuracy"] .pair-accuracy li')).toHaveCount(6)
     await expect(details(page)).toHaveCount(0)
     const violations = await seriousViolations(page)
     expect(violations, formatViolations(violations)).toEqual([])
 
-    await page.locator('#scenario-nav [data-nav="146"]').click()
-    await metricsButton(page, '146').click()
+    await page.locator('#scenario-nav [data-nav="133"]').click()
+    await metricsButton(page, '133').click()
     await expect(page.locator('#inspector h3', { hasText: /^Metrics$/ })).toBeVisible()
     await expect(page.locator('#inspector [data-panel-section="pair-accuracy"]')).toHaveCount(0)
     await expect(page.locator('#inspector h3', { hasText: 'Accuracy by pair' })).toHaveCount(0)
   })
 
   test('the panel opened from the Accuracy chip, unfolded, passes axe', async ({ page }) => {
-    await openExample(page, '145')
-    await chip(page, '145', 'Accuracy').click()
+    await openExample(page, '132')
+    await chip(page, '132', 'Accuracy').click()
     await expect(details(page)).toHaveAttribute('open', '')
     const violations = await seriousViolations(page)
     expect(violations, formatViolations(violations)).toEqual([])
   })
 
   test('print still has the metrics list only, without the timing sections or Accuracy by pair', async ({ page }) => {
-    await openExample(page, '145')
-    await metricsButton(page, '145').click()
+    await openExample(page, '132')
+    await metricsButton(page, '132').click()
     await page.emulateMedia({ media: 'print' })
     const printed = page.locator('.print-metrics')
     await expect(printed).toHaveCount(1)
@@ -241,13 +241,13 @@ for (const width of [390, 320, 768]) {
 
     // With smooth scrolling (no reduced motion) and a tap, as on a phone.
     test('after Metrics and Esc, the Accuracy chip still reaches Accuracy by pair', async ({ page }) => {
-      await openExample(page, '145')
+      await openExample(page, '132')
       await page.emulateMedia({ reducedMotion: 'no-preference' })
-      await metricsButton(page, '145').click()
+      await metricsButton(page, '132').click()
       await expect(page.locator('#inspector .timing')).toBeVisible()
       await page.keyboard.press('Escape')
       await expect(page.locator('#inspector')).toBeHidden()
-      await chip(page, '145', 'Accuracy').tap()
+      await chip(page, '132', 'Accuracy').tap()
       await expect(details(page)).toHaveAttribute('open', '')
       // The heading lands just under the panel's sticky header, and stays there.
       const heading = '#inspector [data-panel-section="pair-accuracy"] h3'
@@ -264,8 +264,8 @@ test.describe('on a phone', () => {
   test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
 
   test('the order is the same as on the desktop', async ({ page }) => {
-    await openExample(page, '144')
-    await metricsButton(page, '144').click()
+    await openExample(page, '131')
+    await metricsButton(page, '131').click()
     expect((await headings(page)).map((h) => h.text)).toEqual(ORDER)
   })
 })

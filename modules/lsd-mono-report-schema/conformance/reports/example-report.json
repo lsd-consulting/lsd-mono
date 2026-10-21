@@ -2,11 +2,17 @@
   "schemaVersion": "0.1.0",
   "title": "Example report",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "check fixture",
+  "generator": "lsd-mono-core (conformance)",
   "status": "warn",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
   "scenarios": [
     {
-      "id": "144",
+      "id": "131",
       "title": "Timed checkout (timing API)",
       "status": "success",
       "description": "Given every call is measured and carries trace and span ids\nWhen two events are captured out of order on the same clock\nThen they are put back in time order and marked clock-ordered\nAnd a consume on another service's clock stays after its publish\nAnd a failed relay status is counted in the Errors metric",
@@ -207,7 +213,10 @@
               "content-type": "application/json"
             },
             "body": {
-              "lines": ["SOCK-1", "HAT-3"]
+              "lines": [
+                "SOCK-1",
+                "HAT-3"
+              ]
             }
           },
           "seq": 4,
@@ -682,10 +691,16 @@
       "accuracy": "TRACED",
       "measuredCoverage": 0.8,
       "pairingCoverage": 1,
-      "sources": ["local", "notification-service"],
+      "sources": [
+        "local",
+        "notification-service"
+      ],
       "clockOrdering": "SAME_SOURCE",
       "clockOrdered": 2,
-      "reorderedByClock": ["16 -> 15", "15 -> 16"],
+      "reorderedByClock": [
+        "16 -\u003e 15",
+        "15 -\u003e 16"
+      ],
       "pairAccuracy": [
         {
           "from": "web-ui",
@@ -755,7 +770,7 @@
       ]
     },
     {
-      "id": "145",
+      "id": "132",
       "title": "Happy path: card payment",
       "status": "success",
       "description": "Given a basket with two items\nAnd the SOCKS10 promotion is live\nWhen the customer pays by card\nThen the order is confirmed\nAnd a confirmation email is sent",
@@ -1031,7 +1046,9 @@
           "data": {
             "before": 3,
             "after": 2,
-            "merged": ["SOCK-1"]
+            "merged": [
+              "SOCK-1"
+            ]
           },
           "seq": 31,
           "timing": "NONE",
@@ -1047,7 +1064,10 @@
           "label": "2 items",
           "type": "SYNCHRONOUS_RESPONSE",
           "data": {
-            "lines": ["SOCK-1", "HAT-3"]
+            "lines": [
+              "SOCK-1",
+              "HAT-3"
+            ]
           },
           "seq": 32,
           "timing": "NONE",
@@ -1070,7 +1090,9 @@
           "data": {
             "code": "SOCKS10",
             "discountPence": 450,
-            "appliesTo": ["SOCK-1"]
+            "appliesTo": [
+              "SOCK-1"
+            ]
           },
           "seq": 33,
           "timing": "NONE",
@@ -1166,7 +1188,11 @@
           "durationMs": 33,
           "data": {
             "sql": "INSERT INTO reservation (order_id, sku, qty) VALUES (?, ?, ?) ON CONFLICT (order_id, sku) DO UPDATE SET qty = EXCLUDED.qty",
-            "params": ["ord-2001", "SOCK-1", 2]
+            "params": [
+              "ord-2001",
+              "SOCK-1",
+              2
+            ]
           },
           "seq": 36,
           "timing": "MEASURED",
@@ -1720,7 +1746,9 @@
       "accuracy": "MEASURED",
       "measuredCoverage": 0.313,
       "pairingCoverage": 0,
-      "sources": ["local"],
+      "sources": [
+        "local"
+      ],
       "clockOrdering": "SAME_SOURCE",
       "clockOrdered": 0,
       "warnings": [
@@ -1837,14 +1865,14 @@
       ]
     },
     {
-      "id": "146",
+      "id": "133",
       "title": "Payment declined (captured out of order)",
       "status": "warn",
       "description": "Given a card the issuer will decline\nWhen the customer pays\nThen the order is confirmed",
       "error": {
         "headline": "AssertionFailedError",
-        "message": "expected: <CONFIRMED> but was: <PAYMENT_DECLINED>",
-        "stack": "org.opentest4j.AssertionFailedError: expected: <CONFIRMED> but was: <PAYMENT_DECLINED>\n\tat com.example.shop.PlaceOrderTest.paysByCard(PlaceOrderTest.kt:88)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:580)"
+        "message": "expected: \u003cCONFIRMED\u003e but was: \u003cPAYMENT_DECLINED\u003e",
+        "stack": "org.opentest4j.AssertionFailedError: expected: \u003cCONFIRMED\u003e but was: \u003cPAYMENT_DECLINED\u003e\n\tat com.example.shop.PlaceOrderTest.paysByCard(PlaceOrderTest.kt:88)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:580)"
       },
       "facts": [
         {
@@ -2067,25 +2095,27 @@
       "accuracy": "TIMESTAMPED",
       "measuredCoverage": 0,
       "pairingCoverage": 0,
-      "sources": ["local"],
+      "sources": [
+        "local"
+      ],
       "wallClockMs": 6000,
       "clockOrdering": "SAME_SOURCE",
       "clockOrdered": 10,
       "reorderedByClock": [
-        "58 -> 57",
-        "7 -> 58",
-        "60 -> 59",
-        "8 -> 60",
-        "9 -> 62",
-        "59 -> 7",
-        "10 -> 8",
-        "62 -> 9",
-        "11 -> 10",
-        "57 -> 11"
+        "58 -\u003e 57",
+        "7 -\u003e 58",
+        "60 -\u003e 59",
+        "8 -\u003e 60",
+        "9 -\u003e 62",
+        "59 -\u003e 7",
+        "10 -\u003e 8",
+        "62 -\u003e 9",
+        "11 -\u003e 10",
+        "57 -\u003e 11"
       ]
     },
     {
-      "id": "147",
+      "id": "134",
       "title": "Out of stock",
       "status": "success",
       "description": "Given HAT-3 has no stock\nWhen the customer places an order\nThen the order is rejected\nAnd no payment is taken",
@@ -2304,7 +2334,9 @@
           "type": "SYNCHRONOUS",
           "data": {
             "sql": "SELECT sku, available FROM stock WHERE sku = ? FOR UPDATE",
-            "params": ["HAT-3"]
+            "params": [
+              "HAT-3"
+            ]
           },
           "seq": 68,
           "timing": "NONE",
@@ -2483,7 +2515,9 @@
       "accuracy": "MEASURED",
       "measuredCoverage": 0.143,
       "pairingCoverage": 0,
-      "sources": ["local"],
+      "sources": [
+        "local"
+      ],
       "clockOrdering": "SAME_SOURCE",
       "clockOrdered": 0,
       "pairAccuracy": [
@@ -2529,11 +2563,5 @@
         }
       ]
     }
-  ],
-  "options": {
-    "metricsEnabled": true,
-    "labelMaxWidth": 200,
-    "usagePing": false,
-    "source": "api"
-  }
+  ]
 }
