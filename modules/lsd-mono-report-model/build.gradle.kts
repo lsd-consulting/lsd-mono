@@ -28,6 +28,8 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     // ReportSchemasTest reads the corpus manifest.
     testImplementation(libs.json.schema.validator)
+    // ReportModelSchemaTest compares the model's constructor parameters with the schema.
+    testImplementation(libs.kotlin.reflect)
     testRuntimeOnly(libs.junit.platform.launcher)
 
     testFixturesImplementation(platform(libs.junit.bom))
