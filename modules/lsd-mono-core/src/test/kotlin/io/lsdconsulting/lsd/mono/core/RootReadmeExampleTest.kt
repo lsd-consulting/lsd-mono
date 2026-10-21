@@ -117,7 +117,8 @@ class RootReadmeExampleTest {
 
     /**
      * Every module the build includes is published at the train version, so the root README's
-     * artifact table and docs/releasing.md's list each one, and both say how many there are.
+     * artifact table, docs/releasing.md and modules/README.md list each one, and every count of them
+     * in the README, releasing.md, docs/versioning-notes.md and modules/README.md is right (#78, #122).
      */
     @Test
     fun `the release docs list every published module`() {
@@ -130,12 +131,34 @@ class RootReadmeExampleTest {
         val count = listOf("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")[modules.size]
         val readmeText = readme.readText()
         val releasing = Path.of("../../docs/releasing.md").readText()
+        val layout = Path.of("../README.md").readText()
+        val versioning = Path.of("../../docs/versioning-notes.md").readText()
         modules.forEach { module ->
             assertTrue("| `$module` |" in readmeText, "the root README's artifact table lists $module")
             assertTrue("| `io.github.lsd-consulting:$module` | `modules/$module` |" in releasing, "docs/releasing.md lists $module")
+            assertTrue("| `$module/` | `$module` |" in layout, "modules/README.md lists $module")
         }
         assertTrue("all $count on one version" in readmeText, "the root README says all $count on one version")
         assertTrue("one train version for all $count:" in releasing, "docs/releasing.md says all $count")
+        // The docs count the artifacts one way, "all six". A digit ("all 5") or a count of the rest
+        // ("the other four") would go stale unseen, so neither is allowed.
+        val number = "\\d+|one|two|three|four|five|six|seven|eight|nine|ten"
+        val counts = Regex("""\b(?:all|the other) (?:$number)\b""", RegexOption.IGNORE_CASE)
+        val docs =
+            listOf(
+                "README.md" to readmeText,
+                "docs/releasing.md" to releasing,
+                "docs/versioning-notes.md" to versioning,
+                "modules/README.md" to layout,
+            )
+        for ((name, text) in docs) {
+            val wrong = counts
+                .findAll(text)
+                .map { it.value }
+                .filter { it.lowercase() != "all $count" }
+                .toList()
+            assertTrue(wrong.isEmpty(), "$name counts the artifacts as $wrong: say all $count")
+        }
     }
 
     @Test

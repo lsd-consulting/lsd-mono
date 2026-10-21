@@ -71,12 +71,14 @@ tasks.test {
         ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("guardedSources")
     // LsdPropertiesTest reads this module's README, RootReadmeExampleTest the root one (#68), and
-    // the release docs and the module list against it.
+    // the release docs, the modules list and the versioning notes against the module list (#122).
     inputs
         .files(
             layout.projectDirectory.file("README.md"),
             rootProject.layout.projectDirectory.file("README.md"),
             rootProject.layout.projectDirectory.file("docs/releasing.md"),
+            rootProject.layout.projectDirectory.file("docs/versioning-notes.md"),
+            rootProject.layout.projectDirectory.file("modules/README.md"),
             rootProject.layout.projectDirectory.file("settings.gradle.kts"),
         ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("readmes")

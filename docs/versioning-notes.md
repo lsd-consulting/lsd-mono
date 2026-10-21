@@ -28,7 +28,15 @@ Releases are `0.y.z` until the API is ready for v1 (see [releasing.md](releasing
 
 Per-module versions (a patch of one artifact alone, a "solo major" for one integration) were considered and rejected: semantic-release decides one version per repository, and matching numbers would no longer mean the artifacts go together. A new major of a dependency gets a new artifact instead, as `lsd-mono-cucumber-8` is named for Cucumber 8.
 
-A future Cucumber 7 or Cucumber 9 artifact joins the train: it starts at the train's version and is released with the other four.
+A future Cucumber 7 or Cucumber 9 artifact joins the train: it starts at the train's version and is released with the rest.
+
+### The report model and writer
+
+`lsd-mono-report-model` and `lsd-mono-report-html` were split out of core in `0.8.0` and are on the train from that release: there is no earlier version of either, and every release since publishes them with core and the integrations ([#122](https://github.com/lsd-consulting/lsd-mono/issues/122)).
+
+- **Same version as core, always.** lsd-mono-core depends on both at its own version (run-time scope). A build that also declares one of them directly should use the same version; mixing versions is not supported, and nothing checks for it.
+- **Experimental API.** Their types are behind `@ExperimentalLsdReportModel` (an opt-in at level ERROR) with no binary-compatibility promise until the marker goes. A breaking change to them is a breaking change of the train, as above (a minor release while `0.y.z`). lsd-mono-core's own API exposes neither, so this does not reach a test that only uses core and its integrations.
+- **Two versions, two meanings.** The train version (`X.Y.Z`) is the version of the code. The report format has its own version, `schemaVersion` in every report (`ReportSchema.VERSION` in the model), with its own rules: a schema minor only adds ([lsd-mono-report-schema](../modules/lsd-mono-report-schema/README.md)). A train release can leave the schema version alone; a change to the format raises it, with the schema change.
 
 ### Tested-against dependencies
 
