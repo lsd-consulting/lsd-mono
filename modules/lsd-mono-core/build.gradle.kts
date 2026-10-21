@@ -61,13 +61,14 @@ javaComponent.withVariantsFromConfiguration(configurations["testFixturesApiEleme
 javaComponent.withVariantsFromConfiguration(configurations["testFixturesRuntimeElements"]) { skip() }
 
 tasks.test {
-    // HtmlEscapingGuardTest scans every module's main Kotlin, not only this one's.
+    // HtmlEscapingGuardTest scans every module's main Kotlin, and JsonChecksRatchetTest every
+    // module's tests (#109), not only this one's.
     inputs
         .files(
             rootProject.layout.projectDirectory
                 .dir("modules")
                 .asFileTree
-                .matching { include("*/src/main/**/*.kt") },
+                .matching { include("*/src/main/**/*.kt", "*/src/test/**/*.kt", "*/src/test/**/*.java") },
         ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("guardedSources")
     // LsdPropertiesTest reads this module's README, RootReadmeExampleTest the root one (#68), and
