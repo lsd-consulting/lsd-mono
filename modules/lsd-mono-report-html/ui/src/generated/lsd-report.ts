@@ -168,7 +168,7 @@ export interface ReportOptions {
    */
   labelMaxWidth?: number
   /**
-   * Whether the page may request the usage ping files. The page also needs a release generator. Default false.
+   * Whether the page may request the usage ping files: at most one fire-and-forget request per event, whose failure is ignored. The page also needs a release generator. Default true, as lsd-mono writes it: on unless lsd.mono.report.usagePing=false. Unlike the other fields, a missing value is read as false, so a report that does not say is never pinged.
    */
   usagePing?: boolean
   source?: ReportSource
