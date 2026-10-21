@@ -13,7 +13,8 @@ import { painted } from './ux-helpers'
 
 const example = conformanceReport('example-components')
 const NAME = '1:1 actual size, readable'
-const DESCRIPTION = 'Too small to read. Press Shift+0, or Enter on an item, to view at actual size.'
+/** What the too-small drawing is described as on touch, where a tap is how to get to 1:1. */
+const DESCRIPTION_TOUCH = 'Too small to read. Tap the drawing, or 1:1, to view at actual size.'
 const shots = process.env.LSD_SHOTS
 
 const pane = (page: Page) => page.locator('.diagram-pane[data-pane="components"]')
@@ -333,7 +334,7 @@ for (const width of [320, 390] as const) {
       await openReport(page, { report: example, path: '/#scenario=144&view=components', wait: 'none' })
       await expect(pane(page)).toBeVisible()
       const drawing = pane(page).locator('svg.component-diagram')
-      await expect(drawing).toHaveAccessibleDescription(DESCRIPTION)
+      await expect(drawing).toHaveAccessibleDescription(DESCRIPTION_TOUCH)
       await expect(viewStatus(page)).toHaveText(
         /^Component diagram, 14 components, 13 links, zoom \d+%\. Too small to read: tap 1:1\.$/,
       )
@@ -345,7 +346,7 @@ for (const width of [320, 390] as const) {
       await toolbar(page)
         .getByRole('button', { name: /^Reset zoom/ })
         .tap()
-      await expect(drawing).toHaveAccessibleDescription(DESCRIPTION)
+      await expect(drawing).toHaveAccessibleDescription(DESCRIPTION_TOUCH)
     })
 
     test('a tap on the sequence drawing in Overview goes to 1:1 there, as in Components', async ({ page }) => {

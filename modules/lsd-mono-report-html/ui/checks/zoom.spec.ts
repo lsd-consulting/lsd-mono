@@ -228,7 +228,9 @@ test.describe('at 1440×900', () => {
     expect((await placed()).across).toBe(true)
   })
 
-  test('Enter on a focused message in Overview goes to the default view on that message', async ({ page }) => {
+  test('Enter on a focused message in Overview goes to 1:1 on that message, as a click there does', async ({
+    page,
+  }) => {
     await openExample(page)
     await overview(page).click()
     const target = card(page).locator('button.msg-open').nth(5)
@@ -236,9 +238,10 @@ test.describe('at 1440×900', () => {
     await target.focus()
     await page.keyboard.press('Enter')
     await expect(overview(page)).toHaveAttribute('aria-pressed', 'false')
-    await expectZoom(page, '95')
+    await expectZoom(page, '100')
     await expect(page.locator('#inspector')).toBeHidden()
     await expect(page.locator(`button.msg-open[data-message-id="${id}"]`)).toBeInViewport()
+    if (shots) await page.screenshot({ path: `${shots}/120-1440-overview-enter-1to1.png` })
   })
 
   test('the 4-lane scenario opens at 100%, the reset keeps it there, and Overview has nothing to do', async ({

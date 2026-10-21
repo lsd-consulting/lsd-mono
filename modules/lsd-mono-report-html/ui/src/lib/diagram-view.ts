@@ -121,6 +121,13 @@ export const TOO_SMALL_TEXT_TOUCH = 'Too small to read: tap 1:1'
  * visible cue is aria-hidden, so a screen reader on a page that opens there hears it from here.
  */
 export const TOO_SMALL_DESCRIPTION = 'Too small to read. Press Shift+0, or Enter on an item, to view at actual size.'
+/** The same on touch (a coarse pointer), where there is no Shift+0 or Enter: a tap does it. */
+export const TOO_SMALL_DESCRIPTION_TOUCH = 'Too small to read. Tap the drawing, or 1:1, to view at actual size.'
+
+/** The drawing's too-small description for a coarse pointer (touch) or a fine one. */
+export function tooSmallDescription(coarse: boolean): string {
+  return coarse ? TOO_SMALL_DESCRIPTION_TOUCH : TOO_SMALL_DESCRIPTION
+}
 
 export function tooSmallHint(coarse: boolean): string {
   return coarse ? TOO_SMALL_TEXT_TOUCH : TOO_SMALL_TEXT

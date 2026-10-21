@@ -5,7 +5,8 @@ import type { Scenario } from '../types'
 import { type ComponentGraph, componentGraph } from './component-graph'
 import { renderComponentDiagram } from './component-diagram'
 import { escapeAttr, escapeHtml } from './escape'
-import { TOO_SMALL_DESCRIPTION } from './diagram-view'
+import { tooSmallDescription } from './diagram-view'
+import { isCoarsePointer } from './media'
 
 /** A drawn component diagram: its graph, for the links, and its natural size. */
 export interface MountedComponents {
@@ -34,7 +35,7 @@ export function componentViewHtml(scenario: Scenario, toolbarHtml: string, zoom 
     <div class="comp-diagram">
       <div class="seq-toolbar comp-toolbar" role="toolbar" aria-label="Diagram view">${toolbarHtml}</div>
       <div class="comp-scroll" data-scenario-id="${escapeAttr(scenario.id)}" style="--comp-w:${drawn.width * zoom}px;--comp-h:${drawn.height * zoom}px;--comp-natural-w:${drawn.width}px">${svg}</div>
-      <span class="comp-too-small" id="${escapeAttr(tooSmallDescriptionId(scenario.id))}" hidden>${escapeHtml(TOO_SMALL_DESCRIPTION)}</span>
+      <span class="comp-too-small" id="${escapeAttr(tooSmallDescriptionId(scenario.id))}" hidden>${escapeHtml(tooSmallDescription(isCoarsePointer()))}</span>
     </div>`
 }
 

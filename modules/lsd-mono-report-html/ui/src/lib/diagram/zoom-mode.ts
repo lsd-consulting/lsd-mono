@@ -7,7 +7,7 @@ import type { SavedView, ZoomMode } from './state'
 export type ZoomEvent =
   /** − or +, the wheel: the user's own zoom. Leaves Overview without going back. */
   | { kind: 'step' }
-  /** The % readout, or Enter or a click in Overview: the default view, fitted afresh. */
+  /** The % readout or the 0 key: the default view, fitted afresh. (Enter or a click in Overview goes to 1:1, #120.) */
   | { kind: 'reset' }
   /** Overview on, remembering where the view was. */
   | { kind: 'enter-overview'; at: Omit<SavedView, 'mode'> }

@@ -196,6 +196,10 @@ describe('Components zoom', () => {
     // Both wordings; zoom.css shows the touch one on a coarse pointer.
     expect(hint.querySelector('.zoom-hint-key')!.textContent).toBe('Too small to read: press Shift+0')
     expect(hint.querySelector('.zoom-hint-touch')!.textContent).toBe('Too small to read: tap 1:1')
+    // The drawing's description (the cue is aria-hidden) says what to press with a keyboard.
+    expect(document.querySelector('.comp-too-small')!.textContent).toBe(
+      'Too small to read. Press Shift+0, or Enter on an item, to view at actual size.',
+    )
     runComponentZoom(scroller, 'out')
     expect(hint.hidden).toBe(true)
     runComponentZoom(scroller, 'reset')
@@ -314,6 +318,9 @@ describe('Components zoom', () => {
       runComponentZoom(scroller, 'reset')
       expect(status()).toMatch(/^Default zoom, \d+%\. Too small to read: tap 1:1\.$/)
       expect(componentTooSmallSaid(id)).toBe('. Too small to read: tap 1:1.')
+      // So does the drawing's description: there is no Shift+0 or Enter on touch, a tap does it.
+      const described = document.getElementById(scroller.querySelector('svg')!.getAttribute('aria-describedby')!)
+      expect(described?.textContent).toBe('Too small to read. Tap the drawing, or 1:1, to view at actual size.')
       runComponentZoom(scroller, 'actual')
       expect(componentTooSmallSaid(id)).toBe('')
     } finally {

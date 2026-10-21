@@ -290,15 +290,18 @@ describe('Overview (#94)', () => {
     expect(z.view().zoom).toBeGreaterThanOrEqual(before)
   })
 
-  it('leaves for the default view centred on an arrow when Enter is pressed on it', () => {
+  it('leaves for 1:1 centred on an arrow when Enter is pressed on it, as a click does (#120)', () => {
     const z = mount(12, 600)
     z.button('overview').click()
     const arrow = z.root.querySelector<HTMLButtonElement>('button.msg-open')!
     arrow.focus()
     const ev = press(arrow, 'Enter')
+    flushDiagramPaints()
     expect(ev.defaultPrevented).toBe(true)
     expect(z.button('overview').getAttribute('aria-pressed')).toBe('false')
-    expect(z.status()).toMatch(/^Default zoom, \d+%$/)
+    expect(z.view().mode.kind).toBe('zoomed')
+    expect(z.readout()).toBe('100%')
+    expect(z.status()).toBe('Zoom 1:1, 100%')
   })
 
   it('leaves for 1:1 when the drawing is clicked, without opening what is under it (#120)', () => {

@@ -199,12 +199,16 @@ function actualSize(scrollport: HTMLElement): void {
   if (zoom != null) announce(scrollport, { kind: 'actual', zoom })
 }
 
-/** From Overview, the default view centred on a message (Enter on it). */
+/**
+ * From Overview, 1:1 centred on a message (Enter on it), as a click or tap there goes to 1:1
+ * (#120): the keyboard and the pointer land at the same readable size.
+ */
 export function zoomToMessage(scrollport: HTMLElement, messageId: string): void {
   const centre = messageCentre(scrollport, messageId)
   if (!centre) return
-  resetZoom(scrollport, centre)
+  const zoom = showActualSize(scrollport, centre)
   revealMessageX(scrollport, messageId)
+  if (zoom != null) announce(scrollport, { kind: 'actual', zoom })
 }
 
 /**

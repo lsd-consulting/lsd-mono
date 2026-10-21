@@ -17,6 +17,7 @@ import {
   READABLE_ZOOM,
   belowReadable,
   stepZoom,
+  tooSmallDescription,
   tooSmallHint,
   type ZoomChange,
 } from './diagram-view'
@@ -157,8 +158,13 @@ export function componentTooSmallSaid(scenarioId: string): string {
 function describeTooSmall(scroller: HTMLElement, scenarioId: string): void {
   const svg = scroller.querySelector('svg.component-diagram')
   if (!svg) return
-  if (componentTooSmall(scenarioId)) svg.setAttribute('aria-describedby', tooSmallDescriptionId(scenarioId))
-  else svg.removeAttribute('aria-describedby')
+  if (componentTooSmall(scenarioId)) {
+    // Worded for the pointer in use now: Shift+0 and Enter by key, a tap on touch.
+    const text = document.getElementById(tooSmallDescriptionId(scenarioId))
+    const said = tooSmallDescription(isCoarsePointer())
+    if (text && text.textContent !== said) text.textContent = said
+    svg.setAttribute('aria-describedby', tooSmallDescriptionId(scenarioId))
+  } else svg.removeAttribute('aria-describedby')
 }
 
 /** The Zoom group's readout, limits and Overview button, from the scenario's state. */

@@ -132,7 +132,7 @@ const zoomKey = (e: KeyEvent, c: DiagramKeyContext) =>
   zoomsHere(c)
     ? zoomKeyAction(event(e), { singleKeys: c.singleKeys, overview: c.overview, panelOpen: c.panelOpen })
     : null
-/** In Overview, Enter on a message zooms to it instead of opening it. */
+/** In Overview, Enter on a message zooms to it at 1:1 instead of opening it. */
 const zoomsToMessage = (e: KeyEvent, c: DiagramKeyContext) =>
   c.on === 'arrow' && c.zoomable && c.overview && c.messageId !== null && e.key === 'Enter' && !e.shiftKey && noMods(e)
 const activates = (e: KeyEvent) => e.key === 'Enter' || e.key === ' '
