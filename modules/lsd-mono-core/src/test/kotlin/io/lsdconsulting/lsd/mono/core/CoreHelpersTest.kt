@@ -2,13 +2,14 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-/** Direct tests for [LsdProperties] and StringUtils (#25). lsd-mono-report-html's JsonTest tests its Json.kt. */
+/** Direct tests for [LsdProperties] (#25). lsd-mono-report-html's JsonTest tests its Json.kt. */
 @LsdTestConfig
 class CoreHelpersTest {
     @Test
@@ -37,14 +38,8 @@ class CoreHelpersTest {
         assertEquals(200, LsdProperties.labelMaxWidth())
         System.setProperty(LsdProperties.LABEL_MAX_WIDTH, "0")
         assertEquals(200, LsdProperties.labelMaxWidth())
-    }
-
-    @Test
-    fun abbreviate() {
-        assertEquals("hello", "  hello  ".abbreviate(10))
-        assertEquals("hel...", "hello world".abbreviate(6))
-        assertEquals("he", "hello".abbreviate(2), "narrower than the ellipsis is a hard cut")
-        assertEquals("", "hello".abbreviate(0))
-        assertEquals("", "   ".abbreviate(5))
+        // One default everywhere: the property, the options and the JSON; the report UI checks it too (#111).
+        assertEquals(ReportOptions.DEFAULT_LABEL_MAX_WIDTH, LsdProperties.labelMaxWidth())
+        assertEquals(ReportOptions.DEFAULT_LABEL_MAX_WIDTH, ReportOptionsJson().labelMaxWidth)
     }
 }

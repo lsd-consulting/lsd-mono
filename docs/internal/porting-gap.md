@@ -198,7 +198,7 @@ Each item: legacy behaviour → why it matters → suggested LSD Mono shape → 
 | | |
 |--|--|
 | **Legacy** | `renderReport(title, options)` returns HTML string; `ReportOptions(devMode, metricsEnabled, maxEventsPerDiagram)`; properties also include `DIAGRAM_THEME`, `LABEL_MAX_WIDTH`, `DEV_MODE`, etc. |
-| **Shipped** | `ReportOptions(metricsEnabled, labelMaxWidth)` from `lsd.mono.metrics.enabled` (default true) and `lsd.mono.label.maxWidth` (default 200; lsd-core's `lsd.core.*` names are not read). Written on the report as `options`. Full event labels stay in JSON; metric summaries abbreviate, and the SVG truncates with a `<title>` of the full label. **No** `DIAGRAM_THEME`. **No** `maxEventsPerDiagram` split. |
+| **Shipped** | `ReportOptions(metricsEnabled, labelMaxWidth)` from `lsd.mono.metrics.enabled` (default true) and `lsd.mono.label.maxWidth` (default 200; lsd-core's `lsd.core.*` names are not read). Written on the report as `options`. Full event labels stay in JSON; only the diagram cuts them (`truncateLabel` in the report UI), with a `<title>` of the full label. **No** `DIAGRAM_THEME`. **No** `maxEventsPerDiagram` split. |
 | **Still open** | In-memory `renderReport` returning HTML without writing files. `devMode` stays out (single-file shell). |
 | **Test** | `ScenarioMetricsTest` locks `labelMaxWidth` in the options with a full event label. `sequence-diagram.test.ts` locks SVG truncation. `multi-scenario-status.json` includes default `options`. |
 

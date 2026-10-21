@@ -32,7 +32,7 @@ public object LsdProperties {
      */
     public const val TIMING_ORDER_BY_STARTED_AT: String = "lsd.mono.timing.orderByStartedAt"
 
-    /** Width summaries and the diagram truncate labels to. Default 200. */
+    /** Width the diagram cuts message labels to; the full label stays in the report and the side panel. Default 200. */
     public const val LABEL_MAX_WIDTH: String = "lsd.mono.label.maxWidth"
 
     /**

@@ -28,7 +28,7 @@ public data class ReportJson(
 public data class ReportOptionsJson(
     /** When false, scenarios carry no `metrics`. */
     val metricsEnabled: Boolean = true,
-    /** Characters after which the page truncates labels in its summaries. */
+    /** Width the diagram cuts message labels to; the full label stays in the report and the side panel. */
     val labelMaxWidth: Int = 200,
     /**
      * Whether the page may send the usage ping. The page also needs a release `generator`. True by

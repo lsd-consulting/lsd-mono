@@ -32,7 +32,7 @@ Legend: **U** = unused outside its own file or tests. **L** = mirrors legacy lsd
 | `class LsdScenario` (internal constructor) | `key`, `reportKey`, `isActive`, `capture(vararg …)` x2, `addFact`, `bind(): AutoCloseable`, `wrap(Runnable)`, `wrapCallable(Callable)`, `complete(...)`, `discard()` | `wrapCallable` **U**; `complete` **P** |
 | `class IdGenerator` | `next()`, `reset()` | **X** (it's in the `SequenceEventBuilder` signature) |
 | `data class ReportOptions` + `fromProperties()`, `DEFAULT_LABEL_MAX_WIDTH` | | **X**: nothing accepts it |
-| `fun String.abbreviate(maxWidth)` | | **X**, and it adds an extension to every `String` in the caller's project |
+| `fun String.abbreviate(maxWidth)` | | **X**, and it adds an extension to every `String` in the caller's project. Since removed: nothing called it (#111) |
 
 ### Capture DSL (`core.capture.CaptureDsl.kt`)
 
@@ -83,7 +83,7 @@ What the integrations import from core: `LsdContext`, `LsdScenario`, `ScenarioEr
 
 | Item | Action | Why |
 |---|---|---|
-| `model/*`, `ReportWriter`, `ScenarioMetrics`, `ReportOptions`, `orderByCreatedAt`, `IdGenerator`, `ParticipantIds`, `Fact`, `Scenario`, `abbreviate`, `Html`, `LsdVersion` | `internal` | Wire format and implementation. Only same-module tests use them, and internal still works there. |
+| `model/*`, `ReportWriter`, `ScenarioMetrics`, `ReportOptions`, `orderByCreatedAt`, `IdGenerator`, `ParticipantIds`, `Fact`, `Scenario`, `Html`, `LsdVersion` | `internal` | Wire format and implementation. Only same-module tests use them, and internal still works there. |
 | `SequenceEvent` + the 7 event classes, `NotePlacement`, `LifelineAction` | `internal` | Callers use verbs instead. Ids are always assigned by the context, and from/to become nullable inside (fixes the `""` sentinel). The JSON still writes `""`, so the UI doesn't change. |
 | `SequenceEventBuilder`, `MessageBuilder`, `LifelineBuilder`, `messageBuilder()`, the top-level `noteOver/noteLeft/noteRight/logicalDivider/section/delay/spacer/shortInbound/shortOutbound` builders | **remove** | Replaced by the verbs and the `capture { }` block (§3, §4). Two capture paths become one. |
 | `LsdContext.capture(vararg SequenceEvent)` / `(vararg SequenceEventBuilder)` | **remove** | Replaced by `capture { }`. |

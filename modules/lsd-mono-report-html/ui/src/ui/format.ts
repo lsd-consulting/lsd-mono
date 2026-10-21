@@ -40,7 +40,10 @@ export function statusLabel(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-/** Matches Kotlin `String.abbreviate` / `lsd.mono.label.maxWidth` (default 200). */
+/**
+ * The default of `lsd.mono.label.maxWidth`: keep in step with Kotlin's
+ * `ReportOptions.DEFAULT_LABEL_MAX_WIDTH` (format.test.ts checks). Only the diagram cuts labels.
+ */
 export const DEFAULT_LABEL_MAX_WIDTH = 200
 const ELLIPSIS = '...'
 

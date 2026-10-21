@@ -9,8 +9,10 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
  * [metricsEnabled] defaults **on** (`lsd.mono.metrics.enabled`) so the existing
  * message-count metrics stay unless a caller turns them off.
  *
- * [labelMaxWidth] defaults to 200 (`lsd.mono.label.maxWidth`). Full labels stay on
- * events; summaries and the SVG shell truncate to this width.
+ * [labelMaxWidth] defaults to 200 (`lsd.mono.label.maxWidth`): the width the diagram cuts message
+ * labels to. The full label stays in the report and the side panel. Kotlin cuts nothing; the report
+ * UI's `DEFAULT_LABEL_MAX_WIDTH` (lsd-mono-report-html ui/src/ui/format.ts) keeps in step with
+ * [DEFAULT_LABEL_MAX_WIDTH].
  */
 internal data class ReportOptions(
     val metricsEnabled: Boolean = true,
