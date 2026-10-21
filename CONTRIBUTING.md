@@ -19,7 +19,9 @@ In `modules/lsd-mono-report-html/ui`: `npm run typecheck`, `npm run lint`, `npm 
 
 - **Public API.** `lsd-mono-core` uses explicit API mode. A change to the public surface shows up in
   `modules/lsd-mono-core/api/lsd-mono-core.api`: run `./gradlew updateKotlinAbi` and commit the dump
-  with the change, so it is reviewed.
+  with the change, so it is reviewed. Report model and writer types (`lsd-mono-report-model`,
+  `lsd-mono-report-html`) must never appear in core's public API: core's users would get "cannot
+  access class" errors, and the model's experimental opt-in would leak into core's API.
 - **No deprecation shims.** Until v1, change the API instead of keeping an old form, and say what to change in a
   `BREAKING CHANGE:` footer.
 - **Conventional commits.** `type(scope)!: subject`, lower case, no full stop. The types, and which of them

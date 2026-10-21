@@ -18,6 +18,13 @@ description =
 
 // The report model is experimental (@ExperimentalLsdReportModel); core maps its scenarios to it, as the
 // model and writer move with it in lockstep.
+//
+// Never let a model or writer type (io.lsdconsulting.lsd.mono.report.model or .report.html) appear in
+// core's public API. This opt-in covers the whole module, so the compiler does not warn here. But
+// core takes the model and writer as implementation, not api: a consumer has them only at runtime,
+// so its compiler would fail with "Cannot access class FactJson", and the experimental opt-in would
+// leak into core's API. checkKotlinAbi fails on such a change; do not accept it with
+// updateKotlinAbi.
 kotlin {
     compilerOptions {
         optIn.add("io.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel")
