@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { uxFixture } from './ux-fixture'
 import {
   THEMES,
@@ -25,6 +25,19 @@ const actionsOpacity = (page: Page, id: string) =>
 /** The sequence toolbar's last shown control, the tab stop just before the header row. */
 const lastToolbarControl = (page: Page) =>
   page.locator('.diagram-pane[data-pane="sequence"] .seq-toolbar button:not([disabled]):visible').last()
+
+/**
+ * Hover a header with it a third of the way down the window, so the Hide and More bar it opens
+ * just under it (#92) is on screen. A click that first had to scroll the page to the bar would
+ * move the header out from under the pointer, and the bar closes with the hover.
+ */
+async function hoverHead(head: Locator): Promise<void> {
+  await head.evaluate(async (el) => {
+    scrollBy(0, el.getBoundingClientRect().top - innerHeight / 3)
+    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))
+  })
+  await head.hover()
+}
 
 const headerNames = (page: Page) =>
   page
@@ -75,7 +88,7 @@ test('a header × appears on hover and hides that participant; the chip lists it
   expect(await actionsOpacity(page, 'client')).toBe('0')
   expect(await actionsOpacity(page, 'db')).toBeNull()
 
-  await page.locator('[data-participant-head="db"]').hover()
+  await hoverHead(page.locator('[data-participant-head="db"]'))
   expect(await actionsOpacity(page, 'db')).toBe('1')
   const hovered = await seriousViolations(page)
   expect(hovered, formatViolations(hovered)).toEqual([])
@@ -96,7 +109,7 @@ test('a header × appears on hover and hides that participant; the chip lists it
   for (const theme of THEMES) {
     if (theme !== 'dark') {
       await openFixture(page, theme)
-      await page.locator('[data-participant-head="db"]').hover()
+      await hoverHead(page.locator('[data-participant-head="db"]'))
       await page.getByRole('button', { name: 'Hide Database' }).click()
     }
     await page.getByRole('button', { name: '1 hidden participant' }).click()
@@ -121,7 +134,7 @@ test('Escape closes the hidden list without closing the side panel', async ({ pa
   await openFixture(page, 'dark')
   await page.locator('button.msg-open[data-message-id="m0"]').click()
   await expect(page.locator('#inspector')).toBeVisible()
-  await page.locator('[data-participant-head="bus"]').hover()
+  await hoverHead(page.locator('[data-participant-head="bus"]'))
   await page.getByRole('button', { name: 'Hide Queue' }).click()
   await page.getByRole('button', { name: '1 hidden participant' }).click()
   await page.keyboard.press('Escape')
@@ -176,7 +189,7 @@ test('hiding refits a diagram the user has not zoomed, and keeps a zoom they cho
   const before = (await zoomOf(page, 'wide-a')).percent
   expect(before).toBeLessThan(100)
   for (const id of ['p0', 'p1', 'p2', 'p3']) {
-    await card.locator(`[data-participant-head="${id}"]`).hover()
+    await hoverHead(card.locator(`[data-participant-head="${id}"]`))
     await card.getByRole('button', { name: `Hide Service ${id.slice(1)}`, exact: true }).click()
   }
   await expect.poll(async () => (await zoomOf(page, 'wide-a')).percent).toBeGreaterThan(before)
@@ -184,7 +197,7 @@ test('hiding refits a diagram the user has not zoomed, and keeps a zoom they cho
 
   await card.getByRole('button', { name: 'Zoom in' }).click()
   const chosen = (await zoomOf(page, 'wide-a')).percent
-  await card.locator('[data-participant-head="p4"]').hover()
+  await hoverHead(card.locator('[data-participant-head="p4"]'))
   await card.getByRole('button', { name: 'Hide Service 4', exact: true }).click()
   await page.waitForTimeout(200)
   expect((await zoomOf(page, 'wide-a')).percent).toBe(chosen)
@@ -201,7 +214,7 @@ test('hiding refits a diagram the user has not zoomed, and keeps a zoom they cho
 
 test('print keeps hidden participants hidden and leaves out the header buttons and the chip', async ({ page }) => {
   await openReport(page, { report: uxFixture, theme: 'light' })
-  await page.locator('[data-participant-head="db"]').hover()
+  await hoverHead(page.locator('[data-participant-head="db"]'))
   await page.getByRole('button', { name: 'Hide Database' }).click()
   await page.locator('[data-participant-head="bus"]').click({ button: 'right' })
   await startPrint(page)
