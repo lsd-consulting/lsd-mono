@@ -35,6 +35,18 @@ dependencies {
     testFixturesImplementation(libs.json.schema.validator)
 }
 
+tasks.test {
+    // ExperimentalMarkerGuardTest scans report-html's main Kotlin as well as this module's.
+    inputs
+        .files(
+            rootProject.layout.projectDirectory
+                .dir("modules")
+                .asFileTree
+                .matching { include("lsd-mono-report-model/src/main/**/*.kt", "lsd-mono-report-html/src/main/**/*.kt") },
+        ).withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("guardedSources")
+}
+
 // The test fixtures are for this repository's tests: keep them out of the published component, so
 // Maven Central gets no -test-fixtures jar and the POM and Gradle metadata do not mention one.
 val javaComponent = components["java"] as AdhocComponentWithVariants
