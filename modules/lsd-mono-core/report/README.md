@@ -110,13 +110,13 @@ Not supported by design: PlantUML sprite includes and skinparam colours. Still o
 
 ## Sample data
 
-`src/data/sample-report.ts` mirrors multi-scenario reports:
+The built-in demo is the shared test report `reports/sample.json` in `modules/lsd-mono-report-schema/conformance`, which `src/data/sample-report.ts` imports. It mirrors multi-scenario reports:
 
 1. **success** — happy-path checkout (reserve → pay → event)
 2. **warn** — payment timeout + retry
 3. **error** — insufficient stock → 409, payment skipped
 
-The shape stays close to `ScenarioModel` + `SequenceEvent` / `Message` / `DataHolder` so the JVM `ReportJson` writer can feed the same shell. Captured reports come from the parent façade; this file is only the no-payload demo. Its JSON bodies are in `src/data/sample-payloads.ts`, loaded when the side panel or Find first needs them. Try Find with `snowdrop`: it is only in the checkout's payload (its voucher code), so it shows a payload match.
+The shape stays close to `ScenarioModel` + `SequenceEvent` / `Message` / `DataHolder` so the JVM `ReportJson` writer can feed the same shell. Captured reports come from the parent façade; this one is only the no-payload demo, and it follows the report schema like any report. Its JSON bodies are in `src/data/sample-payloads.ts`, loaded when the side panel or Find first needs them. Try Find with `snowdrop`: it is only in the checkout's payload (its voucher code), so it shows a payload match.
 
 ## Keyboard
 

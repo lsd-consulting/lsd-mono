@@ -8,6 +8,8 @@ export default defineConfig({
     assetsInlineLimit: 100000,
     cssCodeSplit: false,
   },
-  server: { port: 5173, open: false },
+  // The demo report (src/data/sample-report.ts) is a shared test report beside the schema, outside
+  // this package, so the dev server may serve that directory too.
+  server: { port: 5173, open: false, fs: { allow: ['.', '../../lsd-mono-report-schema/conformance/reports'] } },
   preview: { port: 4173 },
 })

@@ -87,6 +87,10 @@ val reportSingle = tasks.register<Exec>("reportSingle") {
     inputs.dir(reportDir.dir("src")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(reportDir.dir("scripts")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(reportDir.dir("public")).withPathSensitivity(PathSensitivity.RELATIVE)
+    // The demo report the shell falls back to is a shared test report beside the schema.
+    inputs
+        .file(rootProject.layout.projectDirectory.file("modules/lsd-mono-report-schema/conformance/reports/sample.json"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir(reportDir.dir("dist"))
 }
 

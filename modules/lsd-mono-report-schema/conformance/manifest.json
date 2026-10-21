@@ -86,6 +86,13 @@
       "about": "The live example report's first scenario (14 components), for the component diagram checks."
     },
     {
+      "file": "reports/sample.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "hand-written",
+      "about": "The report UI's built-in demo (src/data/sample-report.ts imports it): three scenarios of a checkout, with HTML in the descriptions. Its JSON bodies are in the UI's sample-payloads.ts."
+    },
+    {
       "file": "reports/future-minor.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
