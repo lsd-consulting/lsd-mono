@@ -4,8 +4,8 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -44,7 +44,7 @@ class CaptureToJsonTest {
         val files = lsd.completeReport("Orders flow")
         lsd.createIndex()
 
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Orders flow") + "-report.json").readText()
         assertTrue(json.contains("\"title\": \"Orders flow\""))
         assertTrue(json.contains("\"key\": \"orderId\""))
         assertTrue(json.contains("\"value\": \"ord-1\""))
@@ -83,22 +83,22 @@ class CaptureToJsonTest {
         assertTrue(json.contains("\\u003cp\\u003eok\\u003c/p\\u003e"))
         assertFalse(json.contains("</script>"))
 
-        val diagram = tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-diagram.html").readText()
+        val diagram = tempDir.resolve(ReportFileNames.stem("Orders flow") + "-diagram.html").readText()
         val injectedAt = diagram.indexOf("window.__LSD_REPORT__=")
         val sampleAt = diagram.indexOf("Checkout Service")
         assertTrue(injectedAt >= 0, "shell missing injection")
         assertTrue(sampleAt > injectedAt, "sample fallback should follow the injected report")
         assertTrue(diagram.contains("POST /checkout"))
-        assertTrue(diagram.contains("window.__LSD_PAYLOADS_SRC__=\"${ReportWriter.reportFileStem("Orders flow")}-payloads.js\""))
+        assertTrue(diagram.contains("window.__LSD_PAYLOADS_SRC__=\"${ReportFileNames.stem("Orders flow")}-payloads.js\""))
         assertTrue(diagram.contains("window.__LSD_REPORT__??"), "shell should fall back to sample data when the global is absent")
         assertFalse(diagram.contains("cart-1"), "message bodies stay out of the first paint")
-        val payloads = tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-payloads.js").readText()
+        val payloads = tempDir.resolve(ReportFileNames.stem("Orders flow") + "-payloads.js").readText()
         // Each payload is its JSON text, parsed when the shell opens it (#63).
         assertTrue(payloads.startsWith("window.__LSD_PAYLOAD_TEXT__="), payloads)
         assertTrue(payloads.contains("""\"cartId\":\"cart-1\""""), payloads)
 
-        assertEquals(ReportWriter.reportFileStem("Orders flow") + "-report.json", files.reportJson.fileName.toString())
-        assertFalse(tempDir.resolve(ReportWriter.reportFileStem("Orders flow") + "-report.html").toFile().exists(), "no listing page")
+        assertEquals(ReportFileNames.stem("Orders flow") + "-report.json", files.reportJson.fileName.toString())
+        assertFalse(tempDir.resolve(ReportFileNames.stem("Orders flow") + "-report.html").toFile().exists(), "no listing page")
         // No shared "latest" copies that another report would overwrite (#25).
         assertFalse(tempDir.resolve("report.json").toFile().exists())
         assertFalse(tempDir.resolve("lsd-report.single.html").toFile().exists())

@@ -1,8 +1,8 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.math.BigDecimal
@@ -69,7 +69,7 @@ class PayloadScriptGoldenTest {
         lsd.completeScenario("awkward payloads", status = Status.SUCCESS)
 
         lsd.completeReport("Payload script")
-        val script = tempDir.resolve(ReportWriter.reportFileStem("Payload script") + "-payloads.js").readText()
+        val script = tempDir.resolve(ReportFileNames.stem("Payload script") + "-payloads.js").readText()
         Conformance.assertMatches("payloads/payload-script.js", script)
     }
 }

@@ -1,21 +1,6 @@
-package io.lsdconsulting.lsd.mono.core.report
+package io.lsdconsulting.lsd.mono.report.html
 
-import io.lsdconsulting.lsd.mono.core.ReportFiles
-import io.lsdconsulting.lsd.mono.core.html.Html
-import io.lsdconsulting.lsd.mono.core.json.JsonArray
-import io.lsdconsulting.lsd.mono.core.json.JsonBool
-import io.lsdconsulting.lsd.mono.core.json.JsonNumber
-import io.lsdconsulting.lsd.mono.core.json.JsonObject
-import io.lsdconsulting.lsd.mono.core.json.JsonString
-import io.lsdconsulting.lsd.mono.core.json.JsonValue
-import io.lsdconsulting.lsd.mono.core.json.jsonString
-import io.lsdconsulting.lsd.mono.core.json.render
-import io.lsdconsulting.lsd.mono.core.model.IndexScenario
-import io.lsdconsulting.lsd.mono.core.model.ReportFile
-import io.lsdconsulting.lsd.mono.core.model.ScenarioCounts
-import io.lsdconsulting.lsd.mono.core.model.forShell
-import io.lsdconsulting.lsd.mono.core.model.shellPayloadScript
-import io.lsdconsulting.lsd.mono.core.model.toJson
+import io.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel
 import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ReportSchema
@@ -37,15 +22,21 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
- * Writes ReportJson, a minimal HTML listing, and the report single-file shell
- * with `window.__LSD_REPORT__` injected so the SVG UI renders the captured scenario.
- * Message bodies are not in that script. They are written beside the diagram as
- * `<stem>-payloads.js` and loaded when the inspector opens.
- * Embedded sample data is only the fallback when that global is absent.
+ * Writes a [ReportJson] as files: `<stem>-report.json` (the report), `<stem>-diagram.html` (the
+ * interactive report page: the single-file shell bundled in this jar, with the report injected as
+ * `window.__LSD_REPORT__`), `<stem>-report.js` (the report for the index page to load) and, when
+ * messages carry data, `<stem>-payloads.js`, which the page loads when the inspector opens.
+ * [writeIndex] writes `index.html`, which lists every report in the directory.
+ *
+ * ```kotlin
+ * val writer = ReportWriter(ReportWriterSettings(generator = "my-adapter 1.0"))
+ * val written = writer.writeReport(report, File("build/reports/lsd"))
+ * writer.writeIndex(File("build/reports/lsd"))
+ * ```
  *
  * **Several writers, one directory.** Test classes, parallel tests, Gradle forks
  * and modules can share an output directory:
- * - Each report's files start with [reportFileStem]: the sanitised title plus a short
+ * - Each report's files start with one stem, `<sanitised title>-<8 hex chars>`: the title plus a short
  *   hash of the report key (or the title), so two reports never share a file.
  * - Every file is written to a temporary file and moved into place, so a reader
  *   never sees half a file and concurrent writers do not interleave.
@@ -57,23 +48,28 @@ import kotlin.concurrent.withLock
  * The writer reads no properties: what it adds itself, the index page's generator, time and
  * usage-ping switch, comes in [settings]. The index lock and the parsed index entries are shared
  * by every writer in the JVM.
+ *
+ * Experimental, as the model it takes is: see [ExperimentalLsdReportModel].
  */
-internal class ReportWriter(
+@ExperimentalLsdReportModel
+public class ReportWriter(
     private val settings: ReportWriterSettings,
 ) {
     /**
-     * Write one report. File names are [reportFileStem]: the title plus a hash of
+     * Write one report. File names start with the report's stem: the title plus a hash of
      * [reportKey] (a test class or feature id) when given, else of the title, so
      * reports with the same title do not collide. [fileTitle] stands in for the title in the
      * file names when an integration names its files apart from the title it shows.
-     * @return the diagram, listing and JSON files.
+     * The report's messages' data must be JSON values (see [MessageEventJson.data]).
+     * @return the files written, for [writeIndex].
      */
-    fun writeReport(
+    @JvmOverloads
+    public fun writeReport(
         report: ReportJson,
         outputDir: File,
         reportKey: String? = null,
         fileTitle: String = report.title,
-    ): ReportFiles {
+    ): WrittenReport {
         outputDir.mkdirs()
         val stem = reportFileStem(fileTitle, reportKey)
         val jsonName = "$stem-report.json"
@@ -95,12 +91,13 @@ internal class ReportWriter(
         val diagramPath = outputDir.resolve(diagramName).toPath()
         writeAtomically(jsonPath, report.toJson())
         writeAtomically(diagramPath, shell)
-        writeIndexEntry(outputDir, indexEntry(report, reportKey, fileTitle))
-        return ReportFiles(diagramHtml = diagramPath, reportJson = jsonPath)
+        val entry = indexEntry(report, reportKey, fileTitle)
+        writeIndexEntry(outputDir, entry)
+        return WrittenReport(diagramHtml = diagramPath, reportJson = jsonPath, entry = entry)
     }
 
     /** What the index lists for a report written with [writeReport]. */
-    fun indexEntry(
+    internal fun indexEntry(
         report: ReportJson,
         reportKey: String? = null,
         fileTitle: String = report.title,
@@ -118,11 +115,19 @@ internal class ReportWriter(
     }
 
     /**
-     * Write `index.html` listing [reportFiles] plus every report already recorded in
-     * [outputDir] by any writer: failed reports first, then by title. Safe to call from several threads
-     * and processes at once.
+     * Write `index.html` in [outputDir], listing every report any writer has written there, and
+     * [reports] as well: failed reports first, then by title. Safe to call from several threads and
+     * processes at once.
+     * @return the index page.
      */
-    fun writeIndex(
+    @JvmOverloads
+    public fun writeIndex(
+        outputDir: File,
+        reports: List<WrittenReport> = emptyList(),
+    ): Path = writeIndexOf(reports.map { it.entry }, outputDir)
+
+    /** [writeIndex], with entries that need not have been written: a link-only entry has no stem. */
+    internal fun writeIndexOf(
         reportFiles: List<ReportFile>,
         outputDir: File,
     ): Path {
@@ -370,8 +375,8 @@ internal class ReportWriter(
         return raw
     }
 
-    companion object {
-        private const val SHELL_RESOURCE = "/lsd-mono-core/report/lsd-report.single.html"
+    public companion object {
+        private const val SHELL_RESOURCE = "/lsd-mono-report-html/lsd-report.single.html"
         private const val INDEX_DIR = ".lsd-index"
         private const val INDEX_LOCK = ".lock"
         private const val INDEX_FORMAT = "2"
@@ -398,10 +403,17 @@ internal class ReportWriter(
          * [reportKey] when given, else of [title], so it is stable across runs and two
          * titles that sanitise to the same text still get different files.
          */
+        internal fun reportFileStem(
+            title: String,
+            reportKey: String? = null,
+        ): String = "${sanitizeFilename(title)}-${shortHash(reportKey ?: title)}"
+
+        /**
+         * [report] as the JSON text [writeReport] writes to `<stem>-report.json`, with
+         * `schemaVersion` set to [ReportSchema.VERSION].
+         */
         @JvmStatic
-        @JvmOverloads
-        fun reportFileStem(title: String, reportKey: String? = null): String =
-            "${sanitizeFilename(title)}-${shortHash(reportKey ?: title)}"
+        public fun toJson(report: ReportJson): String = report.toJson()
 
         internal fun sanitizeFilename(title: String): String =
             title

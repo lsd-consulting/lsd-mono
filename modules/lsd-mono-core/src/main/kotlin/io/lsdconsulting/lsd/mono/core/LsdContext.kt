@@ -361,17 +361,16 @@ public class LsdContext :
                 reports.take(reportKey)
             }
         val report = jsonMapper.toReportJson(title, taken, source)
-        val writer = reportWriter()
-        val files = writer.writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey, fileTitle = fileTitle)
-        reports.written(writer.indexEntry(report, reportKey, fileTitle))
-        return files
+        val written = reportWriter().writeReport(report = report, outputDir = outputDirectory, reportKey = reportKey, fileTitle = fileTitle)
+        reports.written(written)
+        return ReportFiles(diagramHtml = written.diagramHtml, reportJson = written.reportJson)
     }
 
     /**
      * Write `index.html` listing every report in the output directory, including
      * reports written by other test JVMs (Gradle forks) or modules sharing it.
      */
-    public fun createIndex(): Path = reportWriter().writeIndex(reports.writtenSoFar(), outputDirectory)
+    public fun createIndex(): Path = reportWriter().writeIndex(outputDirectory, reports.writtenSoFar())
 
     /**
      * Forget everything: participants, running and completed scenarios, the default scenario's

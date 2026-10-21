@@ -4,8 +4,8 @@ import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS_RESPONSE
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -109,7 +109,7 @@ class PendingCallTest {
         lsd.completeScenario("second")
         lsd.completeReport("Calls")
 
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Calls") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Calls") + "-report.json").readText()
         assertTrue(json.contains("\"label\": \"GET /orders\""), json)
         assertTrue(json.contains("\"label\": \"next\""), json)
         assertFalse(json.contains("\"label\": \"late\""), json)

@@ -1,4 +1,4 @@
-package io.lsdconsulting.lsd.mono.core.html
+package io.lsdconsulting.lsd.mono.report.html
 
 /**
  * The only HTML escapers for pages written from Kotlin (#28), one per context:

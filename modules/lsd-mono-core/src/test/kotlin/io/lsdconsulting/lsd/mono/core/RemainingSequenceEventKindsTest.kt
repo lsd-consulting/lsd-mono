@@ -4,8 +4,8 @@ import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -50,7 +50,7 @@ class RemainingSequenceEventKindsTest {
         lsd.completeScenario("event kinds", "P1 remaining", Status.SUCCESS)
         lsd.completeReport("Event kinds")
 
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Event kinds") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Event kinds") + "-report.json").readText()
 
         assertTrue(json.contains("\"placement\": \"over\""))
         assertTrue(json.contains("\"placement\": \"left\""))

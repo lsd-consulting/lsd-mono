@@ -9,8 +9,8 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.WarningKind
 import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -635,6 +635,6 @@ class TimingApiTest {
 
     private fun report(lsd: LsdContext, title: String): String {
         lsd.completeReport(title)
-        return tempDir.resolve(ReportWriter.reportFileStem(title) + "-report.json").readText()
+        return tempDir.resolve(ReportFileNames.stem(title) + "-report.json").readText()
     }
 }

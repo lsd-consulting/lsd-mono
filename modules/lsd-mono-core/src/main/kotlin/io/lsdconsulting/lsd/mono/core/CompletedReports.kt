@@ -1,7 +1,7 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Scenario
-import io.lsdconsulting.lsd.mono.core.model.ReportFile
+import io.lsdconsulting.lsd.mono.report.html.WrittenReport
 
 /**
  * Report-level state of one [LsdContext]: completed scenarios waiting for their report, the
@@ -12,7 +12,7 @@ internal class CompletedReports(
     private val lock: Any,
 ) {
     private val completed = LinkedHashMap<String?, MutableList<Pair<Long, Scenario>>>()
-    private val written = ArrayList<ReportFile>()
+    private val written = ArrayList<WrittenReport>()
     private val open = HashSet<String>()
 
     /** Keep [scenario] for the report [reportKey]; [order] is when it began, which the report follows. */
@@ -34,11 +34,11 @@ internal class CompletedReports(
                 .map { it.second }
         }
 
-    fun written(entry: ReportFile) {
-        synchronized(lock) { written.add(entry) }
+    fun written(report: WrittenReport) {
+        synchronized(lock) { written.add(report) }
     }
 
-    fun writtenSoFar(): List<ReportFile> = synchronized(lock) { written.toList() }
+    fun writtenSoFar(): List<WrittenReport> = synchronized(lock) { written.toList() }
 
     /**
      * The key of a new `report { }` block: its title, so its file name is the same on every run,

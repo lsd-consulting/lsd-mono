@@ -1,8 +1,10 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.PayloadConverters.Limits
-import io.lsdconsulting.lsd.mono.core.json.anyToJson
-import io.lsdconsulting.lsd.mono.core.json.render
+import io.lsdconsulting.lsd.mono.report.html.ReportWriter
+import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
+import io.lsdconsulting.lsd.mono.report.model.ReportJson
+import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -24,9 +26,31 @@ class PayloadConvertersTest {
     private val snapshot = PayloadConverters(Limits())
 
     private fun snap(value: Any?, limits: Limits = Limits()): Any? =
-        PayloadConverters(limits).snapshot(value).also { assertValidJson(anyToJson(it).render()) }
+        PayloadConverters(limits).snapshot(value).also { assertValidJson(render(it)) }
 
-    private fun json(value: Any?): String = anyToJson(snapshot.snapshot(value)).render().also(::assertValidJson)
+    private fun json(value: Any?): String = render(snapshot.snapshot(value)).also(::assertValidJson)
+
+    /** A report whose one message carries [data], as the writer writes `<stem>-report.json`. */
+    private fun render(data: Any?): String =
+        ReportWriter.toJson(
+            ReportJson(
+                title = "data",
+                generatedAt = "2026-10-21T08:00:00Z",
+                generator = "test",
+                status = "success",
+                scenarios =
+                    listOf(
+                        ScenarioJson(
+                            id = "s",
+                            title = "s",
+                            status = "success",
+                            description = "",
+                            facts = emptyList(),
+                            events = listOf(MessageEventJson(id = "m", from = "a", to = "b", label = "m", type = "SYNCHRONOUS", data = data)),
+                        ),
+                    ),
+            ),
+        )
 
     enum class Colour { RED, GREEN }
 

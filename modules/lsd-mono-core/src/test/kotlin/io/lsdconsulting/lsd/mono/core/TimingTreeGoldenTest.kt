@@ -2,8 +2,8 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.MessageType
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
@@ -51,7 +51,7 @@ class TimingTreeGoldenTest {
         lsd.completeScenario("all sources fallback", status = Status.SUCCESS)
 
         lsd.completeReport("Timing tree")
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Timing tree") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Timing tree") + "-report.json").readText()
         Conformance.assertProduced("reports/timing-tree.json", json)
     }
 

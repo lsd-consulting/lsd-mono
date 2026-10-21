@@ -2,8 +2,8 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -37,7 +37,7 @@ class SectionCaptureTest {
         lsd.completeScenario("phased call", "activations survive sections", Status.SUCCESS)
         lsd.completeReport("Sections")
 
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Sections") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Sections") + "-report.json").readText()
         val kinds = Regex(""""kind": "([^"]+)"""").findAll(json).map { it.groupValues[1] }.toList()
         assertEquals(
             listOf("activate", "message", "section", "section", "message", "deactivate"),

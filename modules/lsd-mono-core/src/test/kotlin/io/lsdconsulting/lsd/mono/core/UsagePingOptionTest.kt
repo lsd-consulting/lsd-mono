@@ -2,9 +2,9 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.properties.LsdConfig
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.reportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import io.lsdconsulting.lsd.mono.report.model.ReportSource
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -30,7 +30,7 @@ class UsagePingOptionTest {
         lsd.message("A", "B", "hello")
         lsd.completeScenario("one")
         if (source == null) lsd.completeReport("Ping") else @OptIn(InternalLsdApi::class) lsd.completeReport("Ping", null, source)
-        return tempDir.resolve(ReportWriter.reportFileStem("Ping") + "-report.json").readText()
+        return tempDir.resolve(ReportFileNames.stem("Ping") + "-report.json").readText()
     }
 
     @Test
@@ -45,9 +45,9 @@ class UsagePingOptionTest {
         System.setProperty(LsdProperties.USAGE_PING, "false")
         val json = write()
         assertTrue(json.contains(""""usagePing": false"""), json)
-        val diagram = tempDir.resolve(ReportWriter.reportFileStem("Ping") + "-diagram.html").readText()
+        val diagram = tempDir.resolve(ReportFileNames.stem("Ping") + "-diagram.html").readText()
         assertTrue(Regex(""""usagePing"\s*:\s*false""").containsMatchIn(diagram), "the page decides from the report it carries")
-        val manifest = reportWriter().writeIndex(emptyList(), tempDir.toFile()).readText().substringAfter("window.__LSD_INDEX__=")
+        val manifest = reportWriter().writeIndex(tempDir.toFile()).readText().substringAfter("window.__LSD_INDEX__=")
         assertTrue(Regex(""""options"\s*:\s*\{\s*"usagePing"\s*:\s*false\s*}""").containsMatchIn(manifest), manifest.take(300))
     }
 

@@ -14,7 +14,7 @@ import kotlin.io.path.readText
 /**
  * Keeps HTML escaping in one place (#28, #30). Every module's main Kotlin is scanned:
  *
- * - Only `html/Html.kt` writes escaping entities or replaces markup characters.
+ * - Only lsd-mono-report-html's `Html.kt` writes escaping entities or replaces markup characters.
  * - A string template that contains markup only interpolates values that are escaped or are
  *   markup already built safely: `Html.text(...)`, `Html.attribute(...)`, `jsonString(...)`,
  *   a value or function whose name ends in `Html`, or a `.size`. Anything else is listed in
@@ -25,7 +25,7 @@ class HtmlEscapingGuardTest {
     fun `only Html escapes markup characters`() {
         val findings =
             mainSources().flatMap { (path, source) ->
-                if (path.endsWith("/html/Html.kt")) return@flatMap emptyList()
+                if (path.endsWith("/report/html/Html.kt")) return@flatMap emptyList()
                 source.lines().mapIndexedNotNull { index, line ->
                     val code = line.substringBefore("//")
                     when {
@@ -42,7 +42,7 @@ class HtmlEscapingGuardTest {
     fun `markup templates interpolate only escaped values`() {
         val findings =
             mainSources().flatMap { (path, source) ->
-                if (path.endsWith("/html/Html.kt")) return@flatMap emptyList()
+                if (path.endsWith("/report/html/Html.kt")) return@flatMap emptyList()
                 Templates(source).all().filter { MARKUP.containsMatchIn(it.text) }.flatMap { template ->
                     template.expressions
                         .filterNot { expression -> SAFE.any { it.matches(expression) } }
@@ -61,7 +61,7 @@ class HtmlEscapingGuardTest {
         val markup = Templates(source).all().filter { MARKUP.containsMatchIn(it.text) }
         assertEquals(listOf(listOf("Html.text(x)"), listOf("name", "f(\"}\")")), markup.map { it.expressions })
         assertEquals(listOf(1, 2), markup.map { it.line })
-        assertTrue(mainSources().any { it.first.endsWith("/report/ReportWriter.kt") }, "the scan found no sources")
+        assertTrue(mainSources().any { it.first.endsWith("/report/html/ReportWriter.kt") }, "the scan found no sources")
     }
 
     private class Allowed(
@@ -165,9 +165,9 @@ class HtmlEscapingGuardTest {
             )
         val ALLOWED =
             listOf(
-                Allowed("report/ReportWriter.kt", "src", "a script statement whose only value is written by jsonString"),
-                Allowed("report/ReportWriter.kt", "report.toJson().trim()", "JSON whose strings are written by jsonString, which escapes <, > and &"),
-                Allowed("report/ReportWriter.kt", "manifest.render().trim()", "the index manifest: JSON whose strings are written by jsonString"),
+                Allowed("report/html/ReportWriter.kt", "src", "a script statement whose only value is written by jsonString"),
+                Allowed("report/html/ReportWriter.kt", "report.toJson().trim()", "JSON whose strings are written by jsonString, which escapes <, > and &"),
+                Allowed("report/html/ReportWriter.kt", "manifest.render().trim()", "the index manifest: JSON whose strings are written by jsonString"),
             )
 
         /** (path relative to the repository, text) for every module's `src/main` Kotlin. */

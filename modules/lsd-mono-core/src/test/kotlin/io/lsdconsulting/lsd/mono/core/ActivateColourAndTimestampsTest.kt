@@ -2,8 +2,8 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -27,7 +27,7 @@ class ActivateColourAndTimestampsTest {
         lsd.completeScenario("coloured activation", status = Status.SUCCESS)
         lsd.completeReport("Activate colour")
 
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Activate colour") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Activate colour") + "-report.json").readText()
         assertTrue(json.contains("\"kind\": \"activate\""))
         assertTrue(json.contains("\"participantId\": \"api\""))
         assertTrue(json.contains("\"colour\": \"#c026d3\""))
@@ -67,7 +67,7 @@ class ActivateColourAndTimestampsTest {
         lsd.completeScenario("reordered", status = Status.SUCCESS)
         lsd.completeReport("Timestamps")
 
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Timestamps") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Timestamps") + "-report.json").readText()
         val early = json.indexOf("\"label\": \"early\"")
         val mid = json.indexOf("\"label\": \"mid\"")
         val late = json.indexOf("\"label\": \"late\"")

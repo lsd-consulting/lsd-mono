@@ -3,8 +3,6 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.PayloadConvertersTest.Companion.assertValidJson
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
-import io.lsdconsulting.lsd.mono.core.html.Html
-import io.lsdconsulting.lsd.mono.core.json.jsonString
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -20,46 +18,11 @@ import java.nio.file.Path
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 
-/** One escaper per context (#28), and a whole hostile report proving nothing leaks. */
+/** A whole hostile report proving nothing leaks (#28). lsd-mono-report-html's HtmlTest tests each escaper. */
 @LsdTestConfig
 class HtmlEscapingTest {
     @TempDir
     lateinit var tempDir: Path
-
-    @Test
-    fun `text escapes ampersand and angle brackets only`() {
-        assertEquals("&lt;a href=\"x\"&gt;Tom &amp; Jerry's&lt;/a&gt;", Html.text("<a href=\"x\">Tom & Jerry's</a>"))
-        assertEquals("&lt;/script&gt;&lt;!--", Html.text("</script><!--"))
-        assertEquals("&amp;amp;", Html.text("&amp;"))
-        assertEquals("", Html.text(null))
-        assertEquals("plain", Html.text("plain"))
-    }
-
-    @Test
-    fun `attribute escapes quotes too`() {
-        assertEquals("&quot;x&quot; onmouseover=&#39;y&#39; &lt;&amp;&gt;", Html.attribute("\"x\" onmouseover='y' <&>"))
-        assertEquals("", Html.attribute(null))
-    }
-
-    @Test
-    fun `both keep whitespace, U+2028 and pairs, and replace other controls and lone surrogates`() {
-        val awkward = "a\u2028b\u2029c\t\n\r\u000C \u0000\u0001\u001f x\uD800y\uDC00z \uDC00\uD800 pair \uD83D\uDE00"
-        val expected = "a\u2028b\u2029c\t\n\r\u000C \uFFFD\uFFFD\uFFFD x\uFFFDy\uFFFDz \uFFFD\uFFFD pair \uD83D\uDE00"
-        assertEquals(expected, Html.text(awkward))
-        assertEquals(expected, Html.attribute(awkward))
-        assertTrue(utf8(Html.text(awkward).toByteArray()) != null)
-        assertEquals("x\uFFFDy \uD83D\uDE00", Html.wellFormed("x\uDC00y \uD83D\uDE00"))
-    }
-
-    @Test
-    fun `json for script escapes markup, separators, controls and lone surrogates`() {
-        val json = jsonString("</script><!-- & \u2028\u2029 \u0000\u001f \"\\ \uD800 \uD83D\uDE00")
-        assertEquals(
-            "\"\\u003c/script\\u003e\\u003c!-- \\u0026 \\u2028\\u2029 \\u0000\\u001f \\\"\\\\ \\ufffd \uD83D\uDE00\"",
-            json,
-        )
-        assertValidJson(json)
-    }
 
     @Test
     fun `a hostile report leaks into none of the files written for it`() {
@@ -111,7 +74,7 @@ class HtmlEscapingTest {
 
         fun hostile(tag: String) = "$tag$ATTACK\u2028\u0001\uD800"
 
-        /** What [Html.text] must make of [hostile]: markup escaped, the control and lone surrogate replaced. */
+        /** What `Html.text` must make of [hostile]: markup escaped, the control and lone surrogate replaced. */
         fun escapedText(tag: String) =
             "$tag\"'&gt;&lt;img src=x onerror=alert(1) data-pwned=1&gt;&lt;/script&gt;&lt;!--&lt;svg onload=alert(2)&gt;\u2028\uFFFD\uFFFD"
 

@@ -13,11 +13,11 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.WarningKind
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas.Document
 import io.lsdconsulting.lsd.mono.core.testing.ReportSchemas.between
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import io.lsdconsulting.lsd.mono.report.model.ReportSchema
 import io.lsdconsulting.lsd.mono.report.model.ReportSource
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -49,7 +49,7 @@ class ReportSchemaTest {
         everything(lsd)
         lsd.completeReport(TITLE)
         lsd.createIndex()
-        val stem = ReportWriter.reportFileStem(TITLE)
+        val stem = ReportFileNames.stem(TITLE)
 
         val json = tempDir.resolve("$stem-report.json").readText()
         assertValid(report, json, "$stem-report.json")
@@ -150,7 +150,7 @@ class ReportSchemaTest {
         val lsd = LsdContext()
         everything(lsd)
         lsd.completeReport(TITLE)
-        val json = tempDir.resolve("${ReportWriter.reportFileStem(TITLE)}-report.json").readText()
+        val json = tempDir.resolve("${ReportFileNames.stem(TITLE)}-report.json").readText()
         assertEquals(emptyList<String>(), strictErrors(json), "the writer's report follows the closed schema")
 
         val typo = edit(json) { participant(this).put("type", "QUEU") }

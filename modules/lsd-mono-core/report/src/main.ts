@@ -15,7 +15,7 @@ import { pingSource, usage } from './lib/usage-ping'
 
 declare global {
   interface Window {
-    /** Set by lsd-mono-core ReportWriter before this bundle boots. Dev: assign before load to preview a capture. */
+    /** Set by lsd-mono-report-html's ReportWriter before this bundle boots. Dev: assign before load to preview a capture. */
     __LSD_REPORT__?: ReportJson
     /** Full message payloads, loaded when the inspector opens. Not part of the first paint. */
     __LSD_PAYLOADS__?: Record<string, unknown>

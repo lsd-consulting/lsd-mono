@@ -1,9 +1,10 @@
 # lsd-mono-core
 
-The core of LSD Mono: a Kotlin capture API (`LsdContext`), timing analysis, and the writer that
-produces the report JSON and the interactive HTML report. The report UI lives in `report/`
-(Vite, TypeScript and a custom SVG diagram). The JUnit, Cucumber and coroutines integrations
-depend on this module only.
+The core of LSD Mono: a Kotlin capture API (`LsdContext`) and timing analysis. It maps what it
+captured to the report model ([lsd-mono-report-model](../lsd-mono-report-model)) and writes the
+report JSON and the interactive HTML report with [lsd-mono-report-html](../lsd-mono-report-html),
+which it depends on. The report UI lives in `report/` (Vite, TypeScript and a custom SVG
+diagram). The JUnit, Cucumber and coroutines integrations depend on this module only.
 
 Depend on `io.github.lsd-consulting:lsd-mono-core` from Maven Central; [Getting started](../../README.md#getting-started) in the root README has the Gradle and Maven snippets and the latest version.
 
@@ -36,7 +37,7 @@ lsd-mono-core/
   that `check` compares against (see [generated files](../../docs/generated-files.md))
 - `completeReport` writes, per report, files named `<title>-<hash>` (the hash is of the report
   key, or of the title when there is no key):
-  - `*-diagram.html` — the classpath shell (`/lsd-mono-core/report/lsd-report.single.html`) with the captured
+  - `*-diagram.html` — the classpath shell (`/lsd-mono-report-html/lsd-report.single.html`, in lsd-mono-report-html's jar) with the captured
     `ReportJson` injected (the shell falls back to sample data when opened without one)
   - `*-payloads.js` — message bodies, loaded when the inspector opens
   - `*-report.js` — the same report data as a script, which the index page loads when the report is opened

@@ -2,6 +2,8 @@ package io.lsdconsulting.lsd.mono.core.report
 
 import io.lsdconsulting.lsd.mono.core.LsdVersion
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.report.html.ReportWriter
+import io.lsdconsulting.lsd.mono.report.html.ReportWriterSettings
 
 /**
  * A [ReportWriter] with the settings the properties give now: this version as the generator,

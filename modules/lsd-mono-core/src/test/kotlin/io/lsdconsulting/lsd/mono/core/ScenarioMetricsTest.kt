@@ -3,9 +3,9 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.formatMs
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.report.isErrorStatus
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -34,7 +34,7 @@ class ScenarioMetricsTest {
         lsd.message("A", "C", "event", type = io.lsdconsulting.lsd.mono.core.domain.MessageType.ASYNCHRONOUS, timing = Timing.tookMs(5.0))
         lsd.completeScenario("once", "ok", Status.SUCCESS)
         lsd.completeReport("Once")
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Once") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Once") + "-report.json").readText()
         assertTrue(json.contains("\"value\": \"105 ms\""), json)
     }
 
@@ -50,7 +50,7 @@ class ScenarioMetricsTest {
         lsd.message("A", "B", "untagged")
         lsd.completeScenario("none", status = Status.SUCCESS)
         lsd.completeReport("Errors")
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Errors") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Errors") + "-report.json").readText()
         assertTrue(Regex("\"Errors\",\\s*\"value\": \"2\"").containsMatchIn(json), json)
         assertEquals(1, Regex("\"key\": \"Errors\"").findAll(json).count(), "no statuses, no Errors metric")
         assertTrue(json.contains("\"status\": \"503\""), json)
@@ -85,7 +85,7 @@ class ScenarioMetricsTest {
         lsd.completeScenario("timed", "ok", Status.SUCCESS)
         lsd.completeReport("Metrics")
 
-        val json = tempDir.resolve(ReportWriter.reportFileStem("Metrics") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("Metrics") + "-report.json").readText()
         assertTrue(json.contains("\"metricsEnabled\": true"))
         assertTrue(json.contains("\"labelMaxWidth\": 12"))
         assertTrue(json.contains("\"key\": \"Messages\""))
@@ -105,7 +105,7 @@ class ScenarioMetricsTest {
         lsd.completeScenario("quiet", "", Status.SUCCESS)
         lsd.completeReport("No metrics")
 
-        val json = tempDir.resolve(ReportWriter.reportFileStem("No metrics") + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem("No metrics") + "-report.json").readText()
         assertTrue(json.contains("\"metricsEnabled\": false"))
         assertTrue(json.contains("\"metrics\": []"))
         assertFalse(json.contains("\"insights\""))
@@ -121,7 +121,7 @@ class ScenarioMetricsTest {
         capture(lsd)
         lsd.completeScenario(name, "", Status.SUCCESS)
         lsd.completeReport(name)
-        val json = tempDir.resolve(ReportWriter.reportFileStem(name) + "-report.json").readText()
+        val json = tempDir.resolve(ReportFileNames.stem(name) + "-report.json").readText()
         return Regex(""""key": "Captured duration",\s*"value": "([^"]+)"""").find(json)?.groupValues?.get(1)
     }
 

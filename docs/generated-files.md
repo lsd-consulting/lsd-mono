@@ -18,7 +18,7 @@ notes, are not checked. Run it locally on a tree with no uncommitted changes.
 
 | File | Built by | Used by |
 |------|----------|---------|
-| `modules/lsd-mono-core/report/dist/lsd-report.html` | `reportSingle` (`npm run build:single`), on every build | Packaged into the jar as `/lsd-mono-core/report/lsd-report.single.html`, the shell every report uses |
+| `modules/lsd-mono-core/report/dist/lsd-report.html` | `reportSingle` (`npm run build:single`), on every build | Packaged into lsd-mono-report-html's jar as `/lsd-mono-report-html/lsd-report.single.html`, the shell every report uses |
 | `modules/lsd-mono-core/report/dist/lsd-report-payloads.js` | `reportSingle` | The shell's built-in demo when you open `dist/lsd-report.html` with no captured report |
 | `modules/lsd-mono-core/build/pages/` (`index.html`, `example-report.html` and the example report's `-diagram.html`, `-report.js`, `-payloads.js`, `-report.json`) | `./gradlew :modules:lsd-mono-core:kitchenSinkSample` | The [Pages workflow](../.github/workflows/pages.yml) builds and publishes it on pushes to `main`. `index.html` is the report index that `createIndex()` writes for the example report |
 | `docs/perf-samples/` | `docs/perf/generate-*.mjs` | Local perf runs (gitignored) |
@@ -48,6 +48,7 @@ about them.
 | `modules/lsd-mono-cucumber-8/api/lsd-mono-cucumber-8.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-coroutines/api/lsd-mono-coroutines.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-report-model/api/lsd-mono-report-model.api` | `./gradlew updateKotlinAbi` |
+| `modules/lsd-mono-report-html/api/lsd-mono-report-html.api` | `./gradlew updateKotlinAbi` |
 
 Every published module uses Kotlin's explicit API mode and the Kotlin Gradle plugin's built-in ABI
 validation (the `lsd.kotlin-jvm` convention in `build-logic`). The dump lists the module's public

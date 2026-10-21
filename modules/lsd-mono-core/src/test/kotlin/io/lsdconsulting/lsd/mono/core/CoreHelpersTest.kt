@@ -1,8 +1,5 @@
 package io.lsdconsulting.lsd.mono.core
 
-import io.lsdconsulting.lsd.mono.core.json.anyToJson
-import io.lsdconsulting.lsd.mono.core.json.jsonString
-import io.lsdconsulting.lsd.mono.core.json.render
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
@@ -11,51 +8,9 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-/** Direct tests for Json.kt, [LsdProperties] and StringUtils (#25). */
+/** Direct tests for [LsdProperties] and StringUtils (#25). lsd-mono-report-html's JsonTest tests its Json.kt. */
 @LsdTestConfig
 class CoreHelpersTest {
-    @Test
-    fun `jsonString escapes quotes, control characters and script-breaking markup`() {
-        assertEquals(""""a\"b\\c"""", jsonString("a\"b\\c"))
-        assertEquals(""""\n\r\t\u0001"""", jsonString("\n\r\t\u0001"))
-        assertEquals(""""\u003c/script\u003e \u0026"""", jsonString("</script> &"))
-        assertEquals(""""\u2028\u2029"""", jsonString("\u2028\u2029"))
-        assertEquals("\"héllo ✓\"", jsonString("héllo ✓"))
-    }
-
-    @Test
-    fun `anyToJson maps values and keeps non-finite numbers as strings`() {
-        val json =
-            anyToJson(
-                mapOf(
-                    "s" to "x",
-                    "i" to 1,
-                    "l" to 2L,
-                    "d" to 1.5,
-                    "nan" to Double.NaN,
-                    "b" to true,
-                    "n" to null,
-                    "list" to listOf(1, "two"),
-                    "arr" to arrayOf(3),
-                    "other" to StringBuilder("sb"),
-                ),
-            ).render()
-        listOf(
-            """"s": "x"""",
-            """"i": 1""",
-            """"l": 2""",
-            """"d": 1.5""",
-            """"nan": "NaN"""",
-            """"b": true""",
-            """"n": null""",
-            """"other": "sb"""",
-        ).forEach { assertTrue(json.contains(it), "$it in $json") }
-        assertTrue(Regex(""""list": \[\s*1,\s*"two"\s*]""").containsMatchIn(json), json)
-        assertTrue(Regex(""""arr": \[\s*3\s*]""").containsMatchIn(json), json)
-        assertEquals("{}", anyToJson(emptyMap<String, Any>()).render())
-        assertEquals("[]", anyToJson(emptyList<Any>()).render())
-    }
-
     @Test
     fun `properties prefer the key, then the default`() {
         System.clearProperty(LsdProperties.OUTPUT_DIR)

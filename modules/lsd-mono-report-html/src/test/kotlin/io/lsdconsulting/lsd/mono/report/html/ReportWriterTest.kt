@@ -1,12 +1,8 @@
-package io.lsdconsulting.lsd.mono.core
+package io.lsdconsulting.lsd.mono.report.html
 
-import io.lsdconsulting.lsd.mono.core.model.ReportFile
-import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
-import io.lsdconsulting.lsd.mono.core.report.ReportWriterSettings
-import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
+import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -28,7 +24,6 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 /** Direct tests for [ReportWriter] file naming, atomic writes, and the shared index (#25). */
-@LsdTestConfig
 class ReportWriterTest {
     @TempDir
     lateinit var tempDir: Path
@@ -119,18 +114,15 @@ class ReportWriterTest {
 
     @Test
     fun `an index from one writer lists reports written by others in the same directory`() {
-        // Two contexts stand in for two Gradle test forks or modules sharing one output dir
-        // (LsdTestConfig points it at tempDir).
+        // Two writers stand in for two Gradle test forks or modules sharing one output dir.
         run {
-            val forkA = LsdContext()
-            val forkB = LsdContext()
-            forkA.completeScenario("a")
-            forkA.completeReport("Fork A")
-            forkB.completeScenario("b")
-            forkB.completeReport("Fork B")
-            forkB.createIndex()
+            val forkA = ReportWriter(ReportWriterSettings(generator = "fork A"))
+            val forkB = ReportWriter(ReportWriterSettings(generator = "fork B"))
+            forkA.writeReport(report("Fork A", scenarioCount = 1), tempDir.toFile())
+            forkB.writeReport(report("Fork B", scenarioCount = 1), tempDir.toFile())
+            forkB.writeIndex(tempDir.toFile())
             val fromB = tempDir.resolve("index.html").readText()
-            forkA.createIndex()
+            forkA.writeIndex(tempDir.toFile())
             val fromA = tempDir.resolve("index.html").readText()
             listOf(fromA, fromB).map(::manifest).forEach { index ->
                 assertTrue(index.contains("Fork A") && index.contains("Fork B"), index)
@@ -146,7 +138,7 @@ class ReportWriterTest {
         writer.writeReport(report("Kept"), tempDir.toFile())
         Files.delete(gone)
         val extra = ReportFile(filename = "elsewhere.html", title = "Extra", status = "warn")
-        val index = manifest(writer.writeIndex(listOf(extra), tempDir.toFile()).readText())
+        val index = manifest(writer.writeIndexOf(listOf(extra), tempDir.toFile()).readText())
         assertFalse(index.contains("Gone"), index)
         assertTrue(index.contains("Kept"), index)
         assertTrue(index.contains(""""id":"elsewhere.html","title":"Extra","status":"warn","href":"elsewhere.html""""), index)
@@ -154,7 +146,7 @@ class ReportWriterTest {
 
     @Test
     fun `index escapes titles`() {
-        val page = writer.writeIndex(listOf(ReportFile("x.html", "<b>bold</b> </script> & co", "success")), tempDir.toFile()).readText()
+        val page = writer.writeIndexOf(listOf(ReportFile("x.html", "<b>bold</b> </script> & co", "success")), tempDir.toFile()).readText()
         val index = manifest(page)
         assertFalse(index.contains("</script>") || index.contains("<b>"), index)
         assertTrue(index.contains("bold"), index)
@@ -164,7 +156,7 @@ class ReportWriterTest {
     fun `index links each report to its diagram, lists failed reports first and counts scenarios`() {
         writer.writeReport(report("Alpha", scenarioCount = 2), tempDir.toFile())
         writer.writeReport(report("Zulu", scenarioCount = 3, failing = 1), tempDir.toFile())
-        val page = writer.writeIndex(emptyList(), tempDir.toFile()).readText()
+        val page = writer.writeIndex(tempDir.toFile()).readText()
         val index = manifest(page)
         val zulu = ReportWriter.reportFileStem("Zulu")
         assertTrue(index.contains(""""id":"$zulu","title":"Zulu","status":"error","href":"$zulu-diagram.html","data":"$zulu-report.js""""), index)
@@ -193,11 +185,9 @@ class ReportWriterTest {
     }
 
     @Test
-    fun `the index takes its generator, time and ping switch from the settings, not the properties`() {
-        System.setProperty(LsdProperties.USAGE_PING, "false")
-        System.setProperty(LsdProperties.GENERATED_AT, "2020-01-01T00:00:00Z")
+    fun `the index takes its generator, time and ping switch from the settings`() {
         val settings = ReportWriterSettings(generator = "adapter 1.0", generatedAt = Instant.parse("2026-01-02T03:04:05.678Z"), usagePing = true)
-        val index = manifest(ReportWriter(settings).writeIndex(emptyList(), tempDir.toFile()).readText())
+        val index = manifest(ReportWriter(settings).writeIndex(tempDir.toFile()).readText())
         assertTrue(index.contains(""""generatedAt":"2026-01-02T03:04:05.678Z","generator":"adapter 1.0","options":{"usagePing":true}"""), index)
     }
 
@@ -207,7 +197,7 @@ class ReportWriterTest {
         Files.createDirectories(dir)
         tempDir.resolve("old-report.html").writeText("old")
         dir.resolve("old-report.properties").writeText("filename=old-report.html\ntitle=Old\nstatus=success\n")
-        val index = manifest(writer.writeIndex(emptyList(), tempDir.toFile()).readText())
+        val index = manifest(writer.writeIndex(tempDir.toFile()).readText())
         assertTrue(index.contains(""""reports":[]"""), index)
     }
 
@@ -228,7 +218,7 @@ class ReportWriterTest {
             options = ReportOptionsJson(metricsEnabled = false, labelMaxWidth = 200),
             scenarios =
                 List(scenarioCount) { n ->
-                    io.lsdconsulting.lsd.mono.report.model.ScenarioJson(
+                    ScenarioJson(
                         id = "s$n",
                         title = "scenario $n",
                         status = if (n < failing) "error" else "success",

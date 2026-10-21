@@ -1,8 +1,8 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -29,7 +29,7 @@ class ScopedBlocksTest {
     private val lsd = LsdContext()
 
     private fun json(title: String, reportKey: String? = null): String =
-        tempDir.resolve(ReportWriter.reportFileStem(title, reportKey) + "-report.json").readText()
+        tempDir.resolve(ReportFileNames.stem(title, reportKey) + "-report.json").readText()
 
     /** The labels of each scenario in a report, by scenario title, in report order. */
     private fun labelsByScenario(json: String): Map<String, List<String>> {

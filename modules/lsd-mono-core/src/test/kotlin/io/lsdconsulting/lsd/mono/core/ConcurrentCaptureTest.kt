@@ -1,9 +1,9 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Message
-import io.lsdconsulting.lsd.mono.core.report.ReportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
+import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -218,7 +218,7 @@ class ConcurrentCaptureTest {
     }
 
     private fun readReport(title: String, reportKey: String?): String =
-        tempDir.resolve(ReportWriter.reportFileStem(title, reportKey) + "-report.json").readText()
+        tempDir.resolve(ReportFileNames.stem(title, reportKey) + "-report.json").readText()
 
     /** The scenario titled [title], and only it, as written. */
     private fun scenarioSlice(json: String, title: String): String = ReportJson(json).scenario(title).json

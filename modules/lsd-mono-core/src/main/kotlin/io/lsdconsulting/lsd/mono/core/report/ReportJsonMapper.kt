@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.report
 
 import io.lsdconsulting.lsd.mono.core.LsdVersion
+import io.lsdconsulting.lsd.mono.core.PayloadConverters
 import io.lsdconsulting.lsd.mono.core.ReportOptions
 import io.lsdconsulting.lsd.mono.core.domain.Delay
 import io.lsdconsulting.lsd.mono.core.domain.Divider
@@ -34,6 +35,8 @@ import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.report.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.report.model.TraceJson
 import io.lsdconsulting.lsd.mono.report.model.WarningJson
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -114,7 +117,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     type = type.name,
                     colour = colour?.takeIf { it.isNotBlank() },
                     durationMs = timing.reportedMs(this),
-                    data = data,
+                    data = data?.let(::jsonData),
                     startedAt = startedAt?.toString(),
                     seq = seq.takeIf { it > 0 },
                     callId = callRef?.id,
@@ -150,6 +153,16 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     colour = if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null,
                     startedAt = startedAt?.toString(),
                 )
+        }
+
+    /**
+     * [data] as JSON values for the model: a scalar as it is, anything else copied by the default
+     * payload converters, as the JSON writer did before it moved to lsd-mono-report-html.
+     */
+    private fun jsonData(data: Any): Any? =
+        when (data) {
+            is String, is Boolean, is Long, is BigInteger, is BigDecimal -> data
+            else -> PayloadConverters.default.snapshot(data)
         }
 
     /** [name] when it is one of [ReportSource.ALL], else [ReportSource.API]. */

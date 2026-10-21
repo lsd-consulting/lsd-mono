@@ -1,15 +1,5 @@
-package io.lsdconsulting.lsd.mono.core.model
+package io.lsdconsulting.lsd.mono.report.html
 
-import io.lsdconsulting.lsd.mono.core.domain.formatMs
-import io.lsdconsulting.lsd.mono.core.json.JsonArray
-import io.lsdconsulting.lsd.mono.core.json.JsonBool
-import io.lsdconsulting.lsd.mono.core.json.JsonNumber
-import io.lsdconsulting.lsd.mono.core.json.JsonObject
-import io.lsdconsulting.lsd.mono.core.json.JsonString
-import io.lsdconsulting.lsd.mono.core.json.JsonValue
-import io.lsdconsulting.lsd.mono.core.json.anyToJson
-import io.lsdconsulting.lsd.mono.core.json.render
-import io.lsdconsulting.lsd.mono.core.json.renderCompact
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.EventJson
@@ -24,6 +14,8 @@ import io.lsdconsulting.lsd.mono.report.model.ScenarioErrorJson
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.report.model.SpacerEventJson
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 /*
  * The report JSON as text, and the index entries. The report itself is lsd-mono-report-model's
@@ -75,8 +67,18 @@ internal data class ScenarioCounts(
     }
 }
 
-/** Fractional milliseconds, to the microsecond, without trailing zeros ([formatMs]). */
-internal fun msNumber(ms: Double): JsonNumber = JsonNumber(formatMs(ms))
+/**
+ * Fractional milliseconds, to the microsecond, without trailing zeros: `42`, `17.625`, `0.333`, as
+ * the schema has them. lsd-mono-core formats the milliseconds in its metrics and warnings the same way.
+ */
+internal fun msNumber(ms: Double): JsonNumber =
+    JsonNumber(
+        BigDecimal
+            .valueOf(ms)
+            .setScale(3, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString(),
+    )
 
 internal fun ReportJson.toJson(): String =
     obj(

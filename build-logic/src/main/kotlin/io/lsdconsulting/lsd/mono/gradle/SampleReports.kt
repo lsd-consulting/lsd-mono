@@ -53,8 +53,8 @@ fun Project.registerIntegrationReadmeSamples(
     val capture =
         tasks.register<JavaExec>("captureReadmeReport") {
             description = "$what and write its report HTML."
-            // The report shell must be on the core classpath for ReportWriter.
-            dependsOn(core.tasks.named("copyReportShell"), core.tasks.named("classes"))
+            // The report shell must be on the classpath for ReportWriter (lsd-mono-report-html).
+            dependsOn(project(":modules:lsd-mono-report-html").tasks.named("copyReportShell"), core.tasks.named("classes"))
             classpath = readme.runtimeClasspath
             this.mainClass.set(mainClass)
             writesSampleReport(reportDir)
