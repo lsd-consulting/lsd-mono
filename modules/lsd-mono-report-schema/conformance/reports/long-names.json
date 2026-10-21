@@ -1,0 +1,123 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "Long names and a long report title and a long report title and a long report title and a long report title and a long report title and a long report title",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "lsd-mono-core (conformance)",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "6",
+      "title": "Given a scenario title that is much longer than the header has room for, When it is shown in the list and in the header, Then it wraps or is cut without hiding the rest of the page (and then some and then some and then some and then some and then some and then some and then some and then some and then some and then some)",
+      "status": "success",
+      "description": "A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well. A description that is long as well.",
+      "facts": [
+        {
+          "key": "A fact key that is far longer than any key column was designed for",
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        },
+        {
+          "key": "url",
+          "value": "https://example.com/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/segment/?query=qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "4"
+        }
+      ],
+      "participants": [
+        {
+          "id": "checkout",
+          "name": "Customer facing checkout experience orchestration service (EU West, blue deployment)",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "long",
+          "name": "VeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAtVeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAt",
+          "type": "PARTICIPANT",
+          "alias": "VeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAtVeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAt display"
+        },
+        {
+          "id": "db",
+          "name": "Db",
+          "type": "DATABASE",
+          "alias": "The primary relational database cluster for orders and payments"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "1",
+          "from": "checkout",
+          "to": "long",
+          "label": "GET /v1/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/items?expand=everything",
+          "type": "SYNCHRONOUS",
+          "seq": 1,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "long",
+          "to": "checkout",
+          "label": "200 OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 2,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "1"
+        },
+        {
+          "kind": "message",
+          "id": "3",
+          "from": "long",
+          "to": "db",
+          "label": "SELECT column_1, column_2, column_3, column_4, column_5, column_6, column_7, column_8, column_9, column_10, column_11, column_12, column_13, column_14, column_15, column_16, column_17, column_18, column_19, column_20, column_21, column_22, column_23, column_24, column_25, column_26, column_27, column_28, column_29, column_30, column_31, column_32, column_33, column_34, column_35, column_36, column_37, column_38, column_39, column_40, column_41, column_42, column_43, column_44, column_45, column_46, column_47, column_48, column_49, column_50, column_51, column_52, column_53, column_54, column_55, column_56, column_57, column_58, column_59, column_60 FROM orders",
+          "type": "SYNCHRONOUS",
+          "seq": 3,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "message",
+          "id": "4",
+          "from": "db",
+          "to": "long",
+          "label": "60 rows",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 4,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "3"
+        },
+        {
+          "kind": "note",
+          "id": "5",
+          "text": "A note with a very long text that goes on and on A note with a very long text that goes on and on A note with a very long text that goes on and on A note with a very long text that goes on and on A note with a very long text that goes on and on A note with a very long text that goes on and on A note with a very long text that goes on and on A note with a very long text that goes on and on",
+          "over": "long",
+          "placement": "over"
+        }
+      ],
+      "accuracy": "STRUCTURE_ONLY",
+      "measuredCoverage": 0,
+      "pairingCoverage": 0,
+      "sources": [
+        "local"
+      ],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}

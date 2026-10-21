@@ -23,6 +23,7 @@ class TimingTreeGoldenTest {
 
     @Test
     fun `span nesting, duplicate spans and the ALL_SOURCES fallback`() {
+        Conformance.produce()
         val lsd = LsdContext().configure { it.orderByStartedAt(ClockOrdering.ALL_SOURCES) }
         val sync = MessageType.SYNCHRONOUS
 
@@ -51,11 +52,7 @@ class TimingTreeGoldenTest {
 
         lsd.completeReport("Timing tree")
         val json = tempDir.resolve(ReportWriter.reportFileStem("Timing tree") + "-report.json").readText()
-        val scrubbed =
-            json
-                .replace(Regex(""""generatedAt": "[^"]*""""), """"generatedAt": "SCRUBBED"""")
-                .replace(Regex(""""generator": "[^"]*""""), """"generator": "SCRUBBED"""")
-        Conformance.assertMatches("reports/timing-tree.json", scrubbed)
+        Conformance.assertProduced("reports/timing-tree.json", json)
     }
 
     private fun t(ms: Long): Instant = Instant.parse("2026-01-01T00:00:00Z").plusMillis(ms)

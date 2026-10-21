@@ -1,0 +1,117 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "report\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "lsd-mono-core (conformance)",
+  "status": "error",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "7",
+      "title": "scenario\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+      "status": "error",
+      "description": "\u003cmark\u003eGiven\u003c/mark\u003e description\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029 \u003cp onclick=\"x\"\u003ep\u003c/p\u003e\u003cimg src=y onerror=alert(4)\u003e",
+      "error": {
+        "headline": "headline\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+        "message": "message\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+        "stack": "stack\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
+      },
+      "facts": [
+        {
+          "key": "fact key\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+          "value": "fact value\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "2"
+        }
+      ],
+      "participants": [
+        {
+          "id": "a",
+          "name": "participant a\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+          "type": "ACTOR"
+        },
+        {
+          "id": "b",
+          "name": "participant b\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+          "type": "PARTICIPANT",
+          "alias": "display b\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
+        }
+      ],
+      "events": [
+        {
+          "kind": "section",
+          "id": "1",
+          "title": "section\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
+        },
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "a",
+          "to": "b",
+          "label": "label\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+          "type": "SYNCHRONOUS",
+          "data": {
+            "method": "method\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+            "path": "path\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+            "status": "status\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+            "body": {
+              "html": "body\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
+            }
+          },
+          "seq": 1,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "note",
+          "id": "3",
+          "text": "note\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+          "over": "a",
+          "placement": "over"
+        },
+        {
+          "kind": "divider",
+          "id": "4",
+          "label": "divider\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
+        },
+        {
+          "kind": "delay",
+          "id": "5",
+          "label": "delay\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
+        },
+        {
+          "kind": "message",
+          "id": "6",
+          "from": "b",
+          "to": "a",
+          "label": "response\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": "plain body \u003c/script\u003e\u003cscript\u003ealert(3)\u003c/script\u003e",
+          "seq": 2,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "2"
+        }
+      ],
+      "accuracy": "STRUCTURE_ONLY",
+      "measuredCoverage": 0,
+      "pairingCoverage": 0,
+      "sources": [
+        "local"
+      ],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}

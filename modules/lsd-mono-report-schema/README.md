@@ -109,3 +109,9 @@ The report UI also reads reports from before the schema (an older lsd-mono's `<s
 in the same directory as a newer index), which can lack fields the schema requires. It fills in
 the optional fields and the older ones' defaults in one place when it loads a report
 (`src/lib/report-normalise.ts`).
+
+## Shared test reports
+
+[`conformance/`](conformance/README.md) holds report data both lsd-mono-core and the report UI
+are tested against: reports the schema must accept, reports it must reject, an index manifest and
+a generated large report.

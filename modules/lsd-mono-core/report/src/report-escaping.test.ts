@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeAll, describe, expect, it } from 'vitest'
+import { conformanceText } from './lib/conformance.test-util'
 import type { Report } from './types'
 
 /**
@@ -9,48 +10,9 @@ import type { Report } from './types'
 const ATTACK = `"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>`
 const H = (tag: string) => `${tag}${ATTACK}\u2028\u2029\u0001\uD800`
 
-const hostile = {
-  title: H('title'),
-  generatedAt: H('generatedAt'),
-  generator: H('generator'),
-  options: { metricsEnabled: true, labelMaxWidth: 200 },
-  scenarios: [
-    {
-      id: H('scenario'),
-      title: H('scenario title'),
-      // An unknown status is filtered out of the page, so a real one keeps the card on screen.
-      status: 'error',
-      description: `<mark>Given</mark> ${H('description')} <p onclick="x">p</p><img src=y onerror=alert(3)>`,
-      error: { headline: H('headline'), message: H('message'), stack: H('stack') },
-      facts: [{ key: H('fact key'), value: H('fact value') }],
-      metrics: [{ key: H('metric key'), value: H('metric value') }],
-      participants: [
-        { id: 'a', name: H('participant a'), type: 'ACTOR', colour: `red" ${ATTACK}` },
-        { id: 'b', name: H('participant b'), alias: H('alias b'), type: H('type'), colour: `blue' ${ATTACK}` },
-      ],
-      events: [
-        { kind: 'section', id: H('section'), title: H('section title') },
-        {
-          kind: 'message',
-          id: H('m1'),
-          from: 'a',
-          to: 'b',
-          label: H('label'),
-          type: 'SYNCHRONOUS',
-          colour: `green" ${ATTACK}`,
-          durationMs: H('duration'),
-          data: { method: H('method'), path: H('path'), status: H('http status'), body: H('body') },
-        },
-        { kind: 'activate', id: 'act1', participantId: 'b', colour: `pink" ${ATTACK}` },
-        { kind: 'note', id: 'n1', text: H('note'), over: 'a', placement: H('placement') },
-        { kind: 'divider', id: 'd1', label: H('divider') },
-        { kind: 'delay', id: 'w1', label: H('delay') },
-        { kind: 'message', id: 'm2', from: 'b', to: 'a', label: H('response'), type: H('message type') },
-        { kind: 'deactivate', id: 'act2', participantId: 'b' },
-      ],
-    },
-  ],
-} as unknown as Report
+// The shared test reports' hostile report: every string hostile, with wrong types and enums too, so
+// the schema rejects it; the page must still show it safely.
+const hostile = JSON.parse(conformanceText('invalid/hostile.json')) as Report
 
 function injected(root: ParentNode): string[] {
   const found: string[] = []

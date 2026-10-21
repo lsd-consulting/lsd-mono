@@ -1,6 +1,6 @@
-// The JSON Schema in modules/lsd-mono-report-schema against the reports the UI is tested with:
-// lsd-mono-core's golden files and the example reports the checks open, in the shared corpus,
-// and the report builders the checks share. lsd-mono-core's own ReportSchemaTest validates what the writer produces.
+// The JSON Schema in modules/lsd-mono-report-schema: what it requires and allows, its version, and
+// the report builders the checks share. conformance.test.ts checks the shared test reports against
+// it; lsd-mono-core's ReportSchemaTest validates what the writer produces.
 import { describe, expect, it } from 'vitest'
 import { findReport } from '../../checks/find-fixture'
 import { sectionsIndex, sectionsReport } from '../../checks/diagram-pages'
@@ -9,15 +9,6 @@ import { wideReport } from '../../checks/wide-sample'
 import { REPORT_SCHEMA_VERSION } from '../types'
 import { conformanceText } from './conformance.test-util'
 import { reportSchema, schemaErrors as errors } from './report-schema.test-util'
-
-/** A golden file with its scrubbed time and generator put back, as lsd-mono-core writes them. */
-function golden(file: string): unknown {
-  return JSON.parse(
-    conformanceText(`reports/${file}`)
-      .replace('"generatedAt": "SCRUBBED"', '"generatedAt": "2026-01-01T12:00:00Z"')
-      .replace('"generator": "SCRUBBED"', '"generator": "lsd-mono-core 0.7.0"'),
-  )
-}
 
 const example = (file: string) =>
   JSON.parse(conformanceText(`reports/${file}`)) as Record<string, unknown> & ExampleReport
@@ -31,14 +22,6 @@ interface ExampleReport {
 }
 
 describe('the report schema', () => {
-  it.each(['multi-scenario-status.json', 'timing-tree.json'])('validates the golden %s', (file) => {
-    expect(errors(golden(file))).toEqual([])
-  })
-
-  it.each(['example-report.json', 'example-components.json'])('validates the checks’ %s', (file) => {
-    expect(errors(example(file))).toEqual([])
-  })
-
   it('validates the report builders the checks share', () => {
     const sections = sectionsReport(3)
     const built = { uxFixture, findReport, sections, wide: wideReport(5, 12, (_, id) => ({ id })) }

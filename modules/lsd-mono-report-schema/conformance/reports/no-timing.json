@@ -1,0 +1,208 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "No timing",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "lsd-mono-core (conformance)",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "16",
+      "title": "Order placed, no timings",
+      "status": "success",
+      "description": "\u003cmark\u003eGiven\u003c/mark\u003e a cart \u003cmark\u003eWhen\u003c/mark\u003e the customer orders",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "8"
+        }
+      ],
+      "participants": [
+        {
+          "id": "customer",
+          "name": "Customer",
+          "type": "ACTOR"
+        },
+        {
+          "id": "shop",
+          "name": "Shop",
+          "type": "BOUNDARY"
+        },
+        {
+          "id": "orders-db",
+          "name": "Orders DB",
+          "type": "DATABASE"
+        },
+        {
+          "id": "order-events",
+          "name": "Order events",
+          "type": "QUEUE"
+        }
+      ],
+      "events": [
+        {
+          "kind": "section",
+          "id": "1",
+          "title": "Place the order"
+        },
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "",
+          "to": "shop",
+          "label": "webhook",
+          "type": "SHORT_INBOUND",
+          "seq": 1,
+          "timing": "NONE",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "message",
+          "id": "3",
+          "from": "customer",
+          "to": "shop",
+          "label": "POST /orders",
+          "type": "SYNCHRONOUS",
+          "data": {
+            "method": "POST",
+            "path": "/orders",
+            "body": {
+              "sku": "HAT-3"
+            }
+          },
+          "seq": 2,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "activate",
+          "id": "4",
+          "participantId": "shop"
+        },
+        {
+          "kind": "message",
+          "id": "5",
+          "from": "shop",
+          "to": "orders-db",
+          "label": "insert order",
+          "type": "SYNCHRONOUS",
+          "seq": 3,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "parentId": "3"
+        },
+        {
+          "kind": "message",
+          "id": "6",
+          "from": "orders-db",
+          "to": "shop",
+          "label": "1 row",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 4,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "5"
+        },
+        {
+          "kind": "message",
+          "id": "7",
+          "from": "shop",
+          "to": "order-events",
+          "label": "order.placed",
+          "type": "ASYNCHRONOUS",
+          "data": {
+            "orderId": "ord-1"
+          },
+          "seq": 5,
+          "callId": "7",
+          "timing": "NONE",
+          "order": "SEQUENCE",
+          "parentId": "3"
+        },
+        {
+          "kind": "note",
+          "id": "8",
+          "text": "idempotent by orderId",
+          "over": "shop",
+          "placement": "over"
+        },
+        {
+          "kind": "deactivate",
+          "id": "9",
+          "participantId": "shop"
+        },
+        {
+          "kind": "message",
+          "id": "10",
+          "from": "shop",
+          "to": "customer",
+          "label": "201 Created",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "data": {
+            "status": 201
+          },
+          "seq": 6,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "3"
+        },
+        {
+          "kind": "divider",
+          "id": "11",
+          "label": "Later"
+        },
+        {
+          "kind": "delay",
+          "id": "12",
+          "label": "next day"
+        },
+        {
+          "kind": "message",
+          "id": "13",
+          "from": "shop",
+          "to": "customer",
+          "label": "never arrives",
+          "type": "LOST",
+          "seq": 7,
+          "timing": "NONE",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "message",
+          "id": "14",
+          "from": "shop",
+          "to": "",
+          "label": "audit log",
+          "type": "SHORT_OUTBOUND",
+          "seq": 8,
+          "timing": "NONE",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "note",
+          "id": "15",
+          "text": "at the edge",
+          "placement": "right"
+        }
+      ],
+      "accuracy": "STRUCTURE_ONLY",
+      "measuredCoverage": 0,
+      "pairingCoverage": 0,
+      "sources": [
+        "local"
+      ],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}

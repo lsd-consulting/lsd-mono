@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "Minimal",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "lsd-mono-core (conformance)",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "1",
+      "title": "Minimal",
+      "status": "success",
+      "description": "",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "0"
+        }
+      ],
+      "participants": [],
+      "events": [],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "0.2.0",
+  "title": "A report from a newer minor version",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "hand-written",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "spock",
+    "theme": "dark"
+  },
+  "scenarios": [
+    {
+      "id": "1",
+      "title": "Fields this version does not know",
+      "status": "success",
+      "description": "",
+      "facts": [
+        {
+          "key": "run",
+          "value": "42",
+          "url": "https://example.com/run/42"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "2",
+          "unit": "count"
+        }
+      ],
+      "participants": [
+        {
+          "id": "web",
+          "name": "Web",
+          "type": "ACTOR",
+          "group": "edge"
+        },
+        {
+          "id": "api",
+          "name": "Api",
+          "type": "PARTICIPANT",
+          "group": "core",
+          "icon": "server"
+        },
+        {
+          "id": "robot",
+          "name": "Robot",
+          "type": "ROBOT"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "1",
+          "from": "web",
+          "to": "api",
+          "label": "GET /orders",
+          "type": "SYNCHRONOUS",
+          "attributes": {
+            "http.route": "/orders"
+          },
+          "otel": {
+            "spanId": "00f067aa0ba902b7"
+          }
+        },
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "api",
+          "to": "web",
+          "label": "200",
+          "type": "SYNCHRONOUS_RESPONSE"
+        },
+        {
+          "kind": "message",
+          "id": "fm-broadcast",
+          "from": "web",
+          "to": "robot",
+          "label": "broadcast",
+          "type": "BROADCAST"
+        },
+        {
+          "kind": "bookmark",
+          "id": "fm-bookmark",
+          "label": "a new kind of row"
+        }
+      ],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [
+        "local"
+      ],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0,
+      "tags": [
+        "smoke",
+        "checkout"
+      ],
+      "links": [
+        {
+          "href": "https://example.com/run/42",
+          "title": "CI run"
+        }
+      ]
+    }
+  ],
+  "capabilities": [
+    "notes",
+    "payloads",
+    "timing"
+  ],
+  "producer": {
+    "name": "some-other-producer",
+    "version": "3.1.4"
+  }
+}

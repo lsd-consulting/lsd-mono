@@ -14,9 +14,9 @@ import kotlin.io.path.readText
 
 /**
  * Locks the multi-scenario status contract: per-scenario `success` / `warn` / `error`
- * and the report-level rollup (worst of ERROR > WARN > SUCCESS).
- * `generatedAt` and `generator` are checked, then scrubbed; everything else must match the
- * golden byte-for-byte, so the golden does not change with the clock or the project version.
+ * and the report-level rollup (worst of ERROR > WARN > SUCCESS), with the index that lists it.
+ * `generatedAt` and `generator` are checked, then set to the corpus's ([Conformance]); everything
+ * else must match the shared test reports byte for byte.
  */
 @LsdTestConfig(deterministicIds = true)
 class MultiScenarioStatusGoldenTest {
@@ -25,6 +25,7 @@ class MultiScenarioStatusGoldenTest {
 
     @Test
     fun `three scenarios lock success warn and error with error rollup`() {
+        Conformance.produce()
         val lsd = LsdContext()
         lsd.completeScenario("checkout happy path", "placed", Status.SUCCESS)
         lsd.completeScenario("payment declined", "card rejected", Status.WARN)
@@ -40,20 +41,17 @@ class MultiScenarioStatusGoldenTest {
         val projectVersion = System.getProperty("lsd.mono.test.projectVersion") ?: error("Gradle sets the project version")
         assertTrue(json.contains(""""generator": "lsd-mono-core $projectVersion""""), json)
 
-        val scrubbed =
-            GENERATOR.replace(
-                GENERATED_AT.replace(json, """"generatedAt": "SCRUBBED""""),
-                """"generator": "SCRUBBED"""",
-            )
-        Conformance.assertMatches("reports/multi-scenario-status.json", scrubbed)
+        Conformance.assertProduced("reports/multi-scenario-status.json", json)
 
-        assertEquals(1, count(scrubbed, """"status": "success""""))
-        assertEquals(1, count(scrubbed, """"status": "warn""""))
+        assertEquals(1, count(json, """"status": "success""""))
+        assertEquals(1, count(json, """"status": "warn""""))
         // report rollup + the error scenario
-        assertEquals(2, count(scrubbed, """"status": "error""""))
+        assertEquals(2, count(json, """"status": "error""""))
 
         val index = tempDir.resolve("index.html").readText()
-        val manifest = index.substringAfter("window.__LSD_INDEX__=").substringBefore(";</script>").replace(Regex("\\s+"), "")
+        val indexJson = index.substringAfter("window.__LSD_INDEX__=").substringBefore(";</script>")
+        Conformance.assertProduced("indexes/status-mix.json", indexJson + "\n", Conformance.INDEX_SCHEMA)
+        val manifest = indexJson.replace(Regex("\\s+"), "")
         assertTrue(manifest.contains(""""status":"error","href""""), "index should use the error rollup")
         assertTrue(manifest.contains(""""counts":{"success":1,"warn":1,"error":1}"""), "index should count the three scenarios")
     }
@@ -62,6 +60,5 @@ class MultiScenarioStatusGoldenTest {
 
     companion object {
         private val GENERATED_AT = Regex(""""generatedAt": "([^"]*)"""")
-        private val GENERATOR = Regex(""""generator": "[^"]*"""")
     }
 }

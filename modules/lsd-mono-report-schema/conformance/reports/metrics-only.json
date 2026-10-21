@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "Metrics only",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "hand-written",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "1",
+      "title": "Load test summary",
+      "status": "success",
+      "description": "A producer that sends only figures, no diagram",
+      "facts": [
+        {
+          "key": "tool",
+          "value": "k6"
+        },
+        {
+          "key": "duration",
+          "value": "10 min"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "Requests",
+          "value": "12,000"
+        },
+        {
+          "key": "p95 latency",
+          "value": "212 ms"
+        },
+        {
+          "key": "Error rate",
+          "value": "0.4%"
+        },
+        {
+          "key": "Captured duration",
+          "value": "4,095 ms"
+        }
+      ],
+      "participants": [],
+      "events": [],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}

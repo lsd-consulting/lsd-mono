@@ -1,0 +1,178 @@
+{
+  "$comment": "Every file in the shared test reports: what it is for, which schema it is checked against, whether that schema must accept it, and who writes it. lsd-mono-core's ConformanceTest and the report UI's conformance.test.ts both fail on a file this list does not name. source: lsd-mono-core (its tests write the file and compare their output with it), captured (copied from lsd-mono-core output once and kept for the checks), hand-written, or generated (a script makes it).",
+  "fixtures": [
+    {
+      "file": "reports/minimal.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "One scenario with nothing in it: no participants, events or facts."
+    },
+    {
+      "file": "reports/no-timing.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "A structural sketch with no timings (STRUCTURE_ONLY): every arrow type, notes over and at the edge, an activation, a section, a divider and a delay."
+    },
+    {
+      "file": "reports/no-components.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "Facts and structural rows but no participants or messages, so there is no component diagram to draw."
+    },
+    {
+      "file": "reports/metrics-only.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "hand-written",
+      "about": "Metrics and facts with no diagram, as a producer that sends only figures would write. lsd-mono-core works out its own metrics from the messages, so it cannot write this."
+    },
+    {
+      "file": "reports/other-producer.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "hand-written",
+      "about": "A report from another producer: no options and no timing summary, which a reader fills in with its defaults, and times with a UTC offset."
+    },
+    {
+      "file": "reports/long-names.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "Names, display names, labels, titles, facts and a note far longer than the page, some with no space to break at."
+    },
+    {
+      "file": "reports/unicode-rtl.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "Arabic and Hebrew (right to left) beside Japanese, Hindi and Thai; Arabic-Indic digits, emoji with joiners and flags, a combining accent and bidirectional embedding marks."
+    },
+    {
+      "file": "reports/escaping.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "Markup, a script end, a comment and U+2028/U+2029 in every free text field, payloads included. The page must show it all as text."
+    },
+    {
+      "file": "reports/multi-scenario-status.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "A success, a warn and an error scenario, with the report's status the worst of them."
+    },
+    {
+      "file": "reports/timing-tree.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "The call tree for nested spans, a span two calls share, and clock order across sources falling back for a pair that disagrees."
+    },
+    {
+      "file": "reports/example-report.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "captured",
+      "about": "Four scenarios of the live example report (kitchenSinkSample), with timings, pairs and payload summaries. The zoom, Metrics and help checks open it."
+    },
+    {
+      "file": "reports/example-components.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "captured",
+      "about": "The live example report's first scenario (14 components), for the component diagram checks."
+    },
+    {
+      "file": "reports/future-minor.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "hand-written",
+      "about": "schemaVersion 0.2.0 with what a newer minor version may add: fields this version does not know (at the top, in the options, a scenario, a participant, a fact, a metric and a message), values of open enums it does not list (participant type ROBOT, message type BROADCAST, source spock) and an event of an unknown kind. Readers of 0.1 must accept it; the UI shows it with a notice."
+    },
+    {
+      "file": "reports/next-major.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "hand-written",
+      "about": "schemaVersion 1.0.0 in a 0.1-shaped report. The 0.x schema does not pin the major, so it accepts it; the UI shows a page saying to upgrade lsd-mono instead of the report."
+    },
+    {
+      "file": "generated/large.mjs",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "generated",
+      "about": "largeReport(): 100 participants and 400 messages by default, any size on request."
+    },
+    {
+      "file": "indexes/status-mix.json",
+      "schema": "lsd-index.schema.json",
+      "valid": true,
+      "source": "lsd-mono-core",
+      "about": "The index manifest (window.__LSD_INDEX__) lsd-mono-core writes for multi-scenario-status.json."
+    },
+    {
+      "file": "payloads/payload-script.js",
+      "source": "lsd-mono-core",
+      "about": "A -payloads.js sidecar with awkward payloads: markup, U+2028/U+2029, emoji, a lone surrogate, plain-string bodies, doubles and big decimals. Not JSON: the page runs it."
+    },
+    {
+      "file": "invalid/missing-schema-version.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "",
+      "source": "hand-written",
+      "about": "No schemaVersion."
+    },
+    {
+      "file": "invalid/unknown-status.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/status",
+      "source": "hand-written",
+      "about": "A status outside success, warn and error."
+    },
+    {
+      "file": "invalid/events-not-a-list.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/scenarios/0/events",
+      "source": "hand-written",
+      "about": "A scenario's events as an object instead of a list."
+    },
+    {
+      "file": "invalid/not-a-time.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/generatedAt",
+      "source": "hand-written",
+      "about": "generatedAt that is not an RFC 3339 date-time. A UTC offset is fine (reports/other-producer.json); this is not a time at all."
+    },
+    {
+      "file": "invalid/kind-without-fields.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/scenarios/0/events/0",
+      "source": "hand-written",
+      "about": "A known event kind (message) without the fields it needs. An unknown kind is allowed (reports/future-minor.json); a known one keeps its shape."
+    },
+    {
+      "file": "invalid/empty-name.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/scenarios/0/participants/0/name",
+      "source": "hand-written",
+      "about": "A participant with an empty name. Ids and participant names are never empty."
+    },
+    {
+      "file": "invalid/hostile.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/generatedAt",
+      "source": "hand-written",
+      "about": "Every string hostile, with wrong types and enums too (a string duration, an unknown participant type and placement), control characters and lone surrogates. The page must still show it as text and create no element from it."
+    }
+  ]
+}

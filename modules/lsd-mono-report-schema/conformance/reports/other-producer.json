@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "Another producer",
+  "generatedAt": "2026-01-01T13:00:00.250+01:00",
+  "generator": "acme-trace 3.2",
+  "status": "success",
+  "scenarios": [
+    {
+      "id": "checkout",
+      "title": "Checkout, from traces",
+      "status": "success",
+      "description": "Written by a producer with no timing analysis and no settings of its own.",
+      "facts": [
+        {
+          "key": "trace",
+          "value": "4bf92f3577b34da6"
+        }
+      ],
+      "metrics": [],
+      "participants": [
+        {
+          "id": "web",
+          "name": "Web",
+          "type": "ACTOR"
+        },
+        {
+          "id": "api",
+          "name": "Api",
+          "type": "PARTICIPANT"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "m1",
+          "from": "web",
+          "to": "api",
+          "label": "POST /checkout",
+          "type": "SYNCHRONOUS",
+          "startedAt": "2026-01-01T13:00:00.100+01:00"
+        },
+        {
+          "kind": "message",
+          "id": "m2",
+          "from": "api",
+          "to": "web",
+          "label": "201",
+          "type": "SYNCHRONOUS_RESPONSE"
+        }
+      ]
+    }
+  ]
+}

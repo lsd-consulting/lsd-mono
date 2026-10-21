@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "No components",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "lsd-mono-core (conformance)",
+  "status": "warn",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "5",
+      "title": "Nothing to draw",
+      "status": "warn",
+      "description": "A scenario that captured no messages",
+      "facts": [
+        {
+          "key": "ticket",
+          "value": "LSD-1"
+        },
+        {
+          "key": "environment",
+          "value": "staging"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "0"
+        }
+      ],
+      "participants": [],
+      "events": [
+        {
+          "kind": "section",
+          "id": "1",
+          "title": "Setup"
+        },
+        {
+          "kind": "divider",
+          "id": "2",
+          "label": "Nothing was called"
+        },
+        {
+          "kind": "delay",
+          "id": "3",
+          "label": "waited for a timeout"
+        },
+        {
+          "kind": "spacer",
+          "id": "4",
+          "heightPx": 24
+        }
+      ],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}

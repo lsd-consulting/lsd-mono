@@ -1,0 +1,108 @@
+{
+  "title": "title\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+  "generatedAt": "generatedAt\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+  "generator": "generator\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200
+  },
+  "scenarios": [
+    {
+      "id": "scenario\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+      "title": "scenario title\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+      "status": "error",
+      "description": "<mark>Given</mark> description\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800 <p onclick=\"x\">p</p><img src=y onerror=alert(3)>",
+      "error": {
+        "headline": "headline\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+        "message": "message\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+        "stack": "stack\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+      },
+      "facts": [
+        {
+          "key": "fact key\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "value": "fact value\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "metric key\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "value": "metric value\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+        }
+      ],
+      "participants": [
+        {
+          "id": "a",
+          "name": "participant a\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "type": "ACTOR",
+          "colour": "red\" \"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>"
+        },
+        {
+          "id": "b",
+          "name": "participant b\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "alias": "alias b\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "type": "type\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "colour": "blue' \"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>"
+        }
+      ],
+      "events": [
+        {
+          "kind": "section",
+          "id": "section\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "title": "section title\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+        },
+        {
+          "kind": "message",
+          "id": "m1\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "from": "a",
+          "to": "b",
+          "label": "label\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "type": "SYNCHRONOUS",
+          "colour": "green\" \"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>",
+          "durationMs": "duration\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "data": {
+            "method": "method\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+            "path": "path\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+            "status": "http status\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+            "body": "body\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+          }
+        },
+        {
+          "kind": "activate",
+          "id": "act1",
+          "participantId": "b",
+          "colour": "pink\" \"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>"
+        },
+        {
+          "kind": "note",
+          "id": "n1",
+          "text": "note\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "over": "a",
+          "placement": "placement\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+        },
+        {
+          "kind": "divider",
+          "id": "d1",
+          "label": "divider\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+        },
+        {
+          "kind": "delay",
+          "id": "w1",
+          "label": "delay\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+        },
+        {
+          "kind": "message",
+          "id": "m2",
+          "from": "b",
+          "to": "a",
+          "label": "response\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800",
+          "type": "message type\"'><img src=x onerror=alert(1) data-pwned=1></script><!--<svg onload=alert(2)>\u2028\u2029\u0001\ud800"
+        },
+        {
+          "kind": "deactivate",
+          "id": "act2",
+          "participantId": "b"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0.0",
+  "title": "A report from a future major version",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "hand-written",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "1",
+      "title": "Same shape, new major",
+      "status": "success",
+      "description": "",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "2"
+        }
+      ],
+      "participants": [
+        {
+          "id": "web",
+          "name": "Web",
+          "type": "ACTOR"
+        },
+        {
+          "id": "api",
+          "name": "Api",
+          "type": "PARTICIPANT"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "1",
+          "from": "web",
+          "to": "api",
+          "label": "GET /orders",
+          "type": "SYNCHRONOUS"
+        },
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "api",
+          "to": "web",
+          "label": "200",
+          "type": "SYNCHRONOUS_RESPONSE"
+        }
+      ],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [
+        "local"
+      ],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}

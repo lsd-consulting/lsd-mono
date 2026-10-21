@@ -1,0 +1,158 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "Unicode والعربية",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "lsd-mono-core (conformance)",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "8",
+      "title": "طلب ناجح — הזמנה הצליחה — 注文成功",
+      "status": "success",
+      "description": "يتحقق من الاتجاه من اليمين إلى اليسار",
+      "facts": [
+        {
+          "key": "العميل",
+          "value": "أحمد ٤٢"
+        },
+        {
+          "key": "mixed",
+          "value": "Order ‫#42 مدفوع‬ paid"
+        }
+      ],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "6"
+        }
+      ],
+      "participants": [
+        {
+          "id": "orders",
+          "name": "خدمة الطلبات",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "payments",
+          "name": "שירות תשלומים",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "jp",
+          "name": "注文サービス",
+          "type": "DATABASE"
+        },
+        {
+          "id": "cafe",
+          "name": "Café",
+          "type": "PARTICIPANT",
+          "alias": "Café 👩‍👩‍👧 🇬🇧"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "1",
+          "from": "cafe",
+          "to": "orders",
+          "label": "اطلب ٣ قطع",
+          "type": "SYNCHRONOUS",
+          "data": {
+            "المنتج": "قبعة",
+            "الكمية": 3
+          },
+          "seq": 1,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE"
+        },
+        {
+          "kind": "message",
+          "id": "2",
+          "from": "orders",
+          "to": "payments",
+          "label": "חיוב ₪120.50",
+          "type": "SYNCHRONOUS",
+          "seq": 2,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "parentId": "1"
+        },
+        {
+          "kind": "message",
+          "id": "3",
+          "from": "payments",
+          "to": "orders",
+          "label": "אושר ✅",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 3,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "2"
+        },
+        {
+          "kind": "message",
+          "id": "4",
+          "from": "orders",
+          "to": "jp",
+          "label": "在庫を確認する",
+          "type": "SYNCHRONOUS",
+          "seq": 4,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "parentId": "1"
+        },
+        {
+          "kind": "message",
+          "id": "5",
+          "from": "jp",
+          "to": "orders",
+          "label": "OK 在庫あり",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 5,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "4"
+        },
+        {
+          "kind": "note",
+          "id": "6",
+          "text": "ملاحظة: الدفع مؤكد",
+          "over": "orders",
+          "placement": "over"
+        },
+        {
+          "kind": "message",
+          "id": "7",
+          "from": "orders",
+          "to": "cafe",
+          "label": "تم ✓ — Zoë naïve Ångström हिन्दी ไทย",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "seq": 6,
+          "timing": "NONE",
+          "pairing": "GUESSED",
+          "order": "SEQUENCE",
+          "replyOf": "1"
+        }
+      ],
+      "accuracy": "STRUCTURE_ONLY",
+      "measuredCoverage": 0,
+      "pairingCoverage": 0,
+      "sources": [
+        "local"
+      ],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}
