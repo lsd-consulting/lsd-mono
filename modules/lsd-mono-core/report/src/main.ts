@@ -45,9 +45,10 @@ function boot(): void {
   applyHash()
   session.booted = true
   // After first render. A page with neither a report nor an index (the built-in demo) never pings.
-  usage.configure(window.__LSD_REPORT__ ?? index)
+  // The report as the page holds it (normalised, so its options are filled in), or the index.
+  usage.configure(window.__LSD_REPORT__ ? session.report : index)
   usage.ping('report-open')
-  if (window.__LSD_REPORT__) pingSource(window.__LSD_REPORT__)
+  if (window.__LSD_REPORT__) pingSource(session.report)
   window.addEventListener('hashchange', () => applyHash())
   listenForKeys(document)
   window.addEventListener('resize', () => {

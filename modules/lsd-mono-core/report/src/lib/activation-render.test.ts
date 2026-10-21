@@ -4,6 +4,7 @@ import type { Scenario } from '../types'
 import { ACT_W, COL_GAP, HEADER_BLOCK_H, LEFT_PAD } from './layout'
 import { bindDiagramScroll, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
 import { untimed } from './report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 
 /**
  * Nested bars on a later lifeline (refs #2). The nested bar was drawn at the same x
@@ -56,7 +57,7 @@ function arrowX(label: string): { x1: number; x2: number } {
 
 describe('nested activation bars', () => {
   beforeEach(() => {
-    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario)}</div>`
+    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_WIDTH)}</div>`
     const scroll = document.querySelector<HTMLElement>('.seq-scroll')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 900 })
     Object.defineProperty(scroll, 'clientWidth', { configurable: true, value: 900 })

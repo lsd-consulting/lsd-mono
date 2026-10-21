@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
+import { DEFAULT_OPTIONS } from './report-normalise'
 import {
   REPORT_SOURCES,
   USAGE_EVENTS,
@@ -64,8 +65,10 @@ describe('usage ping', () => {
 
   it.each([
     ['usagePing false', { generator: 'lsd-mono-core 0.2.0', options: { usagePing: false } }],
-    ['no usagePing option', { generator: 'lsd-mono-core 0.2.0', options: {} }],
-    ['no options', { generator: 'lsd-mono-core 0.2.0' }],
+    [
+      'a report that names no options, as the page holds it',
+      { generator: 'lsd-mono-core 0.2.0', options: DEFAULT_OPTIONS },
+    ],
     ['a snapshot build', { generator: 'lsd-mono-core 0.2.1-SNAPSHOT', options: { usagePing: true } }],
     ['an unknown version', { generator: 'lsd-mono-core unknown', options: { usagePing: true } }],
     ['no report', null],

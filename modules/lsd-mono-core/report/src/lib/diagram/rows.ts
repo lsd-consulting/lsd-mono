@@ -1,6 +1,6 @@
 // Sequence diagram rows: header, the painted window, and one SVG row per event.
 import type { MessageEvent, Participant, Scenario } from '../../types'
-import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../../ui/format'
+import { truncateLabel } from '../../ui/format'
 import {
   TOUCH_HIT_CSS,
   focusableNeighbors,
@@ -117,6 +117,20 @@ function headerSlots(
   )
 }
 
+/** A participant header box with no colour of its own: a neutral outline. */
+const HEADER_COLOUR = '#94a3b8'
+/** An activation bar whose participant has no colour of its own: the theme's accent. */
+const ACTIVATION_COLOUR = 'var(--accent)'
+/** An arrow (or an activation of an unknown participant) with no colour to take: the default green. */
+const ARROW_COLOUR = '#34d399'
+/** A response arrow with no colour of its own: neutral, so it reads as the reply to its call. */
+const RESPONSE_COLOUR = '#94a3b8'
+
+/** Each participant's colour by id, using `fallback` for a participant with none. */
+function laneColours(participants: readonly Participant[], fallback: string): Map<string, string> {
+  return new Map(participants.map((p) => [p.id, p.colour ?? fallback]))
+}
+
 function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlySet<string>, zoom: number): string {
   const width = frame.total
   const visible = visibleParticipants(scenario.participants, hiddenIds)
@@ -126,7 +140,7 @@ function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlyS
       const x = xFor(i, index)
       const name = p.alias ?? p.name
       const head = participantHeadFor(p)
-      const colour = escapeAttr(p.colour ?? '#94a3b8')
+      const colour = escapeAttr(p.colour ?? HEADER_COLOUR)
       return `
       <g class="participant-box" data-participant="${escapeAttr(p.id)}" data-participant-type="${escapeAttr(head.type)}" transform="translate(${x}, 0)" style="--pc:${colour}">
         <title>${escapeHtml(name)}, ${head.typeLabel}</title>
@@ -155,7 +169,7 @@ export function windowSvg(
   const height = Math.max(end - viewTop, 1)
   const visible = visibleParticipants(scenario.participants, view.hidden)
   const index = laneIndex(visible)
-  const colourOf = new Map(scenario.participants.map((p) => [p.id, p.colour ?? 'var(--accent)']))
+  const colourOf = laneColours(scenario.participants, ACTIVATION_COLOUR)
   const spans = activationSpans(rows, Math.max(diagram.height - BOTTOM_PAD, 0))
 
   const markers = markerSet()
@@ -176,7 +190,7 @@ export function windowSvg(
       const y1 = Math.min(span.y1, end)
       if (y1 - y0 < 1) return ''
       const x = xFor(i, index) - ACT_W / 2 + span.depth * ACT_NEST_DX
-      const fallback = colourOf.get(span.participantId) ?? '#34d399'
+      const fallback = colourOf.get(span.participantId) ?? ARROW_COLOUR
       return activationBarSvg({
         x,
         y: y0,
@@ -233,12 +247,12 @@ export function renderRowSvg(
   row: LayoutRow,
   width: number,
   participants: Participant[],
-  labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH,
+  labelMaxWidth: number,
   paint: RowPaint = EMPTY_PAINT,
 ): string {
   const visible = visibleParticipants(participants, paint.hiddenIds)
   const index = laneIndex(visible)
-  const colourOf = new Map(participants.map((p) => [p.id, p.colour ?? '#34d399']))
+  const colourOf = laneColours(participants, ARROW_COLOUR)
   const markers = markerSet()
   const ensureMarker = markers.ensure
   const buttons: string[] = []
@@ -368,7 +382,8 @@ function renderMessageRow(
   const spec = messageArrowSpec(msg.type)
   const match = findMatch(msg, query, paint.payloadHits)
   const rawColour =
-    msg.colour || (msg.type === 'SYNCHRONOUS_RESPONSE' ? '#94a3b8' : colourOf.get(msg.from || msg.to) || '#34d399')
+    msg.colour ||
+    (msg.type === 'SYNCHRONOUS_RESPONSE' ? RESPONSE_COLOUR : colourOf.get(msg.from || msg.to) || ARROW_COLOUR)
   const endId = ensureMarker(rawColour, spec.end)
   const startId = ensureMarker(rawColour, spec.start)
   const colour = escapeAttr(rawColour)

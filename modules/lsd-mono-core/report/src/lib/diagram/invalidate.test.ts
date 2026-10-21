@@ -6,6 +6,7 @@ import { createInvalidator, flushDiagramPaints, type DiagramPainters } from './i
 import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { forgetDiagrams } from './state'
 import { untimed } from '../report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
 
 function fakePainters() {
   const calls: string[] = []
@@ -125,7 +126,7 @@ describe('the diagram paints once for several changes in one task (#104)', () =>
     const changed = vi.fn()
     setFindHooks({ changed })
     const host = document.createElement('div')
-    host.innerHTML = renderDiagramHtml(scenario())
+    host.innerHTML = renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_WIDTH)
     document.body.append(host)
     const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })

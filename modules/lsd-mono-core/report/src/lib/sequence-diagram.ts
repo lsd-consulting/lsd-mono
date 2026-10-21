@@ -1,7 +1,6 @@
 // The sequence diagram: mounting, frame and pads, the HTML shell and message focus. Shapes, rows,
 // the viewport lives in ./diagram; their state is one controller, diagramState.
 import type { MessageEvent, Scenario } from '../types'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 import { drawnFocusTarget, focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
 import { unscaledViewport } from './diagram-view'
 import { headerHtml } from './diagram/rows'
@@ -24,7 +23,7 @@ export { syncDiagramWindow } from './diagram/window'
 export { PRINT_MAX_UPSCALE, diagramPads, frameOf, paintedMessageIds, sliceViewTop } from './diagram/geometry'
 export { findFieldLabel } from './diagram/search-reveal'
 
-function mountDiagram(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): MountedDiagram {
+function mountDiagram(scenario: Scenario, labelMaxWidth: number): MountedDiagram {
   const rows = layoutRows(scenario.events)
   const diagram: MountedDiagram = {
     scenario,
@@ -123,7 +122,7 @@ function payloadLegendHtml(scenario: Scenario): string {
 }
 
 /** Continuous diagram: sticky participant header, section jump list, virtualised rows. */
-export function renderDiagramHtml(scenario: Scenario, labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH): string {
+export function renderDiagramHtml(scenario: Scenario, labelMaxWidth: number): string {
   const diagram = mountDiagram(scenario, labelMaxWidth)
   const view = diagramView(scenario.id)
   const frame = frameOf(diagram, view.hidden)

@@ -4,6 +4,7 @@ import type { Scenario } from '../types'
 import { HEADER_BLOCK_H } from './layout'
 import { PRINT_MAX_UPSCALE, bindDiagramScroll, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
 import { untimed } from './report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 
 /** Long enough that the screen window paints only some of the rows. */
 const scenario: Scenario = {
@@ -36,7 +37,7 @@ describe('sequence diagram in print', () => {
   let scroll: HTMLElement
 
   beforeEach(() => {
-    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario)}</div>`
+    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_WIDTH)}</div>`
     scroll = document.querySelector<HTMLElement>('.seq-scroll')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 240 })
     Object.defineProperty(scroll, 'clientWidth', { configurable: true, value: 600 })

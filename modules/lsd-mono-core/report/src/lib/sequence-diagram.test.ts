@@ -24,6 +24,7 @@ import {
 import { renderDiagramHtml, renderRowSvg } from './sequence-diagram'
 import type { DiagramEvent, Participant, Scenario } from '../types'
 import { untimed } from './report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 
 const participants: Participant[] = [
   { id: 'api', name: 'Api', type: 'PARTICIPANT', colour: '#34d399' },
@@ -133,6 +134,7 @@ describe('renderRowSvg fragments', () => {
       }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(html).toContain('<button type="button" class="msg-open"')
     expect(html).toContain('aria-label="Open place order, api to db, call, has payload"')
@@ -163,6 +165,7 @@ describe('renderRowSvg fragments', () => {
         }),
         400,
         participants,
+        DEFAULT_LABEL_MAX_WIDTH,
       )
     const html = row({ id: 1 })
     expect(html).toContain('<tspan class="msg-payload" dx="6" aria-hidden="true">{}<title>Has a payload')
@@ -182,6 +185,7 @@ describe('renderRowSvg fragments', () => {
       }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(html).not.toContain('msg-open')
   })
@@ -199,6 +203,7 @@ describe('renderRowSvg fragments', () => {
       }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(html).toContain('class="msg-open"')
     expect(html).not.toContain('ord_1')
@@ -216,6 +221,7 @@ describe('renderRowSvg fragments', () => {
       }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(svg).toContain('data-msg-type="LOST"')
     expect(svg).toContain('[lost]')
@@ -237,6 +243,7 @@ describe('renderRowSvg fragments', () => {
         { id: 'api', name: 'Api', type: 'PARTICIPANT', colour: 'var(--accent)' },
         { id: 'db', name: 'Db', type: 'DATABASE', colour: 'var(--accent)' },
       ],
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(svg).toContain('data-msg-type="SYNCHRONOUS"')
     expect(svg).toContain('marker-end="url(#mk_filled_var--accent)"')
@@ -258,6 +265,7 @@ describe('renderRowSvg fragments', () => {
       }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(svg).toContain('data-msg-type="BI_DIRECTIONAL"')
     expect(svg).toContain('marker-start=')
@@ -277,6 +285,7 @@ describe('renderRowSvg fragments', () => {
       }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(inbound).toContain('data-msg-type="SHORT_INBOUND"')
     expect(inbound).toContain('[in]')
@@ -293,6 +302,7 @@ describe('renderRowSvg fragments', () => {
       }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(outbound).toContain('data-msg-type="SHORT_OUTBOUND"')
     expect(outbound).toContain('[out]')
@@ -321,6 +331,7 @@ describe('renderRowSvg fragments', () => {
       rowFor({ kind: 'note', id: 'n1', text: 'L', over: 'api', placement: 'left' }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(left).toContain('data-placement="left"')
     expect(left).toContain('note-left')
@@ -329,6 +340,7 @@ describe('renderRowSvg fragments', () => {
       rowFor({ kind: 'note', id: 'n2', text: 'R', over: 'api', placement: 'right' }),
       400,
       participants,
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(right).toContain('data-placement="right"')
     expect(right).toContain('note-right')
@@ -340,7 +352,7 @@ describe('renderRowSvg fragments', () => {
     expect(card.lines.length).toBeGreaterThan(1)
     const row = rowFor({ kind: 'note', id: 'n-long', text, over: 'api', placement: 'over' })
     expect(row.height).toBeGreaterThan(40)
-    const svg = renderRowSvg(row, 400, participants)
+    const svg = renderRowSvg(row, 400, participants, DEFAULT_LABEL_MAX_WIDTH)
     expect(svg).toContain(`width="${NOTE_CARD_W}"`)
     expect(svg).toContain(`height="${card.height}"`)
     // One tspan per wrapped line.
@@ -362,6 +374,7 @@ describe('renderRowSvg fragments', () => {
         rowFor({ kind: 'note', id: `n-${placement}`, text: 'Payment retried', over: 'api', placement }),
         400,
         participants,
+        DEFAULT_LABEL_MAX_WIDTH,
       )
       // Placement stays layout data on the group.
       expect(svg).toContain(`data-placement="${placement}"`)
@@ -387,7 +400,7 @@ describe('renderRowSvg fragments', () => {
       rowFor({ kind: 'note', id: 'n-hit', text: 'Payment retried', over: 'api', placement: 'over' }),
       400,
       participants,
-      undefined,
+      DEFAULT_LABEL_MAX_WIDTH,
       { query: 'retried', hiddenIds: new Set() },
     )
     expect(svg).toContain('search-hit')
@@ -403,6 +416,7 @@ describe('renderRowSvg fragments', () => {
         rowFor({ kind: 'note', id: `n-${placement}`, text, over: 'api', placement }),
         400,
         participants,
+        DEFAULT_LABEL_MAX_WIDTH,
       )
       expect(svg).toContain(`data-placement="${placement}"`)
       expect(svg).toContain(`height="${card.height}"`)
@@ -418,8 +432,8 @@ describe('section separator', () => {
       { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'place order', type: 'SYNCHRONOUS' },
     ]
     const rows = layoutRows(events)
-    const sectionSvg = renderRowSvg(rows[0], 400, participants)
-    const messageSvg = renderRowSvg(rows[1], 400, participants)
+    const sectionSvg = renderRowSvg(rows[0], 400, participants, DEFAULT_LABEL_MAX_WIDTH)
+    const messageSvg = renderRowSvg(rows[1], 400, participants, DEFAULT_LABEL_MAX_WIDTH)
     expect(sectionSvg).toContain(`y="${SECTION_BAND_Y}"`)
     expect(sectionSvg).toContain(`height="${SECTION_BAND_H}"`)
     expect(sectionSvg).not.toContain(`height="${rows[0].height - 16}"`)
@@ -585,7 +599,7 @@ function headerHtml(participants: Participant[], id: string): string {
       },
     ],
   }
-  const html = renderDiagramHtml(scenario)
+  const html = renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_WIDTH)
   const start = html.indexOf('seq-sticky-header')
   const end = html.indexOf('seq-spacer')
   return html.slice(start, end)
@@ -691,8 +705,8 @@ describe('side panel buttons', () => {
 
   it('explains the {} marker under the toolbar only when an arrow has a payload', () => {
     const plain = { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' } as const
-    expect(renderDiagramHtml(scenarioWith([plain]))).not.toContain('payload-legend')
-    const html = renderDiagramHtml(scenarioWith([{ ...plain, data: { body: '{}' } }]))
+    expect(renderDiagramHtml(scenarioWith([plain]), DEFAULT_LABEL_MAX_WIDTH)).not.toContain('payload-legend')
+    const html = renderDiagramHtml(scenarioWith([{ ...plain, data: { body: '{}' } }]), DEFAULT_LABEL_MAX_WIDTH)
     const legend = html.slice(html.indexOf('class="payload-legend"'), html.indexOf('class="seq-stage"'))
     expect(legend).toContain('aria-hidden="true">{}</span>')
     expect(legend).toContain('An arrow marked with braces</span> has a payload')
@@ -702,6 +716,7 @@ describe('side panel buttons', () => {
   it("has no Component diagram button: the drawing is the diagram area's Components view (#105)", () => {
     const html = renderDiagramHtml(
       scenarioWith([{ kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' }]),
+      DEFAULT_LABEL_MAX_WIDTH,
     )
     expect(html).not.toContain('data-show-components')
     expect(html).not.toContain('Component diagram')

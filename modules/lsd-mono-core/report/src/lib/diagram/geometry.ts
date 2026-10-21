@@ -2,7 +2,7 @@
 // A leaf of the diagram modules: it imports none of them but shapes and state's types, so the
 // rest can all use it without an import cycle.
 import type { DiagramEvent, MessageEvent, Participant } from '../../types'
-import { DEFAULT_LABEL_MAX_WIDTH, truncateLabel } from '../../ui/format'
+import { truncateLabel } from '../../ui/format'
 import { messageHasPayload } from '../diagram-a11y'
 import { eventHiddenByColumns, messageLabelRect, visibleParticipants } from '../diagram-view'
 import type { Rect } from '../diagram-view'
@@ -50,7 +50,7 @@ const SELF_LABEL_DX = ACT_W + 36 + 8
 export function diagramPads(
   events: DiagramEvent[],
   visible: Participant[],
-  labelMaxWidth = DEFAULT_LABEL_MAX_WIDTH,
+  labelMaxWidth: number,
 ): { left: number; right: number } {
   const index = laneIndex(visible)
   const width = laneWidth(index, visible.length)

@@ -15,6 +15,7 @@ import {
 import { bindDiagramScroll, diagramView, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
 import { flushDiagramPaints } from './diagram/invalidate'
 import { untimed } from './report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 
 let n = 0
 /** A fresh scenario id per test: hidden state lives per scenario for the page's life. */
@@ -45,7 +46,7 @@ function scenario(): Scenario {
 
 function mount(s: Scenario = scenario()): { s: Scenario; root: HTMLElement; scroll: HTMLElement } {
   const host = document.createElement('div')
-  host.innerHTML = renderDiagramHtml(s)
+  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
   document.body.append(host)
   const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
   Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })

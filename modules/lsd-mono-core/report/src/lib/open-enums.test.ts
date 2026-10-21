@@ -6,6 +6,7 @@ import { messageKind } from './diagram/text-view'
 import { normaliseScenario } from './report-normalise'
 import { renderDiagramHtml } from './sequence-diagram'
 import type { DiagramEvent, MessageEvent, Scenario } from '../types'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 
 const newer = '"><img src=x onerror=alert(1)>'
 const message: MessageEvent = { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'ping', type: 'BROADCAST' }
@@ -37,14 +38,14 @@ describe('values from a newer producer', () => {
       type: 'PARTICIPANT',
       typeLabel: 'component',
     })
-    const html = renderDiagramHtml(scenario([message]))
+    const html = renderDiagramHtml(scenario([message]), DEFAULT_LABEL_MAX_WIDTH)
     expect(html).not.toContain('ROBOT')
     expect(html).not.toContain('<img')
   })
 
   it('leaves out an event of an unknown kind', () => {
     const hologram = { kind: 'hologram', id: 'h1', label: 'never drawn' } as unknown as DiagramEvent
-    const html = renderDiagramHtml(scenario([message, hologram]))
+    const html = renderDiagramHtml(scenario([message, hologram]), DEFAULT_LABEL_MAX_WIDTH)
     expect(html).not.toContain('never drawn')
     expect(html).toContain('ping')
   })

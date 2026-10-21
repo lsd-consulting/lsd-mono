@@ -15,6 +15,7 @@ import {
 import { layoutComponents, renderComponentDiagram } from './component-diagram'
 import { componentGraph } from './component-graph'
 import { untimed } from './report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
 
 const TYPES: ParticipantType[] = ['ACTOR', 'PARTICIPANT', 'DATABASE', 'QUEUE', 'ENTITY', 'BOUNDARY']
 const LONG = 'Customer Notification Preferences and Delivery Orchestration Service'
@@ -128,11 +129,11 @@ describe('lanes', () => {
   })
 
   it('pad the frame when a wide shape sits on an outer lifeline', () => {
-    const pads = diagramPads([], people([LONG, 'Api', LONG]))
+    const pads = diagramPads([], people([LONG, 'Api', LONG]), DEFAULT_LABEL_MAX_WIDTH)
     const half = participantHeadFor({ type: 'PARTICIPANT', name: LONG }).half
     expect(pads.left).toBeGreaterThanOrEqual(Math.ceil(half - LEFT_PAD + 8))
     expect(pads.right).toBeGreaterThan(0)
-    expect(diagramPads([], people(['Api', 'Db']))).toEqual({ left: 0, right: 0 })
+    expect(diagramPads([], people(['Api', 'Db']), DEFAULT_LABEL_MAX_WIDTH)).toEqual({ left: 0, right: 0 })
   })
 })
 
@@ -157,7 +158,7 @@ describe('sequence header with long names', () => {
   }
 
   it('keeps the full name in the title and accessible name, and lifelines under the shapes', () => {
-    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario)}</div>`
+    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_WIDTH)}</div>`
     const scroll = document.querySelector<HTMLElement>('.seq-scroll')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })
     bindDiagramScroll(document.getElementById('root')!)

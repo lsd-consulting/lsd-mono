@@ -12,6 +12,7 @@ import { SEARCH_REVEAL_DELAY_MS } from './search-reveal'
 import { diagramState, forgetDiagrams } from './state'
 import { refitDiagram } from './zoom'
 import { untimed } from '../report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
 
 let n = 0
 function scenario(messages: number): Scenario {
@@ -47,7 +48,7 @@ function scenario(messages: number): Scenario {
 function mount(messages = 6, width = 1400) {
   const s = scenario(messages)
   const host = document.createElement('div')
-  host.innerHTML = renderDiagramHtml(s)
+  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
   document.body.append(host)
   let panel = width
   const scroll = host.querySelector<HTMLElement>('.seq-scroll')!

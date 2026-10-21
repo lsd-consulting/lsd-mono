@@ -11,6 +11,7 @@ import { createKeyRouter } from '../keys/router'
 import { singleKeysEnabled } from '../../ui/shortcuts'
 import { flushDiagramPaints } from './invalidate'
 import { untimed } from '../report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
 
 let n = 0
 /** A fresh scenario per test, [lanes] wide: views live per scenario id for the page's life. */
@@ -47,7 +48,7 @@ function scenario(lanes: number): Scenario {
 function mount(lanes = 12, width = 600) {
   const s = scenario(lanes)
   const host = document.createElement('div')
-  host.innerHTML = renderDiagramHtml(s)
+  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
   document.body.append(host)
   const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
   Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })

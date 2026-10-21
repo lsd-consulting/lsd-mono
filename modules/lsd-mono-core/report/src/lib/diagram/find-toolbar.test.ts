@@ -6,6 +6,7 @@ import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { forgetDiagrams } from './state'
 import { flushDiagramPaints } from './invalidate'
 import { untimed } from '../report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
 
 function scenario(withPayloads = true): Scenario {
   return {
@@ -37,7 +38,7 @@ function scenario(withPayloads = true): Scenario {
 
 function mount(s: Scenario) {
   const host = document.createElement('div')
-  host.innerHTML = renderDiagramHtml(s)
+  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
   document.body.append(host)
   const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
   Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })

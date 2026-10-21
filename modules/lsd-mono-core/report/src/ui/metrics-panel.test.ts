@@ -7,6 +7,7 @@ import { metricsPanelHtml } from './metrics'
 import { createKeyRouter } from '../lib/keys/router'
 import type { InspectorController } from './inspector'
 import { untimed } from '../lib/report-fixture.test-util'
+import { DEFAULT_LABEL_MAX_WIDTH } from './format'
 /** Escape as the page's key router gives it to the side panel (#102). */
 function pressEscape(controller: InspectorController): void {
   const router = createKeyRouter(() => ({
@@ -49,7 +50,7 @@ function toolbarOf(html: string): string {
 
 describe('metrics button', () => {
   it('sits in the side panel group, alone now the component diagram is a view (#105), and names the scenario it opens', () => {
-    const toolbar = toolbarOf(renderDiagramHtml(scenario()))
+    const toolbar = toolbarOf(renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_WIDTH))
     expect(toolbar).toMatch(
       /aria-label="Open in the side panel"><button[^>]*data-show-metrics="pay"[^>]*>(?:(?!<\/button>).)*<span>Metrics<\/span><\/button><\/div>/s,
     )
@@ -57,7 +58,7 @@ describe('metrics button', () => {
   })
 
   it('is left out when there are no metrics, with its group', () => {
-    const toolbar = toolbarOf(renderDiagramHtml(scenario({ metrics: [] })))
+    const toolbar = toolbarOf(renderDiagramHtml(scenario({ metrics: [] }), DEFAULT_LABEL_MAX_WIDTH))
     expect(toolbar).not.toContain('data-show-metrics')
     expect(toolbar).not.toContain('panel-controls')
   })
@@ -66,7 +67,7 @@ describe('metrics button', () => {
 describe('side panel buttons', () => {
   it('say they open the side panel, closed until the app marks one open, named by their text alone', () => {
     const host = document.createElement('div')
-    host.innerHTML = renderDiagramHtml(scenario())
+    host.innerHTML = renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_WIDTH)
     for (const [selector, text] of [['[data-show-metrics]', 'Metrics']] as const) {
       const button = host.querySelector<HTMLButtonElement>(`.panel-controls ${selector}`)!
       expect(button.getAttribute('aria-controls')).toBe('inspector')

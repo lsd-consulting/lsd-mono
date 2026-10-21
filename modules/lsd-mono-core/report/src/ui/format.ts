@@ -44,7 +44,7 @@ export function statusLabel(s: string): string {
 export const DEFAULT_LABEL_MAX_WIDTH = 200
 const ELLIPSIS = '...'
 
-export function truncateLabel(label: string, maxWidth = DEFAULT_LABEL_MAX_WIDTH): string {
+export function truncateLabel(label: string, maxWidth: number): string {
   const trimmed = label.trim()
   if (trimmed.length <= maxWidth) return trimmed
   if (maxWidth <= 0) return ''

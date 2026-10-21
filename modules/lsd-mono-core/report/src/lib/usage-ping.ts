@@ -36,10 +36,13 @@ export function sourceEvent(source: unknown): UsageEvent | null {
   return (REPORT_SOURCES as readonly unknown[]).includes(source) ? (`source-${source as ReportSource}` as const) : null
 }
 
-/** What decides whether a page pings: the report's (or index's) `usagePing` option and `generator`. */
+/**
+ * What decides whether a page pings: the report's (or index's) `usagePing` option and `generator`.
+ * A report as normaliseReport gives it, or an index manifest, which always has its options.
+ */
 export interface UsagePingSource {
-  generator?: string
-  options?: { usagePing?: boolean }
+  generator: string
+  options: { usagePing: boolean }
 }
 
 /** Sends one request. Returns a promise when it is asynchronous; any rejection is ignored. */
@@ -64,7 +67,7 @@ export class UsagePing {
    * else (the option false or missing, a snapshot or unknown version) turns it off.
    */
   configure(source: UsagePingSource | null | undefined): void {
-    this.version = !this.devBuild && source?.options?.usagePing === true ? releaseVersion(source.generator) : null
+    this.version = !this.devBuild && source?.options.usagePing === true ? releaseVersion(source.generator) : null
   }
 
   /** Whether [ping] would send anything at all. */
@@ -98,10 +101,10 @@ export const usage = new UsagePing(import.meta.env.DEV && !devCheckOptIn())
 
 /** Count the integration that wrote [report], when the report itself allows the ping. */
 export function pingSource(
-  report: UsagePingSource & { options?: { source?: string } },
+  report: UsagePingSource & { options: { source?: string } },
   pinger: UsagePing = usage,
 ): void {
-  if (report.options?.usagePing !== true) return
+  if (!report.options.usagePing) return
   const event = sourceEvent(report.options.source)
   if (event) pinger.ping(event)
 }
