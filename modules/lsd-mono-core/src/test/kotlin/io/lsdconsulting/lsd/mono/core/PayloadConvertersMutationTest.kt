@@ -2,11 +2,12 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import tools.jackson.databind.json.JsonMapper
 import java.nio.file.Path
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
@@ -43,14 +44,22 @@ class PayloadConvertersMutationTest {
         lsd.completeReport("Mutation")
         val json = tempDir.listDirectoryEntries("Mutation*-report.json").single().readText()
 
-        assertTrue(json.contains(""""status": 201"""), json)
-        assertFalse(json.contains("500"), json)
-        assertTrue(json.contains(""""x-request-id": "req-1""""), json)
+        // On the parsed data, not the text: "500" could be in a time such as ...:00.500Z.
+        val messages = JsonMapper()
+            .readTree(json)
+            .get("scenarios")
+            .get(0)
+            .get("events")
+            .filter { it.get("kind").asString() == "message" }
+        val order = messages.single { it.get("label").asString() == "POST /orders" }.get("data")
+        assertEquals(201, order.get("status").asInt(), "the status as captured, not the later 500")
+        assertEquals("req-1", order.get("headers").get("x-request-id").asString())
+        assertEquals(listOf("socks"), order.get("items").values().map { it.asString() })
         assertFalse(json.contains("req-2"), json)
         assertFalse(json.contains("hats"), json)
-        assertTrue(json.contains(""""data": "first""""), json)
+        assertEquals("first", messages.single { it.get("label").asString() == "INSERT" }.get("data").asString())
         assertFalse(json.contains("second"), json)
-        assertTrue(json.contains(""""data": "original""""), json)
+        assertEquals("original", messages.single { it.get("label").asString() == "publish" }.get("data").asString())
         assertFalse(json.contains("mutated"), json)
     }
 }
