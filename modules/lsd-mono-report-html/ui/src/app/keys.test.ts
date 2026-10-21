@@ -41,7 +41,7 @@ const help = () => document.querySelector('#help')!.getAttribute('data-open')
 beforeEach(() => {
   vi.clearAllMocks()
   ctx.session.inspector.isOpen = () => false
-  document.body.innerHTML = `<input id="search"><button id="btn-help">?</button><button id="btn">B</button>${helpDialogHtml('<input type="checkbox" id="single-keys">')}`
+  document.body.innerHTML = `<input type="search" id="search"><button id="btn-help">?</button><button id="btn">B</button>${helpDialogHtml('<input type="checkbox" id="single-keys">')}`
   ctx.session.help = bindHelpDialog(document)
 })
 
@@ -86,16 +86,109 @@ describe('page keys', () => {
     expect(ctx.session.inspector.close).toHaveBeenCalledOnce()
   })
 
-  it('lets go of a text field on Escape, and gives Escape to an open side panel first, and only to it', () => {
+  it('gives Escape in a text field to an open side panel first, and only to it', () => {
     const search = document.querySelector<HTMLInputElement>('#search')!
-    search.focus()
-    expect(press(search, 'Escape').defaultPrevented).toBe(true)
-    expect(document.activeElement).not.toBe(search)
+    search.value = 'order'
     search.focus()
     ctx.session.inspector.isOpen = () => true
     expect(press(search, 'Escape').defaultPrevented).toBe(true)
     expect(ctx.session.inspector.close).toHaveBeenCalledOnce()
     expect(document.activeElement).toBe(search)
+    expect(search.value).toBe('order')
+  })
+
+  describe('Escape in search and Find (#114)', () => {
+    const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!
+    beforeEach(() => {
+      document.body.insertAdjacentHTML(
+        'beforeend',
+        `<ul id="scenario-nav"><li><button data-nav="a" aria-current="true" id="item">A</button></li></ul>
+        <main id="main"><div class="scenario-head"><h2 id="scenario-title" tabindex="-1">A</h2></div>
+          <div class="seq-diagram"><input type="search" data-diagram-find id="find"><div class="seq-scroll" tabindex="-1" id="scroll"></div></div>
+        </main>`,
+      )
+    })
+
+    for (const [name, sel, owner] of [
+      ['search', '#search', 'scenario-title'],
+      ['Find', '#find', 'scroll'],
+    ] as const) {
+      it(`${name}: the first Escape clears the text the way deleting it would, and keeps focus`, () => {
+        const field = $<HTMLInputElement>(sel)
+        const inputs: string[] = []
+        field.addEventListener('input', () => inputs.push(field.value))
+        field.value = 'pay'
+        field.focus()
+        expect(press(field, 'Escape').defaultPrevented).toBe(true)
+        expect(field.value).toBe('')
+        expect(inputs).toEqual([''])
+        expect(document.activeElement).toBe(field)
+      })
+
+      it(`${name}: Escape in the empty field moves focus to ${owner}, never the body`, () => {
+        const field = $<HTMLInputElement>(sel)
+        field.focus()
+        expect(press(field, 'Escape').defaultPrevented).toBe(true)
+        expect(document.activeElement?.id).toBe(owner)
+      })
+
+      it(`${name}: a held Escape clears once and goes no further`, () => {
+        const field = $<HTMLInputElement>(sel)
+        field.value = 'pay'
+        field.focus()
+        press(field, 'Escape')
+        const held = press(field, 'Escape', { repeat: true })
+        expect(held.defaultPrevented).toBe(true)
+        expect(document.activeElement).toBe(field)
+      })
+    }
+
+    it('Find: a scrollport barely on screen comes up to the middle of the window; one in view stays', () => {
+      const scroll = $('#scroll')
+      const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+      const at = (top: number) =>
+        (scroll.getBoundingClientRect = () =>
+          ({ top, bottom: top + 600, left: 0, right: 800, width: 800, height: 600 }) as DOMRect)
+      const height = innerHeight
+      // Its top 8px above the foot of the window (1280×800: y=792).
+      at(height - 8)
+      $('#find').focus()
+      press($('#find'), 'Escape')
+      expect(document.activeElement?.id).toBe('scroll')
+      expect(scrollBy).toHaveBeenCalledTimes(1)
+      expect(scrollBy.mock.calls[0][0]).toMatchObject({ top: height - 8 - height / 2 })
+      // 100px or more of it shows: the page stays where it is.
+      scrollBy.mockClear()
+      at(height - 100)
+      $('#find').focus()
+      press($('#find'), 'Escape')
+      expect(scrollBy).not.toHaveBeenCalled()
+      scrollBy.mockRestore()
+    })
+
+    it('search with no scenario shown goes to the selected list item', () => {
+      $('.scenario-head').remove()
+      $('#search').focus()
+      press($('#search'), 'Escape')
+      expect(document.activeElement?.id).toBe('item')
+    })
+
+    it('search keeps focus when there is nowhere to go', () => {
+      $('#main').remove()
+      $('#scenario-nav').remove()
+      $('#search').focus()
+      press($('#search'), 'Escape')
+      expect(document.activeElement?.id).toBe('search')
+    })
+
+    it('leaves the help checkbox alone: it is an input, but not a text field', () => {
+      const check = $<HTMLInputElement>('#single-keys')
+      check.focus()
+      const ev = press(check, 'Escape')
+      expect(document.activeElement).toBe(check)
+      expect(check.value).toBe('on')
+      expect(ev.defaultPrevented).toBe(false)
+    })
   })
 
   it('leaves an Escape a widget has already taken', () => {

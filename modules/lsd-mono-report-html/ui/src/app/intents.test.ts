@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Scenario } from '../types'
-import { keyTarget, mainClick, openingScenario } from './intents'
+import { fieldEscapeTargets, isTextField, keyTarget, mainClick, openingScenario } from './intents'
 
 const el = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)!
 
@@ -47,9 +47,52 @@ describe('keyTarget', () => {
     expect(keyTarget(el('#plain')).arrows).toBe(false)
   })
 
+  it('knows a field Escape can clear (#114): text inputs and textareas, not a checkbox', () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<input type="checkbox" id="check"><input type="range" id="range"><input type="SEARCH" id="upper">',
+    )
+    for (const id of ['#search', '#note', '#upper']) expect(isTextField(el(id)), id).toBe(true)
+    for (const id of ['#check', '#range', '#edit', '#item']) expect(isTextField(el(id)), id).toBe(false)
+    expect(keyTarget(el('#check'))).toMatchObject({ typing: true, textField: false, fieldHasText: false })
+    expect(keyTarget(el('#search'))).toMatchObject({ textField: true, fieldHasText: false })
+    el<HTMLInputElement>('#search').value = 'order'
+    expect(keyTarget(el('#search')).fieldHasText).toBe(true)
+    expect(keyTarget(el('#item'))).toMatchObject({ textField: false, fieldHasText: false })
+  })
+
   it('knows a control that Enter presses', () => {
     for (const id of ['#item', '#link', '#slider']) expect(keyTarget(el(id)).onControl, id).toBe(true)
     expect(keyTarget(el('#plain')).onControl).toBe(false)
+  })
+})
+
+describe('fieldEscapeTargets', () => {
+  const ids = (field: Element) => fieldEscapeTargets(field).map((t) => t.id)
+
+  it("gives Find's focus to its own diagram's scrollport", () => {
+    document.body.innerHTML = `
+      <div class="seq-diagram" id="one"><input type="search" data-diagram-find id="find1"><div class="seq-scroll" id="scroll1"></div></div>
+      <div class="seq-diagram" id="two"><input type="search" data-diagram-find id="find2"><div class="seq-scroll" id="scroll2"></div></div>`
+    expect(ids(el('#find1'))).toEqual(['scroll1'])
+    expect(ids(el('#find2'))).toEqual(['scroll2'])
+  })
+
+  it("gives search's focus to the scenario heading, else the selected list item, else the list's first", () => {
+    document.body.innerHTML = `
+      <input type="search" id="search">
+      <ul id="scenario-nav"><li><button id="first" data-nav="a">A</button></li><li><button id="current" data-nav="b" aria-current="true">B</button></li></ul>
+      <main id="main"><div class="scenario-head"><h2 id="scenario-title" tabindex="-1">B</h2></div></main>`
+    expect(ids(el('#search'))).toEqual(['scenario-title', 'current', 'first'])
+    el('.scenario-head').remove()
+    expect(ids(el('#search'))).toEqual(['current', 'first'])
+    el('#current').removeAttribute('aria-current')
+    expect(ids(el('#search'))).toEqual(['first'])
+  })
+
+  it('has nowhere to go with nothing listed, so the field keeps focus (never the body)', () => {
+    document.body.innerHTML = `<input type="search" id="search"><ul id="scenario-nav"></ul><main id="main"></main>`
+    expect(ids(el('#search'))).toEqual([])
   })
 })
 

@@ -5,6 +5,8 @@ import { createKeyRouter, type KeyContexts } from './router'
 
 const page = {
   typing: false,
+  textField: false,
+  fieldHasText: false,
   ownKeys: false,
   arrows: true,
   onControl: false,
@@ -35,18 +37,18 @@ describe('key router', () => {
   it('goes on to the next scope when a handler returns false, and leaves a key nobody used', () => {
     const router = createKeyRouter(() => ({ dialog: null, panel: { open: true }, diagram: null, page }))
     router.on('panel', 'close-panel', () => false)
-    const blur = vi.fn()
-    router.on('page', 'blur', blur)
+    const leave = vi.fn()
+    router.on('page', 'leave-field', leave)
     const typing = createKeyRouter(() => ({
       dialog: null,
       panel: { open: true },
       diagram: null,
-      page: { ...page, typing: true },
+      page: { ...page, typing: true, textField: true },
     }))
     typing.on('panel', 'close-panel', () => false)
-    typing.on('page', 'blur', blur)
+    typing.on('page', 'leave-field', leave)
     expect(typing.dispatch(keydown('Escape'))).toBe(true)
-    expect(blur).toHaveBeenCalledOnce()
+    expect(leave).toHaveBeenCalledOnce()
     const x = keydown('x')
     expect(router.dispatch(x)).toBe(false)
     expect(x.defaultPrevented).toBe(false)

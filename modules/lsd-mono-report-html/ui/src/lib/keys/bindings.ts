@@ -31,6 +31,10 @@ export interface KeyEvent {
 export interface PageKeyContext {
   /** A text field has focus: keys type, and Escape leaves the field. */
   typing: boolean
+  /** The focus takes typed text (search, Find), not a checkbox: Escape clears it, then leaves it (#114). */
+  textField: boolean
+  /** That text field has text in it, so Escape clears it first. */
+  fieldHasText: boolean
   /** A control with keys of its own (an arrow, a panel button, the panel, a diagram, the theme menu): page keys keep off. */
   ownKeys: boolean
   /** Arrows act here: the page, the scenario list or the scenario heading. */
@@ -308,7 +312,17 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
     help: '<kbd>Esc</kbd> close',
     matches: (e, c) => closingEscape(e) && c.open,
   },
-  { id: 'blur', scope: 'page', matches: (e, c) => e.key === 'Escape' && c.typing },
+  // In search or Find (#114), one Escape clears the text (focus stays in the field), and the next
+  // lets go of the empty field to its owner: Find to its diagram, search to the shown scenario. The
+  // page body never gets focus, so the Escape after that reaches the diagram (and leaves Overview).
+  { id: 'clear-field', scope: 'page', matches: (e, c) => closingEscape(e) && c.textField && c.fieldHasText },
+  { id: 'leave-field', scope: 'page', matches: (e, c) => closingEscape(e) && c.textField && !c.fieldHasText },
+  // Escape no longer blurs other inputs (#114): the old 'blur' binding covered any typing target, and
+  // the only non-text one, the help dialog's checkbox, has the dialog's Escape. A future non-text
+  // field (a select, contenteditable) keeps focus on Escape unless it is given a binding here.
+  // A held Escape does nothing more in a text field. The browser's own Escape would clear a search
+  // field, so a held key after the side panel closed would empty the field too: two things, not one.
+  { id: 'hold-field', scope: 'page', matches: (e, c) => e.key === 'Escape' && Boolean(e.repeat) && c.textField },
 ]
 
 /** The binding with [id]. Throws for an id the table does not have. */

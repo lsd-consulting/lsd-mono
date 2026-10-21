@@ -34,7 +34,7 @@ export default defineConfig({
         // src/ui 92.7 / 85.6 / 97.6 / 94.6 (the link panel tests, #105)
         'src/ui/**': { statements: 91, branches: 84, functions: 96, lines: 93 },
         // src/app 77.9 / 73.3 / 79.6 / 81.7 (src/conformance.test.ts boots the page): the decisions are pure functions with unit tests (intents.ts,
-        // #99, the key handlers, #102, and the view switch, its hash and reveal, #105); the rest is
+        // #99, the key handlers, #102, Escape in text fields, #114, and the view switch, its hash and reveal, #105); the rest is
         // covered end to end by check:ux, which does not count here.
         'src/app/**': { statements: 76, branches: 72, functions: 78, lines: 80 },
       },

@@ -53,6 +53,19 @@ async function openIndex(page: Page, theme: string, hash = ''): Promise<string[]
   return loaded
 }
 
+/**
+ * Watches the next keydown: [read] then says whether the page's own listener took it
+ * (defaultPrevented), as the browser's built-in Escape in a search field would not.
+ */
+async function nextKeyTaken(page: Page): Promise<() => Promise<boolean>> {
+  await page.evaluate(() => {
+    const w = window as unknown as { keyTaken?: boolean }
+    delete w.keyTaken
+    document.addEventListener('keydown', (e) => (w.keyTaken = e.defaultPrevented), { once: true })
+  })
+  return () => page.evaluate(() => (window as unknown as { keyTaken?: boolean }).keyTaken === true)
+}
+
 async function serious(page: Page): Promise<string[]> {
   const results = await new AxeBuilder({ page }).withTags([...AXE_TAGS]).analyze()
   return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)
@@ -93,4 +106,26 @@ test('index: on a phone the report list sits above the diagram and passes axe', 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
   expect(overflow).toBeLessThanOrEqual(0)
   expect(await serious(page)).toEqual([])
+})
+
+test('index: Esc in Search reports clears it first, then leaves it for the open report, never the body (#114)', async ({
+  page,
+}) => {
+  await openIndex(page, 'dark')
+  const search = page.locator('#search')
+  await search.click()
+  await page.keyboard.type('refund')
+  // The page's own clear, not the browser's (which a search field also has): it takes the key.
+  const prevented = await nextKeyTaken(page)
+  await page.keyboard.press('Escape')
+  expect(await prevented()).toBe(true)
+  await expect(search).toHaveValue('')
+  await expect(search).toBeFocused()
+  await page.keyboard.press('Escape')
+  const where = await page.evaluate(() => {
+    const el = document.activeElement
+    return el === document.body || !el ? 'BODY' : el.id || el.tagName
+  })
+  expect(where).not.toBe('BODY')
+  expect(where).not.toBe('search')
 })

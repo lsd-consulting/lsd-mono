@@ -58,6 +58,11 @@
   scroll-padding-top: var(--seq-header-h, 56px);
   scroll-padding-bottom: 12px;
 }
+/* Escape in an empty Find gives the scrollport focus (#114); show where it went. */
+.seq-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .seq-sticky-header {
   position: sticky;
   top: 0;

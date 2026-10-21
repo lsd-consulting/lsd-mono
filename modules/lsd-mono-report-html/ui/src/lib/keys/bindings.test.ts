@@ -15,6 +15,8 @@ import {
 
 const page: PageKeyContext = {
   typing: false,
+  textField: false,
+  fieldHasText: false,
   ownKeys: false,
   arrows: true,
   onControl: false,
@@ -44,9 +46,13 @@ describe('page key bindings', () => {
     expect(pageAction(key('x'))).toBeNull()
   })
 
-  it('lets go of a text field on Escape, else does nothing; the help closes before (dialog scope)', () => {
-    expect(pageAction(key('Escape'), { ...page, typing: true })).toBe('blur')
+  it('clears a text field on Escape, lets go of it when empty, else does nothing; the help closes before (dialog scope)', () => {
+    const field = { ...page, typing: true, textField: true }
+    expect(pageAction(key('Escape'), { ...field, fieldHasText: true })).toBe('clear-field')
+    expect(pageAction(key('Escape'), field)).toBe('leave-field')
     expect(pageAction(key('Escape'))).toBeNull()
+    // A checkbox is an input, but has no text to clear or field to leave.
+    expect(pageAction(key('Escape'), { ...page, typing: true })).toBeNull()
     expect(matchingBindings('dialog', key('Escape'), { open: true }).map((b) => b.id)).toEqual(['close-help'])
     expect(matchingBindings('dialog', key('Escape'), { open: false })).toEqual([])
   })
@@ -61,6 +67,18 @@ describe('page key bindings', () => {
       for (const mods of [{ repeat: true }, { ctrlKey: true }, { metaKey: true }, { altKey: true }])
         expect(matchingBindings(scope, key('Escape', mods), ctx), `${scope} ${Object.keys(mods)[0]}`).toEqual([])
     }
+  })
+
+  it('clears or leaves a text field once per press: a held Escape is taken and does nothing (#114)', () => {
+    const field = { ...page, typing: true, textField: true }
+    for (const fieldHasText of [true, false]) {
+      const ctx = { ...field, fieldHasText }
+      expect(pageAction(key('Escape', { repeat: true }), ctx), String(fieldHasText)).toBe('hold-field')
+      expect(pageAction(key('Escape', { shiftKey: true }), ctx)).toBe(fieldHasText ? 'clear-field' : 'leave-field')
+      for (const mods of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }])
+        expect(pageAction(key('Escape', mods), ctx), Object.keys(mods)[0]).toBeNull()
+    }
+    expect(pageAction(key('Escape', { repeat: true }))).toBeNull()
   })
 
   it('keeps off text fields and controls with keys of their own', () => {
@@ -94,7 +112,8 @@ describe('page key bindings', () => {
     expect(pageAction(key('ArrowDown'), off)).toBe('next')
     expect(pageAction(key('ArrowUp'), off)).toBe('prev')
     expect(pageAction(key('Enter'), off)).toBe('diagram')
-    expect(pageAction(key('Escape'), { ...off, typing: true })).toBe('blur')
+    expect(pageAction(key('Escape'), { ...off, typing: true, textField: true })).toBe('leave-field')
+    expect(pageAction(key('Escape'), { ...off, typing: true, textField: true, fieldHasText: true })).toBe('clear-field')
   })
 
   it('does not take j, d or / with Ctrl, Cmd or Alt held, so browser shortcuts stay theirs', () => {
@@ -176,13 +195,15 @@ describe('key conflicts', () => {
     ...['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'],
   ]
   const events = KEYS.flatMap((k) =>
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((bits) => ({
+    [...Array(32).keys()].map((bits) => ({
       key: k,
       code: k === '!' || k === '1' ? 'Digit1' : k === '0' ? 'Digit0' : '',
       shiftKey: Boolean(bits & 1),
       ctrlKey: Boolean(bits & 2),
       metaKey: Boolean(bits & 4),
       altKey: Boolean(bits & 8),
+      // Held down: Escape closes one layer per press (#102), and a text field takes the repeats (#114).
+      repeat: Boolean(bits & 16),
     })),
   )
   const flags = (n: number) =>
@@ -204,15 +225,19 @@ describe('key conflicts', () => {
         target: null as unknown as HTMLElement,
       })),
     ),
-    page: flags(7).map(([typing, ownKeys, arrows, onControl, inMenu, hasScenario, singleKeys]) => ({
-      typing,
-      ownKeys,
-      arrows,
-      onControl,
-      inMenu,
-      hasScenario,
-      singleKeys,
-    })),
+    page: flags(9).map(
+      ([typing, textField, fieldHasText, ownKeys, arrows, onControl, inMenu, hasScenario, singleKeys]) => ({
+        typing,
+        textField,
+        fieldHasText,
+        ownKeys,
+        arrows,
+        onControl,
+        inMenu,
+        hasScenario,
+        singleKeys,
+      }),
+    ),
   }
 
   /** The keys two or more bindings of [table] in [scope] take at once. */

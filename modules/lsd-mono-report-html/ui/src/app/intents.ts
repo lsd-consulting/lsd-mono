@@ -11,6 +11,10 @@ import { defaultScenarioId } from '../ui/selection'
 export interface KeyTarget {
   /** A text field has focus: keys type, and Escape leaves the field. */
   typing: boolean
+  /** The focus takes typed text (search, Find), not a checkbox: Escape clears it, then leaves it (#114). */
+  textField: boolean
+  /** That text field has text in it, so Escape clears it first. */
+  fieldHasText: boolean
   /** A control with keys of its own (an arrow, a panel button, the panel, a diagram, the theme menu): page keys keep off. */
   ownKeys: boolean
   /** The arrow keys move the selection here: on the list, the page or the scenario heading. */
@@ -21,9 +25,23 @@ export interface KeyTarget {
   inMenu: boolean
 }
 
+/** Input types that take typed text. A checkbox, a button or a slider is an INPUT too, but not one. */
+const TEXT_INPUTS = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number'])
+
+/** [target] takes typed text and has a value Escape can clear: a textarea or a text-like input. */
+export function isTextField(target: Element): target is HTMLInputElement | HTMLTextAreaElement {
+  return (
+    target.tagName === 'TEXTAREA' ||
+    (target.tagName === 'INPUT' && TEXT_INPUTS.has((target as HTMLInputElement).type.toLowerCase()))
+  )
+}
+
 export function keyTarget(target: HTMLElement): KeyTarget {
+  const textField = isTextField(target)
   return {
     typing: target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable,
+    textField,
+    fieldHasText: textField && target.value !== '',
     ownKeys: Boolean(
       target.closest('button.msg-open, [data-show-metrics], #inspector, .seq-scroll, .comp-scroll, #theme-menu'),
     ),
@@ -33,6 +51,27 @@ export function keyTarget(target: HTMLElement): KeyTarget {
     onControl: Boolean(target.closest('button, a, [role="slider"]')),
     inMenu: Boolean(target.closest('[role="menu"], [role^="menuitem"], .hidden-popover')),
   }
+}
+
+// Escape in a text field (#114; keys.ts)
+
+/**
+ * Where focus goes when Escape lets go of the empty text field [field], best first; keys.ts gives
+ * it to the first that takes it. Never the page body: from the diagram's Find, the diagram's
+ * scrollport, so the next Escape is the diagram's (it leaves Overview); from search, the shown
+ * scenario's heading, else the selected list item, else the list's first. With none of them
+ * (nothing is listed), the field keeps focus.
+ */
+export function fieldEscapeTargets(field: Element): HTMLElement[] {
+  const card = field.closest('.seq-diagram')
+  if (card) return [...card.querySelectorAll<HTMLElement>('.seq-scroll')].slice(0, 1)
+  const doc = field.ownerDocument
+  const candidates = [
+    doc.querySelector<HTMLElement>('#main .scenario-head h2'),
+    doc.querySelector<HTMLElement>('#scenario-nav [aria-current="true"]'),
+    doc.querySelector<HTMLElement>('#scenario-nav button'),
+  ]
+  return [...new Set(candidates)].filter((el): el is HTMLElement => el !== null && el !== field)
 }
 
 // Clicks in the main column (chrome.ts)

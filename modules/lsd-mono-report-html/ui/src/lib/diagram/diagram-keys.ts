@@ -4,7 +4,8 @@ import { diagramState, diagramView } from './state'
 import { mountedComponents } from '../component-view'
 import { inComponentOverview } from '../component-zoom'
 
-function isTextField(el: Element): boolean {
+/** Takes keys of its own: any input, a textarea, a select or editable text (not app/intents.ts's isTextField). */
+function isEditable(el: Element): boolean {
   return el.matches('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
 }
 
@@ -47,7 +48,7 @@ function componentKeyContext(
   target: Element,
   page: { singleKeys: boolean; panelOpen: boolean },
 ): DiagramKeyContext | null {
-  if (isTextField(target) || target.closest('[role="menu"]')) return null
+  if (isEditable(target) || target.closest('[role="menu"]')) return null
   const scrollport = view.querySelector<HTMLElement>('.comp-scroll')
   const id = scrollport?.dataset.scenarioId
   const zoomable = Boolean(id && mountedComponents(id))
@@ -65,7 +66,7 @@ function componentKeyContext(
 
 function placeIn(target: Element): DiagramKeyContext['on'] | null {
   if (target.matches('[data-diagram-find]')) return 'find'
-  if (isTextField(target) || target.closest('[role="menu"]')) return null
+  if (isEditable(target) || target.closest('[role="menu"]')) return null
   const scroll = target.closest('.seq-scroll')
   if (scroll && target.closest('button.msg-open')) return 'arrow'
   if (scroll && target === scroll) return 'scrollport'
