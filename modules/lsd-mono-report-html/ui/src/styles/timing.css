@@ -332,6 +332,12 @@
     flex: 0 0 auto;
     scroll-snap-align: start;
   }
+  /* The row's end is a snap point too. Without one, the last chip's start lies past the furthest
+     scroll, so a focus that scrolled it into view snapped back to the start and left it cut off,
+     its focus ring with it (#116). */
+  .timing-strip > li:last-child {
+    scroll-snap-align: end;
+  }
   .timing-chip {
     width: auto;
     padding: 6px 10px;

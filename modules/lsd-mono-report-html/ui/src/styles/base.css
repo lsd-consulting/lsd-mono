@@ -55,3 +55,15 @@ html {
      and floated over the page while it scrolled. */
   grid-template-rows: auto 1fr;
 }
+
+/* Forced colours (Windows Contrast themes) drop box-shadow, and most focus rings here are a
+   box-shadow over outline: none, so those controls showed no focus at all (#116). There, every
+   keyboard focus gets a system-colour outline instead. It is drawn inside the control, so a
+   scrolling container (the scenario list, the timing chip row, the side panel) cannot clip it,
+   and it wins over each control's own outline: none. The diagram's SVG keeps its own marks. */
+@media (forced-colors: active) {
+  :focus-visible:not(svg, svg *) {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px !important;
+  }
+}

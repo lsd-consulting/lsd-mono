@@ -9,6 +9,10 @@
   max-height: calc(100dvh - var(--topbar-h));
   overflow: auto;
   min-width: 0;
+  /* The head sticks at the top of this scroller; --inspector-head-h is its measured height
+     (inspector.ts; 65px with a one-line title). Focus moving back up the panel stops 8px below
+     it, so a focused lane bar or row is not hidden under it, ring and all (#116). */
+  scroll-padding-top: calc(var(--inspector-head-h, 65px) + 8px);
 }
 /* Inner edge of the side column. Drag left to widen. */
 .inspector-resize {

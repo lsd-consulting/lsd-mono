@@ -1,5 +1,6 @@
 import { readAppCss, readDiagramCss } from './read-css.test-util'
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 
 const css = readAppCss()
 const diagramCss = readDiagramCss()
@@ -46,5 +47,25 @@ describe('the header buttons (#92)', () => {
   it('sit over the More lanes cue: the header stacks above it', () => {
     const z = (selector: string) => Number(/z-index:\s*(\d+)/.exec(rule(selector, diagramCss))?.[1])
     expect(z('.seq-sticky-header')).toBeGreaterThan(z('.seq-more'))
+  })
+})
+
+describe('focus in forced colours (#116)', () => {
+  it('gives every keyboard focus a system-colour outline inside the control, over its own outline: none', () => {
+    const block = /@media \(forced-colors: active\) \{\s*:focus-visible:not\(svg, svg \*\) \{([^}]*)\}/.exec(css)
+    expect(block, 'forced-colours :focus-visible rule').not.toBeNull()
+    expect(block![1]).toMatch(/outline:\s*2px solid Highlight !important/)
+    expect(block![1]).toMatch(/outline-offset:\s*-2px !important/)
+  })
+
+  it('only there: outside forced colours the rings stay box-shadows', () => {
+    const outside = css.replace(/@media \(forced-colors: active\) \{[\s\S]*?\n\}/g, '')
+    expect(outside).not.toMatch(/:focus-visible:not\(svg/)
+  })
+
+  it('stops focus in the side panel below its sticky head, and ends the phone chip row on a snap point', () => {
+    expect(rule('.inspector')).toMatch(/scroll-padding-top:\s*calc\(var\(--inspector-head-h, 65px\) \+ 8px\)/)
+    const timing = readFileSync(new URL('./timing.css', import.meta.url), 'utf8')
+    expect(timing).toMatch(/\.timing-strip > li:last-child \{\s*scroll-snap-align: end;/)
   })
 })

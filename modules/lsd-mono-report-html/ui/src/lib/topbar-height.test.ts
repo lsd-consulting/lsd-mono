@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { stickyLead, trackTopbarHeight } from './topbar-height'
+import { stickyLead, trackHeightVar, trackTopbarHeight } from './topbar-height'
 
 /** A ResizeObserver stand-in the test can fire by hand. */
 function fakeObserver() {
@@ -66,6 +66,28 @@ describe('trackTopbarHeight', () => {
     const { bar } = barOfHeight(90)
     trackTopbarHeight(bar, root, undefined)()
     expect(root.style.getPropertyValue('--topbar-h')).toBe('90px')
+  })
+})
+
+describe('trackHeightVar (#116)', () => {
+  it('keeps the variable at the element height, skips while it is hidden, and stops when asked', () => {
+    const target = document.createElement('aside')
+    const { bar: head, setHeight } = barOfHeight(0) // the panel starts hidden
+    const { Observer, live } = fakeObserver()
+    const stop = trackHeightVar(head, target, '--inspector-head-h', Observer)
+    expect(target.style.getPropertyValue('--inspector-head-h')).toBe('')
+    setHeight(64.6)
+    live[0].fire()
+    expect(target.style.getPropertyValue('--inspector-head-h')).toBe('65px')
+    setHeight(98) // a long title wraps
+    live[0].fire()
+    expect(target.style.getPropertyValue('--inspector-head-h')).toBe('98px')
+    setHeight(0)
+    live[0].fire()
+    expect(target.style.getPropertyValue('--inspector-head-h')).toBe('98px')
+    stop()
+    expect(live[0].disconnected).toBe(true)
+    expect(trackHeightVar(head, target, '--x', undefined)).toBeTypeOf('function')
   })
 })
 

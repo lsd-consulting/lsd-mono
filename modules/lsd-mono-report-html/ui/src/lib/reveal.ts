@@ -27,3 +27,18 @@ export function revealBelowTopbar(panel: HTMLElement, content?: HTMLElement): vo
   const anchor = target.top + show - head <= room ? head : row
   win.scrollTo({ top: Math.max(0, win.scrollY + anchor - top), behavior: scrollBehavior() })
 }
+
+/**
+ * Scroll [scroller] sideways just enough that [el] is wholly inside it. A browser leaves a control
+ * that is partly in view where it is when it takes focus, so its far edge, and the focus ring
+ * drawn there, stayed cut off (#116: the phone's row of timing chips). A control wider than the
+ * scroller lines up with its start.
+ */
+export function revealSideways(scroller: HTMLElement, el: Element): void {
+  const box = scroller.getBoundingClientRect()
+  const r = el.getBoundingClientRect()
+  let delta = 0
+  if (r.left < box.left) delta = r.left - box.left
+  else if (r.right > box.right) delta = Math.min(r.right - box.right, r.left - box.left)
+  if (delta) scroller.scrollLeft += delta
+}

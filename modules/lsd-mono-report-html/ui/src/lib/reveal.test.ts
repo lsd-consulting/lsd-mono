@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { revealBelowTopbar } from './reveal'
+import { revealBelowTopbar, revealSideways } from './reveal'
 
 function setup(panelTop: number, rowTop: number, preTop: number, preHeight: number) {
   document.body.innerHTML = '<aside><div class="json-row"></div><pre></pre></aside>'
@@ -54,5 +54,39 @@ describe('revealBelowTopbar', () => {
     pre.getBoundingClientRect = () => ({ top: 300, height: 400, bottom: 700 }) as DOMRect
     revealBelowTopbar(panel, pre)
     expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('revealSideways (#116)', () => {
+  function strip(left: number, right: number, scrollLeft = 0) {
+    document.body.innerHTML = '<ul><li><button>chip</button></li></ul>'
+    const scroller = document.querySelector('ul') as HTMLElement
+    const chip = document.querySelector('button') as HTMLElement
+    scroller.getBoundingClientRect = () => ({ left: 20, right: 373 }) as DOMRect
+    chip.getBoundingClientRect = () => ({ left, right }) as DOMRect
+    let x = scrollLeft
+    Object.defineProperty(scroller, 'scrollLeft', { get: () => x, set: (v: number) => (x = v), configurable: true })
+    return { scroller, chip, left: () => x }
+  }
+
+  it('scrolls a chip cut off at the far edge wholly into the row', () => {
+    const { scroller, chip, left } = strip(299, 412)
+    revealSideways(scroller, chip)
+    expect(left()).toBe(39)
+  })
+
+  it('scrolls back for a chip cut off at the near edge', () => {
+    const { scroller, chip, left } = strip(-10, 100, 39)
+    revealSideways(scroller, chip)
+    expect(left()).toBe(9)
+  })
+
+  it('leaves a chip already in the row, and lines up one wider than the row with its start', () => {
+    const inside = strip(30, 200, 5)
+    revealSideways(inside.scroller, inside.chip)
+    expect(inside.left()).toBe(5)
+    const wide = strip(50, 500)
+    revealSideways(wide.scroller, wide.chip)
+    expect(wide.left()).toBe(30)
   })
 })

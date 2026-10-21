@@ -16,6 +16,7 @@ import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSid
 import { statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
 import { trackTopbarHeight } from '../lib/topbar-height'
+import { revealSideways } from '../lib/reveal'
 import {
   openError,
   syncWithPanel,
@@ -109,6 +110,12 @@ function bindChrome(): void {
   bindSidePanel()
   const main = document.querySelector<HTMLElement>('#main')!
   main.addEventListener('click', onMainClick)
+  // On a phone the timing chips are one row that scrolls sideways: a focused chip comes wholly into it.
+  main.addEventListener('focusin', (ev) => {
+    const target = ev.target as Element
+    const strip = target.closest?.<HTMLElement>('.timing-strip')
+    if (strip) revealSideways(strip, target)
+  })
 }
 
 /** Search, the status chips, and the empty state's Clear filters button. */

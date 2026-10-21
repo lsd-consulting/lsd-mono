@@ -6,6 +6,7 @@ import { bindPanelShell, type PanelPrintView } from './inspector-shell'
 import { bindErrorView, bindMessageView } from './inspector-message'
 import { bindLinkView } from './inspector-link'
 import { bindMetricsView, type MetricsView } from './inspector-metrics'
+import { trackHeightVar } from '../lib/topbar-height'
 
 export type { PanelPrintView } from './inspector-shell'
 export type { FocusReturn, InspectorInvoker } from './inspector-view'
@@ -88,6 +89,9 @@ export function bindInspector(doc: Document, options: InspectorOptions): Inspect
   const error = bindErrorView(panel.shell)
   const link = bindLinkView(panel.shell, panel.linkHost)
   const metrics = bindMetricsView(panel.shell, panel.metricsHost)
+  const aside = doc.getElementById('inspector')
+  const head = aside?.querySelector<HTMLElement>('.inspector-head')
+  if (aside && head) trackHeightVar(head, aside, '--inspector-head-h')
   return {
     isOpen: panel.isOpen,
     close: panel.close,

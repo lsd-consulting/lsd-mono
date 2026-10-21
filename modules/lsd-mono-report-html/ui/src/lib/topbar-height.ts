@@ -46,3 +46,25 @@ export function trackTopbarHeight(
   observer.observe(bar)
   return () => observer.disconnect()
 }
+
+/**
+ * Keep [prop] on [target] equal to [el]'s height, so CSS can make room for a sticky part whose
+ * height depends on its content (the side panel's head, #116). Skipped while [el] is hidden, so
+ * the CSS fallback stays. Returns a function that stops tracking.
+ */
+export function trackHeightVar(
+  el: HTMLElement,
+  target: HTMLElement,
+  prop: string,
+  Observer: typeof ResizeObserver | undefined = globalThis.ResizeObserver,
+): () => void {
+  const apply = () => {
+    const height = Math.ceil(el.getBoundingClientRect().height)
+    if (height > 0) target.style.setProperty(prop, `${height}px`)
+  }
+  apply()
+  if (!Observer) return () => {}
+  const observer = new Observer(apply)
+  observer.observe(el)
+  return () => observer.disconnect()
+}
