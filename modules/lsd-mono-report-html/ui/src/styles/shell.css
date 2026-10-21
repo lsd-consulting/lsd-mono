@@ -14,9 +14,11 @@
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--inspector-w);
   transition: --inspector-w 160ms ease;
 }
-/* Drag updates the width on every pointer move. A glide would lag the cursor.
-   prefers-reduced-motion already sets transition: none on every element. */
-.shell.with-inspector.inspector-resizing {
+/* Drag updates the width on every pointer move. A glide would lag the cursor. A view setting its
+   own width (inspector-instant, #90) does not glide either: every frame of it resized and refit
+   the diagram. prefers-reduced-motion already sets transition: none on every element. */
+.shell.with-inspector.inspector-resizing,
+.shell.with-inspector.inspector-instant {
   transition: none;
 }
 

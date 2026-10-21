@@ -49,7 +49,8 @@ export function clampInspectorWidth(px: number, viewport: number): number {
 export interface InspectorWidth {
   /** Current panel width in px. */
   current: () => number
-  apply: (px: number) => void
+  /** Set the width. [instant]: at once, without the glide (see [setInstantly]). */
+  apply: (px: number, instant?: boolean) => void
   /** Size the panel to a view whose content is [content] px wide. */
   fit: (content: number) => void
   /** Back to the width saved for this session. */
@@ -70,9 +71,11 @@ export function bindInspectorWidth(
   const shell = (): HTMLElement | null => panel.closest('.shell')
   const viewport = (): number => doc.defaultView?.innerWidth ?? 1200
 
-  function apply(px: number): void {
+  function apply(px: number, instant = false): void {
     width = clampInspectorWidth(px, viewport())
-    shell()?.style.setProperty('--inspector-w', `${width}px`)
+    const host = shell()
+    if (host && instant) setInstantly(host, width)
+    else host?.style.setProperty('--inspector-w', `${width}px`)
     const wide = width > INSPECTOR_NARROW_PX + 16
     shell()?.classList.toggle('inspector-json-wide', wide)
     panel.classList.toggle('inspector-json-wide', wide)
@@ -92,7 +95,7 @@ export function bindInspectorWidth(
    */
   function fit(content: number): void {
     if (viewport() <= STACKED_MAX_PX) return
-    apply(fitViewWidth(content, viewport()))
+    apply(fitViewWidth(content, viewport()), true)
   }
 
   function persist(): void {
@@ -118,6 +121,21 @@ export function bindInspectorWidth(
       width = readWidth(doc)
     },
   }
+}
+
+/**
+ * Set --inspector-w on [shell] without the glide (#90). The panel glides when a person asks for a
+ * width (Expand, Shrink). When a view sets it (the Timing view needing room, a message going back
+ * to the saved width), every frame of the glide resized the diagram beside it, and each resize
+ * refit and repainted the diagram: three or four long tasks after every Timing open. The width
+ * changes with the transition off; reading the computed value applies it there and then, so
+ * turning the transition back on has nothing left to animate.
+ */
+export function setInstantly(shell: HTMLElement, px: number): void {
+  shell.classList.add('inspector-instant')
+  shell.style.setProperty('--inspector-w', `${px}px`)
+  shell.ownerDocument.defaultView?.getComputedStyle(shell).getPropertyValue('--inspector-w')
+  shell.classList.remove('inspector-instant')
 }
 
 function readWidth(doc: Document): number {

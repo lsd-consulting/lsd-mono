@@ -66,7 +66,8 @@ export function bindPanelShell(doc: Document, options: PanelShellOptions): Panel
   const viewport = (): number => doc.defaultView?.innerWidth ?? 1200
 
   function setOpen(open: boolean, focus = true): void {
-    if (open) width.apply(width.current())
+    // A view's width, not a person's: set at once (#90).
+    if (open) width.apply(width.current(), true)
     panel!.hidden = !open
     panel!.closest('.shell')?.classList.toggle('with-inspector', open)
     if (open && focus) panel!.focus()
