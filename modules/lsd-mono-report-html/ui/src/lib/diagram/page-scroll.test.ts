@@ -76,6 +76,77 @@ describe('page scroll', () => {
   })
 })
 
+describe('room below the stage on a phone (#80, #113)', () => {
+  /** On a phone, a stage [content] px tall with [room] px of page under it, its top at [stageTop]. */
+  function mountPhone(content: number, room: number, stageTop: number) {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('max-width: 560px') }))
+    const mounted = mount(content, 800, stageTop)
+    let top = stageTop
+    mounted.stage.getBoundingClientRect = () => ({ top, bottom: top + content }) as DOMRect
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: window.scrollY + stageTop + content + room,
+      configurable: true,
+    })
+    const below = () => mounted.scroll.closest<HTMLElement>('.seq-diagram')!.style.getPropertyValue('--seq-below')
+    const scrollPage = (stageBottom: number) => {
+      top = stageBottom - content
+      window.dispatchEvent(new Event('scroll'))
+    }
+    return { ...mounted, below, scrollPage }
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    Reflect.deleteProperty(document.documentElement, 'scrollHeight')
+  })
+
+  it('leaves none of the room out while the page has it still to scroll, so the drawing fills the screen', () => {
+    const { scroll, below, scrollPage } = mountPhone(5000, 122, 300)
+    bindPageScroll(scroll)
+    expect(below()).toBe('0px')
+    scrollPage(innerHeight + 400)
+    expect(below()).toBe('0px')
+    // Exactly the room left to scroll: the stage's end is at the bottom of the screen.
+    scrollPage(innerHeight)
+    expect(below()).toBe('0px')
+  })
+
+  it('leaves out what of the room has come up, all of it at the page end', () => {
+    const { scroll, below, scrollPage } = mountPhone(5000, 122, 300)
+    bindPageScroll(scroll)
+    scrollPage(innerHeight - 50)
+    expect(below()).toBe('50px')
+    scrollPage(innerHeight - 122)
+    expect(below()).toBe('122px')
+    // Never more than the room, should the page scroll past it (an open inspector under the report).
+    scrollPage(innerHeight - 400)
+    expect(below()).toBe('122px')
+    // And back again on the way up.
+    scrollPage(innerHeight + 10)
+    expect(below()).toBe('0px')
+  })
+
+  it('fits the scrollport before it follows the page, so its scrollTop reaches the drawing end', () => {
+    const content = 5000
+    const { scroll, below, scrollPage } = mountPhone(content, 122, 300)
+    // The scrollport is 800px tall less what it leaves out.
+    Object.defineProperty(scroll, 'clientHeight', {
+      get: () => 800 - (Number.parseFloat(below()) || 0),
+      configurable: true,
+    })
+    bindPageScroll(scroll)
+    scrollPage(innerHeight - 122)
+    expect(below()).toBe('122px')
+    expect(scroll.scrollTop).toBe(content - 678)
+  })
+
+  it('leaves a desktop scrollport its full height', () => {
+    const { scroll } = mount(5000, 800, 300)
+    bindPageScroll(scroll)
+    expect(scroll.closest<HTMLElement>('.seq-diagram')!.style.getPropertyValue('--seq-below')).toBe('0px')
+  })
+})
+
 describe('section jump', () => {
   it('moves the page so the row sits at the top of the diagram, at the current zoom, even when the drawing fits', () => {
     const { scroll } = mount(566, 566, 300)

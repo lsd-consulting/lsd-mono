@@ -159,6 +159,10 @@
 }
 
 @media (max-width: 560px) {
+  /* Under the report, room for the home indicator rather than a desktop's 64px (#113). */
+  .main {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
   /* Still sticky, with search and filters inside: the bar wraps onto two rows. Opaque, because
      the toolbar rows that scroll away pass under it. */
   .topbar {

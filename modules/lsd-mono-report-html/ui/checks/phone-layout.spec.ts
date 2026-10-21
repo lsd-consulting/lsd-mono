@@ -213,6 +213,61 @@ for (const [name, viewport] of [
   })
 }
 
+// Android phones in portrait (#113): mid-scroll the drawing reaches the bottom of the screen, with
+// no empty band under it; only in the last of the page does it give up the room below the stage,
+// ending with the drawing's end in view (#80).
+for (const [name, viewport] of [
+  ['360x780', { width: 360, height: 780 }],
+  ['390x844', { width: 390, height: 844 }],
+  ['412x915', { width: 412, height: 915 }],
+] as const) {
+  test.describe(`drawing height on a ${name} phone`, () => {
+    const { userAgent, deviceScaleFactor, isMobile, hasTouch } = PHONES.Pixel
+    test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
+
+    test('the drawing fills the screen down to its bottom edge while scrolling, and ends with the page', async ({
+      page,
+    }) => {
+      await open(page, 'report')
+      const drawing = () =>
+        page.evaluate(() => {
+          const scroll = document.querySelector<HTMLElement>('.seq-scroll')!
+          const box = scroll.getBoundingClientRect()
+          const hit = document.elementFromPoint(box.left + box.width / 2, innerHeight - 4)
+          return {
+            bottom: box.bottom,
+            stageBottom: document.querySelector('.seq-stage')!.getBoundingClientRect().bottom,
+            drawnAtScreenBottom: !!hit && scroll.contains(hit),
+            atDrawingEnd: scroll.scrollHeight - scroll.clientHeight - scroll.scrollTop <= 1,
+          }
+        })
+      const start = await page.evaluate(
+        () => document.querySelector('.seq-stage')!.getBoundingClientRect().top + scrollY,
+      )
+      const end = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)
+      const room = await page.evaluate(
+        () =>
+          document.documentElement.scrollHeight -
+          (document.querySelector('.seq-stage')!.getBoundingClientRect().bottom + scrollY),
+      )
+      expect(room).toBeGreaterThan(0)
+      for (const y of [start + 200, (start + end) / 2, end - room - 20]) {
+        await page.evaluate((to) => scrollTo(0, to), y)
+        await page.waitForTimeout(80)
+        const m = await drawing()
+        expect(m.bottom, `drawing bottom at scroll ${y}`).toBeGreaterThanOrEqual(viewport.height - 1)
+        expect(m.drawnAtScreenBottom, `drawing at the screen bottom at scroll ${y}`).toBe(true)
+      }
+      await page.evaluate((to) => scrollTo(0, to), end)
+      await page.waitForTimeout(80)
+      const m = await drawing()
+      expect(Math.abs(m.bottom - m.stageBottom)).toBeLessThanOrEqual(1)
+      expect(m.bottom).toBeLessThanOrEqual(viewport.height)
+      expect(m.atDrawingEnd).toBe(true)
+    })
+  })
+}
+
 // WCAG 2.4.11 Focus Not Obscured: on a phone the toolbar's upper rows slide under the top bar, so
 // a focused Zoom button could sit entirely beneath it. Walk the whole tab order both ways.
 for (const [name, viewport] of [

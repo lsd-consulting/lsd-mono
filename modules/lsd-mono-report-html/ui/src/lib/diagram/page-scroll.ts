@@ -68,14 +68,38 @@ export function sizeStage(scrollport: HTMLElement): void {
     diagram.style.setProperty('--seq-toolbar-lead', leadPx)
   // What the page holds below the stage (panel padding, margins). The scrollport cannot stick
   // there, so at the end of the page it is carried up by that much and its top, with the
-  // participant header, slides under the bars. Leave that room out of its height instead, so
-  // it fits between the bars and the stage's end and stays stuck to the last scroll position.
-  // Phones only: a desktop keeps the full-height scrollport it has always had.
+  // participant header, slides under the bars (#80). Phones only: a desktop keeps the
+  // full-height scrollport it has always had.
   // An open inspector stacks under the report on a phone and is not part of that room, so
   // while it is open the last measure stands.
-  if (document.querySelector('.with-inspector')) return
-  const below = `${isPhone() ? belowStage(stage) : 0}px`
+  if (!document.querySelector('.with-inspector')) roomBelow.set(diagram, isPhone() ? belowStage(stage) : 0)
+  fitBelow(stage, diagram)
+}
+
+/** The room under each diagram's stage that its scrollport leaves out at the end of the page. */
+const roomBelow = new WeakMap<HTMLElement, number>()
+
+/**
+ * Leave out of the scrollport's height only the part of the room below the stage that is on
+ * screen, so it fits between the bars and the stage's end and stays stuck to the last scroll
+ * position (#80). That is none of it while the page has the room still to scroll, and all of it
+ * at the page end: until the last of the room comes up, the drawing fills the screen (#113).
+ * Run on every page scroll, before the scrollport follows it, so its scrollTop is clamped to
+ * the height it is about to have.
+ */
+function fitBelow(stage: HTMLElement, diagram: HTMLElement): void {
+  const room = roomBelow.get(diagram) ?? 0
+  const shown = room > 0 ? Math.ceil(window.innerHeight - stage.getBoundingClientRect().bottom) : 0
+  const below = `${Math.min(room, Math.max(0, shown))}px`
   if (diagram.style.getPropertyValue('--seq-below') !== below) diagram.style.setProperty('--seq-below', below)
+}
+
+/** Page scrolled: fit the scrollport to the room below the stage that has come up. */
+function fitToPage(scrollport: HTMLElement): void {
+  const stage = stageOf(scrollport)
+  const diagram = stage?.closest<HTMLElement>('.seq-diagram')
+  if (!stage || !diagram || !linked(scrollport) || undrawn(scrollport)) return
+  fitBelow(stage, diagram)
 }
 
 /** Page height under the stage's bottom edge, in CSS pixels. */
@@ -149,7 +173,10 @@ let listening = false
 function onPageScroll(): void {
   for (const scrollport of scrollports) {
     if (!scrollport.isConnected) scrollports.delete(scrollport)
-    else followPage(scrollport)
+    else {
+      fitToPage(scrollport)
+      followPage(scrollport)
+    }
   }
 }
 
