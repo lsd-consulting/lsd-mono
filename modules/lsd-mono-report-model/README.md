@@ -14,8 +14,22 @@ classes and writes it with lsd-mono-report-html.
 | **Is** | The report's data classes, in `io.lsdconsulting.lsd.mono.report.model` |
 | **Is not** | JSON text, files or the page: lsd-mono-report-html writes those |
 
-Values the schema leaves open (participant and message types, sources, timing values) are strings,
-so a newer schema's values fit. The schema lists the known ones, and the doc comments name them.
+The model follows the schema's shape: the scenario's timing summary (`accuracy`, `sources`,
+`clockOrdering` and the rest) is flat on `ScenarioJson`, as in the schema. Enum-like values follow
+one rule:
+
+- **Closed in the schema** (`Status`, `NotePlacement`, `Accuracy`, `ClockOrdering`, a lifeline
+  event's kind): a Kotlin enum (`StatusJson`, `NotePlacementJson`, `AccuracyJson`,
+  `ClockOrderingJson`, `LifelineKindJson`), whose `json` is the value written.
+- **Open in the schema** (participant and message types, timing, pairing and order sources, warning
+  kinds, the report source): a `String`, so a newer schema's values fit, with the known values as
+  constants (`KnownParticipantType`, `KnownMessageType`, … `KnownReportSource`).
+
+The model's tests hold both to the schema's lists. The event classes are sealed to the kinds
+lsd-mono writes. The schema's events are open, so code that reads a report it did not write must
+tolerate an unknown event kind rather than assume this list is complete. A message's `data` is
+`Any?` and should hold JSON values (null, strings, booleans, numbers, maps and lists); nothing checks
+it, and the writer writes anything else as its `toString()`.
 ## Experimental: no binary-compatibility promise yet
 
 Every type here is marked `@ExperimentalLsdReportModel`, a `RequiresOptIn` marker at level ERROR

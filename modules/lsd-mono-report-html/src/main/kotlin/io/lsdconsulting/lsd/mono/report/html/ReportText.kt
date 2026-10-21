@@ -87,7 +87,7 @@ internal fun ReportJson.toJson(): String =
             "title" to JsonString(title),
             "generatedAt" to JsonString(generatedAt),
             "generator" to JsonString(generator),
-            "status" to JsonString(status),
+            "status" to JsonString(status.json),
             "options" to options.toJsonValue(),
             "scenarios" to JsonArray(scenarios.map { it.toJsonValue() }),
         ),
@@ -98,22 +98,23 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
         buildList {
             add("id" to JsonString(id))
             add("title" to JsonString(title))
-            add("status" to JsonString(status))
+            add("status" to JsonString(status.json))
             add("description" to JsonString(description))
             error?.let { add("error" to it.toJsonValue()) }
             add("facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
             add("metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
             add("participants" to JsonArray(participants.map { it.toJsonValue() }))
             add("events" to JsonArray(events.map { it.toJsonValue() }))
-            val summary = timing
-            if (summary != null) {
-                add("accuracy" to JsonString(summary.accuracy))
-                summary.measuredCoverage?.let { add("measuredCoverage" to msNumber(it)) }
-                summary.pairingCoverage?.let { add("pairingCoverage" to msNumber(it)) }
-                add("sources" to JsonArray(summary.sources.map(::JsonString)))
-                summary.wallClockMs?.let { add("wallClockMs" to msNumber(it)) }
-                add("clockOrdering" to JsonString(summary.clockOrdering))
-                add("clockOrdered" to JsonNumber(summary.clockOrdered.toString()))
+            // The timing summary: each field when it is set, flat as the schema has it.
+            accuracy?.let { add("accuracy" to JsonString(it.json)) }
+            measuredCoverage?.let { add("measuredCoverage" to msNumber(it)) }
+            pairingCoverage?.let { add("pairingCoverage" to msNumber(it)) }
+            sources?.let { add("sources" to JsonArray(it.map(::JsonString))) }
+            wallClockMs?.let { add("wallClockMs" to msNumber(it)) }
+            clockOrdering?.let { add("clockOrdering" to JsonString(it.json)) }
+            clockOrdered?.let { add("clockOrdered" to JsonNumber(it.toString())) }
+            run {
+                val summary = this@toJsonValue
                 if (summary.warnings.isNotEmpty()) {
                     add(
                         "warnings" to
@@ -128,7 +129,7 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
                         "pairAccuracy" to
                             JsonArray(
                                 summary.pairAccuracy.map {
-                                    obj(listOf("from" to JsonString(it.from), "to" to JsonString(it.to), "accuracy" to JsonString(it.accuracy)))
+                                    obj(listOf("from" to JsonString(it.from), "to" to JsonString(it.to), "accuracy" to JsonString(it.accuracy.json)))
                                 },
                             ),
                     )
@@ -218,7 +219,7 @@ internal fun EventJson.toJsonValue(): JsonValue =
                     add("id" to JsonString(id))
                     add("text" to JsonString(text))
                     over?.let { add("over" to JsonString(it)) }
-                    add("placement" to JsonString(placement))
+                    add("placement" to JsonString(placement.json))
                     startedAt?.let { add("startedAt" to JsonString(it)) }
                 },
             )
@@ -261,7 +262,7 @@ internal fun EventJson.toJsonValue(): JsonValue =
         is LifelineEventJson ->
             obj(
                 buildList {
-                    add("kind" to JsonString(kind))
+                    add("kind" to JsonString(kind.json))
                     add("id" to JsonString(id))
                     add("participantId" to JsonString(participantId))
                     colour?.let { add("colour" to JsonString(it)) }

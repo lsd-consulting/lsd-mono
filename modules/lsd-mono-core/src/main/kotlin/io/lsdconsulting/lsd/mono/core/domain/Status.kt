@@ -16,14 +16,4 @@ public enum class Status {
 
     /** Passed. */
     SUCCESS,
-    ;
-
-    internal fun toReportStatus(): String =
-        when (this) {
-            SUCCESS -> "success"
-            WARN -> "warn"
-            ERROR -> "error"
-        }
-
-    internal fun toCssClass(): String = toReportStatus()
 }

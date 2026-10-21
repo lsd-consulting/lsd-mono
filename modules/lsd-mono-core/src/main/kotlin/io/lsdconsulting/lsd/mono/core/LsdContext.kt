@@ -10,8 +10,8 @@ import io.lsdconsulting.lsd.mono.core.domain.orderAndAnalyse
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.ReportJsonMapper
 import io.lsdconsulting.lsd.mono.core.report.reportWriter
+import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
-import io.lsdconsulting.lsd.mono.report.model.ReportSource
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -325,7 +325,7 @@ public class LsdContext :
      * @return the files written; open [ReportFiles.diagramHtml].
      */
     @JvmOverloads
-    public fun completeReport(title: String, reportKey: String? = null): ReportFiles = writeReport(title, reportKey, ReportSource.API)
+    public fun completeReport(title: String, reportKey: String? = null): ReportFiles = writeReport(title, reportKey, KnownReportSource.API)
 
     /**
      * [completeReport] for a test integration: [source] (`junit` or `cucumber`) is recorded in the

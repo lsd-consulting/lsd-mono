@@ -15,8 +15,8 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.WarningKind
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
+import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import io.lsdconsulting.lsd.mono.report.model.ReportSchema
-import io.lsdconsulting.lsd.mono.report.model.ReportSource
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas.Document
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas.between
@@ -129,7 +129,7 @@ class ReportSchemaTest {
             "ClockOrdering" to ClockOrdering.entries.map { it.name },
             "KnownOrderSource" to OrderSource.entries.map { it.name },
             "KnownWarningKind" to WarningKind.entries.map { it.name },
-            "KnownReportSource" to ReportSource.ALL,
+            "KnownReportSource" to KnownReportSource.ALL,
         )
         val enums = defs.properties().filter { (_, node) -> node.has("enum") }.map { it.key }
         assertEquals(enums.sorted(), writer.keys.sorted(), "every enum in \$defs is checked against the writer's values")

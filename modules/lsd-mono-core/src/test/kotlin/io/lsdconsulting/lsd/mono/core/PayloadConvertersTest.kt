@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.report.html.ReportWriter
 import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
+import io.lsdconsulting.lsd.mono.report.model.StatusJson
 import io.lsdconsulting.lsd.mono.report.model.testing.assertValidJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -38,13 +39,13 @@ class PayloadConvertersTest {
                 title = "data",
                 generatedAt = "2026-10-21T08:00:00Z",
                 generator = "test",
-                status = "success",
+                status = StatusJson.SUCCESS,
                 scenarios =
                     listOf(
                         ScenarioJson(
                             id = "s",
                             title = "s",
-                            status = "success",
+                            status = StatusJson.SUCCESS,
                             description = "",
                             facts = emptyList(),
                             events = listOf(MessageEventJson(id = "m", from = "a", to = "b", label = "m", type = "SYNCHRONOUS", data = data)),

@@ -17,10 +17,10 @@ kotlin {
 }
 
 // The model is plain values; what its tests leave is mostly the data classes' generated code.
-// Line coverage was 73.1% when the floor was set, from the model's own code: the test fixtures
+// Line coverage was 85.6% when the floor was set, from the model's own code: the test fixtures
 // (ReportSchemas, ReportCorpus, assertValidJson) are not counted (lsd.coverage).
 lsdCoverage {
-    lineFloor.set(71)
+    lineFloor.set(84)
 }
 
 dependencies {

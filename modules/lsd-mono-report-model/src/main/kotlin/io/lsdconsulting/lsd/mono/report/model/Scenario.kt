@@ -1,13 +1,19 @@
 package io.lsdconsulting.lsd.mono.report.model
 
-/** One scenario: its outcome, what it is about, who takes part and what happened, in order. */
+/**
+ * One scenario: its outcome, what it is about, who takes part and what happened, in order.
+ *
+ * The fields from [accuracy] on are the timing summary, flat on the scenario as the schema has
+ * them. lsd-mono-core sets all of them or none; one left null (or empty) is not written, and the
+ * page works it out.
+ */
 @ExperimentalLsdReportModel
 public data class ScenarioJson(
     /** Unique within the report; the page's links use it. */
     val id: String,
     val title: String,
-    /** `success`, `warn` or `error`. */
-    val status: String,
+    /** The scenario's outcome. */
+    val status: StatusJson,
     val description: String,
     /** Key and value pairs shown with the scenario, such as an order id. */
     val facts: List<FactJson>,
@@ -19,8 +25,26 @@ public data class ScenarioJson(
     val events: List<EventJson> = emptyList(),
     /** Why the scenario failed or was aborted. Null for one that did not. */
     val error: ScenarioErrorJson? = null,
-    /** How the scenario's times were measured. Null leaves it out, and the page works it out. */
-    val timing: ScenarioTimingJson? = null,
+    /** How well the scenario's times are known. */
+    val accuracy: AccuracyJson? = null,
+    /** The share of messages with a measured duration, 0 to 1. */
+    val measuredCoverage: Double? = null,
+    /** The share of calls paired with their reply, 0 to 1. */
+    val pairingCoverage: Double? = null,
+    /** The capture sources the scenario's messages came from, such as `local`. Null is not written; empty is. */
+    val sources: List<String>? = null,
+    /** From the first message's start to the last one's end. */
+    val wallClockMs: Double? = null,
+    /** Which events were put in clock order. */
+    val clockOrdering: ClockOrderingJson? = null,
+    /** How many messages were put in clock order. */
+    val clockOrdered: Int? = null,
+    /** Timing warnings. Written when there are any. */
+    val warnings: List<WarningJson> = emptyList(),
+    /** Ids of the messages moved into clock order. Written when there are any. */
+    val reorderedByClock: List<String> = emptyList(),
+    /** The accuracy between each pair of participants. Written when there are any. */
+    val pairAccuracy: List<PairAccuracyJson> = emptyList(),
 )
 
 /** Why a scenario failed. */
@@ -33,34 +57,7 @@ public data class ScenarioErrorJson(
     val stack: String? = null,
 )
 
-/**
- * How a scenario's times were measured. The names and values are the schema's: see
- * `lsd-report.schema.json` for each enum.
- */
-@ExperimentalLsdReportModel
-public data class ScenarioTimingJson(
-    /** The schema's `Accuracy`: `STRUCTURE_ONLY`, `TIMESTAMPED`, `MEASURED` or `TRACED`. */
-    val accuracy: String,
-    /** The share of messages with a measured duration, 0 to 1. */
-    val measuredCoverage: Double?,
-    /** The share of calls paired with their reply, 0 to 1. */
-    val pairingCoverage: Double?,
-    /** The capture sources the scenario's messages came from, such as `local`. */
-    val sources: List<String>,
-    /** From the first message's start to the last one's end. */
-    val wallClockMs: Double?,
-    /** The schema's `ClockOrdering`: `OFF`, `SAME_SOURCE` or `ALL_SOURCES`. */
-    val clockOrdering: String,
-    /** How many messages were put in clock order. */
-    val clockOrdered: Int,
-    val warnings: List<WarningJson>,
-    /** Ids of the messages moved into clock order. */
-    val reorderedByClock: List<String>,
-    /** The accuracy between each pair of participants. */
-    val pairAccuracy: List<PairAccuracyJson> = emptyList(),
-)
-
-/** A timing warning: its `kind` (for example `LONGER_THAN_PARENT`) and its sentence. */
+/** A timing warning: its `kind` (one of [KnownWarningKind.ALL], or another) and its sentence. */
 @ExperimentalLsdReportModel
 public data class WarningJson(
     val kind: String,
@@ -72,7 +69,7 @@ public data class WarningJson(
 public data class PairAccuracyJson(
     val from: String,
     val to: String,
-    val accuracy: String,
+    val accuracy: AccuracyJson,
 )
 
 /** A fact shown with a scenario. */
@@ -96,8 +93,8 @@ public data class ParticipantJson(
     val id: String,
     /** The name shown. */
     val name: String,
-    /** How it is drawn: `PARTICIPANT`, `ACTOR`, `DATABASE`, `QUEUE`, `ENTITY` or `BOUNDARY`. A reader draws another as a participant. */
-    val type: String = "PARTICIPANT",
+    /** How it is drawn: one of [KnownParticipantType.ALL], or another, which a reader draws as a participant. */
+    val type: String = KnownParticipantType.PARTICIPANT,
     /** A shorter name to show instead, when there is one. */
     val alias: String? = null,
     /** A CSS colour for its lifeline. */

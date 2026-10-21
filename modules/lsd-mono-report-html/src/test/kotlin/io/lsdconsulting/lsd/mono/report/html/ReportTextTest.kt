@@ -1,21 +1,26 @@
 package io.lsdconsulting.lsd.mono.report.html
 
+import io.lsdconsulting.lsd.mono.report.model.AccuracyJson
+import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.FactJson
+import io.lsdconsulting.lsd.mono.report.model.KnownWarningKind
 import io.lsdconsulting.lsd.mono.report.model.LifelineEventJson
+import io.lsdconsulting.lsd.mono.report.model.LifelineKindJson
 import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.report.model.MetricJson
 import io.lsdconsulting.lsd.mono.report.model.NoteEventJson
+import io.lsdconsulting.lsd.mono.report.model.NotePlacementJson
 import io.lsdconsulting.lsd.mono.report.model.PairAccuracyJson
 import io.lsdconsulting.lsd.mono.report.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ReportSchema
 import io.lsdconsulting.lsd.mono.report.model.ScenarioErrorJson
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
-import io.lsdconsulting.lsd.mono.report.model.ScenarioTimingJson
 import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.report.model.SpacerEventJson
+import io.lsdconsulting.lsd.mono.report.model.StatusJson
 import io.lsdconsulting.lsd.mono.report.model.TraceJson
 import io.lsdconsulting.lsd.mono.report.model.WarningJson
 import io.lsdconsulting.lsd.mono.report.model.testing.assertValidJson
@@ -65,7 +70,7 @@ class ReportTextTest {
         ScenarioJson(
             id = "s1",
             title = "Place an order",
-            status = "error",
+            status = StatusJson.ERROR,
             description = "Given a basket",
             facts = listOf(FactJson("orderId", "o-1")),
             metrics = listOf(MetricJson("Messages", "2")),
@@ -73,32 +78,29 @@ class ReportTextTest {
             events =
                 listOf(
                     SectionEventJson("se1", "Checkout"),
-                    LifelineEventJson(LifelineEventJson.ACTIVATE, "l1", "api", colour = "green"),
+                    LifelineEventJson(LifelineKindJson.ACTIVATE, "l1", "api", colour = "green"),
                     call,
                     reply,
-                    NoteEventJson("n1", "a note", over = "api", placement = "right", startedAt = "2026-10-21T08:00:01Z"),
+                    NoteEventJson("n1", "a note", over = "api", placement = NotePlacementJson.RIGHT, startedAt = "2026-10-21T08:00:01Z"),
                     DelayEventJson("d1", "later"),
                     SpacerEventJson("sp1", 40),
                     DividerEventJson("dv1", "then"),
-                    LifelineEventJson(LifelineEventJson.DEACTIVATE, "l2", "api"),
+                    LifelineEventJson(LifelineKindJson.DEACTIVATE, "l2", "api"),
                 ),
             error = ScenarioErrorJson("AssertionError", "expected 2", "at Test.kt:1"),
-            timing =
-                ScenarioTimingJson(
-                    accuracy = "MEASURED",
-                    measuredCoverage = 0.5,
-                    pairingCoverage = 1.0,
-                    sources = listOf("local", "api-service"),
-                    wallClockMs = 20.0,
-                    clockOrdering = "SAME_SOURCE",
-                    clockOrdered = 1,
-                    warnings = listOf(WarningJson("LONGER_THAN_PARENT", "too long")),
-                    reorderedByClock = listOf("m2"),
-                    pairAccuracy = listOf(PairAccuracyJson("client", "api", "MEASURED")),
-                ),
+            accuracy = AccuracyJson.MEASURED,
+            measuredCoverage = 0.5,
+            pairingCoverage = 1.0,
+            sources = listOf("local", "api-service"),
+            wallClockMs = 20.0,
+            clockOrdering = ClockOrderingJson.SAME_SOURCE,
+            clockOrdered = 1,
+            warnings = listOf(WarningJson(KnownWarningKind.LONGER_THAN_PARENT, "too long")),
+            reorderedByClock = listOf("m2"),
+            pairAccuracy = listOf(PairAccuracyJson("client", "api", AccuracyJson.MEASURED)),
         )
     private val report =
-        ReportJson(title = "Orders", generatedAt = "2026-10-21T08:00:00Z", generator = "test 1.0", status = "error", scenarios = listOf(scenario))
+        ReportJson(title = "Orders", generatedAt = "2026-10-21T08:00:00Z", generator = "test 1.0", status = StatusJson.ERROR, scenarios = listOf(scenario))
 
     @Test
     fun `every field of every event kind is written, and absent ones are left out`() {
@@ -133,7 +135,25 @@ class ReportTextTest {
 
     @Test
     fun `a scenario without a timing summary leaves it out`() {
-        val json = ReportWriter.toJson(report.copy(scenarios = listOf(scenario.copy(timing = null, error = null))))
+        val json = ReportWriter.toJson(
+            report.copy(
+                scenarios = listOf(
+                    scenario.copy(
+                        accuracy = null,
+                        measuredCoverage = null,
+                        pairingCoverage = null,
+                        sources = null,
+                        wallClockMs = null,
+                        clockOrdering = null,
+                        clockOrdered = null,
+                        warnings = emptyList(),
+                        reorderedByClock = emptyList(),
+                        pairAccuracy = emptyList(),
+                        error = null,
+                    ),
+                ),
+            ),
+        )
         listOf("accuracy", "sources", "clockOrdering", "\"error\": {").forEach { assertFalse(json.contains(it), "$it in $json") }
     }
 

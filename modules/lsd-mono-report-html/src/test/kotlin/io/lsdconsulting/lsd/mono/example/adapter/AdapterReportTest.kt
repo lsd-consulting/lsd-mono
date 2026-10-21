@@ -2,9 +2,15 @@ package io.lsdconsulting.lsd.mono.example.adapter
 
 import io.lsdconsulting.lsd.mono.report.html.ReportWriter
 import io.lsdconsulting.lsd.mono.report.html.ReportWriterSettings
+import io.lsdconsulting.lsd.mono.report.model.AccuracyJson
+import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.FactJson
+import io.lsdconsulting.lsd.mono.report.model.KnownMessageType
+import io.lsdconsulting.lsd.mono.report.model.KnownParticipantType
+import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import io.lsdconsulting.lsd.mono.report.model.LifelineEventJson
+import io.lsdconsulting.lsd.mono.report.model.LifelineKindJson
 import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.report.model.MetricJson
 import io.lsdconsulting.lsd.mono.report.model.NoteEventJson
@@ -12,10 +18,9 @@ import io.lsdconsulting.lsd.mono.report.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.report.model.ReportSchema
-import io.lsdconsulting.lsd.mono.report.model.ReportSource
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
-import io.lsdconsulting.lsd.mono.report.model.ScenarioTimingJson
 import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
+import io.lsdconsulting.lsd.mono.report.model.StatusJson
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -73,18 +78,22 @@ class AdapterReportTest {
             title = "Minimal",
             generatedAt = GENERATED_AT,
             generator = "lsd-mono-core (conformance)",
-            status = "success",
+            status = StatusJson.SUCCESS,
             options = ReportOptionsJson(usagePing = false),
             scenarios =
                 listOf(
                     ScenarioJson(
                         id = "1",
                         title = "Minimal",
-                        status = "success",
+                        status = StatusJson.SUCCESS,
                         description = "",
                         facts = emptyList(),
                         metrics = listOf(MetricJson("Messages", "0")),
-                        timing = structureOnly(),
+                        // The timing summary core writes when nothing was timed.
+                        accuracy = AccuracyJson.STRUCTURE_ONLY,
+                        sources = emptyList(),
+                        clockOrdering = ClockOrderingJson.SAME_SOURCE,
+                        clockOrdered = 0,
                     ),
                 ),
         )
@@ -95,54 +104,45 @@ class AdapterReportTest {
             title = "Checkout",
             generatedAt = GENERATED_AT,
             generator = "example-adapter 1.0",
-            status = "error",
-            options = ReportOptionsJson(usagePing = false, source = ReportSource.API),
+            status = StatusJson.ERROR,
+            options = ReportOptionsJson(usagePing = false, source = KnownReportSource.API),
             scenarios =
                 listOf(
                     ScenarioJson(
                         id = "checkout-1",
                         title = "Place an order",
-                        status = "success",
+                        status = StatusJson.SUCCESS,
                         description = "The shop places an order with the payments service.",
                         facts = listOf(FactJson("orderId", "A-17")),
                         participants =
                             listOf(
-                                ParticipantJson("shop", "Shop", type = "ACTOR"),
+                                ParticipantJson("shop", "Shop", type = KnownParticipantType.ACTOR),
                                 ParticipantJson("payments", "Payments", type = "CONTROL", colour = "#3b82f6"),
                             ),
                         events =
                             listOf(
                                 SectionEventJson("s1", "Pay"),
-                                MessageEventJson("m1", "shop", "payments", "POST /payments", "SYNCHRONOUS", data = mapOf("amount" to 12.5)),
-                                LifelineEventJson(LifelineEventJson.ACTIVATE, "a1", "payments"),
+                                MessageEventJson("m1", "shop", "payments", "POST /payments", KnownMessageType.SYNCHRONOUS, data = mapOf("amount" to 12.5)),
+                                LifelineEventJson(LifelineKindJson.ACTIVATE, "a1", "payments"),
                                 NoteEventJson("n1", "checks the card", over = "payments"),
-                                LifelineEventJson(LifelineEventJson.DEACTIVATE, "a2", "payments"),
-                                MessageEventJson("m2", "payments", "shop", "201 Created", "SYNCHRONOUS_RESPONSE", status = "201"),
+                                LifelineEventJson(LifelineKindJson.DEACTIVATE, "a2", "payments"),
+                                MessageEventJson("m2", "payments", "shop", "201 Created", KnownMessageType.SYNCHRONOUS_RESPONSE, status = "201"),
                                 DividerEventJson("d1", "done"),
                             ),
-                        timing = structureOnly(),
+                        // The timing summary core writes when nothing was timed.
+                        accuracy = AccuracyJson.STRUCTURE_ONLY,
+                        sources = emptyList(),
+                        clockOrdering = ClockOrderingJson.SAME_SOURCE,
+                        clockOrdered = 0,
                     ),
                     ScenarioJson(
                         id = "checkout-2",
                         title = "Card declined",
-                        status = "error",
+                        status = StatusJson.ERROR,
                         description = "",
                         facts = emptyList(),
                     ),
                 ),
-        )
-
-    private fun structureOnly() =
-        ScenarioTimingJson(
-            accuracy = "STRUCTURE_ONLY",
-            measuredCoverage = null,
-            pairingCoverage = null,
-            sources = emptyList(),
-            wallClockMs = null,
-            clockOrdering = "SAME_SOURCE",
-            clockOrdered = 0,
-            warnings = emptyList(),
-            reorderedByClock = emptyList(),
         )
 
     private companion object {

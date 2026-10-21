@@ -5,7 +5,7 @@ import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.reportWriter
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
-import io.lsdconsulting.lsd.mono.report.model.ReportSource
+import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -67,7 +67,7 @@ class UsagePingOptionTest {
     @Test
     fun `every source has its ping file in the repository, so a tagged release serves it`() {
         val ping = Path.of("../../ping")
-        for (source in ReportSource.ALL) {
+        for (source in KnownReportSource.ALL) {
             val file = ping.resolve("source-$source.txt")
             assertTrue(Files.isRegularFile(file), "missing $file")
             assertEquals(1L, Files.size(file), "$file is one byte")

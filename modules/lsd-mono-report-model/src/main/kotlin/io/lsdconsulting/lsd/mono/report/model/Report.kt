@@ -15,8 +15,8 @@ public data class ReportJson(
     val generatedAt: String,
     /** What wrote the report and its version, such as `lsd-mono-core 0.7.0`. The usage ping reads it. */
     val generator: String,
-    /** The worst scenario outcome: `error`, else `warn`, else `success` (also when there are no scenarios). */
-    val status: String,
+    /** The worst scenario outcome: [StatusJson.ERROR], else `WARN`, else `SUCCESS` (also when there are no scenarios). */
+    val status: StatusJson,
     /** Switches for the page. */
     val options: ReportOptionsJson = ReportOptionsJson(),
     /** The scenarios, in the order the page lists them. */
@@ -30,24 +30,11 @@ public data class ReportOptionsJson(
     val metricsEnabled: Boolean = true,
     /** Characters after which the page truncates labels in its summaries. */
     val labelMaxWidth: Int = 200,
-    /** Whether the page may send the usage ping. The page also needs a release `generator`. */
+    /**
+     * Whether the page may send the usage ping. The page also needs a release `generator`. True by
+     * default, as lsd-mono-core's `lsd.mono.report.usagePing` is; the writer always writes it.
+     */
     val usagePing: Boolean = true,
-    /** What wrote the report, counted by the usage ping as `source-<name>`: one of [ReportSource.ALL], or another name. */
-    val source: String = ReportSource.API,
+    /** What wrote the report, counted by the usage ping as `source-<name>`: one of [KnownReportSource.ALL], or another name. */
+    val source: String = KnownReportSource.API,
 )
-
-/** The report sources lsd-mono knows. The schema allows others; a reader treats them as unknown. */
-@ExperimentalLsdReportModel
-public object ReportSource {
-    /** lsd-mono-junit-jupiter's extension. */
-    public const val JUNIT: String = "junit"
-
-    /** lsd-mono-cucumber-8's plugin. */
-    public const val CUCUMBER: String = "cucumber"
-
-    /** A report written through the API directly. */
-    public const val API: String = "api"
-
-    /** Every known source. */
-    public val ALL: List<String> = listOf(JUNIT, CUCUMBER, API)
-}

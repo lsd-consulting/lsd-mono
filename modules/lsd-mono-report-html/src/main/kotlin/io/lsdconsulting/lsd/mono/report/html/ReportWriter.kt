@@ -106,11 +106,11 @@ public class ReportWriter(
         return ReportFile(
             filename = "$stem-diagram.html",
             title = report.title,
-            status = report.status,
-            counts = ScenarioCounts.of(report.scenarios.map { it.status }),
+            status = report.status.json,
+            counts = ScenarioCounts.of(report.scenarios.map { it.status.json }),
             stem = stem,
             dataScript = "$stem-report.js",
-            scenarios = report.scenarios.map { IndexScenario(it.id, it.title, it.status, it.events.count { e -> e is MessageEventJson }) },
+            scenarios = report.scenarios.map { IndexScenario(it.id, it.title, it.status.json, it.events.count { e -> e is MessageEventJson }) },
         )
     }
 

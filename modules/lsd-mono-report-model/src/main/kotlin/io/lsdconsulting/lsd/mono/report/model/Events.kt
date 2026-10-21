@@ -5,6 +5,12 @@ package io.lsdconsulting.lsd.mono.report.model
  * subclass; every event has an [id], unique within its scenario, and may have a [startedAt]
  * time by its source's clock (an RFC 3339 date-time with `Z` or an offset). When any event of a
  * scenario has one, the page sorts the events by it.
+ *
+ * Sealed to the kinds lsd-mono writes, which is what the model is for: writing reports. The
+ * schema's events are open (its `UnknownEvent`), so a newer schema or another producer can write a
+ * kind with no class here. Code that reads a report it did not write itself, with its own parser
+ * and these classes or not, must tolerate an unknown `kind`, skipping it or showing it as unknown,
+ * rather than fail or assume this list is complete.
  */
 @ExperimentalLsdReportModel
 public sealed class EventJson {
@@ -23,14 +29,16 @@ public data class MessageEventJson(
     val from: String,
     val to: String,
     val label: String,
-    /** The schema's `MessageType`, such as `SYNCHRONOUS` or `SYNCHRONOUS_RESPONSE`. */
+    /** The schema's `MessageType`: one of [KnownMessageType.ALL], or another, which a reader draws as a call. */
     val type: String,
     val colour: String? = null,
     /** How long the message took, in fractional milliseconds. */
     val durationMs: Double? = null,
     /**
-     * The message's payload, as JSON values: null, a String, a Boolean, a Number, a `Map` with
-     * String keys or a `List` of these. The writer writes anything else as its `toString()`.
+     * The message's payload. It should be JSON values: null, a String, a Boolean, a Number, a `Map`
+     * with String keys or a `List` of these. The type is `Any?` and nothing checks it: the writer
+     * writes an array as a list and anything else as its `toString()`. A JSON value type may replace
+     * it before the model leaves experimental (#118).
      */
     val data: Any? = null,
     /**
@@ -54,11 +62,11 @@ public data class MessageEventJson(
     val capturedAt: String? = null,
     /** The message's status, such as an HTTP status, as text: `200`, `404 Not Found`. */
     val status: String? = null,
-    /** The schema's `TimingSource`: how [durationMs] was found. */
+    /** The schema's `TimingSource`: how [durationMs] was found, one of [KnownTimingSource.ALL] or another. */
     val timing: String? = null,
-    /** The schema's `PairingSource`: how the call and its reply were paired. */
+    /** The schema's `PairingSource`: how the call and its reply were paired, one of [KnownPairingSource.ALL] or another. */
     val pairing: String? = null,
-    /** The schema's `OrderSource`: what put the message in its place. */
+    /** The schema's `OrderSource`: what put the message in its place, one of [KnownOrderSource.ALL] or another. */
     val order: String? = null,
     /** The id of the call this message runs inside. */
     val parentId: String? = null,
@@ -81,8 +89,8 @@ public data class NoteEventJson(
     val text: String,
     /** The participant the note is over. Needed for [placement] `over`; optional for `left` and `right`. */
     val over: String? = null,
-    /** `over`, `left` or `right`. */
-    val placement: String = "over",
+    /** Where the note goes. */
+    val placement: NotePlacementJson = NotePlacementJson.OVER,
     override val startedAt: String? = null,
 ) : EventJson()
 
@@ -122,21 +130,12 @@ public data class SectionEventJson(
 /** A lifeline starting or stopping its activation bar. */
 @ExperimentalLsdReportModel
 public data class LifelineEventJson(
-    /** [ACTIVATE] or [DEACTIVATE]. */
-    val kind: String,
+    /** Whether the bar starts or stops. */
+    val kind: LifelineKindJson,
     override val id: String,
     /** The participant whose lifeline it is. */
     val participantId: String,
-    /** The bar's CSS colour. Only on [ACTIVATE]. */
+    /** The bar's CSS colour. Only on [LifelineKindJson.ACTIVATE]. */
     val colour: String? = null,
     override val startedAt: String? = null,
-) : EventJson() {
-    init {
-        require(kind == ACTIVATE || kind == DEACTIVATE) { "kind is $ACTIVATE or $DEACTIVATE, not $kind" }
-    }
-
-    public companion object {
-        public const val ACTIVATE: String = "activate"
-        public const val DEACTIVATE: String = "deactivate"
-    }
-}
+) : EventJson()

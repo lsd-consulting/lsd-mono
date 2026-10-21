@@ -16,23 +16,27 @@ import io.lsdconsulting.lsd.mono.core.domain.SequenceEvent
 import io.lsdconsulting.lsd.mono.core.domain.Spacer
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
+import io.lsdconsulting.lsd.mono.report.model.AccuracyJson
+import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.EventJson
 import io.lsdconsulting.lsd.mono.report.model.FactJson
+import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import io.lsdconsulting.lsd.mono.report.model.LifelineEventJson
+import io.lsdconsulting.lsd.mono.report.model.LifelineKindJson
 import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.report.model.NoteEventJson
+import io.lsdconsulting.lsd.mono.report.model.NotePlacementJson
 import io.lsdconsulting.lsd.mono.report.model.PairAccuracyJson
 import io.lsdconsulting.lsd.mono.report.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
-import io.lsdconsulting.lsd.mono.report.model.ReportSource
 import io.lsdconsulting.lsd.mono.report.model.ScenarioErrorJson
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
-import io.lsdconsulting.lsd.mono.report.model.ScenarioTimingJson
 import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.report.model.SpacerEventJson
+import io.lsdconsulting.lsd.mono.report.model.StatusJson
 import io.lsdconsulting.lsd.mono.report.model.TraceJson
 import io.lsdconsulting.lsd.mono.report.model.WarningJson
 import java.math.BigDecimal
@@ -45,7 +49,7 @@ import java.time.temporal.ChronoUnit
  * id. Report options are read once per report.
  */
 internal class ReportJsonMapper(private val nextId: () -> String) {
-    fun toReportJson(title: String, scenarios: List<Scenario>, source: String = ReportSource.API): ReportJson {
+    fun toReportJson(title: String, scenarios: List<Scenario>, source: String = KnownReportSource.API): ReportJson {
         val options = ReportOptions.fromProperties()
         return ReportJson(
             title = title,
@@ -70,7 +74,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
     private fun Scenario.toJsonModel(options: ReportOptions): ScenarioJson = ScenarioJson(
         id = nextId(),
         title = title,
-        status = status.toReportStatus(),
+        status = status.toJson(),
         description = description,
         facts = facts.map { FactJson(it.key, it.value) },
         error = error?.let { ScenarioErrorJson(it.headline, it.message, it.stack) },
@@ -86,19 +90,16 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                 )
             },
         events = events.map { it.toEventJson(timing) },
-        timing =
-            ScenarioTimingJson(
-                accuracy = timing.accuracy.name,
-                measuredCoverage = timing.measuredCoverage,
-                pairingCoverage = timing.pairingCoverage,
-                sources = timing.sources,
-                wallClockMs = timing.wallClockMs,
-                clockOrdering = timing.clockOrdering.name,
-                clockOrdered = timing.clockOrdered,
-                warnings = timing.warnings.map { WarningJson(it.kind.name, it.message) },
-                reorderedByClock = timing.reorderedByClock,
-                pairAccuracy = timing.pairAccuracy.map { PairAccuracyJson(it.from, it.to, it.accuracy.name) },
-            ),
+        accuracy = AccuracyJson.valueOf(timing.accuracy.name),
+        measuredCoverage = timing.measuredCoverage,
+        pairingCoverage = timing.pairingCoverage,
+        sources = timing.sources,
+        wallClockMs = timing.wallClockMs,
+        clockOrdering = ClockOrderingJson.valueOf(timing.clockOrdering.name),
+        clockOrdered = timing.clockOrdered,
+        warnings = timing.warnings.map { WarningJson(it.kind.name, it.message) },
+        reorderedByClock = timing.reorderedByClock,
+        pairAccuracy = timing.pairAccuracy.map { PairAccuracyJson(it.from, it.to, AccuracyJson.valueOf(it.accuracy.name)) },
     )
 
     /** `capturedAt` is a wall-clock hint; reproducible reports leave it out. */
@@ -138,7 +139,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     id = id,
                     text = text,
                     over = over,
-                    placement = placement.name.lowercase(),
+                    placement = NotePlacementJson.valueOf(placement.name),
                     startedAt = startedAt?.toString(),
                 )
             is Divider -> DividerEventJson(id = id, label = label, startedAt = startedAt?.toString())
@@ -147,7 +148,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
             is Spacer -> SpacerEventJson(id = id, heightPx = heightPx, startedAt = startedAt?.toString())
             is Lifeline ->
                 LifelineEventJson(
-                    kind = if (action == LifelineAction.ACTIVATE) "activate" else "deactivate",
+                    kind = if (action == LifelineAction.ACTIVATE) LifelineKindJson.ACTIVATE else LifelineKindJson.DEACTIVATE,
                     id = id,
                     participantId = participantId,
                     colour = if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null,
@@ -165,10 +166,17 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
             else -> PayloadConverters.default.snapshot(data)
         }
 
-    /** [name] when it is one of [ReportSource.ALL], else [ReportSource.API]. */
-    private fun knownSource(name: String?): String = name?.takeIf { it in ReportSource.ALL } ?: ReportSource.API
+    /** [name] when it is one of [KnownReportSource.ALL], else [KnownReportSource.API]. */
+    private fun knownSource(name: String?): String = name?.takeIf { it in KnownReportSource.ALL } ?: KnownReportSource.API
 
-    private fun determineOverallStatus(scenarios: List<Scenario>): String =
+    private fun Status.toJson(): StatusJson =
+        when (this) {
+            Status.SUCCESS -> StatusJson.SUCCESS
+            Status.WARN -> StatusJson.WARN
+            Status.ERROR -> StatusJson.ERROR
+        }
+
+    private fun determineOverallStatus(scenarios: List<Scenario>): StatusJson =
         scenarios
             .map { it.status }
             .sortedWith(
@@ -180,6 +188,6 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     }
                 },
             ).firstOrNull()
-            ?.toCssClass()
-            ?: "success"
+            ?.toJson()
+            ?: StatusJson.SUCCESS
 }

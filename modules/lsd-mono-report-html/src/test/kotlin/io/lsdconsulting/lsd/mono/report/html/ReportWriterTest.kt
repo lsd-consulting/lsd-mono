@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.report.html
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
+import io.lsdconsulting.lsd.mono.report.model.StatusJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -214,14 +215,14 @@ class ReportWriterTest {
             title = title,
             generatedAt = "2026-10-09T08:00:00Z",
             generator = "test",
-            status = if (failing > 0) "error" else "success",
+            status = if (failing > 0) StatusJson.ERROR else StatusJson.SUCCESS,
             options = ReportOptionsJson(metricsEnabled = false, labelMaxWidth = 200),
             scenarios =
                 List(scenarioCount) { n ->
                     ScenarioJson(
                         id = "s$n",
                         title = "scenario $n",
-                        status = if (n < failing) "error" else "success",
+                        status = if (n < failing) StatusJson.ERROR else StatusJson.SUCCESS,
                         description = "d".repeat(200),
                         facts = emptyList(),
                         error = null,
