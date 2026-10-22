@@ -5,13 +5,11 @@ import io.lsdconsulting.lsd.mono.report.model.AttributeValueJson
 import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
-import io.lsdconsulting.lsd.mono.report.model.FactJson
 import io.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
 import io.lsdconsulting.lsd.mono.report.model.KnownWarningKind
 import io.lsdconsulting.lsd.mono.report.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.report.model.LifelineKindJson
 import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
-import io.lsdconsulting.lsd.mono.report.model.MetricJson
 import io.lsdconsulting.lsd.mono.report.model.NoteEventJson
 import io.lsdconsulting.lsd.mono.report.model.NotePlacementJson
 import io.lsdconsulting.lsd.mono.report.model.PairAccuracyJson
@@ -36,74 +34,79 @@ import org.junit.jupiter.api.Test
 /** The report as JSON text ([ReportWriter.toJson]) and the diagram page's copy of it ([forShell]). */
 class ReportTextTest {
     private val call =
-        MessageEventJson(
-            id = "m1",
-            from = "client",
-            to = "api",
-            label = "POST /orders",
-            type = "SYNCHRONOUS",
-            colour = "red",
-            durationMs = 12.3456,
-            data = mapOf("method" to "POST", "path" to "/orders", "body" to mapOf("sku" to "SOCK-1")),
-            startedAt = "2026-10-21T08:00:00Z",
-            seq = 1,
-            callId = "c1",
-            causedBy = "m0",
-            trace = TraceJson("t1", "s1", "p1"),
-            source = "api-service",
-            capturedAt = "2026-10-21T08:00:00.001Z",
-            status = "201",
-            timing = "MEASURED",
-            pairing = "CALL_ID",
-            order = "CAPTURE",
-            parentId = "m0",
-        )
+        MessageEventJson
+            .builder(id = "m1", from = "client", to = "api", label = "POST /orders", type = "SYNCHRONOUS")
+            .colour("red")
+            .durationMs(12.3456)
+            .data(mapOf("method" to "POST", "path" to "/orders", "body" to mapOf("sku" to "SOCK-1")))
+            .startedAt("2026-10-21T08:00:00Z")
+            .seq(1)
+            .callId("c1")
+            .causedBy("m0")
+            .trace(TraceJson("t1", "s1", "p1"))
+            .source("api-service")
+            .capturedAt("2026-10-21T08:00:00.001Z")
+            .status("201")
+            .timing("MEASURED")
+            .pairing("CALL_ID")
+            .order("CAPTURE")
+            .parentId("m0")
+            .build()
     private val reply =
-        MessageEventJson(
-            id = "m2",
-            from = "api",
-            to = "client",
-            label = "201",
-            type = "SYNCHRONOUS_RESPONSE",
-            replyTo = "c1",
-            replyOf = "m1",
-            data = mapOf("status" to 201),
-        )
+        MessageEventJson
+            .builder(id = "m2", from = "api", to = "client", label = "201", type = "SYNCHRONOUS_RESPONSE")
+            .replyTo("c1")
+            .replyOf("m1")
+            .data(mapOf("status" to 201))
+            .build()
     private val scenario =
-        ScenarioJson(
-            id = "s1",
-            title = "Place an order",
-            status = StatusJson.ERROR,
-            description = "Given a basket",
-            facts = listOf(FactJson("orderId", "o-1")),
-            metrics = listOf(MetricJson("Messages", "2")),
-            participants = listOf(ParticipantJson("client", "Client", "ACTOR", alias = "C", colour = "blue"), ParticipantJson("api", "Api")),
-            events =
+        ScenarioJson
+            .builder(id = "s1", title = "Place an order", status = StatusJson.ERROR)
+            .description("Given a basket")
+            .fact("orderId", "o-1")
+            .metric("Messages", "2")
+            .participant(
+                ParticipantJson
+                    .builder("client", "Client")
+                    .type("ACTOR")
+                    .alias("C")
+                    .colour("blue")
+                    .build(),
+            ).participant(ParticipantJson.builder("api", "Api").build())
+            .events(
                 listOf(
-                    SectionEventJson("se1", "Checkout"),
-                    LifelineEventJson(LifelineKindJson.ACTIVATE, "l1", "api", colour = "green"),
+                    SectionEventJson.builder("se1", "Checkout").build(),
+                    LifelineEventJson.builder(LifelineKindJson.ACTIVATE, "l1", "api").colour("green").build(),
                     call,
                     reply,
-                    NoteEventJson("n1", "a note", over = "api", placement = NotePlacementJson.RIGHT, startedAt = "2026-10-21T08:00:01Z"),
-                    DelayEventJson("d1", "later"),
-                    SpacerEventJson("sp1", 40),
-                    DividerEventJson("dv1", "then"),
-                    LifelineEventJson(LifelineKindJson.DEACTIVATE, "l2", "api"),
+                    NoteEventJson
+                        .builder("n1", "a note")
+                        .over("api")
+                        .placement(NotePlacementJson.RIGHT)
+                        .startedAt("2026-10-21T08:00:01Z")
+                        .build(),
+                    DelayEventJson.builder("d1").label("later").build(),
+                    SpacerEventJson.builder("sp1").heightPx(40).build(),
+                    DividerEventJson.builder("dv1", "then").build(),
+                    LifelineEventJson.builder(LifelineKindJson.DEACTIVATE, "l2", "api").build(),
                 ),
-            error = ScenarioErrorJson("AssertionError", "expected 2", "at Test.kt:1"),
-            accuracy = AccuracyJson.MEASURED,
-            measuredCoverage = 0.5,
-            pairingCoverage = 1.0,
-            sources = listOf("local", "api-service"),
-            wallClockMs = 20.0,
-            clockOrdering = ClockOrderingJson.SAME_SOURCE,
-            clockOrdered = 1,
-            warnings = listOf(WarningJson(KnownWarningKind.LONGER_THAN_PARENT, "too long")),
-            reorderedByClock = listOf("m2"),
-            pairAccuracy = listOf(PairAccuracyJson("client", "api", AccuracyJson.MEASURED)),
-        )
+            ).error(ScenarioErrorJson.builder("AssertionError", "expected 2").stack("at Test.kt:1").build())
+            .accuracy(AccuracyJson.MEASURED)
+            .measuredCoverage(0.5)
+            .pairingCoverage(1.0)
+            .sources(listOf("local", "api-service"))
+            .wallClockMs(20.0)
+            .clockOrdering(ClockOrderingJson.SAME_SOURCE)
+            .clockOrdered(1)
+            .warning(WarningJson(KnownWarningKind.LONGER_THAN_PARENT, "too long"))
+            .reorderedByClock(listOf("m2"))
+            .pairAccuracy(listOf(PairAccuracyJson("client", "api", AccuracyJson.MEASURED)))
+            .build()
     private val report =
-        ReportJson(title = "Orders", generatedAt = "2026-10-21T08:00:00Z", generator = "test 1.0", status = StatusJson.ERROR, scenarios = listOf(scenario))
+        ReportJson
+            .builder(title = "Orders", generatedAt = "2026-10-21T08:00:00Z", generator = "test 1.0", status = StatusJson.ERROR)
+            .scenario(scenario)
+            .build()
 
     @Test
     fun `every field of every event kind is written, and absent ones are left out`() {
@@ -139,9 +142,10 @@ class ReportTextTest {
     @Test
     fun `a message's attributes and origin are written as the schema has them`() {
         val imported =
-            call.copy(
-                trace = TraceJson("4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7", "53995c3f42cd8ad8"),
-                attributes =
+            call
+                .toBuilder()
+                .trace(TraceJson("4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7", "53995c3f42cd8ad8"))
+                .attributes(
                     mapOf(
                         "http.request.method" to AttributeValueJson.of("POST"),
                         "http.response.status_code" to AttributeValueJson.of(201),
@@ -152,11 +156,10 @@ class ReportTextTest {
                         "lsd.flags" to AttributeValueJson.ofBooleans(listOf(true)),
                         "lsd.sizes" to AttributeValueJson.ofLongs(listOf(1, 2)),
                         "lsd.ratios" to AttributeValueJson.ofDoubles(listOf(0.5)),
-                        "" to AttributeValueJson.of("no key"),
                     ),
-                origin = KnownMessageOrigin.IMPORTED,
-            )
-        val json = ReportWriter.toJson(report.copy(scenarios = listOf(scenario.copy(events = listOf(imported, reply)))))
+                ).origin(KnownMessageOrigin.IMPORTED)
+                .build()
+        val json = ReportWriter.toJson(withScenario(scenario.toBuilder().events(listOf(imported, reply)).build()))
         ReportSchemas.assertValid(ReportSchemas.Document.REPORT, json, "a report with attributes and an origin")
         val compact = json.replace(Regex("\\s*\n\\s*"), "").replace("\": ", "\":")
         listOf(
@@ -166,28 +169,26 @@ class ReportTextTest {
             // A captured message with no attributes has neither field.
             """{"kind":"message","id":"m2","from":"api","to":"client","label":"201","type":"SYNCHRONOUS_RESPONSE","data":{"status":201},"replyTo":"c1","replyOf":"m1"}""",
         ).forEach { assertTrue(compact.contains(it), "$it in $compact") }
-        assertFalse(compact.contains("no key"), "an empty key is left out")
     }
 
     @Test
     fun `a scenario without a timing summary leaves it out`() {
         val json = ReportWriter.toJson(
-            report.copy(
-                scenarios = listOf(
-                    scenario.copy(
-                        accuracy = null,
-                        measuredCoverage = null,
-                        pairingCoverage = null,
-                        sources = null,
-                        wallClockMs = null,
-                        clockOrdering = null,
-                        clockOrdered = null,
-                        warnings = emptyList(),
-                        reorderedByClock = emptyList(),
-                        pairAccuracy = emptyList(),
-                        error = null,
-                    ),
-                ),
+            withScenario(
+                scenario
+                    .toBuilder()
+                    .accuracy(null)
+                    .measuredCoverage(null)
+                    .pairingCoverage(null)
+                    .sources(null)
+                    .wallClockMs(null)
+                    .clockOrdering(null)
+                    .clockOrdered(null)
+                    .warnings(emptyList())
+                    .reorderedByClock(emptyList())
+                    .pairAccuracy(emptyList())
+                    .error(null)
+                    .build(),
             ),
         )
         listOf("accuracy", "sources", "clockOrdering", "\"error\": {").forEach { assertFalse(json.contains(it), "$it in $json") }
@@ -212,7 +213,7 @@ class ReportTextTest {
 
     @Test
     fun `data that is not a map moves to the payload script whole`() {
-        val text = report.copy(scenarios = listOf(scenario.copy(events = listOf(call.copy(data = "plain text body")))))
+        val text = withScenario(scenario.toBuilder().events(listOf(call.toBuilder().data("plain text body").build())).build())
         val shell = text.forShell()
         val message = shell.report.scenarios
             .single()
@@ -221,4 +222,6 @@ class ReportTextTest {
         assertNull(message.data)
         assertEquals("plain text body", shell.payloads["s1/m1"])
     }
+
+    private fun withScenario(changed: ScenarioJson): ReportJson = report.toBuilder().scenarios(listOf(changed)).build()
 }

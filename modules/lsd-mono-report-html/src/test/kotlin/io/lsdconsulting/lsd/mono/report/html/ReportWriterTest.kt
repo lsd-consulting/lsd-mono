@@ -211,25 +211,24 @@ class ReportWriterTest {
             .replace("\": ", "\":")
 
     private fun report(title: String, scenarioCount: Int = 0, failing: Int = 0): ReportJson =
-        ReportJson(
-            title = title,
-            generatedAt = "2026-10-09T08:00:00Z",
-            generator = "test",
-            status = if (failing > 0) StatusJson.ERROR else StatusJson.SUCCESS,
-            options = ReportOptionsJson(metricsEnabled = false, labelMaxWidth = 200),
-            scenarios =
+        ReportJson
+            .builder(
+                title = title,
+                generatedAt = "2026-10-09T08:00:00Z",
+                generator = "test",
+                status = if (failing > 0) StatusJson.ERROR else StatusJson.SUCCESS,
+            ).options(
+                ReportOptionsJson
+                    .builder()
+                    .metricsEnabled(false)
+                    .labelMaxWidth(200)
+                    .build(),
+            ).scenarios(
                 List(scenarioCount) { n ->
-                    ScenarioJson(
-                        id = "s$n",
-                        title = "scenario $n",
-                        status = if (n < failing) StatusJson.ERROR else StatusJson.SUCCESS,
-                        description = "d".repeat(200),
-                        facts = emptyList(),
-                        error = null,
-                        metrics = emptyList(),
-                        participants = emptyList(),
-                        events = emptyList(),
-                    )
+                    ScenarioJson
+                        .builder(id = "s$n", title = "scenario $n", status = if (n < failing) StatusJson.ERROR else StatusJson.SUCCESS)
+                        .description("d".repeat(200))
+                        .build()
                 },
-        )
+            ).build()
 }

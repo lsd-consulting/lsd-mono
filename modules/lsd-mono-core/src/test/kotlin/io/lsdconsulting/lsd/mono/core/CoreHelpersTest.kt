@@ -40,6 +40,6 @@ class CoreHelpersTest {
         assertEquals(200, LsdProperties.labelMaxWidth())
         // One default everywhere: the property, the options and the JSON; the report UI checks it too (#111).
         assertEquals(ReportOptions.DEFAULT_LABEL_MAX_WIDTH, LsdProperties.labelMaxWidth())
-        assertEquals(ReportOptions.DEFAULT_LABEL_MAX_WIDTH, ReportOptionsJson().labelMaxWidth)
+        assertEquals(ReportOptions.DEFAULT_LABEL_MAX_WIDTH, ReportOptionsJson.builder().build().labelMaxWidth)
     }
 }

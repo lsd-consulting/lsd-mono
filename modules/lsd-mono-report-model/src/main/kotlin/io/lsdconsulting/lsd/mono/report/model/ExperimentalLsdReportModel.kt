@@ -2,10 +2,10 @@ package io.lsdconsulting.lsd.mono.report.model
 
 /**
  * Marks lsd-mono-report-model's types, and lsd-mono-report-html's writer API that takes them, as
- * experimental: they can change in any release, with no binary-compatibility promise. Their shape
- * changes before 1.0: the wide data classes are to become classes with a builder, so that the
- * schema's added fields stop breaking callers
- * (https://github.com/lsd-consulting/lsd-mono/issues/118).
+ * experimental: they can change in any release, with no binary-compatibility promise. The wide
+ * classes are made with builders, so that the schema's added fields stop breaking callers
+ * (https://github.com/lsd-consulting/lsd-mono/issues/118); the marker stays until that shape has
+ * been used for a release or two.
  *
  * A Kotlin caller opts in where it uses them, with `@OptIn(ExperimentalLsdReportModel::class)`, or
  * once per module with the compiler option

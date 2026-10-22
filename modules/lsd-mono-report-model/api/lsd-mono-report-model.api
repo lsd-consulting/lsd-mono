@@ -49,35 +49,46 @@ public final class io/lsdconsulting/lsd/mono/report/model/ClockOrderingJson : ja
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/DelayEventJson : io/lsdconsulting/lsd/mono/report/model/EventJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson$Companion;
+	public static final fun builder (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getId ()Ljava/lang/String;
 	public final fun getLabel ()Ljava/lang/String;
 	public fun getStartedAt ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson$Builder;
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lsdconsulting/lsd/mono/report/model/DelayEventJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson;
+	public final fun label (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson$Builder;
+	public final fun startedAt (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/DelayEventJson$Companion {
+	public final fun builder (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DelayEventJson$Builder;
+}
+
 public final class io/lsdconsulting/lsd/mono/report/model/DividerEventJson : io/lsdconsulting/lsd/mono/report/model/EventJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getId ()Ljava/lang/String;
 	public final fun getLabel ()Ljava/lang/String;
 	public fun getStartedAt ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/DividerEventJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson;
+	public final fun startedAt (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/DividerEventJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/DividerEventJson$Builder;
 }
 
 public abstract class io/lsdconsulting/lsd/mono/report/model/EventJson {
@@ -176,15 +187,8 @@ public final class io/lsdconsulting/lsd/mono/report/model/KnownWarningKind {
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/LifelineEventJson : io/lsdconsulting/lsd/mono/report/model/EventJson {
-	public fun <init> (Lio/lsdconsulting/lsd/mono/report/model/LifelineKindJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Lio/lsdconsulting/lsd/mono/report/model/LifelineKindJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Lio/lsdconsulting/lsd/mono/report/model/LifelineKindJson;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()Ljava/lang/String;
-	public final fun component5 ()Ljava/lang/String;
-	public final fun copy (Lio/lsdconsulting/lsd/mono/report/model/LifelineKindJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson;Lio/lsdconsulting/lsd/mono/report/model/LifelineKindJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson$Companion;
+	public static final fun builder (Lio/lsdconsulting/lsd/mono/report/model/LifelineKindJson;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getColour ()Ljava/lang/String;
 	public fun getId ()Ljava/lang/String;
@@ -192,7 +196,18 @@ public final class io/lsdconsulting/lsd/mono/report/model/LifelineEventJson : io
 	public final fun getParticipantId ()Ljava/lang/String;
 	public fun getStartedAt ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/LifelineEventJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson;
+	public final fun colour (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson$Builder;
+	public final fun startedAt (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/LifelineEventJson$Companion {
+	public final fun builder (Lio/lsdconsulting/lsd/mono/report/model/LifelineKindJson;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/LifelineEventJson$Builder;
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/LifelineKindJson : java/lang/Enum {
@@ -205,35 +220,8 @@ public final class io/lsdconsulting/lsd/mono/report/model/LifelineKindJson : jav
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/MessageEventJson : io/lsdconsulting/lsd/mono/report/model/EventJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/TraceJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/TraceJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component10 ()Ljava/lang/String;
-	public final fun component11 ()Ljava/lang/Long;
-	public final fun component12 ()Ljava/lang/String;
-	public final fun component13 ()Ljava/lang/String;
-	public final fun component14 ()Ljava/lang/String;
-	public final fun component15 ()Lio/lsdconsulting/lsd/mono/report/model/TraceJson;
-	public final fun component16 ()Ljava/lang/String;
-	public final fun component17 ()Ljava/lang/String;
-	public final fun component18 ()Ljava/lang/String;
-	public final fun component19 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component20 ()Ljava/lang/String;
-	public final fun component21 ()Ljava/lang/String;
-	public final fun component22 ()Ljava/lang/String;
-	public final fun component23 ()Ljava/lang/String;
-	public final fun component24 ()Ljava/util/Map;
-	public final fun component25 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()Ljava/lang/String;
-	public final fun component5 ()Ljava/lang/String;
-	public final fun component6 ()Ljava/lang/String;
-	public final fun component7 ()Ljava/lang/Double;
-	public final fun component8 ()Ljava/lang/Object;
-	public final fun component9 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/TraceJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/TraceJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAttributes ()Ljava/util/Map;
 	public final fun getCallId ()Ljava/lang/String;
@@ -261,7 +249,42 @@ public final class io/lsdconsulting/lsd/mono/report/model/MessageEventJson : io/
 	public final fun getTrace ()Lio/lsdconsulting/lsd/mono/report/model/TraceJson;
 	public final fun getType ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder {
+	public final fun attribute (Ljava/lang/String;D)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun attribute (Ljava/lang/String;I)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun attribute (Ljava/lang/String;J)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun attribute (Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/AttributeValueJson;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun attribute (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun attribute (Ljava/lang/String;Z)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun attributes (Ljava/util/Map;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson;
+	public final fun callId (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun capturedAt (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun causedBy (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun colour (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun data (Ljava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun durationMs (Ljava/lang/Double;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun order (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun origin (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun pairing (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun parentId (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun payloadId (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun replyOf (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun replyTo (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun seq (Ljava/lang/Long;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun source (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun startedAt (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun status (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun timing (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+	public final fun trace (Lio/lsdconsulting/lsd/mono/report/model/TraceJson;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/MessageEventJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/MessageEventJson$Builder;
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/MetricJson {
@@ -278,15 +301,8 @@ public final class io/lsdconsulting/lsd/mono/report/model/MetricJson {
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/NoteEventJson : io/lsdconsulting/lsd/mono/report/model/EventJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/NotePlacementJson;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/NotePlacementJson;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()Lio/lsdconsulting/lsd/mono/report/model/NotePlacementJson;
-	public final fun component5 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/NotePlacementJson;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/NotePlacementJson;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getId ()Ljava/lang/String;
 	public final fun getOver ()Ljava/lang/String;
@@ -294,7 +310,19 @@ public final class io/lsdconsulting/lsd/mono/report/model/NoteEventJson : io/lsd
 	public fun getStartedAt ()Ljava/lang/String;
 	public final fun getText ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/NoteEventJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson;
+	public final fun over (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson$Builder;
+	public final fun placement (Lio/lsdconsulting/lsd/mono/report/model/NotePlacementJson;)Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson$Builder;
+	public final fun startedAt (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/NoteEventJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/NoteEventJson$Builder;
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/NotePlacementJson : java/lang/Enum {
@@ -323,15 +351,8 @@ public final class io/lsdconsulting/lsd/mono/report/model/PairAccuracyJson {
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/ParticipantJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()Ljava/lang/String;
-	public final fun component5 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAlias ()Ljava/lang/String;
 	public final fun getColour ()Ljava/lang/String;
@@ -339,20 +360,24 @@ public final class io/lsdconsulting/lsd/mono/report/model/ParticipantJson {
 	public final fun getName ()Ljava/lang/String;
 	public final fun getType ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson$Builder;
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lsdconsulting/lsd/mono/report/model/ParticipantJson$Builder {
+	public final fun alias (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson$Builder;
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson;
+	public final fun colour (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson$Builder;
+	public final fun type (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/ParticipantJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson$Builder;
+}
+
 public final class io/lsdconsulting/lsd/mono/report/model/ReportJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()Lio/lsdconsulting/lsd/mono/report/model/StatusJson;
-	public final fun component5 ()Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;
-	public final fun component6 ()Ljava/util/List;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ReportJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;Ljava/util/List;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/ReportJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/ReportJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;)Lio/lsdconsulting/lsd/mono/report/model/ReportJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getGeneratedAt ()Ljava/lang/String;
 	public final fun getGenerator ()Ljava/lang/String;
@@ -361,26 +386,44 @@ public final class io/lsdconsulting/lsd/mono/report/model/ReportJson {
 	public final fun getStatus ()Lio/lsdconsulting/lsd/mono/report/model/StatusJson;
 	public final fun getTitle ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/ReportJson$Builder;
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lsdconsulting/lsd/mono/report/model/ReportJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/ReportJson;
+	public final fun options (Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;)Lio/lsdconsulting/lsd/mono/report/model/ReportJson$Builder;
+	public final fun scenario (Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson;)Lio/lsdconsulting/lsd/mono/report/model/ReportJson$Builder;
+	public final fun scenarios (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ReportJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/ReportJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;)Lio/lsdconsulting/lsd/mono/report/model/ReportJson$Builder;
+}
+
 public final class io/lsdconsulting/lsd/mono/report/model/ReportOptionsJson {
-	public fun <init> ()V
-	public fun <init> (ZIZLjava/lang/String;)V
-	public synthetic fun <init> (ZIZLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Z
-	public final fun component2 ()I
-	public final fun component3 ()Z
-	public final fun component4 ()Ljava/lang/String;
-	public final fun copy (ZIZLjava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;ZIZLjava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Companion;
+	public static final fun builder ()Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getLabelMaxWidth ()I
 	public final fun getMetricsEnabled ()Z
 	public final fun getSource ()Ljava/lang/String;
 	public final fun getUsagePing ()Z
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson;
+	public final fun labelMaxWidth (I)Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Builder;
+	public final fun metricsEnabled (Z)Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Builder;
+	public final fun source (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Builder;
+	public final fun usagePing (Z)Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Companion {
+	public final fun builder ()Lio/lsdconsulting/lsd/mono/report/model/ReportOptionsJson$Builder;
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/ReportSchema {
@@ -389,45 +432,29 @@ public final class io/lsdconsulting/lsd/mono/report/model/ReportSchema {
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getHeadline ()Ljava/lang/String;
 	public final fun getMessage ()Ljava/lang/String;
 	public final fun getStack ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson$Builder;
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;
+	public final fun stack (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson$Builder;
+}
+
 public final class io/lsdconsulting/lsd/mono/report/model/ScenarioJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;Lio/lsdconsulting/lsd/mono/report/model/AccuracyJson;Ljava/lang/Double;Ljava/lang/Double;Ljava/util/List;Ljava/lang/Double;Lio/lsdconsulting/lsd/mono/report/model/ClockOrderingJson;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;Lio/lsdconsulting/lsd/mono/report/model/AccuracyJson;Ljava/lang/Double;Ljava/lang/Double;Ljava/util/List;Ljava/lang/Double;Lio/lsdconsulting/lsd/mono/report/model/ClockOrderingJson;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component10 ()Lio/lsdconsulting/lsd/mono/report/model/AccuracyJson;
-	public final fun component11 ()Ljava/lang/Double;
-	public final fun component12 ()Ljava/lang/Double;
-	public final fun component13 ()Ljava/util/List;
-	public final fun component14 ()Ljava/lang/Double;
-	public final fun component15 ()Lio/lsdconsulting/lsd/mono/report/model/ClockOrderingJson;
-	public final fun component16 ()Ljava/lang/Integer;
-	public final fun component17 ()Ljava/util/List;
-	public final fun component18 ()Ljava/util/List;
-	public final fun component19 ()Ljava/util/List;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Lio/lsdconsulting/lsd/mono/report/model/StatusJson;
-	public final fun component4 ()Ljava/lang/String;
-	public final fun component5 ()Ljava/util/List;
-	public final fun component6 ()Ljava/util/List;
-	public final fun component7 ()Ljava/util/List;
-	public final fun component8 ()Ljava/util/List;
-	public final fun component9 ()Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;Lio/lsdconsulting/lsd/mono/report/model/AccuracyJson;Ljava/lang/Double;Ljava/lang/Double;Ljava/util/List;Ljava/lang/Double;Lio/lsdconsulting/lsd/mono/report/model/ClockOrderingJson;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson;Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;Lio/lsdconsulting/lsd/mono/report/model/AccuracyJson;Ljava/lang/Double;Ljava/lang/Double;Ljava/util/List;Ljava/lang/Double;Lio/lsdconsulting/lsd/mono/report/model/ClockOrderingJson;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAccuracy ()Lio/lsdconsulting/lsd/mono/report/model/AccuracyJson;
 	public final fun getClockOrdered ()Ljava/lang/Integer;
@@ -449,39 +476,80 @@ public final class io/lsdconsulting/lsd/mono/report/model/ScenarioJson {
 	public final fun getWallClockMs ()Ljava/lang/Double;
 	public final fun getWarnings ()Ljava/util/List;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder {
+	public final fun accuracy (Lio/lsdconsulting/lsd/mono/report/model/AccuracyJson;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson;
+	public final fun clockOrdered (Ljava/lang/Integer;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun clockOrdering (Lio/lsdconsulting/lsd/mono/report/model/ClockOrderingJson;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun description (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun error (Lio/lsdconsulting/lsd/mono/report/model/ScenarioErrorJson;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun event (Lio/lsdconsulting/lsd/mono/report/model/EventJson;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun events (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun fact (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun facts (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun measuredCoverage (Ljava/lang/Double;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun metric (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun metrics (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun pairAccuracy (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun pairingCoverage (Ljava/lang/Double;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun participant (Lio/lsdconsulting/lsd/mono/report/model/ParticipantJson;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun participants (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun reorderedByClock (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun sources (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun wallClockMs (Ljava/lang/Double;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun warning (Lio/lsdconsulting/lsd/mono/report/model/WarningJson;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+	public final fun warnings (Ljava/util/List;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/ScenarioJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;Lio/lsdconsulting/lsd/mono/report/model/StatusJson;)Lio/lsdconsulting/lsd/mono/report/model/ScenarioJson$Builder;
+}
+
 public final class io/lsdconsulting/lsd/mono/report/model/SectionEventJson : io/lsdconsulting/lsd/mono/report/model/EventJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getId ()Ljava/lang/String;
 	public fun getStartedAt ()Ljava/lang/String;
 	public final fun getTitle ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson$Builder;
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lsdconsulting/lsd/mono/report/model/SectionEventJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson;
+	public final fun startedAt (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/SectionEventJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/SectionEventJson$Builder;
+}
+
 public final class io/lsdconsulting/lsd/mono/report/model/SpacerEventJson : io/lsdconsulting/lsd/mono/report/model/EventJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/Integer;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson;
-	public static synthetic fun copy$default (Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson;
+	public static final field Companion Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson$Companion;
+	public static final fun builder (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getHeightPx ()Ljava/lang/Integer;
 	public fun getId ()Ljava/lang/String;
 	public fun getStartedAt ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/SpacerEventJson$Builder {
+	public final fun build ()Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson;
+	public final fun heightPx (Ljava/lang/Integer;)Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson$Builder;
+	public final fun startedAt (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson$Builder;
+}
+
+public final class io/lsdconsulting/lsd/mono/report/model/SpacerEventJson$Companion {
+	public final fun builder (Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/model/SpacerEventJson$Builder;
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/StatusJson : java/lang/Enum {
@@ -495,7 +563,10 @@ public final class io/lsdconsulting/lsd/mono/report/model/StatusJson : java/lang
 }
 
 public final class io/lsdconsulting/lsd/mono/report/model/TraceJson {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;

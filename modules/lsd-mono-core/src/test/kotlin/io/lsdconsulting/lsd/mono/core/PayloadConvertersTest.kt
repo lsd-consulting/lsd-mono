@@ -35,23 +35,14 @@ class PayloadConvertersTest {
     /** A report whose one message carries [data], as the writer writes `<stem>-report.json`. */
     private fun render(data: Any?): String =
         ReportWriter.toJson(
-            ReportJson(
-                title = "data",
-                generatedAt = "2026-10-21T08:00:00Z",
-                generator = "test",
-                status = StatusJson.SUCCESS,
-                scenarios =
-                    listOf(
-                        ScenarioJson(
-                            id = "s",
-                            title = "s",
-                            status = StatusJson.SUCCESS,
-                            description = "",
-                            facts = emptyList(),
-                            events = listOf(MessageEventJson(id = "m", from = "a", to = "b", label = "m", type = "SYNCHRONOUS", data = data)),
-                        ),
-                    ),
-            ),
+            ReportJson
+                .builder(title = "data", generatedAt = "2026-10-21T08:00:00Z", generator = "test", status = StatusJson.SUCCESS)
+                .scenario(
+                    ScenarioJson
+                        .builder(id = "s", title = "s", status = StatusJson.SUCCESS)
+                        .event(MessageEventJson.builder(id = "m", from = "a", to = "b", label = "m", type = "SYNCHRONOUS").data(data).build())
+                        .build(),
+                ).build(),
         )
 
     enum class Colour { RED, GREEN }

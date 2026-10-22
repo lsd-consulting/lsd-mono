@@ -11,8 +11,36 @@ classes and writes it with lsd-mono-report-html.
 
 | | |
 | --- | --- |
-| **Is** | The report's data classes, in `io.lsdconsulting.lsd.mono.report.model` |
+| **Is** | The report's values and their builders, in `io.lsdconsulting.lsd.mono.report.model` |
 | **Is not** | JSON text, files or the page: lsd-mono-report-html writes those |
+
+The values that grow with the schema (`ReportJson`, `ReportOptionsJson`, `ScenarioJson`,
+`ScenarioErrorJson`, `ParticipantJson` and every event class) are plain classes made with a
+builder: `builder(…)` takes what the schema requires, each optional field has a setter, and
+`toBuilder()` makes a changed copy. A newer release adds setters, which breaks no caller, Kotlin or
+Java. The small fixed values (`FactJson`, `MetricJson`, `TraceJson`, `WarningJson`,
+`PairAccuracyJson`) are data classes; `AttributeValueJson` is made with `of(…)`.
+
+```kotlin
+val report =
+    ReportJson
+        .builder(title = "Checkout", generatedAt = "2026-10-21T08:00:00Z", generator = "my-adapter 1.0", status = StatusJson.SUCCESS)
+        .scenario(
+            ScenarioJson
+                .builder(id = "pay", title = "Pay", status = StatusJson.SUCCESS)
+                .participant(ParticipantJson.builder("shop", "Shop").type(KnownParticipantType.ACTOR).build())
+                .participant(ParticipantJson.builder("payments", "Payments").build())
+                .event(
+                    MessageEventJson
+                        .builder("m1", "shop", "payments", "POST /payments", KnownMessageType.SYNCHRONOUS)
+                        .durationMs(12.5)
+                        .attribute("http.route", "/payments")
+                        .build(),
+                ).build(),
+        ).build()
+```
+
+Java uses the same calls (`ReportJson.builder(…)…build()`).
 
 The model follows the schema's shape: the scenario's timing summary (`accuracy`, `sources`,
 `clockOrdering` and the rest) is flat on `ScenarioJson`, as in the schema. Enum-like values follow
@@ -46,16 +74,15 @@ Every type here is marked `@ExperimentalLsdReportModel`, a `RequiresOptIn` marke
 
 There is no binary-compatibility promise until the marker goes:
 
-- The classes are data classes, and the schema's minor versions add fields. Each added field changes
-  a class's constructor, `copy` and `componentN` functions, so code compiled against one release can
-  fail with `NoSuchMethodError` against the next.
+- The builders ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)) are the shape meant
+  for 1.0: adding a field adds a setter, and changes no constructor, `copy` or `componentN` function
+  a caller compiled against. The marker stays until that shape has been used for a release or two.
 - **Java callers don't see opt-in markers.** Java compiles against these classes with no warning, so
   this note is the only one a Java caller gets.
-- The shape will change before 1.0: the wide classes are to become plain classes with a builder,
-  and the small fixed values stay data classes
-  ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)). The trace and timing fields are
-  settled: `TraceJson` is frozen at its three ids, and OpenTelemetry's other span data arrives as a
-  message's `attributes` (see the schema's [OpenTelemetry](../lsd-mono-report-schema/README.md#opentelemetry)).
+- The trace and timing fields are settled: `TraceJson` is frozen at its three ids, and
+  OpenTelemetry's other span data arrives as a message's `attributes` (see the schema's
+  [OpenTelemetry](../lsd-mono-report-schema/README.md#opentelemetry)). A message's `data` is still
+  `Any?`; a JSON value type may replace it before the marker goes.
 
 The ABI dump (`api/lsd-mono-report-model.api`) is kept, so that every change shows in review.
 

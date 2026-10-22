@@ -211,9 +211,8 @@ internal fun EventJson.toJsonValue(): JsonValue =
                     order?.let { add("order" to JsonString(it)) }
                     parentId?.let { add("parentId" to JsonString(it)) }
                     replyOf?.let { add("replyOf" to JsonString(it)) }
-                    // The schema has no empty key; one is left out.
-                    val named = attributes.filterKeys { it.isNotEmpty() }
-                    if (named.isNotEmpty()) add("attributes" to obj(named.map { (key, value) -> key to value.toJsonValue() }))
+                    // The builder takes no empty key, as the schema has none.
+                    if (attributes.isNotEmpty()) add("attributes" to obj(attributes.map { (key, value) -> key to value.toJsonValue() }))
                     origin?.let { add("origin" to JsonString(it)) }
                 },
             )
@@ -300,20 +299,21 @@ private fun attributeJson(value: Any?): JsonValue =
 internal fun ReportJson.forShell(): ShellReport {
     val payloads = linkedMapOf<String, Any?>()
     val light =
-        copy(
-            scenarios =
+        toBuilder()
+            .scenarios(
                 scenarios.map { scenario ->
-                    scenario.copy(
-                        events =
+                    scenario
+                        .toBuilder()
+                        .events(
                             scenario.events.map { event ->
                                 if (event !is MessageEventJson)
                                     event
                                 else
                                     splitMessageForShell(scenario.id, event, payloads)
                             },
-                    )
+                        ).build()
                 },
-        )
+            ).build()
     return ShellReport(light, payloads)
 }
 
@@ -332,7 +332,11 @@ private fun splitMessageForShell(
     if (!split.defer) return event
     val id = "$scenarioId/${event.id}"
     payloads[id] = data
-    return event.copy(data = split.summary, payloadId = id)
+    return event
+        .toBuilder()
+        .data(split.summary)
+        .payloadId(id)
+        .build()
 }
 
 private data class PayloadSplit(val summary: Map<String, Any?>?, val defer: Boolean)

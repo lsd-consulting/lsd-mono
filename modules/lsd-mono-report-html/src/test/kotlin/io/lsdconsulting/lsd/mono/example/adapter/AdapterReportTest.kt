@@ -5,14 +5,13 @@ import io.lsdconsulting.lsd.mono.report.html.ReportWriterSettings
 import io.lsdconsulting.lsd.mono.report.model.AccuracyJson
 import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
-import io.lsdconsulting.lsd.mono.report.model.FactJson
+import io.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
 import io.lsdconsulting.lsd.mono.report.model.KnownMessageType
 import io.lsdconsulting.lsd.mono.report.model.KnownParticipantType
 import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import io.lsdconsulting.lsd.mono.report.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.report.model.LifelineKindJson
 import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
-import io.lsdconsulting.lsd.mono.report.model.MetricJson
 import io.lsdconsulting.lsd.mono.report.model.NoteEventJson
 import io.lsdconsulting.lsd.mono.report.model.ParticipantJson
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
@@ -21,6 +20,7 @@ import io.lsdconsulting.lsd.mono.report.model.ReportSchema
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.report.model.StatusJson
+import io.lsdconsulting.lsd.mono.report.model.TraceJson
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -74,76 +74,71 @@ class AdapterReportTest {
 
     /** What lsd-mono-core writes for one empty scenario, built here without it. */
     private fun minimal() =
-        ReportJson(
-            title = "Minimal",
-            generatedAt = GENERATED_AT,
-            generator = "lsd-mono-core (conformance)",
-            status = StatusJson.SUCCESS,
-            options = ReportOptionsJson(usagePing = false),
-            scenarios =
-                listOf(
-                    ScenarioJson(
-                        id = "1",
-                        title = "Minimal",
-                        status = StatusJson.SUCCESS,
-                        description = "",
-                        facts = emptyList(),
-                        metrics = listOf(MetricJson("Messages", "0")),
-                        // The timing summary core writes when nothing was timed.
-                        accuracy = AccuracyJson.STRUCTURE_ONLY,
-                        sources = emptyList(),
-                        clockOrdering = ClockOrderingJson.SAME_SOURCE,
-                        clockOrdered = 0,
-                    ),
-                ),
-        )
+        ReportJson
+            .builder(title = "Minimal", generatedAt = GENERATED_AT, generator = "lsd-mono-core (conformance)", status = StatusJson.SUCCESS)
+            .options(ReportOptionsJson.builder().usagePing(false).build())
+            .scenario(
+                ScenarioJson
+                    .builder(id = "1", title = "Minimal", status = StatusJson.SUCCESS)
+                    .metric("Messages", "0")
+                    // The timing summary core writes when nothing was timed.
+                    .accuracy(AccuracyJson.STRUCTURE_ONLY)
+                    .sources(emptyList())
+                    .clockOrdering(ClockOrderingJson.SAME_SOURCE)
+                    .clockOrdered(0)
+                    .build(),
+            ).build()
 
-    /** A report as an adapter for another framework might build it: two services and an exchange. */
+    /** A report as an adapter for another framework might build it: two services and an exchange, one call imported from spans. */
     private fun checkout() =
-        ReportJson(
-            title = "Checkout",
-            generatedAt = GENERATED_AT,
-            generator = "example-adapter 1.0",
-            status = StatusJson.ERROR,
-            options = ReportOptionsJson(usagePing = false, source = KnownReportSource.API),
-            scenarios =
-                listOf(
-                    ScenarioJson(
-                        id = "checkout-1",
-                        title = "Place an order",
-                        status = StatusJson.SUCCESS,
-                        description = "The shop places an order with the payments service.",
-                        facts = listOf(FactJson("orderId", "A-17")),
-                        participants =
-                            listOf(
-                                ParticipantJson("shop", "Shop", type = KnownParticipantType.ACTOR),
-                                ParticipantJson("payments", "Payments", type = "CONTROL", colour = "#3b82f6"),
-                            ),
-                        events =
-                            listOf(
-                                SectionEventJson("s1", "Pay"),
-                                MessageEventJson("m1", "shop", "payments", "POST /payments", KnownMessageType.SYNCHRONOUS, data = mapOf("amount" to 12.5)),
-                                LifelineEventJson(LifelineKindJson.ACTIVATE, "a1", "payments"),
-                                NoteEventJson("n1", "checks the card", over = "payments"),
-                                LifelineEventJson(LifelineKindJson.DEACTIVATE, "a2", "payments"),
-                                MessageEventJson("m2", "payments", "shop", "201 Created", KnownMessageType.SYNCHRONOUS_RESPONSE, status = "201"),
-                                DividerEventJson("d1", "done"),
-                            ),
-                        // The timing summary core writes when nothing was timed.
-                        accuracy = AccuracyJson.STRUCTURE_ONLY,
-                        sources = emptyList(),
-                        clockOrdering = ClockOrderingJson.SAME_SOURCE,
-                        clockOrdered = 0,
-                    ),
-                    ScenarioJson(
-                        id = "checkout-2",
-                        title = "Card declined",
-                        status = StatusJson.ERROR,
-                        description = "",
-                        facts = emptyList(),
-                    ),
-                ),
-        )
+        ReportJson
+            .builder(title = "Checkout", generatedAt = GENERATED_AT, generator = "example-adapter 1.0", status = StatusJson.ERROR)
+            .options(
+                ReportOptionsJson
+                    .builder()
+                    .usagePing(false)
+                    .source(KnownReportSource.API)
+                    .build(),
+            ).scenario(
+                ScenarioJson
+                    .builder(id = "checkout-1", title = "Place an order", status = StatusJson.SUCCESS)
+                    .description("The shop places an order with the payments service.")
+                    .fact("orderId", "A-17")
+                    .participant(ParticipantJson.builder("shop", "Shop").type(KnownParticipantType.ACTOR).build())
+                    .participant(
+                        ParticipantJson
+                            .builder("payments", "Payments")
+                            .type("CONTROL")
+                            .colour("#3b82f6")
+                            .build(),
+                    ).event(SectionEventJson.builder("s1", "Pay").build())
+                    .event(
+                        MessageEventJson
+                            .builder("m1", "shop", "payments", "POST /payments", KnownMessageType.SYNCHRONOUS)
+                            .data(mapOf("amount" to 12.5))
+                            .trace(TraceJson("4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7"))
+                            .attribute("http.request.method", "POST")
+                            .attribute("http.route", "/payments")
+                            .origin(KnownMessageOrigin.IMPORTED)
+                            .build(),
+                    ).event(LifelineEventJson.builder(LifelineKindJson.ACTIVATE, "a1", "payments").build())
+                    .event(NoteEventJson.builder("n1", "checks the card").over("payments").build())
+                    .event(LifelineEventJson.builder(LifelineKindJson.DEACTIVATE, "a2", "payments").build())
+                    .event(
+                        MessageEventJson
+                            .builder("m2", "payments", "shop", "201 Created", KnownMessageType.SYNCHRONOUS_RESPONSE)
+                            .status("201")
+                            .attribute("http.response.status_code", 201)
+                            .build(),
+                    ).event(DividerEventJson.builder("d1", "done").build())
+                    // The timing summary core writes when nothing was timed.
+                    .accuracy(AccuracyJson.STRUCTURE_ONLY)
+                    .sources(emptyList())
+                    .clockOrdering(ClockOrderingJson.SAME_SOURCE)
+                    .clockOrdered(0)
+                    .build(),
+            ).scenario(ScenarioJson.builder(id = "checkout-2", title = "Card declined", status = StatusJson.ERROR).build())
+            .build()
 
     private companion object {
         const val GENERATED_AT = "2026-01-01T12:00:00Z"
