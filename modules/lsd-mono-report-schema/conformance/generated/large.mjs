@@ -41,7 +41,7 @@ export function largeReport({ participants = 100, messages = 400 } = {}) {
     }
   }
   return {
-    schemaVersion: '0.1.0',
+    schemaVersion: '0.2.0',
     title: `Large: ${participants} participants, ${messages} messages`,
     generatedAt: '2026-01-01T12:00:00Z',
     generator: 'conformance/generated/large.mjs',

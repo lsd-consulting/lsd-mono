@@ -142,6 +142,19 @@ public object KnownWarningKind {
     public val ALL: List<String> = listOf(REPLY_WITHOUT_CALL, DURATION_ON_REPLY_DROPPED, LONGER_THAN_PARENT, DUPLICATE_SPAN, SKEW)
 }
 
+/** The schema's `KnownMessageOrigin`: where a [MessageEventJson] came from. The schema allows others. */
+@ExperimentalLsdReportModel
+public object KnownMessageOrigin {
+    /** Recorded by the producer while the test ran, as lsd-mono-core does. A message with no origin is one. */
+    public const val CAPTURED: String = "captured"
+
+    /** Built afterwards from another record, such as OpenTelemetry spans. */
+    public const val IMPORTED: String = "imported"
+
+    /** Every known origin. */
+    public val ALL: List<String> = listOf(CAPTURED, IMPORTED)
+}
+
 /** The schema's `KnownReportSource`: the [ReportOptionsJson.source]s lsd-mono knows. The schema allows others. */
 @ExperimentalLsdReportModel
 public object KnownReportSource {

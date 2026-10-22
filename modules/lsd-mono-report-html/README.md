@@ -34,8 +34,8 @@ as every type of the model they take is ([lsd-mono-report-model](../lsd-mono-rep
 `-opt-in=io.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel`.
 
 There is no binary-compatibility promise until the marker goes. **Java callers don't see opt-in
-markers**, so for Java this note is the only warning. The model's shape will change before 1.0, once
-the OpenTelemetry alignment is decided, and the writer's signatures change with it
+markers**, so for Java this note is the only warning. The model's shape will change before 1.0, when
+its wide classes get builders, and the writer's signatures change with it
 ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)). lsd-mono-core's own API does not
 expose either module, so a test that uses lsd-mono-core, its JUnit or Cucumber integration is not
 affected.

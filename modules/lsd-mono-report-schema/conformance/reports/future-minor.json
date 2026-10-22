@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.2.0",
+  "schemaVersion": "0.3.0",
   "title": "A report from a newer minor version",
   "generatedAt": "2026-01-01T12:00:00Z",
   "generator": "hand-written",
@@ -59,9 +59,13 @@
           "to": "api",
           "label": "GET /orders",
           "type": "SYNCHRONOUS",
-          "attributes": {
-            "http.route": "/orders"
-          },
+          "origin": "replayed",
+          "links": [
+            {
+              "traceId": "0af7651916cd43dd8448eb211c80319c",
+              "spanId": "b7ad6b7169203331"
+            }
+          ],
           "otel": {
             "spanId": "00f067aa0ba902b7"
           }

@@ -72,9 +72,25 @@ public data class MessageEventJson(
     val parentId: String? = null,
     /** On a paired reply: the id of the call it answers. */
     val replyOf: String? = null,
+    /**
+     * Facts about the message by OpenTelemetry semantic convention name, such as `http.route`.
+     * Keys are not empty; `lsd.` keys are kept for lsd-mono's own. Written when there are any.
+     */
+    val attributes: Map<String, AttributeValueJson> = emptyMap(),
+    /**
+     * The schema's `MessageOrigin`: one of [KnownMessageOrigin.ALL], or another. Null means
+     * [KnownMessageOrigin.CAPTURED]: leave it null for a message the producer recorded itself.
+     */
+    val origin: String? = null,
 ) : EventJson()
 
-/** Trace ids on a message. */
+/**
+ * Trace context on a message: its trace, its span and the span it runs inside. Frozen at these
+ * three ids, so it stays a data class: anything more about a span (flags, state, kind, status) goes
+ * in [MessageEventJson.attributes]. W3C Trace Context and OpenTelemetry ids are lowercase hex, 32
+ * characters for [traceId] and 16 for the span ids; B3 ids, including a 64-bit [traceId], are
+ * written as they are too.
+ */
 @ExperimentalLsdReportModel
 public data class TraceJson(
     val traceId: String,

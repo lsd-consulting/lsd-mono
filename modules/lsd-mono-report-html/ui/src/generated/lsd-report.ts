@@ -2,7 +2,7 @@
 // Do not edit: change the schema, then run `npm run types:generate`.
 
 /** The schema version this UI's types follow, as reports write it in `schemaVersion`. */
-export const REPORT_SCHEMA_VERSION = '0.1.0'
+export const REPORT_SCHEMA_VERSION = '0.2.0'
 
 /**
  * A scenario's or report's outcome, in lower case.
@@ -130,13 +130,32 @@ export type KnownWarningKind =
  * via the `definition` "KnownReportSource".
  */
 export type KnownReportSource = 'junit' | 'cucumber' | 'api'
+/**
+ * This interface was referenced by `Report`'s JSON-Schema
+ * via the `definition` "KnownMessageOrigin".
+ */
+export type KnownMessageOrigin = 'captured' | 'imported'
+/**
+ * Where a message came from: captured, recorded by the producer while the test ran (as lsd-mono-core does), or imported, built afterwards from another record, such as OpenTelemetry spans from a file or a trace backend. Absent means captured. Not the same as source, the message's clock domain. Open: a newer producer may send a value not listed here. Readers show a value they do not know as it is.
+ *
+ * This interface was referenced by `Report`'s JSON-Schema
+ * via the `definition` "MessageOrigin".
+ */
+export type MessageOrigin = KnownMessageOrigin | (string & {})
+/**
+ * One attribute's value, as OpenTelemetry's are: a string, a boolean, a number, or a list of one of those.
+ *
+ * This interface was referenced by `Report`'s JSON-Schema
+ * via the `definition` "AttributeValue".
+ */
+export type AttributeValue = string | boolean | number | string[] | boolean[] | number[]
 
 /**
- * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-core as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version: 0.x minor versions only add. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.
+ * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-core as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.
  */
 export interface Report {
   /**
-   * The version of this schema the report follows: semver, apart from the lsd-mono version. 0.1.0 for this schema.
+   * The version of this schema the report follows: semver, apart from the lsd-mono version. 0.2.0 for this schema.
    */
   schemaVersion: string
   title: string
@@ -307,15 +326,33 @@ export interface PairAccuracy {
   accuracy: Accuracy
 }
 /**
- * Trace ids on a message.
+ * Trace context on a message, in OpenTelemetry's terms, and frozen at these three ids: no minor version adds to it, and anything more about the span (trace flags, trace state, span kind, status) goes in the message's attributes. Ids are as the producer received them; lsd-mono-core never invents them. W3C Trace Context and OpenTelemetry write lowercase hex, 32 characters for traceId and 16 for spanId and parentSpanId, and a producer should write them that way. B3 ids are accepted too, including a 16-character (64-bit) traceId, so no format is enforced.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "Trace".
  */
 export interface Trace {
+  /**
+   * The trace: 32 lowercase hex characters (W3C, OpenTelemetry), or 16 or 32 for B3.
+   */
   traceId: string
+  /**
+   * This message's span: 16 lowercase hex characters. A reply with its call's spanId is paired with it.
+   */
   spanId?: string
+  /**
+   * The span this one runs inside: 16 lowercase hex characters. Nests the message inside the call with that spanId.
+   */
   parentSpanId?: string
+}
+/**
+ * Facts about a message as named keys, such as its HTTP route or messaging destination. Keys use OpenTelemetry semantic convention names where there is one (http.request.method, http.route, http.response.status_code, url.full, messaging.destination.name, rpc.method, service.name), and keys starting lsd. are kept for lsd-mono's own. Keys are not empty. Absent, rather than empty, when there are none. Readers show or ignore them; no attribute changes how a message is drawn.
+ *
+ * This interface was referenced by `Report`'s JSON-Schema
+ * via the `definition` "Attributes".
+ */
+export interface Attributes {
+  [k: string]: AttributeValue | undefined
 }
 /**
  * A message between two participants. data is its payload: any JSON value, absent when it has none. In the diagram page's copy, when payloadId is set, only the payload's method, path and status (or nothing) stay in data.
@@ -386,6 +423,8 @@ export interface MessageEvent {
    * On a paired reply: id of the call it answers.
    */
   replyOf?: string
+  attributes?: Attributes
+  origin?: MessageOrigin
   /**
    * When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one.
    */

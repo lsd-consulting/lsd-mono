@@ -12,13 +12,14 @@ This is a plain directory, not a Gradle project or a published artifact (yet).
 
 ## Versions
 
-**Pre-1.0: the schema may change before 1.0.0.** How the format lines up with OpenTelemetry is
-still open, so it stays 0.x until that is decided.
+**Pre-1.0: the schema may change before 1.0.0.** It is frozen at 1.0.0 with lsd-mono 1.0.0. How
+it lines up with OpenTelemetry is decided ([below](#opentelemetry)): additively, with no
+OpenTelemetry dependency.
 
 - Every report and index has a required `schemaVersion`: the semver of the schema it follows,
-  apart from the lsd-mono version. This is `0.1.0`.
+  apart from the lsd-mono version. This is `0.2.0`.
 - The version is in each schema's `$id`
-  (`https://lsd-consulting.github.io/lsd-mono/schema/0.1.0/lsd-report.schema.json`). Nothing is
+  (`https://lsd-consulting.github.io/lsd-mono/schema/0.2.0/lsd-report.schema.json`). Nothing is
   published at that address yet; the `$id`s name the schemas and let the index schema refer to
   the report schema.
 - **A minor version only adds**, 0.x included: a new optional field, a new value of an open
@@ -28,6 +29,21 @@ still open, so it stays 0.x until that is decided.
   can trust a minor version.)
 - To change the format: edit the schema, raise the version in both `$id`s and in
   `ReportSchema.VERSION` (lsd-mono-report-model), and regenerate the UI's types (below).
+
+| Version | Change |
+|---------|--------|
+| `0.1.0` | The format as lsd-mono-core 0.7 wrote it. |
+| `0.2.0` | A message's optional `attributes` and `origin`; `Trace` frozen at three ids and its id forms written down. Only adds: a 0.1 report is a valid 0.2 report. |
+
+### The compatibility rule
+
+**Readers ignore fields they do not know, and a minor version only adds optional fields** (and
+values of open enums and event kinds), in 0.x and in 1.x alike. A field is never made required,
+renamed, removed or given a new type or meaning in a minor version; that takes a new major. The
+rule is the same as OpenTelemetry's own for OTLP ("receivers MUST ignore message fields with
+unknown names"), and the shared test reports prove it: `reports/future-minor.json` (schema
+`0.3.0`, with fields, enum values and an event kind this version does not know) is accepted by
+both validators and opened by the report UI.
 
 ### What a reader does
 
@@ -55,6 +71,35 @@ with a small notice that anything new in it is not shown. For a newer major vers
 page saying to upgrade lsd-mono instead of the report (on the index page, instead of that one
 report), and for a `schemaVersion` that is not a major.minor.patch version a page saying it cannot
 be opened. A report without `schemaVersion` is from before the schema and is shown as usual.
+
+## OpenTelemetry
+
+Decided before 1.0: the format stays LSD's own event model (calls and replies as separate arrows,
+notes, sections, dividers), not OpenTelemetry spans, and nothing here depends on OpenTelemetry.
+Importing spans (OTLP files, Jaeger or Tempo) is to be an optional module after 1.0
+([#96](https://github.com/lsd-consulting/lsd-mono/issues/96)). So that it can be added without a
+breaking change, 0.2.0 settles the parts OpenTelemetry touches:
+
+- **`trace` is frozen** at `traceId`, `spanId` and `parentSpanId`; no minor version adds to it.
+  W3C Trace Context and OpenTelemetry ids are lowercase hex (32 characters for the trace, 16 for a
+  span), and producers should write them so. B3 ids, a 16-character trace id among them, are
+  accepted too: no id format is enforced. Anything else about a span (flags, trace state, kind,
+  status) is an attribute.
+- **`attributes`**, optional on a message: named values (a string, boolean or number, or a list of
+  one of those, as OpenTelemetry's are). Keys use OpenTelemetry's semantic convention names where
+  there is one (`http.request.method`, `http.route`, `http.response.status_code`, `url.full`,
+  `messaging.destination.name`, `rpc.method`, `service.name`); keys starting `lsd.` are kept for
+  lsd-mono's own. No attribute changes how a message is drawn.
+- **`origin`**, optional on a message, an open enum: `captured` (recorded by the producer while the
+  test ran) or `imported` (built afterwards from another record, such as spans). Absent means
+  captured, so lsd-mono-core writes none. It is not `source`, which is the clock domain.
+- **Times stay as they are:** `startedAt` (RFC 3339, which can carry nanoseconds) and `durationMs`
+  (to the microsecond). An import loses precision below a microsecond, which a diagram does not
+  need.
+
+lsd-mono-core writes neither `attributes` nor `origin` yet, and the report UI does not show them
+yet: they are for producers that import, and for the import module. Span links, should they come,
+would be an optional `links` list on a message, not part of `trace`.
 
 ## Who uses it
 

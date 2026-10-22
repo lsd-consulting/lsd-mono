@@ -30,6 +30,13 @@ lsd-mono writes. The schema's events are open, so code that reads a report it di
 tolerate an unknown event kind rather than assume this list is complete. A message's `data` is
 `Any?` and should hold JSON values (null, strings, booleans, numbers, maps and lists); nothing checks
 it, and the writer writes anything else as its `toString()`.
+
+A message's `attributes` are typed: each value is an `AttributeValueJson`, made with
+`AttributeValueJson.of(…)` (a String, Boolean, Long, Int or finite Double) or `ofStrings`,
+`ofBooleans`, `ofLongs` or `ofDoubles` for a list, as OpenTelemetry's attribute values are. Its
+`origin` is `KnownMessageOrigin.IMPORTED` for a message built from another record, such as spans,
+and null for one the producer captured.
+
 ## Experimental: no binary-compatibility promise yet
 
 Every type here is marked `@ExperimentalLsdReportModel`, a `RequiresOptIn` marker at level ERROR
@@ -44,9 +51,11 @@ There is no binary-compatibility promise until the marker goes:
   fail with `NoSuchMethodError` against the next.
 - **Java callers don't see opt-in markers.** Java compiles against these classes with no warning, so
   this note is the only one a Java caller gets.
-- The shape will change before 1.0, once the OpenTelemetry alignment is decided: the wide classes
-  are to become plain classes with a builder, and the small fixed values stay data classes
-  ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)).
+- The shape will change before 1.0: the wide classes are to become plain classes with a builder,
+  and the small fixed values stay data classes
+  ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)). The trace and timing fields are
+  settled: `TraceJson` is frozen at its three ids, and OpenTelemetry's other span data arrives as a
+  message's `attributes` (see the schema's [OpenTelemetry](../lsd-mono-report-schema/README.md#opentelemetry)).
 
 The ABI dump (`api/lsd-mono-report-model.api`) is kept, so that every change shows in review.
 

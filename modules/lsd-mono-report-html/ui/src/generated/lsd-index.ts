@@ -11,7 +11,7 @@ export type Status = 'success' | 'warn' | 'error'
  */
 export interface IndexManifest {
   /**
-   * The version of the schema the manifest follows; the same as the reports'. 0.1.0 for this schema.
+   * The version of the schema the manifest follows; the same as the reports'. 0.2.0 for this schema.
    */
   schemaVersion: string
   /**

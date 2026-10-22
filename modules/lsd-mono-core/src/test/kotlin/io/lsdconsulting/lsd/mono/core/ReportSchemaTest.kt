@@ -15,6 +15,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.WarningKind
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
+import io.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
 import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import io.lsdconsulting.lsd.mono.report.model.ReportSchema
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
@@ -86,6 +87,10 @@ class ReportSchemaTest {
             "ids are not empty" to edit(json) { scenario(this).put("id", "") },
             "participant names are not empty" to edit(json) { participant(this).put("name", "") },
             "a known event kind keeps its shape" to edit(json) { event(this).remove("from") },
+            "an attribute value is a string, boolean, number or a list of one" to edit(json) {
+                event(this).putObject("attributes").putObject("http.request").put("method", "GET")
+            },
+            "an attribute key is not empty" to edit(json) { event(this).putObject("attributes").put("", "x") },
         )
         rejected.forEach { (rule, edited) -> assertTrue(errors(report, edited).isNotEmpty(), rule) }
         val accepted = mapOf(
@@ -95,6 +100,24 @@ class ReportSchemaTest {
                 participant(this).put("fromANewerMinor", true)
                 event(this).put("fromANewerMinor", true)
             },
+            "OpenTelemetry trace ids, attributes and an origin" to edit(json) {
+                val message = event(this)
+                message
+                    .putObject("trace")
+                    .put("traceId", "4bf92f3577b34da6a3ce929d0e0e4736")
+                    .put("spanId", "00f067aa0ba902b7")
+                    .put("parentSpanId", "53995c3f42cd8ad8")
+                message
+                    .putObject("attributes")
+                    .put("http.route", "/orders")
+                    .put("http.response.status_code", 200)
+                    .put("lsd.retried", false)
+                    .putArray("lsd.tags")
+                    .add("a")
+                message.put("origin", "imported")
+            },
+            "a B3 64-bit trace id" to edit(json) { event(this).putObject("trace").put("traceId", "a3ce929d0e0e4736") },
+            "an unknown origin" to edit(json) { event(this).put("origin", "replayed") },
             "a time with an offset" to edit(json) { put("generatedAt", "2026-01-01T13:00:00+01:00") },
             "an unknown value of an open enum" to edit(json) {
                 participant(this).put("type", "ROBOT")
@@ -130,6 +153,8 @@ class ReportSchemaTest {
             "KnownOrderSource" to OrderSource.entries.map { it.name },
             "KnownWarningKind" to WarningKind.entries.map { it.name },
             "KnownReportSource" to KnownReportSource.ALL,
+            // lsd-mono-core writes no origin (absent is captured); a producer that imports writes the rest.
+            "KnownMessageOrigin" to KnownMessageOrigin.ALL,
         )
         val enums = defs.properties().filter { (_, node) -> node.has("enum") }.map { it.key }
         assertEquals(enums.sorted(), writer.keys.sorted(), "every enum in \$defs is checked against the writer's values")

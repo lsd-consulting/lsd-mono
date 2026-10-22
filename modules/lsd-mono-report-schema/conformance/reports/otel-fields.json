@@ -1,0 +1,156 @@
+{
+  "schemaVersion": "0.2.0",
+  "title": "Trace ids, attributes and origins",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "hand-written",
+  "status": "success",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "otel",
+      "title": "A checkout, part captured and part imported from spans",
+      "status": "success",
+      "description": "The calls from the web are captured in the test. The payment call is imported from the trace backend's spans.",
+      "facts": [
+        {
+          "key": "traceId",
+          "value": "4bf92f3577b34da6a3ce929d0e0e4736"
+        }
+      ],
+      "metrics": [],
+      "participants": [
+        {
+          "id": "web",
+          "name": "Web",
+          "type": "ACTOR"
+        },
+        {
+          "id": "orders",
+          "name": "Orders",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "payments",
+          "name": "Payments",
+          "type": "PARTICIPANT"
+        },
+        {
+          "id": "events",
+          "name": "Events",
+          "type": "QUEUE"
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "m1",
+          "from": "web",
+          "to": "orders",
+          "label": "POST /orders",
+          "type": "SYNCHRONOUS",
+          "durationMs": 42.5,
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "00f067aa0ba902b7"
+          },
+          "status": "201",
+          "attributes": {
+            "http.request.method": "POST",
+            "http.route": "/orders",
+            "http.response.status_code": 201,
+            "url.full": "https://shop.example/orders"
+          },
+          "startedAt": "2026-01-01T12:00:00.100Z"
+        },
+        {
+          "kind": "message",
+          "id": "m2",
+          "from": "orders",
+          "to": "payments",
+          "label": "POST /payments",
+          "type": "SYNCHRONOUS",
+          "durationMs": 17.25,
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "53995c3f42cd8ad8",
+            "parentSpanId": "00f067aa0ba902b7"
+          },
+          "source": "payments",
+          "status": "200",
+          "attributes": {
+            "http.request.method": "POST",
+            "http.route": "/payments",
+            "server.address": "payments.internal",
+            "lsd.span.kind": "CLIENT",
+            "lsd.retried": false,
+            "lsd.amount": 12.99,
+            "lsd.tags": [
+              "card",
+              "3ds"
+            ],
+            "lsd.attempts": [
+              1,
+              2
+            ],
+            "lsd.flags": [
+              true,
+              false
+            ]
+          },
+          "origin": "imported",
+          "startedAt": "2026-01-01T12:00:00.110Z"
+        },
+        {
+          "kind": "message",
+          "id": "m3",
+          "from": "payments",
+          "to": "orders",
+          "label": "200",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "53995c3f42cd8ad8"
+          },
+          "source": "payments",
+          "origin": "imported"
+        },
+        {
+          "kind": "message",
+          "id": "m4",
+          "from": "orders",
+          "to": "events",
+          "label": "order-placed",
+          "type": "ASYNCHRONOUS",
+          "trace": {
+            "traceId": "a3ce929d0e0e4736",
+            "spanId": "6e0c63257de34c92",
+            "parentSpanId": "00f067aa0ba902b7"
+          },
+          "attributes": {
+            "messaging.system": "kafka",
+            "messaging.destination.name": "orders.placed",
+            "messaging.operation.type": "send"
+          },
+          "origin": "captured"
+        },
+        {
+          "kind": "message",
+          "id": "m5",
+          "from": "orders",
+          "to": "web",
+          "label": "201",
+          "type": "SYNCHRONOUS_RESPONSE",
+          "trace": {
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "spanId": "00f067aa0ba902b7"
+          }
+        }
+      ]
+    }
+  ]
+}

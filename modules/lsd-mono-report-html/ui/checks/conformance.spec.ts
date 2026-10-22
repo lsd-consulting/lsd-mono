@@ -36,7 +36,7 @@ for (const [name, load] of REPORTS) {
     await expect(page.locator('#scenario-title')).toHaveText(report.scenarios[0].title)
     expect((await page.locator('#main').innerText()).trim().length).toBeGreaterThan(0)
     if (report.scenarios[0].participants.length > 0) await expect(page.locator('.seq-svg').first()).toBeVisible()
-    await expect(page.locator('.schema-notice')).toHaveCount(report.schemaVersion === '0.2.0' ? 1 : 0)
+    await expect(page.locator('.schema-notice')).toHaveCount(report.schemaVersion === '0.3.0' ? 1 : 0)
     const violations = await seriousViolations(page)
     expect(violations, formatViolations(violations)).toEqual([])
     expect(problems).toEqual([])

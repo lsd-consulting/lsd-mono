@@ -4,9 +4,12 @@ import java.time.Duration
 import java.time.Instant
 
 /**
- * Trace ids from B3 or W3C propagation. [spanId] pairs a reply with its call
+ * Trace ids from W3C Trace Context (OpenTelemetry) or B3 propagation, as they were propagated:
+ * W3C and OpenTelemetry ids are lowercase hex, 32 characters for [traceId] and 16 for the span
+ * ids, and a B3 [traceId] may be 16. [spanId] pairs a reply with its call
  * (`reply.spanId == call.spanId`), and [parentSpanId] nests a call inside another.
- * Optional input from any library that has them; lsd-mono never invents them.
+ * Optional input from any library that has them; lsd-mono never invents them. The report's trace
+ * is frozen at these three ids.
  */
 public data class Trace
     @JvmOverloads

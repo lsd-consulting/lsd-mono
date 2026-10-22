@@ -39,6 +39,7 @@ class ReportModelSchemaTest {
                 "KnownOrderSource" to KnownOrderSource.ALL,
                 "KnownWarningKind" to KnownWarningKind.ALL,
                 "KnownReportSource" to KnownReportSource.ALL,
+                "KnownMessageOrigin" to KnownMessageOrigin.ALL,
             )
         for ((def, values) in known) {
             assertEquals(enumOf(defs().get(def)), values.toSet(), def)

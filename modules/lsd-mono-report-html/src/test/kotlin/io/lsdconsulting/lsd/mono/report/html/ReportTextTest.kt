@@ -1,10 +1,12 @@
 package io.lsdconsulting.lsd.mono.report.html
 
 import io.lsdconsulting.lsd.mono.report.model.AccuracyJson
+import io.lsdconsulting.lsd.mono.report.model.AttributeValueJson
 import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.FactJson
+import io.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
 import io.lsdconsulting.lsd.mono.report.model.KnownWarningKind
 import io.lsdconsulting.lsd.mono.report.model.LifelineEventJson
 import io.lsdconsulting.lsd.mono.report.model.LifelineKindJson
@@ -23,6 +25,7 @@ import io.lsdconsulting.lsd.mono.report.model.SpacerEventJson
 import io.lsdconsulting.lsd.mono.report.model.StatusJson
 import io.lsdconsulting.lsd.mono.report.model.TraceJson
 import io.lsdconsulting.lsd.mono.report.model.WarningJson
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.report.model.testing.assertValidJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -131,6 +134,39 @@ class ReportTextTest {
             """"pairAccuracy":[{"from":"client","to":"api","accuracy":"MEASURED"}]""",
         ).forEach { assertTrue(compact.contains(it), "$it in $compact") }
         assertFalse(compact.contains("payloadId"), "the report file keeps every payload")
+    }
+
+    @Test
+    fun `a message's attributes and origin are written as the schema has them`() {
+        val imported =
+            call.copy(
+                trace = TraceJson("4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7", "53995c3f42cd8ad8"),
+                attributes =
+                    mapOf(
+                        "http.request.method" to AttributeValueJson.of("POST"),
+                        "http.response.status_code" to AttributeValueJson.of(201),
+                        "lsd.retry" to AttributeValueJson.of(false),
+                        "lsd.cost" to AttributeValueJson.of(0.25),
+                        "lsd.big" to AttributeValueJson.of(1.0e10),
+                        "lsd.tags" to AttributeValueJson.ofStrings(listOf("a", "b")),
+                        "lsd.flags" to AttributeValueJson.ofBooleans(listOf(true)),
+                        "lsd.sizes" to AttributeValueJson.ofLongs(listOf(1, 2)),
+                        "lsd.ratios" to AttributeValueJson.ofDoubles(listOf(0.5)),
+                        "" to AttributeValueJson.of("no key"),
+                    ),
+                origin = KnownMessageOrigin.IMPORTED,
+            )
+        val json = ReportWriter.toJson(report.copy(scenarios = listOf(scenario.copy(events = listOf(imported, reply)))))
+        ReportSchemas.assertValid(ReportSchemas.Document.REPORT, json, "a report with attributes and an origin")
+        val compact = json.replace(Regex("\\s*\n\\s*"), "").replace("\": ", "\":")
+        listOf(
+            """"trace":{"traceId":"4bf92f3577b34da6a3ce929d0e0e4736","spanId":"00f067aa0ba902b7","parentSpanId":"53995c3f42cd8ad8"}""",
+            """"replyOf":"m1"""",
+            """"parentId":"m0","attributes":{"http.request.method":"POST","http.response.status_code":201,"lsd.retry":false,"lsd.cost":0.25,"lsd.big":10000000000,"lsd.tags":["a","b"],"lsd.flags":[true],"lsd.sizes":[1,2],"lsd.ratios":[0.5]},"origin":"imported"}""",
+            // A captured message with no attributes has neither field.
+            """{"kind":"message","id":"m2","from":"api","to":"client","label":"201","type":"SYNCHRONOUS_RESPONSE","data":{"status":201},"replyTo":"c1","replyOf":"m1"}""",
+        ).forEach { assertTrue(compact.contains(it), "$it in $compact") }
+        assertFalse(compact.contains("no key"), "an empty key is left out")
     }
 
     @Test

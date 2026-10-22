@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://lsd-consulting.github.io/lsd-mono/schema/0.1.0/lsd-report.schema.json",
+  "$id": "https://lsd-consulting.github.io/lsd-mono/schema/0.2.0/lsd-report.schema.json",
   "title": "Report",
-  "description": "One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-core as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version: 0.x minor versions only add. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.",
+  "description": "One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-core as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -16,7 +16,7 @@
     "schemaVersion": {
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
-      "description": "The version of this schema the report follows: semver, apart from the lsd-mono version. 0.1.0 for this schema."
+      "description": "The version of this schema the report follows: semver, apart from the lsd-mono version. 0.2.0 for this schema."
     },
     "title": {
       "type": "string"
@@ -387,21 +387,88 @@
     },
     "Trace": {
       "title": "Trace",
-      "description": "Trace ids on a message.",
+      "description": "Trace context on a message, in OpenTelemetry's terms, and frozen at these three ids: no minor version adds to it, and anything more about the span (trace flags, trace state, span kind, status) goes in the message's attributes. Ids are as the producer received them; lsd-mono-core never invents them. W3C Trace Context and OpenTelemetry write lowercase hex, 32 characters for traceId and 16 for spanId and parentSpanId, and a producer should write them that way. B3 ids are accepted too, including a 16-character (64-bit) traceId, so no format is enforced.",
       "type": "object",
       "required": [
         "traceId"
       ],
       "properties": {
         "traceId": {
-          "type": "string"
+          "type": "string",
+          "description": "The trace: 32 lowercase hex characters (W3C, OpenTelemetry), or 16 or 32 for B3."
         },
         "spanId": {
-          "type": "string"
+          "type": "string",
+          "description": "This message's span: 16 lowercase hex characters. A reply with its call's spanId is paired with it."
         },
         "parentSpanId": {
+          "type": "string",
+          "description": "The span this one runs inside: 16 lowercase hex characters. Nests the message inside the call with that spanId."
+        }
+      }
+    },
+    "KnownMessageOrigin": {
+      "title": "KnownMessageOrigin",
+      "enum": [
+        "captured",
+        "imported"
+      ]
+    },
+    "MessageOrigin": {
+      "title": "MessageOrigin",
+      "description": "Where a message came from: captured, recorded by the producer while the test ran (as lsd-mono-core does), or imported, built afterwards from another record, such as OpenTelemetry spans from a file or a trace backend. Absent means captured. Not the same as source, the message's clock domain. Open: a newer producer may send a value not listed here. Readers show a value they do not know as it is.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KnownMessageOrigin"
+        },
+        {
           "type": "string"
         }
+      ],
+      "tsType": "KnownMessageOrigin | (string & {})"
+    },
+    "AttributeValue": {
+      "title": "AttributeValue",
+      "description": "One attribute's value, as OpenTelemetry's are: a string, a boolean, a number, or a list of one of those.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
+      ]
+    },
+    "Attributes": {
+      "title": "Attributes",
+      "description": "Facts about a message as named keys, such as its HTTP route or messaging destination. Keys use OpenTelemetry semantic convention names where there is one (http.request.method, http.route, http.response.status_code, url.full, messaging.destination.name, rpc.method, service.name), and keys starting lsd. are kept for lsd-mono's own. Keys are not empty. Absent, rather than empty, when there are none. Readers show or ignore them; no attribute changes how a message is drawn.",
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/AttributeValue"
       }
     },
     "MessageEvent": {
@@ -499,6 +566,12 @@
         "replyOf": {
           "type": "string",
           "description": "On a paired reply: id of the call it answers."
+        },
+        "attributes": {
+          "$ref": "#/$defs/Attributes"
+        },
+        "origin": {
+          "$ref": "#/$defs/MessageOrigin"
         },
         "startedAt": {
           "type": "string",

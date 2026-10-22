@@ -97,7 +97,14 @@
       "schema": "lsd-report.schema.json",
       "valid": true,
       "source": "hand-written",
-      "about": "schemaVersion 0.2.0 with what a newer minor version may add: fields this version does not know (at the top, in the options, a scenario, a participant, a fact, a metric and a message), values of open enums it does not list (participant type ROBOT, message type BROADCAST, source spock) and an event of an unknown kind. Readers of 0.1 must accept it; the UI shows it with a notice."
+      "about": "schemaVersion 0.3.0 with what a newer minor version may add: fields this version does not know (at the top, in the options, a scenario, a participant, a fact, a metric and a message, span links among them), values of open enums it does not list (participant type ROBOT, message type BROADCAST, origin replayed, source spock) and an event of an unknown kind. Readers of 0.2 must accept it; the UI shows it with a notice."
+    },
+    {
+      "file": "reports/otel-fields.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "hand-written",
+      "about": "The OpenTelemetry-ready fields of schema 0.2.0: W3C trace ids beside a B3 64-bit trace id, attributes with semantic convention names and every kind of value, and messages captured (no origin, and origin captured) beside ones imported from spans. Nothing in lsd-mono-core writes attributes or an origin yet; the page must show it as usual."
     },
     {
       "file": "reports/next-major.json",

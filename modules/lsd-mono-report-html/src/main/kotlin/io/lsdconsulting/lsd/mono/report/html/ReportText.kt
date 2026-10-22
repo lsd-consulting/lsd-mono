@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.report.html
 
+import io.lsdconsulting.lsd.mono.report.model.AttributeValueJson
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.EventJson
@@ -210,6 +211,10 @@ internal fun EventJson.toJsonValue(): JsonValue =
                     order?.let { add("order" to JsonString(it)) }
                     parentId?.let { add("parentId" to JsonString(it)) }
                     replyOf?.let { add("replyOf" to JsonString(it)) }
+                    // The schema has no empty key; one is left out.
+                    val named = attributes.filterKeys { it.isNotEmpty() }
+                    if (named.isNotEmpty()) add("attributes" to obj(named.map { (key, value) -> key to value.toJsonValue() }))
+                    origin?.let { add("origin" to JsonString(it)) }
                 },
             )
         is NoteEventJson ->
@@ -272,6 +277,20 @@ internal fun EventJson.toJsonValue(): JsonValue =
     }
 
 private fun obj(fields: List<Pair<String, JsonValue>>): JsonObject = JsonObject(fields)
+
+/** An attribute's value: a String, Boolean, Long or Double, or a list of one of those, as [AttributeValueJson] allows. */
+private fun AttributeValueJson.toJsonValue(): JsonValue = attributeJson(value)
+
+private fun attributeJson(value: Any?): JsonValue =
+    when (value) {
+        is String -> JsonString(value)
+        is Boolean -> JsonBool(value)
+        is Long -> JsonNumber(value.toString())
+        // Plain decimal, never an exponent: 1.0E10 would still be JSON, but not as written elsewhere.
+        is Double -> JsonNumber(BigDecimal.valueOf(value).stripTrailingZeros().toPlainString())
+        is List<*> -> JsonArray(value.map(::attributeJson))
+        else -> JsonString(value.toString())
+    }
 
 /**
  * Report injected into the HTML shell. Method, path, and status stay on the message.
