@@ -6,7 +6,7 @@
 
 LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
 
-![A tour of the report: choosing a scenario from the list, zooming in and out and back to the default, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
+![A tour of the report: choosing a scenario from the list, zooming in and out and back to the default, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the light, dark and high-contrast themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
 
 **[Live example report →](https://lsd-consulting.github.io/lsd-mono/example-report.html)** An online shop checkout across 14 services and five scenarios, built from the latest release. Click an arrow to see its request, reply or event payload.
 

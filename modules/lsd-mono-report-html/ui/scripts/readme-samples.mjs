@@ -171,7 +171,7 @@ async function recordTour(page, file) {
   // 1. Overview: the list down the side, one scenario at a time (the first one first).
   await placePointer(at.x, at.y)
   await caption('Every scenario in the list; the first one opens first')
-  await snap(900)
+  await snap(700)
   await moveTo(130, 330, 6)
   await snap(500)
   await caption('Choose a scenario to see it on its own', { sameBeat: true })
@@ -220,7 +220,7 @@ async function recordTour(page, file) {
     await page.waitForTimeout(60)
     await snap(60)
   }
-  await snap(1100)
+  await snap(900)
 
   // 4. Open an arrow's JSON, then drag the panel wider.
   await caption('Click an arrow to open its JSON, and drag the panel wider')
@@ -247,7 +247,7 @@ async function recordTour(page, file) {
   }
   await page.mouse.up()
   await ring(false)
-  await snap(1000)
+  await snap(800)
 
   // 5. The Components view, and a link's messages in the side panel (#105).
   await caption('See the scenario as a component diagram')
@@ -276,7 +276,7 @@ async function recordTour(page, file) {
     await ring(false)
     const listed = await page.locator('#inspector-link .component-links').boundingBox()
     if (listed) await moveTo(listed.x + 60, listed.y + 10, 5)
-    await snap(1300)
+    await snap(1100)
   }
   await page.locator('#inspector-close').click()
   await page.locator('#inspector').waitFor({ state: 'hidden' })
@@ -301,7 +301,7 @@ async function recordTour(page, file) {
     })
   const clocked = await page.locator('#inspector-metrics .waterfall .wf-row.clock').first().boundingBox()
   if (clocked) await moveTo(clocked.x + 80, clocked.y + clocked.height / 2, 5)
-  await snap(1100)
+  await snap(900)
   await page.locator('#inspector-close').click()
   await page.locator('#inspector').waitFor({ state: 'hidden' })
 
@@ -320,21 +320,28 @@ async function recordTour(page, file) {
   await snap(700)
   await click(hideX, { hold: 900 })
   // The chip lists what is hidden, with Show and Show all.
-  await click(diagram.locator('.hidden-chip'), { hold: 1300 })
+  await click(diagram.locator('.hidden-chip'), { hold: 1100 })
   await page.keyboard.press('Escape')
   await snap(200)
 
-  // 8. Themes: light, high contrast, then Auto (follows the OS, light here).
-  await caption('Light and high-contrast themes, or Auto to follow the OS')
+  // 8. Themes: light, dark, high contrast, then Auto (follows the OS, light here).
+  await caption('Light, dark and high-contrast themes, or Auto to follow the OS')
   await page.evaluate(() => window.scrollTo(0, 0))
   await snap(200)
-  // The theme menu: high contrast, then Auto.
-  await click(page.locator('#btn-theme'), { hold: 500 })
-  await click(page.locator('#theme-menu [data-theme-mode="contrast"]'), { hold: 800 })
-  await click(page.locator('#btn-theme'), { hold: 500 })
-  await click(page.locator('#theme-menu [data-theme-mode="auto"]'), { hold: 1100 })
+  // The theme menu: dark, high contrast, then Auto.
+  for (const [mode, shown, hold] of [
+    ['dark', 'dark', 800],
+    ['contrast', 'contrast', 700],
+    ['auto', 'light', 900],
+  ]) {
+    await click(page.locator('#btn-theme'), { hold: 200 })
+    await click(page.locator(`#theme-menu [data-theme-mode="${mode}"]`), {
+      hold,
+      settle: () => page.waitForFunction((theme) => document.documentElement.dataset.theme === theme, shown),
+    })
+  }
 
-  // 10. Collapse the scenario list.
+  // 9. Collapse the scenario list.
   await caption('Collapse the scenario list to an icon rail')
   await click(page.locator('#btn-sidebar'), { hold: 900 })
 
