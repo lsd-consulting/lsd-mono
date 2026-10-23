@@ -6,6 +6,7 @@ import { loadExternalPayloads, loadPayloadsFrom, payloadKey } from '../lib/paylo
 import { placePrintMetrics, printMetricsSection } from '../ui/metrics'
 import { pairAccuracySectionHtml, timingPanelHtml } from '../ui/timing'
 import { placePrintPanel, printMessageSection } from '../ui/print-panel'
+import { mountTimingWindow } from '../ui/timing-window'
 import { diagramView, findMessage } from '../lib/sequence-diagram'
 import { messageHasPayload } from '../lib/diagram-a11y'
 import { foldQuery } from '../lib/payload-search'
@@ -100,6 +101,7 @@ export function openMetrics(scenario: Scenario, section?: string, chip: number |
     pairAccuracyHtml: pairAccuracySectionHtml(scenario),
     section,
     chip,
+    mount: (host) => mountTimingWindow(host, scenario),
   })
   syncWithPanel()
   usage.ping('metrics-open')

@@ -8,6 +8,8 @@
  * in it, and the DOM nodes before and after. Then the p95 frame time while the side panel
  * scrolls through the waterfall, and the time from clicking a waterfall row halfway down to
  * its arrow being drawn in the diagram. `cpu` above 1 throttles the CPU that many times.
+ * A long waterfall is windowed (#90b): `rows` is the whole list, `rowsDrawn` the rows in the DOM
+ * after opening and `rowsDrawnScrolled` after the scroll.
  *
  * Usage: node measure-timing.mjs /path/to/docs/perf-samples [timed-2000:4]
  */
@@ -59,7 +61,8 @@ async function once(spec) {
       return {
         ms,
         built,
-        rows: document.querySelectorAll('#inspector .waterfall > li').length,
+        rows: Number(document.querySelector('#inspector .waterfall')?.dataset.rows) || document.querySelectorAll('#inspector .waterfall > li').length,
+        rowsDrawn: document.querySelectorAll('#inspector .waterfall > li').length,
         laneBars: document.querySelectorAll('#inspector .lane-bar').length,
         panelNodes: document.querySelectorAll('#inspector *').length,
         longTasks: tasks == null ? null : tasks.filter((d) => d >= 50).length,
@@ -87,14 +90,31 @@ async function once(spec) {
         }
         requestAnimationFrame(tick)
       })
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)))
       const tasks = window.__longTasks
-      return { frames, max, longTasks: tasks == null ? null : tasks.filter((d) => d >= 50).length }
+      return {
+        frames,
+        max,
+        drawn: document.querySelectorAll('#inspector .waterfall > li').length,
+        longTasks: tasks == null ? null : tasks.filter((d) => d >= 50).length,
+      }
     })
 
     const jump = await page.evaluate(async () => {
       window.__longTasks = window.__longTasks && []
-      const rows = document.querySelectorAll('#inspector .wf-row')
-      const row = rows[Math.floor(rows.length / 2)]
+      // The row halfway down the whole list; a windowed list draws it once scrolled near it.
+      const scroller = document.querySelector('#inspector')
+      const list = scroller.querySelector('.waterfall')
+      const windowed = Boolean(list.dataset.rows)
+      const want = Math.floor((windowed ? Number(list.dataset.rows) : list.children.length) / 2)
+      const find = () =>
+        (windowed ? list.querySelector(`:scope > li[data-i="${want}"]`) : list.children[want])?.querySelector('.wf-row')
+      for (let k = 0; !find() && k < 20; k++) {
+        const into = list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + want * 26
+        scroller.scrollTop += into - scroller.clientHeight / 2
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      }
+      const row = find()
       row.scrollIntoView({ block: 'center' })
       await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50)))
       const id = row.dataset.showMessage
@@ -119,6 +139,8 @@ async function once(spec) {
       openLongTasks: open.longTasks,
       openLongTaskMaxMs: open.longTaskMaxMs,
       rows: open.rows,
+      rowsDrawn: open.rowsDrawn,
+      rowsDrawnScrolled: scroll.drawn,
       laneBars: open.laneBars,
       panelNodes: open.panelNodes,
       nodesBefore,
@@ -156,6 +178,8 @@ for (const spec of cases) {
     cpu: spec.cpu,
     error,
     rows: runs[0]?.rows ?? null,
+    rowsDrawn: runs[0]?.rowsDrawn ?? null,
+    rowsDrawnScrolled: runs[0]?.rowsDrawnScrolled ?? null,
     laneBars: runs[0]?.laneBars ?? null,
     panelNodes: runs[0]?.panelNodes ?? null,
     nodesBefore: runs[0]?.nodesBefore ?? null,

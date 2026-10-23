@@ -1,5 +1,6 @@
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { formatMs, hasTiming, timeline, type Timeline } from '../lib/timing'
+import { WATERFALL_FIRST_ROWS, WATERFALL_ROW_ESTIMATE_PX, paintsLanes, windowsWaterfall } from '../lib/timing-window'
 import type { Accuracy, KnownWarningKind, Scenario } from '../types'
 
 const ACCURACY_LABEL: Record<Accuracy, string> = {
@@ -126,10 +127,10 @@ export function timingPanelHtml(scenario: Scenario): string {
     <div class="timing-stack" role="img" aria-label="Time by participant">${stack}</div>
     <ul class="timing-legend">${legend}</ul>
     <h3>Swim lanes <small>calls into each participant, on one time axis</small></h3>
-    ${swimLanesHtml(scenario, t, colour, id)}
+    ${swimLanesHtml(scenario, t)}
     <h3>Waterfall <small>solid = self · light = children · tick = untimed</small></h3>
     ${axisHtml(T)}
-    <ol class="waterfall">${t.rows.map((r) => rowHtml(scenario, r, T, id)).join('')}</ol>
+    ${waterfallHtml(scenario, t, T, id)}
   </section>`
 }
 
@@ -204,26 +205,87 @@ export function tickLabel(v: number, step: number): string {
   return v.toFixed(Math.ceil(-Math.log10(step) - 1e-9))
 }
 
-function swimLanesHtml(scenario: Scenario, t: Timeline, colour: Map<string, number>, id: string): string {
-  const lanes = t.byParticipant.map((p) => p.participant)
-  if (!lanes.length) return '<p class="inspector-empty">No measured time to place in lanes.</p>'
-  const T = t.totalMs || 1
-  const rows = lanes
-    .map((lane) => {
-      const bars = t.rows
-        .filter((r) => r.participant === lane && r.spanMs > 0)
-        .map(
-          (r) =>
-            `<button type="button" class="lane-bar lane-c${colour.get(lane)}" style="left:${pct(r.startMs, T)};width:${pct(r.spanMs, T)}" data-show-message="${escapeAttr(r.message.id)}" data-scenario-id="${escapeAttr(id)}" title="${escapeAttr(`${r.message.label} · ${formatMs(r.spanMs)}`)}" aria-label="${escapeAttr(`${r.message.label}, ${formatMs(r.spanMs)}`)}"></button>`,
-        )
-        .join('')
-      return `<li class="lane"><span class="lane-name">${escapeHtml(nameOf(scenario, lane))}</span><span class="lane-track">${bars}</span></li>`
-    })
-    .join('')
-  return `<ol class="swim-lanes" aria-label="Swim lanes">${rows}</ol>`
+/** One swim lane: a participant, its colour and the calls into it with measured time. */
+export interface LaneTrack {
+  participant: string
+  /** lane-cN */
+  colour: number
+  bars: Timeline['rows']
 }
 
-function rowHtml(scenario: Scenario, r: Timeline['rows'][number], total: number, id: string): string {
+const laneCache = new WeakMap<Timeline, LaneTrack[]>()
+
+/** The swim lanes of [t], largest self time first, as the panel draws them. */
+export function laneTracks(t: Timeline): LaneTrack[] {
+  let lanes = laneCache.get(t)
+  if (!lanes) {
+    const byLane = new Map<string, Timeline['rows']>(t.byParticipant.map((p) => [p.participant, []]))
+    for (const r of t.rows) if (r.spanMs > 0) byLane.get(r.participant)?.push(r)
+    lanes = t.byParticipant.map((p, i) => ({
+      participant: p.participant,
+      colour: i % LANE_COLOURS,
+      bars: byLane.get(p.participant) ?? [],
+    }))
+    laneCache.set(t, lanes)
+  }
+  return lanes
+}
+
+/** Bar [j] of [lane] in [scenario]'s swim lanes: a button that opens its message. */
+export function laneBarHtml(scenario: Scenario, lane: LaneTrack, j: number): string {
+  const r = lane.bars[j]
+  if (!r) return ''
+  const T = timeline(scenario).totalMs || 1
+  return `<button type="button" class="lane-bar lane-c${lane.colour}" style="left:${pct(r.startMs, T)};width:${pct(r.spanMs, T)}" data-show-message="${escapeAttr(r.message.id)}" data-scenario-id="${escapeAttr(scenario.id)}" title="${escapeAttr(`${r.message.label} · ${formatMs(r.spanMs)}`)}" aria-label="${escapeAttr(`${r.message.label}, ${formatMs(r.spanMs)}`)}"></button>`
+}
+
+/**
+ * The swim lanes. Many bars (paintsLanes) are painted on a canvas per lane, with one button per
+ * lane standing on its first bar; mountLaneCanvas (timing-window.ts) paints them and moves the
+ * button to the bar under the pointer or the keyboard (#90c).
+ */
+function swimLanesHtml(scenario: Scenario, t: Timeline): string {
+  const lanes = laneTracks(t)
+  if (!lanes.length) return '<p class="inspector-empty">No measured time to place in lanes.</p>'
+  const painted = paintsLanes(lanes.reduce((n, l) => n + l.bars.length, 0))
+  const rows = lanes
+    .map((lane, k) => {
+      const barsHtml = painted
+        ? `<canvas class="lane-canvas" aria-hidden="true"></canvas>${laneBarHtml(scenario, lane, 0)}`
+        : lane.bars.map((_, j) => laneBarHtml(scenario, lane, j)).join('')
+      const trackAttrs = painted ? ` data-lane="${k}"` : ''
+      return `<li class="lane"><span class="lane-name">${escapeHtml(nameOf(scenario, lane.participant))}</span><span class="lane-track"${trackAttrs}>${barsHtml}</span></li>`
+    })
+    .join('')
+  return `<ol class="swim-lanes" aria-label="Swim lanes"${painted ? ' data-lane-canvas' : ''}>${rows}</ol>`
+}
+
+/**
+ * The waterfall list. A long one (windowsWaterfall) starts with its first rows and room for the
+ * rest; mountWaterfallWindow (timing-window.ts) then keeps the rows around the scroll position
+ * drawn (#90b). Each drawn row says its place in the whole list (aria-posinset of aria-setsize).
+ */
+function waterfallHtml(scenario: Scenario, t: Timeline, total: number, id: string): string {
+  const n = t.rows.length
+  if (!windowsWaterfall(n))
+    return `<ol class="waterfall">${t.rows.map((r) => rowHtml(scenario, r, total, id)).join('')}</ol>`
+  const first = Math.min(n, WATERFALL_FIRST_ROWS)
+  const rest = (n - first) * WATERFALL_ROW_ESTIMATE_PX
+  const rows: string[] = []
+  for (let i = 0; i < first; i++) rows.push(waterfallRowHtml(scenario, i))
+  return `<ol class="waterfall" data-waterfall-window="${escapeAttr(id)}" data-rows="${n}" style="padding-bottom:${rest}px">${rows.join('')}</ol>`
+}
+
+/** Row [i] of [scenario]'s windowed waterfall, marked with its index and its place in the list. */
+export function waterfallRowHtml(scenario: Scenario, i: number): string {
+  const t = timeline(scenario)
+  const r = t.rows[i]
+  if (!r) return ''
+  const placeHtml = ` data-i="${i}" aria-posinset="${i + 1}" aria-setsize="${t.rows.length}"`
+  return rowHtml(scenario, r, t.totalMs || 1, scenario.id, placeHtml)
+}
+
+function rowHtml(scenario: Scenario, r: Timeline['rows'][number], total: number, id: string, placeHtml = ''): string {
   const m = r.message
   const who = `${escapeHtml(nameOf(scenario, m.from))} → ${escapeHtml(nameOf(scenario, m.to))}`
   const bar =
@@ -235,7 +297,7 @@ function rowHtml(scenario: Scenario, r: Timeline['rows'][number], total: number,
     m.type === 'ASYNCHRONOUS' || m.type === 'LOST'
       ? ` <span class="tag">${escapeHtml(m.type.toLowerCase())}</span>`
       : ''
-  return `<li><button type="button" class="wf-row${m.order === 'CLOCK' ? ' clock' : ''}" style="--d:${r.depth}" data-show-message="${escapeAttr(m.id)}" data-scenario-id="${escapeAttr(id)}">
+  return `<li${placeHtml}><button type="button" class="wf-row${m.order === 'CLOCK' ? ' clock' : ''}" style="--d:${r.depth}" data-show-message="${escapeAttr(m.id)}" data-scenario-id="${escapeAttr(id)}">
     <span class="wf-lab">${orderBadgesHtml(m.order, m.pairing)}<span class="who">${who}</span> ${escapeHtml(m.label)}${async}${r.overrun ? `<span class="warnx" title="${escapeAttr(`The calls inside took ${formatMs(r.childMs)}, longer than this call's measured ${formatMs(r.ownMs)}: the measurements disagree`)}">${escapeHtml(`Calls inside took longer: ${formatMs(r.childMs)} > ${formatMs(r.ownMs)}`)}</span>` : ''}</span>
     <span class="wf-track">${bar}</span>
     <span class="wf-dur">${dur}</span>

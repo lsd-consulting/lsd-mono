@@ -374,3 +374,23 @@
 .pair-accuracy .acc-structure_only {
   color: var(--text-muted);
 }
+
+/* A long waterfall draws only the rows near the scroll position (#90b); padding stands in for the
+   rest. A focused row scrolled out of the drawn rows stays drawn, at its place in the list. */
+.waterfall[data-waterfall-window] {
+  position: relative;
+}
+.waterfall[data-waterfall-window] > li[data-pinned] {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+/* Many swim-lane bars are painted on a canvas per lane, under the lane's one button (#90c). */
+.lane-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

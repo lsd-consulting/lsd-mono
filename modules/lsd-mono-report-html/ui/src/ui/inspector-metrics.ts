@@ -19,6 +19,11 @@ export interface MetricsView {
   section?: string
   /** The timing chip that opened it (its place in the strip), or null for the toolbar button. */
   chip?: number | null
+  /**
+   * Called once the view is drawn and sized, with its body; returns what to undo when the view
+   * closes or opens again (the timing waterfall's window, #90b).
+   */
+  mount?: (host: HTMLElement) => (() => void) | null | undefined
 }
 
 export interface MetricsPanelView extends PanelView {
@@ -50,8 +55,16 @@ export function bindMetricsView(shell: PanelShell, host: HTMLElement): MetricsPa
     win.scrollTo({ top: Math.max(0, win.scrollY + top - offset), behavior: scrollBehavior() })
   }
 
+  let unmount: (() => void) | null = null
+  const teardown = () => {
+    const undo = unmount
+    unmount = null
+    undo?.()
+  }
+
   const view: MetricsPanelView = {
     open(scenarioId, metrics) {
+      teardown()
       shell.begin(view, { scenarioId, kind: 'metrics', chip: metrics.chip ?? null })
       shell.json.stop()
       shell.title.textContent = metricsTitle(metrics)
@@ -59,6 +72,7 @@ export function bindMetricsView(shell: PanelShell, host: HTMLElement): MetricsPa
       shell.showViewChrome(host)
       host.innerHTML = metricsBodyHtml(scenarioId, metrics)
       shell.width.fit(Math.max(naturalWidth(host), metrics.timingHtml ? TIMING_VIEW_MIN_PX : 0))
+      unmount = metrics.mount?.(host) ?? null
       const section = metrics.section
         ? host.querySelector<HTMLElement>(`[data-panel-section="${cssEscape(metrics.section)}"]`)
         : null
@@ -70,7 +84,9 @@ export function bindMetricsView(shell: PanelShell, host: HTMLElement): MetricsPa
         shell.revealOnPhone()
       }
     },
-    close() {},
+    close() {
+      teardown()
+    },
     // Back to the Metrics button, or the timing chip that opened it (#86).
     focusReturn(invoker) {
       if (!invoker) return { kind: 'none' }

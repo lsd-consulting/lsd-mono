@@ -442,3 +442,24 @@ Scrolling the waterfall holds 60 fps at every size, with no long tasks. Jumping 
 - **Opening the panel at any size** is followed by three long tasks of 62–72 ms, starting about 50 ms after the click and about 75 ms apart, even at 100 calls. The Timing view has already been drawn by then. They look like the page reacting to the wider side panel, but this was not traced.
 
 Tried and not kept: `content-visibility: auto` on waterfall rows halved the open (2,000 calls: 138 → 64 ms at 1×, 549 → 251 ms at 4×). The longest task at 4× stayed at 292–312 ms, and the scroll p95 at 4× rose from 16.7 to 33.4 ms as rows were laid out on the way in. The fix is to window the waterfall rows and lane bars, as the diagram windows its rows. That needs decisions on keyboard order, the browser's find-in-page and print, so it is left as a follow-up.
+
+## Timing view windowed (23 Oct 2026, 20:20 BST)
+
+The waterfall and swim lanes on long timed scenarios, windowed ([#90](https://github.com/lsd-consulting/lsd-mono/issues/90)). Same machine and Chromium **156.0.8078.4** as above, viewport 1440×900, `file://`, Node 24. Three runs per row, medians. "Before" is `main` at `b69a250` (after #90a), "after" is this change. Same fixture and commands as above.
+
+- **Waterfall** (over 300 rows): only the rows around the scroll position are drawn, plus 600 px each way, and padding stands in for the rest. Rows are measured as they are drawn. Each drawn row carries `aria-posinset` / `aria-setsize`. Tab and Shift+Tab still step through every row in order, and a focused row stays drawn wherever the list is scrolled.
+- **Swim lanes** (over 300 bars): each lane's bars are painted on a canvas, in the lane colour the theme gives its button. Each lane has one real button, which moves to the bar under the pointer (hover, title, click) or the keyboard (Tab and Shift+Tab step through every bar, lane by lane, as before).
+- Smaller scenarios are drawn in full, with the same markup as before.
+
+| Calls | CPU | Rows (drawn on open → after a scroll) / lane buttons | Panel DOM nodes | Open (ms) | Longest task on open (ms) | Scroll p95 (ms) | Row → message (ms) |
+|---|---|---|---|---|---|---|---|
+| 100 | 1× | 120 (all) / 100 | 1,177 → 1,177 | 23 → 25 | 0 → 0 | 16.7 → 16.7 | 6 → 5 |
+| 500 | 1× | 600 (39 → 50) / 500 → 5 | 5,497 → 425 | 56 → 23 | 0 → 0 | 16.7 → 16.7 | 18 → 18 |
+| 2,000 | 1× | 2,400 (38 → 50) / 2,000 → 5 | 21,697 → 417 | 191 → 40 | 131–137 → 0 | 33.3 → 16.8 | 14 → 19 |
+| 100 | 4× | 120 (all) / 100 | 1,177 → 1,177 | 91 → 87 | 53–55 → 51–52 | 16.7 → 16.7 | 15 → 15 |
+| 500 | 4× | 600 (39 → 50) / 500 → 5 | 5,497 → 425 | 222 → 92 | 143–146 → 51–54 | 16.7 → 16.7 | 21 → 23 |
+| 2,000 | 4× | 2,400 (38 → 50) / 2,000 → 5 | 21,697 → 417 | 837 → 154 | 519–611 → 79 | 33.4 → 16.8 | 50 → 26 |
+
+The panel's DOM no longer grows with the calls, and no task on open is over 100 ms at 4× CPU at 2,000 calls. Scrolling holds 60 fps with no long tasks. Windowing the waterfall alone took the 2,000-call open at 4× to 242 ms, with a 136–142 ms long task: the 2,000 lane-bar buttons were the rest, hence the canvases.
+
+What it costs: the browser's find-in-page does not see waterfall rows that are not drawn. A screen reader's browse mode sees one button per lane rather than one per bar (Tab still reaches every bar). The side panel prints nothing, so print is unchanged.
