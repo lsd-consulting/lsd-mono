@@ -4,6 +4,9 @@ import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.report.model.StatusJson
+import io.lsdconsulting.lsd.mono.report.model.testing.Json
+import io.lsdconsulting.lsd.mono.report.model.testing.JsonObject
+import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas.between
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -126,9 +129,8 @@ class ReportWriterTest {
             forkA.writeIndex(tempDir.toFile())
             val fromA = tempDir.resolve("index.html").readText()
             listOf(fromA, fromB).map(::manifest).forEach { index ->
-                assertTrue(index.contains("Fork A") && index.contains("Fork B"), index)
+                assertEquals(listOf("Fork A", "Fork B"), index.titles(), "both forks, sorted by title: $index")
             }
-            assertTrue(manifest(fromA).indexOf("Fork A") < manifest(fromA).indexOf("Fork B"), "sorted by title")
             assertFalse(fromA.contains("lsd-report.single.html"), "no shared latest link")
         }
     }
@@ -140,17 +142,21 @@ class ReportWriterTest {
         Files.delete(gone)
         val extra = ReportFile(filename = "elsewhere.html", title = "Extra", status = "warn")
         val index = manifest(writer.writeIndexOf(listOf(extra), tempDir.toFile()).readText())
-        assertFalse(index.contains("Gone"), index)
-        assertTrue(index.contains("Kept"), index)
-        assertTrue(index.contains(""""id":"elsewhere.html","title":"Extra","status":"warn","href":"elsewhere.html""""), index)
+        assertEquals(setOf("Extra", "Kept"), index.titles().toSet(), "no Gone: $index")
+        assertEquals(
+            mapOf("id" to "elsewhere.html", "title" to "Extra", "status" to "warn", "href" to "elsewhere.html"),
+            index.entry("Extra").filterKeys { it in setOf("id", "title", "status", "href") },
+            index.source,
+        )
     }
 
     @Test
     fun `index escapes titles`() {
         val page = writer.writeIndexOf(listOf(ReportFile("x.html", "<b>bold</b> </script> & co", "success")), tempDir.toFile()).readText()
-        val index = manifest(page)
-        assertFalse(index.contains("</script>") || index.contains("<b>"), index)
-        assertTrue(index.contains("bold"), index)
+        // The manifest's text, as the browser's HTML parser sees it: escaped, so the title cannot end the script.
+        val raw = between(page, "window.__LSD_INDEX__=", ";</script>")
+        assertFalse(raw.contains("</script>") || raw.contains("<b>"), raw)
+        assertEquals(listOf("<b>bold</b> </script> & co"), manifest(page).titles(), "and the title reads back as it was")
     }
 
     @Test
@@ -160,10 +166,15 @@ class ReportWriterTest {
         val page = writer.writeIndex(tempDir.toFile()).readText()
         val index = manifest(page)
         val zulu = ReportWriter.reportFileStem("Zulu")
-        assertTrue(index.contains(""""id":"$zulu","title":"Zulu","status":"error","href":"$zulu-diagram.html","data":"$zulu-report.js""""), index)
-        assertTrue(index.contains(""""counts":{"success":2,"warn":0,"error":1}"""), index)
-        assertTrue(index.contains("""{"id":"s0","title":"scenario 0","status":"error","messages":0}"""), index)
-        assertTrue(index.indexOf("Zulu") < index.indexOf("Alpha"), "failed first")
+        assertEquals(listOf("Zulu", "Alpha"), index.titles(), "failed first")
+        val entry = index.entry("Zulu")
+        assertEquals(
+            mapOf("id" to zulu, "title" to "Zulu", "status" to "error", "href" to "$zulu-diagram.html", "data" to "$zulu-report.js"),
+            entry.filterKeys { it in setOf("id", "title", "status", "href", "data") },
+            entry.source,
+        )
+        assertEquals(mapOf("success" to 2.0, "warn" to 0.0, "error" to 1.0), entry["counts"], entry.source)
+        assertEquals(mapOf("id" to "s0", "title" to "scenario 0", "status" to "error", "messages" to 0.0), entry.objects("scenarios").first(), entry.source)
         assertTrue(page.contains("""name="viewport""""), "the index is the report shell")
         assertFalse(page.contains("window.__LSD_REPORT__="), "no report is embedded in the index")
     }
@@ -189,7 +200,9 @@ class ReportWriterTest {
     fun `the index takes its generator, time and ping switch from the settings`() {
         val settings = ReportWriterSettings(generator = "adapter 1.0", generatedAt = Instant.parse("2026-01-02T03:04:05.678Z"), usagePing = true)
         val index = manifest(ReportWriter(settings).writeIndex(tempDir.toFile()).readText())
-        assertTrue(index.contains(""""generatedAt":"2026-01-02T03:04:05.678Z","generator":"adapter 1.0","options":{"usagePing":true}"""), index)
+        assertEquals("2026-01-02T03:04:05.678Z", index.string("generatedAt"), index.source)
+        assertEquals("adapter 1.0", index.string("generator"), index.source)
+        assertEquals(mapOf("usagePing" to true), index["options"], index.source)
     }
 
     @Test
@@ -199,16 +212,20 @@ class ReportWriterTest {
         tempDir.resolve("old-report.html").writeText("old")
         dir.resolve("old-report.properties").writeText("filename=old-report.html\ntitle=Old\nstatus=success\n")
         val index = manifest(writer.writeIndex(tempDir.toFile()).readText())
-        assertTrue(index.contains(""""reports":[]"""), index)
+        assertEquals(emptyList<Any>(), index["reports"], index.source)
     }
 
-    /** The manifest the index page carries, compacted so assertions need not follow its layout. */
-    private fun manifest(page: String): String =
-        page
-            .substringAfter("window.__LSD_INDEX__=")
-            .substringBefore(";</script>")
-            .replace(Regex("\\s*\n\\s*"), "")
-            .replace("\": ", "\":")
+    /**
+     * The manifest the index page carries (`window.__LSD_INDEX__`), parsed (#109). [JsonObject] is the
+     * test fixtures' parsed object (imported), not this package's internal one the writer renders.
+     */
+    private fun manifest(page: String): JsonObject = Json.parse(between(page, "window.__LSD_INDEX__=", ";</script>")) as JsonObject
+
+    /** The manifest's report titles, in its order. */
+    private fun JsonObject.titles(): List<String?> = objects("reports").map { it.string("title") }
+
+    /** The manifest's one report titled [title]. */
+    private fun JsonObject.entry(title: String): JsonObject = objects("reports").single { it.string("title") == title }
 
     private fun report(title: String, scenarioCount: Int = 0, failing: Int = 0): ReportJson =
         ReportJson

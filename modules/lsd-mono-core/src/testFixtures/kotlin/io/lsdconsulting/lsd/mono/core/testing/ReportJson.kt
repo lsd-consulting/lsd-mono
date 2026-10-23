@@ -1,5 +1,7 @@
 package io.lsdconsulting.lsd.mono.core.testing
 
+import io.lsdconsulting.lsd.mono.report.model.testing.Json
+import io.lsdconsulting.lsd.mono.report.model.testing.JsonObject
 import java.nio.file.Path
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name

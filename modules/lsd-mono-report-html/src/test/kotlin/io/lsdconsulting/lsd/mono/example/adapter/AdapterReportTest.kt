@@ -22,6 +22,8 @@ import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
 import io.lsdconsulting.lsd.mono.report.model.SectionEventJson
 import io.lsdconsulting.lsd.mono.report.model.StatusJson
 import io.lsdconsulting.lsd.mono.report.model.TraceJson
+import io.lsdconsulting.lsd.mono.report.model.testing.Json
+import io.lsdconsulting.lsd.mono.report.model.testing.JsonObject
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -63,11 +65,11 @@ class AdapterReportTest {
 
         assertEquals(4, ReportSchemas.assertOutputValid(dir), "the JSON, page, data script and index")
         val page = written.diagramHtml.readText()
-        assertTrue(page.contains("window.__LSD_REPORT__="), "the page carries the report")
-        assertTrue(page.contains("\"schemaVersion\": \"${ReportSchema.VERSION}\""), "at the model's schema version")
+        val report = Json.parse(ReportSchemas.between(page, "window.__LSD_REPORT__=", ";</script>")) as JsonObject
+        assertEquals(ReportSchema.VERSION, report.string("schemaVersion"), "the page carries the report, at the model's schema version")
         assertTrue(page.length > 100_000, "the page has the report UI bundled, ${page.length} characters")
-        val index = dir.resolve("index.html").readText()
-        assertTrue(index.contains("\"generator\": \"example-adapter 1.0\""), "the index names the adapter")
+        val index = Json.parse(ReportSchemas.between(dir.resolve("index.html").readText(), "window.__LSD_INDEX__=", ";</script>")) as JsonObject
+        assertEquals("example-adapter 1.0", index.string("generator"), "the index names the adapter")
     }
 
     private fun writer() =

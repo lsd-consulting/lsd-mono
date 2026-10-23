@@ -13,13 +13,13 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.WarningKind
-import io.lsdconsulting.lsd.mono.core.testing.Json
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import io.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
 import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import io.lsdconsulting.lsd.mono.report.model.ReportSchema
+import io.lsdconsulting.lsd.mono.report.model.testing.Json
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas.Document
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas.between

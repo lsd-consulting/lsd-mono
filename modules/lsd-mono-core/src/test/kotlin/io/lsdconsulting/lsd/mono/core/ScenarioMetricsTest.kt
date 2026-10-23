@@ -4,11 +4,11 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.formatMs
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.isErrorStatus
-import io.lsdconsulting.lsd.mono.core.testing.Json
-import io.lsdconsulting.lsd.mono.core.testing.JsonObject
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
+import io.lsdconsulting.lsd.mono.report.model.testing.Json
+import io.lsdconsulting.lsd.mono.report.model.testing.JsonObject
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals

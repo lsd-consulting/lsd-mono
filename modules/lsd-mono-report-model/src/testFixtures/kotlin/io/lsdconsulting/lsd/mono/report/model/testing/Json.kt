@@ -1,7 +1,9 @@
-package io.lsdconsulting.lsd.mono.core.testing
+package io.lsdconsulting.lsd.mono.report.model.testing
 
 /**
  * A small JSON reader for tests, so they look values up instead of matching the writer's text.
+ * Here, in the model's test fixtures, so lsd-mono-report-html's tests can use it as well as core's
+ * and the integrations' (core depends on report-html, so it cannot live in core's) (#109).
  * Objects keep the exact text they were read from ([JsonObject.source]).
  */
 public object Json {
