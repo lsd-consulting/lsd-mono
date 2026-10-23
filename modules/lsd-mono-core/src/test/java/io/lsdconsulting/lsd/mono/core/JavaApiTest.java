@@ -10,7 +10,10 @@ import io.lsdconsulting.lsd.mono.core.domain.NoteSide;
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType;
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError;
 import io.lsdconsulting.lsd.mono.core.domain.Status;
+import io.lsdconsulting.lsd.mono.core.testing.JsonObject;
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig;
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson;
+import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,8 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -80,19 +81,25 @@ class JavaApiTest {
         lsd.call("Api", "Db").reply();
         lsd.completeScenario("Java", "every verb", Status.SUCCESS);
 
-        String json = events(Files.readString(reportJson(lsd.completeReport("Java"))));
+        ScenarioJson json = report(lsd.completeReport("Java")).scenario("Java");
         assertEquals(
             List.of(
                 "message", "message", "message", "message", "message", "message", "message", "message", "message",
                 "message", "message", "note", "note", "note", "activate", "activate", "deactivate", "deactivate", "section",
                 "divider", "delay", "delay", "spacer", "spacer", "message", "message", "message", "note", "message",
                 "message", "message", "message", "message", "message"),
-            all(json, "\"kind\": \"([a-z]+)\""));
-        assertTrue(json.contains("\"timing\": \"MEASURED\""), json);
-        assertTrue(json.contains("\"order\": \"o-1\"") || Files.readString(payloads(tempDir)).contains("o-1"), json);
-        assertTrue(json.contains("\"startedAt\": \"2026-01-01T00:00:00Z\""), json);
-        assertTrue(json.contains("\"label\": \"IllegalStateException\""), json);
-        assertEquals(2, all(json, "\"type\": \"(LOST)\"").size(), "a MessageType in the data position is the type");
+            values(json.getEvents(), "kind"));
+        assertTrue(values(json.getMessages(), "timing").contains("MEASURED"), json.toString());
+        // The order is inline, or in the payloads file when the data is held there.
+        boolean inline = json.getMessages().stream()
+                .anyMatch(m -> m.get("data") instanceof Map<?, ?> data && "o-1".equals(data.get("order")));
+        assertTrue(inline || Files.readString(payloads(tempDir)).contains("o-1"), json.toString());
+        assertTrue(values(json.getMessages(), "startedAt").contains("2026-01-01T00:00:00Z"), json.toString());
+        assertTrue(json.getLabels().contains("IllegalStateException"), json.toString());
+        assertEquals(
+                2,
+                values(json.getMessages(), "type").stream().filter("LOST"::equals).count(),
+                "a MessageType in the data position is the type");
     }
 
     @Test
@@ -102,8 +109,8 @@ class JavaApiTest {
         assertEquals(ClockOrdering.OFF, lsd.getTimingConfig().orderByStartedAt());
         lsd.message("A", "B", "ping");
         lsd.completeScenario("java-timing");
-        String json = Files.readString(reportJson(lsd.completeReport("Java timing")));
-        assertTrue(json.contains("\"clockOrdering\": \"OFF\""), json);
+        ScenarioJson json = report(lsd.completeReport("Java timing")).scenario("java-timing");
+        assertEquals("OFF", json.get("clockOrdering"), json.toString());
 
         lsd.configure(t -> t.orderByStartedAt(null));
         assertEquals(null, lsd.getTimingConfig().orderByStartedAt());
@@ -128,10 +135,10 @@ class JavaApiTest {
         assertEquals(LsdContext.class, LsdContext.getInstance().getClass());
         assertEquals("lsd-scenario", LsdHeaders.SCENARIO);
 
-        String json = Files.readString(reportJson(lsd.completeReport("Java", "java-report")));
-        assertEquals(List.of("bound", "direct", "block"), all(events(json), "\"label\": \"([^\"]*)\""));
-        assertTrue(json.contains("\"headline\": \"Failed\""), json);
-        assertTrue(json.contains("\"message\": \"boom\""), json);
+        ScenarioJson json = report(lsd.completeReport("Java", "java-report")).scenario("Failed");
+        assertEquals(List.of("bound", "direct", "block"), json.getLabels());
+        assertEquals("Failed", json.getError().get("headline"), json.toString());
+        assertEquals("boom", json.getError().get("message"), json.toString());
     }
 
     @Test
@@ -161,11 +168,12 @@ class JavaApiTest {
                 throw new IllegalStateException("boom");
             }));
 
-            String json = Files.readString(reportJson(report));
-            assertEquals(List.of("receiver", "context", "callable", "nested in report"), all(events(json), "\"label\": \"([^\"]*)\""));
-            String other = Files.readString(reportJson(lsd.completeReport("Java default")));
-            assertEquals(List.of("wrapped"), all(events(other), "\"label\": \"([^\"]*)\""));
-            assertTrue(other.contains("\"message\": \"boom\""), other);
+            assertEquals(List.of("receiver", "context", "callable", "nested in report"), labels(report(report)));
+            ReportJson other = report(lsd.completeReport("Java default"));
+            assertEquals(List.of("wrapped"), labels(other));
+            assertTrue(
+                    other.getScenarios().stream().anyMatch(s -> s.getError() != null && "boom".equals(s.getError().get("message"))),
+                    other.getText());
         } finally {
             pool.shutdownNow();
         }
@@ -187,9 +195,9 @@ class JavaApiTest {
         assertThrows(IllegalArgumentException.class, () -> scenario.note("over nothing", null));
         scenario.complete("Traps");
 
-        String json = events(Files.readString(reportJson(lsd.completeReport("Java traps", "java-traps"))));
-        assertEquals(List.of("null type", "null type with data"), all(json, "\"label\": \"([^\"]*)\""));
-        assertEquals(List.of("SYNCHRONOUS", "SYNCHRONOUS"), all(json, "\"type\": \"(\\w+)\""));
+        ScenarioJson json = report(lsd.completeReport("Java traps", "java-traps")).scenario("Traps");
+        assertEquals(List.of("null type", "null type with data"), json.getLabels());
+        assertEquals(List.of("SYNCHRONOUS", "SYNCHRONOUS"), values(json.getMessages(), "type"));
     }
 
     @Test
@@ -214,12 +222,15 @@ class JavaApiTest {
                 Map.of("content-type", "application/json", "Authorization", "Bearer secret")));
         lsd.completeScenario("java-interactions");
 
-        String json = Files.readString(reportJson(lsd.completeReport("Java interactions")));
+        Path file = reportJson(lsd.completeReport("Java interactions"));
+        ScenarioJson json = ReportJson.Companion.read(file).scenario("java-interactions");
 
-        assertTrue(json.contains("\"status\": \"201\""), json);
-        assertTrue(json.contains("\"content-type\": \"application/json\""), json);
-        assertTrue(json.contains("\"body\": {"), json);
-        assertTrue(!json.contains("Bearer secret"), "authorization is redacted");
+        assertEquals("201", json.message("Created").get("status"), json.toString());
+        JsonObject published = json.message("order.placed").obj("data");
+        assertEquals("application/json", published.obj("headers").get("content-type"), json.toString());
+        assertEquals(Map.of("id", 7.0), Map.copyOf(published.obj("body")), json.toString());
+        // Raw text on purpose: the secret must appear nowhere in the file, under any key.
+        assertTrue(!Files.readString(file).contains("Bearer secret"), "authorization is redacted");
     }
 
     @Test
@@ -228,12 +239,12 @@ class JavaApiTest {
         LsdScenario forgotten = lsd.beginScenario("java-forgotten", "java-forgotten", false);
         forgotten.message("Shop", "Orders", "kept");
 
-        String json = Files.readString(reportJson(lsd.completeReport("Java forgotten", "java-forgotten")));
+        ScenarioJson json = report(lsd.completeReport("Java forgotten", "java-forgotten")).scenario("java-forgotten");
 
         assertTrue(!forgotten.isActive(), "the report completed it");
-        assertTrue(json.contains("\"status\": \"warn\""), json);
-        assertTrue(json.contains("Scenario was not completed before the report was written"), json);
-        assertTrue(json.contains("kept"), json);
+        assertEquals("warn", json.getStatus(), json.toString());
+        assertTrue(json.getDescription().contains("Scenario was not completed before the report was written"), json.toString());
+        assertEquals(List.of("kept"), json.getLabels());
     }
 
     private static Path reportJson(ReportFiles files) {
@@ -246,15 +257,19 @@ class JavaApiTest {
         }
     }
 
-    /** The scenarios' event lists, without the metrics that precede them. */
-    private static String events(String json) {
-        return json.substring(json.indexOf("\"events\""));
+    private static ReportJson report(ReportFiles files) {
+        return ReportJson.Companion.read(reportJson(files));
     }
 
-    private static List<String> all(String text, String regex) {
-        List<String> found = new ArrayList<>();
-        Matcher matcher = Pattern.compile(regex).matcher(text);
-        while (matcher.find()) found.add(matcher.group(1));
+    /** Every scenario's message labels, in report order. */
+    private static List<String> labels(ReportJson report) {
+        return report.getScenarios().stream().flatMap(s -> s.getLabels().stream()).toList();
+    }
+
+    /** The [key] of each of [objects], in order (null where it is absent). */
+    private static List<Object> values(List<JsonObject> objects, String key) {
+        List<Object> found = new ArrayList<>();
+        for (JsonObject o : objects) found.add(o.get(key));
         return found;
     }
 }

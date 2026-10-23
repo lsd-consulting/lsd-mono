@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.coroutines
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -56,7 +57,7 @@ class LsdScenarioContextElementTest {
         scenario.complete(reportKey)
         val json = lsd.completeReport(reportKey, reportKey).reportJson.readText()
         ReportSchemas.assertValid(ReportSchemas.Document.REPORT, json, reportKey)
-        return Regex(""""label": "([^"]*)"""").findAll(json).map { it.groupValues[1] }.toList()
+        return ReportJson(json).scenarios.flatMap { it.labels }
     }
 
     @Test

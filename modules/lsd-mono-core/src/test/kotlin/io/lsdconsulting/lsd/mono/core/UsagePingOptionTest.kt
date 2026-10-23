@@ -3,7 +3,9 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.properties.LsdConfig
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.report.reportWriter
+import io.lsdconsulting.lsd.mono.core.testing.JsonObject
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import org.junit.jupiter.api.AfterEach
@@ -14,7 +16,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.io.path.readText
 
 /**
  * `lsd.mono.report.usagePing` and the report's `source`: what the report page's usage ping
@@ -25,30 +26,31 @@ class UsagePingOptionTest {
     @TempDir
     lateinit var tempDir: Path
 
-    private fun write(source: String? = null): String {
+    /** The report's options. */
+    private fun write(source: String? = null): JsonObject {
         val lsd = LsdContext()
         lsd.message("A", "B", "hello")
         lsd.completeScenario("one")
         if (source == null) lsd.completeReport("Ping") else @OptIn(InternalLsdApi::class) lsd.completeReport("Ping", null, source)
-        return tempDir.resolve(ReportFileNames.stem("Ping") + "-report.json").readText()
+        return ReportJson.read(tempDir.resolve(ReportFileNames.stem("Ping") + "-report.json")).options
     }
 
     @Test
     fun `reports allow the ping by default and record the API as their source`() {
-        val json = write()
-        assertTrue(json.contains(""""usagePing": true"""), json)
-        assertTrue(json.contains(""""source": "api""""), json)
+        val options = write()
+        assertEquals(true, options["usagePing"], options.source)
+        assertEquals("api", options["source"], options.source)
     }
 
     @Test
     fun `usagePing false is written into the report, the diagram page and the index`() {
         System.setProperty(LsdProperties.USAGE_PING, "false")
-        val json = write()
-        assertTrue(json.contains(""""usagePing": false"""), json)
-        val diagram = tempDir.resolve(ReportFileNames.stem("Ping") + "-diagram.html").readText()
-        assertTrue(Regex(""""usagePing"\s*:\s*false""").containsMatchIn(diagram), "the page decides from the report it carries")
-        val manifest = reportWriter().writeIndex(tempDir.toFile()).readText().substringAfter("window.__LSD_INDEX__=")
-        assertTrue(Regex(""""options"\s*:\s*\{\s*"usagePing"\s*:\s*false\s*}""").containsMatchIn(manifest), manifest.take(300))
+        val options = write()
+        assertEquals(false, options["usagePing"], options.source)
+        val diagram = ReportJson.diagram(tempDir.resolve(ReportFileNames.stem("Ping") + "-diagram.html"))
+        assertEquals(false, diagram.options["usagePing"], "the page decides from the report it carries")
+        val manifest = ReportJson.index(reportWriter().writeIndex(tempDir.toFile()).parent)
+        assertEquals(mapOf("usagePing" to false), manifest.obj("options")?.toMap(), manifest.source.take(300))
     }
 
     @Test
@@ -59,9 +61,9 @@ class UsagePingOptionTest {
 
     @Test
     fun `an integration records its own source, and an unknown one counts as the API`() {
-        assertTrue(write("junit").contains(""""source": "junit""""))
-        assertTrue(write("cucumber").contains(""""source": "cucumber""""))
-        assertTrue(write("testng").contains(""""source": "api""""))
+        assertEquals("junit", write("junit")["source"])
+        assertEquals("cucumber", write("cucumber")["source"])
+        assertEquals("api", write("testng")["source"])
     }
 
     @Test

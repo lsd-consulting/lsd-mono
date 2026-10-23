@@ -32,31 +32,13 @@ class JsonChecksRatchetTest {
 
     private val allowed =
         mapOf(
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/RemainingSequenceEventKindsTest.kt" to 29,
-            "lsd-mono-junit-jupiter/src/test/kotlin/io/lsdconsulting/lsd/mono/junitjupiter/LsdExtensionOutcomesTest.kt" to 28,
-            "lsd-mono-core/src/test/java/io/lsdconsulting/lsd/mono/core/JavaApiTest.java" to 13,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/ActivateColourAndTimestampsTest.kt" to 13,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/ConcurrentCaptureTest.kt" to 12,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/ScopedBlocksTest.kt" to 8,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/SectionCaptureTest.kt" to 8,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/UsagePingOptionTest.kt" to 8,
             "lsd-mono-report-html/src/test/kotlin/io/lsdconsulting/lsd/mono/report/html/ReportWriterTest.kt" to 5,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/MultiScenarioStatusGoldenTest.kt" to 4,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/PayloadCaptureTest.kt" to 4,
-            "lsd-mono-cucumber-8/src/test/kotlin/io/lsdconsulting/lsd/mono/cucumber/LsdCucumberPluginTest.kt" to 4,
-            "lsd-mono-junit-jupiter/src/test/kotlin/io/lsdconsulting/lsd/mono/junitjupiter/LsdExtensionParallelTest.kt" to 4,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/PendingCallTest.kt" to 3,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/ReportSchemaTest.kt" to 3,
-            "lsd-mono-cucumber-8/src/test/kotlin/io/lsdconsulting/lsd/mono/cucumber/LsdCucumberPluginParallelTest.kt" to 3,
             "lsd-mono-report-html/src/test/kotlin/io/lsdconsulting/lsd/mono/report/html/JsonTest.kt" to 3,
             "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/Conformance.kt" to 2,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/ScenarioParticipantsTest.kt" to 2,
-            "lsd-mono-cucumber-8/src/test/kotlin/io/lsdconsulting/lsd/mono/cucumber/LsdCucumberPluginEventsTest.kt" to 2,
             "lsd-mono-report-html/src/test/kotlin/io/lsdconsulting/lsd/mono/example/adapter/AdapterReportTest.kt" to 2,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/LsdContextTest.kt" to 1,
+            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/PayloadCaptureTest.kt" to 1,
             "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/PayloadConvertersTest.kt" to 1,
-            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/ScenarioPropagationTest.kt" to 1,
-            "lsd-mono-coroutines/src/test/kotlin/io/lsdconsulting/lsd/mono/coroutines/LsdScenarioContextElementTest.kt" to 1,
+            "lsd-mono-core/src/test/kotlin/io/lsdconsulting/lsd/mono/core/ReportSchemaTest.kt" to 1,
             "lsd-mono-report-model/src/test/kotlin/io/lsdconsulting/lsd/mono/report/model/testing/ReportSchemasTest.kt" to 1,
         )
 

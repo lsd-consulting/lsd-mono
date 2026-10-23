@@ -7,6 +7,7 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -17,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.io.path.readText
 import kotlin.random.Random
 
 /**
@@ -152,13 +152,13 @@ class ScenarioParticipantsTest {
         lsd: LsdContext,
         reportKey: String,
     ): String {
-        val json = lsd.completeReport("Participants $reportKey", reportKey).reportJson.readText()
+        val scenarios = ReportJson.read(lsd.completeReport("Participants $reportKey", reportKey).reportJson).scenarios
         val participants =
-            Regex(""""id": "([^"]+)",\s*"name": "([^"]+)",\s*"type": "([^"]+)"""")
-                .findAll(json)
-                .associate { it.groupValues[1] to "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]}" }
-        return Regex(""""from": "([^"]*)",\s*"to": "([^"]*)",[\s\S]*?"label": "([^"]*)"""")
-            .findAll(json)
-            .joinToString("; ") { "${it.groupValues[3]}: ${participants[it.groupValues[1]]} -> ${participants[it.groupValues[2]]}" }
+            scenarios
+                .flatMap { it.participants }
+                .associate { it["id"] to "${it["id"]} ${it["name"]} ${it["type"]}" }
+        return scenarios
+            .flatMap { it.messages }
+            .joinToString("; ") { "${it["label"]}: ${participants[it["from"]]} -> ${participants[it["to"]]}" }
     }
 }

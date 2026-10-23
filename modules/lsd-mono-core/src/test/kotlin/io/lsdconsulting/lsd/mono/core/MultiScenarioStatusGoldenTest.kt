@@ -1,7 +1,10 @@
 package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.domain.Status
+import io.lsdconsulting.lsd.mono.core.testing.Json
+import io.lsdconsulting.lsd.mono.core.testing.JsonObject
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -34,31 +37,28 @@ class MultiScenarioStatusGoldenTest {
         lsd.createIndex()
 
         val json = tempDir.resolve(ReportFileNames.stem("Status mix") + "-report.json").readText()
-        val generatedAt = GENERATED_AT.find(json)?.groupValues?.get(1) ?: error("no generatedAt in $json")
+        val report = ReportJson(json)
+        val generatedAt = report.root.string("generatedAt") ?: error("no generatedAt in $json")
         val written = Instant.parse(generatedAt)
         assertTrue(generatedAt.endsWith("Z"), "generatedAt should be a UTC instant: $generatedAt")
         assertTrue(Duration.between(written, Instant.now()).abs() < Duration.ofMinutes(5), generatedAt)
         val projectVersion = System.getProperty("lsd.mono.test.projectVersion") ?: error("Gradle sets the project version")
-        assertTrue(json.contains(""""generator": "lsd-mono-core $projectVersion""""), json)
+        assertEquals("lsd-mono-core $projectVersion", report.root["generator"], json)
 
         Conformance.assertProduced("reports/multi-scenario-status.json", json)
 
-        assertEquals(1, count(json, """"status": "success""""))
-        assertEquals(1, count(json, """"status": "warn""""))
-        // report rollup + the error scenario
-        assertEquals(2, count(json, """"status": "error""""))
+        assertEquals(listOf("success", "warn", "error"), report.scenarios.map { it.status })
+        assertEquals("error", report.root["status"], "the report rolls up to error")
 
         val index = tempDir.resolve("index.html").readText()
         val indexJson = index.substringAfter("window.__LSD_INDEX__=").substringBefore(";</script>")
         Conformance.assertProduced("indexes/status-mix.json", indexJson + "\n", Conformance.INDEX_SCHEMA)
-        val manifest = indexJson.replace(Regex("\\s+"), "")
-        assertTrue(manifest.contains(""""status":"error","href""""), "index should use the error rollup")
-        assertTrue(manifest.contains(""""counts":{"success":1,"warn":1,"error":1}"""), "index should count the three scenarios")
-    }
-
-    private fun count(text: String, needle: String): Int = Regex(Regex.escape(needle)).findAll(text).count()
-
-    companion object {
-        private val GENERATED_AT = Regex(""""generatedAt": "([^"]*)"""")
+        val entry = (Json.parse(indexJson) as JsonObject).objects("reports").single()
+        assertEquals("error", entry["status"], "index should use the error rollup")
+        assertEquals(
+            mapOf("success" to 1.0, "warn" to 1.0, "error" to 1.0),
+            entry.obj("counts")?.toMap(),
+            "index should count the three scenarios",
+        )
     }
 }

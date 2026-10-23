@@ -13,7 +13,9 @@ import io.lsdconsulting.lsd.mono.core.domain.ParticipantType
 import io.lsdconsulting.lsd.mono.core.domain.ScenarioError
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.domain.WarningKind
+import io.lsdconsulting.lsd.mono.core.testing.Json
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import io.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
 import io.lsdconsulting.lsd.mono.report.model.KnownReportSource
@@ -54,11 +56,15 @@ class ReportSchemaTest {
 
         val json = tempDir.resolve("$stem-report.json").readText()
         assertValid(report, json, "$stem-report.json")
-        ENUM_VALUES.forEach { value -> assertTrue(json.contains("\"$value\""), "the report uses $value") }
+        val values = strings(Json.parse(json)).toSet()
+        ENUM_VALUES.forEach { value -> assertTrue(value in values, "the report uses $value") }
 
         val diagram = tempDir.resolve("$stem-diagram.html").readText()
         val shellCopy = between(diagram, "window.__LSD_REPORT__=", ";</script>")
-        assertTrue(shellCopy.contains("\"payloadId\""), "the diagram page's copy defers a payload")
+        assertTrue(
+            ReportJson(shellCopy).scenarios.flatMap { it.messages }.any { it.containsKey("payloadId") },
+            "the diagram page's copy defers a payload",
+        )
         assertValid(report, shellCopy, "window.__LSD_REPORT__")
 
         val data = tempDir.resolve("$stem-report.js").readText()
@@ -312,6 +318,15 @@ class ReportSchemaTest {
         }
 
         fun idOf(file: String) = "https://lsd-consulting.github.io/lsd-mono/schema/${ReportSchema.VERSION}/$file"
+
+        /** Every string value in a parsed document, at any depth (not its keys). */
+        private fun strings(value: Any?): Sequence<String> =
+            when (value) {
+                is String -> sequenceOf(value)
+                is Map<*, *> -> value.values.asSequence().flatMap(::strings)
+                is List<*> -> value.asSequence().flatMap(::strings)
+                else -> emptySequence()
+            }
 
         /** Enum values the [everything] report must reach, so the test covers what it says. */
         val ENUM_VALUES =

@@ -15,7 +15,6 @@ import io.cucumber.plugin.event.TestSourceParsed
 import io.cucumber.plugin.event.TestStep
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
-import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -65,8 +64,7 @@ class LsdCucumberPluginEventsTest {
         publisher.finish(testCase, Status.PASSED)
         publisher.publish(runFinished())
 
-        val json = reportJson(tempDir, "shop")
-        assertEquals(listOf("second attempt"), labels(json))
+        assertEquals(listOf("second attempt"), reportJson(tempDir, "shop").scenarios.flatMap { it.labels })
     }
 
     @Test
@@ -76,7 +74,7 @@ class LsdCucumberPluginEventsTest {
         publisher.publish(runFinished())
 
         val scenario = scenariosByTitle(reportJson(tempDir, "shop")).getValue("checkout")
-        assertEquals(""""status": "error"""", Regex(""""status": "\w+"""").find(scenario)!!.value)
+        assertEquals("error", scenario.status, scenario.json)
     }
 
     @Test
@@ -99,7 +97,7 @@ class LsdCucumberPluginEventsTest {
         publisher.publish(TestSourceParsed(Instant.now(), URI("classpath:shop.feature"), listOf(FakeFeature(" Shop front "))))
         publisher.publish(runFinished())
 
-        assertEquals("Shop front", ReportJson(reportJson(tempDir, "shop")).root.string("title"))
+        assertEquals("Shop front", reportJson(tempDir, "shop").root.string("title"))
     }
 
     @Test
@@ -108,8 +106,6 @@ class LsdCucumberPluginEventsTest {
 
         assertFalse(tempDir.resolve("index.html").exists())
     }
-
-    private fun labels(json: String) = Regex(""""label": "([^"]+)"""").findAll(json).map { it.groupValues[1] }.toList()
 
     private class FakePublisher : EventPublisher {
         private val handlers = mutableMapOf<Class<*>, MutableList<EventHandler<*>>>()

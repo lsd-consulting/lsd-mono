@@ -64,17 +64,17 @@ class LsdExtensionParallelTest {
         assertTrue(ParallelFixtureState.maxInFlight.get() > 1, "fixtures did not overlap, so this run proves nothing")
 
         listOf("ParallelFixtureA" to "a", "ParallelFixtureB" to "b").forEach { (className, tag) ->
-            val json = reportJson(className)
-            val titles = Regex(""""title": "parallel fixture [ab]: test(\d+)"""").findAll(json).map { it.value }.toList()
+            val report = reportJson(className)
+            val titles = report.titles
             assertEquals(TESTS_PER_CLASS, titles.size, "$className report should hold exactly its own $TESTS_PER_CLASS scenarios: $titles")
             assertTrue(titles.all { it.contains("parallel fixture $tag:") }, "$className report holds another class's scenarios: $titles")
             (1..TESTS_PER_CLASS).forEach { n ->
                 val own = "$tag$n"
-                val slice = scenarioSlice(json, "parallel fixture $tag: test$n")
-                val labels = Regex(""""label": "([a-z]\d+)-\d+"""").findAll(slice).map { it.groupValues[1] }.toList()
+                val scenario = report.scenario("parallel fixture $tag: test$n")
+                val labels = scenario.labels.map { it.substringBeforeLast('-') }
                 assertEquals(MESSAGES_PER_TEST, labels.size, "$own should have $MESSAGES_PER_TEST messages, had ${labels.size}")
                 assertTrue(labels.all { it == own }, "$own has messages from ${labels.toSet() - own}")
-                val facts = Regex(""""key": "test",\s*"value": "([a-z]\d+)"""").findAll(slice).map { it.groupValues[1] }.toList()
+                val facts = scenario.facts.filter { it.first == "test" }.map { it.second }
                 assertEquals(listOf(own), facts, "$own facts")
             }
         }
@@ -97,18 +97,14 @@ class LsdExtensionParallelTest {
         assertEquals(0, summary.summary.testsFailedCount.toInt(), summary.summary.failures.joinToString { it.exception.stackTraceToString() })
         assertEquals(TESTS_PER_CLASS, summary.summary.testsSucceededCount.toInt())
         assertTrue(ParallelFixtureState.maxInFlight.get() > 1, "fixtures did not overlap, so this run proves nothing")
-        val json = reportJson("ParallelInjectedFixture")
+        val report = reportJson("ParallelInjectedFixture")
         (1..TESTS_PER_CLASS).forEach { n ->
-            val slice = scenarioSlice(json, "parallel injected fixture: test$n")
-            val labels = Regex(""""label": "([a-z]\d+)-\d+"""").findAll(slice).map { it.groupValues[1] }.toList()
+            val labels = report.scenario("parallel injected fixture: test$n").labels.map { it.substringBeforeLast('-') }
             assertEquals(List(MESSAGES_PER_TEST) { "i$n" }, labels, "i$n")
         }
     }
 
-    private fun reportJson(className: String): String = ReportJson.single(tempDir, "$className*-report.json").text
-
-    /** The scenario titled [title], and only it, as written. */
-    private fun scenarioSlice(json: String, title: String): String = ReportJson(json).scenario(title).json
+    private fun reportJson(className: String): ReportJson = ReportJson.single(tempDir, "$className*-report.json")
 
     companion object {
         const val TESTS_PER_CLASS = 6

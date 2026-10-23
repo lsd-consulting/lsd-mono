@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Message
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -178,15 +179,15 @@ class ScenarioPropagationTest {
             assertTrue(other.isActive)
             assertNull(lsd.findScenario("forgotten"))
 
-            val json = files.reportJson.readText()
-            val scenarios = Regex(""""title": "(forgotten|failed)"[\s\S]*?"status": "(\w+)"""").findAll(json)
+            val report = ReportJson.read(files.reportJson)
+            val json = report.text
             assertEquals(
                 mapOf("forgotten" to "warn", "failed" to "error"),
-                scenarios.associate { it.groupValues[1] to it.groupValues[2] },
+                report.scenarios.filter { it.title in setOf("forgotten", "failed") }.associate { it.title to it.status },
                 json,
             )
-            assertTrue(json.contains(LsdContext.NOT_COMPLETED_NOTE), json)
-            assertTrue(json.contains("before the report"), "events captured before the report are kept")
+            assertEquals(LsdContext.NOT_COMPLETED_NOTE, report.scenario("forgotten").description, json)
+            assertTrue("before the report" in report.scenario("forgotten").labels, "events captured before the report are kept")
 
             // Completing it afterwards is a no-op, not a second copy in a later report.
             forgotten.complete("late")

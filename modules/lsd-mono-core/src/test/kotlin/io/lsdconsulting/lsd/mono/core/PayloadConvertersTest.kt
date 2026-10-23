@@ -219,6 +219,7 @@ class PayloadConvertersTest {
             snap(Customer("Ada", Colour.GREEN, Address("High St", "AB1"), listOf("vip"))),
         )
         assertEquals(mapOf("id" to "o-1", "quantity" to 2L, "tags" to listOf("gift")), snap(OrderRecord("o-1", 2, listOf("gift"))))
+        // Raw text on purpose: a whole number is written as 2, not 2.0 (a parsed Double cannot tell).
         assertTrue(json(OrderRecord("o-1", 2, listOf())).contains(""""quantity": 2"""))
     }
 

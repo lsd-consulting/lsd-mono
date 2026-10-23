@@ -53,9 +53,9 @@ class LsdCucumberPluginParallelTest {
         assertTrue(ParallelSteps.maxInFlight.get() > 1, "scenarios did not overlap, so this run proves nothing")
 
         listOf("checkout" to "c", "returns" to "r").forEach { (feature, p) ->
-            val json = reportJson(tempDir, feature)
-            val scenarios = scenariosByTitle(json)
-            val titles = Regex(""""title": "([a-z][0-9]|[a-z] outline #[0-9])"""").findAll(json).map { it.groupValues[1] }.toList()
+            val report = reportJson(tempDir, feature)
+            val scenarios = scenariosByTitle(report)
+            val titles = report.titles
             assertEquals(
                 listOf("${p}1", "${p}2", "${p}3", "$p outline #1", "$p outline #2", "$p outline #3").sorted(),
                 titles.sorted(),
@@ -64,11 +64,11 @@ class LsdCucumberPluginParallelTest {
             val expectations = listOf("${p}1", "${p}2", "${p}3").associateWith { it } +
                 (1..3).associate { n -> "$p outline #$n" to "${p}o$n" }
             expectations.forEach { (title, tag) ->
-                val slice = scenarios[title] ?: error("missing scenario '$title'")
-                val owners = Regex(""""label": "([a-z]+\d)-\d+"""").findAll(slice).map { it.groupValues[1] }.toList()
+                val scenario = scenarios[title] ?: error("missing scenario '$title'")
+                val owners = scenario.labels.map { it.substringBeforeLast('-') }
                 assertEquals(30, owners.size, "$title should have 30 messages")
                 assertEquals(setOf(tag), owners.toSet(), "$title has another scenario's messages")
-                val facts = Regex(""""key": "scenario",\s*"value": "([a-z]+\d)"""").findAll(slice).map { it.groupValues[1] }.toList()
+                val facts = scenario.facts.filter { it.first == "scenario" }.map { it.second }
                 assertEquals(listOf(tag), facts, "$title facts")
             }
         }

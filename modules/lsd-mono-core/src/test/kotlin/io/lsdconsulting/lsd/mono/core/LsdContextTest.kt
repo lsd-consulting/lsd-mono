@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -44,8 +45,8 @@ class LsdContextTest {
             val lsd = LsdContext()
             lsd.completeScenario("fixed")
             lsd.completeReport("Fixed time")
-            val json = File(tempDir.toFile(), "${ReportFileNames.stem("Fixed time")}-report.json").readText()
-            assertTrue(json.contains(""""generatedAt": "2026-01-01T12:00:00Z""""), json)
+            val json = ReportJson.read(tempDir.resolve("${ReportFileNames.stem("Fixed time")}-report.json"))
+            assertEquals("2026-01-01T12:00:00Z", json.root["generatedAt"], json.text)
 
             System.setProperty(LsdProperties.GENERATED_AT, "yesterday")
             assertNull(LsdProperties.generatedAt())

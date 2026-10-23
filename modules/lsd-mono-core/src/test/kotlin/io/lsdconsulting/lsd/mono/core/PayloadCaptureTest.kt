@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.testing.assertValidJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -61,6 +62,7 @@ class PayloadCaptureTest {
         assertTrue(json.contains("[lsd: max depth 32 reached]"))
         assertTrue(json.contains("[lsd: binary, 3 bytes] base64:AP8Q"))
         assertTrue(json.contains("[lsd: truncated 200000 characters]"))
+        // Raw text on purpose: a lone surrogate is written as the escaped replacement character.
         assertTrue(json.contains(""""7": "\ufffd""""))
         assertEquals(4, files.size, files.keys.toString())
         for ((name, text) in files) {
@@ -79,9 +81,9 @@ class PayloadCaptureTest {
         lsd.message("A", "B", "builder", data = StringBuilder("xy"))
         lsd.completeScenario("limits")
         lsd.completeReport("Payload limits")
-        val json = reportFiles("Payload-limits").entries.single { it.key.endsWith("-report.json") }.value
-        assertTrue(json.contains(""""data": "abcd… [lsd: truncated 4 characters]""""), json)
-        assertTrue(json.contains(""""data": "buil… [lsd: truncated 6 characters]""""), json)
+        val scenario = ReportJson.single(tempDir, "Payload-limits*-report.json").scenario("limits")
+        assertEquals("abcd… [lsd: truncated 4 characters]", scenario.message("short")["data"], scenario.json)
+        assertEquals("buil… [lsd: truncated 6 characters]", scenario.message("builder")["data"], scenario.json)
 
         System.clearProperty(LsdProperties.PAYLOAD_MAX_STRING_LENGTH)
         lsd.clear()
@@ -126,7 +128,7 @@ class PayloadCaptureTest {
         lsd.completeReport("Racing payloads")
         val json = reportFiles("Racing-payloads").entries.single { it.key.endsWith("-report.json") }.value
         assertValidJson(json)
-        assertEquals(threads * perThread, Regex(""""label": "t\d+-\d+"""").findAll(json).count())
+        assertEquals(threads * perThread, ReportJson(json).scenario("racing").labels.count { Regex("""t\d+-\d+""").matches(it) })
     }
 
     @Test

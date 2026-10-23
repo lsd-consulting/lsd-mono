@@ -2,7 +2,6 @@ package io.lsdconsulting.lsd.mono.cucumber
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
-import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -43,13 +42,14 @@ class LsdCucumberPluginTest {
         assertEquals(0, summary.testsFailedCount.toInt(), summary.failures.toString())
         assertTrue(summary.testsSucceededCount >= 1)
 
-        val json = reportJson(tempDir, "place_order")
-        assertTrue(json.contains(""""title": "places an order""""), json)
+        val report = reportJson(tempDir, "place_order")
+        val json = report.text
+        val scenario = report.scenario("places an order")
         assertTrue(json.contains("When the customer places an order for socks"), json)
-        assertTrue(json.contains(""""label": "POST /orders""""), json)
-        assertTrue(json.contains(""""status": "success""""), json)
+        assertTrue("POST /orders" in scenario.labels, scenario.json)
+        assertEquals("success", scenario.status, scenario.json)
         assertFalse(json.contains("PlantUML"), json)
-        assertTrue(json.contains(""""source": "cucumber""""), "the usage ping counts the Cucumber plugin")
+        assertEquals("cucumber", report.options["source"], "the usage ping counts the Cucumber plugin")
     }
 
     @Test
@@ -57,7 +57,7 @@ class LsdCucumberPluginTest {
         val summary = runFeatures("place_order.feature")
         assertEquals(0, summary.testsFailedCount.toInt(), summary.failures.toString())
 
-        assertEquals("Place an order", ReportJson(reportJson(tempDir, "place_order")).root.string("title"))
+        assertEquals("Place an order", reportJson(tempDir, "place_order").root.string("title"))
         val stem = tempDir
             .listDirectoryEntries("*-diagram.html")
             .single()
@@ -74,6 +74,6 @@ class LsdCucumberPluginTest {
         val summary = runFeatures("untitled/untitled_order.feature")
         assertEquals(0, summary.testsFailedCount.toInt(), summary.failures.toString())
 
-        assertEquals("untitled_order", ReportJson(reportJson(tempDir, "untitled_order")).root.string("title"))
+        assertEquals("untitled_order", reportJson(tempDir, "untitled_order").root.string("title"))
     }
 }

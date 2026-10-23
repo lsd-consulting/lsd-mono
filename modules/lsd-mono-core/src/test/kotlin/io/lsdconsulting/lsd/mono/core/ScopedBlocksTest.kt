@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -18,7 +19,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.exists
-import kotlin.io.path.readText
 
 /** `scenario { }`, `report { }` and `wrap(Callable)`: binding, nesting, failures and parallel reports. */
 @LsdTestConfig(deterministicIds = true)
@@ -28,18 +28,11 @@ class ScopedBlocksTest {
 
     private val lsd = LsdContext()
 
-    private fun json(title: String, reportKey: String? = null): String =
-        tempDir.resolve(ReportFileNames.stem(title, reportKey) + "-report.json").readText()
+    private fun json(title: String, reportKey: String? = null): ReportJson =
+        ReportJson.read(tempDir.resolve(ReportFileNames.stem(title, reportKey) + "-report.json"))
 
     /** The labels of each scenario in a report, by scenario title, in report order. */
-    private fun labelsByScenario(json: String): Map<String, List<String>> {
-        val titles = Regex(""""title": "([^"]*)"""").findAll(json).toList().drop(1) // the first is the report's
-        return titles.withIndex().associate { (i, title) ->
-            val end = titles.getOrNull(i + 1)?.range?.first ?: json.length
-            val slice = json.substring(title.range.last, end)
-            title.groupValues[1] to Regex(""""label": "([^"]*)"""").findAll(slice).map { it.groupValues[1] }.toList()
-        }
-    }
+    private fun labelsByScenario(json: ReportJson): Map<String, List<String>> = json.scenarios.associate { it.title to it.labels }
 
     @Test
     fun `scenario binds the thread, completes as a success and returns the block's value`() {
@@ -56,8 +49,9 @@ class ScopedBlocksTest {
         lsd.completeReport("Shop")
         val json = json("Shop")
         assertEquals(mapOf("Place an order" to listOf("via the context", "via the receiver")), labelsByScenario(json))
-        assertTrue(json.contains(""""status": "success""""), json)
-        assertTrue(json.contains(""""description": "Given stock""""), json)
+        val scenario = json.scenario("Place an order")
+        assertEquals("success", scenario.status, scenario.json)
+        assertEquals("Given stock", scenario.description, scenario.json)
     }
 
     @Test
@@ -103,9 +97,10 @@ class ScopedBlocksTest {
         lsd.completeReport("Errors")
         val json = json("Errors")
         assertEquals(mapOf("Card declined" to listOf("charge")), labelsByScenario(json))
-        assertTrue(json.contains(""""status": "error""""), json)
-        assertTrue(json.contains(""""headline": "Failed""""), json)
-        assertTrue(json.contains(""""message": "out of stock""""), json)
+        val scenario = json.scenario("Card declined")
+        assertEquals("error", scenario.status, scenario.json)
+        assertEquals("Failed", scenario.error?.get("headline"), scenario.json)
+        assertEquals("out of stock", scenario.error?.get("message"), scenario.json)
     }
 
     @Test
@@ -142,7 +137,7 @@ class ScopedBlocksTest {
         assertEquals("bad input", thrown.message)
         val json = json("Broken", "Broken")
         assertEquals(mapOf("Fine" to listOf("fine"), "Fails" to emptyList<String>()), labelsByScenario(json))
-        assertTrue(json.contains(""""message": "bad input""""), json)
+        assertEquals("bad input", json.scenario("Fails").error?.get("message"), json.text)
     }
 
     @Test
@@ -173,7 +168,7 @@ class ScopedBlocksTest {
 
             assertEquals(threads, paths.toSet().size, "every report gets its own file: $paths")
             paths.forEach { path ->
-                val json = path.reportJson.readText()
+                val json = ReportJson.read(path.reportJson)
                 val scenarios = labelsByScenario(json)
                 assertEquals(3, scenarios.size, "$path: ${scenarios.keys}")
                 val owner = scenarios.keys.map { it.substringBefore(' ') }.toSet()

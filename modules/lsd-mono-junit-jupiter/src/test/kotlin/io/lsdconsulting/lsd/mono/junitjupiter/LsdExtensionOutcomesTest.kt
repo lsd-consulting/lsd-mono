@@ -66,55 +66,60 @@ class LsdExtensionOutcomesTest {
         assertEquals(1, summary.summary.testsAbortedCount.toInt())
         assertEquals(1, summary.summary.testsSkippedCount.toInt())
 
-        val json = reportJson("LsdOutcomeFixtures")
-        assertTrue(json.contains(""""source": "junit""""), "the usage ping counts the JUnit extension")
+        val report = reportJson("LsdOutcomeFixtures")
+        assertEquals("junit", report.options["source"], "the usage ping counts the JUnit extension")
         // Literal titles: the expected text must not come from the code that makes it (#75).
         val prefix = "lsd outcome fixtures"
 
-        val passed = scenarioSlice(json, "$prefix: records a passing scenario")
-        assertTrue(passed.contains(""""status": "success""""), passed)
-        assertTrue(passed.contains(""""description": "Test passed""""), passed)
-        assertTrue(passed.contains(""""label": "ping""""), passed)
-        assertTrue(Regex(""""key": "framework",\s*"value": "junit-jupiter-6"""").containsMatchIn(passed), passed)
-        assertTrue(passed.contains(""""label": "after-each""""), passed)
-        assertFalse(passed.contains(""""error""""), passed)
+        val passed = report.scenario("$prefix: records a passing scenario")
+        assertEquals("success", passed.status, passed.json)
+        assertEquals("Test passed", passed.description, passed.json)
+        assertTrue("ping" in passed.labels, passed.json)
+        assertTrue(("framework" to "junit-jupiter-6") in passed.facts, passed.json)
+        assertTrue("after-each" in passed.labels, passed.json)
+        assertFalse(passed.obj.containsKey("error"), passed.json)
 
-        val failed = scenarioSlice(json, "$prefix: blows up with a structured failure")
-        assertTrue(failed.contains(""""status": "error""""), failed)
-        assertTrue(failed.contains(""""description": "Test failed""""), failed)
-        assertTrue(failed.contains(""""headline": "Failed""""), failed)
-        assertTrue(failed.contains(""""message": "boom: payload \u003cscript\u003e""""), failed)
-        assertTrue(failed.contains(""""stack":"""), failed)
-        assertTrue(failed.contains("IllegalStateException"), failed)
-        assertFalse(failed.contains("overlay"), failed)
-        assertFalse(failed.contains("href="), failed)
-        assertFalse(failed.contains("class=\\\"error\\\""), failed)
+        val failed = report.scenario("$prefix: blows up with a structured failure")
+        assertEquals("error", failed.status, failed.json)
+        assertEquals("Test failed", failed.description, failed.json)
+        val failure = failed.error ?: error("no error in ${failed.json}")
+        assertEquals("Failed", failure["headline"], failed.json)
+        assertEquals("boom: payload <script>", failure["message"], failed.json)
+        // Raw text on purpose: the markup in the message is written escaped.
+        assertTrue(failed.json.contains("""boom: payload \u003cscript\u003e"""), failed.json)
+        assertTrue(failure.string("stack").orEmpty().contains("IllegalStateException"), failed.json)
+        assertFalse(failed.json.contains("overlay"), failed.json)
+        assertFalse(failed.json.contains("href="), failed.json)
+        assertFalse(failed.json.contains("class=\\\"error\\\""), failed.json)
 
-        val disabled = scenarioSlice(json, "$prefix: is disabled")
-        assertTrue(disabled.contains(""""status": "warn""""), disabled)
-        assertTrue(disabled.contains(""""description": "Test disabled: not today""""), disabled)
-        assertFalse(disabled.contains(""""headline""""), disabled)
-        assertFalse(disabled.contains(""""label": "after-each""""), disabled)
+        val disabled = report.scenario("$prefix: is disabled")
+        assertEquals("warn", disabled.status, disabled.json)
+        assertEquals("Test disabled: not today", disabled.description, disabled.json)
+        assertEquals(null, disabled.error?.get("headline"), disabled.json)
+        assertFalse("after-each" in disabled.labels, disabled.json)
 
-        val aborted = scenarioSlice(json, "$prefix: aborts early")
-        assertTrue(aborted.contains(""""status": "warn""""), aborted)
-        assertTrue(aborted.contains(""""description": "Test aborted""""), aborted)
-        assertTrue(aborted.contains(""""headline": "Test aborted""""), aborted)
-        assertTrue(aborted.contains(""""message": "stopped early""""), aborted)
-        assertTrue(aborted.contains(""""stack":"""), aborted)
-        assertFalse(aborted.contains("overlay"), aborted)
+        val aborted = report.scenario("$prefix: aborts early")
+        assertEquals("warn", aborted.status, aborted.json)
+        assertEquals("Test aborted", aborted.description, aborted.json)
+        val abort = aborted.error ?: error("no error in ${aborted.json}")
+        assertEquals("Test aborted", abort["headline"], aborted.json)
+        assertEquals("stopped early", abort["message"], aborted.json)
+        assertTrue(abort.containsKey("stack"), aborted.json)
+        assertFalse(aborted.json.contains("overlay"), aborted.json)
 
         // A written display name keeps its case and brackets; a camelCase method name is split.
-        val named = scenarioSlice(json, "$prefix: Order for iPhone (partial)")
-        assertTrue(named.contains(""""status": "success""""), named)
-        assertTrue(scenarioSlice(json, "$prefix: get urls for ids").contains(""""status": "success""""))
+        val named = report.scenario("$prefix: Order for iPhone (partial)")
+        assertEquals("success", named.status, named.json)
+        assertEquals("success", report.scenario("$prefix: get urls for ids").status)
 
-        val nested = scenarioSlice(json, "$prefix: when grouped: adds a nested scenario")
-        assertTrue(nested.contains(""""status": "success""""), nested)
-        assertTrue(nested.contains(""""text": "from nested""""), nested)
+        val nested = report.scenario("$prefix: when grouped: adds a nested scenario")
+        assertEquals("success", nested.status, nested.json)
+        assertEquals(listOf("from nested"), nested.eventsOf("note").map { it["text"] }, nested.json)
 
-        assertTrue(json.contains(""""status": "error""""))
-        assertFalse(Regex(""""id": "[0-9a-f]{20,}"""").containsMatchIn(json), "expected deterministic decimal ids")
+        assertEquals("error", report.root["status"], "the report rolls up the failure")
+        val ids = report.scenarios.flatMap { scenario -> listOf(scenario["id"]) + scenario.events.map { it["id"] } }.filterNotNull()
+        assertTrue(ids.isNotEmpty())
+        assertFalse(ids.any { Regex("[0-9a-f]{20,}").matches(it.toString()) }, "expected deterministic decimal ids: $ids")
     }
 
     @Test
@@ -128,7 +133,7 @@ class LsdExtensionOutcomesTest {
                 .useConfigurationSource(null)
         }
 
-        val failed = scenarioSlice(reportJson("LsdOutcomeFixtures"), "lsd outcome fixtures: blows up with a structured failure")
+        val failed = reportJson("LsdOutcomeFixtures").scenario("lsd outcome fixtures: blows up with a structured failure").json
         assertTrue(failed.contains("Displaying the stacktrace was disabled"), failed)
         assertFalse(failed.contains("at io.lsdconsulting"), failed)
     }
@@ -144,9 +149,16 @@ class LsdExtensionOutcomesTest {
         assertEquals(IllegalStateException::class.java, thrown.javaClass, thrown.stackTraceToString())
         assertEquals("after-each broke", thrown.message)
 
-        val json = reportJson("LsdAfterEachThrowsFixture")
-        assertTrue(json.contains(""""message": "after-each broke""""), json)
-        assertFalse(json.contains("InvocationTargetException"), json)
+        val report = reportJson("LsdAfterEachThrowsFixture")
+        assertEquals(
+            "after-each broke",
+            report.scenarios
+                .single()
+                .error
+                ?.get("message"),
+            report.text,
+        )
+        assertFalse(report.text.contains("InvocationTargetException"), report.text)
     }
 
     private fun execute(
@@ -165,10 +177,7 @@ class LsdExtensionOutcomesTest {
     }
 
     /** One report per top-level class, named from its title plus a hash of the class id. */
-    private fun reportJson(className: String): String = ReportJson.single(tempDir, "$className-*-report.json").text
-
-    /** The scenario titled [title], and only it, as written. */
-    private fun scenarioSlice(json: String, title: String): String = ReportJson(json).scenario(title).json
+    private fun reportJson(className: String): ReportJson = ReportJson.single(tempDir, "$className-*-report.json")
 }
 
 @Tag("lsd-fixture")

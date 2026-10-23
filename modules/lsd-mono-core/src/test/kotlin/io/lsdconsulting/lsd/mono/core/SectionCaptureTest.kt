@@ -3,14 +3,13 @@ package io.lsdconsulting.lsd.mono.core
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
-import kotlin.io.path.readText
 
 /**
  * Sections replace PlantUML newpage. They stay in one event stream and must not
@@ -37,22 +36,14 @@ class SectionCaptureTest {
         lsd.completeScenario("phased call", "activations survive sections", Status.SUCCESS)
         lsd.completeReport("Sections")
 
-        val json = tempDir.resolve(ReportFileNames.stem("Sections") + "-report.json").readText()
-        val kinds = Regex(""""kind": "([^"]+)"""").findAll(json).map { it.groupValues[1] }.toList()
+        val scenario = ReportJson.single(tempDir, ReportFileNames.stem("Sections") + "-report.json").scenario("phased call")
+        val kinds = scenario.events.map { it["kind"] }
         assertEquals(
             listOf("activate", "message", "section", "section", "message", "deactivate"),
             kinds,
         )
-        assertTrue(json.contains(""""title": "Phase 2""""))
-        assertTrue(json.contains(""""title": "Phase 3""""))
-
-        val activateAt = json.indexOf(""""kind": "activate"""")
-        val phase2 = json.indexOf(""""title": "Phase 2"""")
-        val phase3 = json.indexOf(""""title": "Phase 3"""")
-        val deactivateAt = json.indexOf(""""kind": "deactivate"""")
-        assertTrue(activateAt in 0 until phase2, "activate must precede the first section")
-        assertTrue(phase2 < phase3)
-        assertTrue(deactivateAt > phase3, "deactivate must follow the last section")
-        assertEquals(2, Regex(""""participantId": "api"""").findAll(json).count())
+        // In stream order: the activate before the first section, the deactivate after the last.
+        assertEquals(listOf("Phase 2", "Phase 3"), scenario.eventsOf("section").map { it["title"] })
+        assertEquals(listOf("api", "api"), scenario.events.filter { it["kind"] in setOf("activate", "deactivate") }.map { it["participantId"] })
     }
 }

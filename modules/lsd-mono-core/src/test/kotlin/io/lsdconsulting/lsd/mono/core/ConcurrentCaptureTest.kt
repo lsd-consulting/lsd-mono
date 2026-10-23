@@ -20,7 +20,6 @@ import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.readText
 
 /**
  * Many threads capturing at once (#24). The first test uses only the long-standing
@@ -47,15 +46,16 @@ class ConcurrentCaptureTest {
         lsd.completeScenario("stress")
         lsd.completeReport("Concurrent capture")
 
-        val json = tempDir.listDirectoryEntries("Concurrent-capture*-report.json").single().readText()
-        val labels = Regex(""""label": "(t\d+-\d+)"""").findAll(json).map { it.groupValues[1] }.toList()
+        val scenario = ReportJson.single(tempDir, "Concurrent-capture*-report.json").scenario("stress")
+        val labels = scenario.labels
         assertEquals(threads * perThread, labels.size, "lost or extra events")
         assertEquals(labels.size, labels.toSet().size, "duplicated events")
-        val ids = Regex(""""id": "(\d+)"""").findAll(json).map { it.groupValues[1] }.toList()
+        val ids = listOfNotNull(scenario["id"]) + scenario.events.mapNotNull { it["id"] }
+        assertEquals(threads * perThread + 1, ids.size, "every event and the scenario has an id")
         assertEquals(ids.size, ids.toSet().size, "duplicate ids")
-        val facts = Regex(""""key": "thread \d+"""").findAll(json).count()
+        val facts = scenario.facts.count { it.first.startsWith("thread ") }
         assertEquals(threads * (perThread / 100), facts, "lost facts")
-        val participants = Regex(""""name": "(Client \d+|Service \d+)"""").findAll(json).map { it.groupValues[1] }.toList()
+        val participants = scenario.participants.mapNotNull { it.string("name") }.filter { it.startsWith("Client ") || it.startsWith("Service ") }
         assertEquals(threads + 50, participants.size, "each name should be registered once: $participants")
         assertEquals(participants.size, participants.toSet().size)
     }
@@ -79,14 +79,15 @@ class ConcurrentCaptureTest {
         }
         lsd.completeReport("Isolated", reportKey = "suite")
 
-        val json = readReport("Isolated", "suite")
+        val report = readReport("Isolated", "suite")
         (0 until threads).forEach { t ->
-            val slice = scenarioSlice(json, "scenario $t")
-            val owners = Regex(""""label": "(s\d+)-\d+"""").findAll(slice).map { it.groupValues[1] }.toList()
+            val scenario = report.scenario("scenario $t")
+            val owners = scenario.labels.map { it.substringBefore("-") }
             assertEquals(perThread, owners.size, "scenario $t lost or gained events")
             assertEquals(setOf("s$t"), owners.toSet(), "scenario $t has another thread's events")
-            assertTrue(slice.contains(""""value": "s$t""""), "scenario $t lost its fact")
-            assertEquals(1, Regex(""""key": "owner"""").findAll(slice).count(), "scenario $t has another thread's facts")
+            val facts = scenario.facts.filter { it.first == "owner" }
+            assertTrue(("owner" to "s$t") in facts, "scenario $t lost its fact")
+            assertEquals(1, facts.size, "scenario $t has another thread's facts")
         }
     }
 
@@ -110,10 +111,9 @@ class ConcurrentCaptureTest {
             pool.shutdownNow()
         }
         lsd.completeReport("Pool", reportKey = "pool")
-        val json = readReport("Pool", "pool")
+        val report = readReport("Pool", "pool")
         listOf(0, 1).forEach { t ->
-            val labels = Regex(""""label": "([a-z]+-\d)"""").findAll(scenarioSlice(json, "pool $t")).map { it.groupValues[1] }.toSet()
-            assertEquals(setOf("direct-$t", "pooled-$t", "explicit-$t"), labels)
+            assertEquals(setOf("direct-$t", "pooled-$t", "explicit-$t"), report.scenario("pool $t").labels.toSet())
         }
     }
 
@@ -126,7 +126,7 @@ class ConcurrentCaptureTest {
         server.join()
         lsd.completeScenario("only one")
         lsd.completeReport("One", reportKey = "one")
-        assertTrue(readReport("One", "one").contains("from server thread"))
+        assertTrue("from server thread" in readReport("One", "one").scenario("only one").labels)
     }
 
     @Test
@@ -144,10 +144,11 @@ class ConcurrentCaptureTest {
         // It stays in the default scenario, where single-threaded code would complete it.
         lsd.completeScenario("default")
         lsd.completeReport("Ambiguous", reportKey = "r")
-        val json = readReport("Ambiguous", "r")
-        assertFalse(json.contains("ambiguous"), "an unattributable capture must not land in a running scenario")
+        val running = readReport("Ambiguous", "r").scenarios
+        assertEquals(listOf("first", "second"), running.map { it.title }.sorted())
+        assertFalse(running.any { "ambiguous" in it.labels }, "an unattributable capture must not land in a running scenario")
         lsd.completeReport("Default")
-        assertTrue(readReport("Default", null).contains("ambiguous"))
+        assertTrue("ambiguous" in readReport("Default", null).scenario("default").labels)
     }
 
     @Test
@@ -166,12 +167,12 @@ class ConcurrentCaptureTest {
         val reports = tempDir.listDirectoryEntries("OrderTest-*-report.json")
         assertEquals(suites, reports.size, "same title, different keys must not overwrite: ${reports.map { it.fileName }}")
         (0 until suites).forEach { t ->
-            val json = readReport("OrderTest", "com.example.pkg$t.OrderTest")
-            val owners = Regex(""""label": "(suite\d+)-\d"""").findAll(json).map { it.groupValues[1] }.toList()
+            val owners = readReport("OrderTest", "com.example.pkg$t.OrderTest").scenarios.flatMap { it.labels }.map { it.substringBefore("-") }
             assertEquals(List(3) { "suite$t" }, owners)
         }
-        val index = tempDir.resolve("index.html").readText()
-        assertEquals(suites, Regex(""""href":\s*"OrderTest-[0-9a-f]{8}-diagram.html"""").findAll(index).count(), index)
+        val index = ReportJson.index(tempDir)
+        val pages = Regex("OrderTest-[0-9a-f]{8}-diagram.html")
+        assertEquals(suites, index.objects("reports").count { pages.matches(it.string("href").orEmpty()) }, index.toString())
     }
 
     @Test
@@ -185,10 +186,10 @@ class ConcurrentCaptureTest {
         lsd.message("A", "B", "on time")
         lsd.completeScenario("second")
         lsd.completeReport("Late", reportKey = "late")
-        val json = readReport("Late", "late")
-        assertFalse(json.contains("too late"))
-        assertFalse(json.contains("first again"), "a second complete does nothing")
-        assertTrue(scenarioSlice(json, "second").contains("on time"))
+        val report = readReport("Late", "late")
+        assertFalse(report.scenarios.any { "too late" in it.labels })
+        assertFalse("first again" in report.titles, "a second complete does nothing")
+        assertTrue("on time" in report.scenario("second").labels)
     }
 
     @Test
@@ -200,9 +201,9 @@ class ConcurrentCaptureTest {
         lsd.message("Test", "Api", "call")
         lsd.completeScenario("first test")
         lsd.completeReport("Setup", reportKey = "k")
-        val slice = scenarioSlice(readReport("Setup", "k"), "first test")
-        assertTrue(slice.indexOf("seed data") in 0 until slice.indexOf("\"call\""), slice)
-        assertTrue(slice.contains(""""key": "env""""))
+        val scenario = readReport("Setup", "k").scenario("first test")
+        assertEquals(listOf("seed data", "call"), scenario.labels, scenario.toString())
+        assertTrue(scenario.facts.any { it.first == "env" })
     }
 
     @Test
@@ -217,11 +218,8 @@ class ConcurrentCaptureTest {
         assertNull(lsd.findScenario("same"))
     }
 
-    private fun readReport(title: String, reportKey: String?): String =
-        tempDir.resolve(ReportFileNames.stem(title, reportKey) + "-report.json").readText()
-
-    /** The scenario titled [title], and only it, as written. */
-    private fun scenarioSlice(json: String, title: String): String = ReportJson(json).scenario(title).json
+    private fun readReport(title: String, reportKey: String?): ReportJson =
+        ReportJson.read(tempDir.resolve(ReportFileNames.stem(title, reportKey) + "-report.json"))
 
     private fun runConcurrently(threads: Int, body: (Int) -> Unit) {
         val pool = Executors.newFixedThreadPool(threads)

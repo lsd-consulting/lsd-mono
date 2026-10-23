@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.NoteSide
 import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
 import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
-import kotlin.io.path.readText
 
 /**
  * Locks remaining P1 sequence event kinds in ReportJson:
@@ -50,41 +50,8 @@ class RemainingSequenceEventKindsTest {
         lsd.completeScenario("event kinds", "P1 remaining", Status.SUCCESS)
         lsd.completeReport("Event kinds")
 
-        val json = tempDir.resolve(ReportFileNames.stem("Event kinds") + "-report.json").readText()
+        val scenario = ReportJson.single(tempDir, ReportFileNames.stem("Event kinds") + "-report.json").scenario("event kinds")
 
-        assertTrue(json.contains("\"placement\": \"over\""))
-        assertTrue(json.contains("\"placement\": \"left\""))
-        assertTrue(json.contains("\"placement\": \"right\""))
-        assertTrue(json.contains("\"text\": \"over card\""))
-        assertTrue(json.contains("\"text\": \"left of api\""))
-        assertTrue(json.contains("\"text\": \"right edge\""))
-        assertTrue(json.contains("\"kind\": \"delay\""))
-        assertTrue(json.contains("\"label\": \"retry window\""))
-        assertTrue(json.contains("\"kind\": \"spacer\""))
-        assertTrue(json.contains("\"heightPx\": 48"))
-        assertTrue(json.contains("\"type\": \"SHORT_INBOUND\""))
-        assertTrue(json.contains("\"type\": \"SHORT_OUTBOUND\""))
-        assertTrue(json.contains("\"type\": \"LOST\""))
-        assertTrue(json.contains("\"type\": \"BI_DIRECTIONAL\""))
-        assertTrue(json.contains("\"from\": \"\","))
-        assertTrue(json.contains("\"to\": \"\","))
-
-        // Unanchored right note: object has placement right and no over field before the next kind.
-        val rightIdx = json.indexOf("\"text\": \"right edge\"")
-        assertTrue(rightIdx >= 0)
-        val rightSlice = json.substring(rightIdx, (rightIdx + 120).coerceAtMost(json.length))
-        assertTrue(rightSlice.contains("\"placement\": \"right\""))
-        assertFalse(rightSlice.contains("\"over\""), "unanchored right note must omit over near its text")
-
-        assertFalse(json.contains("\"name\": \"?\""))
-        assertFalse(json.contains("\"id\": \"?\""))
-
-        val eventsStart = json.indexOf("\"events\": [")
-        assertTrue(eventsStart >= 0)
-        val eventsEnd = json.indexOf(']', json.indexOf('[', eventsStart))
-        val eventsBlock = json.substring(eventsStart, eventsEnd + 1)
-        val ordered =
-            Regex("\"kind\": \"([^\"]+)\"").findAll(eventsBlock).map { it.groupValues[1] }.toList()
         assertEquals(
             listOf(
                 "note",
@@ -103,21 +70,35 @@ class RemainingSequenceEventKindsTest {
                 "message",
                 "message",
             ),
-            ordered,
+            scenario.events.map { it["kind"] },
         )
 
-        assertEquals(2, Regex("\"type\": \"SHORT_INBOUND\"").findAll(json).count())
-        assertEquals(2, Regex("\"type\": \"SHORT_OUTBOUND\"").findAll(json).count())
-        assertEquals(1, Regex("\"type\": \"LOST\"").findAll(json).count())
-        assertEquals(1, Regex("\"type\": \"BI_DIRECTIONAL\"").findAll(json).count())
+        // Each note with its own placement and anchor (#109: not a value found anywhere in the file).
+        val notes = scenario.eventsOf("note").associateBy { it["text"] }
+        assertEquals("over", notes.getValue("over card")["placement"])
+        assertEquals("api", notes.getValue("over card")["over"])
+        assertEquals("left", notes.getValue("left of api")["placement"])
+        assertEquals("api", notes.getValue("left of api")["over"])
+        val right = notes.getValue("right edge")
+        assertEquals("right", right["placement"])
+        assertFalse(right.containsKey("over"), "unanchored right note must omit over: $right")
 
-        val participantsStart = json.indexOf("\"participants\": [")
-        val participantsEnd = json.indexOf(']', json.indexOf('[', participantsStart))
-        val participantIds =
-            Regex("\"id\": \"([^\"]+)\"")
-                .findAll(json.substring(participantsStart, participantsEnd + 1))
-                .map { it.groupValues[1] }
-                .toSet()
-        assertEquals(setOf("api", "db"), participantIds)
+        val delays = scenario.eventsOf("delay")
+        assertEquals("retry window", delays.first()["label"])
+        assertEquals(48.0, scenario.eventsOf("spacer").first()["heightPx"])
+
+        val types = scenario.messages.map { it["type"] }
+        assertEquals(2, types.count { it == "SHORT_INBOUND" })
+        assertEquals(2, types.count { it == "SHORT_OUTBOUND" })
+        assertEquals(1, types.count { it == "LOST" })
+        assertEquals(1, types.count { it == "BI_DIRECTIONAL" })
+        // A short arrow has an empty end, not an invented participant.
+        assertEquals(listOf("", "api"), scenario.message("found").let { listOf(it["from"], it["to"]) })
+        assertEquals(listOf("api", ""), scenario.message("emit").let { listOf(it["from"], it["to"]) })
+        assertEquals(listOf("drop", "pair"), scenario.messages.filter { it["type"] in setOf("LOST", "BI_DIRECTIONAL") }.map { it["label"] })
+
+        // No "?" participant, and only the two that were added.
+        assertEquals(setOf("api", "db"), scenario.participants.map { it["id"] }.toSet())
+        assertTrue(scenario.participants.none { it["name"] == "?" || it["id"] == "?" }, scenario.participants.toString())
     }
 }

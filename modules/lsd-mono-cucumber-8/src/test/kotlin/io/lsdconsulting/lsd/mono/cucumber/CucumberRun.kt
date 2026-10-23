@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.cucumber
 
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
+import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClasspathResource
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
@@ -36,11 +37,11 @@ internal fun runFeatures(
 }
 
 /** The one `<feature>-*-report.json` in [dir]. */
-internal fun reportJson(dir: Path, feature: String): String = ReportJson.single(dir, "$feature-*-report.json").text
+internal fun reportJson(dir: Path, feature: String): ReportJson = ReportJson.single(dir, "$feature-*-report.json")
 
-/** The scenarios in a report's JSON by title, each as the text it was written as. Titles must be unique. */
-internal fun scenariosByTitle(json: String): Map<String, String> {
-    val scenarios = ReportJson(json).scenarios
+/** The scenarios in a report by title. Titles must be unique. */
+internal fun scenariosByTitle(report: ReportJson): Map<String, ScenarioJson> {
+    val scenarios = report.scenarios
     check(scenarios.map { it.title }.toSet().size == scenarios.size) { "duplicate titles: ${scenarios.map { it.title }}" }
-    return scenarios.associate { it.title to it.json }
+    return scenarios.associateBy { it.title }
 }

@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS
 import io.lsdconsulting.lsd.mono.core.domain.MessageType.SYNCHRONOUS_RESPONSE
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
+import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -18,7 +19,6 @@ import java.nio.file.Path
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.thread
-import kotlin.io.path.readText
 
 @LsdTestConfig(deterministicIds = true)
 class PendingCallTest {
@@ -109,10 +109,11 @@ class PendingCallTest {
         lsd.completeScenario("second")
         lsd.completeReport("Calls")
 
-        val json = tempDir.resolve(ReportFileNames.stem("Calls") + "-report.json").readText()
-        assertTrue(json.contains("\"label\": \"GET /orders\""), json)
-        assertTrue(json.contains("\"label\": \"next\""), json)
-        assertFalse(json.contains("\"label\": \"late\""), json)
+        val report = ReportJson.single(tempDir, ReportFileNames.stem("Calls") + "-report.json")
+        val labels = report.scenarios.flatMap { it.labels }
+        assertTrue("GET /orders" in report.scenario("first").labels, report.text)
+        assertTrue("next" in report.scenario("second").labels, report.text)
+        assertFalse("late" in labels, report.text)
     }
 
     @Test

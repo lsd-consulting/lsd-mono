@@ -38,6 +38,26 @@ public class ReportJson(
             check(files.size == 1) { "expected one $glob in $dir, found ${dir.listDirectoryEntries().map { it.name }}" }
             return read(files.single())
         }
+
+        /** The report a `*-diagram.html` page carries (`window.__LSD_REPORT__`), parsed (#109). */
+        public fun diagram(file: Path): ReportJson = ReportJson(embedded(file.readText(), "window.__LSD_REPORT__="))
+
+        /**
+         * The manifest the index page in [dir] carries (`window.__LSD_INDEX__`), parsed: its
+         * `reports`, each with id, title, status, href, data and counts, and the run's options (#109).
+         */
+        public fun index(dir: Path): JsonObject =
+            Json.parse(embedded(dir.resolve("index.html").readText(), "window.__LSD_INDEX__=")) as JsonObject
+
+        /** The JSON a page assigns after [start], up to the end of its script. */
+        private fun embedded(
+            page: String,
+            start: String,
+        ): String {
+            val from = page.indexOf(start).also { check(it >= 0) { "no $start in the page" } } + start.length
+            val to = page.indexOf(";</script>", from).also { check(it >= 0) { "no end to $start" } }
+            return page.substring(from, to)
+        }
     }
 }
 
