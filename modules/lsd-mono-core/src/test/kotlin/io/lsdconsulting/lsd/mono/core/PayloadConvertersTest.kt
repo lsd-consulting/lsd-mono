@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.core
 
 import io.lsdconsulting.lsd.mono.core.PayloadConverters.Limits
 import io.lsdconsulting.lsd.mono.report.html.ReportWriter
+import io.lsdconsulting.lsd.mono.report.model.DataValueJson
 import io.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.ScenarioJson
@@ -40,8 +41,17 @@ class PayloadConvertersTest {
                 .scenario(
                     ScenarioJson
                         .builder(id = "s", title = "s", status = StatusJson.SUCCESS)
-                        .event(MessageEventJson.builder(id = "m", from = "a", to = "b", label = "m", type = "SYNCHRONOUS").data(data).build())
-                        .build(),
+                        .event(
+                            MessageEventJson
+                                .builder(
+                                    id = "m",
+                                    from = "a",
+                                    to = "b",
+                                    label = "m",
+                                    type = "SYNCHRONOUS",
+                                ).data(data?.let(DataValueJson::from))
+                                .build(),
+                        ).build(),
                 ).build(),
         )
 

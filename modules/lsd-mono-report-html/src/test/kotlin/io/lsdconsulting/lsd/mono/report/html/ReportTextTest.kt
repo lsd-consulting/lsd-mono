@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.report.html
 import io.lsdconsulting.lsd.mono.report.model.AccuracyJson
 import io.lsdconsulting.lsd.mono.report.model.AttributeValueJson
 import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
+import io.lsdconsulting.lsd.mono.report.model.DataValueJson
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
@@ -38,7 +39,7 @@ class ReportTextTest {
             .builder(id = "m1", from = "client", to = "api", label = "POST /orders", type = "SYNCHRONOUS")
             .colour("red")
             .durationMs(12.3456)
-            .data(mapOf("method" to "POST", "path" to "/orders", "body" to mapOf("sku" to "SOCK-1")))
+            .data(DataValueJson.from(mapOf("method" to "POST", "path" to "/orders", "body" to mapOf("sku" to "SOCK-1"))))
             .startedAt("2026-10-21T08:00:00Z")
             .seq(1)
             .callId("c1")
@@ -57,7 +58,7 @@ class ReportTextTest {
             .builder(id = "m2", from = "api", to = "client", label = "201", type = "SYNCHRONOUS_RESPONSE")
             .replyTo("c1")
             .replyOf("m1")
-            .data(mapOf("status" to 201))
+            .data(DataValueJson.from(mapOf("status" to 201)))
             .build()
     private val scenario =
         ScenarioJson
@@ -201,9 +202,9 @@ class ReportTextTest {
             .single()
             .events
         val light = events.filterIsInstance<MessageEventJson>()
-        assertEquals(mapOf("method" to "POST", "path" to "/orders"), light[0].data)
+        assertEquals(DataValueJson.from(mapOf("method" to "POST", "path" to "/orders")), light[0].data)
         assertEquals("s1/m1", light[0].payloadId)
-        assertEquals(mapOf("status" to 201), light[1].data, "a summary alone stays on the message")
+        assertEquals(DataValueJson.from(mapOf("status" to 201)), light[1].data, "a summary alone stays on the message")
         assertNull(light[1].payloadId)
         assertEquals(setOf("s1/m1"), shell.payloads.keys)
         val script = shellPayloadScript(shell.payloads)
@@ -213,14 +214,14 @@ class ReportTextTest {
 
     @Test
     fun `data that is not a map moves to the payload script whole`() {
-        val text = withScenario(scenario.toBuilder().events(listOf(call.toBuilder().data("plain text body").build())).build())
+        val text = withScenario(scenario.toBuilder().events(listOf(call.toBuilder().data(DataValueJson.of("plain text body")).build())).build())
         val shell = text.forShell()
         val message = shell.report.scenarios
             .single()
             .events
             .single() as MessageEventJson
         assertNull(message.data)
-        assertEquals("plain text body", shell.payloads["s1/m1"])
+        assertEquals(DataValueJson.of("plain text body"), shell.payloads["s1/m1"])
     }
 
     private fun withScenario(changed: ScenarioJson): ReportJson = report.toBuilder().scenarios(listOf(changed)).build()

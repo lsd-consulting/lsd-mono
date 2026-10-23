@@ -2,7 +2,7 @@
 // Do not edit: change the schema, then run `npm run types:generate`.
 
 /** The schema version this UI's types follow, as reports write it in `schemaVersion`. */
-export const REPORT_SCHEMA_VERSION = '0.2.0'
+export const REPORT_SCHEMA_VERSION = '0.3.0'
 
 /**
  * A scenario's or report's outcome, in lower case.
@@ -25,6 +25,13 @@ export type ReportSource = KnownReportSource | (string & {})
  * via the `definition` "ParticipantType".
  */
 export type ParticipantType = KnownParticipantType | (string & {})
+/**
+ * One attribute's value, as OpenTelemetry's are: a string, a boolean, a number, or a list of one of those.
+ *
+ * This interface was referenced by `Report`'s JSON-Schema
+ * via the `definition` "AttributeValue".
+ */
+export type AttributeValue = string | boolean | number | string[] | boolean[] | number[]
 /**
  * One row of a sequence diagram, by kind. The generated TypeScript type leaves out UnknownEvent: the report UI drops those when it loads a report.
  *
@@ -142,20 +149,13 @@ export type KnownMessageOrigin = 'captured' | 'imported'
  * via the `definition` "MessageOrigin".
  */
 export type MessageOrigin = KnownMessageOrigin | (string & {})
-/**
- * One attribute's value, as OpenTelemetry's are: a string, a boolean, a number, or a list of one of those.
- *
- * This interface was referenced by `Report`'s JSON-Schema
- * via the `definition` "AttributeValue".
- */
-export type AttributeValue = string | boolean | number | string[] | boolean[] | number[]
 
 /**
  * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-core as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.
  */
 export interface Report {
   /**
-   * The version of this schema the report follows: semver, apart from the lsd-mono version. 0.2.0 for this schema.
+   * The version of this schema the report follows: semver, apart from the lsd-mono version. 0.3.0 for this schema.
    */
   schemaVersion: string
   title: string
@@ -299,6 +299,13 @@ export interface Participant {
    * A CSS colour for the participant's header.
    */
   colour?: string
+  attributes?: Attributes
+}
+/**
+ * Facts about the participant, such as the service it is (service.name, service.version, service.namespace) or the remote service it stands for (peer.service).
+ */
+export interface Attributes {
+  [k: string]: AttributeValue | undefined
 }
 /**
  * This interface was referenced by `Report`'s JSON-Schema
@@ -346,12 +353,12 @@ export interface Trace {
   parentSpanId?: string
 }
 /**
- * Facts about a message as named keys, such as its HTTP route or messaging destination. Keys use OpenTelemetry semantic convention names where there is one (http.request.method, http.route, http.response.status_code, url.full, messaging.destination.name, rpc.method, service.name), and keys starting lsd. are kept for lsd-mono's own. Keys are not empty. Absent, rather than empty, when there are none. Readers show or ignore them; no attribute changes how a message is drawn.
+ * Facts about a message or a participant as named keys, such as a message's HTTP route or messaging destination, or the service a participant is. Keys use OpenTelemetry semantic convention names where there is one (http.request.method, http.route, http.response.status_code, url.full, messaging.destination.name, rpc.method; service.name, service.version, peer.service), and keys starting lsd. are kept for lsd-mono's own. Keys are not empty. Absent, rather than empty, when there are none. Readers show or ignore them; no attribute changes how a message or participant is drawn.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "Attributes".
  */
-export interface Attributes {
+export interface Attributes1 {
   [k: string]: AttributeValue | undefined
 }
 /**
@@ -423,7 +430,7 @@ export interface MessageEvent {
    * On a paired reply: id of the call it answers.
    */
   replyOf?: string
-  attributes?: Attributes
+  attributes?: Attributes1
   origin?: MessageOrigin
   /**
    * When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one.

@@ -1,7 +1,6 @@
 package io.lsdconsulting.lsd.mono.report.html
 
-import java.math.BigDecimal
-import java.math.BigInteger
+import io.lsdconsulting.lsd.mono.report.model.DataValueJson
 
 internal sealed interface JsonValue {
     fun write(out: StringBuilder, indent: Int)
@@ -105,47 +104,26 @@ private fun isPairedSurrogate(value: String, i: Int): Boolean {
 }
 
 /**
- * A message's data as JSON. The model asks for JSON values: null, strings, booleans, numbers, maps
- * and lists (lsd-mono-core gives it the copies its payload converters make). Arrays are written as
- * lists, a non-finite number as its text, and anything else as its `toString()`, so this never
- * throws. A map or list that contains itself is written as [CYCLE] where it repeats, so it never
- * recurses forever.
+ * Plain values as JSON, as [DataValueJson.from] reads them: null, strings, booleans, numbers, maps
+ * and lists, arrays as lists, a non-finite number as its text, and anything else as its
+ * `toString()`, so this never throws. A map or list that contains itself is written as [CYCLE]
+ * where it repeats, so it never recurses forever.
  */
-internal fun anyToJson(value: Any?): JsonValue = toJson(value, java.util.Collections.newSetFromMap(java.util.IdentityHashMap()))
+internal fun anyToJson(value: Any?): JsonValue = DataValueJson.from(value).toJsonValue()
 
-/** Where a map or list repeats inside itself. */
+/** Where a map or list repeats inside itself: what [DataValueJson.from] writes there. */
 internal const val CYCLE: String = "[lsd: cycle]"
 
-private fun toJson(
-    value: Any?,
-    open: MutableSet<Any>,
-): JsonValue =
-    when (value) {
-        null -> JsonNull
-        is String -> JsonString(value)
-        is Boolean -> JsonBool(value)
-        is Long, is Int, is Short, is Byte, is BigInteger -> JsonNumber(value.toString())
-        is BigDecimal -> JsonNumber(value.toString())
-        is Double -> if (value.isFinite()) JsonNumber(value.toString()) else JsonString(value.toString())
-        is Float -> if (value.isFinite()) JsonNumber(value.toString()) else JsonString(value.toString())
-        is Map<*, *> -> nested(value, open) { JsonObject(value.entries.map { (key, item) -> key.toString() to toJson(item, open) }) }
-        is Iterable<*> -> nested(value, open) { JsonArray(value.map { toJson(it, open) }) }
-        is Array<*> -> nested(value, open) { JsonArray(value.map { toJson(it, open) }) }
-        else -> JsonString(value.toString())
+/** A message's data, written as the JSON value it is. */
+internal fun DataValueJson.toJsonValue(): JsonValue =
+    when (this) {
+        DataValueJson.NullValue -> JsonNull
+        is DataValueJson.StringValue -> JsonString(value)
+        is DataValueJson.BooleanValue -> JsonBool(value)
+        is DataValueJson.NumberValue -> JsonNumber(literal)
+        is DataValueJson.ArrayValue -> JsonArray(items.map { it.toJsonValue() })
+        is DataValueJson.ObjectValue -> JsonObject(fields.map { (key, item) -> key to item.toJsonValue() })
     }
-
-private inline fun nested(
-    value: Any,
-    open: MutableSet<Any>,
-    write: () -> JsonValue,
-): JsonValue {
-    if (!open.add(value)) return JsonString(CYCLE)
-    try {
-        return write()
-    } finally {
-        open.remove(value)
-    }
-}
 
 private fun pad(indent: Int): String = "  ".repeat(indent)
 

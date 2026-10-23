@@ -5,8 +5,9 @@ package io.lsdconsulting.lsd.mono.report.model
  * point number, or a list of one of those. Make one with [of] or, for a list, [ofStrings],
  * [ofBooleans], [ofLongs] or [ofDoubles]; nothing else can be written.
  *
- * A message's attributes ([MessageEventJson.attributes]) are keyed by OpenTelemetry semantic
- * convention names where there is one, such as `http.route` or `messaging.destination.name`.
+ * A message's attributes ([MessageEventJson.attributes]) and a participant's
+ * ([ParticipantJson.attributes]) are keyed by OpenTelemetry semantic convention names where there
+ * is one, such as `http.route`, `messaging.destination.name` or, on a participant, `service.name`.
  * Keys starting `lsd.` are kept for lsd-mono's own.
  */
 @ExperimentalLsdReportModel
@@ -56,4 +57,9 @@ public class AttributeValueJson private constructor(
             return value
         }
     }
+}
+
+/** An attribute key is not empty: the schema has none. */
+internal fun requireAttributeKey(key: String) {
+    require(key.isNotEmpty()) { "An attribute key is not empty" }
 }

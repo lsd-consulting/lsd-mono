@@ -17,9 +17,9 @@ it lines up with OpenTelemetry is decided ([below](#opentelemetry)): additively,
 OpenTelemetry dependency.
 
 - Every report and index has a required `schemaVersion`: the semver of the schema it follows,
-  apart from the lsd-mono version. This is `0.2.0`.
+  apart from the lsd-mono version. This is `0.3.0`.
 - The version is in each schema's `$id`
-  (`https://lsd-consulting.github.io/lsd-mono/schema/0.2.0/lsd-report.schema.json`). Nothing is
+  (`https://lsd-consulting.github.io/lsd-mono/schema/0.3.0/lsd-report.schema.json`). Nothing is
   published at that address yet; the `$id`s name the schemas and let the index schema refer to
   the report schema.
 - **A minor version only adds**, 0.x included: a new optional field, a new value of an open
@@ -34,6 +34,7 @@ OpenTelemetry dependency.
 |---------|--------|
 | `0.1.0` | The format as lsd-mono-core 0.7 wrote it. |
 | `0.2.0` | A message's optional `attributes` and `origin`; `Trace` frozen at three ids and its id forms written down. Only adds: a 0.1 report is a valid 0.2 report. |
+| `0.3.0` | A participant's optional `attributes`, with the same keys and values as a message's. Only adds: a 0.2 report is a valid 0.3 report. |
 
 ### The compatibility rule
 
@@ -42,7 +43,7 @@ values of open enums and event kinds), in 0.x and in 1.x alike. A field is never
 renamed, removed or given a new type or meaning in a minor version; that takes a new major. The
 rule is the same as OpenTelemetry's own for OTLP ("receivers MUST ignore message fields with
 unknown names"), and the shared test reports prove it: `reports/future-minor.json` (schema
-`0.3.0`, with fields, enum values and an event kind this version does not know) is accepted by
+`0.4.0`, with fields, enum values and an event kind this version does not know) is accepted by
 both validators and opened by the report UI.
 
 ### What a reader does
@@ -90,6 +91,9 @@ breaking change, 0.2.0 settles the parts OpenTelemetry touches:
   there is one (`http.request.method`, `http.route`, `http.response.status_code`, `url.full`,
   `messaging.destination.name`, `rpc.method`, `service.name`); keys starting `lsd.` are kept for
   lsd-mono's own. No attribute changes how a message is drawn.
+- **`attributes`**, optional on a participant too (0.3.0), with the same values and key rules:
+  `service.name`, `service.version` and `service.namespace` for the service a participant is,
+  `peer.service` for a remote one it stands for. No attribute changes how a participant is drawn.
 - **`origin`**, optional on a message, an open enum: `captured` (recorded by the producer while the
   test ran) or `imported` (built afterwards from another record, such as spans). Absent means
   captured, so lsd-mono-core writes none. It is not `source`, which is the clock domain.
@@ -97,7 +101,7 @@ breaking change, 0.2.0 settles the parts OpenTelemetry touches:
   (to the microsecond). An import loses precision below a microsecond, which a diagram does not
   need.
 
-lsd-mono-core writes neither `attributes` nor `origin` yet, and the report UI does not show them
+lsd-mono-core writes neither `attributes` (on a message or a participant) nor `origin` yet, and the report UI does not show them
 yet: they are for producers that import, and for the import module. Span links, should they come,
 would be an optional `links` list on a message, not part of `trace`.
 

@@ -35,12 +35,11 @@ public class MessageEventJson internal constructor(
     /** How long the message took, in fractional milliseconds. */
     public val durationMs: Double?,
     /**
-     * The message's payload. It should be JSON values: null, a String, a Boolean, a Number, a `Map`
-     * with String keys or a `List` of these. The type is `Any?` and nothing checks it: the writer
-     * writes an array as a list and anything else as its `toString()`. A JSON value type may replace
-     * it before the model leaves experimental (#118).
+     * The message's payload, a JSON value. Null means none, and is not written; [DataValueJson.NULL]
+     * is written as `null`. [DataValueJson.from] makes one from plain values (maps, lists, strings,
+     * numbers, booleans).
      */
-    public val data: Any?,
+    public val data: DataValueJson?,
     /**
      * The key into the payload file (`<scenarioId>/<messageId>`) when [data] keeps only method, path
      * and status. The writer sets it in the diagram page's copy; leave it null.
@@ -153,7 +152,7 @@ public class MessageEventJson internal constructor(
     ) {
         private var colour: String? = null
         private var durationMs: Double? = null
-        private var data: Any? = null
+        private var data: DataValueJson? = null
         private var payloadId: String? = null
         private var startedAt: String? = null
         private var seq: Long? = null
@@ -176,7 +175,8 @@ public class MessageEventJson internal constructor(
 
         public fun durationMs(value: Double?): Builder = apply { durationMs = value }
 
-        public fun data(value: Any?): Builder = apply { data = value }
+        /** The payload, or null for none. [DataValueJson.from] makes one from plain values. */
+        public fun data(value: DataValueJson?): Builder = apply { data = value }
 
         public fun payloadId(value: String?): Builder = apply { payloadId = value }
 
@@ -216,7 +216,7 @@ public class MessageEventJson internal constructor(
             value: AttributeValueJson,
         ): Builder =
             apply {
-                require(key.isNotEmpty()) { "An attribute key is not empty" }
+                requireAttributeKey(key)
                 attributes[key] = value
             }
 
@@ -249,7 +249,7 @@ public class MessageEventJson internal constructor(
         /** Replaces the attributes. No key is empty. */
         public fun attributes(values: Map<String, AttributeValueJson>): Builder =
             apply {
-                require(values.keys.none { it.isEmpty() }) { "An attribute key is not empty" }
+                values.keys.forEach(::requireAttributeKey)
                 attributes.clear()
                 attributes.putAll(values)
             }

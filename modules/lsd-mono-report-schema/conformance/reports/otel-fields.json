@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.2.0",
+  "schemaVersion": "0.3.0",
   "title": "Trace ids, attributes and origins",
   "generatedAt": "2026-01-01T12:00:00Z",
   "generator": "hand-written",
@@ -32,12 +32,26 @@
         {
           "id": "orders",
           "name": "Orders",
-          "type": "PARTICIPANT"
+          "type": "PARTICIPANT",
+          "attributes": {
+            "service.name": "orders",
+            "service.version": "2.4.1",
+            "service.namespace": "shop",
+            "lsd.instances": 3
+          }
         },
         {
           "id": "payments",
           "name": "Payments",
-          "type": "PARTICIPANT"
+          "type": "PARTICIPANT",
+          "attributes": {
+            "peer.service": "payments",
+            "lsd.external": true,
+            "lsd.regions": [
+              "eu-west-2",
+              "us-east-1"
+            ]
+          }
         },
         {
           "id": "events",

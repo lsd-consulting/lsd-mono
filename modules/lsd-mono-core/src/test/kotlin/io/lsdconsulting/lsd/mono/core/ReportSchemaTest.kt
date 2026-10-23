@@ -91,6 +91,10 @@ class ReportSchemaTest {
                 event(this).putObject("attributes").putObject("http.request").put("method", "GET")
             },
             "an attribute key is not empty" to edit(json) { event(this).putObject("attributes").put("", "x") },
+            "a participant's attribute value is a string, boolean, number or a list of one" to edit(json) {
+                participant(this).putObject("attributes").putObject("service").put("name", "orders")
+            },
+            "a participant's attribute key is not empty" to edit(json) { participant(this).putObject("attributes").put("", "x") },
         )
         rejected.forEach { (rule, edited) -> assertTrue(errors(report, edited).isNotEmpty(), rule) }
         val accepted = mapOf(
@@ -115,6 +119,15 @@ class ReportSchemaTest {
                     .putArray("lsd.tags")
                     .add("a")
                 message.put("origin", "imported")
+            },
+            "a participant's attributes" to edit(json) {
+                participant(this)
+                    .putObject("attributes")
+                    .put("service.name", "orders")
+                    .put("lsd.instances", 3)
+                    .put("lsd.external", false)
+                    .putArray("lsd.regions")
+                    .add("eu-west-2")
             },
             "a B3 64-bit trace id" to edit(json) { event(this).putObject("trace").put("traceId", "a3ce929d0e0e4736") },
             "an unknown origin" to edit(json) { event(this).put("origin", "replayed") },

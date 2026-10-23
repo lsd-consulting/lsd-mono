@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.report.html.ReportWriter
 import io.lsdconsulting.lsd.mono.report.html.ReportWriterSettings
 import io.lsdconsulting.lsd.mono.report.model.AccuracyJson
 import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
+import io.lsdconsulting.lsd.mono.report.model.DataValueJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
 import io.lsdconsulting.lsd.mono.report.model.KnownMessageType
@@ -115,7 +116,7 @@ class AdapterReportTest {
                     .event(
                         MessageEventJson
                             .builder("m1", "shop", "payments", "POST /payments", KnownMessageType.SYNCHRONOUS)
-                            .data(mapOf("amount" to 12.5))
+                            .data(DataValueJson.ofObject(mapOf("amount" to DataValueJson.of(12.5))))
                             .trace(TraceJson("4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7"))
                             .attribute("http.request.method", "POST")
                             .attribute("http.route", "/payments")

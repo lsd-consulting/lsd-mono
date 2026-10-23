@@ -59,14 +59,14 @@ Both sides fail on a file the manifest does not list, or a listed file that is m
 
 What the report UI does with another version (see the schema README's "Versions"):
 
-- **A newer minor version** (`reports/future-minor.json`, 0.3.0): shown, with a small notice
+- **A newer minor version** (`reports/future-minor.json`, 0.4.0): shown, with a small notice
   that anything new in it is not shown. Unknown fields are ignored (span `links` on a message
   among them), an open enum's unknown value falls back (a `ROBOT` participant is drawn as a plain
   one, a `BROADCAST` message as a call, a `replayed` origin is kept as it is), and the event of an
   unknown kind is left out.
-- **The OpenTelemetry fields** (`reports/otel-fields.json`): W3C and B3 trace ids, attributes
-  with every kind of value and imported messages. The page shows the report as usual; it does not
-  show attributes or the origin yet.
+- **The OpenTelemetry fields** (`reports/otel-fields.json`): W3C and B3 trace ids, message
+  attributes with every kind of value, participant attributes and imported messages. The page
+  shows the report as usual; it does not show attributes or the origin yet.
 - **A newer major version** (`reports/next-major.json`, 1.0.0): not shown. The page says to
   upgrade lsd-mono instead, whatever the report's shape.
 - **A version that is not one** (`invalid/malformed-version.json`, `v2`): not shown either. The

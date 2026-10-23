@@ -18,6 +18,7 @@ import io.lsdconsulting.lsd.mono.core.domain.Status
 import io.lsdconsulting.lsd.mono.core.properties.LsdProperties
 import io.lsdconsulting.lsd.mono.report.model.AccuracyJson
 import io.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
+import io.lsdconsulting.lsd.mono.report.model.DataValueJson
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.EventJson
@@ -163,13 +164,14 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
         }
 
     /**
-     * [data] as JSON values for the model: a scalar as it is, anything else copied by the default
-     * payload converters, as the JSON writer did before it moved to lsd-mono-report-html.
+     * [data] as the model's JSON value: a scalar as it is, anything else copied by the default
+     * payload converters, as the JSON writer did before it moved to lsd-mono-report-html. Null
+     * (a payload that copies to nothing) is no data, not JSON `null`.
      */
-    private fun jsonData(data: Any): Any? =
+    private fun jsonData(data: Any): DataValueJson? =
         when (data) {
-            is String, is Boolean, is Long, is BigInteger, is BigDecimal -> data
-            else -> PayloadConverters.default.snapshot(data)
+            is String, is Boolean, is Long, is BigInteger, is BigDecimal -> DataValueJson.from(data)
+            else -> PayloadConverters.default.snapshot(data)?.let(DataValueJson::from)
         }
 
     /** [name] when it is one of [KnownReportSource.ALL], else [KnownReportSource.API]. */

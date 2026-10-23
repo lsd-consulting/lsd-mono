@@ -19,7 +19,7 @@ The values that grow with the schema (`ReportJson`, `ReportOptionsJson`, `Scenar
 builder: `builder(…)` takes what the schema requires, each optional field has a setter, and
 `toBuilder()` makes a changed copy. A newer release adds setters, which breaks no caller, Kotlin or
 Java. The small fixed values (`FactJson`, `MetricJson`, `TraceJson`, `WarningJson`,
-`PairAccuracyJson`) are data classes; `AttributeValueJson` is made with `of(…)`.
+`PairAccuracyJson`) are data classes; `AttributeValueJson` and `DataValueJson` are made with `of(…)`.
 
 ```kotlin
 val report =
@@ -56,12 +56,18 @@ one rule:
 The model's tests hold both to the schema's lists. The event classes are sealed to the kinds
 lsd-mono writes. The schema's events are open, so code that reads a report it did not write must
 tolerate an unknown event kind rather than assume this list is complete. A message's `data` is
-`Any?` and should hold JSON values (null, strings, booleans, numbers, maps and lists); nothing checks
-it, and the writer writes anything else as its `toString()`.
+a `DataValueJson`: a JSON value made with `DataValueJson.of(…)` (a String, Boolean, Long, Int,
+finite Double, BigInteger or BigDecimal), `ofList`, `ofObject` or `DataValueJson.NULL`.
+`DataValueJson.from(…)` converts plain values (maps, lists, arrays, numbers and so on) the way the
+writer converted `Any?` data before 0.10: a non-finite number or any other object becomes its
+`toString()`, and a cycle becomes `"[lsd: cycle]"`. A null `data` is not written; `NULL` is written
+as `null`.
 
-A message's `attributes` are typed: each value is an `AttributeValueJson`, made with
+A message's and a participant's `attributes` are typed: each value is an `AttributeValueJson`, made with
 `AttributeValueJson.of(…)` (a String, Boolean, Long, Int or finite Double) or `ofStrings`,
-`ofBooleans`, `ofLongs` or `ofDoubles` for a list, as OpenTelemetry's attribute values are. Its
+`ofBooleans`, `ofLongs` or `ofDoubles` for a list, as OpenTelemetry's attribute values are. Keys
+are not empty; OpenTelemetry's semantic names (`service.name`, `peer.service`, …) are used where one
+fits, and `lsd.*` is lsd's own. A message's
 `origin` is `KnownMessageOrigin.IMPORTED` for a message built from another record, such as spans,
 and null for one the producer captured.
 
@@ -81,8 +87,8 @@ There is no binary-compatibility promise until the marker goes:
   this note is the only one a Java caller gets.
 - The trace and timing fields are settled: `TraceJson` is frozen at its three ids, and
   OpenTelemetry's other span data arrives as a message's `attributes` (see the schema's
-  [OpenTelemetry](../lsd-mono-report-schema/README.md#opentelemetry)). A message's `data` is still
-  `Any?`; a JSON value type may replace it before the marker goes.
+  [OpenTelemetry](../lsd-mono-report-schema/README.md#opentelemetry)). A message's `data` is a
+  `DataValueJson` (it was `Any?` before 0.10).
 
 The ABI dump (`api/lsd-mono-report-model.api`) is kept, so that every change shows in review.
 

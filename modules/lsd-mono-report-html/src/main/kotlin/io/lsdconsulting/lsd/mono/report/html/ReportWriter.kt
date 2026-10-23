@@ -60,7 +60,6 @@ public class ReportWriter(
      * [reportKey] (a test class or feature id) when given, else of the title, so
      * reports with the same title do not collide. [fileTitle] stands in for the title in the
      * file names when an integration names its files apart from the title it shows.
-     * The report's messages' data must be JSON values (see [MessageEventJson.data]).
      * @return the files written, for [writeIndex].
      */
     @JvmOverloads

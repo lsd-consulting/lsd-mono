@@ -21,7 +21,7 @@ kotlin {
 // Line coverage was 95.3% when the floor was set, from this module's own tests. lsd-mono-core's
 // tests exercise the writer too, but Kover counts each module's tests only.
 lsdCoverage {
-    lineFloor.set(93)
+    lineFloor.set(94)
 }
 
 dependencies {

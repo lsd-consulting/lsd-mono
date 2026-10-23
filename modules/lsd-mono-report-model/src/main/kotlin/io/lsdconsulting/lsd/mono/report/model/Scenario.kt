@@ -295,9 +295,20 @@ public class ParticipantJson internal constructor(
     public val alias: String?,
     /** A CSS colour for its lifeline. */
     public val colour: String?,
+    /**
+     * Facts about the participant by OpenTelemetry semantic convention name, such as `service.name`,
+     * `service.version` or `peer.service`. Keys are not empty; `lsd.` keys are kept for lsd-mono's
+     * own. Written when there are any.
+     */
+    public val attributes: Map<String, AttributeValueJson>,
 ) {
     /** A builder holding this participant's values, to make a changed copy. */
-    public fun toBuilder(): Builder = Builder(id, name).type(type).alias(alias).colour(colour)
+    public fun toBuilder(): Builder =
+        Builder(id, name)
+            .type(type)
+            .alias(alias)
+            .colour(colour)
+            .attributes(attributes)
 
     override fun equals(other: Any?): Boolean = other is ParticipantJson && fields() == other.fields()
 
@@ -305,9 +316,17 @@ public class ParticipantJson internal constructor(
 
     override fun toString(): String = describe("ParticipantJson", fields())
 
-    private fun fields(): List<Pair<String, Any?>> = listOf("id" to id, "name" to name, "type" to type, "alias" to alias, "colour" to colour)
+    private fun fields(): List<Pair<String, Any?>> =
+        listOf(
+            "id" to id,
+            "name" to name,
+            "type" to type,
+            "alias" to alias,
+            "colour" to colour,
+            "attributes" to attributes,
+        )
 
-    /** Makes a [ParticipantJson]: a [KnownParticipantType.PARTICIPANT] with no alias or colour until set. */
+    /** Makes a [ParticipantJson]: a [KnownParticipantType.PARTICIPANT] with no alias, colour or attributes until set. */
     @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
@@ -316,6 +335,7 @@ public class ParticipantJson internal constructor(
         private var type: String = KnownParticipantType.PARTICIPANT
         private var alias: String? = null
         private var colour: String? = null
+        private val attributes = linkedMapOf<String, AttributeValueJson>()
 
         public fun type(value: String): Builder = apply { type = value }
 
@@ -323,7 +343,51 @@ public class ParticipantJson internal constructor(
 
         public fun colour(value: String?): Builder = apply { colour = value }
 
-        public fun build(): ParticipantJson = ParticipantJson(id, name, type, alias, colour)
+        /** Sets one attribute, replacing any with the same [key]. The key is not empty. */
+        public fun attribute(
+            key: String,
+            value: AttributeValueJson,
+        ): Builder =
+            apply {
+                requireAttributeKey(key)
+                attributes[key] = value
+            }
+
+        public fun attribute(
+            key: String,
+            value: String,
+        ): Builder = attribute(key, AttributeValueJson.of(value))
+
+        public fun attribute(
+            key: String,
+            value: Boolean,
+        ): Builder = attribute(key, AttributeValueJson.of(value))
+
+        public fun attribute(
+            key: String,
+            value: Long,
+        ): Builder = attribute(key, AttributeValueJson.of(value))
+
+        public fun attribute(
+            key: String,
+            value: Int,
+        ): Builder = attribute(key, AttributeValueJson.of(value))
+
+        /** A finite number: JSON has no NaN or infinity. */
+        public fun attribute(
+            key: String,
+            value: Double,
+        ): Builder = attribute(key, AttributeValueJson.of(value))
+
+        /** Replaces the attributes. No key is empty. */
+        public fun attributes(values: Map<String, AttributeValueJson>): Builder =
+            apply {
+                values.keys.forEach(::requireAttributeKey)
+                attributes.clear()
+                attributes.putAll(values)
+            }
+
+        public fun build(): ParticipantJson = ParticipantJson(id, name, type, alias, colour, attributes.toMap())
     }
 
     public companion object {

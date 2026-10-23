@@ -129,6 +129,42 @@ class ReportModelTest {
     }
 
     @Test
+    fun `a participant's attributes are optional, kept in order, and keyed by non-empty names`() {
+        val bare = ParticipantJson.builder("orders", "Orders").build()
+        assertEquals(emptyMap<String, AttributeValueJson>(), bare.attributes)
+        val participant =
+            ParticipantJson
+                .builder("orders", "Orders")
+                .attribute("service.name", "orders")
+                .attribute("lsd.external", false)
+                .attribute("lsd.instances", 3)
+                .attribute("lsd.since", 2026L)
+                .attribute("lsd.load", 0.5)
+                .attribute("lsd.regions", AttributeValueJson.ofStrings(listOf("eu-west-2")))
+                .attribute("service.name", "orders-v2")
+                .build()
+        assertEquals(listOf("service.name", "lsd.external", "lsd.instances", "lsd.since", "lsd.load", "lsd.regions"), participant.attributes.keys.toList())
+        assertEquals(AttributeValueJson.of("orders-v2"), participant.attributes["service.name"], "a key set again is replaced")
+        assertEquals(AttributeValueJson.of(3L), participant.attributes["lsd.instances"])
+        assertEquals(participant, participant.toBuilder().build())
+        assertEquals(
+            mapOf("peer.service" to AttributeValueJson.of("payments")),
+            participant
+                .toBuilder()
+                .attributes(mapOf("peer.service" to AttributeValueJson.of("payments")))
+                .build()
+                .attributes,
+        )
+        assertNotEquals(bare, participant)
+        assertThrows(IllegalArgumentException::class.java) { ParticipantJson.builder("a", "A").attribute("", "x") }
+        assertThrows(IllegalArgumentException::class.java) { ParticipantJson.builder("a", "A").attributes(mapOf("" to AttributeValueJson.of(1))) }
+        assertThrows(IllegalArgumentException::class.java) {
+            MessageEventJson.builder("m", "a", "b", "m", KnownMessageType.SYNCHRONOUS).attributes(mapOf("" to AttributeValueJson.of(1)))
+        }
+        assertEquals(true, participant.toString().contains("attributes={service.name=AttributeValueJson(orders-v2)"), participant.toString())
+    }
+
+    @Test
     fun `the schema version is a runtime value`() {
         assertEquals(true, Regex("""\d+\.\d+\.\d+""").matches(ReportSchema.VERSION))
         val field = ReportSchema::class.java.getField("VERSION")
@@ -143,7 +179,7 @@ class ReportModelTest {
                 .builder("m1", "a", "b", "POST /orders", KnownMessageType.SYNCHRONOUS)
                 .colour("red")
                 .durationMs(1.5)
-                .data(mapOf("method" to "POST"))
+                .data(DataValueJson.from(mapOf("method" to "POST")))
                 .payloadId("s1/m1")
                 .startedAt("2026-10-21T08:00:00Z")
                 .seq(1)
@@ -167,6 +203,7 @@ class ReportModelTest {
             .type(KnownParticipantType.ACTOR)
             .alias("Ay")
             .colour("blue")
+            .attribute("service.name", "a")
             .build()
         val error = ScenarioErrorJson.builder("AssertionError", "expected 2").stack("at Test.kt:1").build()
         val scenario =

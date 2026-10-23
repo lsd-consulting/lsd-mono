@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.report.html
 
 import io.lsdconsulting.lsd.mono.report.model.AttributeValueJson
+import io.lsdconsulting.lsd.mono.report.model.DataValueJson
 import io.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.lsdconsulting.lsd.mono.report.model.EventJson
@@ -166,6 +167,8 @@ private fun ParticipantJson.toJsonValue(): JsonValue =
             add("type" to JsonString(type))
             alias?.let { add("alias" to JsonString(it)) }
             colour?.let { add("colour" to JsonString(it)) }
+            // The builder takes no empty key, as the schema has none.
+            if (attributes.isNotEmpty()) add("attributes" to obj(attributes.map { (key, value) -> key to value.toJsonValue() }))
         },
     )
 
@@ -183,7 +186,7 @@ internal fun EventJson.toJsonValue(): JsonValue =
                     add("type" to JsonString(type))
                     colour?.let { add("colour" to JsonString(it)) }
                     durationMs?.let { add("durationMs" to msNumber(it)) }
-                    data?.let { add("data" to anyToJson(it)) }
+                    data?.let { add("data" to it.toJsonValue()) }
                     payloadId?.let { add("payloadId" to JsonString(it)) }
                     seq?.let { add("seq" to JsonNumber(it.toString())) }
                     callId?.let { add("callId" to JsonString(it)) }
@@ -297,7 +300,7 @@ private fun attributeJson(value: Any?): JsonValue =
  * [ReportJson.toJson] is unchanged so `report.json` still has the full capture.
  */
 internal fun ReportJson.forShell(): ShellReport {
-    val payloads = linkedMapOf<String, Any?>()
+    val payloads = linkedMapOf<String, DataValueJson>()
     val light =
         toBuilder()
             .scenarios(
@@ -319,13 +322,13 @@ internal fun ReportJson.forShell(): ShellReport {
 
 internal data class ShellReport(
     val report: ReportJson,
-    val payloads: Map<String, Any?>,
+    val payloads: Map<String, DataValueJson>,
 )
 
 private fun splitMessageForShell(
     scenarioId: String,
     event: MessageEventJson,
-    payloads: MutableMap<String, Any?>,
+    payloads: MutableMap<String, DataValueJson>,
 ): MessageEventJson {
     val data = event.data ?: return event
     val split = splitPayload(data)
@@ -339,27 +342,26 @@ private fun splitMessageForShell(
         .build()
 }
 
-private data class PayloadSplit(val summary: Map<String, Any?>?, val defer: Boolean)
+private data class PayloadSplit(val summary: DataValueJson?, val defer: Boolean)
 
-private fun splitPayload(data: Any?): PayloadSplit {
-    if (data !is Map<*, *>) return PayloadSplit(summary = null, defer = true)
-    val summary = linkedMapOf<String, Any?>()
+private fun splitPayload(data: DataValueJson): PayloadSplit {
+    if (data !is DataValueJson.ObjectValue) return PayloadSplit(summary = null, defer = true)
+    val summary = linkedMapOf<String, DataValueJson>()
     var defer = false
-    for ((key, value) in data) {
-        val name = key?.toString() ?: continue
+    for ((name, value) in data.fields) {
         if (isSummaryField(name, value))
             summary[name] = value
         else
             defer = true
     }
     if (!defer) return PayloadSplit(summary = null, defer = false)
-    return PayloadSplit(summary = summary.takeIf { it.isNotEmpty() }, defer = true)
+    return PayloadSplit(summary = summary.takeIf { it.isNotEmpty() }?.let(DataValueJson::ofObject), defer = true)
 }
 
-private fun isSummaryField(name: String, value: Any?): Boolean =
+private fun isSummaryField(name: String, value: DataValueJson): Boolean =
     when (name) {
-        "method", "path" -> value is String && value.isNotEmpty()
-        "status" -> (value is String && value.isNotEmpty()) || value is Number
+        "method", "path" -> value is DataValueJson.StringValue && value.value.isNotEmpty()
+        "status" -> (value is DataValueJson.StringValue && value.value.isNotEmpty()) || value is DataValueJson.NumberValue
         else -> false
     }
 
@@ -368,5 +370,5 @@ private fun isSummaryField(name: String, value: Any?): Boolean =
  * when it is opened or searched, not every body when the script loads (#63). The outer map is not
  * subject to the payload item limit.
  */
-internal fun shellPayloadScript(payloads: Map<String, Any?>): String =
-    "window.__LSD_PAYLOAD_TEXT__=${JsonObject(payloads.map { (id, data) -> id to JsonString(anyToJson(data).renderCompact()) }).render()};\n"
+internal fun shellPayloadScript(payloads: Map<String, DataValueJson>): String =
+    "window.__LSD_PAYLOAD_TEXT__=${JsonObject(payloads.map { (id, data) -> id to JsonString(data.toJsonValue().renderCompact()) }).render()};\n"

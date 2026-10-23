@@ -15,5 +15,5 @@ public object ReportSchema {
      * compiled, so an adapter would keep its compile-time version after a runtime upgrade.
      */
     @JvmField
-    public val VERSION: String = "0.2.0"
+    public val VERSION: String = "0.3.0"
 }
