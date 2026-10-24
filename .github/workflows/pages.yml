@@ -7,18 +7,20 @@ name: Pages
 # sample report (the shop fixtures, run by its sampleReport task), linked from its README.
 # The example report is not committed; nothing else under docs/ is published.
 #
-# The site is the latest release: the version the README tells people to use. It deploys after
-# the Gradle workflow passes on a push to main and only when that run released, so the commit
-# has its vX.Y.Z tag and the report shows that version. A push that releases nothing leaves the
-# site as it is. Run it by hand to deploy main (shown as the next patch snapshot, such as
-# 0.3.1-SNAPSHOT) or, with `ref`, a release tag. The checkout has the full history and the tags,
-# which the train version reads (TrainVersion.kt). The site never pings (writesSampleReport turns
-# the usage ping off).
+# The site is the latest release: the version the README tells people to use. The weekly release
+# (release.yml) calls this workflow with the new vX.Y.Z tag once it is published, so the report
+# shows that version; a week that releases nothing leaves the site as it is. Run it by hand to
+# deploy main (shown as the next patch snapshot, such as 0.3.1-SNAPSHOT) or, with `ref`, a release
+# tag. The checkout has the full history and the tags, which the train version reads
+# (TrainVersion.kt). The site never pings (writesSampleReport turns the usage ping off).
 on:
-  workflow_run:
-    workflows: [Gradle]
-    types: [completed]
-    branches: [main]
+  # From release.yml, with the tag it just released.
+  workflow_call:
+    inputs:
+      ref:
+        description: "Release tag to deploy, such as v0.3.0"
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       ref:
@@ -35,11 +37,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # A passing build of a push to main that tagged its commit, or a run by hand.
+  # What to deploy: the tag release.yml passed, or what was asked for by hand (main when empty).
+  # In a called workflow github.event_name is the caller's, so this goes by the input alone.
   released:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     outputs:
@@ -47,23 +47,8 @@ jobs:
     steps:
       - id: ref
         env:
-          EVENT: ${{ github.event_name }}
           INPUT_REF: ${{ inputs.ref }}
-          SHA: ${{ github.event.workflow_run.head_sha }}
-          REPO: ${{ github.server_url }}/${{ github.repository }}
-        run: |
-          if [ "$EVENT" = workflow_dispatch ]; then
-            echo "ref=${INPUT_REF:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # Release tags are lightweight; an annotated one lists its commit on a ^{} line.
-          tag=$(git ls-remote --tags "$REPO" 'v[0-9]*' | awk -v sha="$SHA" '$1 == sha { sub("refs/tags/", "", $2); sub(/\^\{\}$/, "", $2); print $2; exit }')
-          if [ -z "$tag" ]; then
-            echo "$SHA released nothing, so the site stays on the last release."
-            exit 0
-          fi
-          echo "$SHA is $tag"
-          echo "ref=$tag" >> "$GITHUB_OUTPUT"
+        run: echo "ref=${INPUT_REF:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: released
