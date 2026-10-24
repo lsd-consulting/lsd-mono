@@ -1,0 +1,3 @@
+# Zero-code test integration: every @SpringBootTest (any Spring TestContext test) gets a scenario per method.
+org.springframework.test.context.TestExecutionListener=\
+io.lsdconsulting.lsd.mono.springboot.LsdSpringTestListener

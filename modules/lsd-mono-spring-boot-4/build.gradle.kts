@@ -1,0 +1,125 @@
+plugins {
+    id("lsd.kotlin-jvm")
+    `java-library`
+}
+
+// A little under the measured 91.3% line coverage; lsd.coverage fails below it and more than 3 points above it.
+lsdCoverage {
+    lineFloor.set(89)
+}
+
+description =
+    "LSD Mono Spring Boot 4 integration — add it to the tests and every @SpringBootTest writes a living sequence diagram"
+
+// The test lifecycle reaches core's integration-only API (as lsd-mono-cucumber-8 does).
+kotlin {
+    compilerOptions {
+        optIn.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi")
+    }
+}
+
+// Built against Spring Boot 4 (Spring Framework 7, Jackson 3). The exact version is the catalog's
+// `spring-boot`; this only stops a resolve from landing on another major. Spring Boot 5 would be a
+// new module (lsd-mono-spring-boot-5), not a move of this pin. Spring Framework's version is never
+// declared here: it is whatever the Boot BOM manages.
+majorLines {
+    pin("Spring Boot 4", 4, listOf("org.springframework.boot"))
+    pin("Spring Framework 7", 7, listOf("org.springframework"))
+    pin("Spring Data 4", 4, listOf("org.springframework.data"))
+    pin("Spring for Apache Kafka 4", 4, listOf("org.springframework.kafka"))
+    pin("Apache Kafka 4", 4, listOf("org.apache.kafka"))
+}
+
+// The JUnit the Spring Boot BOM manages (6.0.x for Boot 4.1), which the starter's tests run on
+// rather than the repo's JUnit (`junit` in the catalog). Resolved here only to check, in
+// BootJunitVersionTest, that `spring-boot-junit` in the catalog still matches the BOM.
+val bootManagedJunit: Configuration by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
+dependencies {
+    api(project(":modules:lsd-mono-core"))
+
+    // Spring is the application's, not ours: compile against it and ship none of it, so the app's
+    // own Boot 4.x wins. Each part of the auto-configuration switches on only when its classes are
+    // on the test classpath.
+    compileOnly(platform(libs.spring.boot.bom))
+    compileOnly("org.springframework.boot:spring-boot-autoconfigure")
+    compileOnly("org.springframework.boot:spring-boot-restclient")
+    compileOnly("org.springframework:spring-web")
+    compileOnly("org.springframework:spring-test")
+    compileOnly("org.springframework:spring-aop")
+    compileOnly("org.springframework.data:spring-data-commons")
+    compileOnly("org.springframework.boot:spring-boot-kafka")
+    compileOnly("org.springframework.kafka:spring-kafka")
+    compileOnly("org.apache.kafka:kafka-clients")
+    compileOnly("jakarta.servlet:jakarta.servlet-api")
+    compileOnly("tools.jackson.core:jackson-databind")
+
+    // Tests run a real @SpringBootTest app (Tomcat, RestClient, RestTemplate, an in-memory Spring
+    // Data repository, an embedded Kafka broker) on Boot's own managed versions, JUnit included.
+    testImplementation(platform(libs.spring.boot.bom))
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc")
+    testImplementation("org.springframework.boot:spring-boot-restclient")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.data:spring-data-keyvalue")
+    testImplementation("org.springframework.boot:spring-boot-starter-kafka")
+    testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
+    // LsdTestConfig, ReportJson and ReportSchemas (#74).
+    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
+    // A class that already uses LsdExtension is left to it; the tests check both on Boot's JUnit.
+    testImplementation(project(":modules:lsd-mono-junit-jupiter"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    bootManagedJunit(platform(libs.spring.boot.bom))
+    bootManagedJunit("org.junit.jupiter:junit-jupiter-api")
+}
+
+// Every org.junit artifact on the test classpaths at Boot's JUnit, though core's test fixtures and
+// lsd-mono-junit-jupiter bring the repo's newer one.
+val bootJunit = libs.versions.spring.boot.junit
+    .get()
+configurations.matching { it.name.startsWith("test") }.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.junit" || requested.group.startsWith("org.junit.")) {
+            useVersion(bootJunit)
+            because("lsd-mono-spring-boot-4's tests run on the JUnit the Spring Boot BOM manages")
+        }
+    }
+}
+
+val managedJunitJars = bootManagedJunit.incoming.artifacts.resolvedArtifacts
+val moduleBuildFiles =
+    rootProject.layout.projectDirectory
+        .dir("modules")
+        .asFileTree
+        .matching { include("*/build.gradle.kts") }
+
+tasks.test {
+    useJUnitPlatform {
+        // @SpringBootTest fixtures, launched explicitly from StarterEndToEndTest.
+        excludeTags("lsd-fixture")
+    }
+    systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-test")
+    systemProperty("lsd.mono.report.usagePing", "false")
+    // BootJunitVersionTest: the version of junit-jupiter-api the Boot BOM picks.
+    val managed =
+        managedJunitJars.map { artifacts ->
+            artifacts
+                .map { it.id.componentIdentifier }
+                .filterIsInstance<ModuleComponentIdentifier>()
+                .single { it.group == "org.junit.jupiter" && it.module == "junit-jupiter-api" }
+                .version
+        }
+    inputs.property("bootManagedJunit", managed)
+    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dlsd.test.bootManagedJunit=${managed.get()}") })
+    // DependencyDirectionTest reads every module's build file.
+    inputs.files(moduleBuildFiles).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("moduleBuildFiles")
+    systemProperty(
+        "lsd.test.modulesDir",
+        rootProject.layout.projectDirectory
+            .dir("modules")
+            .asFile.path,
+    )
+}

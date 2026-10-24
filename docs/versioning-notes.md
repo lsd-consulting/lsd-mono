@@ -4,29 +4,29 @@ How lsd-mono is versioned. How a release happens is in [releasing.md](releasing.
 
 ## How it is versioned today
 
-Group is `io.github.lsd-consulting`, the Maven Central namespace lsd-core is published under (packages stay `io.lsdconsulting.lsd.mono`). The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), coroutines-integration (`lsd-mono-coroutines`), and the report model (`lsd-mono-report-model`) and writer (`lsd-mono-report-html`) that core writes its reports with and that a producer without core can use.
+Group is `io.github.lsd-consulting`, the Maven Central namespace lsd-core is published under (packages stay `io.lsdconsulting.lsd.mono`). The libraries are core (`lsd-mono-core`), junit-integration (`lsd-mono-junit-jupiter`), cucumber-integration (`lsd-mono-cucumber-8`), coroutines-integration (`lsd-mono-coroutines`), spring-boot-integration (`lsd-mono-spring-boot-4`), and the report model (`lsd-mono-report-model`) and writer (`lsd-mono-report-html`) that core writes its reports with and that a producer without core can use.
 
-The train version is set once on the root project, from git (`TrainVersion.kt` in build-logic): `-Plsd.version=X.Y.Z` if given, else `X.Y.Z` on a commit tagged `vX.Y.Z`, else a snapshot of the next patch after the latest `v` tag (`0.0.1-SNAPSHOT` before the first tag, or in a shallow checkout without tags). `./gradlew -q printVersion` shows it. The report's `generator` field and the jar manifest follow it. Every module inherits it (`lsd.common`), and there is no per-module override: all six artifacts always have the train version.
+The train version is set once on the root project, from git (`TrainVersion.kt` in build-logic): `-Plsd.version=X.Y.Z` if given, else `X.Y.Z` on a commit tagged `vX.Y.Z`, else a snapshot of the next patch after the latest `v` tag (`0.0.1-SNAPSHOT` before the first tag, or in a shallow checkout without tags). `./gradlew -q printVersion` shows it. The report's `generator` field and the jar manifest follow it. Every module inherits it (`lsd.common`), and there is no per-module override: all seven artifacts always have the train version.
 
-Releases go to Maven Central with semantic-release from conventional commits, after `gate` on `main` ([releasing.md](releasing.md)). Each release publishes all six artifacts together, at one version; the first was `0.1.0` (17 October 2026).
+Releases go to Maven Central with semantic-release from conventional commits, after `gate` on `main` ([releasing.md](releasing.md)). Each release publishes all seven artifacts together, at one version; the first was `0.1.0` (17 October 2026).
 
-`gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`, kotlinx.coroutines `1.11.0`). It is not the version of these libraries.
+`gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`, kotlinx.coroutines `1.11.0`, Spring Boot `4.1.2`). It is not the version of these libraries.
 
-Renovate is the root `renovate.json`. It reads that shared catalog. JUnit and Cucumber updates are separate pull requests, each capped at the current major, and kotlinx.coroutines is capped at major 1. A future Cucumber 9 module would be another catalog line plus another rule.
+Renovate is the root `renovate.json`. It reads that shared catalog. JUnit and Cucumber updates are separate pull requests, each capped at the current major, kotlinx.coroutines is capped at major 1, and Spring Boot is capped at major 4. `spring-boot-junit`, the JUnit the Spring Boot BOM manages, is not a Renovate dependency: when a Spring Boot update moves it, `BootJunitVersionTest` fails on that pull request and it is bumped by hand there. A future Cucumber 9 module would be another catalog line plus another rule.
 
-junit-integration, cucumber-integration and coroutines-integration depend on core as a project. A consumer takes core plus the integrations it needs. Cucumber 8 is pinned to major 8, and coroutines-integration to kotlinx.coroutines major 1: the catalog holds the exact version and the build fails if anything resolves to another major.
+junit-integration, cucumber-integration, coroutines-integration and spring-boot-integration depend on core as a project. A consumer takes core plus the integrations it needs. Cucumber 8 is pinned to major 8, coroutines-integration to kotlinx.coroutines major 1, and spring-boot-integration to Spring Boot major 4, Spring Framework major 7, Spring Data major 4, Spring for Apache Kafka major 4 and Apache Kafka major 4 (all compileOnly: the app brings its own Boot, and the Boot BOM sets the Spring Framework version): the catalog holds the exact version and the build fails if anything resolves to another major.
 
 ## The train
 
 One shared version across core, the integrations and the report model and writer is the compatibility promise. Matching numbers mean those artifacts were released together and are meant to be used together.
 
-- **Lockstep.** Every release publishes all six at the same version, even when only one changed. No artifact is released on its own, and none has a version of its own.
+- **Lockstep.** Every release publishes all seven at the same version, even when only one changed. No artifact is released on its own, and none has a version of its own.
 - **One decision.** semantic-release picks the version from all the commits since the last tag, whichever module they touch ([releasing.md](releasing.md#commit-messages)). A Renovate bump to one integration's dependency releases the train like any other `fix`.
-- **Majors move together.** A change that breaks one integration (say a new JUnit or Cucumber major) is a breaking change of the train. While the version is `0.y.z` that is a minor release of all six; from v1 it is a major of all six. A breaking change to the report model or the writer counts the same way.
+- **Majors move together.** A change that breaks one integration (say a new JUnit or Cucumber major) is a breaking change of the train. While the version is `0.y.z` that is a minor release of all seven; from v1 it is a major of all seven. A breaking change to the report model or the writer counts the same way.
 
 Releases are `0.y.z` until the API is ready for v1 (see [releasing.md](releasing.md)). [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): while the version is `0.y.z`, the API is not stable. A released version is immutable. Maven Central will not take a version that ends in `-SNAPSHOT`.
 
-Per-module versions (a patch of one artifact alone, a "solo major" for one integration) were considered and rejected: semantic-release decides one version per repository, and matching numbers would no longer mean the artifacts go together. A new major of a dependency gets a new artifact instead, as `lsd-mono-cucumber-8` is named for Cucumber 8.
+Per-module versions (a patch of one artifact alone, a "solo major" for one integration) were considered and rejected: semantic-release decides one version per repository, and matching numbers would no longer mean the artifacts go together. A new major of a dependency gets a new artifact instead, as `lsd-mono-cucumber-8` is named for Cucumber 8 and `lsd-mono-spring-boot-4` for Spring Boot 4.
 
 A future Cucumber 7 or Cucumber 9 artifact joins the train: it starts at the train's version and is released with the rest.
 

@@ -40,6 +40,19 @@
       "groupSlug": "cucumber-8"
     },
     {
+      "description": "One pull request for the Spring Boot 4 catalog line. Stay on major 4: Spring Boot 5 is a new lsd-mono-spring-boot-5 module. When the Boot BOM moves JUnit, lsd-mono-spring-boot-4's BootJunitVersionTest fails until spring-boot-junit in the catalog is bumped in the same pull request.",
+      "matchManagers": [
+        "gradle"
+      ],
+      "matchPackageNames": [
+        "org.springframework.boot:spring-boot-dependencies"
+      ],
+      "matchCurrentVersion": "/^4\\./",
+      "allowedVersions": "/^4\\./",
+      "groupName": "Spring Boot 4",
+      "groupSlug": "spring-boot-4"
+    },
+    {
       "description": "Stay on kotlinx.coroutines 1. lsd-mono-coroutines is built against that major; a 2.x release is a human decision.",
       "matchManagers": [
         "gradle"

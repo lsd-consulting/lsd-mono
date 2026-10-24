@@ -16,11 +16,13 @@ LSD Mono records a scenario as a sequence of messages and writes an interactive 
 
 [`lsd-mono-coroutines` README](modules/lsd-mono-coroutines/README.md) covers keeping a scenario bound while a coroutine moves between threads.
 
+[`lsd-mono-spring-boot-4` README](modules/lsd-mono-spring-boot-4/README.md) covers the Spring Boot 4 starter that draws an existing `@SpringBootTest` suite with no code.
+
 The source is at https://github.com/lsd-consulting/lsd-mono.
 
 ## Getting started
 
-The artifacts are on Maven Central under `io.github.lsd-consulting`, all six on one version. Releases are automatic, so the snippets below say `X.Y.Z` instead of a version: use the latest, which the Maven Central badge above shows. The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
+The artifacts are on Maven Central under `io.github.lsd-consulting`, all seven on one version. Releases are automatic, so the snippets below say `X.Y.Z` instead of a version: use the latest, which the Maven Central badge above shows. The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
 
 | Artifact | Use it for |
 | --- | --- |
@@ -28,6 +30,7 @@ The artifacts are on Maven Central under `io.github.lsd-consulting`, all six on 
 | `lsd-mono-junit-jupiter` | A scenario per JUnit Jupiter 6 test ([README](modules/lsd-mono-junit-jupiter/README.md)). |
 | `lsd-mono-cucumber-8` | A scenario per Cucumber 8 scenario ([README](modules/lsd-mono-cucumber-8/README.md)). |
 | `lsd-mono-coroutines` | Captures from coroutines that change threads, with kotlinx.coroutines 1 ([README](modules/lsd-mono-coroutines/README.md)). |
+| `lsd-mono-spring-boot-4` | A scenario per `@SpringBootTest` method with no code, drawing Spring MVC, `RestClient`, `RestTemplate`, Kafka and Spring Data repository calls, for Spring Boot 4 ([README](modules/lsd-mono-spring-boot-4/README.md)). |
 | `lsd-mono-report-model` | The report as plain Kotlin values, for a producer that writes reports without lsd-mono-core ([README](modules/lsd-mono-report-model/README.md)). lsd-mono-core brings it. |
 | `lsd-mono-report-html` | Writes a report as JSON and as the HTML page, with the report UI bundled ([README](modules/lsd-mono-report-html/README.md)). lsd-mono-core brings it. |
 
@@ -41,6 +44,7 @@ dependencies {
     testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:$lsdMonoVersion")
     testImplementation("io.github.lsd-consulting:lsd-mono-cucumber-8:$lsdMonoVersion")
     testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:$lsdMonoVersion")
+    testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:$lsdMonoVersion")
 }
 ```
 
@@ -65,11 +69,11 @@ Maven:
         <version>${lsd-mono.version}</version>
         <scope>test</scope>
     </dependency>
-    <!-- lsd-mono-cucumber-8 and lsd-mono-coroutines the same way -->
+    <!-- lsd-mono-cucumber-8, lsd-mono-coroutines and lsd-mono-spring-boot-4 the same way -->
 </dependencies>
 ```
 
-Each integration brings in `lsd-mono-core`; listing core as well keeps the API you call directly declared. You still bring the test runtime: a JUnit Jupiter engine for `lsd-mono-junit-jupiter`, and Cucumber 8 (`cucumber-java8` and `cucumber-junit-platform-engine`) for `lsd-mono-cucumber-8`. The module READMEs show the setup for each.
+Each integration brings in `lsd-mono-core`; listing core as well keeps the API you call directly declared. You still bring the test runtime: a JUnit Jupiter engine for `lsd-mono-junit-jupiter`, and Cucumber 8 (`cucumber-java8` and `cucumber-junit-platform-engine`) for `lsd-mono-cucumber-8`; `lsd-mono-spring-boot-4` uses the app's own Spring Boot 4 and `spring-boot-starter-test`. The module READMEs show the setup for each.
 
 ### From this repository
 
@@ -81,10 +85,11 @@ dependencies {
     testImplementation(project(":modules:lsd-mono-junit-jupiter"))
     testImplementation(project(":modules:lsd-mono-cucumber-8"))
     testImplementation(project(":modules:lsd-mono-coroutines")) // only if tests capture from coroutines
+    testImplementation(project(":modules:lsd-mono-spring-boot-4")) // only for @SpringBootTest suites
 }
 ```
 
-They are compiled with `--release 17`, and CI tests on Java 17, 21 and 25. Cucumber support is major 8.
+They are compiled with `--release 17`, and CI tests on Java 17, 21 and 25. Cucumber support is major 8, Spring Boot support major 4.
 
 ## Capture a scenario
 
@@ -224,6 +229,7 @@ modules/lsd-mono-report-html/     the report writer, report UI in ui/
 modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
 modules/lsd-mono-cucumber-8/      Cucumber 8 plugin
 modules/lsd-mono-coroutines/      keeps a scenario bound across coroutine thread hops
+modules/lsd-mono-spring-boot-4/   Spring Boot 4 starter
 build-logic/                      convention plugins (lsd.kotlin-jvm)
 ```
 
