@@ -5,7 +5,50 @@
     ":semanticCommits",
     "helpers:pinGitHubActionDigestsToSemver"
   ],
+  "description": [
+    "Dependency updates release nothing by themselves (build(deps), docs/releasing.md): they wait in main and go out with the next weekly release that has a feat, fix or perf. They arrive on Monday mornings, grouped, once a release has been out three days, so they are merged before Tuesday's release. Security fixes are the exception: fix(deps), at any time, straight away."
+  ],
+  "timezone": "Europe/London",
+  "schedule": [
+    "* 0-8 * * 1"
+  ],
+  "minimumReleaseAge": "3 days",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "description": [
+      "Security fixes: fix(deps), so the next release (or an urgent one by hand) ships them. Any time, no waiting, not grouped."
+    ],
+    "semanticCommitType": "fix",
+    "semanticCommitScope": "deps",
+    "schedule": [
+      "at any time"
+    ],
+    "minimumReleaseAge": null,
+    "groupName": null,
+    "addLabels": [
+      "security"
+    ]
+  },
   "packageRules": [
+    {
+      "description": "Every dependency update is build(deps), which releases nothing (tools/release/.releaserc.json). This replaces fix(deps) from :semanticCommits for production dependencies. Security fixes stay fix(deps) (vulnerabilityAlerts).",
+      "matchPackageNames": [
+        "*"
+      ],
+      "semanticCommitType": "build",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "One weekly pull request for every minor, patch and digest update. The rules below keep their own groups (JUnit, Cucumber, Spring Boot, JDK, Node) because they come later. Majors stay one pull request each.",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    },
     {
       "description": "One pull request for the shared JUnit catalog line. Stay on major 6; a major is a human decision.",
       "matchManagers": [

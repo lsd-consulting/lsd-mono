@@ -31,6 +31,9 @@ In `modules/lsd-mono-report-html/ui`: `npm run typecheck`, `npm run lint`, `npm 
   [release notes](https://github.com/lsd-consulting/lsd-mono/releases) are generated from the commits. So write the
   subject for users, put the explanation they need in the body, and put what they must change in a
   `BREAKING CHANGE:` footer.
+- **Releases are weekly.** Merging to `main` does not release: the Release workflow releases what has built up every
+  Tuesday at 07:00 UK time, at most 4 times a month, to stay inside Maven Central's limits. For a fix that cannot
+  wait, run it by hand once `gate` passes on `main` ([docs/releasing.md](docs/releasing.md#an-urgent-release)).
 - **Coverage only goes up.** Each module's floor (`lsdCoverage { lineFloor }`) and the Vitest
   thresholds fail the build when coverage drops below them, and also when coverage is more than 3
   points above them. Raise the floor when you add tests.

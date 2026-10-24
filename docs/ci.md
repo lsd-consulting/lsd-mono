@@ -1,11 +1,12 @@
 # CI
 
-Two workflows run on GitHub-hosted runners.
+Three workflows run on GitHub-hosted runners.
 
 | Workflow | Runs on | Does |
 |----------|---------|------|
 | [Gradle](../.github/workflows/gradle.yml) | Pushes to `main`, pull requests, manual dispatch. Skipped when a change only touches Markdown, `docs/` or `modules/*/docs/` | `./gradlew build verifyGenerated`: compile, JVM tests, build-logic tests, the report shell build and Vitest, plus the [lint, format and coverage](#lint-format-and-coverage) checks. It then checks the build left no changed or new files ([generated files](generated-files.md)). Test reports are uploaded when it fails. In parallel, `check-ux` runs the report UI's [Playwright checks](#report-ui-checks-checkux) when the report UI changed |
-| [Pages](../.github/workflows/pages.yml) | The Gradle workflow passing on a push to `main` that released, and manual dispatch (main, or a tag given as `ref`) | Builds the example report site (report index plus report) with `kitchenSinkSample`, and the Spring Boot starter's sample report under `spring-boot-4/` with its `sampleReport`, from the release tag, with the full history so the report shows that version, and deploys it to GitHub Pages |
+| [Release](../.github/workflows/release.yml) | Tuesdays at 07:00 UK time, and manual dispatch from `main` | Releases `main` to Maven Central when there is a `feat`, `fix`, `perf` or breaking change since the last tag, `gate` passed on `main`'s latest commit and the month's cap is not reached ([releasing.md](releasing.md#when-releases-happen)). With a `tag`, publishes that tag again |
+| [Pages](../.github/workflows/pages.yml) | Called by the Release workflow after a new release, with its tag, and manual dispatch (main, or a tag given as `ref`) | Builds the example report site (report index plus report) with `kitchenSinkSample`, and the Spring Boot starter's sample report under `spring-boot-4/` with its `sampleReport`, from the release tag, with the full history so the report shows that version, and deploys it to GitHub Pages |
 
 ## Lint, format and coverage
 
@@ -71,9 +72,10 @@ was skipped, so it is the one check to require on `main`: a docs-only pull reque
 
 ## Hardening
 
-- **Permissions.** Both workflows default to `contents: read`. Only the Pages deploy job gets
+- **Permissions.** Every workflow defaults to `contents: read`. Only the Pages deploy job gets
   `pages: write` and `id-token: write`, and only the release job `contents: write` (to push the tag and write the
-  GitHub release). The release job reads the Gradle cache but never writes it, and runs Gradle without the
+  GitHub release). The release's `plan` job, which decides whether to release, gets `checks: read` to read `gate`
+  and holds no secrets. The release job reads the Gradle cache but never writes it, and runs Gradle without the
   configuration cache, so the signing key is not stored anywhere. Checkout does not keep the token (`persist-credentials: false`).
 - **Pinned actions.** Every action is pinned to a full commit SHA, with its version in a comment.
   Renovate (`helpers:pinGitHubActionDigestsToSemver` in `renovate.json`) keeps the SHA and the
@@ -81,9 +83,9 @@ was skipped, so it is the one check to require on `main`: a docs-only pull reque
 - **Wrapper validation.** `gradle/actions/setup-gradle` checks `gradle-wrapper.jar` against
   Gradle's published checksums before anything runs.
 - **Timeouts.** 20 minutes for the build, 15 for `check-ux` and for Pages. A healthy run takes a few minutes, so
-  these limits only catch a hung job.
+  these limits only catch a hung job. 30 for a release.
 - **Concurrency.** A new push to a pull request cancels that pull request's running build. Runs on
-  `main` always finish, and Pages deploys one at a time.
+  `main` always finish, and Pages deploys one at a time. Releases run one at a time and are never cancelled.
 
 ## Pages reruns
 
