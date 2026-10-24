@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.springboot.fixture.ExtensionShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaSendFailureFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
@@ -93,6 +94,22 @@ class StarterEndToEndTest {
         // The listener's own repository call is the app's, not the test's.
         assertEquals("shop", announced.message("findById(\"order-1\")")["from"], announced.json)
         assertTrue(announced.json.contains("lamp-01") && announced.json.contains("orderId"), "the payload is captured: ${announced.json}")
+    }
+
+    @Test
+    fun `a send the producer rejects is drawn as an error reply to its publish`() {
+        val summary = execute(KafkaSendFailureFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val failed =
+            ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single()).scenario("kafka send failure fixture: cannot announce an order")
+        val publish = failed.message("publish \"lamp-01\"")
+        val failure = failed.message("RecordTooLargeException")
+        assertEquals("error", failure["status"], failed.json)
+        assertEquals(publish["to"], failure["from"], failed.json)
+        assertEquals("shop", failure["to"], failed.json)
+        assertTrue(failure.source.contains("max.request.size"), "the exception's message is kept: ${failure.source}")
+        assertTrue("consume \"lamp-01\"" !in failed.labels, "nothing reached the topic: ${failed.labels}")
     }
 
     @Test
