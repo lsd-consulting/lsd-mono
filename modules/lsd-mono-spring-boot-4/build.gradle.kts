@@ -5,7 +5,7 @@ plugins {
     `java-library`
 }
 
-// A little under the measured 93.2% line coverage; lsd.coverage fails below it and more than 3 points above it.
+// A little under the measured 93.9% line coverage; lsd.coverage fails below it and more than 3 points above it.
 lsdCoverage {
     lineFloor.set(91)
 }
@@ -147,6 +147,8 @@ val sampleReportTests =
         filter {
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaSendFailureFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture")
         }
         writesSampleReport(sampleReportDir)
@@ -154,8 +156,10 @@ val sampleReportTests =
         val dir = sampleReportDir.get().asFile
         doLast {
             val diagrams = dir.listFiles { f -> f.name.endsWith("-diagram.html") }.orEmpty().map { it.name }
-            check(listOf("shop-fixture-", "kafka-shop-fixture-", "web-flux-shop-fixture-").all { p -> diagrams.any { it.startsWith(p) } }) {
-                "sampleReportTests wrote $diagrams, not the shop, Kafka shop and WebFlux shop reports"
+            val expected =
+                listOf("shop-fixture-", "kafka-shop-fixture-", "kafka-batch-listener-fixture-", "kafka-send-failure-fixture-", "web-flux-shop-fixture-")
+            check(expected.all { prefix -> diagrams.any { it.startsWith(prefix) } }) {
+                "sampleReportTests wrote $diagrams, not the shop, Kafka shop, Kafka batch listener, Kafka send failure and WebFlux shop reports"
             }
         }
     }
@@ -182,6 +186,10 @@ tasks.register<Sync>("sampleReport") {
         rename("""kafka-shop-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-shop-report.html")
     }
     from(sampleReportDir) {
+        include("kafka-batch-listener-fixture-*-diagram.html")
+        rename("""kafka-batch-listener-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-batch-listener-report.html")
+        include("kafka-send-failure-fixture-*-diagram.html")
+        rename("""kafka-send-failure-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-send-failure-report.html")
         include("web-flux-shop-fixture-*-diagram.html")
         rename("""web-flux-shop-fixture-[0-9a-f]{8}-diagram\.html""", "webflux-report.html")
     }

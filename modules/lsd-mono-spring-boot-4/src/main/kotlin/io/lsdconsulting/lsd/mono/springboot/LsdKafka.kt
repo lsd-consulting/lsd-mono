@@ -84,6 +84,25 @@ internal object KafkaCapture {
         return out
     }
 
+    /** The publish a record carries in [PUBLISH_ID_HEADER], if our producer interceptor stamped it. */
+    fun publishId(headers: Headers?): String? =
+        headers
+            ?.lastHeader(PUBLISH_ID_HEADER)
+            ?.value()
+            ?.toString(Charsets.UTF_8)
+
+    /** An exception's first line, short enough for the inspector; null when it has none or reading it fails. */
+    fun shortMessage(e: Throwable): String? =
+        runCatching { e.message }
+            .getOrNull()
+            ?.lineSequence()
+            ?.firstOrNull()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { if (it.length > MESSAGE_LIMIT) it.take(MESSAGE_LIMIT - 1) + "…" else it }
+
+    private const val MESSAGE_LIMIT = 200
+
     fun names(configs: Map<String, *>): Pair<String, String> =
         (configs[APP_CONFIG] as? String ?: "App") to (configs[CLIENT_CONFIG] as? String ?: ParticipantNames.DEFAULT_CLIENT)
 }
@@ -92,6 +111,12 @@ internal object KafkaCapture {
  * Draws each record a `KafkaTemplate` (or any producer from a Spring producer factory the app's
  * beans use) sends during a test, as a publish from the app to the topic: `Shop → orders.placed`,
  * with the key, headers and payload. It runs on the sending thread, before serialization.
+ *
+ * A send the producer reports as failed (too large, timed out, rejected by the broker) gets an
+ * error reply from the topic to the sender, labelled with the exception and carrying its message.
+ * Kafka reports it on its I/O thread, or on the sending thread when the producer rejects the
+ * record itself; the record's `lsd-publish-id` header says which publish it was. A successful
+ * acknowledgement draws nothing.
  */
 internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
     private var app = "App"
@@ -110,11 +135,12 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
             val id = SpringScenarios.newId()
             val parent = SpringScenarios.parentOf(scenario)
             val topic = record.topic()
+            val publisher = if (parent == null) client else app
             SpringScenarios.declare(scenario, ParticipantType.QUEUE.called(topic))
             scenario.ingest(
                 Interaction(
                     kind = InteractionKind.PUBLISH,
-                    from = if (parent == null) client else app,
+                    from = publisher,
                     to = topic,
                     label = KafkaCapture.label(record.key()),
                     interactionId = id,
@@ -126,16 +152,59 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
                 ),
             )
             SpringScenarios.published(id, scenario)
-            // Read-only once a record has been sent before; then the consumer just goes unpaired.
-            guarded(Unit) { record.headers().add(KafkaCapture.PUBLISH_ID_HEADER, id.toByteArray()) }
+            // Read-only once a record has been sent before; then the consumer just goes unpaired and
+            // its acknowledgement is not drawn.
+            guarded(Unit) {
+                record.headers().add(KafkaCapture.PUBLISH_ID_HEADER, id.toByteArray())
+                SpringScenarios.sending(id, SpringScenarios.Sending(scenario, publisher, topic, System.nanoTime()))
+            }
         }
         return record
+    }
+
+    /** Kafka 4.1+ passes the record's headers, which say which publish this is; older clients never call this. */
+    override fun onAcknowledgement(
+        metadata: RecordMetadata?,
+        exception: Exception?,
+        headers: Headers?,
+    ) {
+        guarded(Unit) {
+            val publishId = KafkaCapture.publishId(headers) ?: return@guarded
+            // Removed either way, so a success just stops waiting, and a second report of one send is ignored.
+            val sent = SpringScenarios.acknowledged(publishId) ?: return@guarded
+            if (exception != null) failed(sent, publishId, exception)
+        }
     }
 
     override fun onAcknowledgement(
         metadata: RecordMetadata?,
         exception: Exception?,
     ) = Unit
+
+    private fun failed(
+        sent: SpringScenarios.Sending,
+        publishId: String,
+        exception: Exception,
+    ) {
+        val name = exception.javaClass.simpleName.ifEmpty { exception.javaClass.name }
+        sent.scenario.ingest(
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = sent.topic,
+                to = sent.publisher,
+                label = name,
+                status = "error",
+                replyTo = publishId,
+                source = SpringScenarios.SOURCE,
+                durationMs = (System.nanoTime() - sent.sentAt) / 1_000_000.0,
+                data =
+                    buildMap {
+                        put("exception", exception.javaClass.name)
+                        KafkaCapture.shortMessage(exception)?.let { put("message", it) }
+                    },
+            ),
+        )
+    }
 
     override fun close() = Unit
 }
@@ -144,6 +213,10 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
  * Draws each record a Spring listener container (so any `@KafkaListener`) polls during a
  * test, as a consume from the topic to the app, paired with its publish when this JVM sent it.
  * Kafka runs the listener on the polling thread, so calls the listener makes are drawn from the app.
+ *
+ * It sits on the consumer, not the listener, so a batch listener (`List<ConsumerRecord>` or a `List`
+ * of payloads) looks the same as a record one: each record in the poll is its own consume, paired
+ * through its own `lsd-publish-id`, and the listener's calls hang off the last record polled.
  */
 internal class LsdKafkaConsumerInterceptor : ConsumerInterceptor<Any?, Any?> {
     private var app = "App"
@@ -156,11 +229,7 @@ internal class LsdKafkaConsumerInterceptor : ConsumerInterceptor<Any?, Any?> {
         guarded(Unit) {
             var last: Pair<LsdScenario, String>? = null
             for (record in records) {
-                val publishId = record
-                    .headers()
-                    .lastHeader(KafkaCapture.PUBLISH_ID_HEADER)
-                    ?.value()
-                    ?.toString(Charsets.UTF_8)
+                val publishId = KafkaCapture.publishId(record.headers())
                 val scenario = SpringScenarios.publishedBy(publishId) ?: SpringScenarios.resolve() ?: continue
                 val id = SpringScenarios.newId()
                 SpringScenarios.declare(scenario, ParticipantType.QUEUE.called(record.topic()))

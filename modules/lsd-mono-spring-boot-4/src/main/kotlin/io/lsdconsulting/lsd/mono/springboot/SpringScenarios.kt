@@ -27,6 +27,7 @@ internal object SpringScenarios {
     private val inbound = ConcurrentHashMap<LsdScenario, ConcurrentLinkedDeque<String>>()
     private val declared = ConcurrentHashMap<LsdScenario, MutableSet<String>>()
     private val published = ConcurrentHashMap<String, LsdScenario>()
+    private val sending = ConcurrentHashMap<String, Sending>()
 
     /** The message a listener thread is handling, set when its consumer polls it (see [consuming]). */
     private val handling = ThreadLocal<Pair<LsdScenario, String>?>()
@@ -43,6 +44,7 @@ internal object SpringScenarios {
         inbound.remove(scenario)
         declared.remove(scenario)
         published.values.removeIf { it == scenario }
+        sending.values.removeIf { it.scenario == scenario }
     }
 
     fun isRunning(scenario: LsdScenario): Boolean = scenario in running
@@ -90,6 +92,27 @@ internal object SpringScenarios {
     }
 
     fun publishedBy(publishId: String?): LsdScenario? = publishId?.let { published[it] }?.takeIf { it in running }
+
+    /** A publish waiting for the broker's acknowledgement, which Kafka reports on another thread. */
+    class Sending(
+        val scenario: LsdScenario,
+        val publisher: String,
+        val topic: String,
+        val sentAt: Long,
+    )
+
+    fun sending(
+        publishId: String,
+        send: Sending,
+    ) {
+        sending[publishId] = send
+    }
+
+    /**
+     * The publish [publishId] acknowledges, once: null when it is unknown, already acknowledged, or
+     * its scenario has finished (then the late acknowledgement is dropped, see [finished]).
+     */
+    fun acknowledged(publishId: String?): Sending? = publishId?.let { sending.remove(it) }?.takeIf { it.scenario in running }
 
     /** Give a participant its shape (topic, repository) once per scenario, before it is first drawn. */
     fun declare(

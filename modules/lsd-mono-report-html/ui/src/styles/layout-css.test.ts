@@ -50,6 +50,15 @@ describe('the header buttons (#92)', () => {
   })
 })
 
+describe('error messages in forced colours', () => {
+  it('keeps the cross and draws the error arrow heavier when the red is gone', () => {
+    const css = readDiagramCss()
+    const blocks = [...css.matchAll(/@media \(forced-colors: active\) \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n')
+    expect(blocks).toMatch(/\.msg-error-mark\s*\{[^}]*fill:\s*CanvasText/)
+    expect(blocks).toMatch(/\.message\.msg-error \.msg-path\s*\{[^}]*stroke:\s*CanvasText;[^}]*stroke-width:\s*3\.5/)
+  })
+})
+
 describe('focus in forced colours (#116)', () => {
   it('gives every keyboard focus a system-colour outline inside the control, over its own outline: none', () => {
     const block = /@media \(forced-colors: active\) \{\s*:focus-visible:not\(svg, svg \*\) \{([^}]*)\}/.exec(css)
