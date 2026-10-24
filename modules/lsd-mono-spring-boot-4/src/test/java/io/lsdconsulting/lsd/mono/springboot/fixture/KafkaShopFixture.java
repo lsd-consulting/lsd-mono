@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.kafka.test.context.EmbeddedKafka;
@@ -39,6 +40,9 @@ public class KafkaShopFixture {
     @LocalServerPort
     int port;
 
+    @Autowired
+    ShopApp.Handled handled;
+
     @Test
     void announcesAnOrder() throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/orders/lamp-01"))
@@ -46,6 +50,6 @@ public class KafkaShopFixture {
                 .POST(HttpRequest.BodyPublishers.ofString("{\"sku\":\"lamp-01\",\"quantity\":2}"))
                 .build();
         assertThat(CLIENT.send(request, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(201);
-        assertThat(ShopApp.HANDLED.await(30, TimeUnit.SECONDS)).isTrue();
+        assertThat(handled.await(30, TimeUnit.SECONDS)).isTrue();
     }
 }

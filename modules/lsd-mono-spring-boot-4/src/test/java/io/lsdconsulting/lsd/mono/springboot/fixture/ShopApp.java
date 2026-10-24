@@ -34,8 +34,6 @@ import org.springframework.web.client.RestTemplate;
 public class ShopApp {
     public static final String TOPIC = "orders.placed";
 
-    /** Counted down when the listener has handled an order event. */
-    public static final CountDownLatch HANDLED = new CountDownLatch(1);
 
     public static class PlacedOrder {
         @Id
@@ -126,19 +124,39 @@ public class ShopApp {
         }
     }
 
+    /**
+     * Counted down when this app's listener has handled an order event. A bean, so each fixture's
+     * context has its own and a listener left running in another cached context cannot release it.
+     */
+    @Component
+    @ConditionalOnProperty(name = "shop.events.enabled", havingValue = "true")
+    public static class Handled {
+        private final CountDownLatch latch = new CountDownLatch(1);
+
+        void countDown() {
+            latch.countDown();
+        }
+
+        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+            return latch.await(timeout, unit);
+        }
+    }
+
     @Component
     @ConditionalOnProperty(name = "shop.events.enabled", havingValue = "true")
     static class OrderListener {
         private final OrderRepository orders;
+        private final Handled handled;
 
-        OrderListener(OrderRepository orders) {
+        OrderListener(OrderRepository orders, Handled handled) {
             this.orders = orders;
+            this.handled = handled;
         }
 
         @KafkaListener(topics = TOPIC, groupId = "shop")
         void on(String event) {
             orders.findById("order-1");
-            HANDLED.countDown();
+            handled.countDown();
         }
     }
 }

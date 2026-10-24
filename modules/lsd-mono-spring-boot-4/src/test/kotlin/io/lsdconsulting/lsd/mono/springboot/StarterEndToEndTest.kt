@@ -6,6 +6,7 @@ import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.springboot.fixture.ExtensionShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -92,6 +93,20 @@ class StarterEndToEndTest {
         // The listener's own repository call is the app's, not the test's.
         assertEquals("shop", announced.message("findById(\"order-1\")")["from"], announced.json)
         assertTrue(announced.json.contains("lamp-01") && announced.json.contains("orderId"), "the payload is captured: ${announced.json}")
+    }
+
+    @Test
+    fun `a KafkaTemplate and listener factory the app builds itself are drawn too`() {
+        val summary = execute(OwnKafkaShopFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val announced =
+            ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single()).scenario("own kafka shop fixture: announces an order")
+        assertEquals("success", announced.status, announced.json)
+        assertEquals("shop", announced.message("publish \"lamp-01\"")["from"], announced.json)
+        assertEquals("orders-placed", announced.message("consume \"lamp-01\"")["from"], announced.json)
+        // The listener's call is the app's: the consumer on its own factory still marks what it handles.
+        assertEquals("shop", announced.message("findById(\"order-1\")")["from"], announced.json)
     }
 
     @Test

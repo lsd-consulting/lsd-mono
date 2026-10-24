@@ -3,7 +3,7 @@ plugins {
     `java-library`
 }
 
-// A little under the measured 91.3% line coverage; lsd.coverage fails below it and more than 3 points above it.
+// A little under the measured 91.7% line coverage; lsd.coverage fails below it and more than 3 points above it.
 lsdCoverage {
     lineFloor.set(89)
 }
@@ -51,7 +51,6 @@ dependencies {
     compileOnly("org.springframework:spring-test")
     compileOnly("org.springframework:spring-aop")
     compileOnly("org.springframework.data:spring-data-commons")
-    compileOnly("org.springframework.boot:spring-boot-kafka")
     compileOnly("org.springframework.kafka:spring-kafka")
     compileOnly("org.apache.kafka:kafka-clients")
     compileOnly("jakarta.servlet:jakarta.servlet-api")

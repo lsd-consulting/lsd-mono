@@ -17,9 +17,9 @@ import org.apache.kafka.common.header.Headers
 import java.time.Instant
 
 /**
- * Wires the interceptors into a Kafka client's configuration: appends ours to whatever
- * `interceptor.classes` the app already has, and passes the participant names along, since Kafka,
- * not Spring, creates interceptors.
+ * Wires the interceptors into a Kafka client's configuration (see [LsdKafkaPostProcessor]):
+ * appends ours to whatever `interceptor.classes` the app already has, and passes the participant
+ * names along, since Kafka, not Spring, creates interceptors.
  */
 internal object KafkaCapture {
     const val APP_CONFIG: String = "lsd.mono.spring.app-name"
@@ -34,17 +34,25 @@ internal object KafkaCapture {
         interceptor: Class<*>,
         names: ParticipantNames,
     ): Map<String, Any> {
-        val existing =
-            when (val value = current[INTERCEPTORS]) {
-                null -> emptyList()
-                is String -> value.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-                is Class<*> -> listOf(value.name)
-                is Collection<*> -> value.mapNotNull { (it as? Class<*>)?.name ?: it?.toString()?.trim() }
-                else -> listOf(value.toString())
-            }
+        val existing = interceptors(current)
         val all = if (interceptor.name in existing) existing else existing + interceptor.name
         return mapOf(INTERCEPTORS to all, APP_CONFIG to names.app, CLIENT_CONFIG to names.client)
     }
+
+    /** Whether [configs] already has [interceptor] and the names: then there is nothing to add. */
+    fun isInstrumented(
+        configs: Map<String, Any?>,
+        interceptor: Class<*>,
+    ): Boolean = interceptor.name in interceptors(configs) && APP_CONFIG in configs
+
+    private fun interceptors(configs: Map<String, Any?>): List<String> =
+        when (val value = configs[INTERCEPTORS]) {
+            null -> emptyList()
+            is String -> value.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            is Class<*> -> listOf(value.name)
+            is Collection<*> -> value.mapNotNull { (it as? Class<*>)?.name ?: it?.toString()?.trim() }
+            else -> listOf(value.toString())
+        }
 
     /** A record's payload as the inspector shows it: JSON text as a tree, anything else as it is. */
     fun payload(value: Any?): Any? =
@@ -81,9 +89,9 @@ internal object KafkaCapture {
 }
 
 /**
- * Draws each record a Spring Boot `KafkaTemplate` (or any producer from Boot's producer factory)
- * sends during a test, as a publish from the app to the topic: `Shop → orders.placed`, with the
- * key, headers and payload. It runs on the sending thread, before serialization.
+ * Draws each record a `KafkaTemplate` (or any producer from a Spring producer factory the app's
+ * beans use) sends during a test, as a publish from the app to the topic: `Shop → orders.placed`,
+ * with the key, headers and payload. It runs on the sending thread, before serialization.
  */
 internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
     private var app = "App"
@@ -133,7 +141,7 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
 }
 
 /**
- * Draws each record a Spring Boot listener container (so any `@KafkaListener`) polls during a
+ * Draws each record a Spring listener container (so any `@KafkaListener`) polls during a
  * test, as a consume from the topic to the app, paired with its publish when this JVM sent it.
  * Kafka runs the listener on the polling thread, so calls the listener makes are drawn from the app.
  */

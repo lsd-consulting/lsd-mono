@@ -3,9 +3,13 @@ public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration {
 }
 
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kafka {
+	public static final field Companion Lio/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kafka$Companion;
 	public fun <init> ()V
-	public final fun lsdKafkaConsumerFactoryCustomizer (Lorg/springframework/core/env/Environment;)Lorg/springframework/boot/kafka/autoconfigure/DefaultKafkaConsumerFactoryCustomizer;
-	public final fun lsdKafkaProducerFactoryCustomizer (Lorg/springframework/core/env/Environment;)Lorg/springframework/boot/kafka/autoconfigure/DefaultKafkaProducerFactoryCustomizer;
+	public static final fun lsdKafkaPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
+}
+
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kafka$Companion {
+	public final fun lsdKafkaPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
 }
 
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Repositories {

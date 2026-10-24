@@ -6,8 +6,8 @@ It draws:
 
 - **inbound Spring MVC** requests the app serves (`Client → Shop: POST /orders`, and the reply with its status and latency);
 - **outbound `RestClient` and `RestTemplate`** calls made through Spring Boot's `RestClient.Builder` and `RestTemplateBuilder` (`Shop → Pricing: POST /quotes`);
-- **Kafka records sent** through Spring Boot's producer factory, so any `KafkaTemplate` it backs, as a publish from the app to the topic (`Shop → orders.placed: publish "lamp-01"`, with the key, headers and payload);
-- **Kafka records consumed** by Spring Boot's listener containers, so any `@KafkaListener`, as a consume from the topic to the app, paired with its publish when the test's JVM sent it;
+- **Kafka records sent** through any Spring producer factory the app's beans use (Spring Boot's own, or one the app builds itself), so any `KafkaTemplate`, as a publish from the app to the topic (`Shop → orders.placed: publish "lamp-01"`, with the key, headers and payload);
+- **Kafka records consumed** by Spring listener containers, so any `@KafkaListener`, whether its container factory is Spring Boot's or the app's, as a consume from the topic to the app, paired with its publish when the test's JVM sent it;
 - **Spring Data repository calls**, any store, as a call and its reply (`Shop → OrderRepository: save(PlacedOrder(id=7, …))`, then what came back), with a one-line summary of the arguments and the result.
 
 Each part switches on only when its classes are on the test classpath. Nothing below a repository is drawn (no JDBC, no SQL), and WebFlux, `WebClient` and JMS are not captured.
@@ -62,7 +62,13 @@ A test class that already has `@ExtendWith(LsdExtension::class)` ([lsd-mono-juni
 ## How it works
 
 - `LsdAutoConfiguration` (`META-INF/spring/…AutoConfiguration.imports`) registers a servlet filter, and `RestClientCustomizer` and `RestTemplateCustomizer` beans that add a client interceptor.
-- For Kafka it registers `DefaultKafkaProducerFactoryCustomizer` and `DefaultKafkaConsumerFactoryCustomizer` beans that append a Kafka `ProducerInterceptor` and `ConsumerInterceptor` to the app's own `interceptor.classes`. Producer and consumer factories the app builds itself, rather than Boot's, are not instrumented. A consume is drawn when the record is polled; the publish adds an `lsd-publish-id` record header to pair the two.
+- For Kafka it registers a bean post-processor that appends a Kafka `ProducerInterceptor` and `ConsumerInterceptor` to the app's own `interceptor.classes` in every `ProducerFactory` and `ConsumerFactory` bean, and in the factory behind every `KafkaTemplate` and listener container factory bean, so factories the app builds itself are covered as well as Spring Boot's. Not covered yet:
+  - a `ConcurrentMessageListenerContainer` or `KafkaMessageListenerContainer` declared directly as a bean, rather than made by a listener container factory;
+  - a custom `KafkaListenerContainerFactory` that does not extend `AbstractKafkaListenerContainerFactory`;
+  - a `ProducerFactory` or `ConsumerFactory` whose `updateConfigs` is the interface's default no-op (it is skipped without a warning);
+  - a raw `KafkaProducer` or `KafkaConsumer` made with `new`, outside any Spring factory;
+  - send outcomes and acknowledgements: a failed send is still drawn as a plain publish;
+  - batch listeners: every record in a batch is drawn, but calls the listener makes are linked to the last one. A consume is drawn when the record is polled; the publish adds an `lsd-publish-id` record header to pair the two.
 - For Spring Data it registers a bean post-processor that adds a method interceptor to every repository proxy through `RepositoryFactoryBeanSupport`, as Spring Boot's repository metrics do. Arguments and results are summarised, never walked, so a lazy JPA association is not loaded to draw it.
 - `LsdSpringTestListener` (`META-INF/spring.factories`) is a Spring `TestExecutionListener` that begins and completes the scenarios and writes the report.
 - Every part is a no-op unless a test scenario is running, and capture never fails the app or the test: a failure is logged once and the event is left out.

@@ -5,8 +5,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
-import org.springframework.boot.kafka.autoconfigure.DefaultKafkaConsumerFactoryCustomizer
-import org.springframework.boot.kafka.autoconfigure.DefaultKafkaProducerFactoryCustomizer
 import org.springframework.boot.restclient.RestClientCustomizer
 import org.springframework.boot.restclient.RestTemplateCustomizer
 import org.springframework.boot.web.servlet.FilterRegistrationBean
@@ -19,7 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 /**
  * On with the dependency, off with `lsd.mono.spring.enabled=false`. Each part switches on only when
  * the app has what it instruments: a servlet web app (Spring MVC), Spring Boot's `RestClient.Builder`
- * and `RestTemplateBuilder`, Spring Boot's Kafka producer and consumer factories, and Spring Data
+ * and `RestTemplateBuilder`, Spring Kafka producer and consumer factories, and Spring Data
  * repositories. Every part is a no-op unless a test scenario is running, so a stray
  * production classpath draws nothing.
  *
@@ -59,34 +57,25 @@ public class LsdAutoConfiguration {
     }
 
     /**
-     * Records sent through Boot's producer factory (so any `KafkaTemplate` it backs), drawn as a
-     * publish to the topic, and records Boot's consumer factory polls (so any `@KafkaListener`),
-     * drawn as a consume. Off for consumers with `lsd.mono.spring.kafka.consumer.enabled=false`.
+     * Records sent through any Spring producer factory the app's beans use (so any `KafkaTemplate`),
+     * drawn as a publish to the topic, and records any of its listener containers poll (so any
+     * `@KafkaListener`), drawn as a consume. That covers Spring Boot's own factories and ones the
+     * app builds itself. Off for consumers with `lsd.mono.spring.kafka.consumer.enabled=false`.
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(
         name = [
-            "org.springframework.boot.kafka.autoconfigure.DefaultKafkaProducerFactoryCustomizer",
+            "org.springframework.kafka.core.ProducerFactory",
             "org.apache.kafka.clients.producer.ProducerInterceptor",
         ],
     )
     public class Kafka {
-        @Bean
-        public fun lsdKafkaProducerFactoryCustomizer(env: Environment): DefaultKafkaProducerFactoryCustomizer =
-            DefaultKafkaProducerFactoryCustomizer { factory ->
-                factory.updateConfigs(
-                    KafkaCapture.configs(factory.configurationProperties, LsdKafkaProducerInterceptor::class.java, ParticipantNames(env)),
-                )
-            }
-
-        @Bean
-        @ConditionalOnProperty(prefix = "lsd.mono.spring.kafka.consumer", name = ["enabled"], havingValue = "true", matchIfMissing = true)
-        public fun lsdKafkaConsumerFactoryCustomizer(env: Environment): DefaultKafkaConsumerFactoryCustomizer =
-            DefaultKafkaConsumerFactoryCustomizer { factory ->
-                factory.updateConfigs(
-                    KafkaCapture.configs(factory.configurationProperties, LsdKafkaConsumerInterceptor::class.java, ParticipantNames(env)),
-                )
-            }
+        public companion object {
+            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
+            @Bean
+            @JvmStatic
+            public fun lsdKafkaPostProcessor(): BeanPostProcessor = LsdKafkaPostProcessor()
+        }
     }
 
     /**
