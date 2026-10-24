@@ -132,12 +132,25 @@
     display: inline;
   }
 }
+/* An error status: a cross before the label, so the red is never the only cue. */
+.msg-error-mark {
+  fill: var(--error);
+  font-weight: 700;
+}
 @media (forced-colors: active) {
   .payload-legend-key {
     color: CanvasText;
   }
   .msg-payload {
     fill: CanvasText;
+  }
+  /* No red here: the cross stays and an error arrow is drawn heavier than the rest. */
+  .msg-error-mark {
+    fill: CanvasText;
+  }
+  .message.msg-error .msg-path {
+    stroke: CanvasText;
+    stroke-width: 3.5;
   }
 }
 

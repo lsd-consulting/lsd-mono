@@ -5,9 +5,9 @@ plugins {
     `java-library`
 }
 
-// A little under the measured 91.7% line coverage; lsd.coverage fails below it and more than 3 points above it.
+// A little under the measured 92.6% line coverage; lsd.coverage fails below it and more than 3 points above it.
 lsdCoverage {
-    lineFloor.set(89)
+    lineFloor.set(90)
 }
 
 description =
@@ -143,15 +143,16 @@ val sampleReportTests =
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaSendFailureFixture")
         }
         writesSampleReport(sampleReportDir)
         ignoreFailures = true
         val dir = sampleReportDir.get().asFile
         doLast {
             val diagrams = dir.listFiles { f -> f.name.endsWith("-diagram.html") }.orEmpty().map { it.name }
-            val expected = listOf("shop-fixture-", "kafka-shop-fixture-", "kafka-batch-listener-fixture-")
+            val expected = listOf("shop-fixture-", "kafka-shop-fixture-", "kafka-batch-listener-fixture-", "kafka-send-failure-fixture-")
             check(expected.all { prefix -> diagrams.any { it.startsWith(prefix) } }) {
-                "sampleReportTests wrote $diagrams, not the shop, Kafka shop and Kafka batch listener reports"
+                "sampleReportTests wrote $diagrams, not the shop, Kafka shop, Kafka batch listener and Kafka send failure reports"
             }
         }
     }
@@ -180,6 +181,8 @@ tasks.register<Sync>("sampleReport") {
     from(sampleReportDir) {
         include("kafka-batch-listener-fixture-*-diagram.html")
         rename("""kafka-batch-listener-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-batch-listener-report.html")
+        include("kafka-send-failure-fixture-*-diagram.html")
+        rename("""kafka-send-failure-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-send-failure-report.html")
     }
     into(layout.buildDirectory.dir("pages"))
 }
