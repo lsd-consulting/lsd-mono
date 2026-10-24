@@ -8,6 +8,7 @@ import io.lsdconsulting.lsd.mono.springboot.fixture.ExtensionShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -107,6 +108,60 @@ class StarterEndToEndTest {
         assertEquals("orders-placed", announced.message("consume \"lamp-01\"")["from"], announced.json)
         // The listener's call is the app's: the consumer on its own factory still marks what it handles.
         assertEquals("shop", announced.message("findById(\"order-1\")")["from"], announced.json)
+    }
+
+    @Test
+    fun `inbound WebFlux requests and outbound WebClient calls are drawn, across scheduler hops`() {
+        val summary = execute(WebFluxShopFixture::class.java)
+
+        assertEquals(2, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val report = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single())
+        val placed = report.scenario("web flux shop fixture: places an order")
+        assertEquals("success", placed.status, placed.json)
+        // The request, the price (Boot's builder), the stock (a WebClient the app built) after the hops, the reply.
+        assertEquals(
+            listOf("POST /orders/lamp-01", "POST /quotes", "200 OK", "GET /stock/lamp-01", "200 OK", "201 Created"),
+            placed.labels,
+            placed.json,
+        )
+        val inbound = placed.message("POST /orders/lamp-01")
+        assertEquals("client", inbound["from"], placed.json)
+        assertEquals("shop", inbound["to"], placed.json)
+        assertEquals(
+            2,
+            inbound
+                .obj("data")
+                ?.obj("body")
+                ?.get("quantity")
+                .toString()
+                .toDouble()
+                .toInt(),
+            inbound.source,
+        )
+        for ((label, to) in listOf("POST /quotes" to "pricing", "GET /stock/lamp-01" to "inventory")) {
+            val call = placed.message(label)
+            assertEquals("shop", call["from"], placed.json)
+            assertEquals(to, call["to"], placed.json)
+            assertEquals(inbound["id"], call["parentId"], "$label nests under the request it serves: ${placed.json}")
+            assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), placed.json)
+        }
+        assertEquals(
+            "lamp-01",
+            placed
+                .message("POST /quotes")
+                .obj("data")
+                ?.obj("body")
+                ?.string("sku"),
+            placed.json,
+        )
+        assertTrue(placed.json.contains("49.0") || placed.json.contains("49"), "the reply bodies are captured: ${placed.json}")
+
+        val tracked = report.scenario("web flux shop fixture: tracks an order nobody knows")
+        assertEquals(listOf("GET /orders/order-404/tracking", "GET /parcels/order-404", "404 Not Found", "404 Not Found"), tracked.labels, tracked.json)
+        val replies = tracked.messages.filter { it["label"] == "404 Not Found" }
+        assertEquals(listOf("tracking", "shop"), replies.map { it["from"] }, tracked.json)
+        assertEquals(listOf("404", "404"), replies.map { it["status"].toString() }, tracked.json)
+        assertTrue(tracked.json.contains("unknown parcel") && tracked.json.contains("no such order"), tracked.json)
     }
 
     @Test

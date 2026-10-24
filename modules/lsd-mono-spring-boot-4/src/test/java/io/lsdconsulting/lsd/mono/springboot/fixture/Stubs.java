@@ -10,19 +10,24 @@ import java.nio.charset.StandardCharsets;
 final class Stubs {
     static final HttpServer PRICING = json("{\"total\":49.0,\"currency\":\"GBP\"}");
     static final HttpServer INVENTORY = json("{\"available\":true}");
+    static final HttpServer TRACKING = json(404, "{\"error\":\"unknown parcel\"}");
 
     static String url(HttpServer server) {
         return "http://localhost:" + server.getAddress().getPort();
     }
 
     private static HttpServer json(String body) {
+        return json(200, body);
+    }
+
+    private static HttpServer json(int status, String body) {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
             server.createContext("/", exchange -> {
                 exchange.getRequestBody().readAllBytes();
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
-                exchange.sendResponseHeaders(200, bytes.length);
+                exchange.sendResponseHeaders(status, bytes.length);
                 exchange.getResponseBody().write(bytes);
                 exchange.close();
             });

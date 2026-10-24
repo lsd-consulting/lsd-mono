@@ -5,12 +5,14 @@
 It draws:
 
 - **inbound Spring MVC** requests the app serves (`Client → Shop: POST /orders`, and the reply with its status and latency);
+- **inbound WebFlux** requests, annotated controllers and router functions alike, drawn the same way;
 - **outbound `RestClient` and `RestTemplate`** calls made through Spring Boot's `RestClient.Builder` and `RestTemplateBuilder` (`Shop → Pricing: POST /quotes`);
+- **outbound `WebClient`** calls through any `WebClient.Builder` or `WebClient` bean, Spring Boot's builder or one the app builds itself, with both bodies, and nested under the request being served even after the reactive chain hops threads;
 - **Kafka records sent** through any Spring producer factory the app's beans use (Spring Boot's own, or one the app builds itself), so any `KafkaTemplate`, as a publish from the app to the topic (`Shop → orders.placed: publish "lamp-01"`, with the key, headers and payload);
 - **Kafka records consumed** by Spring listener containers, so any `@KafkaListener`, whether its container factory is Spring Boot's or the app's, as a consume from the topic to the app, paired with its publish when the test's JVM sent it;
 - **Spring Data repository calls**, any store, as a call and its reply (`Shop → OrderRepository: save(PlacedOrder(id=7, …))`, then what came back), with a one-line summary of the arguments and the result.
 
-Each part switches on only when its classes are on the test classpath. Nothing below a repository is drawn (no JDBC, no SQL), and WebFlux, `WebClient` and JMS are not captured.
+Each part switches on only when its classes are on the test classpath. Nothing below a repository is drawn (no JDBC, no SQL), and JMS is not captured.
 
 ## Depend on it
 
@@ -38,7 +40,7 @@ The report is titled after the class (`place order`), each scenario after the me
 
 ## Sample report
 
-[The sample report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) ([one scenario on its own](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/kafka-shop-report.html)) is what this module's own shop fixtures draw. They are plain `@SpringBootTest` classes that know nothing about LSD; the starter on the test classpath is all it takes:
+[The sample report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) ([one scenario on its own](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/kafka-shop-report.html), [the WebFlux shop](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/webflux-report.html)) is what this module's own shop fixtures draw. They are plain `@SpringBootTest` classes that know nothing about LSD; the starter on the test classpath is all it takes:
 
 ```java
 @EmbeddedKafka(partitions = 1, topics = ShopApp.TOPIC)
@@ -56,7 +58,7 @@ public class KafkaShopFixture {
 }
 ```
 
-The shop calls Inventory and Pricing over HTTP, saves the order through `OrderRepository`, publishes to `orders.placed` and consumes it again, and all of that is on the diagram. The full source is in [`fixture/`](https://github.com/lsd-consulting/lsd-mono/tree/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture) ([`KafkaShopFixture`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/KafkaShopFixture.java), [`ShopFixture`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/ShopFixture.java), [`ShopApp`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/ShopApp.java)). `ShopFixture` has a test that fails on purpose, so the report shows an error scenario too.
+The shop calls Inventory and Pricing over HTTP, saves the order through `OrderRepository`, publishes to `orders.placed` and consumes it again, and all of that is on the diagram. The full source is in [`fixture/`](https://github.com/lsd-consulting/lsd-mono/tree/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture) ([`KafkaShopFixture`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/KafkaShopFixture.java), [`ShopFixture`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/ShopFixture.java), [`ShopApp`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/ShopApp.java)). `ShopFixture` has a test that fails on purpose, so the report shows an error scenario too. [`WebFluxShopFixture`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/WebFluxShopFixture.java) runs a reactive version of the shop ([`WebFluxShopApp`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/WebFluxShopApp.java)): a controller that calls Pricing and then Inventory over `WebClient` after hopping schedulers, and a router function whose tracking service answers 404.
 
 Build it yourself with `./gradlew :modules:lsd-mono-spring-boot-4:sampleReport` and open `modules/lsd-mono-spring-boot-4/build/pages/index.html`.
 
@@ -86,6 +88,13 @@ A test class that already has `@ExtendWith(LsdExtension::class)` ([lsd-mono-juni
 ## How it works
 
 - `LsdAutoConfiguration` (`META-INF/spring/…AutoConfiguration.imports`) registers a servlet filter, and `RestClientCustomizer` and `RestTemplateCustomizer` beans that add a client interceptor.
+- In a reactive app it registers a `WebFilter` instead of the servlet filter. A small request body of known length is read up front and handed to the app again; the response body is copied as it is written, never consumed. The request being served goes into Reactor's context, so a `WebClient` call nests under it on whatever thread it runs.
+- For `WebClient` it registers a bean post-processor that adds an `ExchangeFilterFunction` to every `WebClient.Builder` bean (Spring Boot's included) and rebuilds every `WebClient` bean that lacks it. The reply is drawn when the app has read its body. Not covered yet:
+  - a `WebClient` built inline with `WebClient.builder()` or `WebClient.create()` that is never a bean;
+  - Spring Data and Kafka calls made inside a reactive chain after it hops threads: they find their scenario only when one test is running at a time;
+  - streamed bodies (server-sent events, multipart): the call and its status are drawn without the body;
+  - the error body a `WebExceptionHandler` writes after a failure: the reply carries the exception instead;
+  - `WebTestClient` calls, which are drawn only as the inbound request.
 - For Kafka it registers a bean post-processor that appends a Kafka `ProducerInterceptor` and `ConsumerInterceptor` to the app's own `interceptor.classes` in every `ProducerFactory` and `ConsumerFactory` bean, and in the factory behind every `KafkaTemplate` and listener container factory bean, so factories the app builds itself are covered as well as Spring Boot's. Not covered yet:
   - a `ConcurrentMessageListenerContainer` or `KafkaMessageListenerContainer` declared directly as a bean, rather than made by a listener container factory;
   - a custom `KafkaListenerContainerFactory` that does not extend `AbstractKafkaListenerContainerFactory`;

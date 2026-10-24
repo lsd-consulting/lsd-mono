@@ -5,9 +5,9 @@ plugins {
     `java-library`
 }
 
-// A little under the measured 91.7% line coverage; lsd.coverage fails below it and more than 3 points above it.
+// A little under the measured 93.2% line coverage; lsd.coverage fails below it and more than 3 points above it.
 lsdCoverage {
-    lineFloor.set(89)
+    lineFloor.set(91)
 }
 
 description =
@@ -50,6 +50,8 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-autoconfigure")
     compileOnly("org.springframework.boot:spring-boot-restclient")
     compileOnly("org.springframework:spring-web")
+    compileOnly("org.springframework:spring-webflux")
+    compileOnly("io.projectreactor:reactor-core")
     compileOnly("org.springframework:spring-test")
     compileOnly("org.springframework:spring-aop")
     compileOnly("org.springframework.data:spring-data-commons")
@@ -63,6 +65,9 @@ dependencies {
     testImplementation(platform(libs.spring.boot.bom))
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc")
     testImplementation("org.springframework.boot:spring-boot-restclient")
+    // WebFluxShopFixture opts into a reactive app; with MVC on the classpath too, Boot picks servlet.
+    testImplementation("org.springframework.boot:spring-boot-starter-webflux")
+    testImplementation("org.springframework.boot:spring-boot-webclient")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.data:spring-data-keyvalue")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka")
@@ -129,7 +134,7 @@ tasks.test {
 // run with the starter and nothing else, writing a deterministic report into build/sample-report.
 // Not part of build or check: Kover leaves this test task out, so koverVerify never runs it.
 // ShopFixture's failsAfterPlacingAnOrder is meant to fail, to show an error scenario with its
-// reason, so this task ignores test failures and checks instead that both reports were written.
+// reason, so this task ignores test failures and checks instead that every report was written.
 val sampleReportDir = layout.buildDirectory.dir("sample-report")
 val sampleReportTests =
     tasks.register<Test>("sampleReportTests") {
@@ -142,14 +147,15 @@ val sampleReportTests =
         filter {
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture")
         }
         writesSampleReport(sampleReportDir)
         ignoreFailures = true
         val dir = sampleReportDir.get().asFile
         doLast {
             val diagrams = dir.listFiles { f -> f.name.endsWith("-diagram.html") }.orEmpty().map { it.name }
-            check(diagrams.any { it.startsWith("shop-fixture-") } && diagrams.any { it.startsWith("kafka-shop-fixture-") }) {
-                "sampleReportTests wrote $diagrams, not the shop and Kafka shop reports"
+            check(listOf("shop-fixture-", "kafka-shop-fixture-", "web-flux-shop-fixture-").all { p -> diagrams.any { it.startsWith(p) } }) {
+                "sampleReportTests wrote $diagrams, not the shop, Kafka shop and WebFlux shop reports"
             }
         }
     }
@@ -160,7 +166,7 @@ kover {
 }
 
 // The sample as published on Pages under spring-boot-4/: the report index plus each report, with
-// stable addresses for the two diagrams (files carry a short hash). The Pages workflow copies
+// stable addresses for the diagrams (files carry a short hash). The Pages workflow copies
 // build/pages into the site next to lsd-mono-core's example report.
 tasks.register<Sync>("sampleReport") {
     group = "documentation"
@@ -174,6 +180,10 @@ tasks.register<Sync>("sampleReport") {
     from(sampleReportDir) {
         include("kafka-shop-fixture-*-diagram.html")
         rename("""kafka-shop-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-shop-report.html")
+    }
+    from(sampleReportDir) {
+        include("web-flux-shop-fixture-*-diagram.html")
+        rename("""web-flux-shop-fixture-[0-9a-f]{8}-diagram\.html""", "webflux-report.html")
     }
     into(layout.buildDirectory.dir("pages"))
 }

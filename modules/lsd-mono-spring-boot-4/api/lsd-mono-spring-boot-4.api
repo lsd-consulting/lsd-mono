@@ -12,6 +12,11 @@ public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kaf
 	public final fun lsdKafkaPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
 }
 
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Reactive {
+	public fun <init> ()V
+	public final fun lsdWebFilter (Lorg/springframework/core/env/Environment;)Lorg/springframework/web/server/WebFilter;
+}
+
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Repositories {
 	public static final field Companion Lio/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Repositories$Companion;
 	public fun <init> ()V
@@ -31,6 +36,16 @@ public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Res
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Servlet {
 	public fun <init> ()V
 	public final fun lsdInboundFilter (Lorg/springframework/core/env/Environment;)Lorg/springframework/boot/web/servlet/FilterRegistrationBean;
+}
+
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$WebClients {
+	public static final field Companion Lio/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$WebClients$Companion;
+	public fun <init> ()V
+	public static final fun lsdWebClientPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
+}
+
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$WebClients$Companion {
+	public final fun lsdWebClientPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
 }
 
 public class io/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/springframework/test/context/support/AbstractTestExecutionListener {
