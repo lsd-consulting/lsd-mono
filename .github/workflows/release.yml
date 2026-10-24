@@ -1,33 +1,52 @@
 name: Release
 
-# Releases lsd-mono to Maven Central from conventional commits (docs/releasing.md).
+# Releases lsd-mono to Maven Central from conventional commits (docs/releasing.md), once a week
+# instead of on every push, to stay inside Maven Central's monthly publishing limits.
 #
-# gradle.yml calls this after `gate` passes on a push to main, when the repository variable
-# RELEASE_ENABLED is "true". semantic-release (tools/release/.releaserc.json) reads the commits
-# since the last v tag: fix or perf gives a patch, feat a minor. While the major is 0 a breaking
-# change also gives a minor (the releaseRules there); docs, build, ci, chore, test, refactor and
-# style give nothing. The order is publish first, then tag: a dry run works out the version, Gradle
-# publishes that version, and only then does semantic-release tag vX.Y.Z and write the GitHub
-# release. A failed publish leaves no tag; a failed tag after a publish is retagged by hand.
+# When it runs:
+# - Every Tuesday at 07:00 London time (scheduled). GitHub's cron is UTC and has no time zones, so
+#   there are two schedules, 06:00 UTC and 07:00 UTC, and the `plan` job keeps only the one that is
+#   07:00 in London that day: 06:00 UTC while the UK is on BST, 07:00 UTC on GMT.
+# - By hand (Actions → Release → Run workflow, from main): an urgent release, such as a security fix.
+#   With `tag`, it publishes an existing tag again instead (when its publish failed after tagging).
 #
-# Run it by hand (workflow_dispatch) with an existing tag to publish that tag again, when its
-# publish step failed after the tag was made.
+# A release goes ahead only when all of these hold (the `plan` job):
+# 1. The repository variable RELEASE_ENABLED is "true".
+# 2. There is something to release: a feat, fix or perf commit, or a breaking change, since the
+#    last v tag. docs, build, ci, chore, test, refactor and style release nothing, and neither do
+#    Renovate's build(deps) updates; they go out with the next release that has one.
+# 3. The `gate` check (gradle.yml) passed on the commit being released, main's HEAD.
+# 4. Fewer releases this calendar month (UTC) than the cap: the repository variable
+#    MAX_RELEASES_PER_MONTH, 4 when unset. A run by hand can go over it with `override_cap` and a
+#    `reason`, which goes into the run summary.
+#
+# semantic-release (tools/release/.releaserc.json) reads the commits since the last v tag: fix or
+# perf gives a patch, feat a minor. While the major is 0 a breaking change also gives a minor (the
+# releaseRules there). The order is publish first, then tag: a dry run works out the version,
+# Gradle publishes that version, and only then does semantic-release tag vX.Y.Z and write the
+# GitHub release. A failed publish leaves no tag; a failed tag after a publish is retagged by hand.
+# After a new release, the `pages` job deploys the sample site from the new tag (pages.yml).
 on:
-  workflow_call:
-    secrets:
-      SONATYPE_USERNAME:
-        required: true
-      SONATYPE_PASSWORD:
-        required: true
-      SIGNING_KEY:
-        required: true
-      SIGNING_PASSWORD:
-        required: true
+  schedule:
+    # Tuesday 07:00 Europe/London: 06:00 UTC during BST, 07:00 UTC during GMT. `plan` skips the other.
+    - cron: "0 6 * * 2"
+    - cron: "0 7 * * 2"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to publish to Maven Central again, such as v0.1.0"
-        required: true
+        description: "Existing tag to publish to Maven Central again, such as v0.1.0. Empty to release main now."
+        required: false
+        default: ""
+        type: string
+      override_cap:
+        description: "Release even if this month's cap of releases is reached (needs a reason)"
+        required: false
+        default: false
+        type: boolean
+      reason:
+        description: "Why release now, such as a security fix (shown in the run summary; required with override_cap)"
+        required: false
+        default: ""
         type: string
 
 permissions:
@@ -39,22 +58,110 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  plan:
+    # Decides whether this run releases, and which commit. Holds no secrets and writes nothing.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # To read the gate check on the commit.
+      checks: read
+    outputs:
+      release: ${{ steps.decide.outputs.release }}
+      sha: ${{ steps.decide.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Every tag and the commits since the last one.
+          fetch-depth: 0
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+          TAG: ${{ inputs.tag }}
+          OVERRIDE_CAP: ${{ inputs.override_cap }}
+          REASON: ${{ inputs.reason }}
+          ENABLED: ${{ vars.RELEASE_ENABLED }}
+          CAP: ${{ vars.MAX_RELEASES_PER_MONTH || '4' }}
+        run: |
+          skip() { echo "No release: $1" | tee -a "$GITHUB_STEP_SUMMARY"; echo "release=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          fail() { echo "::error::$1"; echo "Release refused: $1" >> "$GITHUB_STEP_SUMMARY"; exit 1; }
+
+          # Publishing an existing tag again: that tag was checked when it was released.
+          if [ -n "$TAG" ]; then
+            [[ "$TAG" =~ ^v0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail "$TAG is not a v0.y.z tag"
+            git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || fail "there is no tag $TAG"
+            [ "$ENABLED" = true ] || fail "RELEASE_ENABLED is not true"
+            echo "Publishing $TAG again${REASON:+: $REASON}" >> "$GITHUB_STEP_SUMMARY"
+            { echo "release=true"; echo "sha=$(git rev-parse "$TAG^{commit}")"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Only the schedule that is 07:00 in London today (see the comment at the top).
+          if [ "$EVENT" = schedule ]; then
+            offset=$(TZ=Europe/London date +%z)
+            case "$SCHEDULE:$offset" in
+              "0 6 * * 2:+0100" | "0 7 * * 2:+0000") ;;
+              *) echo "Schedule '$SCHEDULE' is not 07:00 in London today (UTC offset $offset): the other one releases."; echo "release=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            esac
+          fi
+
+          [ "$REF" = refs/heads/main ] || fail "releases come from main, not $REF"
+          [ "$ENABLED" = true ] || skip "the repository variable RELEASE_ENABLED is not true."
+
+          # 1. Something to release since the last v tag (semantic-release decides the version later;
+          #    this is the same rule, so a quiet week stops here without spending anything).
+          last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$SHA" 2>/dev/null || true)
+          [ -n "$last" ] || fail "no v tag before $SHA"
+          releasing=$(git log --format='%h %s' "$last..$SHA" | grep -E '^[0-9a-f]+ (feat|fix|perf)(\([^)]*\))?!?: |^[0-9a-f]+ [a-z]+(\([^)]*\))?!: ' || true)
+          breaking=$(git log --format='%h %B' "$last..$SHA" | grep -E '^BREAKING[ -]CHANGE: ' || true)
+          if [ -z "$releasing" ] && [ -z "$breaking" ]; then
+            skip "no feat, fix, perf or breaking change since $last."
+          fi
+          { echo "Unreleased changes since $last:"; echo '```'; printf '%s\n' "$releasing"; [ -z "$breaking" ] || echo "(and a BREAKING CHANGE footer)"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+          # 2. gate passed on this commit (the push to main's Gradle run).
+          gate=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?check_name=gate&filter=latest" \
+            --jq '[.check_runs[] | select(.app.slug == "github-actions")] | sort_by(.started_at) | last | .conclusion // .status // "missing"')
+          [ "$gate" = success ] || fail "gate on $SHA is '${gate:-missing}', not success. Release once main is green (rerun this workflow)."
+
+          # 3. The monthly cap. Counts GitHub releases published this calendar month (UTC), as Maven
+          #    Central counts usage per calendar month.
+          month=$(date -u +%Y-%m)
+          count=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.draft | not) | select(.published_at | startswith(\"$month\")) | .tag_name" | wc -l | tr -d ' ')
+          echo "Releases in $month so far: $count of $CAP." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$count" -ge "$CAP" ]; then
+            if [ "$EVENT" = workflow_dispatch ] && [ "$OVERRIDE_CAP" = true ]; then
+              [ -n "$REASON" ] || fail "override_cap needs a reason"
+              echo "Over the monthly cap by hand: $REASON" >> "$GITHUB_STEP_SUMMARY"
+            else
+              skip "$count releases in $month already, the cap is $CAP. Run by hand with override_cap and a reason to release anyway."
+            fi
+          fi
+
+          [ "$EVENT" != workflow_dispatch ] || echo "Released by hand${REASON:+: $REASON}" >> "$GITHUB_STEP_SUMMARY"
+          { echo "release=true"; echo "sha=$SHA"; } >> "$GITHUB_OUTPUT"
+
   release:
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       # semantic-release pushes the tag and writes the GitHub release.
       contents: write
+    outputs:
+      # Set only when this run made a new release (not when it published a tag again).
+      version: ${{ steps.released.outputs.version }}
     steps:
-      - name: Check the tag to publish again
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          TAG: ${{ inputs.tag }}
-        run: |
-          [[ "$TAG" =~ ^v0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "::error::$TAG is not a v0.y.z tag"; exit 1; }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.sha }}
+          ref: ${{ needs.plan.outputs.sha }}
           persist-credentials: false
           # semantic-release reads every tag and the commits since the last one.
           fetch-depth: 0
@@ -66,7 +173,7 @@ jobs:
             tools/release/package-lock.json
             modules/lsd-mono-report-html/ui/package-lock.json
       - name: Install semantic-release
-        if: github.event_name != 'workflow_dispatch'
+        if: ${{ !inputs.tag }}
         working-directory: tools/release
         run: npm ci
       - name: Work out the next version
@@ -74,10 +181,9 @@ jobs:
         working-directory: tools/release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
           TAG: ${{ inputs.tag }}
         run: |
-          if [ "$EVENT" = workflow_dispatch ]; then
+          if [ -n "$TAG" ]; then
             version="${TAG#v}"
           else
             npx semantic-release --dry-run | tee "$RUNNER_TEMP/dry-run.log"
@@ -125,7 +231,8 @@ jobs:
           [ "$built" = "$VERSION" ] || { echo "::error::Gradle would publish $built, not $VERSION"; exit 1; }
           ./gradlew publishToSonatype closeAndReleaseStagingRepositories -Plsd.version="$VERSION" --no-configuration-cache
       - name: Tag and write the GitHub release
-        if: steps.next.outputs.version && github.event_name != 'workflow_dispatch'
+        id: released
+        if: steps.next.outputs.version && !inputs.tag
         working-directory: tools/release
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -133,3 +240,18 @@ jobs:
         run: |
           npx semantic-release
           git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null || { echo "::error::v$VERSION was published but not tagged: tag it by hand"; exit 1; }
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Released v$VERSION." >> "$GITHUB_STEP_SUMMARY"
+
+  pages:
+    # The sample site follows the latest release (pages.yml). A tag the job's own token pushes does
+    # not start other workflows, so the release calls the Pages workflow itself.
+    needs: release
+    if: needs.release.outputs.version
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: v${{ needs.release.outputs.version }}
