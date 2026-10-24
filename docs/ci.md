@@ -5,7 +5,7 @@ Two workflows run on GitHub-hosted runners.
 | Workflow | Runs on | Does |
 |----------|---------|------|
 | [Gradle](../.github/workflows/gradle.yml) | Pushes to `main`, pull requests, manual dispatch. Skipped when a change only touches Markdown, `docs/` or `modules/*/docs/` | `./gradlew build verifyGenerated`: compile, JVM tests, build-logic tests, the report shell build and Vitest, plus the [lint, format and coverage](#lint-format-and-coverage) checks. It then checks the build left no changed or new files ([generated files](generated-files.md)). Test reports are uploaded when it fails. In parallel, `check-ux` runs the report UI's [Playwright checks](#report-ui-checks-checkux) when the report UI changed |
-| [Pages](../.github/workflows/pages.yml) | The Gradle workflow passing on a push to `main` that released, and manual dispatch (main, or a tag given as `ref`) | Builds the example report site (report index plus report) with `kitchenSinkSample` from the release tag, with the full history so the report shows that version, and deploys it to GitHub Pages |
+| [Pages](../.github/workflows/pages.yml) | The Gradle workflow passing on a push to `main` that released, and manual dispatch (main, or a tag given as `ref`) | Builds the example report site (report index plus report) with `kitchenSinkSample`, and the Spring Boot starter's sample report under `spring-boot-4/` with its `sampleReport`, from the release tag, with the full history so the report shows that version, and deploys it to GitHub Pages |
 
 ## Lint, format and coverage
 

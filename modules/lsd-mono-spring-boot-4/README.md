@@ -36,6 +36,30 @@ class PlaceOrderTest {
 
 The report is titled after the class (`place order`), each scenario after the method (`place order: places an order`), or after `@DisplayName` when there is one. A failed test is an error scenario with its reason; an aborted one is a warning.
 
+## Sample report
+
+[The sample report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) ([one scenario on its own](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/kafka-shop-report.html)) is what this module's own shop fixtures draw. They are plain `@SpringBootTest` classes that know nothing about LSD; the starter on the test classpath is all it takes:
+
+```java
+@EmbeddedKafka(partitions = 1, topics = ShopApp.TOPIC)
+@SpringBootTest(
+        classes = ShopApp.class,
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {"spring.application.name=shop", "shop.events.enabled=true", /* ... */})
+public class KafkaShopFixture {
+    @Test
+    void announcesAnOrder() throws Exception {
+        // POST /orders/lamp-01 and wait for the order to be handled
+        assertThat(CLIENT.send(request, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(201);
+        assertThat(handled.await(30, TimeUnit.SECONDS)).isTrue();
+    }
+}
+```
+
+The shop calls Inventory and Pricing over HTTP, saves the order through `OrderRepository`, publishes to `orders.placed` and consumes it again, and all of that is on the diagram. The full source is in [`fixture/`](https://github.com/lsd-consulting/lsd-mono/tree/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture) ([`KafkaShopFixture`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/KafkaShopFixture.java), [`ShopFixture`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/ShopFixture.java), [`ShopApp`](https://github.com/lsd-consulting/lsd-mono/blob/main/modules/lsd-mono-spring-boot-4/src/test/java/io/lsdconsulting/lsd/mono/springboot/fixture/ShopApp.java)). `ShopFixture` has a test that fails on purpose, so the report shows an error scenario too.
+
+Build it yourself with `./gradlew :modules:lsd-mono-spring-boot-4:sampleReport` and open `modules/lsd-mono-spring-boot-4/build/pages/index.html`.
+
 ## Names on the diagram
 
 - The app is `spring.application.name`, humanised (`orders-service` → `Orders service`), else `App`.

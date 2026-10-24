@@ -1,12 +1,14 @@
 package io.lsdconsulting.lsd.mono.gradle
 
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.process.JavaForkOptions
 import org.gradle.kotlin.dsl.register
 
 /*
@@ -16,13 +18,13 @@ import org.gradle.kotlin.dsl.register
  */
 
 /**
- * Run this sample so it writes a deterministic report into [outDir]: ids are deterministic and the
+ * Run this sample (a program, or a test task that runs fixtures) so it writes a deterministic report into [outDir]: ids are deterministic and the
  * "generated at" instant is `lsd.samples.generatedAt` (gradle.properties), so regenerating changes
  * nothing unless the UI or the sample does. The usage ping is off. [outDir] is emptied first,
  * because report names carry a hash and the scripts and copies that follow expect one
  * `*-diagram.html`.
  */
-fun JavaExec.writesSampleReport(outDir: Provider<Directory>) {
+fun <T> T.writesSampleReport(outDir: Provider<Directory>) where T : Task, T : JavaForkOptions {
     group = "documentation"
     val dir = outDir.get().asFile
     systemProperty("lsd.mono.report.outputDir", dir.absolutePath)

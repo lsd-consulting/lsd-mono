@@ -1,3 +1,5 @@
+import io.lsdconsulting.lsd.mono.gradle.writesSampleReport
+
 plugins {
     id("lsd.kotlin-jvm")
     `java-library`
@@ -121,4 +123,57 @@ tasks.test {
             .dir("modules")
             .asFile.path,
     )
+}
+
+// The sample report the module README links to: the shop fixtures, plain @SpringBootTest classes,
+// run with the starter and nothing else, writing a deterministic report into build/sample-report.
+// Not part of build or check: Kover leaves this test task out, so koverVerify never runs it.
+// ShopFixture's failsAfterPlacingAnOrder is meant to fail, to show an error scenario with its
+// reason, so this task ignores test failures and checks instead that both reports were written.
+val sampleReportDir = layout.buildDirectory.dir("sample-report")
+val sampleReportTests =
+    tasks.register<Test>("sampleReportTests") {
+        description = "Run the shop fixtures and write the sample report into build/sample-report."
+        testClassesDirs = sourceSets.test
+            .get()
+            .output.classesDirs
+        classpath = sourceSets.test.get().runtimeClasspath
+        useJUnitPlatform { includeTags("lsd-fixture") }
+        filter {
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture")
+        }
+        writesSampleReport(sampleReportDir)
+        ignoreFailures = true
+        val dir = sampleReportDir.get().asFile
+        doLast {
+            val diagrams = dir.listFiles { f -> f.name.endsWith("-diagram.html") }.orEmpty().map { it.name }
+            check(diagrams.any { it.startsWith("shop-fixture-") } && diagrams.any { it.startsWith("kafka-shop-fixture-") }) {
+                "sampleReportTests wrote $diagrams, not the shop and Kafka shop reports"
+            }
+        }
+    }
+kover {
+    currentProject {
+        instrumentation { disabledForTestTasks.add(sampleReportTests.name) }
+    }
+}
+
+// The sample as published on Pages under spring-boot-4/: the report index plus each report, with
+// stable addresses for the two diagrams (files carry a short hash). The Pages workflow copies
+// build/pages into the site next to lsd-mono-core's example report.
+tasks.register<Sync>("sampleReport") {
+    group = "documentation"
+    description = "Build the Spring Boot starter's sample report site into build/pages. Not part of build or check."
+    dependsOn(sampleReportTests)
+    from(sampleReportDir) { exclude(".lsd-index/**") }
+    from(sampleReportDir) {
+        include("shop-fixture-*-diagram.html")
+        rename("""shop-fixture-[0-9a-f]{8}-diagram\.html""", "shop-report.html")
+    }
+    from(sampleReportDir) {
+        include("kafka-shop-fixture-*-diagram.html")
+        rename("""kafka-shop-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-shop-report.html")
+    }
+    into(layout.buildDirectory.dir("pages"))
 }

@@ -3,7 +3,8 @@ name: Pages
 # Builds the sample site (the example report and the index.html that lsd-mono-core writes
 # for it, generated from the current report UI and KitchenSinkSample.kt) and publishes it to
 # GitHub Pages, so https://lsd-consulting.github.io/lsd-mono/ opens the report index and
-# example-report.html opens the report on its own.
+# example-report.html opens the report on its own. spring-boot-4/ is the Spring Boot starter's
+# sample report (the shop fixtures, run by its sampleReport task), linked from its README.
 # The example report is not committed; nothing else under docs/ is published.
 #
 # The site is the latest release: the version the README tells people to use. It deploys after
@@ -102,7 +103,11 @@ jobs:
           cache-provider: basic
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Build the sample site
-        run: ./gradlew :modules:lsd-mono-core:kitchenSinkSample
+        run: |
+          ./gradlew :modules:lsd-mono-core:kitchenSinkSample :modules:lsd-mono-spring-boot-4:sampleReport
+          # The Spring Boot starter's sample report, under spring-boot-4/ (its README links there).
+          mkdir -p modules/lsd-mono-core/build/pages/spring-boot-4
+          cp -R modules/lsd-mono-spring-boot-4/build/pages/. modules/lsd-mono-core/build/pages/spring-boot-4/
       - name: Check the site
         run: |
           version=$(./gradlew -q printVersion)
@@ -116,6 +121,14 @@ jobs:
           # Every script the pages load is published.
           for f in $(grep -ohE 'Example-report-[0-9a-f]{8}-(report|payloads)\.js' "$site/index.html" "$site/example-report.html" "$site"/*-report.js | sort -u); do
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
+          done
+          spring=$site/spring-boot-4
+          for f in index.html shop-report.html kafka-shop-report.html; do
+            test -s "$spring/$f" || { echo "missing $spring/$f"; exit 1; }
+          done
+          grep -qF 'window.__LSD_INDEX__=' "$spring/index.html" || { echo "spring-boot-4/index.html has no report manifest"; exit 1; }
+          for f in $(grep -ohE '(kafka-)?shop-fixture-[0-9a-f]{8}-(report|payloads)\.js' "$spring"/*.html "$spring"/*-report.js | sort -u); do
+            test -s "$spring/$f" || { echo "missing $spring/$f"; exit 1; }
           done
       # One artifact name per attempt (#108). Each attempt of a run uploads into that same run, so
       # with the default name a rerun of a failed deploy found two github-pages artifacts and
