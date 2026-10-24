@@ -8,8 +8,8 @@ import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.process.JavaForkOptions
 import org.gradle.kotlin.dsl.register
+import org.gradle.process.JavaForkOptions
 
 /*
  * Sample reports: small programs in a module's `readme` source set that capture a report for the
