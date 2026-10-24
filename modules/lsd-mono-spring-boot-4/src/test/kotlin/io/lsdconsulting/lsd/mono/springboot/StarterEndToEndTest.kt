@@ -154,14 +154,24 @@ class StarterEndToEndTest {
                 ?.string("sku"),
             placed.json,
         )
-        assertTrue(placed.json.contains("49.0") || placed.json.contains("49"), "the reply bodies are captured: ${placed.json}")
+        val quote = placed.messages.single { it["from"] == "pricing" }
+        assertEquals(
+            49.0,
+            quote
+                .obj("data")
+                ?.obj("body")
+                ?.get("total")
+                .toString()
+                .toDouble(),
+            quote.source,
+        )
 
         val tracked = report.scenario("web flux shop fixture: tracks an order nobody knows")
         assertEquals(listOf("GET /orders/order-404/tracking", "GET /parcels/order-404", "404 Not Found", "404 Not Found"), tracked.labels, tracked.json)
         val replies = tracked.messages.filter { it["label"] == "404 Not Found" }
         assertEquals(listOf("tracking", "shop"), replies.map { it["from"] }, tracked.json)
         assertEquals(listOf("404", "404"), replies.map { it["status"].toString() }, tracked.json)
-        assertTrue(tracked.json.contains("unknown parcel") && tracked.json.contains("no such order"), tracked.json)
+        assertEquals(listOf("unknown parcel", "no such order"), replies.map { it.obj("data")?.obj("body")?.string("error") }, tracked.json)
     }
 
     @Test

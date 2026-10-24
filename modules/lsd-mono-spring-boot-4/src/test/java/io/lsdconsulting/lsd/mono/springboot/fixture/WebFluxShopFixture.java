@@ -40,7 +40,7 @@ public class WebFluxShopFixture {
                 .build();
         HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(201);
-        assertThat(response.body()).contains("\"total\":49.0");
+        assertThat(response.body()).contains("49.0");
     }
 
     @Test

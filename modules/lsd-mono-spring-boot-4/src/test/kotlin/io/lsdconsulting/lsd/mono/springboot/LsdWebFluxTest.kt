@@ -136,7 +136,16 @@ class LsdWebFluxTest {
         val reply = drawn.message("201 Created")
         assertEquals("shop", reply["from"])
         assertEquals("201", reply["status"].toString())
-        assertTrue(reply.source.contains("49.0"), reply.source)
+        assertEquals(
+            49.0,
+            reply
+                .obj("data")
+                ?.obj("body")
+                ?.get("total")
+                .toString()
+                .toDouble(),
+            reply.source,
+        )
         assertTrue(request["durationMs"] != null, "the call is timed: ${request.source}")
     }
 
@@ -154,7 +163,7 @@ class LsdWebFluxTest {
         runCatching { filter.filter(order(broken), failure).block() }
         val drawnBroken = report(broken, "broken")
         assertEquals("500 Internal Server Error", drawnBroken.labels.last(), drawnBroken.json)
-        assertTrue(drawnBroken.json.contains("boom"), drawnBroken.json)
+        assertTrue(drawnBroken.message("500 Internal Server Error").source.contains("boom"), drawnBroken.json)
     }
 
     @Test
@@ -230,7 +239,17 @@ class LsdWebFluxTest {
         assertTrue(call["to"] !in listOf("client", "shop"), call.source)
         assertEquals("lamp-01", call.obj("data")?.obj("body")?.string("sku"), call.source)
         assertFalse(call.source.contains(LsdHeaders.SCENARIO), call.source)
-        assertTrue(drawn.message("200 OK").source.contains("49.0"), drawn.json)
+        assertEquals(
+            49.0,
+            drawn
+                .message("200 OK")
+                .obj("data")
+                ?.obj("body")
+                ?.get("total")
+                .toString()
+                .toDouble(),
+            drawn.json,
+        )
     }
 
     @Test
@@ -253,7 +272,15 @@ class LsdWebFluxTest {
             drawn.labels,
             drawn.json,
         )
-        assertTrue(drawn.json.contains("unknown parcel"), drawn.json)
+        assertEquals(
+            "unknown parcel",
+            drawn
+                .message("404 Not Found")
+                .obj("data")
+                ?.obj("body")
+                ?.string("error"),
+            drawn.json,
+        )
         assertEquals(listOf("404", "error"), drawn.messages.filter { it["type"] == "SYNCHRONOUS_RESPONSE" }.map { it["status"].toString() }, drawn.json)
     }
 
