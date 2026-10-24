@@ -371,6 +371,15 @@ function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
 const PAYLOAD_MARKER =
   '<tspan class="msg-payload" dx="6" aria-hidden="true">{}<title>Has a payload: tap or click the arrow to open it</title></tspan>'
 
+/**
+ * Marks a message whose status is an error (the rule the Errors metric uses), so an error never
+ * relies on the red alone: a cross before the label, with a title for sighted users. Screen
+ * readers already hear "error, status …" from the text view, so the glyph is hidden from them.
+ */
+function errorMarker(status: string): string {
+  return `<tspan class="msg-error-mark" aria-hidden="true">✕ <title>Error: status ${escapeHtml(status)}</title></tspan>`
+}
+
 function renderMessageRow(
   msg: MessageEvent,
   y: number,
@@ -387,9 +396,10 @@ function renderMessageRow(
 ): string {
   const spec = messageArrowSpec(msg.type)
   const match = findMatch(msg, query, paint.payloadHits)
+  const isError = !!msg.status && isErrorStatus(msg.status)
   const rawColour =
     msg.colour ||
-    (msg.status && isErrorStatus(msg.status) ? ERROR_COLOUR : null) ||
+    (isError ? ERROR_COLOUR : null) ||
     (msg.type === 'SYNCHRONOUS_RESPONSE' ? RESPONSE_COLOUR : colourOf.get(msg.from || msg.to) || ARROW_COLOUR)
   const endId = ensureMarker(rawColour, spec.end)
   const startId = ensureMarker(rawColour, spec.start)
@@ -405,6 +415,8 @@ function renderMessageRow(
   const hitClass = match ? ` search-hit${current ? ' search-current' : ''}${matchClasses(match)}` : ''
   const hitAttr = match ? ` data-search-hit="${current ? 'current' : 'match'}" data-search-in="${match}"` : ''
   const typeAttr = `data-msg-type="${escapeAttr(msg.type)}"`
+  const errorClass = isError ? ' msg-error' : ''
+  const mark = isError ? errorMarker(msg.status ?? '') : ''
   if (hasData) buttons.push(messageOpenButton(msg, y, width, index, viewTop, zoom, paint))
 
   // Nested bars sit ACT_NEST_DX right of their parent, so arrows shift with them.
@@ -420,9 +432,9 @@ function renderMessageRow(
     const label = shortLabelAnchor(msg.type, x1, x2)
     const hitX = (x1 + x2) / 2
     return `
-    <g class="message message-short${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
+    <g class="message message-short${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
       <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
-      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
+      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${mark}${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
       ${hasData ? `<circle class="msg-hit" cx="${hitX}" cy="0" r="16"/>` : ''}
     </g>`
   }
@@ -449,9 +461,9 @@ function renderMessageRow(
         ACT_NEST_DX
     const bend = Math.max(out, back) + 48 - ACT_W
     return `
-    <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
+    <g class="message${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
       <path class="msg-path" d="M${out} 0 C${bend} 0, ${bend} ${SELF_RETURN_DY}, ${back} ${SELF_RETURN_DY}" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-      <text class="msg-label" x="${bend + 8}" y="4">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
+      <text class="msg-label" x="${bend + 8}" y="4">${mark}${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
       ${hasData ? `<circle class="msg-hit" cx="${bend - 8}" cy="11" r="14"/>` : ''}
     </g>`
   }
@@ -460,9 +472,9 @@ function renderMessageRow(
   const lineX1 = x1 + (x2 > x1 ? ACT_W / 2 : -ACT_W / 2) + nest(msg.from, y)
   const lineX2 = x2 + (x2 > x1 ? -ACT_W / 2 : ACT_W / 2) + nest(msg.to, y)
   return `
-  <g class="message${hasData ? ' has-data' : ''}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
+  <g class="message${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
     <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
+    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${mark}${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
     ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
   </g>`
 }
