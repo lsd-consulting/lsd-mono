@@ -144,6 +144,10 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
  * Draws each record a Spring listener container (so any `@KafkaListener`) polls during a
  * test, as a consume from the topic to the app, paired with its publish when this JVM sent it.
  * Kafka runs the listener on the polling thread, so calls the listener makes are drawn from the app.
+ *
+ * It sits on the consumer, not the listener, so a batch listener (`List<ConsumerRecord>` or a `List`
+ * of payloads) looks the same as a record one: each record in the poll is its own consume, paired
+ * through its own `lsd-publish-id`, and the listener's calls hang off the last record polled.
  */
 internal class LsdKafkaConsumerInterceptor : ConsumerInterceptor<Any?, Any?> {
     private var app = "App"

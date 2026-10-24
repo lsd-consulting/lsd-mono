@@ -59,7 +59,7 @@ public class LsdAutoConfiguration {
     /**
      * Records sent through any Spring producer factory the app's beans use (so any `KafkaTemplate`),
      * drawn as a publish to the topic, and records any of its listener containers poll (so any
-     * `@KafkaListener`), drawn as a consume. That covers Spring Boot's own factories and ones the
+     * `@KafkaListener`, record or batch), drawn as a consume per record. That covers Spring Boot's own factories and ones the
      * app builds itself. Off for consumers with `lsd.mono.spring.kafka.consumer.enabled=false`.
      */
     @Configuration(proxyBeanMethods = false)

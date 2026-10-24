@@ -129,7 +129,7 @@ tasks.test {
 // run with the starter and nothing else, writing a deterministic report into build/sample-report.
 // Not part of build or check: Kover leaves this test task out, so koverVerify never runs it.
 // ShopFixture's failsAfterPlacingAnOrder is meant to fail, to show an error scenario with its
-// reason, so this task ignores test failures and checks instead that both reports were written.
+// reason, so this task ignores test failures and checks instead that every report was written.
 val sampleReportDir = layout.buildDirectory.dir("sample-report")
 val sampleReportTests =
     tasks.register<Test>("sampleReportTests") {
@@ -142,14 +142,16 @@ val sampleReportTests =
         filter {
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture")
         }
         writesSampleReport(sampleReportDir)
         ignoreFailures = true
         val dir = sampleReportDir.get().asFile
         doLast {
             val diagrams = dir.listFiles { f -> f.name.endsWith("-diagram.html") }.orEmpty().map { it.name }
-            check(diagrams.any { it.startsWith("shop-fixture-") } && diagrams.any { it.startsWith("kafka-shop-fixture-") }) {
-                "sampleReportTests wrote $diagrams, not the shop and Kafka shop reports"
+            val expected = listOf("shop-fixture-", "kafka-shop-fixture-", "kafka-batch-listener-fixture-")
+            check(expected.all { prefix -> diagrams.any { it.startsWith(prefix) } }) {
+                "sampleReportTests wrote $diagrams, not the shop, Kafka shop and Kafka batch listener reports"
             }
         }
     }
@@ -160,7 +162,7 @@ kover {
 }
 
 // The sample as published on Pages under spring-boot-4/: the report index plus each report, with
-// stable addresses for the two diagrams (files carry a short hash). The Pages workflow copies
+// stable addresses for the three diagrams (files carry a short hash). The Pages workflow copies
 // build/pages into the site next to lsd-mono-core's example report.
 tasks.register<Sync>("sampleReport") {
     group = "documentation"
@@ -174,6 +176,10 @@ tasks.register<Sync>("sampleReport") {
     from(sampleReportDir) {
         include("kafka-shop-fixture-*-diagram.html")
         rename("""kafka-shop-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-shop-report.html")
+    }
+    from(sampleReportDir) {
+        include("kafka-batch-listener-fixture-*-diagram.html")
+        rename("""kafka-batch-listener-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-batch-listener-report.html")
     }
     into(layout.buildDirectory.dir("pages"))
 }

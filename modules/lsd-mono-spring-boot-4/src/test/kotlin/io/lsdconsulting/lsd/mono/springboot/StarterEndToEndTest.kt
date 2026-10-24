@@ -3,9 +3,12 @@ package io.lsdconsulting.lsd.mono.springboot
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
+import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.springboot.fixture.ExtensionShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaBatchListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
 import org.junit.jupiter.api.AfterEach
@@ -107,6 +110,56 @@ class StarterEndToEndTest {
         assertEquals("orders-placed", announced.message("consume \"lamp-01\"")["from"], announced.json)
         // The listener's call is the app's: the consumer on its own factory still marks what it handles.
         assertEquals("shop", announced.message("findById(\"order-1\")")["from"], announced.json)
+    }
+
+    @Test
+    fun `each record a batch listener on Boot's factory takes is its own consume, paired with its publish`() {
+        val summary = execute(KafkaBatchListenerFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val batch =
+            ReportJson
+                .read(
+                    tempDir.listDirectoryEntries("*-report.json").single(),
+                ).scenario("kafka batch listener fixture: dispatches three orders in one batch")
+        assertEquals("success", batch.status, batch.json)
+        assertPairedConsumes(batch)
+        // The listener's one call for the whole batch is the app's, after the batch's consumes.
+        val save = batch.labels.single { it.startsWith("saveAll(") }
+        assertEquals("shop", batch.message(save)["from"], batch.json)
+        assertTrue(batch.labels.indexOf(save) > batch.labels.indexOf("consume \"chair-03\""), "${batch.labels}")
+    }
+
+    @Test
+    fun `a batch listener on a factory the app builds itself takes payloads and is drawn the same way`() {
+        val summary = execute(OwnKafkaBatchListenerFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val batch =
+            ReportJson
+                .read(tempDir.listDirectoryEntries("*-report.json").single())
+                .scenario("own kafka batch listener fixture: dispatches three orders in one batch")
+        assertEquals("success", batch.status, batch.json)
+        assertPairedConsumes(batch)
+        assertEquals("shop", batch.message("count()")["from"], batch.json)
+    }
+
+    /** Three publishes from the test, then three consumes from the topic to the shop, each caused by its own publish (`lsd-publish-id`). */
+    private fun assertPairedConsumes(batch: ScenarioJson) {
+        val skus = listOf("lamp-01", "desk-02", "chair-03")
+        assertEquals(
+            skus.map { "publish \"$it\"" } + skus.map { "consume \"$it\"" },
+            batch.labels.filter { it.startsWith("publish") || it.startsWith("consume") },
+            batch.json,
+        )
+        for (sku in skus) {
+            val publish = batch.message("publish \"$sku\"")
+            val consume = batch.message("consume \"$sku\"")
+            assertEquals("orders-placed", consume["from"], batch.json)
+            assertEquals("shop", consume["to"], batch.json)
+            assertEquals(publish["callId"], consume["causedBy"], batch.json)
+            assertTrue(consume.source.contains(sku), "the payload is captured: ${consume.source}")
+        }
     }
 
     @Test
