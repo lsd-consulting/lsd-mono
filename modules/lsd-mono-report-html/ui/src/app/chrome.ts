@@ -16,6 +16,7 @@ import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSid
 import { statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
 import { trackTopbarHeight } from '../lib/topbar-height'
+import { repoLinkAttrsHtml } from '../ui/repo-link'
 import { revealSideways } from '../lib/reveal'
 import {
   openError,
@@ -46,8 +47,8 @@ export function renderShell(): void {
   // it the box the fixed dialog is placed in.
   app.innerHTML = `
     <header class="topbar" role="banner">
-      <div class="brand" title="Living Sequence Diagrams">
-        <div class="brand-mark">LSD</div>
+      <div class="brand">
+        <a class="brand-mark repo-link" ${repoLinkAttrsHtml('Living Sequence Diagrams: lsd-mono on GitHub')}>LSD</a>
         <div>
           <div>Report</div>
           <div class="brand-sub">Living Sequence Diagrams</div>

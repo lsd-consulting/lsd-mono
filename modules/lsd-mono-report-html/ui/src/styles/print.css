@@ -33,6 +33,14 @@
     background: #fff;
     color: #000;
   }
+  /* The version links to the repository on screen; on paper it is plain text. */
+  .report-hero .generator-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .report-hero .generator-link code {
+    border-color: var(--border);
+  }
   /* Paper has no navigation: the scenario list and the top bar stay off the page.
      The report title and run time print in the hero. */
   .topbar,

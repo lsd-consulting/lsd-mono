@@ -12,6 +12,7 @@ import { type DiagramViewName, diagramViewHeading, diagramViewHint } from '../li
 import { formatGeneratedAt } from '../ui/format'
 import { newerMinorNoticeHtml } from '../lib/schema-version'
 import { escapeAttr, escapeHtml } from '../lib/escape'
+import { repoLinkAttrsHtml } from '../ui/repo-link'
 import { index, session } from './context'
 export function heroHtml(): string {
   const back = index
@@ -25,7 +26,7 @@ export function heroHtml(): string {
       <h1>${escapeHtml(session.report.title)}</h1>
       <div class="meta">
         <span>Generated ${escapeHtml(formatGeneratedAt(session.report.generatedAt))}</span>
-        <code>${escapeHtml(session.report.generator)}</code>
+        <a class="generator-link repo-link" ${repoLinkAttrsHtml(`${session.report.generator}: lsd-mono on GitHub`)}><code>${escapeHtml(session.report.generator)}</code></a>
       </div>
     </div>`
 }

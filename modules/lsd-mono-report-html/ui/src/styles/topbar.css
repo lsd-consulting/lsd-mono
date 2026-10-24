@@ -32,6 +32,15 @@
   font-size: 11px;
   font-weight: 800;
   box-shadow: var(--shadow-pop);
+  text-decoration: none;
+}
+/* The logo and the report's version link to the lsd-mono repository (ui/repo-link.ts). */
+.brand-mark.repo-link:hover {
+  filter: brightness(1.1);
+}
+.repo-link:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
 }
 .brand-sub {
   font-size: 11px;
