@@ -47,6 +47,8 @@ internal object SpringScenarios {
         sending.values.removeIf { it.scenario == scenario }
     }
 
+    fun isRunning(scenario: LsdScenario): Boolean = scenario in running
+
     /** The scenario a request or call belongs to, or null: then the starter captures nothing. */
     fun resolve(headerValue: String? = null): LsdScenario? {
         val lsd = LsdContext.instance

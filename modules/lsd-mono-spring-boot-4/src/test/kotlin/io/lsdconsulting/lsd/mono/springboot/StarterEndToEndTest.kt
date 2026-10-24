@@ -12,6 +12,8 @@ import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaBatchListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxConcurrentOrdersFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -188,6 +190,70 @@ class StarterEndToEndTest {
     }
 
     @Test
+    fun `inbound WebFlux requests and outbound WebClient calls are drawn`() {
+        val summary = execute(WebFluxShopFixture::class.java)
+
+        assertEquals(2, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val report = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single())
+        val placed = report.scenario("web flux shop fixture: places an order")
+        assertEquals("success", placed.status, placed.json)
+        // The request, the price (Boot's builder), the stock (a WebClient the app built) after the hops, the reply.
+        assertEquals(
+            listOf("POST /orders/lamp-01", "POST /quotes", "200 OK", "GET /stock/lamp-01", "200 OK", "201 Created"),
+            placed.labels,
+            placed.json,
+        )
+        val inbound = placed.message("POST /orders/lamp-01")
+        assertEquals("client", inbound["from"], placed.json)
+        assertEquals("shop", inbound["to"], placed.json)
+        assertEquals(
+            2,
+            inbound
+                .obj("data")
+                ?.obj("body")
+                ?.get("quantity")
+                .toString()
+                .toDouble()
+                .toInt(),
+            inbound.source,
+        )
+        for ((label, to) in listOf("POST /quotes" to "pricing", "GET /stock/lamp-01" to "inventory")) {
+            val call = placed.message(label)
+            assertEquals("shop", call["from"], placed.json)
+            assertEquals(to, call["to"], placed.json)
+            assertEquals(inbound["id"], call["parentId"], "$label nests under the request it serves: ${placed.json}")
+            assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), placed.json)
+        }
+        assertEquals(
+            "lamp-01",
+            placed
+                .message("POST /quotes")
+                .obj("data")
+                ?.obj("body")
+                ?.string("sku"),
+            placed.json,
+        )
+        val quote = placed.messages.single { it["from"] == "pricing" }
+        assertEquals(
+            49.0,
+            quote
+                .obj("data")
+                ?.obj("body")
+                ?.get("total")
+                .toString()
+                .toDouble(),
+            quote.source,
+        )
+
+        val tracked = report.scenario("web flux shop fixture: tracks an order nobody knows")
+        assertEquals(listOf("GET /orders/order-404/tracking", "GET /parcels/order-404", "404 Not Found", "404 Not Found"), tracked.labels, tracked.json)
+        val replies = tracked.messages.filter { it["label"] == "404 Not Found" }
+        assertEquals(listOf("tracking", "shop"), replies.map { it["from"] }, tracked.json)
+        assertEquals(listOf("404", "404"), replies.map { it["status"].toString() }, tracked.json)
+        assertEquals(listOf("unknown parcel", "no such order"), replies.map { it.obj("data")?.obj("body")?.string("error") }, tracked.json)
+    }
+
+    @Test
     fun `a failing test is an error scenario with its reason`() {
         execute(ShopFixture::class.java)
 
@@ -215,6 +281,32 @@ class StarterEndToEndTest {
         assertEquals(1, report.scenarios.size, report.text)
         // The extension titles the report with the class's display name; the starter would humanise it.
         assertEquals("ExtensionShopFixture", report.root.string("title"), report.text)
+    }
+
+    @Test
+    fun `two WebFlux requests served at once each keep their calls across scheduler hops`() {
+        val summary = execute(WebFluxConcurrentOrdersFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val both = ReportJson
+            .read(
+                tempDir.listDirectoryEntries("*-report.json").single(),
+            ).scenario("web flux concurrent orders fixture: places two orders at once")
+        assertEquals("success", both.status, both.json)
+        // Slow pricing on one thread: the second order is in flight while the first hops schedulers,
+        // so a call nests under its own request only if the request rides in the Reactor context.
+        val quotes = both.messages.filter { it["label"] == "POST /quotes" }
+        assertEquals(2, quotes.size, both.json)
+        for (sku in listOf("lamp-01", "desk-02")) {
+            val inbound = both.message("POST /orders/$sku")
+            val price = quotes.single { it.obj("data")?.obj("body")?.string("sku") == sku }
+            val stock = both.message("GET /stock/$sku")
+            for ((label, call) in listOf("POST /quotes ($sku)" to price, "GET /stock/$sku" to stock)) {
+                assertEquals("shop", call["from"], both.json)
+                assertEquals(inbound["id"], call["parentId"], "$label nests under its own request: ${both.json}")
+                assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), both.json)
+            }
+        }
     }
 
     private fun execute(klass: Class<*>): org.junit.platform.launcher.listeners.TestExecutionSummary {

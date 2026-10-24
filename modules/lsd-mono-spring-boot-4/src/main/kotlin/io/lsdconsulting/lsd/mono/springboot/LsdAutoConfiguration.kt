@@ -13,13 +13,14 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
 import org.springframework.core.env.Environment
 import org.springframework.web.filter.OncePerRequestFilter
+import org.springframework.web.server.WebFilter
 
 /**
  * On with the dependency, off with `lsd.mono.spring.enabled=false`. Each part switches on only when
- * the app has what it instruments: a servlet web app (Spring MVC), Spring Boot's `RestClient.Builder`
- * and `RestTemplateBuilder`, Spring Kafka producer and consumer factories, and Spring Data
- * repositories. Every part is a no-op unless a test scenario is running, so a stray
- * production classpath draws nothing.
+ * the app has what it instruments: a servlet web app (Spring MVC) or a reactive one (WebFlux),
+ * Spring Boot's `RestClient.Builder` and `RestTemplateBuilder`, `WebClient`, Spring Kafka producer
+ * and consumer factories, and Spring Data repositories. Every part is a no-op unless a test
+ * scenario is running, so a stray production classpath draws nothing.
  *
  * The beans are Spring's own types; what sits behind them is internal to this module.
  */
@@ -37,6 +38,30 @@ public class LsdAutoConfiguration {
                 order = Ordered.HIGHEST_PRECEDENCE + 10
                 setName("lsdInboundFilter")
             }
+    }
+
+    /** Inbound WebFlux requests, annotated controllers and router functions, drawn from the caller to this app. */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
+    @ConditionalOnClass(name = ["org.springframework.web.server.WebFilter", "reactor.core.publisher.Mono"])
+    public class Reactive {
+        @Bean
+        public fun lsdWebFilter(env: Environment): WebFilter = LsdWebFilter(ParticipantNames(env))
+    }
+
+    /**
+     * Outbound calls through any `WebClient.Builder` or `WebClient` bean: Boot's builder and ones
+     * the app builds itself. Servlet apps that use `WebClient` are covered too.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = ["org.springframework.web.reactive.function.client.WebClient", "reactor.core.publisher.Mono"])
+    public class WebClients {
+        public companion object {
+            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
+            @Bean
+            @JvmStatic
+            public fun lsdWebClientPostProcessor(): BeanPostProcessor = LsdWebClientPostProcessor()
+        }
     }
 
     /** Outbound calls through any `RestClient` or `RestTemplate` built from Boot's builders. */
