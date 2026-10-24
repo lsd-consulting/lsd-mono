@@ -112,6 +112,8 @@ class StarterEndToEndTest {
         assertEquals("shop", announced.message("findById(\"order-1\")")["from"], announced.json)
     }
 
+    private val skusInBatch = listOf("lamp-01", "desk-02", "chair-03")
+
     @Test
     fun `each record a batch listener on Boot's factory takes is its own consume, paired with its publish`() {
         val summary = execute(KafkaBatchListenerFixture::class.java)
@@ -128,6 +130,10 @@ class StarterEndToEndTest {
         val save = batch.labels.single { it.startsWith("saveAll(") }
         assertEquals("shop", batch.message(save)["from"], batch.json)
         assertTrue(batch.labels.indexOf(save) > batch.labels.indexOf("consume \"chair-03\""), "${batch.labels}")
+        // Its span's parent is the batch's last consume (chair-03), not the first or the middle one.
+        val consumeSpans = skusInBatch.associateWith { batch.message("consume \"$it\"").obj("trace")?.get("spanId") }
+        assertEquals(3, consumeSpans.values.toSet().size, "each consume has its own span: ${batch.json}")
+        assertEquals(consumeSpans["chair-03"], batch.message(save).obj("trace")?.get("parentSpanId"), batch.json)
     }
 
     @Test
