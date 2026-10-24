@@ -19,6 +19,7 @@ import org.springframework.web.ErrorResponse
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilter
 import org.springframework.web.server.WebFilterChain
+import reactor.core.CoreSubscriber
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
@@ -147,18 +148,36 @@ internal class LsdWebFilter(
         }
 
         SpringScenarios.enter(scenario, id)
+        val work = SpringScenarios.Current(scenario, id)
         // A chain that throws instead of returning a Mono still gets its reply and leaves the request.
         val handled =
-            try {
-                chain.filter(served)
-            } catch (e: Exception) {
-                Mono.error(e)
+            SpringScenarios.within(work) {
+                try {
+                    chain.filter(served)
+                } catch (e: Exception) {
+                    Mono.error(e)
+                }
             }
-        return handled
-            .contextWrite { LsdReactor.write(it, LsdReactor.Serving(scenario, id)) }
-            .doOnSuccess { finish(null) }
-            .doOnError { finish(it) }
-            .doOnCancel { finish(null, cancelled = true) }
+        return ServedOnThisThread(
+            handled
+                .contextWrite { LsdReactor.write(it, work) }
+                .doOnSuccess { finish(null) }
+                .doOnError { finish(it) }
+                .doOnCancel { finish(null, cancelled = true) },
+            work,
+        )
+    }
+
+    /**
+     * Subscribes to the handler with the request on this thread, so what a handler runs before its
+     * first thread hop (a blocking repository call in `Mono.fromCallable`, say) finds it even while
+     * the scenario serves other requests. After a hop, Reactor's context carries it (see [LsdReactor]).
+     */
+    private class ServedOnThisThread(
+        private val source: Mono<Void>,
+        private val work: SpringScenarios.Current,
+    ) : Mono<Void>() {
+        override fun subscribe(actual: CoreSubscriber<in Void>) = SpringScenarios.within(work) { source.subscribe(actual) }
     }
 
     private companion object {

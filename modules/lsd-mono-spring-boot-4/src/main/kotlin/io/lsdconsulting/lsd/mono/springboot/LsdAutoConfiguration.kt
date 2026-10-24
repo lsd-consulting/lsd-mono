@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.springboot
 
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
@@ -61,6 +62,46 @@ public class LsdAutoConfiguration {
             @Bean
             @JvmStatic
             public fun lsdWebClientPostProcessor(): BeanPostProcessor = LsdWebClientPostProcessor()
+        }
+    }
+
+    /**
+     * The request a reactive chain serves, restored onto each thread the chain hops to, so the
+     * repository calls and Kafka sends made there nest under it (see [LsdContextPropagation]).
+     * Needs Micrometer context-propagation on the test classpath; off with
+     * `lsd.mono.spring.reactor.context-propagation.enabled=false`.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = ["reactor.core.publisher.Hooks", "io.micrometer.context.ContextRegistry"])
+    @ConditionalOnProperty(
+        prefix = "lsd.mono.spring.reactor.context-propagation",
+        name = ["enabled"],
+        havingValue = "true",
+        matchIfMissing = true,
+    )
+    public class ReactorContextPropagation {
+        public companion object {
+            /** Static and a [BeanFactoryPostProcessor], so it is in place before any bean serves a request. */
+            @Bean
+            @JvmStatic
+            public fun lsdContextPropagation(): BeanFactoryPostProcessor = BeanFactoryPostProcessor { LsdContextPropagation.install() }
+        }
+    }
+
+    /**
+     * Work handed to Spring-managed executors and schedulers (`@Async`, Boot's
+     * `applicationTaskExecutor`, executors the app declares) keeps its scenario and the call that
+     * handed it over. Off with `lsd.mono.spring.executors.enabled=false`.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = ["org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"])
+    @ConditionalOnProperty(prefix = "lsd.mono.spring.executors", name = ["enabled"], havingValue = "true", matchIfMissing = true)
+    public class Executors {
+        public companion object {
+            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
+            @Bean
+            @JvmStatic
+            public fun lsdExecutorPostProcessor(): BeanPostProcessor = LsdExecutorPostProcessor()
         }
     }
 

@@ -1,6 +1,5 @@
 package io.lsdconsulting.lsd.mono.springboot
 
-import io.lsdconsulting.lsd.mono.core.LsdScenario
 import org.springframework.core.io.buffer.DataBuffer
 import reactor.util.context.ContextView
 import java.io.ByteArrayOutputStream
@@ -10,23 +9,21 @@ import java.io.ByteArrayOutputStream
  * thread-bound scenario core keeps is not there when its calls go out. The inbound [LsdWebFilter]
  * writes the request it is serving into Reactor's context instead, and [LsdExchangeFilter] reads it
  * back on whichever thread the call is subscribed: the call joins the right scenario, under the
- * right request, even with several scenarios running at once.
+ * right request, even with several scenarios running at once. With Micrometer context-propagation
+ * on the classpath, [LsdContextPropagation] also restores it onto each thread the chain hops to,
+ * so a repository call or Kafka send made there (which cannot see Reactor's context) finds it too.
  */
 internal object LsdReactor {
-    /** The scenario a reactive chain belongs to and the inbound request it is serving. */
-    data class Serving(
-        val scenario: LsdScenario,
-        val spanId: String,
-    )
-
-    private val KEY: Any = Serving::class.java.name
+    /** The key the request being served is kept under, in Reactor's context and for context-propagation. */
+    val KEY: String = SpringScenarios.Current::class.java.name
 
     fun write(
         context: reactor.util.context.Context,
-        serving: Serving,
+        serving: SpringScenarios.Current,
     ): reactor.util.context.Context = context.put(KEY, serving)
 
-    fun read(context: ContextView): Serving? = context.getOrDefault<Serving>(KEY, null)?.takeIf { SpringScenarios.isRunning(it.scenario) }
+    fun read(context: ContextView): SpringScenarios.Current? =
+        context.getOrDefault<SpringScenarios.Current>(KEY, null)?.takeIf { SpringScenarios.isRunning(it.scenario) }
 }
 
 /**

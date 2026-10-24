@@ -5,11 +5,17 @@ import static org.springframework.web.reactive.function.server.RouterFunctions.r
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.map.repository.config.EnableMapRepositories;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,10 +31,13 @@ import reactor.core.scheduler.Schedulers;
  * A plain reactive Spring Boot app with no LSD code: an annotated WebFlux controller that prices an
  * order through Boot's {@link WebClient.Builder}, hops schedulers, then checks stock through a
  * {@link WebClient} the app builds itself; and a router function that tracks an order through a
- * service that answers 404 for one it does not know.
+ * service that answers 404 for one it does not know. With {@code shop.events.enabled} it also books
+ * orders: it saves each through a Spring Data repository and announces it on Kafka, both after
+ * hopping onto a worker pool.
  */
 @SpringBootConfiguration(proxyBeanMethods = false)
 @EnableAutoConfiguration
+@EnableMapRepositories(considerNestedRepositories = true)
 public class WebFluxShopApp {
     /** Built by hand, not from Boot's builder: the starter still draws its calls. */
     @Bean
@@ -78,6 +87,49 @@ public class WebFluxShopApp {
                             .map(stock -> ResponseEntity.status(201)
                                     .body(Map.<String, Object>of(
                                             "sku", sku, "total", quote.get("total"), "inStock", stock.get("available")))));
+        }
+    }
+
+    /** Holds each booking until the other has arrived too, so both are being served at once. */
+    @Component
+    @ConditionalOnProperty(name = "shop.events.enabled", havingValue = "true")
+    public static class BothIn {
+        private final CyclicBarrier barrier = new CyclicBarrier(2);
+
+        Object await() throws Exception {
+            return barrier.await(10, TimeUnit.SECONDS);
+        }
+    }
+
+    @RestController
+    @ConditionalOnProperty(name = "shop.events.enabled", havingValue = "true")
+    static class Bookings {
+        private final ShopApp.OrderRepository orders;
+        private final KafkaTemplate<String, String> kafka;
+        private final BothIn bothIn;
+
+        Bookings(ShopApp.OrderRepository orders, KafkaTemplate<String, String> kafka, BothIn bothIn) {
+            this.orders = orders;
+            this.kafka = kafka;
+            this.bothIn = bothIn;
+        }
+
+        @PostMapping("/bookings/{sku}")
+        Mono<ResponseEntity<Map<String, Object>>> book(@PathVariable("sku") String sku) {
+            return Mono.fromCallable(bothIn::await)
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .delayElement(Duration.ofMillis(5))
+                    .publishOn(Schedulers.boundedElastic())
+                    .map(ignored -> orders.save(new ShopApp.PlacedOrder("order-" + sku, sku, 1)))
+                    .map(placed -> {
+                        try {
+                            kafka.send(ShopApp.TOPIC, sku, "{\"orderId\":\"" + placed.getId() + "\"}")
+                                    .get(30, TimeUnit.SECONDS);
+                        } catch (Exception e) {
+                            throw new IllegalStateException("could not announce " + placed.getId(), e);
+                        }
+                        return ResponseEntity.status(201).body(Map.<String, Object>of("orderId", placed.getId()));
+                    });
         }
     }
 }

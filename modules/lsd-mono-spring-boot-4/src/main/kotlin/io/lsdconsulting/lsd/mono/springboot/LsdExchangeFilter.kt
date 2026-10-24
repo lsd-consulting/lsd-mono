@@ -48,7 +48,7 @@ internal class LsdExchangeFilter(
             if (scenario == null) {
                 next.exchange(request)
             } else {
-                exchange(request, next, scenario, serving?.spanId ?: guarded(null) { SpringScenarios.parentOf(scenario) })
+                exchange(request, next, scenario, serving?.parent ?: guarded(null) { SpringScenarios.parentOf(scenario) })
             }
         }
 

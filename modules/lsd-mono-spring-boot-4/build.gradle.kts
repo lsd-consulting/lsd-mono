@@ -5,9 +5,9 @@ plugins {
     `java-library`
 }
 
-// A little under the measured 93.9% line coverage; lsd.coverage fails below it and more than 3 points above it.
+// A little under the measured 94.2% line coverage; lsd.coverage fails below it and more than 3 points above it.
 lsdCoverage {
-    lineFloor.set(91)
+    lineFloor.set(92)
 }
 
 description =
@@ -52,6 +52,7 @@ dependencies {
     compileOnly("org.springframework:spring-web")
     compileOnly("org.springframework:spring-webflux")
     compileOnly("io.projectreactor:reactor-core")
+    compileOnly("io.micrometer:context-propagation")
     compileOnly("org.springframework:spring-test")
     compileOnly("org.springframework:spring-aop")
     compileOnly("org.springframework.data:spring-data-commons")
@@ -68,6 +69,8 @@ dependencies {
     // WebFluxShopFixture opts into a reactive app; with MVC on the classpath too, Boot picks servlet.
     testImplementation("org.springframework.boot:spring-boot-starter-webflux")
     testImplementation("org.springframework.boot:spring-boot-webclient")
+    // Reactor restores the request being served onto each thread a chain hops to (LsdContextPropagation).
+    testImplementation("io.micrometer:context-propagation")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.data:spring-data-keyvalue")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka")
@@ -150,6 +153,8 @@ val sampleReportTests =
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaSendFailureFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.AsyncShopFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture")
         }
         writesSampleReport(sampleReportDir)
         ignoreFailures = true
@@ -157,9 +162,17 @@ val sampleReportTests =
         doLast {
             val diagrams = dir.listFiles { f -> f.name.endsWith("-diagram.html") }.orEmpty().map { it.name }
             val expected =
-                listOf("shop-fixture-", "kafka-shop-fixture-", "kafka-batch-listener-fixture-", "kafka-send-failure-fixture-", "web-flux-shop-fixture-")
+                listOf(
+                    "shop-fixture-",
+                    "kafka-shop-fixture-",
+                    "kafka-batch-listener-fixture-",
+                    "kafka-send-failure-fixture-",
+                    "web-flux-shop-fixture-",
+                    "async-shop-fixture-",
+                    "web-flux-bookings-fixture-",
+                )
             check(expected.all { prefix -> diagrams.any { it.startsWith(prefix) } }) {
-                "sampleReportTests wrote $diagrams, not the shop, Kafka shop, Kafka batch listener, Kafka send failure and WebFlux shop reports"
+                "sampleReportTests wrote $diagrams, not every report in $expected"
             }
         }
     }
@@ -192,6 +205,10 @@ tasks.register<Sync>("sampleReport") {
         rename("""kafka-send-failure-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-send-failure-report.html")
         include("web-flux-shop-fixture-*-diagram.html")
         rename("""web-flux-shop-fixture-[0-9a-f]{8}-diagram\.html""", "webflux-report.html")
+        include("async-shop-fixture-*-diagram.html")
+        rename("""async-shop-fixture-[0-9a-f]{8}-diagram\.html""", "async-shop-report.html")
+        include("web-flux-bookings-fixture-*-diagram.html")
+        rename("""web-flux-bookings-fixture-[0-9a-f]{8}-diagram\.html""", "webflux-bookings-report.html")
     }
     into(layout.buildDirectory.dir("pages"))
 }
