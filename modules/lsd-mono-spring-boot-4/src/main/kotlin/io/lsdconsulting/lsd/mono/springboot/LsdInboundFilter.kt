@@ -64,7 +64,8 @@ internal class LsdInboundFilter(
         SpringScenarios.enter(scenario, id)
         var failure: Throwable? = null
         try {
-            chain.doFilter(cached, wrapped)
+            // On this thread, and on any pool its work is handed to, calls are this request's.
+            SpringScenarios.within(SpringScenarios.Current(scenario, id)) { chain.doFilter(cached, wrapped) }
         } catch (e: Throwable) {
             failure = e
             throw e

@@ -435,4 +435,76 @@ class LsdWebFluxTest {
         assertNull(SpringScenarios.serving(scenario))
         assertEquals("500 Internal Server Error", report(scenario).labels.last())
     }
+
+    @Test
+    fun `two requests served at once each keep the repository call and Kafka send they make after a thread hop`() {
+        LsdContextPropagation.install()
+        val scenario = start()
+        val orders =
+            ProxyFactory(Orders { it.uppercase() })
+                .apply { addAdvice(LsdRepositoryInterceptor(Orders::class.java) { names }) }
+                .proxy as Orders
+        val kafka = LsdKafkaProducerInterceptor().apply { configure(mapOf(KafkaCapture.APP_CONFIG to "shop")) }
+        val gate = Sinks.empty<Void>()
+
+        fun chain(sku: String) =
+            WebFilterChain { exchange ->
+                gate
+                    .asMono()
+                    .then(Mono.delay(Duration.ofMillis(5)))
+                    .publishOn(Schedulers.boundedElastic())
+                    .map { orders.save(sku) }
+                    .doOnNext { kafka.onSend(ProducerRecord<Any?, Any?>("orders.placed", sku, "{}")) }
+                    .then(Mono.defer { exchange.response.setComplete() })
+            }
+
+        try {
+            val lamp = filter.filter(order(scenario, "lamp-01"), chain("lamp-01")).toFuture()
+            val desk = filter.filter(order(scenario, "desk-02"), chain("desk-02")).toFuture()
+            gate.tryEmitEmpty()
+            lamp.get(5, TimeUnit.SECONDS)
+            desk.get(5, TimeUnit.SECONDS)
+        } finally {
+            LsdContextPropagation.uninstall()
+        }
+
+        val drawn = report(scenario)
+        for (sku in listOf("lamp-01", "desk-02")) {
+            val inbound = drawn.message("POST /orders/$sku?express=true")
+            for (label in listOf("save(\"$sku\")", "publish \"$sku\"")) {
+                val call = drawn.message(label)
+                assertEquals("shop", call["from"], "$label is the app's: ${drawn.json}")
+                assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), "$label nests under its own request: ${drawn.json}")
+            }
+        }
+    }
+
+    @Test
+    fun `a call made while subscribing nests under the request being subscribed, even after another request starts on that thread`() {
+        // Without context-propagation installed: the filter itself keeps the request on the subscribing thread.
+        LsdContextPropagation.uninstall()
+        val scenario = start()
+        val orders =
+            ProxyFactory(Orders { it.uppercase() })
+                .apply { addAdvice(LsdRepositoryInterceptor(Orders::class.java) { names }) }
+                .proxy as Orders
+        var other: reactor.core.Disposable? = null
+        val chain =
+            WebFilterChain { exchange ->
+                Mono.defer {
+                    // Another request starts being served on this thread, then this one saves synchronously.
+                    other = filter.filter(order(scenario, "desk-02")) { Mono.never() }.subscribe()
+                    orders.save("lamp-01")
+                    exchange.response.setComplete()
+                }
+            }
+
+        filter.filter(order(scenario, "lamp-01"), chain).block()
+        other?.dispose()
+
+        val drawn = report(scenario)
+        val inbound = drawn.message("POST /orders/lamp-01?express=true")
+        val save = drawn.message("save(\"lamp-01\")")
+        assertEquals(inbound["callId"], save.obj("trace")?.get("parentSpanId"), "the save is lamp's, not desk's: ${drawn.json}")
+    }
 }

@@ -2,6 +2,16 @@ public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration {
 	public fun <init> ()V
 }
 
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Executors {
+	public static final field Companion Lio/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Executors$Companion;
+	public fun <init> ()V
+	public static final fun lsdExecutorPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
+}
+
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Executors$Companion {
+	public final fun lsdExecutorPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
+}
+
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kafka {
 	public static final field Companion Lio/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kafka$Companion;
 	public fun <init> ()V
@@ -15,6 +25,16 @@ public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kaf
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Reactive {
 	public fun <init> ()V
 	public final fun lsdWebFilter (Lorg/springframework/core/env/Environment;)Lorg/springframework/web/server/WebFilter;
+}
+
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$ReactorContextPropagation {
+	public static final field Companion Lio/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$ReactorContextPropagation$Companion;
+	public fun <init> ()V
+	public static final fun lsdContextPropagation ()Lorg/springframework/beans/factory/config/BeanFactoryPostProcessor;
+}
+
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$ReactorContextPropagation$Companion {
+	public final fun lsdContextPropagation ()Lorg/springframework/beans/factory/config/BeanFactoryPostProcessor;
 }
 
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Repositories {
