@@ -24,6 +24,10 @@ Thumbs.db
 # Local / secrets
 local.properties
 *.log
+.env*
+
+# IntelliJ compiler output
+out/
 
 # report UI / Node (optional local Vite builds)
 **/node_modules/
