@@ -162,7 +162,7 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
         return record
     }
 
-    /** Kafka 4 passes the record's headers, which say which publish this is. */
+    /** Kafka 4.1+ passes the record's headers, which say which publish this is; older clients never call this. */
     override fun onAcknowledgement(
         metadata: RecordMetadata?,
         exception: Exception?,

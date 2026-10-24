@@ -277,6 +277,38 @@ describe('renderRowSvg fragments', () => {
     expect(reply('200')).not.toContain('var(--error)')
   })
 
+  it('marks an error reply with a class and a cross, so colour is not the only cue', () => {
+    const reply = (status: string, colour?: string) =>
+      renderRowSvg(
+        rowFor({
+          kind: 'message',
+          id: 'm-reply',
+          from: 'db',
+          to: 'api',
+          label: 'reply',
+          type: 'SYNCHRONOUS_RESPONSE',
+          status,
+          colour,
+        }),
+        400,
+        participants,
+        DEFAULT_LABEL_MAX_WIDTH,
+      )
+    for (const status of ['error', '404', '503']) {
+      const svg = reply(status)
+      expect(svg).toMatch(/<g class="message[^"]* msg-error[ "]/)
+      expect(svg).toContain(
+        `<tspan class="msg-error-mark" aria-hidden="true">✕ <title>Error: status ${status}</title></tspan>`,
+      )
+    }
+    // A producer's own colour still wins, but the status is still marked.
+    expect(reply('503', '#c026d3')).toContain('msg-error-mark')
+    for (const status of ['200', '302']) {
+      expect(reply(status)).not.toContain('msg-error')
+      expect(reply(status)).not.toContain('✕')
+    }
+  })
+
   it('keeps the colour a message sets even when its status is an error', () => {
     const svg = renderRowSvg(
       rowFor({
