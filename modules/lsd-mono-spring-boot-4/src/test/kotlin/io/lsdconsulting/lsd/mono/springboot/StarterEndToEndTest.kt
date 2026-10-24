@@ -4,18 +4,23 @@ import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
+import io.lsdconsulting.lsd.mono.report.model.testing.JsonObject
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import io.lsdconsulting.lsd.mono.springboot.fixture.AsyncShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ExtensionShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaRecordListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaSendFailureFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.MvcStreamsFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.OwnClientsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaBatchListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxConcurrentOrdersFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxStreamsFixture
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -355,6 +360,131 @@ class StarterEndToEndTest {
                 assertEquals("shop", call["from"], "$label is the app's: ${both.json}")
                 assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), "$label nests under its own request: ${both.json}")
             }
+        }
+    }
+
+    @Test
+    fun `each record a record listener takes in one poll parents its own calls, and the app's interceptor still runs`() {
+        val summary = execute(KafkaRecordListenerFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val poll =
+            ReportJson
+                .read(tempDir.listDirectoryEntries("*-report.json").single())
+                .scenario("kafka record listener fixture: dispatches three orders each on its own")
+        assertEquals("success", poll.status, poll.json)
+        assertPairedConsumes(poll)
+        skusInBatch.forEachIndexed { i, sku ->
+            val consume = poll.message("consume \"$sku\"")
+            assertEquals("${i + 1} of 3", consume.obj("data")?.obj("headers")?.string("kafka.poll"), consume.source)
+            val save = poll.message(poll.labels.single { it.startsWith("save(PlacedOrder(id=order-$sku") })
+            assertEquals("shop", save["from"], poll.json)
+            assertEquals(consume.obj("trace")?.get("spanId"), save.obj("trace")?.get("parentSpanId"), poll.json)
+        }
+    }
+
+    @Test
+    fun `clients the app builds itself as beans, not from Boot's builders, are drawn`() {
+        val summary = execute(OwnClientsFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val placed =
+            ReportJson
+                .read(tempDir.listDirectoryEntries("*-report.json").single())
+                .scenario("own clients fixture: places an order through clients it built itself")
+        assertEquals(
+            listOf(
+                "POST /orders/lamp-01",
+                "GET /stock/lamp-01",
+                "200 OK",
+                "POST /quotes",
+                "200 OK",
+                "GET /parcels/lamp-01",
+                "404 Not Found",
+                "201 Created",
+            ),
+            placed.labels,
+            placed.json,
+        )
+        assertEquals("inventory", placed.message("GET /stock/lamp-01")["to"], placed.json)
+        assertEquals("pricing", placed.message("POST /quotes")["to"], placed.json)
+        assertEquals("tracking", placed.message("GET /parcels/lamp-01")["to"], placed.json)
+    }
+
+    @Test
+    fun `MVC streams, uploads and error pages are drawn as what was sent`() {
+        val summary = execute(MvcStreamsFixture::class.java)
+
+        assertEquals(5, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val report = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single())
+        assertStreamsAndErrors(report, "mvc streams fixture", upload = "uploads an orders documents")
+        val upload = report.scenario("mvc streams fixture: uploads an orders documents")
+        val received = upload.message("POST /orders/order-7/documents")
+        val parts = received.body().objects("parts")
+        assertEquals(listOf("invoice", "note"), parts.map { it["name"] }, received.source)
+        assertEquals("invoice-7.pdf", parts.first()["filename"], received.source)
+        val problem = report.scenario("mvc streams fixture: asks for an invoice not ready yet").message("409 Conflict")
+        assertEquals("the invoice is not ready yet", problem.body()["detail"], problem.source)
+        assertEquals(409.0, problem.body()["status"], problem.source)
+    }
+
+    @Test
+    fun `WebFlux streams, uploads and error replies are drawn as what was sent`() {
+        val summary = execute(WebFluxStreamsFixture::class.java)
+
+        assertEquals(5, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val report = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single())
+        assertStreamsAndErrors(report, "web flux streams fixture", upload = "files an invoice")
+        val scans = report.scenario("web flux streams fixture: follows the couriers scans")
+        val stream = scans.messages.single { it["from"] == "courier" }
+        assertEquals("200 OK", stream["label"], scans.json)
+        val scanned = stream.body()
+        assertEquals(7.0, scanned["events"], stream.source)
+        assertEquals(
+            "depot-1",
+            scanned
+                .objects("first")
+                .first()
+                .obj("data")
+                ?.get("depot"),
+            stream.source,
+        )
+    }
+
+    /** The body a message drew, as parsed JSON (empty when it drew none). */
+    private fun JsonObject.body(): JsonObject = obj("data")?.obj("body") ?: JsonObject(emptyMap(), "{}")
+
+    /** The progress stream as a count and its first events; the archive upload as its parts; error replies as the body sent. */
+    private fun assertStreamsAndErrors(
+        report: ReportJson,
+        fixture: String,
+        upload: String,
+    ) {
+        val progress = report.scenario("$fixture: streams an orders progress")
+        val sent = progress.message("200 OK")
+        val streamed = sent.body()
+        assertEquals(7.0, streamed["events"], sent.source)
+        assertEquals(true, streamed["truncated"], sent.source)
+        val steps = streamed.objects("first").map { it.obj("data")?.get("step") }
+        assertEquals(listOf(1.0, 2.0, 3.0, 4.0, 5.0), steps, "the first five events: ${sent.source}")
+
+        val filed = report.scenario("$fixture: $upload")
+        val archived = filed.message("POST /files")
+        assertEquals("archive", archived["to"], filed.json)
+        val invoice = archived.body().objects("parts").single { it["name"] == "invoice" }
+        assertEquals("invoice-7.pdf", invoice["filename"], archived.source)
+        assertEquals(31.0, invoice["size"], archived.source)
+        assertTrue(!archived.source.contains("%PDF"), "never the contents: ${archived.source}")
+
+        for ((scenario, status) in listOf(
+            "looks up an order nobody knows" to "404 Not Found",
+            "cancels an order that has shipped" to "500 Internal Server Error",
+        )) {
+            val failed = report.scenario("$fixture: $scenario")
+            assertEquals(2, failed.labels.size, failed.json)
+            val body = failed.message(status).body()
+            assertEquals(status.take(3).toDouble(), body["status"], "Boot's error body: ${failed.json}")
+            assertTrue(body["path"] is String, "Boot's error body: ${failed.json}")
         }
     }
 

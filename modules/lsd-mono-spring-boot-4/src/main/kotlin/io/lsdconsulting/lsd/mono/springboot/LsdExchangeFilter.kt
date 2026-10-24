@@ -110,6 +110,7 @@ internal class LsdExchangeFilter(
         fun request(
             body: ByteArray?,
             headers: HttpHeaders?,
+            overflowed: Boolean = false,
         ) {
             if (!requested.compareAndSet(false, true)) return
             guarded(Unit) {
@@ -126,7 +127,7 @@ internal class LsdExchangeFilter(
                         trace = Trace(scenario.correlationId, id, parent),
                         source = SpringScenarios.SOURCE,
                         startedAt = started,
-                        data = body?.let { Bodies.read(it, sent.contentType?.toString()) },
+                        data = body?.let { if (overflowed) Bodies.head(it, sent.contentType?.toString()) else Bodies.read(it, sent.contentType?.toString()) },
                         headers = flatten(sent),
                     ),
                 )
@@ -137,18 +138,18 @@ internal class LsdExchangeFilter(
             request(null, null)
             val code = response.statusCode().value()
             val headers = response.headers().asHttpHeaders()
-            val type = headers.contentType
-            if (type != null && (type.subtype == "event-stream" || type.type == "multipart")) {
-                reply(code.toString(), statusLabel(code), null, flatten(headers))
-                return response
-            }
+            val type = headers.contentType?.toString()
+            // An event stream is summarised as it is read: how many events, and the first few.
+            val sse = if (Streams.isEventStream(type)) SseTap() else null
             val tap = BodyTap()
-            val drawn = { reply(code.toString(), statusLabel(code), tap.bytes()?.let { Bodies.read(it, type?.toString()) }, flatten(headers)) }
+            val drawn = {
+                reply(code.toString(), statusLabel(code), sse?.summary() ?: tap.read(type), flatten(headers))
+            }
             return response
                 .mutate()
                 .body { body ->
                     body
-                        .doOnNext(tap::copy)
+                        .doOnNext { if (sse != null) guarded(Unit) { sse.copy(it) } else tap.copy(it) }
                         .doOnComplete(drawn)
                         .doOnCancel(drawn)
                         .doOnError { drawn() }
@@ -193,7 +194,7 @@ internal class LsdExchangeFilter(
                 Flux
                     .from(body)
                     .doOnNext(tap::copy)
-                    .doOnComplete { call.request(tap.bytes(), headers) },
+                    .doOnComplete { call.request(tap.head(), headers, tap.overflowed) },
             )
 
         override fun writeAndFlushWith(body: Publisher<out Publisher<out DataBuffer>>): Mono<Void> {

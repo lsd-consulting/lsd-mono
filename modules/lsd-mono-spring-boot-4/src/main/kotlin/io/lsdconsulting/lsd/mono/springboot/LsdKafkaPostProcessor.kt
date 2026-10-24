@@ -15,6 +15,8 @@ import org.springframework.kafka.core.ProducerFactory
  * beans the app declares itself (Boot then backs off), and factories built inline in a
  * `KafkaTemplate` or listener container factory bean. Only `interceptor.classes` and the participant
  * names are added; the interceptors themselves draw nothing unless a test scenario is running.
+ * Each listener container factory also gets a record and a batch interceptor, in front of the app's
+ * own, that say which record its listener is handling (see [LsdRecordInterceptor]).
  *
  * A raw `KafkaProducer` or `KafkaConsumer` made with `new`, outside any Spring factory, is not seen.
  */
@@ -37,7 +39,11 @@ internal class LsdKafkaPostProcessor :
             is ProducerFactory<*, *> -> producers(bean)
             is KafkaTemplate<*, *> -> producers(bean.producerFactory)
             is ConsumerFactory<*, *> -> if (consumers) consumers(bean)
-            is AbstractKafkaListenerContainerFactory<*, *, *> -> if (consumers) bean.consumerFactory?.let { consumers(it) }
+            is AbstractKafkaListenerContainerFactory<*, *, *> ->
+                if (consumers) {
+                    bean.consumerFactory?.let { consumers(it) }
+                    guarded(Unit) { ListenerInterceptors.install(bean) }
+                }
         }
         return bean
     }

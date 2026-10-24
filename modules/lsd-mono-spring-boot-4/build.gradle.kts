@@ -5,9 +5,9 @@ plugins {
     `java-library`
 }
 
-// A little under the measured 94.2% line coverage; lsd.coverage fails below it and more than 3 points above it.
+// A little under the measured 95.0% line coverage; lsd.coverage fails below it and more than 3 points above it.
 lsdCoverage {
-    lineFloor.set(92)
+    lineFloor.set(93)
 }
 
 description =
@@ -49,6 +49,7 @@ dependencies {
     compileOnly(platform(libs.spring.boot.bom))
     compileOnly("org.springframework.boot:spring-boot-autoconfigure")
     compileOnly("org.springframework.boot:spring-boot-restclient")
+    compileOnly("org.springframework.boot:spring-boot-webflux")
     compileOnly("org.springframework:spring-web")
     compileOnly("org.springframework:spring-webflux")
     compileOnly("io.projectreactor:reactor-core")
@@ -155,6 +156,10 @@ val sampleReportTests =
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.AsyncShopFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaRecordListenerFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.OwnClientsFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.MvcStreamsFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxStreamsFixture")
         }
         writesSampleReport(sampleReportDir)
         ignoreFailures = true
@@ -170,6 +175,10 @@ val sampleReportTests =
                     "web-flux-shop-fixture-",
                     "async-shop-fixture-",
                     "web-flux-bookings-fixture-",
+                    "kafka-record-listener-fixture-",
+                    "own-clients-fixture-",
+                    "mvc-streams-fixture-",
+                    "web-flux-streams-fixture-",
                 )
             check(expected.all { prefix -> diagrams.any { it.startsWith(prefix) } }) {
                 "sampleReportTests wrote $diagrams, not every report in $expected"
@@ -209,6 +218,14 @@ tasks.register<Sync>("sampleReport") {
         rename("""async-shop-fixture-[0-9a-f]{8}-diagram\.html""", "async-shop-report.html")
         include("web-flux-bookings-fixture-*-diagram.html")
         rename("""web-flux-bookings-fixture-[0-9a-f]{8}-diagram\.html""", "webflux-bookings-report.html")
+        include("kafka-record-listener-fixture-*-diagram.html")
+        rename("""kafka-record-listener-fixture-[0-9a-f]{8}-diagram\.html""", "kafka-record-listener-report.html")
+        include("own-clients-fixture-*-diagram.html")
+        rename("""own-clients-fixture-[0-9a-f]{8}-diagram\.html""", "own-clients-report.html")
+        include("mvc-streams-fixture-*-diagram.html")
+        rename("""mvc-streams-fixture-[0-9a-f]{8}-diagram\.html""", "mvc-streams-report.html")
+        include("web-flux-streams-fixture-*-diagram.html")
+        rename("""web-flux-streams-fixture-[0-9a-f]{8}-diagram\.html""", "webflux-streams-report.html")
     }
     into(layout.buildDirectory.dir("pages"))
 }

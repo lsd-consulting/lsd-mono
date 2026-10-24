@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import java.lang.System.Logger.Level
+import java.util.IdentityHashMap
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -37,6 +38,9 @@ internal object SpringScenarios {
 
     /** The message a listener thread is handling, set when its consumer polls it (see [consuming]). */
     private val handling = ThreadLocal<Pair<LsdScenario, String>?>()
+
+    /** The consume each record of this thread's last poll was drawn as, by the record itself (see [polled]). */
+    private val polled = ThreadLocal<IdentityHashMap<Any, Pair<LsdScenario, String>>?>()
     private val log = System.getLogger("io.lsdconsulting.lsd.mono.springboot")
 
     @Volatile private var warned = false
@@ -71,6 +75,21 @@ internal object SpringScenarios {
     fun leave(scenario: LsdScenario, spanId: String) {
         inbound[scenario]?.removeLastOccurrence(spanId)
     }
+
+    /**
+     * Waits, up to [timeoutMs], for the requests [scenario] is serving to be answered. A reactive
+     * server can hand the client its reply a moment before the filter sees the exchange end, so a
+     * test that has its response can finish before that reply is drawn.
+     */
+    fun settle(
+        scenario: LsdScenario,
+        timeoutMs: Long = SETTLE_MS,
+    ) {
+        val until = System.nanoTime() + timeoutMs * 1_000_000
+        while (inbound[scenario]?.isEmpty() == false && System.nanoTime() < until) Thread.sleep(2)
+    }
+
+    private const val SETTLE_MS = 1_000L
 
     /** The inbound request the app is serving in [scenario], the parent of its outbound calls. */
     fun serving(scenario: LsdScenario): String? = inbound[scenario]?.peekLast()
@@ -127,6 +146,25 @@ internal object SpringScenarios {
         consumeId: String?,
     ) {
         if (scenario == null || consumeId == null) handling.remove() else handling.set(scenario to consumeId)
+    }
+
+    /**
+     * The consumes this thread's consumer drew for the records of its last poll. The listener
+     * container hands the listener those same records, so [handle] can point its calls at the
+     * right one. Replaced by each poll, so it holds no more than one poll's records.
+     */
+    fun polled(consumes: IdentityHashMap<Any, Pair<LsdScenario, String>>?) {
+        if (consumes.isNullOrEmpty()) polled.remove() else polled.set(consumes)
+    }
+
+    /**
+     * The listener is about to handle [record]: its calls belong to that record's consume. False,
+     * leaving things as they were, when this thread's last poll drew no consume for it.
+     */
+    fun handle(record: Any?): Boolean {
+        val consume = record?.let { polled.get()?.get(it) }?.takeIf { it.first in running } ?: return false
+        handling.set(consume)
+        return true
     }
 
     /** Remember which scenario sent a message, so its consumer joins the same diagram. */

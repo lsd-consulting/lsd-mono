@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.springboot
 
+import jakarta.servlet.ServletRequestListener
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.boot.autoconfigure.AutoConfiguration
@@ -9,6 +10,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.restclient.RestClientCustomizer
 import org.springframework.boot.restclient.RestTemplateCustomizer
 import org.springframework.boot.web.servlet.FilterRegistrationBean
+import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
+import org.springframework.boot.webflux.autoconfigure.WebHttpHandlerBuilderCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
@@ -35,10 +38,25 @@ public class LsdAutoConfiguration {
     public class Servlet {
         @Bean
         public fun lsdInboundFilter(env: Environment): FilterRegistrationBean<OncePerRequestFilter> =
-            FilterRegistrationBean<OncePerRequestFilter>(LsdInboundFilter(ParticipantNames(env))).apply {
+            FilterRegistrationBean<OncePerRequestFilter>(LsdInboundFilter(ParticipantNames(env), readParts(env))).apply {
                 order = Ordered.HIGHEST_PRECEDENCE + 10
                 setName("lsdInboundFilter")
             }
+
+        /** Draws the reply of a failed request whose error page never came, as the request ends. */
+        @Bean
+        public fun lsdPendingReplies(): ServletListenerRegistrationBean<ServletRequestListener> =
+            ServletListenerRegistrationBean<ServletRequestListener>(LsdInboundFilter.PendingReplies())
+
+        /**
+         * Multipart requests are drawn as their parts, read up front through the servlet's own
+         * parsing: on unless `lsd.mono.spring.multipart.parts.enabled=false`, or the app turned
+         * Spring Boot's multipart handling off or made it lazy.
+         */
+        private fun readParts(env: Environment): Boolean =
+            env.getProperty("lsd.mono.spring.multipart.parts.enabled", Boolean::class.java, true) &&
+                env.getProperty("spring.servlet.multipart.enabled", Boolean::class.java, true) &&
+                !env.getProperty("spring.servlet.multipart.resolve-lazily", Boolean::class.java, false)
     }
 
     /** Inbound WebFlux requests, annotated controllers and router functions, drawn from the caller to this app. */
@@ -48,6 +66,15 @@ public class LsdAutoConfiguration {
     public class Reactive {
         @Bean
         public fun lsdWebFilter(env: Environment): WebFilter = LsdWebFilter(ParticipantNames(env))
+
+        /** The reply a failed handler gets from the app's error handling, drawn with its status and body. */
+        @Configuration(proxyBeanMethods = false)
+        @ConditionalOnClass(name = ["org.springframework.boot.webflux.autoconfigure.WebHttpHandlerBuilderCustomizer"])
+        public class ErrorReplies {
+            @Bean
+            public fun lsdErrorReplies(): WebHttpHandlerBuilderCustomizer =
+                WebHttpHandlerBuilderCustomizer { it.httpHandlerDecorator(ErrorCapturingResponse::decorate) }
+        }
     }
 
     /**
@@ -105,20 +132,37 @@ public class LsdAutoConfiguration {
         }
     }
 
-    /** Outbound calls through any `RestClient` or `RestTemplate` built from Boot's builders. */
+    /**
+     * Outbound calls through any `RestClient` or `RestTemplate` built from Boot's builders, and
+     * through `RestClient`, `RestClient.Builder`, `RestTemplate` and `RestTemplateBuilder` beans
+     * the app builds itself.
+     */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = ["org.springframework.boot.restclient.RestClientCustomizer"])
     public class RestClients {
         @Bean
         public fun lsdRestClientCustomizer(env: Environment): RestClientCustomizer {
             val interceptor = LsdClientInterceptor(ParticipantNames(env))
-            return RestClientCustomizer { it.requestInterceptor(interceptor) }
+            return RestClientCustomizer {
+                io.lsdconsulting.lsd.mono.springboot.RestClients
+                    .add(it, interceptor)
+            }
         }
 
         @Bean
         public fun lsdRestTemplateCustomizer(env: Environment): RestTemplateCustomizer {
             val interceptor = LsdClientInterceptor(ParticipantNames(env))
-            return RestTemplateCustomizer { it.interceptors.add(interceptor) }
+            return RestTemplateCustomizer {
+                io.lsdconsulting.lsd.mono.springboot.RestClients
+                    .add(it, interceptor)
+            }
+        }
+
+        public companion object {
+            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
+            @Bean
+            @JvmStatic
+            public fun lsdRestClientPostProcessor(): BeanPostProcessor = LsdRestClientPostProcessor()
         }
     }
 
