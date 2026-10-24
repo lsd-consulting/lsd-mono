@@ -110,6 +110,8 @@ class StarterEndToEndTest {
         assertEquals("shop", failure["to"], failed.json)
         assertTrue(failure.source.contains("max.request.size"), "the exception's message is kept: ${failure.source}")
         assertTrue("consume \"lamp-01\"" !in failed.labels, "nothing reached the topic: ${failed.labels}")
+        // Counted as errors (the failed send and the 500 it caused), which the diagram also draws in red.
+        assertEquals("2", failed.metric("Errors"), failed.json)
     }
 
     @Test

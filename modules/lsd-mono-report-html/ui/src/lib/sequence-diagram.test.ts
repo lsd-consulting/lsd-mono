@@ -253,6 +253,50 @@ describe('renderRowSvg fragments', () => {
     expect(svg).toContain('stroke-width="2"')
   })
 
+  it('draws a reply with an error status in the error colour, and a normal reply neutral', () => {
+    const reply = (status: string) =>
+      renderRowSvg(
+        rowFor({
+          kind: 'message',
+          id: 'm-reply',
+          from: 'db',
+          to: 'api',
+          label: 'reply',
+          type: 'SYNCHRONOUS_RESPONSE',
+          status,
+        }),
+        400,
+        participants,
+        DEFAULT_LABEL_MAX_WIDTH,
+      )
+    for (const status of ['error', '500']) {
+      expect(reply(status)).toContain('stroke="var(--error)"')
+      expect(reply(status)).toContain('marker-end="url(#mk_filled_var--error)"')
+    }
+    expect(reply('200')).toContain('stroke="#94a3b8"')
+    expect(reply('200')).not.toContain('var(--error)')
+  })
+
+  it('keeps the colour a message sets even when its status is an error', () => {
+    const svg = renderRowSvg(
+      rowFor({
+        kind: 'message',
+        id: 'm-own',
+        from: 'db',
+        to: 'api',
+        label: 'reply',
+        type: 'SYNCHRONOUS_RESPONSE',
+        status: '503',
+        colour: '#c026d3',
+      }),
+      400,
+      participants,
+      DEFAULT_LABEL_MAX_WIDTH,
+    )
+    expect(svg).toContain('stroke="#c026d3"')
+    expect(svg).not.toContain('var(--error)')
+  })
+
   it('includes marker-start and marker-end for BI_DIRECTIONAL', () => {
     const svg = renderRowSvg(
       rowFor({

@@ -12,6 +12,7 @@ import {
 import { isCoarsePointer } from '../media'
 import { type FindMatch, eventHiddenByColumns, findMatch, messageLabelRect, visibleParticipants } from '../diagram-view'
 import { escapeAttr, escapeHtml } from '../escape'
+import { isErrorStatus } from '../status'
 import {
   ACT_NEST_DX,
   ACT_W,
@@ -125,6 +126,11 @@ const ACTIVATION_COLOUR = 'var(--accent)'
 const ARROW_COLOUR = '#34d399'
 /** A response arrow with no colour of its own: neutral, so it reads as the reply to its call. */
 const RESPONSE_COLOUR = '#94a3b8'
+/**
+ * A message with no colour of its own whose status is an error (see isErrorStatus, the Errors
+ * metric's rule): the theme's error red. The label and inspector still say so in words.
+ */
+const ERROR_COLOUR = 'var(--error)'
 
 /** Each participant's colour by id, using `fallback` for a participant with none. */
 function laneColours(participants: readonly Participant[], fallback: string): Map<string, string> {
@@ -383,6 +389,7 @@ function renderMessageRow(
   const match = findMatch(msg, query, paint.payloadHits)
   const rawColour =
     msg.colour ||
+    (msg.status && isErrorStatus(msg.status) ? ERROR_COLOUR : null) ||
     (msg.type === 'SYNCHRONOUS_RESPONSE' ? RESPONSE_COLOUR : colourOf.get(msg.from || msg.to) || ARROW_COLOUR)
   const endId = ensureMarker(rawColour, spec.end)
   const startId = ensureMarker(rawColour, spec.start)
