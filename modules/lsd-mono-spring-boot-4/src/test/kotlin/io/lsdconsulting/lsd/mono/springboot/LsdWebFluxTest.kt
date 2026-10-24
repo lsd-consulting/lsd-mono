@@ -6,6 +6,7 @@ import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.aop.framework.ProxyFactory
 import org.springframework.core.io.buffer.DataBufferUtils
 import org.springframework.core.io.buffer.DefaultDataBufferFactory
 import org.springframework.http.HttpMethod
@@ -34,12 +36,14 @@ import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.server.ServerWebExchange
 import org.springframework.web.server.WebFilterChain
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Sinks
 import reactor.core.scheduler.Schedulers
 import java.net.ConnectException
 import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Duration
 import java.util.Optional
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /** What the WebFlux filter and the WebClient filter draw, and that the app still sees every byte. */
@@ -78,10 +82,13 @@ class LsdWebFluxTest {
 
     private fun bytes(text: String) = DefaultDataBufferFactory.sharedInstance.wrap(text.toByteArray(UTF_8))
 
-    private fun order(scenario: LsdScenario? = null): MockServerWebExchange {
+    private fun order(
+        scenario: LsdScenario? = null,
+        sku: String = "lamp-01",
+    ): MockServerWebExchange {
         val request =
             MockServerHttpRequest
-                .post("http://localhost:8080/orders/lamp-01?express=true")
+                .post("http://localhost:8080/orders/$sku?express=true")
                 .contentType(MediaType.APPLICATION_JSON)
                 .contentLength(14)
                 .header(LsdHeaders.SCENARIO, scenario?.correlationId ?: "")
@@ -325,5 +332,107 @@ class LsdWebFluxTest {
         assertEquals(inbound["id"], call["parentId"], drawn.json)
         assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), drawn.json)
         assertEquals(emptyList<String>(), report(other, "other").labels)
+    }
+
+    @Test
+    fun `nothing is drawn or entered until the server subscribes`() {
+        val scenario = start()
+        val served = filter.filter(order(scenario), handler())
+
+        assertNull(SpringScenarios.serving(scenario), "assembling the chain serves nothing")
+        served.block()
+
+        assertNull(SpringScenarios.serving(scenario), "the request is left once answered")
+        val drawn = report(scenario)
+        assertEquals(listOf("POST /orders/lamp-01?express=true", "201 Created"), drawn.labels, drawn.json)
+    }
+
+    /** A Spring Data repository, as the starter's post-processor proxies one. */
+    fun interface Orders {
+        fun save(sku: String): String
+    }
+
+    @Test
+    fun `a repository call and a Kafka send a reactive handler makes are the app's, nested under the request it serves`() {
+        val scenario = start()
+        val orders =
+            ProxyFactory(Orders { it.uppercase() })
+                .apply { addAdvice(LsdRepositoryInterceptor(Orders::class.java) { names }) }
+                .proxy as Orders
+        val kafka = LsdKafkaProducerInterceptor().apply { configure(mapOf(KafkaCapture.APP_CONFIG to "shop")) }
+        val chain =
+            WebFilterChain { exchange ->
+                Mono
+                    .fromCallable { orders.save("lamp-01") }
+                    .doOnNext { kafka.onSend(ProducerRecord<Any?, Any?>("orders.placed", "lamp-01", "{}")) }
+                    .then(Mono.defer { exchange.response.setComplete() })
+            }
+
+        filter.filter(order(scenario), chain).block()
+
+        val drawn = report(scenario)
+        val inbound = drawn.message("POST /orders/lamp-01?express=true")
+        for (label in listOf("save(\"lamp-01\")", "publish \"lamp-01\"")) {
+            val call = drawn.message(label)
+            assertEquals("shop", call["from"], "$label is the app's: ${drawn.json}")
+            assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), "$label nests under the request: ${drawn.json}")
+        }
+    }
+
+    @Test
+    fun `two requests served at once in one scenario each keep their own WebClient calls, and both are left when answered`() {
+        val scenario = start()
+        val gate = Sinks.empty<Void>()
+
+        fun chain(sku: String) =
+            WebFilterChain { exchange ->
+                gate
+                    .asMono()
+                    .then(Mono.delay(Duration.ofMillis(5)))
+                    .publishOn(Schedulers.boundedElastic())
+                    .flatMap { client.filter(ClientRequest.create(HttpMethod.GET, URI.create("http://inventory:8083/stock/$sku")).build(), server()) }
+                    .flatMap { it.bodyToMono(String::class.java) }
+                    .then(Mono.defer { exchange.response.setComplete() })
+            }
+
+        val lamp = filter.filter(order(scenario, "lamp-01"), chain("lamp-01")).toFuture()
+        val desk = filter.filter(order(scenario, "desk-02"), chain("desk-02")).toFuture()
+        assertTrue(SpringScenarios.serving(scenario) != null, "both requests are being served")
+        gate.tryEmitEmpty()
+        lamp.get(5, TimeUnit.SECONDS)
+        desk.get(5, TimeUnit.SECONDS)
+
+        assertNull(SpringScenarios.serving(scenario), "both requests are left once answered")
+        val drawn = report(scenario)
+        for (sku in listOf("lamp-01", "desk-02")) {
+            val inbound = drawn.message("POST /orders/$sku?express=true")
+            val call = drawn.message("GET /stock/$sku")
+            assertEquals("shop", call["from"], drawn.json)
+            assertEquals(inbound["id"], call["parentId"], "$sku's call nests under its own request: ${drawn.json}")
+            assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), drawn.json)
+        }
+    }
+
+    @Test
+    fun `a request the client gives up on is drawn as cancelled, not as a status it never sent, and is left`() {
+        val scenario = start()
+        val subscription = filter.filter(order(scenario), { Mono.never() }).subscribe()
+        assertTrue(SpringScenarios.serving(scenario) != null)
+        subscription.dispose()
+
+        assertNull(SpringScenarios.serving(scenario))
+        val drawn = report(scenario)
+        assertEquals(listOf("POST /orders/lamp-01?express=true", "cancelled"), drawn.labels, drawn.json)
+        assertEquals("cancelled", drawn.message("cancelled")["status"].toString(), drawn.json)
+        assertEquals("success", drawn.status, "a client going away is not the app's error: ${drawn.json}")
+    }
+
+    @Test
+    fun `a chain that throws instead of returning a Mono still gets a reply and leaves the request`() {
+        val scenario = start()
+        runCatching { filter.filter(order(scenario)) { throw IllegalStateException("boom") }.block() }
+
+        assertNull(SpringScenarios.serving(scenario))
+        assertEquals("500 Internal Server Error", report(scenario).labels.last())
     }
 }

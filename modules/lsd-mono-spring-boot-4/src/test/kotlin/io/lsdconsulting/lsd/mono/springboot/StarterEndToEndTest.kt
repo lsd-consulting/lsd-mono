@@ -8,6 +8,7 @@ import io.lsdconsulting.lsd.mono.springboot.fixture.ExtensionShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxConcurrentOrdersFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -111,7 +112,7 @@ class StarterEndToEndTest {
     }
 
     @Test
-    fun `inbound WebFlux requests and outbound WebClient calls are drawn, across scheduler hops`() {
+    fun `inbound WebFlux requests and outbound WebClient calls are drawn`() {
         val summary = execute(WebFluxShopFixture::class.java)
 
         assertEquals(2, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
@@ -202,6 +203,32 @@ class StarterEndToEndTest {
         assertEquals(1, report.scenarios.size, report.text)
         // The extension titles the report with the class's display name; the starter would humanise it.
         assertEquals("ExtensionShopFixture", report.root.string("title"), report.text)
+    }
+
+    @Test
+    fun `two WebFlux requests served at once each keep their calls across scheduler hops`() {
+        val summary = execute(WebFluxConcurrentOrdersFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val both = ReportJson
+            .read(
+                tempDir.listDirectoryEntries("*-report.json").single(),
+            ).scenario("web flux concurrent orders fixture: places two orders at once")
+        assertEquals("success", both.status, both.json)
+        // Slow pricing on one thread: the second order is in flight while the first hops schedulers,
+        // so a call nests under its own request only if the request rides in the Reactor context.
+        val quotes = both.messages.filter { it["label"] == "POST /quotes" }
+        assertEquals(2, quotes.size, both.json)
+        for (sku in listOf("lamp-01", "desk-02")) {
+            val inbound = both.message("POST /orders/$sku")
+            val price = quotes.single { it.obj("data")?.obj("body")?.string("sku") == sku }
+            val stock = both.message("GET /stock/$sku")
+            for ((label, call) in listOf("POST /quotes ($sku)" to price, "GET /stock/$sku" to stock)) {
+                assertEquals("shop", call["from"], both.json)
+                assertEquals(inbound["id"], call["parentId"], "$label nests under its own request: ${both.json}")
+                assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), both.json)
+            }
+        }
     }
 
     private fun execute(klass: Class<*>): org.junit.platform.launcher.listeners.TestExecutionSummary {

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.test.context.FilteredClassLoader
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
@@ -72,5 +73,18 @@ class LsdWebClientPostProcessorTest {
         ApplicationContextRunner().withConfiguration(autoConfig).run {
             assertEquals(0, it.getBeansOfType(WebFilter::class.java).size)
         }
+    }
+
+    @Test
+    fun `a servlet app without WebFlux or Reactor on its classpath keeps its servlet filter and loads nothing reactive`() {
+        WebApplicationContextRunner()
+            .withConfiguration(autoConfig)
+            .withClassLoader(FilteredClassLoader("org.springframework.web.reactive", "org.springframework.web.server", "reactor."))
+            .run {
+                assertEquals(null, it.startupFailure, "the context starts")
+                assertEquals(true, it.containsBean("lsdInboundFilter"))
+                assertEquals(false, it.containsBean("lsdWebFilter"))
+                assertEquals(false, it.containsBean("lsdWebClientPostProcessor"))
+            }
     }
 }
