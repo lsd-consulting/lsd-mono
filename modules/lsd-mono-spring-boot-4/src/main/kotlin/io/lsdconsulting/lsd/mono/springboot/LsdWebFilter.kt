@@ -30,6 +30,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * with its status, body and latency. The request it is serving goes into Reactor's context (see
  * [LsdReactor]) so its outbound `WebClient` calls nest under it on whatever thread they run.
  * Outside a test (no scenario running) it passes straight through.
+ *
+ * Nothing is drawn or entered until the server subscribes: a filter chain that is assembled but
+ * never run leaves no request behind, and the request is served from subscription to its end.
  */
 internal class LsdWebFilter(
     private val names: ParticipantNames,
@@ -50,7 +53,7 @@ internal class LsdWebFilter(
             guarded(false) {
                 request.headers.contentLength in 1..Bodies.LIMIT.toLong() && request.headers.contentType?.type != "multipart"
             }
-        if (!cache) return serve(exchange, chain, scenario, null)
+        if (!cache) return Mono.defer { serve(exchange, chain, scenario, null) }
         return DataBufferUtils
             .join(request.body)
             .map { joined ->
@@ -63,6 +66,7 @@ internal class LsdWebFilter(
             .flatMap { serve(exchange, chain, scenario, it) }
     }
 
+    /** Called once the server subscribes (from [Mono.defer] or once the body is read), never before. */
     private fun serve(
         exchange: ServerWebExchange,
         chain: WebFilterChain,
@@ -101,7 +105,10 @@ internal class LsdWebFilter(
             }
         val done = AtomicBoolean()
 
-        fun finish(failure: Throwable?) {
+        fun finish(
+            failure: Throwable?,
+            cancelled: Boolean = false,
+        ) {
             if (!done.compareAndSet(false, true)) return
             SpringScenarios.leave(scenario, id)
             guarded(Unit) {
@@ -112,17 +119,27 @@ internal class LsdWebFilter(
                         failure != null && set < 400 -> 500
                         else -> set
                     }
+                // The client went away (or the test stopped waiting) before the app answered: no
+                // status was sent, so none is made up. "cancelled" is not an HTTP code or an error
+                // word, so it is neither drawn red nor counted as an error; a test that gave up
+                // fails on its own.
+                val shown = if (cancelled) CANCELLED else status.toString()
                 scenario.ingest(
                     Interaction(
                         kind = InteractionKind.RESPONSE,
                         from = names.app,
                         to = caller,
-                        label = statusLabel(status),
-                        status = status.toString(),
+                        label = if (cancelled) CANCELLED else statusLabel(status),
+                        status = shown,
                         replyTo = id,
                         source = SpringScenarios.SOURCE,
                         durationMs = (System.nanoTime() - t0) / 1_000_000.0,
-                        data = failure?.toString() ?: response.tap.bytes()?.let { Bodies.read(it, response.headers.contentType?.toString()) },
+                        data =
+                            when {
+                                cancelled -> null
+                                failure != null -> failure.toString()
+                                else -> response.tap.bytes()?.let { Bodies.read(it, response.headers.contentType?.toString()) }
+                            },
                         headers = flatten(response.headers),
                     ),
                 )
@@ -130,12 +147,23 @@ internal class LsdWebFilter(
         }
 
         SpringScenarios.enter(scenario, id)
-        return chain
-            .filter(served)
+        // A chain that throws instead of returning a Mono still gets its reply and leaves the request.
+        val handled =
+            try {
+                chain.filter(served)
+            } catch (e: Exception) {
+                Mono.error(e)
+            }
+        return handled
             .contextWrite { LsdReactor.write(it, LsdReactor.Serving(scenario, id)) }
             .doOnSuccess { finish(null) }
             .doOnError { finish(it) }
-            .doOnCancel { finish(null) }
+            .doOnCancel { finish(null, cancelled = true) }
+    }
+
+    private companion object {
+        /** The status and label of a reply the client never waited for. */
+        const val CANCELLED = "cancelled"
     }
 }
 

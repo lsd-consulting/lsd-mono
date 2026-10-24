@@ -19,8 +19,8 @@ import org.springframework.web.server.WebFilter
  * On with the dependency, off with `lsd.mono.spring.enabled=false`. Each part switches on only when
  * the app has what it instruments: a servlet web app (Spring MVC) or a reactive one (WebFlux),
  * Spring Boot's `RestClient.Builder` and `RestTemplateBuilder`, `WebClient`, Spring Kafka producer
- * and consumer factories, and Spring Data repositories. Every part is a no-op unless a test scenario is running, so a stray
- * production classpath draws nothing.
+ * and consumer factories, and Spring Data repositories. Every part is a no-op unless a test
+ * scenario is running, so a stray production classpath draws nothing.
  *
  * The beans are Spring's own types; what sits behind them is internal to this module.
  */
