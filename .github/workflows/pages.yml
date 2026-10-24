@@ -123,11 +123,11 @@ jobs:
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
           done
           spring=$site/spring-boot-4
-          for f in index.html shop-report.html kafka-shop-report.html kafka-send-failure-report.html; do
+          for f in index.html shop-report.html kafka-shop-report.html kafka-batch-listener-report.html kafka-send-failure-report.html; do
             test -s "$spring/$f" || { echo "missing $spring/$f"; exit 1; }
           done
           grep -qF 'window.__LSD_INDEX__=' "$spring/index.html" || { echo "spring-boot-4/index.html has no report manifest"; exit 1; }
-          for f in $(grep -ohE '(kafka-shop|kafka-send-failure|shop)-fixture-[0-9a-f]{8}-(report|payloads)\.js' "$spring"/*.html "$spring"/*-report.js | sort -u); do
+          for f in $(grep -ohE '(kafka-shop|kafka-batch-listener|kafka-send-failure|shop)-fixture-[0-9a-f]{8}-(report|payloads)\.js' "$spring"/*.html "$spring"/*-report.js | sort -u); do
             test -s "$spring/$f" || { echo "missing $spring/$f"; exit 1; }
           done
       # One artifact name per attempt (#108). Each attempt of a run uploads into that same run, so

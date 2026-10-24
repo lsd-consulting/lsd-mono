@@ -55,6 +55,21 @@ class LsdKafkaPostProcessorTest {
     }
 
     @Test
+    fun `a batch listener factory's consumer factory is instrumented like any other`() {
+        val consumers = DefaultKafkaConsumerFactory<String, String>(emptyMap())
+        val batch =
+            ConcurrentKafkaListenerContainerFactory<String, String>().apply {
+                setConsumerFactory(consumers)
+                setBatchListener(true)
+            }
+
+        processor().postProcessAfterInitialization(batch, "batchFactory")
+
+        assertEquals(listOf(consumer), interceptors(consumers.configurationProperties))
+        assertEquals(true, batch.isBatchListener)
+    }
+
+    @Test
     fun `consumers are left alone when consumer capture is off`() {
         val consumers = DefaultKafkaConsumerFactory<String, String>(emptyMap())
         val processor = processor(LsdKafkaPostProcessor.CONSUMER_ENABLED to "false")
