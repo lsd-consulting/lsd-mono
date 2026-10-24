@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
 import io.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
+import io.lsdconsulting.lsd.mono.springboot.fixture.AsyncShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ExtensionShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaSendFailureFixture
@@ -12,6 +13,7 @@ import io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaBatchListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxConcurrentOrdersFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture
 import org.junit.jupiter.api.AfterEach
@@ -305,6 +307,53 @@ class StarterEndToEndTest {
                 assertEquals("shop", call["from"], both.json)
                 assertEquals(inbound["id"], call["parentId"], "$label nests under its own request: ${both.json}")
                 assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), both.json)
+            }
+        }
+    }
+
+    @Test
+    fun `work two requests hand to the app's own pool and to an Async method stays under each request`() {
+        val summary = execute(AsyncShopFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val both = ReportJson
+            .read(
+                tempDir.listDirectoryEntries("*-report.json").single(),
+            ).scenario("async shop fixture: places two orders at once")
+        assertEquals("success", both.status, both.json)
+        // Both requests are being served when each hands its work over, so a pool thread finds the
+        // right one only if the request travels with the task.
+        val quotes = both.messages.filter { it["label"] == "POST /quotes" }
+        assertEquals(2, quotes.size, both.json)
+        for (sku in listOf("lamp-01", "desk-02")) {
+            val inbound = both.message("POST /orders/$sku")
+            val price = quotes.single { it.obj("data")?.obj("body")?.string("sku") == sku }
+            val save = both.messages.single { it["label"].toString().startsWith("save(") && it.toString().contains("order-$sku") }
+            for ((label, call) in listOf("POST /quotes ($sku)" to price, "save($sku)" to save)) {
+                assertEquals("shop", call["from"], "$label is the app's: ${both.json}")
+                assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), "$label nests under its own request: ${both.json}")
+            }
+            assertTrue(price.toString().contains("acme"), "the app's own decorator still ran on its pool: $price")
+        }
+    }
+
+    @Test
+    fun `a repository call and a Kafka send two reactive requests make after a thread hop stay under each request`() {
+        val summary = execute(WebFluxBookingsFixture::class.java)
+
+        assertEquals(1, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val both = ReportJson
+            .read(
+                tempDir.listDirectoryEntries("*-report.json").single(),
+            ).scenario("web flux bookings fixture: books two orders at once")
+        assertEquals("success", both.status, both.json)
+        for (sku in listOf("lamp-01", "desk-02")) {
+            val inbound = both.message("POST /bookings/$sku")
+            val save = both.messages.single { it["label"].toString().startsWith("save(") && it.toString().contains("order-$sku") }
+            val publish = both.message("publish \"$sku\"")
+            for ((label, call) in listOf("save($sku)" to save, "publish $sku" to publish)) {
+                assertEquals("shop", call["from"], "$label is the app's: ${both.json}")
+                assertEquals(inbound["callId"], call.obj("trace")?.get("parentSpanId"), "$label nests under its own request: ${both.json}")
             }
         }
     }

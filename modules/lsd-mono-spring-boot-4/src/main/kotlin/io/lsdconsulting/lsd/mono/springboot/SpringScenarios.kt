@@ -29,6 +29,12 @@ internal object SpringScenarios {
     private val published = ConcurrentHashMap<String, LsdScenario>()
     private val sending = ConcurrentHashMap<String, Sending>()
 
+    /**
+     * What this thread is doing for a scenario: serving a request on its server thread, or running
+     * work handed to a pool or a reactive scheduler by one (see [capture] and [within]).
+     */
+    private val current = ThreadLocal<Current?>()
+
     /** The message a listener thread is handling, set when its consumer polls it (see [consuming]). */
     private val handling = ThreadLocal<Pair<LsdScenario, String>?>()
     private val log = System.getLogger("io.lsdconsulting.lsd.mono.springboot")
@@ -53,6 +59,7 @@ internal object SpringScenarios {
     fun resolve(headerValue: String? = null): LsdScenario? {
         val lsd = LsdContext.instance
         lsd.findScenarioByHeader(headerValue)?.let { return it }
+        current()?.let { return it.scenario }
         lsd.currentScenario()?.takeIf { it in running }?.let { return it }
         return running.singleOrNull()
     }
@@ -69,11 +76,50 @@ internal object SpringScenarios {
     fun serving(scenario: LsdScenario): String? = inbound[scenario]?.peekLast()
 
     /**
-     * What the app is doing in [scenario] when it makes a call: serving a request, or handling a
-     * message this thread's Kafka consumer just polled. Null means the test itself is calling.
+     * What the app is doing in [scenario] when it makes a call: the request or message this thread
+     * (or the thread that handed it its work) is serving, or the message this thread's Kafka
+     * consumer just polled. Null means the test itself is calling. With nothing on the thread, the
+     * request the scenario entered last: right while it serves one request at a time.
      */
-    fun parentOf(scenario: LsdScenario): String? =
-        serving(scenario) ?: handling.get()?.takeIf { it.first == scenario }?.second
+    fun parentOf(scenario: LsdScenario): String? {
+        current()?.takeIf { it.scenario == scenario }?.let { return it.parent }
+        handling.get()?.takeIf { it.first == scenario }?.let { return it.second }
+        return serving(scenario)
+    }
+
+    /** A scenario and what the app is doing in it (null: the test itself), carried across threads. */
+    data class Current(
+        val scenario: LsdScenario,
+        val parent: String?,
+    )
+
+    /** What this thread is doing, if its scenario is still running. */
+    fun current(): Current? = current.get()?.takeIf { it.scenario in running }
+
+    /** What this thread is doing, as set: for a context-propagation accessor to read and restore. */
+    fun currentRaw(): Current? = current.get()
+
+    fun setCurrent(value: Current?) {
+        if (value == null) current.remove() else current.set(value)
+    }
+
+    /** What to carry to the thread that runs work handed off from this one, or null outside a scenario. */
+    fun capture(): Current? = resolve()?.let { Current(it, parentOf(it)) }
+
+    /** Run [block] doing [work] on this thread, then put back whatever was there. */
+    fun <T> within(
+        work: Current?,
+        block: () -> T,
+    ): T {
+        if (work == null) return block()
+        val previous = current.get()
+        current.set(work)
+        try {
+            return block()
+        } finally {
+            setCurrent(previous)
+        }
+    }
 
     /** Kafka polls and runs the listener on one thread: what it polled last is what it is handling. */
     fun consuming(
