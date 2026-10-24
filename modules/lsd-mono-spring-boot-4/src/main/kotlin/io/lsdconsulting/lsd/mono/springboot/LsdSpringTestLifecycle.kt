@@ -41,6 +41,7 @@ public class LsdSpringTestLifecycle {
 
     public fun afterTestMethod(testContext: TestContext) {
         val scenario = testContext.removeAttribute(ATTRIBUTE) as? LsdScenario ?: return
+        guarded(Unit) { SpringScenarios.settle(scenario) }
         SpringScenarios.finished(scenario)
         guarded(Unit) {
             val title = "${classTitle(testContext.testClass)}: ${methodTitle(testContext)}"

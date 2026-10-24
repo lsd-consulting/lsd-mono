@@ -15,11 +15,27 @@ internal object Bodies {
         contentType: String?,
     ): Any? {
         if (bytes.isEmpty()) return null
+        if (contentType != null && Streams.isMultipart(contentType)) Multipart.summary(bytes, contentType)?.let { return it }
+        if (Streams.isEventStream(contentType)) return SseTap().apply { copy(bytes) }.summary()
         if (jackson && contentType?.contains("json", ignoreCase = true) == true) {
             runCatching { return Json.parse(bytes) }
         }
         return bytes
     }
+
+    /**
+     * The first [LIMIT] bytes of a larger body: a multipart body lists the parts they hold, an
+     * event stream the events; anything else is too large to show (null).
+     */
+    fun head(
+        bytes: ByteArray,
+        contentType: String?,
+    ): Any? =
+        when {
+            contentType != null && Streams.isMultipart(contentType) -> Multipart.summary(bytes, contentType, truncated = true)
+            Streams.isEventStream(contentType) -> SseTap().apply { copy(bytes) }.summary(cut = true)
+            else -> null
+        }
 
     private object Json {
         private val mapper = JsonMapper.builder().build()

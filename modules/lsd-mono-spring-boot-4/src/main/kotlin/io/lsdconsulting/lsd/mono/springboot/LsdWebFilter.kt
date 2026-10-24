@@ -106,13 +106,52 @@ internal class LsdWebFilter(
             }
         val done = AtomicBoolean()
 
+        fun reply(
+            status: Int?,
+            data: Any?,
+            headers: Map<String, String>,
+        ) = guarded(Unit) {
+            // No status means the client went away (or the test stopped waiting) before the app
+            // answered: none was sent, so none is made up. "cancelled" is not an HTTP code or an
+            // error word, so it is neither drawn red nor counted as an error; a test that gave up
+            // fails on its own.
+            scenario.ingest(
+                Interaction(
+                    kind = InteractionKind.RESPONSE,
+                    from = names.app,
+                    to = caller,
+                    label = status?.let(::statusLabel) ?: CANCELLED,
+                    status = status?.toString() ?: CANCELLED,
+                    replyTo = id,
+                    source = SpringScenarios.SOURCE,
+                    durationMs = (System.nanoTime() - t0) / 1_000_000.0,
+                    data = data,
+                    headers = headers,
+                ),
+            )
+        }
+
         fun finish(
             failure: Throwable?,
             cancelled: Boolean = false,
         ) {
             if (!done.compareAndSet(false, true)) return
-            SpringScenarios.leave(scenario, id)
+            // The request is left once its reply is drawn, so the test listener can wait for it (see SpringScenarios.settle).
+            var leaveNow = true
             guarded(Unit) {
+                // A failed handler's reply is what the app's error handling writes after this
+                // filter has seen the error: drawn, status and body, as it is written.
+                if (failure != null && !cancelled) {
+                    val capture = ErrorCapturingResponse.of(exchange.response)
+                    if (capture != null && !capture.isCommitted) {
+                        capture.arm { status, data, headers ->
+                            reply(status, data, headers)
+                            SpringScenarios.leave(scenario, id)
+                        }
+                        leaveNow = false
+                        return@guarded
+                    }
+                }
                 val set = response.statusCode?.value() ?: 200
                 val status =
                     when {
@@ -120,31 +159,15 @@ internal class LsdWebFilter(
                         failure != null && set < 400 -> 500
                         else -> set
                     }
-                // The client went away (or the test stopped waiting) before the app answered: no
-                // status was sent, so none is made up. "cancelled" is not an HTTP code or an error
-                // word, so it is neither drawn red nor counted as an error; a test that gave up
-                // fails on its own.
-                val shown = if (cancelled) CANCELLED else status.toString()
-                scenario.ingest(
-                    Interaction(
-                        kind = InteractionKind.RESPONSE,
-                        from = names.app,
-                        to = caller,
-                        label = if (cancelled) CANCELLED else statusLabel(status),
-                        status = shown,
-                        replyTo = id,
-                        source = SpringScenarios.SOURCE,
-                        durationMs = (System.nanoTime() - t0) / 1_000_000.0,
-                        data =
-                            when {
-                                cancelled -> null
-                                failure != null -> failure.toString()
-                                else -> response.tap.bytes()?.let { Bodies.read(it, response.headers.contentType?.toString()) }
-                            },
-                        headers = flatten(response.headers),
-                    ),
-                )
+                val data =
+                    when {
+                        cancelled -> response.streamed()
+                        failure != null -> failure.toString()
+                        else -> response.body()
+                    }
+                reply(if (cancelled) null else status, data, flatten(response.headers))
             }
+            if (leaveNow) SpringScenarios.leave(scenario, id)
         }
 
         SpringScenarios.enter(scenario, id)
@@ -209,11 +232,30 @@ private class ReplayedRequest(
         }
 }
 
-/** The response, copying what the app writes on its way to the client; a stream (SSE) is left alone. */
+/**
+ * The response, copying what the app writes on its way to the client. An event stream (SSE) is
+ * not kept, only counted, with its first few events (see [SseTap]).
+ */
 private class TappedResponse(
     delegate: ServerHttpResponse,
 ) : ServerHttpResponseDecorator(delegate) {
-    val tap = BodyTap()
+    private val tap = BodyTap()
+    private val sse = SseTap()
 
-    override fun writeWith(body: Publisher<out DataBuffer>): Mono<Void> = super.writeWith(Flux.from(body).doOnNext(tap::copy))
+    private val streaming: Boolean get() = Streams.isEventStream(headers.contentType?.toString())
+
+    /** The body as it should be drawn. */
+    fun body(): Any? = if (streaming) sse.summary() else tap.read(headers.contentType?.toString())
+
+    /** What a stream the client walked away from had sent so far; nothing for any other body. */
+    fun streamed(): Any? = if (streaming) sse.summary() else null
+
+    private fun copy(buffer: DataBuffer) {
+        if (streaming) guarded(Unit) { sse.copy(buffer) } else tap.copy(buffer)
+    }
+
+    override fun writeWith(body: Publisher<out DataBuffer>): Mono<Void> = super.writeWith(Flux.from(body).doOnNext(::copy))
+
+    override fun writeAndFlushWith(body: Publisher<out Publisher<out DataBuffer>>): Mono<Void> =
+        super.writeAndFlushWith(Flux.from(body).map { chunk -> Flux.from(chunk).doOnNext(::copy) })
 }

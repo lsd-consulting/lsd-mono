@@ -205,4 +205,22 @@ class LsdExecutorPropagationTest {
         )
         assertSame("left alone", processor.postProcessBeforeInitialization("left alone", "string"))
     }
+
+    @Test
+    fun `the listener waits for a request still being answered, and no longer than its limit`() {
+        val scenario = start()
+        SpringScenarios.enter(scenario, "late")
+        val answered = CompletableFuture.runAsync {
+            Thread.sleep(50)
+            SpringScenarios.leave(scenario, "late")
+        }
+        SpringScenarios.settle(scenario)
+        assertTrue(answered.isDone, "settled before the request was left")
+
+        SpringScenarios.enter(scenario, "never")
+        val t0 = System.nanoTime()
+        SpringScenarios.settle(scenario, timeoutMs = 20)
+        assertTrue((System.nanoTime() - t0) / 1_000_000 < 1_000, "gave up at its limit")
+        SpringScenarios.leave(scenario, "never")
+    }
 }

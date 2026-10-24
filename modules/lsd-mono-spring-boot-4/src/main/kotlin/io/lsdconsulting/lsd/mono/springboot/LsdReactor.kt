@@ -39,21 +39,28 @@ internal class BodyTap {
     fun copy(buffer: DataBuffer) {
         if (overflowed) return
         SpringScenarios.guarded(Unit) {
-            val count = buffer.readableByteCount()
-            if (out.size() + count > Bodies.LIMIT) {
-                overflowed = true
-                out.reset()
-                return@guarded
-            }
             buffer.readableByteBuffers().use { buffers ->
                 for (bytes in buffers) {
-                    val chunk = ByteArray(bytes.remaining())
-                    bytes.get(chunk)
-                    synchronized(out) { out.write(chunk) }
+                    synchronized(out) {
+                        // Past the limit only the head is kept: enough for a summary, never the whole body.
+                        val room = Bodies.LIMIT - out.size()
+                        val take = minOf(room, bytes.remaining())
+                        val chunk = ByteArray(take)
+                        bytes.get(chunk)
+                        out.write(chunk)
+                        if (bytes.hasRemaining()) overflowed = true
+                    }
+                    if (overflowed) return@guarded
                 }
             }
         }
     }
+
+    /** The first [Bodies.LIMIT] bytes, whether or not the body went past them. */
+    fun head(): ByteArray = synchronized(out) { out.toByteArray() }
+
+    /** The body as it should be drawn: all of it, or a summary of its head when it was too large. */
+    fun read(contentType: String?): Any? = if (overflowed) Bodies.head(head(), contentType) else Bodies.read(head(), contentType)
 
     /** What was copied, or null when the body was too large to keep. */
     fun bytes(): ByteArray? = if (overflowed) null else synchronized(out) { out.toByteArray() }

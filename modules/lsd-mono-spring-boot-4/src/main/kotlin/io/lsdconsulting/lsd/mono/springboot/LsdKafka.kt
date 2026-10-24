@@ -15,6 +15,7 @@ import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.header.Headers
 import java.time.Instant
+import java.util.IdentityHashMap
 
 /**
  * Wires the interceptors into a Kafka client's configuration (see [LsdKafkaPostProcessor]):
@@ -25,6 +26,15 @@ internal object KafkaCapture {
     const val APP_CONFIG: String = "lsd.mono.spring.app-name"
     const val CLIENT_CONFIG: String = "lsd.mono.spring.client-name"
     const val INTERCEPTORS: String = "interceptor.classes"
+
+    /** A consume's place in a poll of several records: `2 of 3`. */
+    const val POLL_HEADER: String = "kafka.poll"
+
+    /** `2 of 3` for the second of three records polled together; null for a poll of one. */
+    fun place(
+        index: Int,
+        count: Int,
+    ): String? = if (count > 1) "${index + 1} of $count" else null
 
     /** Who sent a message, so the consumer can pair its arrow with the publish. */
     const val PUBLISH_ID_HEADER: String = "lsd-publish-id"
@@ -73,9 +83,11 @@ internal object KafkaCapture {
     fun headers(
         key: Any?,
         headers: Headers?,
+        place: String? = null,
     ): Map<String, String> {
         val out = linkedMapOf<String, String>()
         key?.let { out["kafka.key"] = Summaries.of(it) }
+        place?.let { out[POLL_HEADER] = it }
         headers?.forEach { header ->
             if (!SpringScenarios.isOwnHeader(header.key())) {
                 out[header.key()] = header.value()?.toString(Charsets.UTF_8) ?: ""
@@ -216,7 +228,9 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
  *
  * It sits on the consumer, not the listener, so a batch listener (`List<ConsumerRecord>` or a `List`
  * of payloads) looks the same as a record one: each record in the poll is its own consume, paired
- * through its own `lsd-publish-id`, and the listener's calls hang off the last record polled.
+ * through its own `lsd-publish-id`. A poll of several records marks each consume with its place in
+ * it (`kafka.poll: 2 of 3`). The listener's calls hang off the last record polled, unless the
+ * container's interceptors ([LsdRecordInterceptor], [LsdBatchInterceptor]) say which record it is on.
  */
 internal class LsdKafkaConsumerInterceptor : ConsumerInterceptor<Any?, Any?> {
     private var app = "App"
@@ -228,7 +242,9 @@ internal class LsdKafkaConsumerInterceptor : ConsumerInterceptor<Any?, Any?> {
     override fun onConsume(records: ConsumerRecords<Any?, Any?>): ConsumerRecords<Any?, Any?> {
         guarded(Unit) {
             var last: Pair<LsdScenario, String>? = null
-            for (record in records) {
+            val drawn = IdentityHashMap<Any, Pair<LsdScenario, String>>()
+            val count = records.count()
+            for ((index, record) in records.withIndex()) {
                 val publishId = KafkaCapture.publishId(record.headers())
                 val scenario = SpringScenarios.publishedBy(publishId) ?: SpringScenarios.resolve() ?: continue
                 val id = SpringScenarios.newId()
@@ -245,12 +261,14 @@ internal class LsdKafkaConsumerInterceptor : ConsumerInterceptor<Any?, Any?> {
                         source = SpringScenarios.SOURCE,
                         startedAt = Instant.now(),
                         data = KafkaCapture.payload(record.value()),
-                        headers = KafkaCapture.headers(record.key(), record.headers()),
+                        headers = KafkaCapture.headers(record.key(), record.headers(), KafkaCapture.place(index, count)),
                     ),
                 )
                 last = scenario to id
+                drawn[record] = last
             }
             SpringScenarios.consuming(last?.first, last?.second)
+            SpringScenarios.polled(drawn)
         }
         return records
     }
