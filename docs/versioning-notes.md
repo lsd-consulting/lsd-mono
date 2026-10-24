@@ -8,7 +8,7 @@ Group is `io.github.lsd-consulting`, the Maven Central namespace lsd-core is pub
 
 The train version is set once on the root project, from git (`TrainVersion.kt` in build-logic): `-Plsd.version=X.Y.Z` if given, else `X.Y.Z` on a commit tagged `vX.Y.Z`, else a snapshot of the next patch after the latest `v` tag (`0.0.1-SNAPSHOT` before the first tag, or in a shallow checkout without tags). `./gradlew -q printVersion` shows it. The report's `generator` field and the jar manifest follow it. Every module inherits it (`lsd.common`), and there is no per-module override: all seven artifacts always have the train version.
 
-Releases go to Maven Central with semantic-release from conventional commits, after `gate` on `main` ([releasing.md](releasing.md)). Each release publishes all seven artifacts together, at one version; the first was `0.1.0` (17 October 2026).
+Releases go to Maven Central with semantic-release from conventional commits, once a week, from `main` once `gate` passed ([releasing.md](releasing.md#when-releases-happen)). Each release publishes all seven artifacts together, at one version; the first was `0.1.0` (17 October 2026).
 
 `gradle/libs.versions.toml` lists dependencies (Kotlin, JUnit `6.1.3`, Cucumber `8.0.4`, kotlinx.coroutines `1.11.0`, Spring Boot `4.1.2`). It is not the version of these libraries.
 
@@ -21,7 +21,7 @@ junit-integration, cucumber-integration, coroutines-integration and spring-boot-
 One shared version across core, the integrations and the report model and writer is the compatibility promise. Matching numbers mean those artifacts were released together and are meant to be used together.
 
 - **Lockstep.** Every release publishes all seven at the same version, even when only one changed. No artifact is released on its own, and none has a version of its own.
-- **One decision.** semantic-release picks the version from all the commits since the last tag, whichever module they touch ([releasing.md](releasing.md#commit-messages)). A Renovate bump to one integration's dependency releases the train like any other `fix`.
+- **One decision.** semantic-release picks the version from all the commits since the last tag, whichever module they touch ([releasing.md](releasing.md#commit-messages)). A Renovate bump to one integration's dependency is `build(deps)` and releases nothing by itself: it goes out with the next weekly release, at the train version. A security fix is `fix(deps)`, a patch.
 - **Majors move together.** A change that breaks one integration (say a new JUnit or Cucumber major) is a breaking change of the train. While the version is `0.y.z` that is a minor release of all seven; from v1 it is a major of all seven. A breaking change to the report model or the writer counts the same way.
 
 Releases are `0.y.z` until the API is ready for v1 (see [releasing.md](releasing.md)). [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html): while the version is `0.y.z`, the API is not stable. A released version is immutable. Maven Central will not take a version that ends in `-SNAPSHOT`.
@@ -46,7 +46,7 @@ The library version is not the JUnit or Cucumber version it was built with. Cons
 ## Still open
 
 - [x] **Publishing.** Maven Central, under these artifact ids so they do not clash with legacy `lsd-core`, `lsd-cucumber`, and `lsd-junit-jupiter` ([releasing.md](releasing.md)). Do not depend on published `lsd-core`.
-- [x] **Release workflow.** `release.yml`, called from `gradle.yml` after `gate`.
+- [x] **Release workflow.** `release.yml`, weekly on Tuesdays, checking `gate` on `main`, with a monthly cap.
 - [ ] **Cucumber 7 artifact.** Still a product question. `cucumber-groovy` has no 8.x. Do not loosen the 8 pin.
 - [ ] **Tested-against versions.** No CI matrix of JUnit and Cucumber versions and no versions file yet.
 
