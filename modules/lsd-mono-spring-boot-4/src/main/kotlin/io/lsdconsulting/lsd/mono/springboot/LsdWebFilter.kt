@@ -90,7 +90,7 @@ internal class LsdWebFilter(
                     trace = Trace(scenario.correlationId, id, request.headers.getFirst(LsdInboundFilter.PARENT_SPAN_HEADER)),
                     source = SpringScenarios.SOURCE,
                     startedAt = Instant.now(),
-                    data = body?.let { Bodies.read(it, request.headers.contentType?.toString()) },
+                    data = body?.let { Bodies.read(it, request.headers.contentType?.toString()) } ?: InboundParts.of(request)?.parts,
                     headers = flatten(request.headers),
                 ),
             )

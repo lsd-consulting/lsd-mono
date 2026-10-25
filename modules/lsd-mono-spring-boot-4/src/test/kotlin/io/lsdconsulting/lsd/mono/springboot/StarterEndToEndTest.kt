@@ -16,11 +16,13 @@ import io.lsdconsulting.lsd.mono.springboot.fixture.MvcStreamsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnClientsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaBatchListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.RestClientStreamsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxConcurrentOrdersFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxStreamsFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.WebTestClientFixture
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -449,6 +451,60 @@ class StarterEndToEndTest {
                 ?.get("depot"),
             stream.source,
         )
+    }
+
+    @Test
+    fun `WebTestClient calls bound to the context are drawn in the test's scenario, with parts and Boot's error body`() {
+        val summary = execute(WebTestClientFixture::class.java)
+
+        assertEquals(4, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val report = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single())
+        val placed = report.scenario("web test client fixture: places an order")
+        assertEquals(listOf("POST /orders/lamp-01", "POST /quotes", "200 OK", "201 Created"), placed.labels, placed.json)
+        assertEquals("client", placed.message("POST /orders/lamp-01")["from"], placed.json)
+        assertEquals("pricing", placed.message("POST /quotes")["to"], placed.json)
+
+        val documents = report.scenario("web test client fixture: takes an orders documents")
+        val received = documents.message("POST /orders/order-7/documents")
+        val parts = received.body().objects("parts")
+        assertEquals(listOf("invoice", "note"), parts.map { it["name"] }, received.source)
+        assertEquals("invoice-7.pdf", parts.first()["filename"], received.source)
+        assertEquals(31.0, parts.first()["size"], received.source)
+        assertTrue(!received.source.contains("%PDF"), "never the contents: ${received.source}")
+
+        val label = report.scenario("web test client fixture: takes the returns label")
+        val part = label
+            .message("POST /returns/return-7/label")
+            .body()
+            .objects("parts")
+            .single()
+        assertEquals("return-7.png", part["filename"], label.json)
+        assertEquals("image/png", part["contentType"], label.json)
+
+        val missing = report.scenario("web test client fixture: looks up an order nobody knows")
+        assertEquals(listOf("GET /orders/order-404", "404 Not Found"), missing.labels, missing.json)
+        val body = missing.message("404 Not Found").body()
+        assertEquals(404.0, body["status"], "Boot's error body, not the exception: ${missing.json}")
+        assertTrue(body["path"] is String, "Boot's error body: ${missing.json}")
+    }
+
+    @Test
+    fun `an event stream read through RestClient or RestTemplate is drawn as its events, and still streams`() {
+        val summary = execute(RestClientStreamsFixture::class.java)
+
+        assertEquals(2, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val report = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single())
+        for (name in listOf("follows the couriers scans through the rest client", "reads the depots line by line through the rest template")) {
+            val scenario = report.scenario("rest client streams fixture: $name")
+            val stream = scenario.messages.single { it["from"] == "courier" }
+            assertEquals("200 OK", stream["label"], scenario.json)
+            val events = stream.body()
+            assertEquals(7.0, events["events"], stream.source)
+            assertEquals(true, events["truncated"], "seven events, five shown: ${stream.source}")
+            val depots = events.objects("first").map { it.obj("data")?.get("depot") }
+            assertEquals((1..5).map { "depot-$it" }, depots, stream.source)
+            assertEquals("200 OK", scenario.labels.last(), "the app answers after the stream is drawn: ${scenario.json}")
+        }
     }
 
     /** The body a message drew, as parsed JSON (empty when it drew none). */

@@ -59,16 +59,29 @@ internal class ErrorCapturingResponse(
             return null
         }
 
-        /** The server's handler, wrapping the response of each request made during a test. */
-        fun decorate(handler: HttpHandler): HttpHandler =
+        /**
+         * The server's handler (or a `WebTestClient`'s, bound to the context), wrapping the
+         * response of each request made during a test and, with [readParts], reading the parts of
+         * a multipart request before the app does (see [InboundParts]).
+         */
+        fun decorate(
+            handler: HttpHandler,
+            readParts: Boolean = true,
+        ): HttpHandler =
             HttpHandler { request, response ->
                 val scenario = guarded(null) { SpringScenarios.resolve(request.headers.getFirst(LsdHeaders.SCENARIO)) }
                 if (scenario == null) {
                     handler.handle(request, response)
                 } else {
                     val capture = ErrorCapturingResponse(response)
+                    val handled =
+                        if (readParts && InboundParts.isMultipart(request)) {
+                            InboundParts.read(request) { handler.handle(it, capture) }
+                        } else {
+                            handler.handle(request, capture)
+                        }
                     // Whatever the app's error handling did or did not write, the reply is drawn by the end.
-                    handler.handle(request, capture).doFinally { capture.fire() }
+                    handled.doFinally { capture.fire() }
                 }
             }
     }

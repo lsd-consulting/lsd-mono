@@ -24,12 +24,8 @@ public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kaf
 
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Reactive {
 	public fun <init> ()V
+	public final fun lsdErrorReplies (Lorg/springframework/core/env/Environment;)Lorg/springframework/http/server/reactive/HttpHandlerDecoratorFactory;
 	public final fun lsdWebFilter (Lorg/springframework/core/env/Environment;)Lorg/springframework/web/server/WebFilter;
-}
-
-public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Reactive$ErrorReplies {
-	public fun <init> ()V
-	public final fun lsdErrorReplies ()Lorg/springframework/boot/webflux/autoconfigure/WebHttpHandlerBuilderCustomizer;
 }
 
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$ReactorContextPropagation {
@@ -78,6 +74,11 @@ public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Web
 
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$WebClients$Companion {
 	public final fun lsdWebClientPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
+}
+
+public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$WebTestClients {
+	public fun <init> ()V
+	public final fun lsdWebTestClientCustomizer ()Lorg/springframework/boot/webtestclient/autoconfigure/WebTestClientBuilderCustomizer;
 }
 
 public class io/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/springframework/test/context/support/AbstractTestExecutionListener {

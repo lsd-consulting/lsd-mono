@@ -11,11 +11,12 @@ import org.springframework.boot.restclient.RestClientCustomizer
 import org.springframework.boot.restclient.RestTemplateCustomizer
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
-import org.springframework.boot.webflux.autoconfigure.WebHttpHandlerBuilderCustomizer
+import org.springframework.boot.webtestclient.autoconfigure.WebTestClientBuilderCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
 import org.springframework.core.env.Environment
+import org.springframework.http.server.reactive.HttpHandlerDecoratorFactory
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.server.WebFilter
 
@@ -67,14 +68,34 @@ public class LsdAutoConfiguration {
         @Bean
         public fun lsdWebFilter(env: Environment): WebFilter = LsdWebFilter(ParticipantNames(env))
 
-        /** The reply a failed handler gets from the app's error handling, drawn with its status and body. */
-        @Configuration(proxyBeanMethods = false)
-        @ConditionalOnClass(name = ["org.springframework.boot.webflux.autoconfigure.WebHttpHandlerBuilderCustomizer"])
-        public class ErrorReplies {
-            @Bean
-            public fun lsdErrorReplies(): WebHttpHandlerBuilderCustomizer =
-                WebHttpHandlerBuilderCustomizer { it.httpHandlerDecorator(ErrorCapturingResponse::decorate) }
+        /**
+         * The reply a failed handler gets from the app's error handling, drawn with its status and
+         * body, and the parts of a multipart request (on unless
+         * `lsd.mono.spring.multipart.parts.enabled=false`). A decorator factory, so the server's
+         * handler and a `WebTestClient` bound to the application context both pick it up.
+         */
+        @Bean
+        public fun lsdErrorReplies(env: Environment): HttpHandlerDecoratorFactory {
+            val readParts = env.getProperty("lsd.mono.spring.multipart.parts.enabled", Boolean::class.java, true)
+            return HttpHandlerDecoratorFactory { ErrorCapturingResponse.decorate(it, readParts) }
         }
+    }
+
+    /**
+     * Requests a `WebTestClient` sends, bound to a server or to the application context, carry the
+     * test's scenario, so the app draws them in it even when several tests run at once.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(
+        name = [
+            "org.springframework.boot.webtestclient.autoconfigure.WebTestClientBuilderCustomizer",
+            "org.springframework.test.web.reactive.server.WebTestClient",
+        ],
+    )
+    public class WebTestClients {
+        @Bean
+        public fun lsdWebTestClientCustomizer(): WebTestClientBuilderCustomizer =
+            WebTestClientBuilderCustomizer { it.filter(LsdWebTestClient.filter()) }
     }
 
     /**
