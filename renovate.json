@@ -96,6 +96,19 @@
       "groupSlug": "spring-boot-4"
     },
     {
+      "description": "Stay on http4k 6. lsd-mono-http4k-6 is built against that major; http4k 7 is a new lsd-mono-http4k-7 module.",
+      "matchManagers": [
+        "gradle"
+      ],
+      "matchPackageNames": [
+        "org.http4k:http4k-bom"
+      ],
+      "matchCurrentVersion": "/^6\\./",
+      "allowedVersions": "/^6\\./",
+      "groupName": "http4k 6",
+      "groupSlug": "http4k-6"
+    },
+    {
       "description": "Stay on kotlinx.coroutines 1. lsd-mono-coroutines is built against that major; a 2.x release is a human decision.",
       "matchManagers": [
         "gradle"

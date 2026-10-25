@@ -13,6 +13,9 @@ spring-boot = "4.1.2"
 # library uses it, so Renovate leaves it alone: it moves by hand with spring-boot, and
 # BootJunitVersionTest fails when the two disagree.
 spring-boot-junit = "6.0.3"
+# http4k 6. Only lsd-mono-http4k-6 uses it, compileOnly: the app brings its own http4k. http4k 6
+# is compiled for Java 21, so that module's baseline is 21 (its gradle.properties).
+http4k = "6.61.0.0"
 json-schema-validator = "3.0.8"
 spotless = "8.10.4"
 ktlint = "1.8.0"
@@ -45,6 +48,9 @@ cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform
 
 # Spring Boot 4. Only lsd-mono-spring-boot-4 uses these.
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+
+# http4k 6. Only lsd-mono-http4k-6 uses it.
+http4k-bom = { module = "org.http4k:http4k-bom", version.ref = "http4k" }
 
 # kotlinx.coroutines 1. Only lsd-mono-coroutines uses it.
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }

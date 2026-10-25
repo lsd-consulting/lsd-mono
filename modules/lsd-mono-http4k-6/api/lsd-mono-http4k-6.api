@@ -1,0 +1,20 @@
+public final class io/lsdconsulting/lsd/mono/http4k/LsdHttp4k {
+	public static final field DEFAULT_APP Ljava/lang/String;
+	public static final field DEFAULT_CLIENT Ljava/lang/String;
+	public static final field DEFAULT_MESSAGES_SHOWN I
+	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/http4k/LsdHttp4k;
+	public static final fun clientFilter ()Lorg/http4k/core/Filter;
+	public static final fun clientFilter (Ljava/lang/String;)Lorg/http4k/core/Filter;
+	public static final fun clientFilter (Ljava/lang/String;Ljava/lang/String;)Lorg/http4k/core/Filter;
+	public static synthetic fun clientFilter$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lorg/http4k/core/Filter;
+	public static final fun serverFilter ()Lorg/http4k/core/Filter;
+	public static final fun serverFilter (Ljava/lang/String;)Lorg/http4k/core/Filter;
+	public static final fun serverFilter (Ljava/lang/String;Ljava/lang/String;)Lorg/http4k/core/Filter;
+	public static synthetic fun serverFilter$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lorg/http4k/core/Filter;
+	public static final fun wsFilter ()Lorg/http4k/websocket/WsFilter;
+	public static final fun wsFilter (Ljava/lang/String;)Lorg/http4k/websocket/WsFilter;
+	public static final fun wsFilter (Ljava/lang/String;Ljava/lang/String;)Lorg/http4k/websocket/WsFilter;
+	public static final fun wsFilter (Ljava/lang/String;Ljava/lang/String;I)Lorg/http4k/websocket/WsFilter;
+	public static synthetic fun wsFilter$default (Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lorg/http4k/websocket/WsFilter;
+}
+
