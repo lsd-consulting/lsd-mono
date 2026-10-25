@@ -1,8 +1,10 @@
 package io.lsdconsulting.lsd.mono.springboot
 
 import io.lsdconsulting.lsd.mono.core.LsdHeaders
+import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.springboot.SpringScenarios.guarded
 import org.reactivestreams.Publisher
+import org.springframework.core.env.Environment
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.server.reactive.HttpHandler
 import org.springframework.http.server.reactive.ServerHttpResponse
@@ -49,6 +51,9 @@ internal class ErrorCapturingResponse(
     }
 
     companion object {
+        /** Whether a reactive app reads a multipart request's parts: unless `lsd.mono.spring.multipart.parts.enabled=false`. */
+        fun readsParts(env: Environment): Boolean = env.getProperty("lsd.mono.spring.multipart.parts.enabled", Boolean::class.java, true)
+
         /** Ours, under whatever decorators came after it; null when the response was not wrapped. */
         fun of(response: ServerHttpResponse): ErrorCapturingResponse? {
             var current: ServerHttpResponse? = response
@@ -67,6 +72,12 @@ internal class ErrorCapturingResponse(
         fun decorate(
             handler: HttpHandler,
             readParts: Boolean = true,
+        ): HttpHandler = decorate(handler) { readParts }
+
+        /** As above, deciding per scenario whether to read a multipart request's parts. */
+        fun decorate(
+            handler: HttpHandler,
+            readParts: (LsdScenario) -> Boolean,
         ): HttpHandler =
             HttpHandler { request, response ->
                 val scenario = guarded(null) { SpringScenarios.resolve(request.headers.getFirst(LsdHeaders.SCENARIO)) }
@@ -75,7 +86,7 @@ internal class ErrorCapturingResponse(
                 } else {
                     val capture = ErrorCapturingResponse(response)
                     val handled =
-                        if (readParts && InboundParts.isMultipart(request)) {
+                        if (InboundParts.isMultipart(request) && readParts(scenario)) {
                             InboundParts.read(request) { handler.handle(it, capture) }
                         } else {
                             handler.handle(request, capture)

@@ -3,6 +3,7 @@ package io.lsdconsulting.lsd.mono.springboot
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.domain.Participant
+import org.springframework.core.env.Environment
 import java.lang.System.Logger.Level
 import java.util.IdentityHashMap
 import java.util.UUID
@@ -29,6 +30,7 @@ internal object SpringScenarios {
     private val declared = ConcurrentHashMap<LsdScenario, MutableSet<String>>()
     private val published = ConcurrentHashMap<String, LsdScenario>()
     private val sending = ConcurrentHashMap<String, Sending>()
+    private val clientSettings = ConcurrentHashMap<LsdScenario, Lazy<ClientSettings>>()
 
     /**
      * What this thread is doing for a scenario: serving a request on its server thread, or running
@@ -45,7 +47,12 @@ internal object SpringScenarios {
 
     @Volatile private var warned = false
 
-    fun started(scenario: LsdScenario) {
+    /** [environment] is the test's application context's, for what needs its names (see [clientSettingsOf]). */
+    fun started(
+        scenario: LsdScenario,
+        environment: Environment? = null,
+    ) {
+        environment?.let { clientSettings[scenario] = lazy { ClientSettings(it) } }
         running += scenario
     }
 
@@ -55,7 +62,15 @@ internal object SpringScenarios {
         declared.remove(scenario)
         published.values.removeIf { it == scenario }
         sending.values.removeIf { it.scenario == scenario }
+        clientSettings.remove(scenario)
     }
+
+    /**
+     * The settings of the Spring test that started [scenario], resolved on first use: null outside
+     * one. For what is built outside the app's context, such as a `WebTestClient` bound to a
+     * controller. Held only while the scenario runs, so a closed context is not kept alive.
+     */
+    fun clientSettingsOf(scenario: LsdScenario): ClientSettings? = clientSettings[scenario]?.value
 
     fun isRunning(scenario: LsdScenario): Boolean = scenario in running
 
@@ -225,6 +240,8 @@ internal object SpringScenarios {
         } catch (e: VirtualMachineError) {
             throw e
         } catch (e: Throwable) {
+            // Dropped, but the thread's interrupt is not: whoever interrupted it still sees it.
+            if (e is InterruptedException) Thread.currentThread().interrupt()
             warnOnce(e)
             fallback
         }

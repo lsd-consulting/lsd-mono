@@ -7,13 +7,18 @@ import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.core.env.Environment
 import org.springframework.http.HttpStatus
+import org.springframework.http.client.MultipartBodyBuilder
+import org.springframework.mock.env.MockEnvironment
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.RouterFunctions
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.server.ResponseStatusException
@@ -41,17 +46,25 @@ class LsdWebTestClientTest {
         LsdContext.instance.clear()
     }
 
-    /** This test's scenario, bound to its thread, with another test's running alongside it. */
-    private fun start(): LsdScenario {
+    /**
+     * This test's scenario, bound to its thread, with another test's running alongside it; started,
+     * as the test listener starts it, with its test context's [environment] (null: outside one).
+     */
+    private fun start(environment: Environment? = shop()): LsdScenario {
         val other = LsdContext.instance.beginScenario(reportKey = "other", key = "other", bindCurrentThread = false)
         val mine = LsdContext.instance.beginScenario(reportKey = KEY, key = KEY, bindCurrentThread = true)
         return mine.also {
             listOf(other, mine).forEach {
-                SpringScenarios.started(it)
+                SpringScenarios.started(it, environment)
                 started += it
             }
         }
     }
+
+    private fun shop(): MockEnvironment =
+        MockEnvironment()
+            .withProperty("spring.application.name", "shop")
+            .withProperty("lsd.mono.spring.client-name", "Tester")
 
     private fun report(scenario: LsdScenario): ScenarioJson {
         SpringScenarios.finished(scenario)
@@ -83,7 +96,80 @@ class LsdWebTestClientTest {
 
         val drawn = report(scenario)
         assertEquals(listOf("GET /orders/7", "200 OK", "GET /orders/404", "404 Not Found"), drawn.labels, drawn.json)
+        assertEquals("tester", drawn.message("GET /orders/7")["from"], drawn.json)
+        assertEquals("shop", drawn.message("GET /orders/7")["to"], drawn.json)
+        assertEquals("shop", drawn.message("404 Not Found")["from"], drawn.json)
+    }
+
+    @Test
+    fun `the app's name is the test context's, whichever environment the client was built in`() {
+        val client = WebTestClient
+            .bindToController(Orders())
+            .configureClient()
+            .apply(LsdWebTestClient.configurer())
+            .build()
+        val scenario = start(MockEnvironment().withProperty("lsd.mono.spring.app-name", "Order desk"))
+
+        get(client)
+
+        val drawn = report(scenario)
+        assertEquals("Order desk", drawn.participant(drawn.message("GET /orders/7")["to"] as String)["name"], drawn.json)
+    }
+
+    @Test
+    fun `outside a Spring test the client is drawn with the default names`() {
+        val scenario = start(environment = null)
+
+        get(
+            WebTestClient
+                .bindToController(Orders())
+                .configureClient()
+                .apply(LsdWebTestClient.configurer())
+                .build(),
+        )
+
+        val drawn = report(scenario)
         assertEquals("client", drawn.message("GET /orders/7")["from"], drawn.json)
+        assertEquals("app", drawn.message("GET /orders/7")["to"], drawn.json)
+    }
+
+    @Test
+    fun `a multipart request is drawn as its parts unless the test context turns parts off`() {
+        val route =
+            RouterFunctions
+                .route()
+                .POST("/documents") { request -> request.multipartData().flatMap { ServerResponse.ok().bodyValue(mapOf("parts" to it.size)) } }
+                .build()
+        val client = WebTestClient
+            .bindToRouterFunction(route)
+            .configureClient()
+            .apply(LsdWebTestClient.configurer())
+            .build()
+
+        fun upload(environment: Environment): ScenarioJson {
+            val scenario = start(environment)
+            val parts = MultipartBodyBuilder().apply { part("note", "leave at the door") }.build()
+            client
+                .post()
+                .uri("/documents")
+                .body(BodyInserters.fromMultipartData(parts))
+                .exchange()
+                .expectStatus()
+                .isOk
+            return report(scenario).also { clear() }
+        }
+
+        val read = upload(shop())
+        val drawnParts = read
+            .message("POST /documents")
+            .obj("data")
+            ?.obj("body")
+            ?.objects("parts")
+            .orEmpty()
+        assertEquals(listOf("note"), drawnParts.map { it["name"] }, read.json)
+
+        val unread = upload(shop().withProperty("lsd.mono.spring.multipart.parts.enabled", "false"))
+        assertNull(unread.message("POST /documents").obj("data")?.obj("body"), unread.json)
     }
 
     @Test
