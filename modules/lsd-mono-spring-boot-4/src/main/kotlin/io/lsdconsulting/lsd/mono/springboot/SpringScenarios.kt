@@ -239,6 +239,8 @@ internal object SpringScenarios {
         } catch (e: VirtualMachineError) {
             throw e
         } catch (e: Throwable) {
+            // Dropped, but the thread's interrupt is not: whoever interrupted it still sees it.
+            if (e is InterruptedException) Thread.currentThread().interrupt()
             warnOnce(e)
             fallback
         }
