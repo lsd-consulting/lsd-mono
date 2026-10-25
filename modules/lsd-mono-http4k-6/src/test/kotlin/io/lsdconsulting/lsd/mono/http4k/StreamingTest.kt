@@ -45,13 +45,14 @@ class StreamingTest {
     }
 
     /**
-     * `first ` at once, then `last` only once [release] is called: the caller does that when it
-     * has the response. If nobody calls it within the timeout the stream ends anyway and
+     * [FIRST] at once, then `last` only once [release] is called: the caller does that when it
+     * has the response. [FIRST] is more than a server buffers before sending the headers (64 KiB,
+     * well under the 256 KiB a filter could show), so only a filter waiting for the end holds them. If nobody calls it within the timeout the stream ends anyway and
      * [timedOut] says so, so a filter that waits for the body fails the test rather than hanging it.
      */
     private class Gated : InputStream() {
         private val gate = CountDownLatch(1)
-        private val parts = ArrayDeque(listOf("first ", "last"))
+        private val parts = ArrayDeque(listOf(FIRST, "last"))
         private var current: ByteArray = ByteArray(0)
         private var at = 0
 
@@ -100,11 +101,11 @@ class StreamingTest {
         assertFalse(body.timedOut, "the headers came before the body was released")
         assertEquals(OK, response.status)
         body.release()
-        assertEquals("first last", String(response.body.stream.readAllBytes()))
+        assertEquals(FIRST + "last", String(response.body.stream.readAllBytes()))
 
         val drawn = report(scenario)
         assertEquals(listOf("GET /prices", "200 OK"), drawn.labels, drawn.json)
-        assertEquals("first last", drawn.message("200 OK").body(), drawn.json)
+        assertEquals(FIRST + "last", drawn.message("200 OK").body(), drawn.json)
         assertEquals("Prices -> Client", drawn.arrow(drawn.message("200 OK")))
     }
 
@@ -117,11 +118,11 @@ class StreamingTest {
         val response = prices(Request(GET, "/prices"))
         assertFalse(body.timedOut, "the response came before the body was released")
         body.release()
-        response.body.stream.use { assertEquals("first last", String(it.readAllBytes())) }
+        response.body.stream.use { assertEquals(FIRST + "last", String(it.readAllBytes())) }
 
         val drawn = report(scenario)
         assertEquals(listOf("GET /prices", "200 OK"), drawn.labels, drawn.json)
-        assertEquals("first last", drawn.message("200 OK").body(), drawn.json)
+        assertEquals(FIRST + "last", drawn.message("200 OK").body(), drawn.json)
     }
 
     @Test
@@ -157,5 +158,6 @@ class StreamingTest {
 
     private companion object {
         const val TIMEOUT_SECONDS = 5L
+        val FIRST = "a".repeat(64 * 1024)
     }
 }
