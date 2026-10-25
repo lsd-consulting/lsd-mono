@@ -4,7 +4,8 @@ name: Pages
 # for it, generated from the current report UI and KitchenSinkSample.kt) and publishes it to
 # GitHub Pages, so https://lsd-consulting.github.io/lsd-mono/ opens the report index and
 # example-report.html opens the report on its own. spring-boot-4/ is the Spring Boot starter's
-# sample report (the shop fixtures, run by its sampleReport task), linked from its README.
+# sample report (the shop fixtures, run by its sampleReport task), linked from its README;
+# http4k-6/ is the http4k integration's (lsd-mono-http4k-6's sampleReport), linked from its README.
 # The example report is not committed; nothing else under docs/ is published.
 #
 # The site is the latest release: the version the README tells people to use. The weekly release
@@ -77,6 +78,7 @@ jobs:
           distribution: temurin
           java-version: |
             17
+            21
             25
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -89,10 +91,13 @@ jobs:
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Build the sample site
         run: |
-          ./gradlew :modules:lsd-mono-core:kitchenSinkSample :modules:lsd-mono-spring-boot-4:sampleReport
+          ./gradlew :modules:lsd-mono-core:kitchenSinkSample :modules:lsd-mono-spring-boot-4:sampleReport :modules:lsd-mono-http4k-6:sampleReport
           # The Spring Boot starter's sample report, under spring-boot-4/ (its README links there).
           mkdir -p modules/lsd-mono-core/build/pages/spring-boot-4
           cp -R modules/lsd-mono-spring-boot-4/build/pages/. modules/lsd-mono-core/build/pages/spring-boot-4/
+          # The http4k integration's sample report, under http4k-6/ (its README links there).
+          mkdir -p modules/lsd-mono-core/build/pages/http4k-6
+          cp -R modules/lsd-mono-http4k-6/build/pages/. modules/lsd-mono-core/build/pages/http4k-6/
       - name: Check the site
         run: |
           version=$(./gradlew -q printVersion)
@@ -114,6 +119,14 @@ jobs:
           grep -qF 'window.__LSD_INDEX__=' "$spring/index.html" || { echo "spring-boot-4/index.html has no report manifest"; exit 1; }
           for f in $(grep -ohE '(kafka-shop|kafka-batch-listener|kafka-send-failure|web-flux-shop|web-flux-bookings|async-shop|kafka-record-listener|own-clients|mvc-streams|web-flux-streams|web-test-client|rest-client-streams|shop)-fixture-[0-9a-f]{8}-(report|payloads)\.js' "$spring"/*.html "$spring"/*-report.js | sort -u); do
             test -s "$spring/$f" || { echo "missing $spring/$f"; exit 1; }
+          done
+          http4k=$site/http4k-6
+          for f in index.html shop-report.html server-shop-report.html live-prices-report.html; do
+            test -s "$http4k/$f" || { echo "missing $http4k/$f"; exit 1; }
+          done
+          grep -qF 'window.__LSD_INDEX__=' "$http4k/index.html" || { echo "http4k-6/index.html has no report manifest"; exit 1; }
+          for f in $(grep -ohE '(Shop|ServerShop|LivePrices)Fixture-[0-9a-f]{8}-(report|payloads)\.js' "$http4k"/*.html "$http4k"/*-report.js | sort -u); do
+            test -s "$http4k/$f" || { echo "missing $http4k/$f"; exit 1; }
           done
       # One artifact name per attempt (#108). Each attempt of a run uploads into that same run, so
       # with the default name a rerun of a failed deploy found two github-pages artifacts and
