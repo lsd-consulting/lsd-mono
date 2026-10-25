@@ -117,7 +117,9 @@ internal class WsCapture(
 
         fun tap(ws: Websocket): Websocket {
             // Registered before the app's own handlers, so a message is drawn before its replies.
-            ws.onMessage { message(caller, app, it)?.let { id -> lastIn = id } }
+            // A message left out (over the cap) still gets a span of its own, so the app's calls
+            // while handling it are not nested under an earlier message.
+            ws.onMessage { lastIn = message(caller, app, it) ?: Calls.newId() }
             ws.onClose { close(caller, app, it) }
             ws.onError { error(it) }
             return Tapped(ws)
@@ -230,10 +232,12 @@ internal class WsCapture(
             val view = body.payload.duplicate()
             val size = view.remaining()
             if (message.mode == WsMessage.Mode.Binary) return "binary ($size bytes)" to null
-            val bytes = ByteArray(minOf(view.remaining(), Bodies.LIMIT)).also { view.get(it) }
+            val bytes = ByteArray(minOf(size, Bodies.LIMIT)).also { view.get(it) }
             val text = String(bytes, Charsets.UTF_8)
-            val oneLine = text.replace(Regex("\\s+"), " ").trim()
+            val oneLine = text.take(LABEL_CHARS * 4).replace(Regex("\\s+"), " ").trim()
             val label = if (oneLine.length > LABEL_CHARS) oneLine.take(LABEL_CHARS - 1) + "…" else oneLine
+            // Too large to show, as for an HTTP body: the label still says how it starts.
+            if (size > Bodies.LIMIT) return label to mapOf("notShown" to "larger than ${Bodies.LIMIT / 1024} KiB", "size" to size)
             return label to bytes.takeIf { it.isNotEmpty() }?.let { JsonText.parse(it) ?: it }
         }
     }

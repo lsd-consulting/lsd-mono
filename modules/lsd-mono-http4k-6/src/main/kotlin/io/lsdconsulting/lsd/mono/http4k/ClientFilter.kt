@@ -49,7 +49,7 @@ internal class ClientFilter(
             } catch (e: Throwable) {
                 if (!call.isTaken) {
                     draw(call, request, started, sent.data)
-                    reply(call, request, t0, "error", e.javaClass.simpleName, e.toString(), null)
+                    reply(call, request, Calls.elapsedMs(t0), "error", e.javaClass.simpleName, e.toString(), null)
                 }
                 throw e
             } finally {
@@ -57,10 +57,13 @@ internal class ClientFilter(
                 Calls.pending.remove(call.id)
             }
         if (call.isTaken) return response
-        val received = guarded(Captured(response, null)) { Bodies.capture(response) }
+        val durationMs = Calls.elapsedMs(t0)
         draw(call, request, started, sent.data)
-        reply(call, request, t0, response.status.code.toString(), Calls.statusLabel(response.status), received.data, Calls.headers(response))
-        return received.message
+        val headers = guarded(null) { Calls.headers(response) }
+        // A streamed reply is drawn once it has been read (see Bodies), so it is never held up.
+        return Bodies.capture(response) { data ->
+            reply(call, request, durationMs, response.status.code.toString(), Calls.statusLabel(response.status), data, headers)
+        }
     }
 
     private fun tag(
@@ -106,7 +109,7 @@ internal class ClientFilter(
     private fun reply(
         call: PendingCall,
         request: Request,
-        t0: Long,
+        durationMs: Double,
         status: String,
         label: String,
         data: Any?,
@@ -121,7 +124,7 @@ internal class ClientFilter(
                 status = status,
                 replyTo = call.id,
                 source = Calls.SOURCE,
-                durationMs = (System.nanoTime() - t0) / 1_000_000.0,
+                durationMs = durationMs,
                 data = data,
                 headers = headers,
             ),

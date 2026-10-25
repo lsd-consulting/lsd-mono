@@ -1,5 +1,7 @@
 package io.lsdconsulting.lsd.mono.http4k
 
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
@@ -12,6 +14,15 @@ import java.nio.charset.CodingErrorAction
  */
 internal object JsonText {
     private const val MAX_DEPTH = 64
+
+    /**
+     * Whether a body of [contentType] is read as JSON: `application/json` and any `+json` type
+     * (`application/problem+json`), parameters aside. The Spring Boot starter's rule.
+     */
+    fun isJson(contentType: String?): Boolean {
+        val type = contentType?.substringBefore(';')?.trim()?.lowercase() ?: return false
+        return type == "application/json" || type.endsWith("+json")
+    }
 
     /** [bytes] as maps, lists, strings, numbers, booleans and nulls; null when they are not a JSON object or array. */
     fun parse(bytes: ByteArray): Any? {
@@ -133,7 +144,9 @@ internal object JsonText {
                             't' -> out.append('\t')
                             'u' -> {
                                 if (at + 4 > text.length) throw Invalid
-                                out.append(text.substring(at, at + 4).toIntOrNull(16)?.toChar() ?: throw Invalid)
+                                val hex = text.substring(at, at + 4)
+                                if (!hex.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) throw Invalid
+                                out.append(hex.toInt(16).toChar())
                                 at += 4
                             }
                             else -> throw Invalid
@@ -148,8 +161,9 @@ internal object JsonText {
             while (at < text.length && text[at] in "+-0123456789.eE") at++
             val raw = text.substring(start, at)
             if (!grammar.matches(raw)) throw Invalid
-            if (raw.none { it in ".eE" }) raw.toLongOrNull()?.let { return it }
-            return raw.toDouble()
+            // Exactly as written: a Long when it fits, else BigInteger or BigDecimal (never rounded, never Infinity).
+            if (raw.none { it in ".eE" }) return raw.toLongOrNull() ?: BigInteger(raw)
+            return BigDecimal(raw)
         }
     }
 

@@ -2,6 +2,7 @@ package io.lsdconsulting.lsd.mono.http4k
 
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.http4k.Scenarios.arrow
+import io.lsdconsulting.lsd.mono.http4k.Scenarios.body
 import io.lsdconsulting.lsd.mono.http4k.Scenarios.lsd
 import io.lsdconsulting.lsd.mono.http4k.Scenarios.report
 import io.lsdconsulting.lsd.mono.http4k.Scenarios.start
@@ -27,6 +28,7 @@ import org.http4k.websocket.WsStatus
 import org.http4k.websocket.then
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -104,6 +106,79 @@ class WebSocketTest {
         assertEquals("Client -> Prices", drawn.arrow(drawn.message("GET /prices")))
         assertEquals("Prices -> Client", drawn.arrow(drawn.message("""{"sku":"lamp-01","price":10}""")))
         assertEquals("Prices -> Inventory", drawn.arrow(drawn.message("GET /stock/lamp-01")))
+        assertEquals("Client -> Prices", drawn.arrow(drawn.message("close 1000 Normal")), "the client closed it")
+    }
+
+    @Test
+    fun `after the cap, the app's calls are not nested under the last message drawn`() {
+        val scenario = start()
+        val stock = LsdHttp4k.clientFilter("Inventory").then { Response(OK) }
+        val client = prices(quotes = 0, shown = 1, stock = stock).testWsClient(Request(GET, "/prices"))
+
+        client.send(WsMessage("lamp-01"))
+        client.send(WsMessage("desk-02"))
+        client.close(WsStatus.NORMAL)
+
+        val drawn = report(scenario)
+        val first = drawn.message("GET /stock/lamp-01").obj("trace")?.string("parentSpanId")
+        val second = drawn.message("GET /stock/desk-02").obj("trace")?.string("parentSpanId")
+        assertTrue(first != null && second != null && first != second, drawn.json)
+    }
+
+    @Test
+    fun `no messages shown still draws the handshake, the count and the close, and a negative count is refused`() {
+        val scenario = start()
+        val client = prices(quotes = 2, shown = 0).testWsClient(Request(GET, "/prices"))
+        client.send(WsMessage("lamp-01"))
+        client.received().take(2).toList()
+        client.close(WsStatus.NORMAL)
+
+        val drawn = report(scenario)
+        assertEquals(listOf("GET /prices", "101 Switching Protocols", "close 1000 Normal"), drawn.labels, drawn.json)
+        assertTrue(
+            drawn
+                .eventsOf("note")
+                .single()
+                .source
+                .contains("3 more WebSocket messages not drawn"),
+            drawn.json,
+        )
+        assertThrows(IllegalArgumentException::class.java) { LsdHttp4k.wsFilter("Prices", messagesShown = -1) }
+    }
+
+    @Test
+    fun `messages after the close are not drawn`() {
+        val scenario = start()
+        val handler =
+            LsdHttp4k.wsFilter("Feed").then { _: Request ->
+                WsResponse { ws: Websocket ->
+                    ws.onMessage {
+                        ws.close(WsStatus.NORMAL)
+                        ws.send(WsMessage("too late"))
+                    }
+                }
+            }
+        handler.testWsClient(Request(GET, "/feed")).send(WsMessage("hi"))
+
+        val drawn = report(scenario)
+        assertEquals(listOf("GET /feed", "101 Switching Protocols", "hi", "close 1000 Normal"), drawn.labels, drawn.json)
+        assertEquals("Feed -> Client", drawn.arrow(drawn.message("close 1000 Normal")))
+    }
+
+    @Test
+    fun `a text message over the limit is labelled by how it starts and noted as not shown`() {
+        val scenario = start()
+        val text = "x".repeat(Bodies.LIMIT + 1)
+        val handler = LsdHttp4k.wsFilter("Feed").then { _: Request -> WsResponse { ws: Websocket -> ws.onMessage { } } }
+        handler.testWsClient(Request(GET, "/feed")).send(WsMessage(text))
+
+        val drawn = report(scenario)
+        val message = drawn.messages.first { (it["label"] as String).startsWith("xxx") }
+        assertEquals(
+            mapOf("notShown" to "larger than 256 KiB", "size" to (Bodies.LIMIT + 1).toLong()),
+            (message.body() as Map<*, *>).mapValues { (_, v) -> if (v is Number) v.toLong() else v },
+            message.source,
+        )
     }
 
     @Test

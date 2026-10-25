@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.http4k
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.LsdHeaders
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import org.http4k.core.HttpMessage
 import org.http4k.core.Request
@@ -41,10 +42,10 @@ internal object Calls {
     const val SOURCE: String = "jvm"
 
     /** Who made a call, so the app's server filter names its caller (another app's client filter). */
-    const val CALLER_HEADER: String = "lsd-caller"
+    const val CALLER_HEADER: String = LsdHeaders.CALLER
 
     /** The span a call was made under, so the request it starts nests under the one it serves. */
-    const val PARENT_SPAN_HEADER: String = "lsd-parent-span"
+    const val PARENT_SPAN_HEADER: String = LsdHeaders.PARENT_SPAN
 
     /** A client filter's call id, so a server filter in the same JVM can take the call over. */
     const val CALL_HEADER: String = "lsd-call"
@@ -81,6 +82,9 @@ internal object Calls {
         return "${request.method} ${request.uri.path.ifEmpty { "/" }}${if (query.isEmpty()) "" else "?$query"}"
     }
 
+    /** Milliseconds since [t0], a [System.nanoTime]. */
+    fun elapsedMs(t0: Long): Double = (System.nanoTime() - t0) / 1_000_000.0
+
     /** `201 Created`. */
     fun statusLabel(status: Status): String = if (status.description.isBlank()) status.code.toString() else "${status.code} ${status.description}"
 
@@ -94,6 +98,8 @@ internal object Calls {
         } catch (e: VirtualMachineError) {
             throw e
         } catch (e: Throwable) {
+            // Swallowing an interrupt would hide it from the app: keep the thread marked.
+            if (e is InterruptedException) Thread.currentThread().interrupt()
             warnOnce(e)
             fallback
         }
