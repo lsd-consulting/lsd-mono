@@ -15,6 +15,7 @@ Group `io.github.lsd-consulting` (the Central namespace lsd-core already publish
 | `io.github.lsd-consulting:lsd-mono-cucumber-8` | `modules/lsd-mono-cucumber-8` |
 | `io.github.lsd-consulting:lsd-mono-coroutines` | `modules/lsd-mono-coroutines` |
 | `io.github.lsd-consulting:lsd-mono-spring-boot-4` | `modules/lsd-mono-spring-boot-4` |
+| `io.github.lsd-consulting:lsd-mono-http4k-6` | `modules/lsd-mono-http4k-6` |
 | `io.github.lsd-consulting:lsd-mono-report-model` | `modules/lsd-mono-report-model` |
 | `io.github.lsd-consulting:lsd-mono-report-html` | `modules/lsd-mono-report-html` |
 

@@ -22,6 +22,7 @@ notes, are not checked. Run it locally on a tree with no uncommitted changes.
 | `modules/lsd-mono-report-html/ui/dist/lsd-report-payloads.js` | `reportSingle` | The shell's built-in demo when you open `dist/lsd-report.html` with no captured report |
 | `modules/lsd-mono-core/build/pages/` (`index.html`, `example-report.html` and the example report's `-diagram.html`, `-report.js`, `-payloads.js`, `-report.json`) | `./gradlew :modules:lsd-mono-core:kitchenSinkSample` | The [Pages workflow](../.github/workflows/pages.yml) builds and publishes it on each release, from the release tag. `index.html` is the report index that `createIndex()` writes for the example report |
 | `modules/lsd-mono-spring-boot-4/build/pages/` (`index.html`, `shop-report.html`, `kafka-shop-report.html` and the reports' own files) | `./gradlew :modules:lsd-mono-spring-boot-4:sampleReport` | The Spring Boot starter's sample report: its shop fixtures (plain `@SpringBootTest` classes) run by the `sampleReportTests` task, which ignores the one scenario that fails on purpose. The Pages workflow publishes it under `spring-boot-4/` |
+| `modules/lsd-mono-http4k-6/build/pages/` (`index.html`, `shop-report.html`, `server-shop-report.html`, `live-prices-report.html` and the reports' own files) | `./gradlew :modules:lsd-mono-http4k-6:sampleReport` | The http4k integration's sample report: its fixtures (`LsdExtension` tests of an http4k shop in memory, on real servers, and over a WebSocket) run by the `sampleReportTests` task, which ignores the one scenario that fails on purpose. The Pages workflow publishes it under `http4k-6/` |
 | `docs/perf-samples/` | `docs/perf/generate-*.mjs` | Local perf runs (gitignored) |
 
 ## Committed report types (verified by `check`)
@@ -48,6 +49,7 @@ about them.
 | `modules/lsd-mono-junit-jupiter/api/lsd-mono-junit-jupiter.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-cucumber-8/api/lsd-mono-cucumber-8.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-coroutines/api/lsd-mono-coroutines.api` | `./gradlew updateKotlinAbi` |
+| `modules/lsd-mono-http4k-6/api/lsd-mono-http4k-6.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-report-model/api/lsd-mono-report-model.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-report-html/api/lsd-mono-report-html.api` | `./gradlew updateKotlinAbi` |
 
