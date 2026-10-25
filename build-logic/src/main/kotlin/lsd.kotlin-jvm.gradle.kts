@@ -33,7 +33,7 @@ val repoBaseline: Int =
 val baseline: Int =
     (findProperty("lsd.jvm") as String?)
         ?.trim()
-        ?.toInt()
+        ?.let { it.toIntOrNull() ?: error("lsd.jvm must be a Java version such as 21, was '$it' (${project.path}/gradle.properties)") }
         ?.coerceAtLeast(repoBaseline)
         ?: repoBaseline
 
