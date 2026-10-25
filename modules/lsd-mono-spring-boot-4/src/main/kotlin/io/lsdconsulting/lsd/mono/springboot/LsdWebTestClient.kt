@@ -16,8 +16,6 @@ import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder
 import reactor.core.publisher.Mono
 import java.net.URI
-import java.util.Collections
-import java.util.WeakHashMap
 
 /**
  * For a `WebTestClient` the test builds itself. Spring Boot's auto-configured one
@@ -84,34 +82,32 @@ public object LsdWebTestClient {
                 var added = false
                 handler.filters { filters ->
                     if (filters.none { it is LsdWebFilter }) {
-                        filters.add(0, LsdWebFilter { Settings.of(it).names })
+                        filters.add(0, LsdWebFilter { ClientSettings.of(it).names })
                         added = true
                     }
                 }
-                if (added) handler.httpHandlerDecorator { ErrorCapturingResponse.decorate(it) { scenario -> Settings.of(scenario).readParts } }
+                if (added) handler.httpHandlerDecorator { ErrorCapturingResponse.decorate(it) { scenario -> ClientSettings.of(scenario).readParts } }
             }
         }
     }
+}
 
-    /**
-     * What a client built outside the app's context draws with: the settings of the Spring test
-     * that started the scenario, looked up per request (the client may be built before the test's
-     * scenario begins), or, outside a Spring test, system properties and environment variables.
-     */
-    private class Settings(
-        env: Environment,
-    ) {
-        val names = ParticipantNames(env)
-        val readParts = ErrorCapturingResponse.readsParts(env)
+/**
+ * What a client built outside the app's context draws with: the settings of the Spring test that
+ * started the scenario, held with that scenario (see [SpringScenarios.clientSettingsOf]) and looked
+ * up per request, since the client may be built before the test's scenario begins. Outside a
+ * Spring test, system properties and environment variables, read once, on the first such request:
+ * a system property set after that is not seen.
+ */
+internal class ClientSettings(
+    env: Environment,
+) {
+    val names = ParticipantNames(env)
+    val readParts = ErrorCapturingResponse.readsParts(env)
 
-        companion object {
-            private val fallback by lazy { Settings(StandardEnvironment()) }
+    companion object {
+        private val fallback by lazy { ClientSettings(StandardEnvironment()) }
 
-            /** One per test context's environment, kept only while Spring caches that context. */
-            private val byEnvironment: MutableMap<Environment, Settings> = Collections.synchronizedMap(WeakHashMap())
-
-            fun of(scenario: LsdScenario): Settings =
-                SpringScenarios.environmentOf(scenario)?.let { env -> byEnvironment.getOrPut(env) { Settings(env) } } ?: fallback
-        }
+        fun of(scenario: LsdScenario): ClientSettings = SpringScenarios.clientSettingsOf(scenario) ?: fallback
     }
 }

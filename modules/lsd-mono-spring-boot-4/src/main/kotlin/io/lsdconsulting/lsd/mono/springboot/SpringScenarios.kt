@@ -30,7 +30,7 @@ internal object SpringScenarios {
     private val declared = ConcurrentHashMap<LsdScenario, MutableSet<String>>()
     private val published = ConcurrentHashMap<String, LsdScenario>()
     private val sending = ConcurrentHashMap<String, Sending>()
-    private val environments = ConcurrentHashMap<LsdScenario, Environment>()
+    private val clientSettings = ConcurrentHashMap<LsdScenario, Lazy<ClientSettings>>()
 
     /**
      * What this thread is doing for a scenario: serving a request on its server thread, or running
@@ -47,12 +47,12 @@ internal object SpringScenarios {
 
     @Volatile private var warned = false
 
-    /** [environment] is the test's application context's, for what needs its names (see [environmentOf]). */
+    /** [environment] is the test's application context's, for what needs its names (see [clientSettingsOf]). */
     fun started(
         scenario: LsdScenario,
         environment: Environment? = null,
     ) {
-        environment?.let { environments[scenario] = it }
+        environment?.let { clientSettings[scenario] = lazy { ClientSettings(it) } }
         running += scenario
     }
 
@@ -62,14 +62,15 @@ internal object SpringScenarios {
         declared.remove(scenario)
         published.values.removeIf { it == scenario }
         sending.values.removeIf { it.scenario == scenario }
-        environments.remove(scenario)
+        clientSettings.remove(scenario)
     }
 
     /**
-     * The environment of the Spring test that started [scenario]: null outside one. For what is
-     * built outside the app's context, such as a `WebTestClient` bound to a controller.
+     * The settings of the Spring test that started [scenario], resolved on first use: null outside
+     * one. For what is built outside the app's context, such as a `WebTestClient` bound to a
+     * controller. Held only while the scenario runs, so a closed context is not kept alive.
      */
-    fun environmentOf(scenario: LsdScenario): Environment? = environments[scenario]
+    fun clientSettingsOf(scenario: LsdScenario): ClientSettings? = clientSettings[scenario]?.value
 
     fun isRunning(scenario: LsdScenario): Boolean = scenario in running
 
