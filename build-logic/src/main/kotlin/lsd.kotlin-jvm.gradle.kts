@@ -19,7 +19,10 @@ extensions.configure<MajorLines>("majorLines") {
 // Sources compile for it (Kotlin jvmTarget and -Xjdk-release, javac --release) with a toolchain
 // of that version, and tests run on it by default. `-Plsd.test.jvm=21` runs the tests on another
 // JDK instead, which is how CI covers 21 and 25 (see .github/workflows/gradle.yml).
-val baseline: Int =
+// A module built against a library that needs a newer Java sets `lsd.jvm` in its own
+// gradle.properties (lsd-mono-http4k-6: http4k 6 is compiled for 21), and that is its baseline
+// instead. It is never below the repo's, and its tests never run on an older JDK.
+val repoBaseline: Int =
     extensions
         .getByType<VersionCatalogsExtension>()
         .named("libs")
@@ -27,6 +30,12 @@ val baseline: Int =
         .get()
         .requiredVersion
         .toInt()
+val baseline: Int =
+    (findProperty("lsd.jvm") as String?)
+        ?.trim()
+        ?.let { it.toIntOrNull() ?: error("lsd.jvm must be a Java version such as 21, was '$it' (${project.path}/gradle.properties)") }
+        ?.coerceAtLeast(repoBaseline)
+        ?: repoBaseline
 
 java {
     toolchain {
@@ -85,7 +94,8 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 
 tasks.withType<Test>().configureEach {
     if (testJvm.isPresent) {
-        javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(testJvm) })
+        val runOn = testJvm.map { if (it.asInt() < baseline) JavaLanguageVersion.of(baseline) else it }
+        javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(runOn) })
     }
     useJUnitPlatform()
     testLogging {

@@ -200,4 +200,23 @@ class ScenarioPropagationTest {
             logger.removeHandler(handler)
         }
     }
+
+    @Test
+    @OptIn(InternalLsdApi::class)
+    fun `the running scenario is the current one, else the only one running`() {
+        val lsd = LsdContext()
+        assertNull(lsd.runningScenario(), "none running")
+        val first = lsd.beginScenario(bindCurrentThread = false)
+        assertSame(first, lsd.runningScenario(), "the only one running, on a thread it is not bound to")
+        val second = lsd.beginScenario(bindCurrentThread = false)
+        var elsewhere: LsdScenario? = first
+        runOn { elsewhere = lsd.runningScenario() }
+        assertNull(elsewhere, "two running and none bound: no guess")
+        second.bind().use { assertSame(second, lsd.runningScenario(), "the bound one wins") }
+        first.complete("done")
+        runOn { elsewhere = lsd.runningScenario() }
+        assertSame(second, elsewhere)
+        second.complete("done")
+        assertNull(lsd.runningScenario())
+    }
 }

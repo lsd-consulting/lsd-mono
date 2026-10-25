@@ -109,13 +109,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # 17 is the toolchain (the baseline); the last one listed, 25, runs Gradle itself.
+      # 17 is the toolchain (the baseline), 21 the toolchain of a module that needs it (lsd-mono-http4k-6's
+      # lsd.jvm); the last one listed, 25, runs Gradle itself.
       # gradle.properties points Gradle at the JAVA_HOME_<n>_X64 variables setup-java exports.
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: |
             17
+            21
             25
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -148,7 +150,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     # The JVM tests (not the report UI, Pages or verifyGenerated) on each newer JDK. The classes
-    # are still compiled for 17; -Plsd.test.jvm only changes the JDK the tests run on.
+    # are still compiled for 17 (21 for a module with lsd.jvm=21); -Plsd.test.jvm only changes the
+    # JDK the tests run on.
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     strategy:
@@ -165,6 +168,7 @@ jobs:
           distribution: temurin
           java-version: |
             17
+            21
             ${{ matrix.java }}
       # The core tests read the packaged report shell, so the Vite build still runs once.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0

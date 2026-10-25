@@ -18,11 +18,13 @@ LSD Mono records a scenario as a sequence of messages and writes an interactive 
 
 [`lsd-mono-spring-boot-4` README](modules/lsd-mono-spring-boot-4/README.md) covers the Spring Boot 4 starter that draws an existing `@SpringBootTest` suite with no code.
 
+[`lsd-mono-http4k-6` README](modules/lsd-mono-http4k-6/README.md) covers the http4k 6 filters that draw an http4k app's HTTP calls and WebSockets, in memory or on real servers.
+
 The source is at https://github.com/lsd-consulting/lsd-mono.
 
 ## Getting started
 
-The artifacts are on Maven Central under `io.github.lsd-consulting`, all seven on one version. Releases go out weekly, on Tuesday mornings (UK time) when there is something to release ([docs/releasing.md](docs/releasing.md#when-releases-happen)), so the snippets below say `X.Y.Z` instead of a version: use the latest, which the Maven Central badge above shows. The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
+The artifacts are on Maven Central under `io.github.lsd-consulting`, all eight on one version. Releases go out weekly, on Tuesday mornings (UK time) when there is something to release ([docs/releasing.md](docs/releasing.md#when-releases-happen)), so the snippets below say `X.Y.Z` instead of a version: use the latest, which the Maven Central badge above shows. The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later, except `lsd-mono-http4k-6`, which needs Java 21 (as http4k 6 does).
 
 | Artifact | Use it for |
 | --- | --- |
@@ -31,6 +33,7 @@ The artifacts are on Maven Central under `io.github.lsd-consulting`, all seven o
 | `lsd-mono-cucumber-8` | A scenario per Cucumber 8 scenario ([README](modules/lsd-mono-cucumber-8/README.md)). |
 | `lsd-mono-coroutines` | Captures from coroutines that change threads, with kotlinx.coroutines 1 ([README](modules/lsd-mono-coroutines/README.md)). |
 | `lsd-mono-spring-boot-4` | A scenario per `@SpringBootTest` method with no code, drawing Spring MVC and WebFlux, `RestClient`, `RestTemplate`, `WebClient`, Kafka and Spring Data repository calls, for Spring Boot 4 ([README](modules/lsd-mono-spring-boot-4/README.md)). |
+| `lsd-mono-http4k-6` | http4k 6 filters that draw the requests an app serves, the calls it makes and its WebSockets, in memory or on real servers; Java 21, as http4k 6 is ([README](modules/lsd-mono-http4k-6/README.md)). |
 | `lsd-mono-report-model` | The report as plain Kotlin values, for a producer that writes reports without lsd-mono-core ([README](modules/lsd-mono-report-model/README.md)). lsd-mono-core brings it. |
 | `lsd-mono-report-html` | Writes a report as JSON and as the HTML page, with the report UI bundled ([README](modules/lsd-mono-report-html/README.md)). lsd-mono-core brings it. |
 
@@ -45,6 +48,7 @@ dependencies {
     testImplementation("io.github.lsd-consulting:lsd-mono-cucumber-8:$lsdMonoVersion")
     testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:$lsdMonoVersion")
     testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:$lsdMonoVersion")
+    testImplementation("io.github.lsd-consulting:lsd-mono-http4k-6:$lsdMonoVersion")
 }
 ```
 
@@ -69,11 +73,11 @@ Maven:
         <version>${lsd-mono.version}</version>
         <scope>test</scope>
     </dependency>
-    <!-- lsd-mono-cucumber-8, lsd-mono-coroutines and lsd-mono-spring-boot-4 the same way -->
+    <!-- lsd-mono-cucumber-8, lsd-mono-coroutines, lsd-mono-spring-boot-4 and lsd-mono-http4k-6 the same way -->
 </dependencies>
 ```
 
-Each integration brings in `lsd-mono-core`; listing core as well keeps the API you call directly declared. You still bring the test runtime: a JUnit Jupiter engine for `lsd-mono-junit-jupiter`, and Cucumber 8 (`cucumber-java8` and `cucumber-junit-platform-engine`) for `lsd-mono-cucumber-8`; `lsd-mono-spring-boot-4` uses the app's own Spring Boot 4 and `spring-boot-starter-test`. The module READMEs show the setup for each.
+Each integration brings in `lsd-mono-core`; listing core as well keeps the API you call directly declared. You still bring the test runtime: a JUnit Jupiter engine for `lsd-mono-junit-jupiter`, and Cucumber 8 (`cucumber-java8` and `cucumber-junit-platform-engine`) for `lsd-mono-cucumber-8`; `lsd-mono-spring-boot-4` uses the app's own Spring Boot 4 and `spring-boot-starter-test`, and `lsd-mono-http4k-6` the app's own http4k 6. The module READMEs show the setup for each.
 
 ### From this repository
 
@@ -86,10 +90,11 @@ dependencies {
     testImplementation(project(":modules:lsd-mono-cucumber-8"))
     testImplementation(project(":modules:lsd-mono-coroutines")) // only if tests capture from coroutines
     testImplementation(project(":modules:lsd-mono-spring-boot-4")) // only for @SpringBootTest suites
+    testImplementation(project(":modules:lsd-mono-http4k-6")) // only for http4k apps
 }
 ```
 
-They are compiled with `--release 17`, and CI tests on Java 17, 21 and 25. Cucumber support is major 8, Spring Boot support major 4.
+They are compiled with `--release 17` (`lsd-mono-http4k-6` with `--release 21`, as http4k 6 needs Java 21), and CI tests on Java 17, 21 and 25. Cucumber support is major 8, Spring Boot support major 4, http4k support major 6.
 
 ## Capture a scenario
 
@@ -230,6 +235,7 @@ modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
 modules/lsd-mono-cucumber-8/      Cucumber 8 plugin
 modules/lsd-mono-coroutines/      keeps a scenario bound across coroutine thread hops
 modules/lsd-mono-spring-boot-4/   Spring Boot 4 starter
+modules/lsd-mono-http4k-6/        http4k 6 filters (HTTP server and client, WebSockets)
 build-logic/                      convention plugins (lsd.kotlin-jvm)
 ```
 

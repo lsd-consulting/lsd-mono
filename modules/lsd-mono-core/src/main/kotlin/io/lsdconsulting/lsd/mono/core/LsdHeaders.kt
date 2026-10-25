@@ -10,4 +10,15 @@ package io.lsdconsulting.lsd.mono.core
 public object LsdHeaders {
     /** The [LsdScenario.correlationId] of the scenario that sent the message or request. */
     public const val SCENARIO: String = "lsd-scenario"
+
+    /**
+     * Who made an HTTP call, set by an integration's client side so the server side of another
+     * instrumented app (Spring Boot or http4k) names its caller. A contract between integrations.
+     */
+    @InternalLsdApi
+    public const val CALLER: String = "lsd-caller"
+
+    /** The span an HTTP call was made under, so the request it starts nests under the one being served. */
+    @InternalLsdApi
+    public const val PARENT_SPAN: String = "lsd-parent-span"
 }

@@ -221,7 +221,7 @@ internal class LsdInboundFilter(
 
     internal companion object {
         /** Sent by our client interceptor, so a call into another instrumented app nests under its caller. */
-        const val PARENT_SPAN_HEADER: String = "lsd-parent-span"
+        const val PARENT_SPAN_HEADER: String = LsdHeaders.PARENT_SPAN
 
         /** A failed request's reply, waiting for the error page. */
         val PENDING_REPLY: String = LsdInboundFilter::class.java.name + ".pendingReply"

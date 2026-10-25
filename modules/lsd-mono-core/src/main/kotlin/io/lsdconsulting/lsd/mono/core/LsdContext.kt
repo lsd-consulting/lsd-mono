@@ -179,6 +179,16 @@ public class LsdContext :
         }
 
     /**
+     * The scenario a capture on the calling thread belongs to, for an integration that captures
+     * on threads it does not start (an HTTP server's request threads, say) and needs the
+     * scenario itself rather than an unscoped capture: the [currentScenario], else the only
+     * running scenario. Null when no scenario is current and none, or several, are running, so
+     * the caller can leave the event out rather than guess.
+     */
+    @InternalLsdApi
+    public fun runningScenario(): LsdScenario? = guarded("running scenario", { null }) { currentScenario() ?: scenarios.onlyRunning() }
+
+    /**
      * Wrap [task] so it runs bound to the calling thread's current scenario, for
      * handing work to an executor. Returns [task] unchanged when there is none.
      */

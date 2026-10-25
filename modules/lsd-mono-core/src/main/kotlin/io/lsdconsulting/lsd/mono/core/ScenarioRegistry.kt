@@ -44,6 +44,9 @@ internal class ScenarioRegistry(
 
     fun findByCorrelationId(id: String): LsdScenario? = active.values.firstOrNull { it.correlationId == id }
 
+    /** The only running scenario; null when none or several are running. */
+    fun onlyRunning(): LsdScenario? = active.values.toList().singleOrNull()
+
     fun isActive(scenario: LsdScenario): Boolean = isDefault(scenario) || active[scenario.key] === scenario
 
     fun isDefault(scenario: LsdScenario): Boolean = scenario === defaultScenario

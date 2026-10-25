@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.springboot
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.LsdHeaders
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.domain.Participant
 import org.springframework.core.env.Environment
@@ -23,7 +24,7 @@ internal object SpringScenarios {
     const val SOURCE: String = "jvm"
 
     /** Who sent a request, set by our client interceptor so another app's filter can name it. */
-    const val CALLER_HEADER: String = "lsd-caller"
+    const val CALLER_HEADER: String = LsdHeaders.CALLER
 
     private val running = CopyOnWriteArrayList<LsdScenario>()
     private val inbound = ConcurrentHashMap<LsdScenario, ConcurrentLinkedDeque<String>>()
