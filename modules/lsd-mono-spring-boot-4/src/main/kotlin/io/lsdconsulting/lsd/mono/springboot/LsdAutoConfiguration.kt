@@ -166,13 +166,12 @@ public class LsdAutoConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = ["org.springframework.boot.restclient.RestClientCustomizer"])
-    public class RestClients {
+    public class RestClientsConfig {
         @Bean
         public fun lsdRestClientCustomizer(env: Environment): RestClientCustomizer {
             val interceptor = LsdClientInterceptor(ParticipantNames(env))
             return RestClientCustomizer {
-                io.lsdconsulting.lsd.mono.springboot.RestClients
-                    .add(it, interceptor)
+                RestClients.add(it, interceptor)
             }
         }
 
@@ -180,8 +179,7 @@ public class LsdAutoConfiguration {
         public fun lsdRestTemplateCustomizer(env: Environment): RestTemplateCustomizer {
             val interceptor = LsdClientInterceptor(ParticipantNames(env))
             return RestTemplateCustomizer {
-                io.lsdconsulting.lsd.mono.springboot.RestClients
-                    .add(it, interceptor)
+                RestClients.add(it, interceptor)
             }
         }
 
