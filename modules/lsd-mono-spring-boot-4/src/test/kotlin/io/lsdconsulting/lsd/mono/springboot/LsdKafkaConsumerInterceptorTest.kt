@@ -5,6 +5,7 @@ import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.core.testing.LsdTestConfig
 import io.lsdconsulting.lsd.mono.core.testing.ReportJson
 import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
+import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.lang.reflect.Proxy
 import java.nio.file.Path
 
 /**
@@ -143,6 +145,44 @@ class LsdKafkaConsumerInterceptorTest {
         assertEquals(listOf("consume", "consume \"desk-02\""), drawn.labels, drawn.json)
         assertNull(drawn.message("consume")["causedBy"], drawn.json)
     }
+
+    @Test
+    fun `a batch that is only part of the poll hangs its calls off its own last record, not the poll's`() {
+        val scenario = start()
+        val lamp = sent("lamp-01", 0)
+        val desk = sent("desk-02", 1)
+        consumer.onConsume(poll(lamp, desk))
+
+        // The container split the poll: this batch is lamp alone (as with subBatchPerPartition).
+        val batch = poll(lamp)
+        assertSame(batch, LsdBatchInterceptor().intercept(batch.typed(), noConsumer()))
+        val repositoryCallParent = SpringScenarios.parentOf(scenario)
+
+        val drawn = report(scenario)
+        assertEquals(drawn.message("consume \"lamp-01\"").obj("trace")?.string("spanId"), repositoryCallParent, drawn.json)
+    }
+
+    @Test
+    fun `a batch of records no scenario drew leaves what the poll set alone`() {
+        val scenario = start()
+        consumer.onConsume(poll(sent("lamp-01", 0), sent("desk-02", 1)))
+
+        LsdBatchInterceptor().intercept(poll(ConsumerRecord(TOPIC, 0, 9, "other", "not polled")).typed(), noConsumer())
+
+        val repositoryCallParent = SpringScenarios.parentOf(scenario)
+        val drawn = report(scenario)
+        assertEquals(drawn.message("consume \"desk-02\"").obj("trace")?.string("spanId"), repositoryCallParent, drawn.json)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun ConsumerRecords<Any?, Any?>.typed() = this as ConsumerRecords<Any, Any>
+
+    /** The interceptor never touches the consumer. */
+    @Suppress("UNCHECKED_CAST")
+    private fun noConsumer(): Consumer<Any, Any> =
+        Proxy.newProxyInstance(javaClass.classLoader, arrayOf(Consumer::class.java)) { _, method, _ ->
+            error("unexpected call to ${method.name}")
+        } as Consumer<Any, Any>
 
     private companion object {
         const val TOPIC = "orders.placed"

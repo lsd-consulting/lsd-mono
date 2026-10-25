@@ -25,7 +25,11 @@ import reactor.core.publisher.Mono;
 @SpringBootTest(
         classes = SelfBuiltWebTestClientFixture.App.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"spring.application.name=shop", "spring.main.web-application-type=reactive"})
+        properties = {
+            "spring.application.name=shop",
+            "lsd.mono.spring.client-name=Tester",
+            "spring.main.web-application-type=reactive"
+        })
 public class SelfBuiltWebTestClientFixture {
     @SpringBootConfiguration(proxyBeanMethods = false)
     @EnableAutoConfiguration

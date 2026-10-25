@@ -463,7 +463,9 @@ class StarterEndToEndTest {
         for ((test, id) in listOf("over the server" to "order-1", "in the context" to "order-2", "at the controller" to "order-3")) {
             val looked = report.scenario("self built web test client fixture: looks up an order $test")
             assertEquals(listOf("GET /orders/$id", "200 OK"), looked.labels, looked.json)
-            assertEquals("client", looked.message("GET /orders/$id")["from"], looked.json)
+            assertEquals("tester", looked.message("GET /orders/$id")["from"], looked.json)
+            // The app is one participant, named from the test's context, however the client is bound.
+            assertEquals("shop", looked.message("GET /orders/$id")["to"], looked.json)
         }
     }
 

@@ -29,12 +29,11 @@ public class LsdSpringTestLifecycle {
             lsd.findScenario(key)?.discard()
             val reportKey = reportKey(testContext.testClass)
             val scenario = lsd.beginScenario(reportKey = reportKey, key = key)
-            val client =
-                testContext.applicationContext.environment.getProperty("lsd.mono.spring.client-name")
-                    ?: ParticipantNames.DEFAULT_CLIENT
+            val environment = testContext.applicationContext.environment
+            val client = environment.getProperty("lsd.mono.spring.client-name") ?: ParticipantNames.DEFAULT_CLIENT
             lsd.addParticipants(ParticipantType.ACTOR.called(client))
             testContext.setAttribute(ATTRIBUTE, scenario)
-            SpringScenarios.started(scenario)
+            SpringScenarios.started(scenario, environment)
             pending[reportKey] = outerClass(testContext.testClass)
         }
     }

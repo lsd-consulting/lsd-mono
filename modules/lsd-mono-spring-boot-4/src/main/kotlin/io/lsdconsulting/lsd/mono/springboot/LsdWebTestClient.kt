@@ -2,7 +2,9 @@ package io.lsdconsulting.lsd.mono.springboot
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdHeaders
+import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.springboot.SpringScenarios.guarded
+import org.springframework.core.env.Environment
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.http.client.reactive.ClientHttpConnector
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -28,8 +30,10 @@ import java.net.URI
  *
  * Its requests carry the test's scenario, so they are drawn in it even while several tests run at
  * once. Bound to a controller, router function or web handler, where the app's own filters are
- * not in the chain, it also draws the requests itself. Applying it more than once, or to a client
- * that already has it, adds nothing.
+ * not in the chain, it also draws the requests itself, naming the app and the test's client as the
+ * app's own filter does: from the test's application context (`spring.application.name`,
+ * `lsd.mono.spring.app-name`, `lsd.mono.spring.client-name`), as are its other `lsd.mono.spring.*`
+ * settings. Applying it more than once, or to a client that already has it, adds nothing.
  */
 public object LsdWebTestClient {
     /** Apply it with `WebTestClient.Builder.apply(...)`. */
@@ -78,12 +82,32 @@ public object LsdWebTestClient {
                 var added = false
                 handler.filters { filters ->
                     if (filters.none { it is LsdWebFilter }) {
-                        filters.add(0, LsdWebFilter(ParticipantNames(StandardEnvironment())))
+                        filters.add(0, LsdWebFilter { ClientSettings.of(it).names })
                         added = true
                     }
                 }
-                if (added) handler.httpHandlerDecorator { ErrorCapturingResponse.decorate(it) }
+                if (added) handler.httpHandlerDecorator { ErrorCapturingResponse.decorate(it) { scenario -> ClientSettings.of(scenario).readParts } }
             }
         }
+    }
+}
+
+/**
+ * What a client built outside the app's context draws with: the settings of the Spring test that
+ * started the scenario, held with that scenario (see [SpringScenarios.clientSettingsOf]) and looked
+ * up per request, since the client may be built before the test's scenario begins. Outside a
+ * Spring test, system properties and environment variables, read once, on the first such request:
+ * a system property set after that is not seen.
+ */
+internal class ClientSettings(
+    env: Environment,
+) {
+    val names = ParticipantNames(env)
+    val readParts = ErrorCapturingResponse.readsParts(env)
+
+    companion object {
+        private val fallback by lazy { ClientSettings(StandardEnvironment()) }
+
+        fun of(scenario: LsdScenario): ClientSettings = SpringScenarios.clientSettingsOf(scenario) ?: fallback
     }
 }

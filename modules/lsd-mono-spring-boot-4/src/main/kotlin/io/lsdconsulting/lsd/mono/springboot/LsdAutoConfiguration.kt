@@ -36,7 +36,7 @@ public class LsdAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     @ConditionalOnClass(name = ["org.springframework.web.filter.OncePerRequestFilter", "jakarta.servlet.Filter"])
-    public class Servlet {
+    internal class Servlet {
         @Bean
         public fun lsdInboundFilter(env: Environment): FilterRegistrationBean<OncePerRequestFilter> =
             FilterRegistrationBean<OncePerRequestFilter>(LsdInboundFilter(ParticipantNames(env), readParts(env))).apply {
@@ -64,7 +64,7 @@ public class LsdAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
     @ConditionalOnClass(name = ["org.springframework.web.server.WebFilter", "reactor.core.publisher.Mono"])
-    public class Reactive {
+    internal class Reactive {
         @Bean
         public fun lsdWebFilter(env: Environment): WebFilter = LsdWebFilter(ParticipantNames(env))
 
@@ -76,7 +76,7 @@ public class LsdAutoConfiguration {
          */
         @Bean
         public fun lsdErrorReplies(env: Environment): HttpHandlerDecoratorFactory {
-            val readParts = env.getProperty("lsd.mono.spring.multipart.parts.enabled", Boolean::class.java, true)
+            val readParts = ErrorCapturingResponse.readsParts(env)
             return HttpHandlerDecoratorFactory { ErrorCapturingResponse.decorate(it, readParts) }
         }
     }
@@ -92,7 +92,7 @@ public class LsdAutoConfiguration {
             "org.springframework.test.web.reactive.server.WebTestClient",
         ],
     )
-    public class WebTestClients {
+    internal class WebTestClients {
         @Bean
         public fun lsdWebTestClientCustomizer(): WebTestClientBuilderCustomizer =
             WebTestClientBuilderCustomizer { it.filter(LsdWebTestClient.filter()) }
@@ -104,8 +104,8 @@ public class LsdAutoConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = ["org.springframework.web.reactive.function.client.WebClient", "reactor.core.publisher.Mono"])
-    public class WebClients {
-        public companion object {
+    internal class WebClients {
+        companion object {
             /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
@@ -127,8 +127,8 @@ public class LsdAutoConfiguration {
         havingValue = "true",
         matchIfMissing = true,
     )
-    public class ReactorContextPropagation {
-        public companion object {
+    internal class ReactorContextPropagation {
+        companion object {
             /** Static and a [BeanFactoryPostProcessor], so it is in place before any bean serves a request. */
             @Bean
             @JvmStatic
@@ -145,8 +145,8 @@ public class LsdAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = ["org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"])
     @ConditionalOnProperty(prefix = "lsd.mono.spring.executors", name = ["enabled"], havingValue = "true", matchIfMissing = true)
-    public class Executors {
-        public companion object {
+    internal class Executors {
+        companion object {
             /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
@@ -166,13 +166,12 @@ public class LsdAutoConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = ["org.springframework.boot.restclient.RestClientCustomizer"])
-    public class RestClients {
+    internal class RestClientsConfig {
         @Bean
         public fun lsdRestClientCustomizer(env: Environment): RestClientCustomizer {
             val interceptor = LsdClientInterceptor(ParticipantNames(env))
             return RestClientCustomizer {
-                io.lsdconsulting.lsd.mono.springboot.RestClients
-                    .add(it, interceptor)
+                RestClients.add(it, interceptor)
             }
         }
 
@@ -180,12 +179,11 @@ public class LsdAutoConfiguration {
         public fun lsdRestTemplateCustomizer(env: Environment): RestTemplateCustomizer {
             val interceptor = LsdClientInterceptor(ParticipantNames(env))
             return RestTemplateCustomizer {
-                io.lsdconsulting.lsd.mono.springboot.RestClients
-                    .add(it, interceptor)
+                RestClients.add(it, interceptor)
             }
         }
 
-        public companion object {
+        companion object {
             /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
@@ -207,8 +205,8 @@ public class LsdAutoConfiguration {
             "org.apache.kafka.clients.producer.ProducerInterceptor",
         ],
     )
-    public class Kafka {
-        public companion object {
+    internal class Kafka {
+        companion object {
             /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
@@ -228,8 +226,8 @@ public class LsdAutoConfiguration {
         ],
     )
     @ConditionalOnProperty(prefix = "lsd.mono.spring.repositories", name = ["enabled"], havingValue = "true", matchIfMissing = true)
-    public class Repositories {
-        public companion object {
+    internal class Repositories {
+        companion object {
             /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
