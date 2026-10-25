@@ -17,6 +17,7 @@ import io.lsdconsulting.lsd.mono.springboot.fixture.OwnClientsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaBatchListenerFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.OwnKafkaShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.RestClientStreamsFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.SelfBuiltWebTestClientFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxConcurrentOrdersFixture
@@ -451,6 +452,19 @@ class StarterEndToEndTest {
                 ?.get("depot"),
             stream.source,
         )
+    }
+
+    @Test
+    fun `a WebTestClient the test builds itself is drawn, bound to the server, the context or (with the configurer) a controller`() {
+        val summary = execute(SelfBuiltWebTestClientFixture::class.java)
+
+        assertEquals(3, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val report = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single())
+        for ((test, id) in listOf("over the server" to "order-1", "in the context" to "order-2", "at the controller" to "order-3")) {
+            val looked = report.scenario("self built web test client fixture: looks up an order $test")
+            assertEquals(listOf("GET /orders/$id", "200 OK"), looked.labels, looked.json)
+            assertEquals("client", looked.message("GET /orders/$id")["from"], looked.json)
+        }
     }
 
     @Test

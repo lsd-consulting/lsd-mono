@@ -6,10 +6,12 @@ public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Exe
 	public static final field Companion Lio/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Executors$Companion;
 	public fun <init> ()V
 	public static final fun lsdExecutorPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
+	public static final fun lsdExecutorServicePostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
 }
 
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Executors$Companion {
 	public final fun lsdExecutorPostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
+	public final fun lsdExecutorServicePostProcessor ()Lorg/springframework/beans/factory/config/BeanPostProcessor;
 }
 
 public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration$Kafka {
@@ -87,5 +89,10 @@ public class io/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/sp
 	public fun afterTestMethod (Lorg/springframework/test/context/TestContext;)V
 	public fun beforeTestMethod (Lorg/springframework/test/context/TestContext;)V
 	public fun getOrder ()I
+}
+
+public final class io/lsdconsulting/lsd/mono/springboot/LsdWebTestClient {
+	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/springboot/LsdWebTestClient;
+	public static final fun configurer ()Lorg/springframework/test/web/reactive/server/WebTestClientConfigurer;
 }
 
