@@ -61,7 +61,7 @@ Where the non-Kotlin parts are:
 
 lsd-mono-core brings the report model and writer at run time only (Maven `runtime` scope), so a
 test that uses lsd-mono-core never compiles against them. Code that does use their types declares
-them itself, at the same version as lsd-mono-core: all seven are released together at one version
+them itself, at the same version as lsd-mono-core: all eight are released together at one version
 and are only meant to be used at matching versions
 ([docs/versioning-notes.md](../docs/versioning-notes.md)). Both are experimental for now: their
 types need an opt-in and have no binary-compatibility promise yet (see their READMEs).

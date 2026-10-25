@@ -6,7 +6,7 @@ the API is not stable yet ([versioning-notes.md](versioning-notes.md)).
 
 ## What gets published
 
-Group `io.github.lsd-consulting` (the Central namespace lsd-core already publishes under), one train version for all seven:
+Group `io.github.lsd-consulting` (the Central namespace lsd-core already publishes under), one train version for all eight:
 
 | Artifact | Module |
 | --- | --- |

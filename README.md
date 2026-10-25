@@ -24,7 +24,7 @@ The source is at https://github.com/lsd-consulting/lsd-mono.
 
 ## Getting started
 
-The artifacts are on Maven Central under `io.github.lsd-consulting`, all seven on one version. Releases go out weekly, on Tuesday mornings (UK time) when there is something to release ([docs/releasing.md](docs/releasing.md#when-releases-happen)), so the snippets below say `X.Y.Z` instead of a version: use the latest, which the Maven Central badge above shows. The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
+The artifacts are on Maven Central under `io.github.lsd-consulting`, all eight on one version. Releases go out weekly, on Tuesday mornings (UK time) when there is something to release ([docs/releasing.md](docs/releasing.md#when-releases-happen)), so the snippets below say `X.Y.Z` instead of a version: use the latest, which the Maven Central badge above shows. The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed in each. Until v1 they are `0.y.z`, and a minor release may change the API ([docs/releasing.md](docs/releasing.md)). They run on Java 17 or later.
 
 | Artifact | Use it for |
 | --- | --- |
