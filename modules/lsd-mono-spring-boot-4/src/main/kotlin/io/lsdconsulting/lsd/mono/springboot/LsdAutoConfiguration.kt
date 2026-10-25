@@ -76,7 +76,7 @@ public class LsdAutoConfiguration {
          */
         @Bean
         public fun lsdErrorReplies(env: Environment): HttpHandlerDecoratorFactory {
-            val readParts = env.getProperty("lsd.mono.spring.multipart.parts.enabled", Boolean::class.java, true)
+            val readParts = ErrorCapturingResponse.readsParts(env)
             return HttpHandlerDecoratorFactory { ErrorCapturingResponse.decorate(it, readParts) }
         }
     }

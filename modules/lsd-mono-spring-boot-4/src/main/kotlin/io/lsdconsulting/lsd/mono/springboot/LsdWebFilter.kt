@@ -36,9 +36,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * never run leaves no request behind, and the request is served from subscription to its end.
  */
 internal class LsdWebFilter(
-    private val names: ParticipantNames,
+    private val namesFor: (LsdScenario) -> ParticipantNames,
 ) : WebFilter,
     Ordered {
+    /** The app's names, from its own environment. */
+    constructor(names: ParticipantNames) : this({ names })
+
     override fun getOrder(): Int = Ordered.HIGHEST_PRECEDENCE + 10
 
     override fun filter(
@@ -75,6 +78,7 @@ internal class LsdWebFilter(
         body: ByteArray?,
     ): Mono<Void> {
         val request = exchange.request
+        val names = namesFor(scenario)
         val id = SpringScenarios.newId()
         val caller = request.headers.getFirst(SpringScenarios.CALLER_HEADER)?.takeIf { it.isNotBlank() } ?: names.client
         val t0 = System.nanoTime()

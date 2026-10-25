@@ -2,7 +2,9 @@ package io.lsdconsulting.lsd.mono.springboot
 
 import io.lsdconsulting.lsd.mono.core.LsdContext
 import io.lsdconsulting.lsd.mono.core.LsdHeaders
+import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.springboot.SpringScenarios.guarded
+import org.springframework.core.env.Environment
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.http.client.reactive.ClientHttpConnector
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -14,6 +16,8 @@ import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder
 import reactor.core.publisher.Mono
 import java.net.URI
+import java.util.Collections
+import java.util.WeakHashMap
 
 /**
  * For a `WebTestClient` the test builds itself. Spring Boot's auto-configured one
@@ -28,8 +32,10 @@ import java.net.URI
  *
  * Its requests carry the test's scenario, so they are drawn in it even while several tests run at
  * once. Bound to a controller, router function or web handler, where the app's own filters are
- * not in the chain, it also draws the requests itself. Applying it more than once, or to a client
- * that already has it, adds nothing.
+ * not in the chain, it also draws the requests itself, naming the app and the test's client as the
+ * app's own filter does: from the test's application context (`spring.application.name`,
+ * `lsd.mono.spring.app-name`, `lsd.mono.spring.client-name`), as are its other `lsd.mono.spring.*`
+ * settings. Applying it more than once, or to a client that already has it, adds nothing.
  */
 public object LsdWebTestClient {
     /** Apply it with `WebTestClient.Builder.apply(...)`. */
@@ -78,12 +84,34 @@ public object LsdWebTestClient {
                 var added = false
                 handler.filters { filters ->
                     if (filters.none { it is LsdWebFilter }) {
-                        filters.add(0, LsdWebFilter(ParticipantNames(StandardEnvironment())))
+                        filters.add(0, LsdWebFilter { Settings.of(it).names })
                         added = true
                     }
                 }
-                if (added) handler.httpHandlerDecorator { ErrorCapturingResponse.decorate(it) }
+                if (added) handler.httpHandlerDecorator { ErrorCapturingResponse.decorate(it) { scenario -> Settings.of(scenario).readParts } }
             }
+        }
+    }
+
+    /**
+     * What a client built outside the app's context draws with: the settings of the Spring test
+     * that started the scenario, looked up per request (the client may be built before the test's
+     * scenario begins), or, outside a Spring test, system properties and environment variables.
+     */
+    private class Settings(
+        env: Environment,
+    ) {
+        val names = ParticipantNames(env)
+        val readParts = ErrorCapturingResponse.readsParts(env)
+
+        companion object {
+            private val fallback by lazy { Settings(StandardEnvironment()) }
+
+            /** One per test context's environment, kept only while Spring caches that context. */
+            private val byEnvironment: MutableMap<Environment, Settings> = Collections.synchronizedMap(WeakHashMap())
+
+            fun of(scenario: LsdScenario): Settings =
+                SpringScenarios.environmentOf(scenario)?.let { env -> byEnvironment.getOrPut(env) { Settings(env) } } ?: fallback
         }
     }
 }

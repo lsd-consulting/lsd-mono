@@ -51,7 +51,7 @@ WebTestClient client = WebTestClient.bindToController(new OrderController())
         .build();
 ```
 
-It sends the test's scenario with each request and, with no app filter in the chain, draws the requests itself. Applying it twice, or to Spring Boot's client, adds nothing.
+It sends the test's scenario with each request and, with no app filter in the chain, draws the requests itself, with the same names as the app's own filter: the app is named from the test's application context (`lsd.mono.spring.app-name`, else `spring.application.name`) and the caller is `lsd.mono.spring.client-name` (`Client` by default), so the app is one participant however the client is bound. `lsd.mono.spring.multipart.parts.enabled` is read from the same context. Applying it twice, or to Spring Boot's client, adds nothing.
 
 ## Sample report
 
