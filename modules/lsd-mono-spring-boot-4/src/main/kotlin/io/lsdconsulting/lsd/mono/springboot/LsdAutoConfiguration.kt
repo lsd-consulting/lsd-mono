@@ -138,8 +138,9 @@ public class LsdAutoConfiguration {
 
     /**
      * Work handed to Spring-managed executors and schedulers (`@Async`, Boot's
-     * `applicationTaskExecutor`, executors the app declares) keeps its scenario and the call that
-     * handed it over. Off with `lsd.mono.spring.executors.enabled=false`.
+     * `applicationTaskExecutor`, executors the app declares) and to plain `ExecutorService` and
+     * `ScheduledExecutorService` beans keeps its scenario and the call that handed it over. Off
+     * with `lsd.mono.spring.executors.enabled=false`.
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(name = ["org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"])
@@ -150,6 +151,11 @@ public class LsdAutoConfiguration {
             @Bean
             @JvmStatic
             public fun lsdExecutorPostProcessor(): BeanPostProcessor = LsdExecutorPostProcessor()
+
+            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
+            @Bean
+            @JvmStatic
+            public fun lsdExecutorServicePostProcessor(): BeanPostProcessor = LsdExecutorServicePostProcessor()
         }
     }
 

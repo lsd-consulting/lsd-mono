@@ -8,22 +8,34 @@ import io.lsdconsulting.lsd.mono.core.testing.ScenarioJson
 import jakarta.servlet.FilterChain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.aop.framework.ProxyFactory
+import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.test.context.runner.ApplicationContextRunner
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.core.task.SimpleAsyncTaskExecutor
 import org.springframework.core.task.TaskDecorator
+import org.springframework.core.task.support.ExecutorServiceAdapter
 import org.springframework.mock.env.MockEnvironment
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
+import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -98,6 +110,15 @@ class LsdExecutorPropagationTest {
         bothIn: CyclicBarrier,
         scenario: LsdScenario,
         onPool: () -> Unit = {},
+    ): CompletableFuture<Unit> = order(sku, { pool.submit(it).get(5, TimeUnit.SECONDS) }, bothIn, scenario, onPool)
+
+    /** POST /orders/[sku] through the servlet filter, on its own thread, saving the order through [hand]. */
+    private fun order(
+        sku: String,
+        hand: (Callable<Unit>) -> Unit,
+        bothIn: CyclicBarrier,
+        scenario: LsdScenario,
+        onPool: () -> Unit = {},
     ): CompletableFuture<Unit> =
         CompletableFuture.supplyAsync({
             val request = MockHttpServletRequest("POST", "/orders/$sku")
@@ -108,7 +129,7 @@ class LsdExecutorPropagationTest {
                 FilterChain { _, response ->
                     // Both requests are being served before either hands its work over.
                     bothIn.await(5, TimeUnit.SECONDS)
-                    pool.submit { onPool().also { orders.save(sku) } }.get(5, TimeUnit.SECONDS)
+                    hand(Callable { onPool().also { orders.save(sku) } })
                     (response as jakarta.servlet.http.HttpServletResponse).status = 201
                 },
             )
@@ -205,6 +226,147 @@ class LsdExecutorPropagationTest {
                 org.springframework.core.task.support.CompositeTaskDecorator,
         )
         assertSame("left alone", processor.postProcessBeforeInitialization("left alone", "string"))
+    }
+
+    /** Plain pools as the app declares them, one way of handing work over each. */
+    private fun plainHands(): List<Pair<String, (Callable<Unit>) -> Unit>> {
+        val plain = LsdExecutorService(Executors.newFixedThreadPool(2)).also { pools += AutoCloseable { it.shutdownNow() } }
+        val timer = LsdScheduledExecutorService(Executors.newScheduledThreadPool(2)).also { pools += AutoCloseable { it.shutdownNow() } }
+        val wait = 5L to TimeUnit.SECONDS
+        return listOf(
+            "submit" to { task -> plain.submit(task).get(wait.first, wait.second) },
+            "runnable" to { task -> plain.submit(Runnable { task.call() }).get(wait.first, wait.second) },
+            "result" to { task -> plain.submit(Runnable { task.call() }, Unit).get(wait.first, wait.second) },
+            "execute" to { task ->
+                val done = CountDownLatch(1)
+                plain.execute {
+                    task.call()
+                    done.countDown()
+                }
+                assertTrue(done.await(wait.first, wait.second))
+            },
+            "all" to { task -> plain.invokeAll(listOf(task)).single().get() },
+            "alltimed" to { task -> plain.invokeAll(listOf(task), wait.first, wait.second).single().get() },
+            "any" to { task -> plain.invokeAny(listOf(task)) },
+            "anytimed" to { task -> plain.invokeAny(listOf(task), wait.first, wait.second) },
+            "schedule" to { task -> timer.schedule(task, 1, TimeUnit.MILLISECONDS).get(wait.first, wait.second) },
+            "delayed" to { task -> timer.schedule(Runnable { task.call() }, 1, TimeUnit.MILLISECONDS).get(wait.first, wait.second) },
+            "rate" to { task -> periodic(task) { run -> timer.scheduleAtFixedRate(run, 0, 10, TimeUnit.MILLISECONDS) } },
+            "delay" to { task -> periodic(task) { run -> timer.scheduleWithFixedDelay(run, 0, 10, TimeUnit.MILLISECONDS) } },
+        )
+    }
+
+    /** Runs [task] on the first tick of a periodic schedule, then cancels it. */
+    private fun periodic(
+        task: Callable<Unit>,
+        schedule: (Runnable) -> java.util.concurrent.Future<*>,
+    ) {
+        val done = CountDownLatch(1)
+        val ticks =
+            schedule {
+                if (done.count > 0) {
+                    task.call()
+                    done.countDown()
+                }
+            }
+        assertTrue(done.await(5, TimeUnit.SECONDS))
+        ticks.cancel(false)
+    }
+
+    @Test
+    fun `two requests served at once each keep the work they hand to a plain ExecutorService, however it is handed over`() {
+        val scenario = start()
+        val hands = plainHands()
+        for ((how, hand) in hands) {
+            val bothIn = CyclicBarrier(2)
+            listOf("$how-1", "$how-2").map { order(it, hand, bothIn, scenario) }.forEach { it.get(10, TimeUnit.SECONDS) }
+        }
+
+        assertNested(report(scenario), *hands.flatMap { (how, _) -> listOf("$how-1", "$how-2") }.toTypedArray())
+    }
+
+    @Test
+    fun `outside a scenario a plain pool gets the task exactly as it was handed over`() {
+        val seen = mutableListOf<Any>()
+        val recording =
+            object : java.util.concurrent.AbstractExecutorService() {
+                override fun execute(command: Runnable) {
+                    seen += command
+                    command.run()
+                }
+
+                override fun <T> submit(task: Callable<T>): java.util.concurrent.Future<T> {
+                    seen += task
+                    return CompletableFuture.completedFuture(task.call())
+                }
+
+                override fun shutdown() = Unit
+
+                override fun shutdownNow(): MutableList<Runnable> = mutableListOf()
+
+                override fun isShutdown() = false
+
+                override fun isTerminated() = false
+
+                override fun awaitTermination(
+                    timeout: Long,
+                    unit: TimeUnit,
+                ) = true
+            }
+        val wrapped = LsdExecutorService(recording)
+        val task = Callable { "done" }
+        val command = Runnable {}
+        assertEquals("done", wrapped.submit(task).get())
+        wrapped.execute(command)
+        assertEquals(listOf<Any>(task, command), seen)
+        assertTrue(wrapped.toString().startsWith("LsdExecutorService("))
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    class Pools {
+        @Bean
+        fun plainPool(): ExecutorService = Executors.newFixedThreadPool(1).also { raw = it }
+
+        @Bean
+        fun timerPool(): ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+
+        @Bean
+        fun classPool(): ThreadPoolExecutor = Executors.newFixedThreadPool(1) as ThreadPoolExecutor
+
+        @Bean
+        fun adapted(): ExecutorService = ExecutorServiceAdapter(ThreadPoolTaskExecutor().apply { initialize() })
+
+        companion object {
+            @Volatile var raw: ExecutorService? = null
+        }
+    }
+
+    private val contexts =
+        ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(LsdAutoConfiguration::class.java))
+            .withUserConfiguration(Pools::class.java)
+
+    @Test
+    fun `plain ExecutorService beans are wrapped when declared as an interface, and still shut down with the context`() {
+        contexts.run { context ->
+            assertInstanceOf(LsdExecutorService::class.java, context.getBean("plainPool"))
+            assertInstanceOf(LsdScheduledExecutorService::class.java, context.getBean("timerPool"))
+            assertInstanceOf(LsdExecutorService::class.java, context.getBean("plainPool", ExecutorService::class.java))
+            // Declared as a class, so whatever injects it still gets a ThreadPoolExecutor.
+            assertFalse(context.getBean("classPool") is LsdExecutorService)
+            assertInstanceOf(ThreadPoolExecutor::class.java, context.getBean(ThreadPoolExecutor::class.java))
+            // Spring's adapter runs on its TaskExecutor, which carries the scenario already.
+            assertInstanceOf(ExecutorServiceAdapter::class.java, context.getBean("adapted"))
+        }
+        assertTrue(Pools.raw!!.isShutdown, "Spring shut the pool itself down")
+    }
+
+    @Test
+    fun `lsd mono spring executors enabled false leaves plain ExecutorService beans alone`() {
+        contexts.withPropertyValues("lsd.mono.spring.executors.enabled=false").run { context ->
+            assertFalse(context.getBean("plainPool") is LsdExecutorService)
+            assertFalse(context.getBean("timerPool") is LsdExecutorService)
+        }
     }
 
     @Test

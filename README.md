@@ -30,7 +30,7 @@ The artifacts are on Maven Central under `io.github.lsd-consulting`, all seven o
 | `lsd-mono-junit-jupiter` | A scenario per JUnit Jupiter 6 test ([README](modules/lsd-mono-junit-jupiter/README.md)). |
 | `lsd-mono-cucumber-8` | A scenario per Cucumber 8 scenario ([README](modules/lsd-mono-cucumber-8/README.md)). |
 | `lsd-mono-coroutines` | Captures from coroutines that change threads, with kotlinx.coroutines 1 ([README](modules/lsd-mono-coroutines/README.md)). |
-| `lsd-mono-spring-boot-4` | A scenario per `@SpringBootTest` method with no code, drawing Spring MVC, `RestClient`, `RestTemplate`, Kafka and Spring Data repository calls, for Spring Boot 4 ([README](modules/lsd-mono-spring-boot-4/README.md)). |
+| `lsd-mono-spring-boot-4` | A scenario per `@SpringBootTest` method with no code, drawing Spring MVC and WebFlux, `RestClient`, `RestTemplate`, `WebClient`, Kafka and Spring Data repository calls, for Spring Boot 4 ([README](modules/lsd-mono-spring-boot-4/README.md)). |
 | `lsd-mono-report-model` | The report as plain Kotlin values, for a producer that writes reports without lsd-mono-core ([README](modules/lsd-mono-report-model/README.md)). lsd-mono-core brings it. |
 | `lsd-mono-report-html` | Writes a report as JSON and as the HTML page, with the report UI bundled ([README](modules/lsd-mono-report-html/README.md)). lsd-mono-core brings it. |
 

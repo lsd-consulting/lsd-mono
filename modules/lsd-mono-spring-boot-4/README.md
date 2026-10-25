@@ -6,7 +6,7 @@ It draws:
 
 - **inbound Spring MVC** requests the app serves (`Client → Shop: POST /orders`, and the reply with its status and latency);
 - **inbound WebFlux** requests, annotated controllers and router functions alike, drawn the same way;
-- **`WebTestClient` requests** from Spring Boot's auto-configured client (`@AutoConfigureWebTestClient`), bound to the application context or to a running server, drawn in the test's scenario like any other request to the app;
+- **`WebTestClient` requests** from Spring Boot's auto-configured client (`@AutoConfigureWebTestClient`), bound to the application context or to a running server, drawn in the test's scenario like any other request to the app, and one the test builds itself ([below](#a-webtestclient-the-test-builds-itself));
 - **outbound `RestClient` and `RestTemplate`** calls made through Spring Boot's `RestClient.Builder` and `RestTemplateBuilder` (`Shop → Pricing: POST /quotes`), with a server-sent event reply drawn as its events while the app streams it;
 - **outbound `WebClient`** calls through any `WebClient.Builder` or `WebClient` bean, Spring Boot's builder or one the app builds itself, with both bodies, and nested under the request being served even after the reactive chain hops threads;
 - **Kafka records sent** through any Spring producer factory the app's beans use (Spring Boot's own, or one the app builds itself), so any `KafkaTemplate`, as a publish from the app to the topic (`Shop → orders.placed: publish "lamp-01"`, with the key, headers and payload);
@@ -39,6 +39,19 @@ class PlaceOrderTest {
 ```
 
 The report is titled after the class (`place order`), each scenario after the method (`place order: places an order`), or after `@DisplayName` when there is one. A failed test is an error scenario with its reason; an aborted one is a warning.
+
+## A WebTestClient the test builds itself
+
+Bound to the application context (`WebTestClient.bindToApplicationContext(context)`) or to the running server (`bindToServer()`), it needs nothing: the app's own filter draws its requests, in the test's scenario while one test runs at a time. Bound to a controller, router function or web handler, the app's filters are not in the chain and nothing is drawn, and with tests running in parallel a request may land outside its test's scenario. One line covers both:
+
+```java
+WebTestClient client = WebTestClient.bindToController(new OrderController())
+        .configureClient()
+        .apply(LsdWebTestClient.configurer())
+        .build();
+```
+
+It sends the test's scenario with each request and, with no app filter in the chain, draws the requests itself. Applying it twice, or to Spring Boot's client, adds nothing.
 
 ## Sample report
 
@@ -80,7 +93,7 @@ Build it yourself with `./gradlew :modules:lsd-mono-spring-boot-4:sampleReport` 
 | `lsd.mono.spring.client-name` | `Client` | the test's participant name |
 | `lsd.mono.spring.kafka.consumer.enabled` | `true` | `false` leaves Kafka consumes out (sends are still drawn) |
 | `lsd.mono.spring.repositories.enabled` | `true` | `false` leaves Spring Data repository calls out |
-| `lsd.mono.spring.executors.enabled` | `true` | `false` leaves Spring's task executors and schedulers undecorated |
+| `lsd.mono.spring.executors.enabled` | `true` | `false` leaves Spring's task executors and schedulers undecorated, and plain `ExecutorService` beans unwrapped |
 | `lsd.mono.spring.reactor.context-propagation.enabled` | `true` | `false` stops the starter turning on Reactor's automatic context propagation |
 | `lsd.mono.spring.multipart.parts.enabled` | `true` | `false` stops the starter reading a multipart request's parts, in the servlet filter and in a reactive app (the servlet filter also leaves them alone with `spring.servlet.multipart.enabled=false` or `resolve-lazily=true`) |
 
@@ -95,19 +108,21 @@ A test class that already has `@ExtendWith(LsdExtension::class)` ([lsd-mono-juni
 - `LsdAutoConfiguration` (`META-INF/spring/…AutoConfiguration.imports`) registers a servlet filter, and `RestClientCustomizer` and `RestTemplateCustomizer` beans that add a client interceptor. A bean post-processor adds the interceptor, once, to the clients an app builds itself as beans: a `RestClient` or `RestClient.Builder` from `RestClient.builder()`, a `RestTemplate` made with `new`, and a `RestTemplateBuilder` the app declares.
 - The servlet filter writes the response through to the client as the app writes it, copying the first 256 KB, so a stream (`SseEmitter`, `ResponseBodyEmitter`) reaches the client as it is sent. An asynchronous request is answered when it completes. When a handler fails, by an exception or `sendError`, the filter also sees Spring Boot's `/error` dispatch and draws the body it writes (the error attributes JSON); a `ProblemDetail` from the app's own handler is drawn as written. Under MockMvc, which runs no error page, the reply is what the handler left.
 - In a reactive app it registers a `WebFilter` instead of the servlet filter. A small request body of known length is read up front and handed to the app again; the response body is copied as it is written, never consumed. The request being served goes into Reactor's context, so a `WebClient` call nests under it on whatever thread it runs. An `HttpHandlerDecoratorFactory` bean wraps the server's handler, and a `WebTestClient`'s bound to the context, which Spring builds the same way. During a scenario it wraps the response, so after a failure the reply drawn is the body the `WebExceptionHandler` writes (Spring Boot's error JSON), and it reads the head of a multipart request (up to 256 KB, sized or chunked) before the app does, then hands every byte on, so `@RequestPart` and `ServerRequest.multipartData()` work as before. It has to sit there rather than in the `WebFilter`: WebFlux parses multipart data from the request the exchange was created with.
-- A `WebTestClientBuilderCustomizer` adds a filter to Spring Boot's `WebTestClient` that sends the test's scenario in `lsd-scenario` (always when bound to the context, where nothing leaves the JVM; to loopback hosts or `lsd.mono.propagation.allowedHosts` when bound to a server), so the app's own filter draws the request in the right scenario.
+- A `WebTestClientBuilderCustomizer` adds a filter to Spring Boot's `WebTestClient` that sends the test's scenario in `lsd-scenario` (always when bound to the context, where nothing leaves the JVM; to loopback hosts or `lsd.mono.propagation.allowedHosts` when bound to a server), so the app's own filter draws the request in the right scenario. `LsdWebTestClient.configurer()` adds the same filter to a client the test builds, and, when it is bound to a controller, router function or web handler, the starter's `WebFilter` and response wrapper.
 - For `WebClient` it registers a bean post-processor that adds an `ExchangeFilterFunction` to every `WebClient.Builder` bean (Spring Boot's included) and rebuilds every `WebClient` bean that lacks it. The reply is drawn when the app has read its body.
 - Streamed bodies are summarised, never consumed or held whole: a server-sent event stream is drawn as its event count and its first five events (`event`, `id`, `data`), a multipart body as its parts (name, file name, type and size, never the contents). A multipart or event-stream body over 256 KB is summarised from its first 256 KB and marked `truncated`. An event stream read through `RestClient` or `RestTemplate` is copied as the app reads it, and its reply is drawn once: when the app reads to the end, or, marked `truncated`, when it closes the stream before then.
 - Not covered:
   - a client built inline and never a bean (`RestClient.create()`, `new RestTemplate()` in a method, `WebClient.create()`): neither Spring nor the clients offer a global hook short of bytecode instrumentation. Build it from Spring Boot's injected `RestClient.Builder`, `RestTemplateBuilder` or `WebClient.Builder`, or declare it as a bean;
   - a server-sent event response through `RestClient` or `RestTemplate` that the app neither reads to the end nor closes: its reply is never drawn, since nothing marks when the app is done with it. Reading it without the app would consume the stream, so the starter waits for the app;
-  - a `WebTestClient` the test builds itself (`WebTestClient.bindToServer()`, `bindToController(...)`, `bindToRouterFunction(...)`) rather than Spring Boot's: the request is still drawn when it reaches the app's filter, but outside the test's scenario unless the test sends `lsd-scenario`.
+  - a `WebTestClient` the test builds bound to a controller, router function or web handler, unless it applies `LsdWebTestClient.configurer()` ([above](#a-webtestclient-the-test-builds-itself)).
 - Work a request hands to another thread keeps its scenario and the request that handed it over:
   - For Spring's `ThreadPoolTaskExecutor`, `ThreadPoolTaskScheduler` and `SimpleAsyncTaskExecutor` beans (Spring Boot's `applicationTaskExecutor`, so `@Async`, included) it registers a bean post-processor that adds a `TaskDecorator`. It is composed with the app's own decorator (a `CompositeTaskDecorator`, the app's inside), and captures the request when the task is submitted.
+  - A plain `ExecutorService` or `ScheduledExecutorService` bean (`Executors.newFixedThreadPool(4)`, a `ThreadPoolExecutorFactoryBean` excepted) is wrapped so each task it is given keeps its scenario: `submit`, `execute`, `invokeAll`, `invokeAny` and the `schedule` methods. It is wrapped only when declared as one of those interfaces, so whatever injects it still gets what it asked for; Spring shuts the pool itself down as before.
   - In a reactive app, with `io.micrometer:context-propagation` on the test classpath (it is managed by Spring Boot's dependencies), it registers a `ThreadLocalAccessor` for the request it puts in Reactor's context and turns on `Hooks.enableAutomaticContextPropagation()`, as `spring.reactor.context-propagation=auto` does. A repository call or Kafka send made after `publishOn` or `subscribeOn` then nests under its own request, even with several served at once. Without the library those calls fall back to the most recent request in the scenario.
   - Not covered:
-    - a plain `java.util.concurrent.ExecutorService` bean, `CompletableFuture.supplyAsync` without an executor, or the common `ForkJoinPool`;
-    - a periodic `@Scheduled` task: it is scheduled at startup, outside any scenario, so its calls are drawn as the test's when one test is running and left out otherwise.
+    - an executor bean declared as a class (`ThreadPoolExecutor`, `ForkJoinPool`, or a `@Component` that implements `ExecutorService`): declare it as `ExecutorService` instead;
+    - an executor that is not a bean, `CompletableFuture.supplyAsync` without an executor, and the common `ForkJoinPool`: there is no hook short of instrumentation. Pass the wrapped bean (`supplyAsync(work, pool)`);
+    - a periodic `@Scheduled` task: it is scheduled at startup, outside any scenario, so its calls are drawn as the test's when one test is running and left out otherwise. A task a request schedules on a `ScheduledExecutorService` bean keeps that request's scenario.
 - For Kafka it registers a bean post-processor that appends a Kafka `ProducerInterceptor` and `ConsumerInterceptor` to the app's own `interceptor.classes` in every `ProducerFactory` and `ConsumerFactory` bean, and in the factory behind every `KafkaTemplate` and listener container factory bean, so factories the app builds itself are covered as well as Spring Boot's. Not covered yet:
   - a `ConcurrentMessageListenerContainer` or `KafkaMessageListenerContainer` declared directly as a bean, rather than made by a listener container factory;
   - a custom `KafkaListenerContainerFactory` that does not extend `AbstractKafkaListenerContainerFactory`;
