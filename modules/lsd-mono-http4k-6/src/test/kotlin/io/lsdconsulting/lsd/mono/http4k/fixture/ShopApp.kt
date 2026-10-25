@@ -47,7 +47,7 @@ object ShopApp {
             routes(
                 "/orders/{sku}" bind POST to { request ->
                     val sku = request.path("sku").orEmpty()
-                    val inStock = stock(Request(GET, "/stock/$sku")).bodyString().contains("\"available\":true")
+                    val inStock = stock(Request(GET, "/stock/$sku")).bodyString().endsWith("\"available\":true}")
                     when {
                         !inStock -> Response(CONFLICT).header(json.first, json.second).body("""{"error":"$sku is out of stock"}""")
                         !pay(Request(POST, "/payments").header(json.first, json.second).body("""{"amount":49.0}""")).status.successful ->
