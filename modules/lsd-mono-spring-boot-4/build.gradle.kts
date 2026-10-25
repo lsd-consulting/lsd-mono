@@ -55,6 +55,7 @@ dependencies {
     compileOnly("io.projectreactor:reactor-core")
     compileOnly("io.micrometer:context-propagation")
     compileOnly("org.springframework:spring-test")
+    compileOnly("org.springframework.boot:spring-boot-webtestclient")
     compileOnly("org.springframework:spring-aop")
     compileOnly("org.springframework.data:spring-data-commons")
     compileOnly("org.springframework.kafka:spring-kafka")
@@ -73,6 +74,8 @@ dependencies {
     // Reactor restores the request being served onto each thread a chain hops to (LsdContextPropagation).
     testImplementation("io.micrometer:context-propagation")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // WebTestClientFixture: @AutoConfigureWebTestClient and the customizer the starter registers.
+    testImplementation("org.springframework.boot:spring-boot-webtestclient")
     testImplementation("org.springframework.data:spring-data-keyvalue")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
@@ -160,6 +163,8 @@ val sampleReportTests =
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.OwnClientsFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.MvcStreamsFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxStreamsFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebTestClientFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.RestClientStreamsFixture")
         }
         writesSampleReport(sampleReportDir)
         ignoreFailures = true
@@ -179,6 +184,8 @@ val sampleReportTests =
                     "own-clients-fixture-",
                     "mvc-streams-fixture-",
                     "web-flux-streams-fixture-",
+                    "web-test-client-fixture-",
+                    "rest-client-streams-fixture-",
                 )
             check(expected.all { prefix -> diagrams.any { it.startsWith(prefix) } }) {
                 "sampleReportTests wrote $diagrams, not every report in $expected"
@@ -226,6 +233,10 @@ tasks.register<Sync>("sampleReport") {
         rename("""mvc-streams-fixture-[0-9a-f]{8}-diagram\.html""", "mvc-streams-report.html")
         include("web-flux-streams-fixture-*-diagram.html")
         rename("""web-flux-streams-fixture-[0-9a-f]{8}-diagram\.html""", "webflux-streams-report.html")
+        include("web-test-client-fixture-*-diagram.html")
+        rename("""web-test-client-fixture-[0-9a-f]{8}-diagram\.html""", "webtestclient-report.html")
+        include("rest-client-streams-fixture-*-diagram.html")
+        rename("""rest-client-streams-fixture-[0-9a-f]{8}-diagram\.html""", "rest-client-streams-report.html")
     }
     into(layout.buildDirectory.dir("pages"))
 }

@@ -13,9 +13,11 @@ import org.springframework.http.client.ClientHttpRequestExecution
 import org.springframework.http.client.ClientHttpRequestInterceptor
 import org.springframework.http.client.ClientHttpResponse
 import java.io.ByteArrayInputStream
+import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Draws every call a `RestClient` or `RestTemplate` built by Spring Boot makes during a test:
@@ -74,6 +76,17 @@ internal class LsdClientInterceptor(
                 reply(scenario, id, target, caller, t0, "error", e.javaClass.simpleName, e.message)
                 throw e
             }
+        // An event stream is drawn as the app reads it, so the call still streams (see TappedEvents).
+        val events = guarded(false) { Streams.isEventStream(response.headers.contentType?.toString()) }
+        if (events) {
+            return guarded<ClientHttpResponse>(response) {
+                val code = response.statusCode.value()
+                val headers = flatten(response.headers)
+                TappedEvents(response) { summary ->
+                    reply(scenario, id, target, caller, t0, code.toString(), statusLabel(code), summary, headers)
+                }
+            }
+        }
         val buffered = guarded<ClientHttpResponse>(response) { BufferedResponse.of(response) }
         guarded(Unit) {
             val code = buffered.statusCode.value()
@@ -152,4 +165,73 @@ private class ConcatResponse(
     private val head: ByteArray,
 ) : ClientHttpResponse by delegate {
     override fun getBody(): InputStream = java.io.SequenceInputStream(ByteArrayInputStream(head), delegate.body)
+}
+
+/**
+ * An event stream, counted as the app reads it, with its first few events (see [SseTap]); never
+ * held. The reply is drawn once: when the stream ends, or when the app closes it first (then it is
+ * marked `truncated`, as the rest went unread). One the app never closes is never drawn.
+ */
+private class TappedEvents(
+    private val delegate: ClientHttpResponse,
+    private val draw: (Any?) -> Unit,
+) : ClientHttpResponse by delegate {
+    private val tap = SseTap()
+    private val drawn = AtomicBoolean()
+
+    @Volatile private var ended = false
+    private var stream: InputStream? = null
+
+    override fun getBody(): InputStream =
+        synchronized(this) {
+            stream ?: Tapped(delegate.body).also { stream = it }
+        }
+
+    override fun close() {
+        try {
+            finish()
+        } finally {
+            delegate.close()
+        }
+    }
+
+    private fun finish() {
+        if (drawn.compareAndSet(false, true)) guarded(Unit) { draw(tap.summary(cut = !ended)) }
+    }
+
+    private inner class Tapped(
+        input: InputStream,
+    ) : FilterInputStream(input) {
+        override fun read(): Int {
+            val b = super.read()
+            if (b < 0) end() else guarded(Unit) { tap.copy(byteArrayOf(b.toByte())) }
+            return b
+        }
+
+        override fun read(
+            b: ByteArray,
+            off: Int,
+            len: Int,
+        ): Int {
+            val n = super.read(b, off, len)
+            if (n < 0)
+                end()
+            else if (n > 0)
+                guarded(Unit) { tap.copy(b, off, n) }
+            return n
+        }
+
+        override fun close() {
+            try {
+                finish()
+            } finally {
+                super.close()
+            }
+        }
+
+        private fun end() {
+            ended = true
+            finish()
+        }
+    }
 }

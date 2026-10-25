@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Work handed to a Spring-managed executor keeps its scenario and the request that handed it over. */
 @LsdTestConfig(deterministicIds = true)
@@ -210,12 +211,15 @@ class LsdExecutorPropagationTest {
     fun `the listener waits for a request still being answered, and no longer than its limit`() {
         val scenario = start()
         SpringScenarios.enter(scenario, "late")
-        val answered = CompletableFuture.runAsync {
+        val left = AtomicBoolean()
+        val answered = Thread {
             Thread.sleep(50)
+            left.set(true)
             SpringScenarios.leave(scenario, "late")
-        }
-        SpringScenarios.settle(scenario)
-        assertTrue(answered.isDone, "settled before the request was left")
+        }.apply { start() }
+        SpringScenarios.settle(scenario, timeoutMs = 10_000)
+        assertTrue(left.get(), "settled before the request was left")
+        answered.join()
 
         SpringScenarios.enter(scenario, "never")
         val t0 = System.nanoTime()
