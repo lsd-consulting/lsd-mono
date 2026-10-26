@@ -19,13 +19,13 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor
 import org.springframework.messaging.simp.SimpMessageType
 import org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler
 import org.springframework.messaging.simp.config.ChannelRegistration
-import org.springframework.messaging.simp.stomp.StompCommand
-import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 import org.springframework.messaging.support.ExecutorChannelInterceptor
 import org.springframework.messaging.support.MessageBuilder
 import org.springframework.messaging.support.MessageHeaderAccessor
 import org.springframework.util.ClassUtils
+import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketHandler
+import org.springframework.web.socket.WebSocketMessage
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
 import org.springframework.web.socket.handler.WebSocketHandlerDecorator
 import org.springframework.web.socket.messaging.SubProtocolWebSocketHandler
@@ -62,6 +62,37 @@ internal object Stomp {
     }
 
     fun session(message: Message<*>): DrawnSession? = SimpMessageHeaderAccessor.getSessionId(message.headers)?.let { sessions[it] }
+
+    /**
+     * What the popup shows of an ERROR frame the app writes to the socket: its `message` header and
+     * body. Null for any other frame.
+     */
+    fun error(message: WebSocketMessage<*>): Map<String, Any?>? {
+        val text = (message as? TextMessage)?.payload ?: return null
+        if (!text.startsWith("ERROR\n") && !text.startsWith("ERROR\r\n")) return null
+        val lines = text.substringBefore('\u0000').lines()
+        val blank = lines.indexOfFirst { it.isEmpty() }.takeIf { it > 0 } ?: lines.size
+        val why = lines
+            .subList(1, blank)
+            .firstOrNull { it.startsWith("message:") }
+            ?.substringAfter(':')
+            ?.let(::unescape)
+        val body = lines.drop(blank + 1).joinToString("\n")
+        return linkedMapOf("message" to why, "body" to body(body)).filterValues { it != null }
+    }
+
+    /** A STOMP header value, unescaped. */
+    private fun unescape(value: String): String =
+        ESCAPE.replace(value) {
+            when (val c = it.groupValues[1]) {
+                "r" -> "\r"
+                "n" -> "\n"
+                "c" -> ":"
+                else -> c
+            }
+        }
+
+    private val ESCAPE = Regex("""\\(.)""")
 
     /** What the popup shows of a frame's body. */
     fun body(payload: Any?): Any? =
@@ -153,7 +184,7 @@ internal class LsdStompInbound(
     }
 }
 
-/** Frames to the caller: the messages its subscriptions receive, and errors. */
+/** Frames to the caller: the messages its subscriptions receive. ERROR frames are drawn by [DrawnSession], which sees them all. */
 internal class LsdStompOutbound : ExecutorChannelInterceptor {
     override fun preSend(
         message: Message<*>,
@@ -167,18 +198,9 @@ internal class LsdStompOutbound : ExecutorChannelInterceptor {
         val drawn = Stomp.session(message) ?: return
         val headers = message.headers
         val destination = SimpMessageHeaderAccessor.getDestination(headers)
-        when (SimpMessageHeaderAccessor.getMessageType(headers)) {
-            SimpMessageType.MESSAGE -> {
-                val name = headers[MessageNames.HEADER] as? String
-                drawn.drawing.arrow(drawn.app, drawn.call.caller, "${name ?: "MESSAGE"} $destination", Stomp.body(message.payload))
-            }
-            else -> {
-                val stomp = StompHeaderAccessor.wrap(message)
-                if (stomp.command != StompCommand.ERROR) return
-                val why = stomp.message?.let { " $it" } ?: ""
-                drawn.drawing.arrow(drawn.app, drawn.call.caller, "ERROR$why", Stomp.body(message.payload), status = "error")
-            }
-        }
+        if (SimpMessageHeaderAccessor.getMessageType(headers) != SimpMessageType.MESSAGE) return
+        val name = headers[MessageNames.HEADER] as? String
+        drawn.drawing.arrow(drawn.app, drawn.call.caller, "${name ?: "MESSAGE"} $destination", Stomp.body(message.payload))
     }
 }
 

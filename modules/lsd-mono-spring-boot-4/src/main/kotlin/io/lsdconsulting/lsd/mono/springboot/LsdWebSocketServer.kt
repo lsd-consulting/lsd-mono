@@ -29,21 +29,25 @@ internal class LsdWebSocketPostProcessor(
     private val env: Environment,
 ) : BeanPostProcessor {
     private val names by lazy { ParticipantNames(env) }
-    private val shown by lazy {
-        env.getProperty("lsd.mono.spring.websocket.messages-shown", Int::class.java, WsDrawing.DEFAULT_SHOWN)
-    }
+    private val shown by lazy { WsDrawing.shown(env) }
 
     override fun postProcessAfterInitialization(
         bean: Any,
         beanName: String,
     ): Any {
-        if (bean is WebSocketHandlerMapping) guarded(Unit) { wrap(bean) }
+        if (bean !is WebSocketHandlerMapping) return bean
+        // Outside the guard: a negative messages-shown fails the app's start, with the setting named.
+        val shown = shown
+        guarded(Unit) { wrap(bean, shown) }
         return bean
     }
 
-    private fun wrap(mapping: WebSocketHandlerMapping) {
+    private fun wrap(
+        mapping: WebSocketHandlerMapping,
+        shown: Int,
+    ) {
         for ((path, handler) in mapping.handlerMap.toMap()) {
-            if (handler !is WebSocketHttpRequestHandler || handler.webSocketHandler is LsdWebSocketHandler) continue
+            if (handler !is WebSocketHttpRequestHandler) continue
             val app = unwrap(handler.webSocketHandler)
             if (app is LsdWebSocketHandler) continue
             // A STOMP endpoint's frames are drawn from its channels (see LsdStompInterceptor); this draws its close.
@@ -186,7 +190,12 @@ internal class DrawnSession(
     private val frames: Boolean,
 ) : WebSocketSessionDecorator(session) {
     override fun sendMessage(message: WebSocketMessage<*>) {
-        if (frames) drawing.message(app, call.caller, message)
+        if (frames) {
+            drawing.message(app, call.caller, message)
+        } else {
+            // STOMP writes its ERROR frames here, some (an inbound interceptor's rejection) without the outbound channel.
+            guarded(null) { Stomp.error(message) }?.let { drawing.arrow(app, call.caller, "ERROR", it, status = "error") }
+        }
         super.sendMessage(message)
     }
 

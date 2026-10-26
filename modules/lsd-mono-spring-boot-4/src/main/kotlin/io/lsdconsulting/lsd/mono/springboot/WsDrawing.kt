@@ -4,6 +4,7 @@ import io.lsdconsulting.lsd.mono.core.Interaction
 import io.lsdconsulting.lsd.mono.core.InteractionKind
 import io.lsdconsulting.lsd.mono.core.LsdScenario
 import io.lsdconsulting.lsd.mono.springboot.SpringScenarios.guarded
+import org.springframework.core.env.Environment
 import org.springframework.web.socket.BinaryMessage
 import org.springframework.web.socket.CloseStatus
 import org.springframework.web.socket.TextMessage
@@ -100,7 +101,7 @@ internal class WsDrawing(
         to: String,
         e: Throwable,
     ) = guarded(Unit) {
-        if (!SpringScenarios.isRunning(scenario)) return@guarded
+        if (closed.get() || !SpringScenarios.isRunning(scenario)) return@guarded
         scenario.ingest(
             Interaction(
                 kind = InteractionKind.MESSAGE,
@@ -118,6 +119,14 @@ internal class WsDrawing(
     companion object {
         const val TEXT_LABEL: String = "text message"
         const val DEFAULT_SHOWN: Int = 20
+        const val SHOWN_PROPERTY: String = "lsd.mono.spring.websocket.messages-shown"
+
+        /** How many of a socket's messages are drawn: `lsd.mono.spring.websocket.messages-shown`, 20 by default. */
+        fun shown(env: Environment): Int {
+            val shown = env.getProperty(SHOWN_PROPERTY, Int::class.java, DEFAULT_SHOWN)
+            require(shown >= 0) { "$SHOWN_PROPERTY must not be negative: $shown" }
+            return shown
+        }
 
         /**
          * A message's label and what the popup shows, or null for a ping or pong. The label is

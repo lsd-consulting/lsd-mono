@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.lsdconsulting.lsd.mono.springboot.LsdWebSocketClient;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -19,14 +20,19 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.converter.JacksonJsonMessageConverter;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
+import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.CloseStatus;
@@ -48,7 +54,8 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 /**
  * A shop with no LSD code that quotes prices over WebSockets: a raw {@code @EnableWebSocket}
  * handler at {@code /prices}, and a STOMP endpoint at {@code /stomp} whose {@code @MessageMapping}
- * takes a {@link QuoteRequest} and answers on {@code /topic/prices} with a {@link PriceChanged}.
+ * takes a {@link QuoteRequest} and answers on {@code /topic/prices} with a {@link PriceChanged}, and
+ * whose channel interceptor refuses any SEND to {@code /app/forbidden}.
  * The tests open their sockets through {@code LsdWebSocketClient.wrap(...)}, all but one, which
  * shows a plain client is drawn the same. Launched by StarterEndToEndTest, and part of the sample report.
  */
@@ -113,8 +120,18 @@ public class WebSocketShopFixture {
             }
 
             @Override
-            public void configureClientInboundChannel(org.springframework.messaging.simp.config.ChannelRegistration registration) {
+            public void configureClientInboundChannel(ChannelRegistration registration) {
                 registration.taskExecutor().corePoolSize(1);
+                // The shop's own rule: nobody may SEND to /app/forbidden. STOMP answers with an ERROR and closes.
+                registration.interceptors(new ChannelInterceptor() {
+                    @Override
+                    public Message<?> preSend(Message<?> message, MessageChannel channel) {
+                        if ("/app/forbidden".equals(SimpMessageHeaderAccessor.getDestination(message.getHeaders()))) {
+                            throw new IllegalStateException("/app/forbidden is not allowed");
+                        }
+                        return message;
+                    }
+                });
             }
         }
 
@@ -233,7 +250,7 @@ public class WebSocketShopFixture {
         StompSession session = stomp.connectAsync("ws://localhost:" + port + "/stomp", new StompSessionHandlerAdapter() {})
                 .get(10, TimeUnit.SECONDS);
         CompletableFuture<PriceChanged> price = new CompletableFuture<>();
-        session.subscribe("/topic/prices", new StompFrameHandler() {
+        StompSession.Subscription prices = session.subscribe("/topic/prices", new StompFrameHandler() {
                     @Override
                     public Type getPayloadType(StompHeaders headers) {
                         return PriceChanged.class;
@@ -248,10 +265,29 @@ public class WebSocketShopFixture {
         session.send("/app/quote", new QuoteRequest("lamp-01"));
 
         assertThat(price.get(10, TimeUnit.SECONDS)).isEqualTo(new PriceChanged("lamp-01", 12.5));
+        prices.unsubscribe();
         // With a receipt, the app answers the DISCONNECT with a RECEIPT and leaves the close to the client.
         StompHeaders bye = new StompHeaders();
         bye.setReceipt("bye");
         session.disconnect(bye);
+        closes.await();
+    }
+
+    @Test
+    void refusesAForbiddenSend() throws Exception {
+        WebSocketStompClient stomp = new WebSocketStompClient(LsdWebSocketClient.wrap(new StandardWebSocketClient()));
+        CompletableFuture<String> error = new CompletableFuture<>();
+        StompSession session = stomp.connectAsync("ws://localhost:" + port + "/stomp", new StompSessionHandlerAdapter() {
+                    @Override
+                    public void handleFrame(StompHeaders headers, Object payload) {
+                        error.complete(headers.getFirst("message"));
+                    }
+                })
+                .get(10, TimeUnit.SECONDS);
+
+        session.send("/app/forbidden", "please".getBytes(StandardCharsets.UTF_8));
+
+        assertThat(error.get(10, TimeUnit.SECONDS)).isNotBlank();
         closes.await();
     }
 

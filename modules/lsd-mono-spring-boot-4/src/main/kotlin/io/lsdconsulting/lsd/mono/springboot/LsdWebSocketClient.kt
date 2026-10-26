@@ -77,7 +77,8 @@ public object LsdWebSocketClient {
             }
             // A socket to this app's own server is drawn once, by the app's side.
             if (guarded(true) { names.isSelf(uri) }) return client.execute(webSocketHandler, sent, uri)
-            val socket = guarded(null) { Socket.open(scenario, caller, names.of(uri), uri, parent, sent, settings.shown) }
+            val shown = settings.shown
+            val socket = guarded(null) { Socket.open(scenario, caller, names.of(uri), uri, parent, sent, shown) }
                 ?: return client.execute(webSocketHandler, sent, uri)
             val handler = ClientHandler(webSocketHandler, socket)
             return client

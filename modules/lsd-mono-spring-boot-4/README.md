@@ -67,7 +67,7 @@ Calls the app makes while it handles a message are drawn under that message. Onl
 Labels are short, and the content is in the popup (folded when it is JSON; a text message over 256 KiB is noted, not shown):
 
 - A raw message is `text message` or `binary (3 bytes)`: the app writes it itself, so its class is not known.
-- A STOMP frame is labelled with its destination and the class its payload is read into or written from: `QuoteRequest /app/quote` for a `SEND` that a `@MessageMapping` method taking a `QuoteRequest` handles, `PriceChanged /topic/prices` for the `MESSAGE` a `@SendTo` or `SimpMessagingTemplate` writes from a `PriceChanged`, else `SEND /app/quote` or `MESSAGE /topic/prices`. `SUBSCRIBE`, `UNSUBSCRIBE` and `ERROR` frames are drawn; `CONNECT`, heartbeats, `DISCONNECT` and receipts are not.
+- A STOMP frame is labelled with its destination and the class its payload is read into or written from: `QuoteRequest /app/quote` for a `SEND` that a `@MessageMapping` method taking a `QuoteRequest` handles, `PriceChanged /topic/prices` for the `MESSAGE` a `@SendTo` or `SimpMessagingTemplate` writes from a `PriceChanged`, else `SEND /app/quote` or `MESSAGE /topic/prices`. `SUBSCRIBE` and `UNSUBSCRIBE` frames are drawn, and so is each `ERROR` frame the app sends, as `ERROR` with its `message` header and body in the popup (one an app's channel interceptor causes by refusing a frame too, then the `close 1002` the app makes); `CONNECT`, heartbeats, `DISCONNECT` and receipts are not.
 
 The test's own client needs one line, so its handshake carries the test's scenario (a socket to another server is drawn by the client: the handshake, messages either way, the close and errors, with the same cap). A `WebSocketStompClient` takes the wrapped client:
 
@@ -123,7 +123,7 @@ Build it yourself with `./gradlew :modules:lsd-mono-spring-boot-4:sampleReport` 
 | `lsd.mono.spring.executors.enabled` | `true` | `false` leaves Spring's task executors and schedulers undecorated, and plain `ExecutorService` beans unwrapped |
 | `lsd.mono.spring.reactor.context-propagation.enabled` | `true` | `false` stops the starter turning on Reactor's automatic context propagation |
 | `lsd.mono.spring.websocket.enabled` | `true` | `false` leaves the app's WebSockets and STOMP frames undrawn |
-| `lsd.mono.spring.websocket.messages-shown` | `20` | how many messages of one socket are drawn before the rest are counted in a note |
+| `lsd.mono.spring.websocket.messages-shown` | `20` | how many messages of one socket are drawn before the rest are counted in a note; a negative value is refused (the app does not start) |
 | `lsd.mono.spring.multipart.parts.enabled` | `true` | `false` stops the starter reading a multipart request's parts, in the servlet filter and in a reactive app (the servlet filter also leaves them alone with `spring.servlet.multipart.enabled=false` or `resolve-lazily=true`) |
 
 Report output (directory, title and so on) is configured as for core (`lsd.mono.report.*`).
@@ -166,7 +166,11 @@ A test class that already has `@ExtendWith(LsdExtension::class)` ([lsd-mono-juni
   - WebSockets in a reactive (WebFlux) app;
   - a class name on a raw message: the app serialises it itself, so it is `text message`;
   - a STOMP app on an external broker relay: frames are drawn, but a `MESSAGE` the relay delivers is labelled `MESSAGE /topic/…`, as the class header does not survive the broker;
-  - a client socket opened with a `WebSocketClient` the test does not wrap, to a server other than the app.
+  - a client socket opened with a `WebSocketClient` the test does not wrap, to a server other than the app;
+  - a wrapped client's socket to the app's own server when the app's side does not draw it (`lsd.mono.spring.websocket.enabled=false`, or a SockJS endpoint): the client leaves it to the app's side, so it is not drawn at all;
+  - the HTTP status of a handshake another server refuses: it is drawn with the exception's class (`DeploymentException`);
+  - a message the app sends that is dropped after it is drawn (a `ConcurrentWebSocketSessionDecorator` over its buffer limit): sends are drawn as the app makes them;
+  - STOMP sessions are matched to their frames by the container's session id, unique within Tomcat; two servers in one JVM whose containers reuse ids could mix up their frames.
 - `LsdSpringTestListener` (`META-INF/spring.factories`) is a Spring `TestExecutionListener` that begins and completes the scenarios and writes the report.
 - Every part is a no-op unless a test scenario is running, and capture never fails the app or the test: a failure is logged once and the event is left out.
 

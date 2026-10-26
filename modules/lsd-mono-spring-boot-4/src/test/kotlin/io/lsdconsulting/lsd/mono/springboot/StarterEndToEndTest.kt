@@ -565,7 +565,7 @@ class StarterEndToEndTest {
     fun `a raw WebSocket the app serves is drawn once - handshake, each message either way, and the close`() {
         val summary = execute(WebSocketShopFixture::class.java)
 
-        assertEquals(4, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        assertEquals(5, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
         val quoted = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single()).scenario("web socket shop fixture: quotes price over web socket")
         assertEquals(
             listOf("GET /prices", "101 Switching Protocols", "text message", "text message", "text message", "close 1000 bye"),
@@ -592,6 +592,7 @@ class StarterEndToEndTest {
                 "SUBSCRIBE /topic/prices",
                 "QuoteRequest /app/quote",
                 "PriceChanged /topic/prices",
+                "UNSUBSCRIBE",
                 "close 1000",
             ),
             streamed.labels,
@@ -600,6 +601,22 @@ class StarterEndToEndTest {
         assertEquals("lamp-01", (streamed.message("QuoteRequest /app/quote")["data"] as JsonObject)["sku"], streamed.json)
         assertEquals("shop", streamed.message("PriceChanged /topic/prices")["from"], streamed.json)
         assertEquals(12.5, (streamed.message("PriceChanged /topic/prices")["data"] as JsonObject)["price"], streamed.json)
+    }
+
+    @Test
+    fun `a STOMP frame the app's own interceptor refuses is drawn, then the ERROR frame and the 1002 close the app makes`() {
+        execute(WebSocketShopFixture::class.java)
+
+        val refused = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single()).scenario("web socket shop fixture: refuses forbidden send")
+        assertEquals(
+            listOf("GET /stomp", "101 Switching Protocols", "SEND /app/forbidden", "ERROR", "close 1002"),
+            refused.labels,
+            refused.json,
+        )
+        val error = refused.message("ERROR")
+        assertEquals(listOf("shop", "client", "error"), listOf(error["from"], error["to"], error["status"]), refused.json)
+        assertTrue((error["data"] as JsonObject)["message"] is String, refused.json)
+        assertEquals("shop", refused.message("close 1002")["from"], refused.json)
     }
 
     @Test
