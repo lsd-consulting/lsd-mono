@@ -105,6 +105,9 @@ internal class ClientSettings(
     val names = ParticipantNames(env)
     val readParts = ErrorCapturingResponse.readsParts(env)
 
+    /** Read when a socket is first opened, so a negative value fails that, not every request. */
+    val shown: Int by lazy { WsDrawing.shown(env) }
+
     companion object {
         private val fallback by lazy { ClientSettings(StandardEnvironment()) }
 

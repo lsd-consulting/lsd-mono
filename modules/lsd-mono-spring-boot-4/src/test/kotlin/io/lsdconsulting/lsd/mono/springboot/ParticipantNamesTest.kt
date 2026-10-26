@@ -33,6 +33,15 @@ class ParticipantNamesTest {
     }
 
     @Test
+    fun `a URL with no port is the scheme's default - 443 for https and wss, else 80`() {
+        val names = ParticipantNames(env("shop.quotes.url" to "wss://quotes.example.com/stream", "shop.feed.url" to "ws://feed.example.com/ticks"))
+
+        assertEquals("Quotes", names.of(URI("wss://quotes.example.com:443/stream")))
+        assertEquals("quotes.example.com", names.of(URI("wss://quotes.example.com:80/stream")))
+        assertEquals("Feed", names.of(URI("ws://feed.example.com:80/ticks")))
+    }
+
+    @Test
     fun `overrides and own port`() {
         val names = ParticipantNames(env("lsd.mono.spring.app-name" to "Shop", "lsd.mono.spring.client-name" to "Tester", "local.server.port" to "8081"))
 

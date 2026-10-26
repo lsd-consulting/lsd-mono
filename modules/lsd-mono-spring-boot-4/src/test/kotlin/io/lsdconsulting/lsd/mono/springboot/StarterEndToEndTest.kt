@@ -23,6 +23,7 @@ import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxConcurrentOrdersFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxStreamsFixture
+import io.lsdconsulting.lsd.mono.springboot.fixture.WebSocketShopFixture
 import io.lsdconsulting.lsd.mono.springboot.fixture.WebTestClientFixture
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -558,6 +559,93 @@ class StarterEndToEndTest {
             assertEquals(status.take(3).toDouble(), body["status"], "Boot's error body: ${failed.json}")
             assertTrue(body["path"] is String, "Boot's error body: ${failed.json}")
         }
+    }
+
+    @Test
+    fun `a raw WebSocket the app serves is drawn once - handshake, each message either way, and the close`() {
+        val summary = execute(WebSocketShopFixture::class.java)
+
+        assertEquals(5, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        val quoted = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single()).scenario("web socket shop fixture: quotes price over web socket")
+        assertEquals(
+            listOf("GET /prices", "101 Switching Protocols", "text message", "text message", "text message", "close 1000 bye"),
+            quoted.labels,
+            quoted.json,
+        )
+        val (asked, price) = quoted.messages.filter { it["label"] == "text message" }
+        assertEquals(listOf("client", "shop"), listOf(asked["from"], asked["to"]), quoted.json)
+        assertEquals(listOf("shop", "client"), listOf(price["from"], price["to"]), quoted.json)
+        // The JSON is in the popup, not on the arrow.
+        assertEquals(12.5, (price["data"] as JsonObject)["price"], quoted.json)
+        assertEquals("shop", quoted.message("close 1000 bye")["from"], quoted.json)
+    }
+
+    @Test
+    fun `STOMP frames are labelled with their destination and the class their payload is read into or written from`() {
+        execute(WebSocketShopFixture::class.java)
+
+        val streamed = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single()).scenario("web socket shop fixture: streams prices over stomp")
+        assertEquals(
+            listOf(
+                "GET /stomp",
+                "101 Switching Protocols",
+                "SUBSCRIBE /topic/prices",
+                "QuoteRequest /app/quote",
+                "PriceChanged /topic/prices",
+                "UNSUBSCRIBE",
+                "close 1000",
+            ),
+            streamed.labels,
+            streamed.json,
+        )
+        assertEquals("lamp-01", (streamed.message("QuoteRequest /app/quote")["data"] as JsonObject)["sku"], streamed.json)
+        assertEquals("shop", streamed.message("PriceChanged /topic/prices")["from"], streamed.json)
+        assertEquals(12.5, (streamed.message("PriceChanged /topic/prices")["data"] as JsonObject)["price"], streamed.json)
+    }
+
+    @Test
+    fun `a STOMP frame the app's own interceptor refuses is drawn, then the ERROR frame and the 1002 close the app makes`() {
+        execute(WebSocketShopFixture::class.java)
+
+        val refused = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single()).scenario("web socket shop fixture: refuses forbidden send")
+        assertEquals(
+            listOf("GET /stomp", "101 Switching Protocols", "SEND /app/forbidden", "ERROR", "close 1002"),
+            refused.labels,
+            refused.json,
+        )
+        val error = refused.message("ERROR")
+        assertEquals(listOf("shop", "client", "error"), listOf(error["from"], error["to"], error["status"]), refused.json)
+        assertTrue((error["data"] as JsonObject)["message"] is String, refused.json)
+        assertEquals("shop", refused.message("close 1002")["from"], refused.json)
+    }
+
+    @Test
+    fun `a WebSocket handler that throws is drawn as the error and the 1011 close the app makes`() {
+        execute(WebSocketShopFixture::class.java)
+
+        val failed = ReportJson
+            .read(
+                tempDir.listDirectoryEntries("*-report.json").single(),
+            ).scenario("web socket shop fixture: fails to quote an unknown product")
+        assertEquals(
+            listOf("GET /prices", "101 Switching Protocols", "text message", "IllegalStateException", "close 1011"),
+            failed.labels,
+            failed.json,
+        )
+        assertEquals("error", failed.message("IllegalStateException")["status"], failed.json)
+        assertEquals("shop", failed.message("close 1011")["from"], failed.json)
+    }
+
+    @Test
+    fun `after 20 WebSocket messages the rest are counted, and a plain client is drawn the same`() {
+        execute(WebSocketShopFixture::class.java)
+
+        val flooded = ReportJson
+            .read(
+                tempDir.listDirectoryEntries("*-report.json").single(),
+            ).scenario("web socket shop fixture: streams more ticks than are drawn")
+        assertEquals(listOf("GET /prices", "101 Switching Protocols") + List(20) { "text message" } + "close 1000 bye", flooded.labels, flooded.json)
+        assertEquals(listOf("… 7 more WebSocket messages not drawn"), flooded.eventsOf("note").map { it["text"] }, flooded.json)
     }
 
     private fun execute(klass: Class<*>): org.junit.platform.launcher.listeners.TestExecutionSummary {

@@ -1,6 +1,7 @@
 package io.lsdconsulting.lsd.mono.springboot
 
 import jakarta.servlet.ServletRequestListener
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.boot.autoconfigure.AutoConfiguration
@@ -17,8 +18,10 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
 import org.springframework.core.env.Environment
 import org.springframework.http.server.reactive.HttpHandlerDecoratorFactory
+import org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.server.WebFilter
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
 
 /**
  * On with the dependency, off with `lsd.mono.spring.enabled=false`. Each part switches on only when
@@ -134,6 +137,48 @@ public class LsdAutoConfiguration {
             @Bean
             @JvmStatic
             public fun lsdContextPropagation(): BeanFactoryPostProcessor = BeanFactoryPostProcessor { LsdContextPropagation.install() }
+        }
+    }
+
+    /**
+     * WebSockets a servlet app serves (`@EnableWebSocket` handlers and STOMP endpoints): the
+     * handshake is drawn by the inbound filter, then each message, the close and errors. STOMP
+     * frames are drawn from the broker's client channels, labelled with the payload's class where
+     * the app's own code says what it is. Off with `lsd.mono.spring.websocket.enabled=false`.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnClass(
+        name = [
+            "org.springframework.web.socket.server.support.WebSocketHandlerMapping",
+            "org.springframework.web.servlet.handler.SimpleUrlHandlerMapping",
+        ],
+    )
+    @ConditionalOnProperty(prefix = "lsd.mono.spring.websocket", name = ["enabled"], havingValue = "true", matchIfMissing = true)
+    internal class WebSockets {
+        companion object {
+            @Bean
+            @JvmStatic
+            public fun lsdWebSocketPostProcessor(env: Environment): BeanPostProcessor = LsdWebSocketPostProcessor(env)
+        }
+
+        @Configuration(proxyBeanMethods = false)
+        @ConditionalOnClass(
+            name = [
+                "org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer",
+                "org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler",
+            ],
+        )
+        internal class StompFrames {
+            @Bean
+            public fun lsdStompConfigurer(handler: ObjectProvider<SimpAnnotationMethodMessageHandler>): WebSocketMessageBrokerConfigurer =
+                LsdStompConfigurer(handler)
+
+            companion object {
+                @Bean
+                @JvmStatic
+                public fun lsdStompPostProcessor(): BeanPostProcessor = LsdStompPostProcessor()
+            }
         }
     }
 

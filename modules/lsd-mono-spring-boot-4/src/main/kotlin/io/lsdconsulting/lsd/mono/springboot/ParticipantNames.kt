@@ -48,7 +48,7 @@ internal class ParticipantNames(
             if (source !is EnumerablePropertySource<*>) continue
             for (name in source.propertyNames) {
                 val value = runCatching { env.getProperty(name) }.getOrNull() ?: continue
-                if (!value.startsWith("http://") && !value.startsWith("https://")) continue
+                if (schemes.none { value.startsWith(it) }) continue
                 val uri = runCatching { URI(value.trim()) }.getOrNull() ?: continue
                 if (uri.host.equals(target.host, ignoreCase = true) && port(uri) == port(target)) {
                     nameFromKey(name)?.let { return it }
@@ -60,6 +60,8 @@ internal class ParticipantNames(
 
     companion object {
         const val DEFAULT_CLIENT: String = "Client"
+
+        private val schemes = listOf("http://", "https://", "ws://", "wss://")
 
         private val generic =
             setOf(
@@ -104,7 +106,7 @@ internal class ParticipantNames(
         internal fun port(uri: URI): Int =
             when {
                 uri.port != -1 -> uri.port
-                uri.scheme == "https" -> 443
+                uri.scheme == "https" || uri.scheme == "wss" -> 443
                 else -> 80
             }
 
