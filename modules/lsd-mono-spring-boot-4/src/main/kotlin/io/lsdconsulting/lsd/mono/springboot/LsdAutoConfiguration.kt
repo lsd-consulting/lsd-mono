@@ -27,7 +27,9 @@ import org.springframework.web.server.WebFilter
  * and consumer factories, and Spring Data repositories. Every part is a no-op unless a test
  * scenario is running, so a stray production classpath draws nothing.
  *
- * The beans are Spring's own types; what sits behind them is internal to this module.
+ * The beans are Spring's own types; what sits behind them is internal to this module. Each
+ * post-processor bean is static (`@JvmStatic` in a companion), as a post-processor must be, so it
+ * does not drag its configuration in early.
  */
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "lsd.mono.spring", name = ["enabled"], havingValue = "true", matchIfMissing = true)
@@ -106,7 +108,6 @@ public class LsdAutoConfiguration {
     @ConditionalOnClass(name = ["org.springframework.web.reactive.function.client.WebClient", "reactor.core.publisher.Mono"])
     internal class WebClients {
         companion object {
-            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
             public fun lsdWebClientPostProcessor(): BeanPostProcessor = LsdWebClientPostProcessor()
@@ -147,12 +148,10 @@ public class LsdAutoConfiguration {
     @ConditionalOnProperty(prefix = "lsd.mono.spring.executors", name = ["enabled"], havingValue = "true", matchIfMissing = true)
     internal class Executors {
         companion object {
-            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
             public fun lsdExecutorPostProcessor(): BeanPostProcessor = LsdExecutorPostProcessor()
 
-            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
             public fun lsdExecutorServicePostProcessor(): BeanPostProcessor = LsdExecutorServicePostProcessor()
@@ -184,7 +183,6 @@ public class LsdAutoConfiguration {
         }
 
         companion object {
-            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
             public fun lsdRestClientPostProcessor(): BeanPostProcessor = LsdRestClientPostProcessor()
@@ -207,7 +205,6 @@ public class LsdAutoConfiguration {
     )
     internal class Kafka {
         companion object {
-            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
             public fun lsdKafkaPostProcessor(): BeanPostProcessor = LsdKafkaPostProcessor()
@@ -228,7 +225,6 @@ public class LsdAutoConfiguration {
     @ConditionalOnProperty(prefix = "lsd.mono.spring.repositories", name = ["enabled"], havingValue = "true", matchIfMissing = true)
     internal class Repositories {
         companion object {
-            /** Static, as a post-processor must be, so it does not drag this configuration in early. */
             @Bean
             @JvmStatic
             public fun lsdRepositoryPostProcessor(): BeanPostProcessor = LsdRepositoryPostProcessor()

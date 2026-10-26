@@ -11,6 +11,8 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * The scenarios the test listener has running, and which inbound request each one is serving.
@@ -64,6 +66,7 @@ internal object SpringScenarios {
         published.values.removeIf { it == scenario }
         sending.values.removeIf { it.scenario == scenario }
         clientSettings.remove(scenario)
+        answered()
     }
 
     /**
@@ -90,7 +93,12 @@ internal object SpringScenarios {
 
     fun leave(scenario: LsdScenario, spanId: String) {
         inbound[scenario]?.removeLastOccurrence(spanId)
+        answered()
     }
+
+    /** Wakes [settle]: a request was left, or a scenario finished. */
+    private fun answered() =
+        settling.withLock { left.signalAll() }
 
     /**
      * Waits, up to [timeoutMs], for the requests [scenario] is serving to be answered. A reactive
@@ -101,11 +109,20 @@ internal object SpringScenarios {
         scenario: LsdScenario,
         timeoutMs: Long = SETTLE_MS,
     ) {
-        val until = System.nanoTime() + timeoutMs * 1_000_000
-        while (inbound[scenario]?.isEmpty() == false && System.nanoTime() < until) Thread.sleep(2)
+        var wait = timeoutMs * 1_000_000
+        settling.withLock {
+            while (inbound[scenario]?.isEmpty() == false) {
+                if (wait <= 0) return
+                wait = left.awaitNanos(wait)
+            }
+        }
     }
 
     private const val SETTLE_MS = 1_000L
+
+    /** [settle] waits on [left], signalled whenever a request is left (see [answered]). */
+    private val settling = ReentrantLock()
+    private val left = settling.newCondition()
 
     /** The inbound request the app is serving in [scenario], the parent of its outbound calls. */
     fun serving(scenario: LsdScenario): String? = inbound[scenario]?.peekLast()
@@ -140,6 +157,16 @@ internal object SpringScenarios {
 
     /** What to carry to the thread that runs work handed off from this one, or null outside a scenario. */
     fun capture(): Current? = resolve()?.let { Current(it, parentOf(it)) }
+
+    /**
+     * [task] to run on another thread within the scenario and call this thread is in now ([capture]
+     * then [within]), or null outside a scenario: then the task runs as it is. Behind every executor
+     * the starter instruments ([LsdTaskDecorator], [LsdExecutorService]).
+     */
+    fun <T> carry(task: () -> T): (() -> T)? {
+        val work = guarded(null) { capture() } ?: return null
+        return { within(work, task) }
+    }
 
     /** Run [block] doing [work] on this thread, then put back whatever was there. */
     fun <T> within(

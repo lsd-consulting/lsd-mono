@@ -17,15 +17,13 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 internal object LsdTaskDecorator : TaskDecorator {
     override fun decorate(runnable: Runnable): Runnable {
         if (runnable is Carried) return runnable
-        val work = guarded(null) { SpringScenarios.capture() } ?: return runnable
-        return Carried(runnable, work)
+        return SpringScenarios.carry(runnable::run)?.let(::Carried) ?: runnable
     }
 
     private class Carried(
-        private val task: Runnable,
-        private val work: SpringScenarios.Current,
+        private val carried: () -> Unit,
     ) : Runnable {
-        override fun run() = SpringScenarios.within(work) { task.run() }
+        override fun run() = carried()
     }
 }
 

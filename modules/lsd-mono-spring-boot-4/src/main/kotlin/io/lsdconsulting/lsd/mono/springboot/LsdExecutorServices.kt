@@ -54,10 +54,7 @@ internal open class LsdExecutorService(
 
     protected fun carry(task: Runnable): Runnable = LsdTaskDecorator.decorate(task)
 
-    protected fun <T> carry(task: Callable<T>): Callable<T> {
-        val work = guarded(null) { SpringScenarios.capture() } ?: return task
-        return Callable { SpringScenarios.within(work) { task.call() } }
-    }
+    protected fun <T> carry(task: Callable<T>): Callable<T> = SpringScenarios.carry(task::call)?.let { Callable(it) } ?: task
 }
 
 /** [LsdExecutorService] for a `ScheduledExecutorService`: a periodic task keeps the scenario it was scheduled in. */
