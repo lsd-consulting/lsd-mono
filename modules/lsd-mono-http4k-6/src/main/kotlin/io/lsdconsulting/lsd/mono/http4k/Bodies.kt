@@ -27,7 +27,8 @@ internal class Captured<T : HttpMessage>(
  *   handed the same bytes in memory.
  * - A response stream of unknown length is passed on at once and copied as it is read, up to
  *   [LIMIT]: the reply is shown when the reader reaches its end or closes it ([capture] with a
- *   callback), so a stream that only ends once the caller reads it is never held up.
+ *   callback), so a stream that only ends once the caller reads it is never held up. One closed
+ *   before its end is shown with a note of how far it was read.
  * - A request stream of unknown length is passed on unread and shown as a note, because the
  *   request is drawn before the app reads it.
  * - An event stream, a body known to be larger than [LIMIT] and a compressed body are
@@ -190,12 +191,26 @@ internal object Bodies {
             if (room > 0) kept.write(bytes, off, minOf(room, n))
         }
 
-        private fun finish() =
+        /**
+         * Shows what was kept. A stream closed before its end is marked as such, with what was read
+         * if it came to no more than [LIMIT], so a partial body is never taken for the whole one.
+         */
+        private fun finish(closedEarly: Boolean = false) =
             shown(
                 Calls.guarded(null) {
-                    if (total > LIMIT) tooLarge(total) else show(kept.toByteArray(), null, contentType)
+                    when {
+                        closedEarly -> closedAt()
+                        total > LIMIT -> tooLarge(total)
+                        else -> show(kept.toByteArray(), null, contentType)
+                    }
                 },
             )
+
+        private fun closedAt(): Map<String, Any> =
+            buildMap {
+                put("note", "closed after $total bytes, not read to the end")
+                if (total <= LIMIT) show(kept.toByteArray(), null, contentType)?.let { put("body", it) }
+            }
 
         private inline fun <T> reading(block: () -> T): T =
             try {
@@ -232,7 +247,7 @@ internal object Bodies {
             try {
                 input.close()
             } finally {
-                finish()
+                finish(closedEarly = true)
             }
         }
     }

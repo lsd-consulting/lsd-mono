@@ -134,12 +134,37 @@ class BodiesTest {
     }
 
     @Test
-    fun `a stream the reader closes early shows what was read`() {
+    fun `a stream the reader closes early shows what was read, marked as not read to the end`() {
         val shown = Shown(Response(OK).body(ByteArrayInputStream("hello world".toByteArray())))
         val stream = shown.passed.body.stream
         assertEquals(5, stream.read(ByteArray(5)))
         assertEquals(0, stream.read(ByteArray(0)))
         assertTrue(stream.available() > 0)
+        stream.close()
+        val data = shown.data as Map<*, *>
+        assertEquals("closed after 5 bytes, not read to the end", data["note"])
+        assertEquals("hello", String(data["body"] as ByteArray))
+    }
+
+    @Test
+    fun `a long stream closed early, or closed unread, is a note without a body`() {
+        val long = Shown(Response(OK).body(ByteArrayInputStream(big(Bodies.LIMIT + 10))))
+        val stream = long.passed.body.stream
+        val read = stream.readNBytes(Bodies.LIMIT + 1).size
+        stream.close()
+        assertEquals(mapOf("note" to "closed after $read bytes, not read to the end"), long.data)
+
+        val unread = Shown(Response(OK).body(ByteArrayInputStream("hello".toByteArray())))
+        unread.passed.body.stream
+            .close()
+        assertEquals(mapOf("note" to "closed after 0 bytes, not read to the end"), unread.data)
+    }
+
+    @Test
+    fun `a stream read to its end and then closed is the whole body, shown once`() {
+        val shown = Shown(Response(OK).body(ByteArrayInputStream("hello".toByteArray())))
+        val stream = shown.passed.body.stream
+        assertEquals("hello", String(stream.readAllBytes()))
         stream.close()
         assertEquals("hello", String(shown.data as ByteArray))
     }
@@ -158,6 +183,31 @@ class BodiesTest {
         assertThrows(IOException::class.java) { stream.read() }
         stream.close()
         assertEquals("xxx", String(shown.data as ByteArray))
+    }
+
+    @Test
+    fun `a stream that fails while teed is shown on the failure itself, without being closed`() {
+        val failing =
+            object : InputStream() {
+                var left = 3
+
+                override fun read(): Int = if (left-- > 0) 'x'.code else throw IOException("reset")
+
+                override fun read(
+                    b: ByteArray,
+                    off: Int,
+                    len: Int,
+                ): Int = if (left > 0) super.read(b, off, minOf(len, left)) else throw IOException("reset")
+            }
+        val shown = Shown(Response(OK).body(failing))
+        val stream = shown.passed.body.stream
+        val buffer = ByteArray(16)
+        assertEquals(3, stream.read(buffer, 0, buffer.size))
+        assertTrue(shown.calls.isEmpty(), "nothing is shown before the stream ends or fails")
+        assertThrows(IOException::class.java) { stream.read(buffer, 0, buffer.size) }
+        assertEquals("xxx", String(shown.data as ByteArray), "shown once, though never closed")
+        assertThrows(IOException::class.java) { stream.read() }
+        assertEquals(1, shown.calls.size, "a second failure does not show it again")
     }
 
     @Test
