@@ -5,9 +5,9 @@ plugins {
     `java-library`
 }
 
-// A little under the measured 95.0% line coverage; lsd.coverage fails below it and more than 3 points above it.
+// A little under the measured 96.0% line coverage; lsd.coverage fails below it and more than 3 points above it.
 lsdCoverage {
-    lineFloor.set(93)
+    lineFloor.set(95)
 }
 
 description =

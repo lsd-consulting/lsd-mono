@@ -217,6 +217,28 @@ class LsdWebSocketClientTest {
     }
 
     @Test
+    fun `nothing is drawn after the close - not a late message, nor an error`() {
+        val scenario = start()
+        val server = Server()
+
+        LsdWebSocketClient.wrap(server).execute(Received(), null, PRICES).get()
+        server.close(CloseStatus.GOING_AWAY)
+        server.send(TextMessage("late"))
+        server.handler!!.handleTransportError(server.session, java.io.IOException("reset"))
+
+        val drawn = report(scenario)
+        assertEquals(listOf("GET /prices", "101 Switching Protocols", "close 1001"), drawn.labels, drawn.json)
+    }
+
+    @Test
+    fun `a negative messages-shown fails the socket's opening, naming the setting`() {
+        start(shop().withProperty("lsd.mono.spring.websocket.messages-shown", "-1"))
+
+        val e = assertThrows(IllegalArgumentException::class.java) { LsdWebSocketClient.wrap(Server()).execute(Received(), null, PRICES) }
+        assertEquals("lsd.mono.spring.websocket.messages-shown must not be negative: -1", e.message)
+    }
+
+    @Test
     fun `wrapping a wrapped client adds nothing`() {
         val wrapped = LsdWebSocketClient.wrap(Server())
 
