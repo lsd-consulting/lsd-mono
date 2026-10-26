@@ -95,6 +95,12 @@ internal class WsClientCapture(
 
         @Volatile private var tappedWs: Tapped? = null
 
+        /** The handshake was drawn as made: a send is drawn before it goes, so it shows before any reply. */
+        @Volatile private var open = false
+
+        /** The handshake was drawn as failed: what the socket reports after (its error again, a close) is not. */
+        @Volatile private var refused = false
+
         /** The app's headers, with the scenario added for a host it may go to. */
         val headers: Headers = guarded(appHeaders) { tag(appHeaders) }
 
@@ -130,19 +136,26 @@ internal class WsClientCapture(
             }
         }
 
-        fun connected() = settle("101", "101 Switching Protocols", null)
+        fun connected() {
+            if (settle("101", "101 Switching Protocols", null)) open = true
+        }
 
-        fun failed(e: Throwable) = settle("error", e.javaClass.simpleName, e.toString())
+        fun failed(e: Throwable) {
+            if (settle("error", e.javaClass.simpleName, e.toString())) refused = true
+        }
 
-        /** Draws the handshake and its outcome once, unless a server capture took it over. */
+        /** Drawing what the socket reports: here, and it opened. */
+        private val drawingSocket: Boolean get() = drawingHere && !refused
+
+        /** Draws the handshake and its outcome once, unless a server capture took it over; true if this settled it. */
         private fun settle(
             status: String,
             label: String,
             data: Any?,
-        ) {
-            if (!settled.compareAndSet(false, true)) return
+        ): Boolean {
+            if (!settled.compareAndSet(false, true)) return false
             Calls.pending.remove(call.id)
-            if (!drawingHere) return
+            if (!drawingHere) return true
             guarded(Unit) {
                 call.scenario.ingest(
                     Interaction(
@@ -171,14 +184,15 @@ internal class WsClientCapture(
                     ),
                 )
             }
+            return true
         }
 
         /** The socket as the app sees it; ours listen first, so a message is drawn before the app reacts. */
         fun tapped(ws: Websocket): Websocket {
             if (listening.compareAndSet(false, true)) {
-                ws.onMessage { if (drawingHere) drawing.message(remote, local, it) }
-                ws.onClose { if (drawingHere) drawing.close(remote, local, it) }
-                ws.onError { if (drawingHere) drawing.error(remote, local, it) }
+                ws.onMessage { if (drawingSocket) drawing.message(remote, local, it) }
+                ws.onClose { if (drawingSocket) drawing.close(remote, local, it) }
+                ws.onError { if (drawingSocket) drawing.error(remote, local, it) }
             }
             return tappedWs?.takeIf { it.ws === ws } ?: Tapped(ws).also { tappedWs = it }
         }
@@ -189,13 +203,19 @@ internal class WsClientCapture(
         private inner class Tapped(
             val ws: Websocket,
         ) : Websocket {
+            /** Before the handshake is drawn, only a send that went is drawn, after it. */
             override fun send(message: WsMessage) {
-                if (drawingHere) drawing.message(local, remote, message)
-                ws.send(message)
+                if (open) {
+                    if (drawingHere) drawing.message(local, remote, message)
+                    ws.send(message)
+                } else {
+                    ws.send(message)
+                    if (drawingSocket) drawing.message(local, remote, message)
+                }
             }
 
             override fun close(status: WsStatus) {
-                if (drawingHere) drawing.close(local, remote, status)
+                if (drawingSocket) drawing.close(local, remote, status)
                 ws.close(status)
             }
 
