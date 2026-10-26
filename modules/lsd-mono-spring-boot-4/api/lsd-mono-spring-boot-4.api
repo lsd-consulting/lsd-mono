@@ -10,6 +10,11 @@ public class io/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/sp
 	public fun getOrder ()I
 }
 
+public final class io/lsdconsulting/lsd/mono/springboot/LsdWebSocketClient {
+	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/springboot/LsdWebSocketClient;
+	public static final fun wrap (Lorg/springframework/web/socket/client/WebSocketClient;)Lorg/springframework/web/socket/client/WebSocketClient;
+}
+
 public final class io/lsdconsulting/lsd/mono/springboot/LsdWebTestClient {
 	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/springboot/LsdWebTestClient;
 	public static final fun configurer ()Lorg/springframework/test/web/reactive/server/WebTestClientConfigurer;

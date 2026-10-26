@@ -61,6 +61,9 @@ dependencies {
     compileOnly("org.springframework.kafka:spring-kafka")
     compileOnly("org.apache.kafka:kafka-clients")
     compileOnly("jakarta.servlet:jakarta.servlet-api")
+    compileOnly("org.springframework:spring-webmvc")
+    compileOnly("org.springframework:spring-websocket")
+    compileOnly("org.springframework:spring-messaging")
     compileOnly("tools.jackson.core:jackson-databind")
 
     // Tests run a real @SpringBootTest app (Tomcat, RestClient, RestTemplate, an in-memory Spring
@@ -78,6 +81,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-webtestclient")
     testImplementation("org.springframework.data:spring-data-keyvalue")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka")
+    // WebSocketShopFixture: a servlet app with raw WebSocket handlers and a STOMP broker.
+    testImplementation("org.springframework.boot:spring-boot-starter-websocket")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
     // LsdTestConfig, ReportJson and ReportSchemas (#74).
     testImplementation(testFixtures(project(":modules:lsd-mono-core")))
@@ -165,6 +170,7 @@ val sampleReportTests =
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxStreamsFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebTestClientFixture")
             includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.RestClientStreamsFixture")
+            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebSocketShopFixture")
         }
         writesSampleReport(sampleReportDir)
         ignoreFailures = true
@@ -186,6 +192,7 @@ val sampleReportTests =
                     "web-flux-streams-fixture-",
                     "web-test-client-fixture-",
                     "rest-client-streams-fixture-",
+                    "web-socket-shop-fixture-",
                 )
             check(expected.all { prefix -> diagrams.any { it.startsWith(prefix) } }) {
                 "sampleReportTests wrote $diagrams, not every report in $expected"
@@ -237,6 +244,8 @@ tasks.register<Sync>("sampleReport") {
         rename("""web-test-client-fixture-[0-9a-f]{8}-diagram\.html""", "webtestclient-report.html")
         include("rest-client-streams-fixture-*-diagram.html")
         rename("""rest-client-streams-fixture-[0-9a-f]{8}-diagram\.html""", "rest-client-streams-report.html")
+        include("web-socket-shop-fixture-*-diagram.html")
+        rename("""web-socket-shop-fixture-[0-9a-f]{8}-diagram\.html""", "websocket-report.html")
     }
     into(layout.buildDirectory.dir("pages"))
 }

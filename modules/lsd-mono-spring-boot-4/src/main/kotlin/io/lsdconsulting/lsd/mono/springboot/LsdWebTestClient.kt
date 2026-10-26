@@ -104,6 +104,7 @@ internal class ClientSettings(
 ) {
     val names = ParticipantNames(env)
     val readParts = ErrorCapturingResponse.readsParts(env)
+    val shown: Int = env.getProperty("lsd.mono.spring.websocket.messages-shown", Int::class.java, WsDrawing.DEFAULT_SHOWN)
 
     companion object {
         private val fallback by lazy { ClientSettings(StandardEnvironment()) }
