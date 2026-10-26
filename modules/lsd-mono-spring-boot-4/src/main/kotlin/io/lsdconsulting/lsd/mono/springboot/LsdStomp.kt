@@ -27,6 +27,7 @@ import org.springframework.messaging.support.MessageHeaderAccessor
 import org.springframework.util.ClassUtils
 import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
+import org.springframework.web.socket.handler.WebSocketHandlerDecorator
 import org.springframework.web.socket.messaging.SubProtocolWebSocketHandler
 import java.security.Principal
 import java.util.concurrent.ConcurrentHashMap
@@ -46,7 +47,8 @@ internal object Stomp {
 
     private val sessions = ConcurrentHashMap<String, DrawnSession>()
 
-    fun isEndpoint(handler: WebSocketHandler): Boolean = available && handler is SubProtocolWebSocketHandler
+    /** A STOMP endpoint's handler, under any decorators the app's `WebSocketTransportRegistration` added. */
+    fun isEndpoint(handler: WebSocketHandler): Boolean = available && WebSocketHandlerDecorator.unwrap(handler) is SubProtocolWebSocketHandler
 
     fun opened(
         sessionId: String,

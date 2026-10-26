@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,6 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.event.EventListener;
 import org.springframework.messaging.converter.JacksonJsonMessageConverter;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -40,8 +40,9 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
+import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 /**
@@ -67,15 +68,38 @@ public class WebSocketShopFixture {
         @Configuration(proxyBeanMethods = false)
         @EnableWebSocket
         static class Raw implements WebSocketConfigurer {
+            private final Closes closes;
+
+            Raw(Closes closes) {
+                this.closes = closes;
+            }
+
             @Override
             public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-                registry.addHandler(new Prices(), "/prices");
+                registry.addHandler(new Prices(closes), "/prices");
             }
         }
 
         @Configuration(proxyBeanMethods = false)
         @EnableWebSocketMessageBroker
         static class Stomp implements WebSocketMessageBrokerConfigurer {
+            private final Closes closes;
+
+            Stomp(Closes closes) {
+                this.closes = closes;
+            }
+
+            @Override
+            public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+                registration.addDecoratorFactory(handler -> new WebSocketHandlerDecorator(handler) {
+                    @Override
+                    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+                        super.afterConnectionClosed(session, status);
+                        closes.closed();
+                    }
+                });
+            }
+
             @Override
             public void registerStompEndpoints(StompEndpointRegistry registry) {
                 registry.addEndpoint("/stomp");
@@ -103,14 +127,20 @@ public class WebSocketShopFixture {
             }
         }
 
-        /** Counts STOMP sessions the broker has seen end, so a test can wait for its own. */
+        /**
+         * Counts the sockets the app has seen close, so a test can wait for the app's side to finish
+         * with its socket before it ends: the client's side of a close can finish first.
+         */
         @Component
-        static class Disconnects {
-            final CountDownLatch ended = new CountDownLatch(1);
+        static class Closes {
+            private final Semaphore closed = new Semaphore(0);
 
-            @EventListener
-            void on(SessionDisconnectEvent event) {
-                ended.countDown();
+            void closed() {
+                closed.release();
+            }
+
+            void await() throws InterruptedException {
+                assertThat(closed.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
             }
         }
 
@@ -119,6 +149,17 @@ public class WebSocketShopFixture {
          * boom} fails; {@code bye} closes the socket from the server.
          */
         static class Prices extends TextWebSocketHandler {
+            private final Closes closes;
+
+            Prices(Closes closes) {
+                this.closes = closes;
+            }
+
+            @Override
+            public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+                closes.closed();
+            }
+
             @Override
             protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
                 String text = message.getPayload();
@@ -138,7 +179,7 @@ public class WebSocketShopFixture {
     int port;
 
     @Autowired
-    App.Disconnects disconnects;
+    App.Closes closes;
 
     /** What a socket the test opened received, and when it closed. */
     static class Received extends TextWebSocketHandler {
@@ -181,6 +222,7 @@ public class WebSocketShopFixture {
         socket.sendMessage(new TextMessage("bye"));
 
         assertThat(received.closed.get(10, TimeUnit.SECONDS).getCode()).isEqualTo(1000);
+        closes.await();
         assertThat(received.messages).containsExactly("{\"sku\":\"lamp-01\",\"price\":12.5}");
     }
 
@@ -206,8 +248,11 @@ public class WebSocketShopFixture {
         session.send("/app/quote", new QuoteRequest("lamp-01"));
 
         assertThat(price.get(10, TimeUnit.SECONDS)).isEqualTo(new PriceChanged("lamp-01", 12.5));
-        session.disconnect();
-        assertThat(disconnects.ended.await(10, TimeUnit.SECONDS)).isTrue();
+        // With a receipt, the app answers the DISCONNECT with a RECEIPT and leaves the close to the client.
+        StompHeaders bye = new StompHeaders();
+        bye.setReceipt("bye");
+        session.disconnect(bye);
+        closes.await();
     }
 
     @Test
@@ -218,6 +263,7 @@ public class WebSocketShopFixture {
         socket.sendMessage(new TextMessage("boom"));
 
         assertThat(received.closed.get(10, TimeUnit.SECONDS).getCode()).isEqualTo(1011);
+        closes.await();
     }
 
     @Test
@@ -232,5 +278,6 @@ public class WebSocketShopFixture {
         socket.sendMessage(new TextMessage("bye"));
 
         assertThat(received.closed.get(10, TimeUnit.SECONDS).getCode()).isEqualTo(1000);
+        closes.await();
     }
 }
