@@ -46,9 +46,9 @@ A WebSocket message's arrow has a short label, and its body is in the arrow's po
 
 The name is remembered for the message's content, so it labels the arrow at whichever end in this JVM draws it: a test's client and the app's server, in memory or over a real socket. Limits:
 
-- A message from outside this JVM, or written without a wrapped lens, keeps the default label: the label never comes from guessing at the JSON.
+- A message from outside this JVM, or written without a wrapped lens, keeps the default label, unless it is byte for byte one a wrapped lens wrote here: the label comes from the bytes the lens wrote, never from reading the JSON.
 - JDK and Kotlin types (a `String`, a `List<PriceChanged>`) and anonymous classes keep the default label; wrap a class of the app's own.
-- Two classes written as exactly the same bytes share the label of whichever was written last. Messages over 64 KiB are not named, and only the last 512 written are remembered.
+- Bytes written from two different classes keep the default label rather than naming either. Messages over 64 KiB are not named, and only the 512 most recently written or looked up are remembered.
 - HTTP bodies are labelled as before (`POST /orders`); this is for WebSocket messages only.
 
 ## What a test looks like
