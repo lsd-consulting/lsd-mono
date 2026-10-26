@@ -7,10 +7,16 @@ public final class io/lsdconsulting/lsd/mono/http4k/LsdHttp4k {
 	public static final fun clientFilter (Ljava/lang/String;)Lorg/http4k/core/Filter;
 	public static final fun clientFilter (Ljava/lang/String;Ljava/lang/String;)Lorg/http4k/core/Filter;
 	public static synthetic fun clientFilter$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lorg/http4k/core/Filter;
+	public static final fun labelled (Lorg/http4k/lens/BiDiWsMessageLens;)Lorg/http4k/lens/BiDiWsMessageLens;
 	public static final fun serverFilter ()Lorg/http4k/core/Filter;
 	public static final fun serverFilter (Ljava/lang/String;)Lorg/http4k/core/Filter;
 	public static final fun serverFilter (Ljava/lang/String;Ljava/lang/String;)Lorg/http4k/core/Filter;
 	public static synthetic fun serverFilter$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lorg/http4k/core/Filter;
+	public static final fun wsClient (Lorg/http4k/websocket/WebsocketFactory;)Lorg/http4k/websocket/WebsocketFactory;
+	public static final fun wsClient (Lorg/http4k/websocket/WebsocketFactory;Ljava/lang/String;)Lorg/http4k/websocket/WebsocketFactory;
+	public static final fun wsClient (Lorg/http4k/websocket/WebsocketFactory;Ljava/lang/String;Ljava/lang/String;)Lorg/http4k/websocket/WebsocketFactory;
+	public static final fun wsClient (Lorg/http4k/websocket/WebsocketFactory;Ljava/lang/String;Ljava/lang/String;I)Lorg/http4k/websocket/WebsocketFactory;
+	public static synthetic fun wsClient$default (Lorg/http4k/websocket/WebsocketFactory;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lorg/http4k/websocket/WebsocketFactory;
 	public static final fun wsFilter ()Lorg/http4k/websocket/WsFilter;
 	public static final fun wsFilter (Ljava/lang/String;)Lorg/http4k/websocket/WsFilter;
 	public static final fun wsFilter (Ljava/lang/String;Ljava/lang/String;)Lorg/http4k/websocket/WsFilter;

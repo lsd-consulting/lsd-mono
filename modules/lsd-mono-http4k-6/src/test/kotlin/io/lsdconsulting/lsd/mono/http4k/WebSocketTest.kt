@@ -93,18 +93,22 @@ class WebSocketTest {
             listOf(
                 "GET /prices",
                 "101 Switching Protocols",
-                "lamp-01",
+                "text message",
                 "GET /stock/lamp-01",
                 "200 OK",
-                """{"sku":"lamp-01","price":10}""",
-                """{"sku":"lamp-01","price":11}""",
+                "text message",
+                "text message",
                 "close 1000 Normal",
             ),
             drawn.labels,
             drawn.json,
         )
         assertEquals("Client -> Prices", drawn.arrow(drawn.message("GET /prices")))
-        assertEquals("Prices -> Client", drawn.arrow(drawn.message("""{"sku":"lamp-01","price":10}""")))
+        assertEquals(
+            listOf("Client -> Prices", "Prices -> Client", "Prices -> Client"),
+            drawn.messages.filter { it["label"] == "text message" }.map { drawn.arrow(it) },
+        )
+        assertEquals("lamp-01", drawn.messages.first { it["label"] == "text message" }.body(), "the text is in the popup, not the label")
         assertEquals("Prices -> Inventory", drawn.arrow(drawn.message("GET /stock/lamp-01")))
         assertEquals("Client -> Prices", drawn.arrow(drawn.message("close 1000 Normal")), "the client closed it")
     }
@@ -161,19 +165,19 @@ class WebSocketTest {
         handler.testWsClient(Request(GET, "/feed")).send(WsMessage("hi"))
 
         val drawn = report(scenario)
-        assertEquals(listOf("GET /feed", "101 Switching Protocols", "hi", "close 1000 Normal"), drawn.labels, drawn.json)
+        assertEquals(listOf("GET /feed", "101 Switching Protocols", "text message", "close 1000 Normal"), drawn.labels, drawn.json)
         assertEquals("Feed -> Client", drawn.arrow(drawn.message("close 1000 Normal")))
     }
 
     @Test
-    fun `a text message over the limit is labelled by how it starts and noted as not shown`() {
+    fun `a text message over the limit is noted as not shown`() {
         val scenario = start()
         val text = "x".repeat(Bodies.LIMIT + 1)
         val handler = LsdHttp4k.wsFilter("Feed").then { _: Request -> WsResponse { ws: Websocket -> ws.onMessage { } } }
         handler.testWsClient(Request(GET, "/feed")).send(WsMessage(text))
 
         val drawn = report(scenario)
-        val message = drawn.messages.first { (it["label"] as String).startsWith("xxx") }
+        val message = drawn.message("text message")
         assertEquals(
             mapOf("notShown" to "larger than 256 KiB", "size" to (Bodies.LIMIT + 1).toLong()),
             (message.body() as Map<*, *>).mapValues { (_, v) -> if (v is Number) v.toLong() else v },
@@ -191,7 +195,7 @@ class WebSocketTest {
         client.close(WsStatus.NORMAL)
 
         val drawn = report(scenario)
-        assertEquals(3, drawn.labels.count { it.startsWith("desk-02") || it.startsWith("{") }, drawn.json)
+        assertEquals(3, drawn.labels.count { it == "text message" }, drawn.json)
         val note = drawn.eventsOf("note").single()
         assertTrue(note.source.contains("8 more WebSocket messages not drawn"), note.source)
     }
@@ -214,7 +218,16 @@ class WebSocketTest {
 
         val drawn = report(scenario)
         assertEquals(
-            listOf("GET /feed", "101 Switching Protocols", "hi", "binary (3 bytes)", "IllegalStateException", "bye", "binary (3 bytes)", "close 4000 done"),
+            listOf(
+                "GET /feed",
+                "101 Switching Protocols",
+                "text message",
+                "binary (3 bytes)",
+                "IllegalStateException",
+                "text message",
+                "binary (3 bytes)",
+                "close 4000 done",
+            ),
             drawn.labels,
             drawn.json,
         )
@@ -247,8 +260,8 @@ class WebSocketTest {
         assertTrue(closed.await(5, TimeUnit.SECONDS), "the server saw the close")
 
         val drawn = report(scenario)
-        assertEquals(listOf("GET /prices", "101 Switching Protocols", "lamp-01"), drawn.labels.take(3), drawn.json)
-        assertEquals(2, drawn.labels.count { it.startsWith("{\"sku\"") }, drawn.json)
+        assertEquals(listOf("GET /prices", "101 Switching Protocols", "text message"), drawn.labels.take(3), drawn.json)
+        assertEquals(3, drawn.labels.count { it == "text message" }, drawn.json)
         assertTrue(drawn.labels.last().startsWith("close 1000"), drawn.json)
     }
 }
