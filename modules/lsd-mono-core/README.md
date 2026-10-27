@@ -6,7 +6,7 @@ report JSON and the interactive HTML report with [lsd-mono-report-html](../lsd-m
 which it depends on. The report UI lives in lsd-mono-report-html's `ui/` (Vite, TypeScript and a
 custom SVG diagram). The JUnit, Cucumber and coroutines integrations depend on this module only.
 
-Depend on `io.github.lsd-consulting:lsd-mono-core` from Maven Central; [Getting started](../../README.md#getting-started) in the root README has the Gradle and Maven snippets and the latest version.
+Depend on `io.github.lsd-consulting:lsd-mono-core` from Maven Central; [Supported stacks](../../README.md#jvm-kotlin-java) in the root README has the Gradle and Maven snippets and the latest version.
 
 ## What this is / is not
 
@@ -68,6 +68,53 @@ The [feature tour](../../README.md) shows it, and so can you in the [live exampl
 - Callers sit above the components they call.
 - The view has the same Zoom group, keys and Ctrl/Cmd+wheel as the sequence diagram, kept per scenario. It opens at 100%, where names are 11px. **Overview** fits the whole drawing both ways, down to 10%, and a click in it goes back to 100% there.
 - The view you pick stays for the next scenario you open, and is in the URL (`&view=components`), so a reload or a shared link opens it again. Printing prints the view that is shown.
+
+## Capture a scenario by hand
+
+Capture with `LsdContext` from any code, with participant shapes, payloads, facts and activations:
+
+```kotlin
+import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
+import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
+import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
+import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
+
+val lsd = LsdContext()
+lsd.addParticipants(
+    ACTOR.called("Customer"),
+    PARTICIPANT.called("Checkout"),
+    DATABASE.called("Orders"),
+    QUEUE.called("Order events"),
+)
+lsd.addFact("orderId", "ord-1001")
+lsd.capture {
+    "Customer" calls "Checkout" label "POST /orders" data mapOf(
+        "method" to "POST",
+        "path" to "/orders",
+        "status" to 201,
+        "body" to mapOf("sku" to "SOCK-1", "qty" to 2),
+    )
+    activate("Checkout")
+    "Checkout" calls "Orders" label "insert order"
+    "Orders" repliesTo "Checkout" label "row saved"
+    "Checkout" sends "Order events" label "order.placed" data mapOf(
+        "orderId" to "ord-1001",
+        "sku" to "SOCK-1",
+    )
+    "Checkout" repliesTo "Customer" label "201 Created"
+    deactivate("Checkout")
+}
+lsd.completeScenario("Place an order", "Customer checks out two pairs of socks.")
+val listing = lsd.completeReport("Place an order")
+lsd.createIndex()
+```
+
+`completeReport` writes under `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it). Open `Place-an-order-1153f62c-diagram.html`: the interactive diagram. `Place-an-order-1153f62c-report.json` holds the data. `completeReport` returns both as `ReportFiles` (`diagramHtml`, `reportJson`). The 8 characters are a hash of the title, so two titles that read the same as file names (`Place an order`, `Place-an-order`) never overwrite each other. `createIndex()` writes `index.html`: the same report app with every report in the directory in its sidebar (failed first), including ones written by other test JVMs or modules. A report's data loads when you open it, and `index.html#report=<file stem>` links to one report.
+
+Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Any other fields load from `Place-an-order-1153f62c-payloads.js` when the panel opens.
+
+The participant type is the header shape. `ACTOR` is a person, `DATABASE` a cylinder, `QUEUE` stacked plates. `ENTITY` is a circle and `BOUNDARY` a circle with a bar. Anything else, including `PARTICIPANT`, is a rounded box. Sync responses and async messages draw an arrow head at the destination.
 
 ## Kotlin API
 
@@ -372,7 +419,7 @@ a feature off.
 | `lsd.mono.metrics.enabled` | `true` | Message count and captured duration in the Metrics view |
 | `lsd.mono.label.maxWidth` | `200` | Width the diagram cuts message labels to; the full label stays in the report and the side panel. Not a positive number: the default |
 | `lsd.mono.report.generatedAt` | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |
-| `lsd.mono.report.usagePing` | `true` | `false` stops the report page requesting the usage ping file from jsDelivr when it is opened, see [Usage ping](../../README.md#usage-ping) |
+| `lsd.mono.report.usagePing` | `true` | `false` stops the report page requesting the usage ping file from jsDelivr when it is opened, see [Usage ping](../../docs/usage-ping.md) |
 | `lsd.mono.cucumber.splitBySteps` | `false` | `true` makes the Cucumber plugin start a section at each step |
 | `lsd.mono.payload.maxDepth` | `32` | Payload limit, see [Message data](#message-data) |
 | `lsd.mono.payload.maxStringLength` | `100000` | Payload limit, see [Message data](#message-data) |

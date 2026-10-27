@@ -12,7 +12,7 @@ dependencies {
 }
 ```
 
-The version is on the [Maven Central badge](../../README.md#getting-started) in the root README. From another project in this repo, use `testImplementation(project(":modules:lsd-mono-cucumber-8"))` instead.
+The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo, use `testImplementation(project(":modules:lsd-mono-cucumber-8"))` instead.
 
 `lsd-mono-cucumber-8` brings in `lsd-mono-core` and `io.cucumber:cucumber-plugin`. You still need a Cucumber 8 runtime and a step-definition library. `cucumber-java8` and `cucumber-junit-platform-engine` are the pair this module is tested with. Stay on Cucumber 8. This build rejects 7.x and 9+.
 

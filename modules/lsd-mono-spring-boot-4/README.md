@@ -23,7 +23,7 @@ Each part switches on only when its classes are on the test classpath. Nothing b
 testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:<version>")
 ```
 
-The version is on the [Maven Central badge](../../README.md#getting-started) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-spring-boot-4"))`.
+The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-spring-boot-4"))`.
 
 That pulls in `lsd-mono-core`. Spring itself is not: the starter is compiled against Spring Boot 4 (Spring Framework 7, Jackson 3) and uses the app's own Boot 4.x, JUnit included. It needs nothing beyond what `spring-boot-starter-test` already brings.
 

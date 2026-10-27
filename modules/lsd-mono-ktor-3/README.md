@@ -9,7 +9,7 @@ testImplementation("io.github.lsd-consulting:lsd-mono-ktor-3:<version>")
 testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:<version>") // or lsd-mono-cucumber-8
 ```
 
-The version is on the [Maven Central badge](../../README.md#getting-started) in the root README. This module is not on Maven Central yet: it is first published with the next weekly release, and so is its [sample report](https://lsd-consulting.github.io/lsd-mono/ktor-3/). From another project in this repo: `testImplementation(project(":modules:lsd-mono-ktor-3"))`.
+The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. This module is not on Maven Central yet: it is first published with the next weekly release, and so is its [sample report](https://lsd-consulting.github.io/lsd-mono/ktor-3/). From another project in this repo: `testImplementation(project(":modules:lsd-mono-ktor-3"))`.
 
 Ktor is not a dependency of this module (it is `compileOnly`): the app's own Ktor 3 is used. The server plugin needs `ktor-server-core` and the client plugin `ktor-client-core`; WebSockets served need `ktor-server-websockets`, which an app with WebSockets already has (the client's are in `ktor-client-core`). The module runs on the same Java as the rest of lsd-mono (17 or later).
 
