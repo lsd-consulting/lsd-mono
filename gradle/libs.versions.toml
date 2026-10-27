@@ -61,7 +61,7 @@ ktor-bom = { module = "io.ktor:ktor-bom", version.ref = "ktor" }
 # kotlinx.coroutines 1. Only lsd-mono-coroutines uses it.
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 
-# Test only: lsd-mono-core's tests validate real report output against the report JSON Schema.
+# Test only: lsd-mono-jvm's tests validate real report output against the report JSON Schema.
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
 
 # Test only: lsd-mono-report-model's tests read the model's constructor parameters.

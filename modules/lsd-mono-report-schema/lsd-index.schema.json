@@ -20,7 +20,7 @@
     },
     "title": {
       "type": "string",
-      "description": "Always `LSD reports` from lsd-mono-core."
+      "description": "Always `LSD reports` from lsd-mono-jvm."
     },
     "generatedAt": {
       "type": "string",

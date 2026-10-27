@@ -7,12 +7,12 @@ plugins {
 }
 
 description =
-    "LSD Mono report model: the report JSON as plain Kotlin values, for producers that write a report without lsd-mono-core"
+    "LSD Mono report model: the report JSON as plain Kotlin values, for producers that write a report without lsd-mono-jvm"
 
 // The report model is experimental (@ExperimentalLsdReportModel); its own tests use it freely.
 kotlin {
     compilerOptions {
-        optIn.add("io.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel")
+        optIn.add("io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel")
     }
 }
 

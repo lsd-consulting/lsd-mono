@@ -2,7 +2,7 @@
   "schemaVersion": "0.1.0",
   "title": "Checkout Service — Living Sequence Diagrams",
   "generatedAt": "2026-09-30T06:42:11Z",
-  "generator": "lsd-mono-core 0.0.1-SNAPSHOT",
+  "generator": "lsd-mono-jvm 0.0.1-SNAPSHOT",
   "status": "error",
   "options": {
     "metricsEnabled": true,

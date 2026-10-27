@@ -65,7 +65,7 @@ function reportFor(size) {
   return {
     title: `mono-${size}`,
     generatedAt: new Date().toISOString(),
-    generator: 'lsd-mono-core perf fixture',
+    generator: 'lsd-mono-jvm perf fixture',
     status: 'success',
     options: { metricsEnabled: true, labelMaxWidth: 200 },
     scenarios: [
@@ -186,7 +186,7 @@ function timedReportFor(calls) {
   return {
     title: `timed-${calls}`,
     generatedAt: new Date().toISOString(),
-    generator: 'lsd-mono-core perf fixture',
+    generator: 'lsd-mono-jvm perf fixture',
     status: 'success',
     options: { metricsEnabled: true, labelMaxWidth: 200 },
     scenarios: [

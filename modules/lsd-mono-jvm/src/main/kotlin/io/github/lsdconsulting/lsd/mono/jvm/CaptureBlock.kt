@@ -1,0 +1,156 @@
+package io.github.lsdconsulting.lsd.mono.jvm
+
+import io.github.lsdconsulting.lsd.mono.jvm.domain.Message
+import io.github.lsdconsulting.lsd.mono.jvm.domain.MessageType
+import io.github.lsdconsulting.lsd.mono.jvm.domain.SequenceEvent
+import java.time.Instant
+
+/**
+ * The receiver of `capture { }`: several events captured together.
+ *
+ * ```kotlin
+ * lsd.capture {
+ *     "Customer" calls "Orders" label "POST /orders" data body took 412
+ *     activate("Orders")
+ *     "Orders" sends "order-events" label "order.paid"
+ *     note("idempotent by orderId", on = "Orders")
+ *     "Orders" repliesTo "Customer" label "201 Created"
+ *     deactivate("Orders")
+ * }
+ * ```
+ *
+ * The arrows ([calls], [repliesTo], [sends]) exist only here, and every [Capturer] verb
+ * works too. The block picks its scenario once, when it starts, and adds its events
+ * together when it ends, even if it throws, so other threads' events never land between
+ * them. Message data is copied when its line runs. Facts are added at once.
+ *
+ * Use the receiver only inside the block, on the block's thread. Once the block has
+ * ended, calls on it throw.
+ */
+public class CaptureBlock internal constructor(
+    private val scenario: LsdScenario,
+) : Capturer() {
+    /** [SequenceEvent]s and [MessageSpec]s, in the order they were written. */
+    private val entries = ArrayList<Any>()
+    private var ended = false
+
+    /** Guards [entries] and [ended]: a [PendingCall] from this block may be replied to from another thread. */
+    private val lock = Any()
+
+    /** A synchronous call from this participant to [to]. */
+    public infix fun String.calls(to: String): MessageSpec = spec(this, to, MessageType.SYNCHRONOUS)
+
+    /** The response to a call, from this participant (the callee) to [to]. */
+    public infix fun String.repliesTo(to: String): MessageSpec = spec(this, to, MessageType.SYNCHRONOUS_RESPONSE)
+
+    /** An asynchronous message from this participant to [to], such as an event on a queue. */
+    public infix fun String.sends(to: String): MessageSpec = spec(this, to, MessageType.ASYNCHRONOUS)
+
+    private fun spec(
+        from: String,
+        to: String,
+        type: MessageType,
+    ): MessageSpec = MessageSpec(from, to, type, scenario.context.payloads::snapshot).also { add(it) }
+
+    override fun emit(events: List<SequenceEvent>) {
+        events.forEach { add(scenario.context.copyData(it)) }
+    }
+
+    override fun fact(key: String, value: String) {
+        synchronized(lock) { checkOpen() }
+        scenario.addFact(key, value)
+    }
+
+    /** The request joins the block; the reply joins it too if it comes before the block ends. */
+    override fun startCall(request: Message): PendingCall {
+        val call = PendingCall(scenario, request, ::deliverReply)
+        scenario.track(call)
+        add(scenario.context.copyData(request))
+        return call
+    }
+
+    private fun deliverReply(reply: Message) {
+        synchronized(lock) {
+            if (!ended) {
+                entries.add(scenario.context.copyData(reply))
+                return
+            }
+        }
+        scenario.emit(listOf(reply))
+    }
+
+    private fun add(entry: Any) {
+        synchronized(lock) {
+            checkOpen()
+            entries.add(entry)
+        }
+    }
+
+    private fun checkOpen() = check(!ended) { "This capture block has ended; use its receiver only inside the block" }
+
+    internal fun run(block: CaptureBlock.() -> Unit) {
+        try {
+            block()
+        } finally {
+            // Commit under the lock, so a reply that arrives now waits and lands after the block's events.
+            synchronized(lock) {
+                ended = true
+                val events = entries.map { if (it is MessageSpec) it.toMessage() else it as SequenceEvent }
+                scenario.context.captureInto(scenario, events, dataCopied = true)
+            }
+        }
+    }
+}
+
+/**
+ * A message written with an arrow in a [CaptureBlock], such as
+ * `"A" calls "B" label "GET /x" data body took 12`. The block captures it when it ends.
+ */
+public class MessageSpec internal constructor(
+    private val from: String,
+    private val to: String,
+    private val type: MessageType,
+    private val copy: (Any?) -> Any?,
+) {
+    private var label = ""
+    private var data: Any? = null
+    private var colour: String? = null
+    private var timing = Timing()
+    private var trace: Trace? = null
+
+    /** The text on the arrow. */
+    public infix fun label(text: String): MessageSpec = apply { label = text }
+
+    /** The payload shown in the inspector. It is copied now, so later changes don't reach the report. */
+    public infix fun data(value: Any?): MessageSpec = apply { data = copy(value) }
+
+    /** How long the call took, measured, in milliseconds (fractional allowed): `took 12` or `took 0.4`. */
+    public infix fun took(ms: Number): MessageSpec = apply { timing = timing.copy(durationMs = ms.toDouble()) }
+
+    /** The message's [Timing]: start, measured duration, clock source, ordering hint. Replaces any set before. */
+    public infix fun timing(value: Timing): MessageSpec = apply { timing = value }
+
+    /** Trace and span ids, for exact pairing and nesting. */
+    public infix fun trace(ids: Trace): MessageSpec = apply { trace = ids }
+
+    /** The clock domain (service or JVM) it was timed in. */
+    public infix fun source(name: String): MessageSpec = apply { timing = timing.copy(source = name) }
+
+    /** The arrow's colour, such as `#dc2626`. */
+    public infix fun colour(css: String): MessageSpec = apply { colour = css }
+
+    /** When it started, for capture that arrives out of order. */
+    public infix fun startedAt(instant: Instant): MessageSpec = apply { timing = timing.copy(startedAt = instant) }
+
+    internal fun toMessage(): Message =
+        Message(
+            id = "",
+            from = from,
+            to = to,
+            label = label,
+            type = type,
+            colour = colour,
+            data = data,
+            callRef = if (type == MessageType.ASYNCHRONOUS) CallRef(null) else null,
+        ).withTiming(timing, trace)
+}

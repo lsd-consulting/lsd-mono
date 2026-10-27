@@ -1,6 +1,6 @@
 # LSD Report
 
-Report UI for **lsd-mono-report-html** (and so for lsd-mono-core, which writes its reports with it). Sources live in `modules/lsd-mono-report-html/ui`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `dist/lsd-report.html` into its jar as `lsd-report.single.html`. Build output is not committed. The Kotlin writer injects the report as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
+Report UI for **lsd-mono-report-html** (and so for lsd-mono-jvm, which writes its reports with it). Sources live in `modules/lsd-mono-report-html/ui`. The parent module's Gradle build runs this package (`reportSingle`, `reportTest`) and packages `dist/lsd-report.html` into its jar as `lsd-report.single.html`. Build output is not committed. The Kotlin writer injects the report as `window.__LSD_REPORT__`. Opening the shell with no payload falls back to the sample report.
 
 It is not published on its own.
 

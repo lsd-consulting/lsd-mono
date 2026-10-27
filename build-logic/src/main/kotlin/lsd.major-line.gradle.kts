@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.MajorLines
+import io.github.lsdconsulting.lsd.mono.gradle.MajorLines
 
 // Declares `majorLines { pin(...); ban(...) }`. Every configuration of the project
 // rejects a candidate that breaks a declared pin or ban, so a resolve fails loudly

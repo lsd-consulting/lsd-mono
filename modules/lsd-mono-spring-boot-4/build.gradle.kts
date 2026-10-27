@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.writesSampleReport
+import io.github.lsdconsulting.lsd.mono.gradle.writesSampleReport
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -16,7 +16,7 @@ description =
 // The test lifecycle reaches core's integration-only API (as lsd-mono-cucumber-8 does).
 kotlin {
     compilerOptions {
-        optIn.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi")
+        optIn.add("io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi")
     }
 }
 
@@ -41,7 +41,7 @@ val bootManagedJunit: Configuration by configurations.creating {
 }
 
 dependencies {
-    api(project(":modules:lsd-mono-core"))
+    api(project(":modules:lsd-mono-jvm"))
 
     // Spring is the application's, not ours: compile against it and ship none of it, so the app's
     // own Boot 4.x wins. Each part of the auto-configuration switches on only when its classes are
@@ -85,7 +85,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-websocket")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
     // LsdTestConfig, ReportJson and ReportSchemas (#74).
-    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
+    testImplementation(testFixtures(project(":modules:lsd-mono-jvm")))
     // A class that already uses LsdExtension is left to it; the tests check both on Boot's JUnit.
     testImplementation(project(":modules:lsd-mono-junit-jupiter"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -157,20 +157,20 @@ val sampleReportTests =
         classpath = sourceSets.test.get().runtimeClasspath
         useJUnitPlatform { includeTags("lsd-fixture") }
         filter {
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaSendFailureFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.AsyncShopFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.KafkaRecordListenerFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.OwnClientsFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.MvcStreamsFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebFluxStreamsFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebTestClientFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.RestClientStreamsFixture")
-            includeTestsMatching("io.lsdconsulting.lsd.mono.springboot.fixture.WebSocketShopFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.ShopFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.KafkaShopFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.KafkaBatchListenerFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.KafkaSendFailureFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.WebFluxShopFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.AsyncShopFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.WebFluxBookingsFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.KafkaRecordListenerFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.OwnClientsFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.MvcStreamsFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.WebFluxStreamsFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.WebTestClientFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.RestClientStreamsFixture")
+            includeTestsMatching("io.github.lsdconsulting.lsd.mono.springboot.fixture.WebSocketShopFixture")
         }
         writesSampleReport(sampleReportDir)
         ignoreFailures = true
@@ -207,7 +207,7 @@ kover {
 
 // The sample as published on Pages under spring-boot-4/: the report index plus each report, with
 // stable addresses for the diagrams (files carry a short hash). The Pages workflow copies
-// build/pages into the site next to lsd-mono-core's example report.
+// build/pages into the site next to lsd-mono-jvm's example report.
 tasks.register<Sync>("sampleReport") {
     group = "documentation"
     description = "Build the Spring Boot starter's sample report site into build/pages. Not part of build or check."

@@ -1,6 +1,6 @@
 name: Pages
 
-# Builds the sample site (the example report and the index.html that lsd-mono-core writes
+# Builds the sample site (the example report and the index.html that lsd-mono-jvm writes
 # for it, generated from the current report UI and KitchenSinkSample.kt) and publishes it to
 # GitHub Pages, so https://lsd-consulting.github.io/lsd-mono/ opens the report index and
 # example-report.html opens the report on its own. spring-boot-4/ is the Spring Boot starter's
@@ -92,22 +92,22 @@ jobs:
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Build the sample site
         run: |
-          ./gradlew :modules:lsd-mono-core:kitchenSinkSample :modules:lsd-mono-spring-boot-4:sampleReport :modules:lsd-mono-http4k-6:sampleReport :modules:lsd-mono-ktor-3:sampleReport
+          ./gradlew :modules:lsd-mono-jvm:kitchenSinkSample :modules:lsd-mono-spring-boot-4:sampleReport :modules:lsd-mono-http4k-6:sampleReport :modules:lsd-mono-ktor-3:sampleReport
           # The Spring Boot starter's sample report, under spring-boot-4/ (its README links there).
-          mkdir -p modules/lsd-mono-core/build/pages/spring-boot-4
-          cp -R modules/lsd-mono-spring-boot-4/build/pages/. modules/lsd-mono-core/build/pages/spring-boot-4/
+          mkdir -p modules/lsd-mono-jvm/build/pages/spring-boot-4
+          cp -R modules/lsd-mono-spring-boot-4/build/pages/. modules/lsd-mono-jvm/build/pages/spring-boot-4/
           # The http4k integration's sample report, under http4k-6/ (its README links there).
-          mkdir -p modules/lsd-mono-core/build/pages/http4k-6
-          cp -R modules/lsd-mono-http4k-6/build/pages/. modules/lsd-mono-core/build/pages/http4k-6/
+          mkdir -p modules/lsd-mono-jvm/build/pages/http4k-6
+          cp -R modules/lsd-mono-http4k-6/build/pages/. modules/lsd-mono-jvm/build/pages/http4k-6/
           # The Ktor integration's sample report, under ktor-3/ (its README links there).
-          mkdir -p modules/lsd-mono-core/build/pages/ktor-3
-          cp -R modules/lsd-mono-ktor-3/build/pages/. modules/lsd-mono-core/build/pages/ktor-3/
+          mkdir -p modules/lsd-mono-jvm/build/pages/ktor-3
+          cp -R modules/lsd-mono-ktor-3/build/pages/. modules/lsd-mono-jvm/build/pages/ktor-3/
       - name: Check the site
         run: |
           version=$(./gradlew -q printVersion)
           echo "Site built as $version"
           [ "$version" != 0.0.1-SNAPSHOT ] || { echo "::error::no tags in the checkout, so no version"; exit 1; }
-          site=modules/lsd-mono-core/build/pages
+          site=modules/lsd-mono-jvm/build/pages
           for f in index.html example-report.html; do
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
           done
@@ -145,7 +145,7 @@ jobs:
       # failed every time. See "Pages reruns" in docs/ci.md.
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: modules/lsd-mono-core/build/pages
+          path: modules/lsd-mono-jvm/build/pages
           name: github-pages-${{ github.run_attempt }}
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

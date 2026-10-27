@@ -1,6 +1,6 @@
 # lsd-mono-junit-jupiter
 
-`lsd-mono-junit-jupiter` is the JUnit Jupiter 6 extension for [lsd-mono-core](../lsd-mono-core) that turns each test into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside the test. When the test ends, the extension stores a passed test as a successful scenario, and a failure or abort with a structured error. It writes the report when the class finishes. It depends on first-party `lsd-mono-core`, not the old published `lsd-core`, and there is no PlantUML on this path.
+`lsd-mono-junit-jupiter` is the JUnit Jupiter 6 extension for [lsd-mono-jvm](../lsd-mono-jvm) that turns each test into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside the test. When the test ends, the extension stores a passed test as a successful scenario, and a failure or abort with a structured error. It writes the report when the class finishes. It depends on first-party `lsd-mono-jvm`, not the old published `lsd-core`, and there is no PlantUML on this path.
 
 It replaces the earlier published `lsd-junit5` and `lsd-junit-jupiter` libraries for projects that use LSD Mono.
 
@@ -12,19 +12,19 @@ testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:<version>")
 
 The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-junit-jupiter"))`.
 
-That pulls in `lsd-mono-core` and the Jupiter API. You still need a Jupiter engine on the test runtime classpath (the `junit-jupiter` bundle is enough).
+That pulls in `lsd-mono-jvm` and the Jupiter API. You still need a Jupiter engine on the test runtime classpath (the `junit-jupiter` bundle is enough).
 
 ## Capture from a test
 
 Register `LsdExtension`. Capture inside the test. Do **not** call `completeScenario` or `completeReport` yourself — the extension does that after each test and after the class.
 
 ```kotlin
-import io.lsdconsulting.lsd.mono.core.LsdContext
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
-import io.lsdconsulting.lsd.mono.junitjupiter.LsdExtension
+import io.github.lsdconsulting.lsd.mono.jvm.LsdContext
+import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.ACTOR
+import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.DATABASE
+import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.PARTICIPANT
+import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.QUEUE
+import io.github.lsdconsulting.lsd.mono.junitjupiter.LsdExtension
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
@@ -98,7 +98,7 @@ build/reports/lsd/PlaceOrderTest-<hash>-diagram.html
 
 `<hash>` is 8 hex characters from the class's unique id, so two classes with the same simple name in different packages get separate reports. It is the same on every run. Open the `-diagram.html` file: it is the interactive diagram. Next to it, `PlaceOrderTest-<hash>-report.json` holds the data. `createIndex()` (called by the extension) writes `index.html`, which shows every report in the directory in one page, failed first, including ones written by other Gradle test forks.
 
-Override the directory with `lsd.mono.report.outputDir` (every property is listed in the [core README](../lsd-mono-core/README.md#configuration-reference)). In this module's own tests that is `build/reports/lsd-test`.
+Override the directory with `lsd.mono.report.outputDir` (every property is listed in the [core README](../lsd-mono-jvm/README.md#configuration-reference)). In this module's own tests that is `build/reports/lsd-test`.
 
 Any `lsd.mono.*` property can also go in `src/test/resources/junit-platform.properties`, next to
 your JUnit settings. JUnit configuration parameters come after system properties and

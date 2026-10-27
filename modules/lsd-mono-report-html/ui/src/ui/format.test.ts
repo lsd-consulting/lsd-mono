@@ -6,7 +6,7 @@ describe('labelMaxWidth (#111)', () => {
   it('defaults to what Kotlin writes when the report has no width', () => {
     const kotlin = readFileSync(
       new URL(
-        '../../../../lsd-mono-core/src/main/kotlin/io/lsdconsulting/lsd/mono/core/ReportOptions.kt',
+        '../../../../lsd-mono-jvm/src/main/kotlin/io/github/lsdconsulting/lsd/mono/jvm/ReportOptions.kt',
         import.meta.url,
       ),
       'utf8',

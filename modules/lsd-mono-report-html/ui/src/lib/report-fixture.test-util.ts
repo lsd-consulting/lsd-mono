@@ -1,11 +1,11 @@
-// Report pieces for tests that build reports by hand: what lsd-mono-core writes when there is
+// Report pieces for tests that build reports by hand: what lsd-mono-jvm writes when there is
 // nothing more to say, so a fixture names only what it is about. Spread them first, so the
 // fixture's own fields win.
 import type { IndexManifest } from '../generated/lsd-index'
 import { REPORT_SCHEMA_VERSION, type DiagramEvent, type Report, type Scenario } from '../types'
 
 /**
- * The timing summary lsd-mono-core writes for a scenario whose messages carry no timings: one
+ * The timing summary lsd-mono-jvm writes for a scenario whose messages carry no timings: one
  * clock, `local`, or no clock at all when [events] has no messages. Pass the scenario's events
  * when it may have none; without them the scenario is taken to have messages.
  */

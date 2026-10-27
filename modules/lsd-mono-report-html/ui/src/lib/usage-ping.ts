@@ -21,9 +21,12 @@ export type ReportSource = (typeof REPORT_SOURCES)[number]
 
 const CDN = 'https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono'
 
-/** The release version in a report's `generator` (`lsd-mono-core 0.2.0`); null for a snapshot, dev or unknown build. */
+/**
+ * The release version in a report's `generator` (`lsd-mono-jvm 0.2.0`, or `lsd-mono-core 0.2.0` from a
+ * release before the rename); null for a snapshot, dev or unknown build.
+ */
 export function releaseVersion(generator: string | undefined): string | null {
-  return /^lsd-mono-core (\d+\.\d+\.\d+)$/.exec(generator ?? '')?.[1] ?? null
+  return /^lsd-mono-(?:jvm|core) (\d+\.\d+\.\d+)$/.exec(generator ?? '')?.[1] ?? null
 }
 
 /** The file requested for [event]: pinned to the version, so jsDelivr counts hits per release. No query string. */

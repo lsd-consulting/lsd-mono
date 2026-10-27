@@ -18,10 +18,10 @@ page it gets (`page`: `report`, `upgrade` or `cannot-open`).
 
 ## Who checks what
 
-- **lsd-mono-core** (`ConformanceTest` and the golden tests) writes every file whose `source` is
-  `lsd-mono-core` from the same scenarios, checks the output against the schema, and compares it
+- **lsd-mono-jvm** (`ConformanceTest` and the golden tests) writes every file whose `source` is
+  `lsd-mono-jvm` from the same scenarios, checks the output against the schema, and compares it
   with the file byte for byte. Only the time and the generator are set to fixed values
-  (`2026-01-01T12:00:00Z`, `lsd-mono-core (conformance)`); ids are the deterministic ones, and the
+  (`2026-01-01T12:00:00Z`, `lsd-mono-jvm (conformance)`); ids are the deterministic ones, and the
   usage ping is off. It also checks every other JSON file against the schema with its validator
   (networknt, formats asserted), and that a large written report (100 participants, 400
   messages) follows it.
@@ -43,17 +43,17 @@ Both sides fail on a file the manifest does not list, or a listed file that is m
 
 ## Changing a report
 
-- **Written by lsd-mono-core:** change the scenario in the test, run
-  `./gradlew :modules:lsd-mono-core:test --tests '*ConformanceTest*'`, and copy the file the
-  failure names from `modules/lsd-mono-core/build/conformance-actual/` over this one. Review the
+- **Written by lsd-mono-jvm:** change the scenario in the test, run
+  `./gradlew :modules:lsd-mono-jvm:test --tests '*ConformanceTest*'`, and copy the file the
+  failure names from `modules/lsd-mono-jvm/build/conformance-actual/` over this one. Review the
   difference like code: it is a change in what the producer writes.
 - **Hand-written, captured or generated:** edit it; both sides re-check it against the schema. A
-  captured report would be a copy of lsd-mono-core output kept as it was; there is none now.
+  captured report would be a copy of lsd-mono-jvm output kept as it was; there is none now.
   `reports/example-report.json` is written from the example report's scenarios like any
-  lsd-mono-core file, and `reports/example-components.json` is kept by hand (its manifest entry
+  lsd-mono-jvm file, and `reports/example-components.json` is kept by hand (its manifest entry
   says why).
 - **A new file:** add it to `manifest.json`, and to `PRODUCED` in `ConformanceTest` if
-  lsd-mono-core writes it.
+  lsd-mono-jvm writes it.
 
 ## Versions in the UI
 

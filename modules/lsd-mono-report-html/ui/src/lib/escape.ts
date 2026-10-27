@@ -11,7 +11,7 @@
  * JavaScript strings, so control characters and lone surrogates cannot make it invalid,
  * and keeping them lets ids in attributes match the report data exactly. The Kotlin
  * writer, which writes UTF-8 files, also replaces those with U+FFFD
- * (`io.lsdconsulting.lsd.mono.report.html.Html`).
+ * (`io.github.lsdconsulting.lsd.mono.report.html.Html`).
  */
 
 const TEXT_UNSAFE = /[&<>]/g

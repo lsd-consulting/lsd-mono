@@ -143,7 +143,7 @@ export type KnownReportSource = 'junit' | 'cucumber' | 'api'
  */
 export type KnownMessageOrigin = 'captured' | 'imported'
 /**
- * Where a message came from: captured, recorded by the producer while the test ran (as lsd-mono-core does), or imported, built afterwards from another record, such as OpenTelemetry spans from a file or a trace backend. Absent means captured. Not the same as source, the message's clock domain. Open: a newer producer may send a value not listed here. Readers show a value they do not know as it is.
+ * Where a message came from: captured, recorded by the producer while the test ran (as lsd-mono-jvm does), or imported, built afterwards from another record, such as OpenTelemetry spans from a file or a trace backend. Absent means captured. Not the same as source, the message's clock domain. Open: a newer producer may send a value not listed here. Readers show a value they do not know as it is.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "MessageOrigin".
@@ -151,7 +151,7 @@ export type KnownMessageOrigin = 'captured' | 'imported'
 export type MessageOrigin = KnownMessageOrigin | (string & {})
 
 /**
- * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-core as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.
+ * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.
  */
 export interface Report {
   /**
@@ -160,7 +160,7 @@ export interface Report {
   schemaVersion: string
   title: string
   /**
-   * When the report was written: an RFC 3339 date-time, with Z or a UTC offset. lsd-mono-core writes UTC with Z, to the millisecond or less (the seconds alone when they are whole).
+   * When the report was written: an RFC 3339 date-time, with Z or a UTC offset. lsd-mono-jvm writes UTC with Z, to the millisecond or less (the seconds alone when they are whole).
    */
   generatedAt: string
   /**
@@ -333,7 +333,7 @@ export interface PairAccuracy {
   accuracy: Accuracy
 }
 /**
- * Trace context on a message, in OpenTelemetry's terms, and frozen at these three ids: no minor version adds to it, and anything more about the span (trace flags, trace state, span kind, status) goes in the message's attributes. Ids are as the producer received them; lsd-mono-core never invents them. W3C Trace Context and OpenTelemetry write lowercase hex, 32 characters for traceId and 16 for spanId and parentSpanId, and a producer should write them that way. B3 ids are accepted too, including a 16-character (64-bit) traceId, so no format is enforced.
+ * Trace context on a message, in OpenTelemetry's terms, and frozen at these three ids: no minor version adds to it, and anything more about the span (trace flags, trace state, span kind, status) goes in the message's attributes. Ids are as the producer received them; lsd-mono-jvm never invents them. W3C Trace Context and OpenTelemetry write lowercase hex, 32 characters for traceId and 16 for spanId and parentSpanId, and a producer should write them that way. B3 ids are accepted too, including a 16-character (64-bit) traceId, so no format is enforced.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "Trace".

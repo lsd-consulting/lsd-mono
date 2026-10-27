@@ -2,7 +2,7 @@
 
 Next steps: [next-steps.md](next-steps.md)
 
-**Scope:** features still to port from legacy [lsd-core](https://github.com/lsd-consulting/lsd-core) (`com.lsd.core`) into LSD Mono `modules/lsd-mono-core` (`io.lsdconsulting.lsd.mono.core`) and its `report/` UI.
+**Scope:** features still to port from legacy [lsd-core](https://github.com/lsd-consulting/lsd-core) (`com.lsd.core`) into LSD Mono `modules/lsd-mono-jvm` (`io.github.lsdconsulting.lsd.mono.jvm`) and its `report/` UI.
 
 **Inspected (local tree, through the UX checks, 2026-10-03):** legacy domain / `LsdContext` / report pipeline / builders / properties; mono capture, report writer, JSON models, JUnit Jupiter 6 extension; report types, SVG renderer, chrome.
 
@@ -14,7 +14,7 @@ Legacy is **inspiration and migration API only** — not the product path. Gener
 
 Replace the PlantUML → SVG → Handlebars HTML pipeline with a **modern web stack** (report: Vite + TypeScript + custom SVG) that is responsive, keyboard-friendly, and can handle **very large diagrams** without chopping them into PlantUML pages.
 
-Keep a **migration-friendly capture API** (familiar `LsdContext` shapes) under Mono artifact names (`lsd-mono-core`, `lsd-mono-*`).
+Keep a **migration-friendly capture API** (familiar `LsdContext` shapes) under Mono artifact names (`lsd-mono-jvm`, `lsd-mono-*`).
 
 Treat **quality tests as first-class**: golden `ReportJson` contracts first, unit tests for domain/layout rules, browser smoke later — not golden PlantUML/SVG blobs.
 
@@ -26,7 +26,7 @@ These are **implemented**, not stubs, unless noted.
 
 | Area | Evidence |
 |------|----------|
-| Participants (name/id/alias/colour + types ACTOR, PARTICIPANT, DATABASE, QUEUE, ENTITY, BOUNDARY) | `modules/lsd-mono-core/.../domain/Participant.kt`; auto-register on capture in `LsdContext.bind` / `resolve` |
+| Participants (name/id/alias/colour + types ACTOR, PARTICIPANT, DATABASE, QUEUE, ENTITY, BOUNDARY) | `modules/lsd-mono-jvm/.../domain/Participant.kt`; auto-register on capture in `LsdContext.bind` / `resolve` |
 | Facts | `addFact` → `FactJson` in report |
 | Messages: SYNCHRONOUS, SYNCHRONOUS_RESPONSE, ASYNCHRONOUS, LOST, BI_DIRECTIONAL, SHORT_INBOUND, SHORT_OUTBOUND (+ colour, data, durationMs) | `domain/SequenceEvent.kt` `MessageType`; JSON `MessageEventJson` — short types + distinct LOST/BI SVG **landed 2026-10-03** |
 | Note over / left / right | `Note` + `NoteSide`; verb `note(text, on, side)` — **landed 2026-10-03** |
@@ -254,7 +254,7 @@ The large-diagram UX baseline is shipped: sticky participant header, scenario an
 |--|--|
 | **Legacy** | Ecosystem (interceptors, cucumber, etc.) calls `LsdContext.capture` / builders. |
 | **Mono** | `lsd-mono-cucumber-8` is shipped. Logging and HTTP interceptor modules are still open. |
-| **LSD Mono** | Document capture contract; later `lsd-mono-*` integrations depend on `lsd-mono-core` only. |
+| **LSD Mono** | Document capture contract; later `lsd-mono-*` integrations depend on `lsd-mono-jvm` only. |
 | **Priority** | **P1** (docs + contract); modules themselves later |
 | **Test** | Contract suite: DSL + `capture(vararg SequenceEvent)` golden. |
 
@@ -329,8 +329,8 @@ Open implementation work is tracked in `docs/internal/next-steps.md` and the **S
 | Legacy PlantUML markup | [lsd-core `SequenceDiagramMarkup.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/adapter/puml/SequenceDiagramMarkup.kt) |
 | Legacy metrics | [lsd-core `Metrics.kt`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/kotlin/com/lsd/core/report/model/Metrics.kt) |
 | Legacy HTML report | [lsd-core `html-report.hbs`](https://github.com/lsd-consulting/lsd-core/blob/main/src/main/resources/templates/html-report.hbs) |
-| Mono context | `modules/lsd-mono-core/src/main/kotlin/.../LsdContext.kt` |
-| Mono events | `modules/lsd-mono-core/src/main/kotlin/.../domain/SequenceEvent.kt` |
+| Mono context | `modules/lsd-mono-jvm/src/main/kotlin/.../LsdContext.kt` |
+| Mono events | `modules/lsd-mono-jvm/src/main/kotlin/.../domain/SequenceEvent.kt` |
 | Mono writer | `modules/lsd-mono-report-html/src/main/kotlin/.../report/html/ReportWriter.kt` |
 | Report types / UI / SVG | `modules/lsd-mono-report-html/ui/src/{types.ts,main.ts,lib/sequence-diagram.ts}` |
 | JUnit extension | `modules/lsd-mono-junit-jupiter/src/main/kotlin/.../LsdExtension.kt` |

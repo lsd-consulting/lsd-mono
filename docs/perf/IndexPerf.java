@@ -1,5 +1,5 @@
-import io.lsdconsulting.lsd.mono.core.LsdContext;
-import io.lsdconsulting.lsd.mono.core.domain.Status;
+import io.github.lsdconsulting.lsd.mono.jvm.LsdContext;
+import io.github.lsdconsulting.lsd.mono.jvm.domain.Status;
 import java.util.*;
 /** 200 test classes x 5 scenarios x 20 call/reply pairs; times completeReport and createIndex per class. */
 public class IndexPerf {

@@ -1,6 +1,6 @@
 // The JSON Schema in modules/lsd-mono-report-schema: what it requires and allows, its version, and
 // the report builders the checks share. conformance.test.ts checks the shared test reports against
-// it; lsd-mono-core's ReportSchemaTest validates what the writer produces.
+// it; lsd-mono-jvm's ReportSchemaTest validates what the writer produces.
 import { describe, expect, it } from 'vitest'
 import { findReport } from '../../checks/find-fixture'
 import { sectionsIndex, sectionsReport } from '../../checks/diagram-pages'

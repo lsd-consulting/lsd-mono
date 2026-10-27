@@ -1,6 +1,6 @@
 # lsd-mono-cucumber-8
 
-`lsd-mono-cucumber-8` is the Cucumber 8 plugin for [lsd-mono-core](../lsd-mono-core) that turns each scenario into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside your steps. The plugin records pass, fail, or warning when the scenario ends, and writes the report when the feature finishes. It depends on first-party `lsd-mono-core`, not the old published `lsd-core`, and there is no PlantUML on this path. It is pinned to Cucumber 8: the catalog holds the exact version (`8.0.4`) and the build fails if anything resolves to another major. A newer Cucumber major gets its own module.
+`lsd-mono-cucumber-8` is the Cucumber 8 plugin for [lsd-mono-jvm](../lsd-mono-jvm) that turns each scenario into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside your steps. The plugin records pass, fail, or warning when the scenario ends, and writes the report when the feature finishes. It depends on first-party `lsd-mono-jvm`, not the old published `lsd-core`, and there is no PlantUML on this path. It is pinned to Cucumber 8: the catalog holds the exact version (`8.0.4`) and the build fails if anything resolves to another major. A newer Cucumber major gets its own module.
 
 ## Depend on it
 
@@ -14,19 +14,19 @@ dependencies {
 
 The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo, use `testImplementation(project(":modules:lsd-mono-cucumber-8"))` instead.
 
-`lsd-mono-cucumber-8` brings in `lsd-mono-core` and `io.cucumber:cucumber-plugin`. You still need a Cucumber 8 runtime and a step-definition library. `cucumber-java8` and `cucumber-junit-platform-engine` are the pair this module is tested with. Stay on Cucumber 8. This build rejects 7.x and 9+.
+`lsd-mono-cucumber-8` brings in `lsd-mono-jvm` and `io.cucumber:cucumber-plugin`. You still need a Cucumber 8 runtime and a step-definition library. `cucumber-java8` and `cucumber-junit-platform-engine` are the pair this module is tested with. Stay on Cucumber 8. This build rejects 7.x and 9+.
 
 ## Register the plugin
 
 `src/test/resources/junit-platform.properties`:
 
 ```properties
-cucumber.plugin=io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin
+cucumber.plugin=io.github.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin
 cucumber.glue=com.example.steps
 cucumber.publish.enabled=false
 ```
 
-The class is `io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`. It implements Cucumber's `ConcurrentEventListener`.
+The class is `io.github.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`. It implements Cucumber's `ConcurrentEventListener`.
 
 Parallel execution is supported (`cucumber.execution.parallel.enabled=true`, or `--threads` on the CLI). Each scenario gets its own buffer, bound to the thread that runs its steps, so `LsdContext.instance` in a step lands in that scenario, and each feature gets its own report. Work a step hands to another thread needs `LsdContext.instance.wrap(task)`. A capture from a thread that is not bound to a scenario goes to the running scenario when there is only one; with several running it is logged as a warning and kept out of all of them.
 
@@ -38,11 +38,11 @@ Do **not** call `completeScenario` or `completeReport` yourself. The plugin does
 
 ```kotlin
 import io.cucumber.java8.En
-import io.lsdconsulting.lsd.mono.core.LsdContext
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.ACTOR
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.DATABASE
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.PARTICIPANT
-import io.lsdconsulting.lsd.mono.core.domain.ParticipantType.QUEUE
+import io.github.lsdconsulting.lsd.mono.jvm.LsdContext
+import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.ACTOR
+import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.DATABASE
+import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.PARTICIPANT
+import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.QUEUE
 
 class PlaceOrderSteps : En {
     init {
@@ -106,7 +106,7 @@ A passed scenario is stored as a success. The scenario title is the Cucumber sce
 
 These carry no stack trace; a failure keeps its stack behind **Show stack trace**.
 
-Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step (every property is listed in the [core README](../lsd-mono-core/README.md#configuration-reference)). That stays in the same diagram. It is not a new page. The step a scenario stopped at gets its section; the steps Cucumber then skips get none, because they never run, and the description lists them as `(skipped)`.
+Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step (every property is listed in the [core README](../lsd-mono-jvm/README.md#configuration-reference)). That stays in the same diagram. It is not a new page. The step a scenario stopped at gets its section; the steps Cucumber then skips get none, because they never run, and the description lists them as `(skipped)`.
 
 ## Where the report is written
 

@@ -73,7 +73,7 @@ export function wideReport(
     schemaVersion: REPORT_SCHEMA_VERSION,
     title: `mono-p${count}-m${size}`,
     generatedAt: new Date().toISOString(),
-    generator: 'lsd-mono-core wide perf fixture',
+    generator: 'lsd-mono-jvm wide perf fixture',
     status: 'success',
     options: { metricsEnabled: true, labelMaxWidth: 200, usagePing: false, source: 'api' },
     scenarios: [

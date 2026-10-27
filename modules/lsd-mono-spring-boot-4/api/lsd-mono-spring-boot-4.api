@@ -1,8 +1,8 @@
-public final class io/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration {
+public final class io/github/lsdconsulting/lsd/mono/springboot/LsdAutoConfiguration {
 	public fun <init> ()V
 }
 
-public class io/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/springframework/test/context/support/AbstractTestExecutionListener {
+public class io/github/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/springframework/test/context/support/AbstractTestExecutionListener {
 	public fun <init> ()V
 	public fun afterTestClass (Lorg/springframework/test/context/TestContext;)V
 	public fun afterTestMethod (Lorg/springframework/test/context/TestContext;)V
@@ -10,13 +10,13 @@ public class io/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/sp
 	public fun getOrder ()I
 }
 
-public final class io/lsdconsulting/lsd/mono/springboot/LsdWebSocketClient {
-	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/springboot/LsdWebSocketClient;
+public final class io/github/lsdconsulting/lsd/mono/springboot/LsdWebSocketClient {
+	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/springboot/LsdWebSocketClient;
 	public static final fun wrap (Lorg/springframework/web/socket/client/WebSocketClient;)Lorg/springframework/web/socket/client/WebSocketClient;
 }
 
-public final class io/lsdconsulting/lsd/mono/springboot/LsdWebTestClient {
-	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/springboot/LsdWebTestClient;
+public final class io/github/lsdconsulting/lsd/mono/springboot/LsdWebTestClient {
+	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/springboot/LsdWebTestClient;
 	public static final fun configurer ()Lorg/springframework/test/web/reactive/server/WebTestClientConfigurer;
 }
 

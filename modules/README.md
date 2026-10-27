@@ -7,18 +7,18 @@ published `lsd-consulting` libraries (e.g. Maven Central `lsd-core`,
 
 | Path | Artifact | Purpose |
 |------|----------|---------|
-| `lsd-mono-core/` | `lsd-mono-core` | Core: sequence capture, timing and properties. Builds the report model and writes it with lsd-mono-report-html → depends on `:modules:lsd-mono-report-model` and `:modules:lsd-mono-report-html` |
-| `lsd-mono-junit-jupiter/` | `lsd-mono-junit-jupiter` | JUnit Jupiter **6** extension → depends on `:modules:lsd-mono-core` |
-| `lsd-mono-cucumber-8/` | `lsd-mono-cucumber-8` | Cucumber **8** plugin → depends on `:modules:lsd-mono-core` |
-| `lsd-mono-coroutines/` | `lsd-mono-coroutines` | kotlinx.coroutines **1** support: keeps a scenario bound across thread hops → depends on `:modules:lsd-mono-core` |
-| `lsd-mono-spring-boot-4/` | `lsd-mono-spring-boot-4` | Spring Boot **4** starter: every `@SpringBootTest` draws its Spring MVC and WebFlux requests (`WebTestClient` included), `RestClient`, `RestTemplate` and `WebClient` calls, Kafka sends, failed sends and consumes, Spring Data repository calls, and WebSockets with STOMP, no code ([sample report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/)) → depends on `:modules:lsd-mono-core` |
-| `lsd-mono-http4k-6/` | `lsd-mono-http4k-6` | http4k **6** filters: the requests an app serves, the calls it makes and its WebSockets, in memory or on real servers; Java 21 ([sample report](https://lsd-consulting.github.io/lsd-mono/http4k-6/)) → depends on `:modules:lsd-mono-core` |
-| `lsd-mono-ktor-3/` | `lsd-mono-ktor-3` | Ktor **3** plugins: the requests an app serves, the calls its `HttpClient` makes and its WebSockets, in `testApplication` or on real engines ([sample report](https://lsd-consulting.github.io/lsd-mono/ktor-3/)) → depends on `:modules:lsd-mono-core` |
-| `lsd-mono-report-model/` | `lsd-mono-report-model` | The report JSON as plain Kotlin values (`ReportJson` and the rest) and the schema version. No dependencies beyond the Kotlin standard library; lsd-mono-core builds reports from it |
-| `lsd-mono-report-html/` | `lsd-mono-report-html` | Writes a report model as `<stem>-report.json` and the interactive HTML page, and the index of a directory's reports; bundles the single-file report shell → depends on `:modules:lsd-mono-report-model`. lsd-mono-core depends on it |
+| `lsd-mono-jvm/` | `lsd-mono-jvm` | Core: sequence capture, timing and properties. Builds the report model and writes it with lsd-mono-report-html → depends on `:modules:lsd-mono-report-model` and `:modules:lsd-mono-report-html` |
+| `lsd-mono-junit-jupiter/` | `lsd-mono-junit-jupiter` | JUnit Jupiter **6** extension → depends on `:modules:lsd-mono-jvm` |
+| `lsd-mono-cucumber-8/` | `lsd-mono-cucumber-8` | Cucumber **8** plugin → depends on `:modules:lsd-mono-jvm` |
+| `lsd-mono-coroutines/` | `lsd-mono-coroutines` | kotlinx.coroutines **1** support: keeps a scenario bound across thread hops → depends on `:modules:lsd-mono-jvm` |
+| `lsd-mono-spring-boot-4/` | `lsd-mono-spring-boot-4` | Spring Boot **4** starter: every `@SpringBootTest` draws its Spring MVC and WebFlux requests (`WebTestClient` included), `RestClient`, `RestTemplate` and `WebClient` calls, Kafka sends, failed sends and consumes, Spring Data repository calls, and WebSockets with STOMP, no code ([sample report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/)) → depends on `:modules:lsd-mono-jvm` |
+| `lsd-mono-http4k-6/` | `lsd-mono-http4k-6` | http4k **6** filters: the requests an app serves, the calls it makes and its WebSockets, in memory or on real servers; Java 21 ([sample report](https://lsd-consulting.github.io/lsd-mono/http4k-6/)) → depends on `:modules:lsd-mono-jvm` |
+| `lsd-mono-ktor-3/` | `lsd-mono-ktor-3` | Ktor **3** plugins: the requests an app serves, the calls its `HttpClient` makes and its WebSockets, in `testApplication` or on real engines ([sample report](https://lsd-consulting.github.io/lsd-mono/ktor-3/)) → depends on `:modules:lsd-mono-jvm` |
+| `lsd-mono-report-model/` | `lsd-mono-report-model` | The report JSON as plain Kotlin values (`ReportJson` and the rest) and the schema version. No dependencies beyond the Kotlin standard library; lsd-mono-jvm builds reports from it |
+| `lsd-mono-report-html/` | `lsd-mono-report-html` | Writes a report model as `<stem>-report.json` and the interactive HTML page, and the index of a directory's reports; bundles the single-file report shell → depends on `:modules:lsd-mono-report-model`. lsd-mono-jvm depends on it |
 | `lsd-mono-report-schema/` | none (not a Gradle project) | JSON Schemas for the report and index data, and the shared test reports. The Kotlin tests read them from the classpath (lsd-mono-report-model's test fixtures); the report UI's types are generated from them |
 
-`lsd-mono-core` is the core artifact. For the behaviour of the earlier libraries, see the
+`lsd-mono-jvm` is the core artifact. For the behaviour of the earlier libraries, see the
 upstream [lsd-core](https://github.com/lsd-consulting/lsd-core) repository. It is not part of this
 tree.
 
@@ -28,7 +28,7 @@ tree.
 lsd-mono-junit-jupiter ─┐
 lsd-mono-cucumber-8 ────┤
 lsd-mono-coroutines ────┤
-lsd-mono-spring-boot-4 ─┼─→ lsd-mono-core ─→ lsd-mono-report-html ─→ lsd-mono-report-model
+lsd-mono-spring-boot-4 ─┼─→ lsd-mono-jvm ─→ lsd-mono-report-html ─→ lsd-mono-report-model
 lsd-mono-http4k-6 ──────┤
 lsd-mono-ktor-3 ────────┘
 
@@ -37,7 +37,7 @@ and the report UI's TypeScript types are generated from it.
 ```
 
 The report side has no dependency on the capture side: lsd-mono-report-html and
-lsd-mono-report-model know nothing of `LsdContext`, JUnit, Cucumber or Spring, and lsd-mono-core's own API
+lsd-mono-report-model know nothing of `LsdContext`, JUnit, Cucumber or Spring, and lsd-mono-jvm's own API
 exposes neither of them.
 
 Where the non-Kotlin parts are:
@@ -52,19 +52,19 @@ Where the non-Kotlin parts are:
 
 | You are | Depend on |
 |---------|-----------|
-| Writing JUnit Jupiter 6 tests | `lsd-mono-core` and `lsd-mono-junit-jupiter` |
-| Writing Cucumber 8 scenarios | `lsd-mono-core` and `lsd-mono-cucumber-8` |
+| Writing JUnit Jupiter 6 tests | `lsd-mono-jvm` and `lsd-mono-junit-jupiter` |
+| Writing Cucumber 8 scenarios | `lsd-mono-jvm` and `lsd-mono-cucumber-8` |
 | Capturing from coroutines that change threads | add `lsd-mono-coroutines` |
-| Testing a Spring Boot 4 app with `@SpringBootTest` | `lsd-mono-spring-boot-4` (it brings `lsd-mono-core`) |
-| Testing an http4k 6 app | `lsd-mono-http4k-6` (it brings `lsd-mono-core`) and a test integration such as `lsd-mono-junit-jupiter` |
-| Testing a Ktor 3 app | `lsd-mono-ktor-3` (it brings `lsd-mono-core`) and a test integration such as `lsd-mono-junit-jupiter` |
-| Capturing by hand with `LsdContext` | `lsd-mono-core` only |
-| Writing reports without lsd-mono-core (an adapter for another test framework, a trace importer) | `lsd-mono-report-html`, which brings `lsd-mono-report-model` on the compile classpath |
+| Testing a Spring Boot 4 app with `@SpringBootTest` | `lsd-mono-spring-boot-4` (it brings `lsd-mono-jvm`) |
+| Testing an http4k 6 app | `lsd-mono-http4k-6` (it brings `lsd-mono-jvm`) and a test integration such as `lsd-mono-junit-jupiter` |
+| Testing a Ktor 3 app | `lsd-mono-ktor-3` (it brings `lsd-mono-jvm`) and a test integration such as `lsd-mono-junit-jupiter` |
+| Capturing by hand with `LsdContext` | `lsd-mono-jvm` only |
+| Writing reports without lsd-mono-jvm (an adapter for another test framework, a trace importer) | `lsd-mono-report-html`, which brings `lsd-mono-report-model` on the compile classpath |
 | Reading or building the report values only, with no files | `lsd-mono-report-model` |
 
-lsd-mono-core brings the report model and writer at run time only (Maven `runtime` scope), so a
-test that uses lsd-mono-core never compiles against them. Code that does use their types declares
-them itself, at the same version as lsd-mono-core: all nine are released together at one version
+lsd-mono-jvm brings the report model and writer at run time only (Maven `runtime` scope), so a
+test that uses lsd-mono-jvm never compiles against them. Code that does use their types declares
+them itself, at the same version as lsd-mono-jvm: all nine are released together at one version
 and are only meant to be used at matching versions
 ([docs/versioning-notes.md](../docs/versioning-notes.md)). Both are experimental for now: their
 types need an opt-in and have no binary-compatibility promise yet (see their READMEs).

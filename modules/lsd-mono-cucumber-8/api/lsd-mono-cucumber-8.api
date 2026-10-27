@@ -1,4 +1,4 @@
-public final class io/lsdconsulting/lsd/mono/cucumber/LsdCucumberPlugin : io/cucumber/plugin/ConcurrentEventListener {
+public final class io/github/lsdconsulting/lsd/mono/cucumber/LsdCucumberPlugin : io/cucumber/plugin/ConcurrentEventListener {
 	public fun <init> ()V
 	public fun setEventPublisher (Lio/cucumber/plugin/event/EventPublisher;)V
 }

@@ -5,7 +5,7 @@ import { unreadableFit, type UnreadableFit } from './schema-version'
 import { cssEscape } from './escape.ts'
 
 /**
- * The index page: every report in an output directory, in one page. lsd-mono-core writes
+ * The index page: every report in an output directory, in one page. lsd-mono-jvm writes
  * `index.html` as the report shell with this manifest in `window.__LSD_INDEX__`. A report's
  * data is a sibling script (`<stem>-report.js`) that is added only when the report is opened,
  * so the first paint does not grow with the size of the suite.

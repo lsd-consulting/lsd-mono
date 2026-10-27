@@ -1,25 +1,25 @@
 {
-  "$comment": "Every file in the shared test reports: what it is for, which schema it is checked against, whether that schema must accept it, and who writes it. lsd-mono-core's ConformanceTest and the report UI's conformance.test.ts both fail on a file this list does not name. source: lsd-mono-core (its tests write the file and compare their output with it), captured (copied from lsd-mono-core output once and kept for the checks), hand-written, or generated (a script makes it). page, for a report the UI boots though the schema rejects it or a reader would not show it: what the page shows (report, upgrade or cannot-open).",
+  "$comment": "Every file in the shared test reports: what it is for, which schema it is checked against, whether that schema must accept it, and who writes it. lsd-mono-jvm's ConformanceTest and the report UI's conformance.test.ts both fail on a file this list does not name. source: lsd-mono-jvm (its tests write the file and compare their output with it), captured (copied from lsd-mono-jvm output once and kept for the checks), hand-written, or generated (a script makes it). page, for a report the UI boots though the schema rejects it or a reader would not show it: what the page shows (report, upgrade or cannot-open).",
   "fixtures": [
     {
       "file": "reports/minimal.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "One scenario with nothing in it: no participants, events or facts."
     },
     {
       "file": "reports/no-timing.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "A structural sketch with no timings (STRUCTURE_ONLY): every arrow type, notes over and at the edge, an activation, a section, a divider and a delay."
     },
     {
       "file": "reports/no-components.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "Facts and structural rows but no participants or messages, so there is no component diagram to draw."
     },
     {
@@ -27,7 +27,7 @@
       "schema": "lsd-report.schema.json",
       "valid": true,
       "source": "hand-written",
-      "about": "Metrics and facts with no diagram, as a producer that sends only figures would write. lsd-mono-core works out its own metrics from the messages, so it cannot write this."
+      "about": "Metrics and facts with no diagram, as a producer that sends only figures would write. lsd-mono-jvm works out its own metrics from the messages, so it cannot write this."
     },
     {
       "file": "reports/other-producer.json",
@@ -40,42 +40,42 @@
       "file": "reports/long-names.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "Names, display names, labels, titles, facts and a note far longer than the page, some with no space to break at."
     },
     {
       "file": "reports/unicode-rtl.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "Arabic and Hebrew (right to left) beside Japanese, Hindi and Thai; Arabic-Indic digits, emoji with joiners and flags, a combining accent and bidirectional embedding marks."
     },
     {
       "file": "reports/escaping.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "Markup, a script end, a comment and U+2028/U+2029 in every free text field, payloads included. The page must show it all as text."
     },
     {
       "file": "reports/multi-scenario-status.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "A success, a warn and an error scenario, with the report's status the worst of them."
     },
     {
       "file": "reports/timing-tree.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "The call tree for nested spans, a span two calls share, and clock order across sources falling back for a pair that disagrees."
     },
     {
       "file": "reports/example-report.json",
       "schema": "lsd-report.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "The first four scenarios of the live example report (kitchenSinkSample), with timings, pairs and payload summaries, as ExampleReportGoldenTest writes them. The zoom, Metrics and help checks open it."
     },
     {
@@ -104,7 +104,7 @@
       "schema": "lsd-report.schema.json",
       "valid": true,
       "source": "hand-written",
-      "about": "The OpenTelemetry-ready fields of schema 0.3.0: W3C trace ids beside a B3 64-bit trace id, message attributes with semantic convention names and every kind of value, participant attributes (service.name, peer.service, lsd. keys), and messages captured (no origin, and origin captured) beside ones imported from spans. Nothing in lsd-mono-core writes attributes or an origin yet; the page must show it as usual."
+      "about": "The OpenTelemetry-ready fields of schema 0.3.0: W3C trace ids beside a B3 64-bit trace id, message attributes with semantic convention names and every kind of value, participant attributes (service.name, peer.service, lsd. keys), and messages captured (no origin, and origin captured) beside ones imported from spans. Nothing in lsd-mono-jvm writes attributes or an origin yet; the page must show it as usual."
     },
     {
       "file": "reports/next-major.json",
@@ -125,18 +125,18 @@
       "file": "indexes/status-mix.json",
       "schema": "lsd-index.schema.json",
       "valid": true,
-      "source": "lsd-mono-core",
-      "about": "The index manifest (window.__LSD_INDEX__) lsd-mono-core writes for multi-scenario-status.json."
+      "source": "lsd-mono-jvm",
+      "about": "The index manifest (window.__LSD_INDEX__) lsd-mono-jvm writes for multi-scenario-status.json."
     },
     {
       "file": "payloads/payload-script.js",
-      "source": "lsd-mono-core",
+      "source": "lsd-mono-jvm",
       "about": "A -payloads.js sidecar with awkward payloads: markup, U+2028/U+2029, emoji, a lone surrogate, plain-string bodies, doubles and big decimals. Not JSON: the page runs it."
     },
     {
       "file": "vectors/status-vectors.json",
       "source": "hand-written",
-      "about": "Not a report: message statuses that are and are not errors, the rule both the Errors metric (lsd-mono-core) and the page's error marks (the report UI) follow."
+      "about": "Not a report: message statuses that are and are not errors, the rule both the Errors metric (lsd-mono-jvm) and the page's error marks (the report UI) follow."
     },
     {
       "file": "invalid/missing-schema-version.json",

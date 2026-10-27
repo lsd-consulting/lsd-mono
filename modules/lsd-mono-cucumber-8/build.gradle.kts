@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.registerIntegrationReadmeSamples
+import io.github.lsdconsulting.lsd.mono.gradle.registerIntegrationReadmeSamples
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -16,7 +16,7 @@ description = "LSD Mono Cucumber 8 integration — plugin for living sequence di
 // Reads its split-by-steps property through core's integration-only API.
 kotlin {
     compilerOptions {
-        optIn.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi")
+        optIn.add("io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi")
     }
 }
 
@@ -50,14 +50,14 @@ majorLines {
 }
 
 dependencies {
-    api(project(":modules:lsd-mono-core"))
+    api(project(":modules:lsd-mono-jvm"))
     api(libs.cucumber.plugin)
 
     implementation(platform(libs.cucumber.bom))
 
     testImplementation(platform(libs.junit.bom))
     // LsdTestConfig and ReportJson (#74).
-    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
+    testImplementation(testFixtures(project(":modules:lsd-mono-jvm")))
     testImplementation(libs.cucumber.java8)
     testImplementation(libs.cucumber.junit.platform.engine)
     testImplementation(libs.junit.jupiter)
@@ -65,7 +65,7 @@ dependencies {
 
     // readme source set does not inherit main deps.
     "readmeImplementation"(sourceSets.named("main").get().output)
-    "readmeImplementation"(project(":modules:lsd-mono-core"))
+    "readmeImplementation"(project(":modules:lsd-mono-jvm"))
     "readmeImplementation"(platform(libs.cucumber.bom))
     "readmeImplementation"(libs.cucumber.java8)
     "readmeImplementation"(libs.cucumber.junit.platform.engine)
@@ -78,12 +78,12 @@ tasks.test {
 
 // README samples (captureReadmeReport, readmeSamples): the feature runs through LsdCucumberPlugin.
 val readmeFeature = layout.projectDirectory.file(
-    "src/readme/resources/io/lsdconsulting/lsd/mono/cucumber/readme/place_order.feature",
+    "src/readme/resources/io/github/lsdconsulting/lsd/mono/cucumber/readme/place_order.feature",
 )
 
 registerIntegrationReadmeSamples(
     readmeSourceSet,
-    "io.lsdconsulting.lsd.mono.cucumber.readme.CucumberReadmeSampleKt",
+    "io.github.lsdconsulting.lsd.mono.cucumber.readme.CucumberReadmeSampleKt",
     "Run the Cucumber README scenario through LsdCucumberPlugin",
 ) {
     args(readmeFeature.asFile.absolutePath)

@@ -1,6 +1,6 @@
 # lsd-mono-coroutines
 
-`lsd-mono-coroutines` keeps an LSD scenario bound while a Kotlin coroutine moves between threads. Without it, a capture made after the coroutine resumes on another dispatcher thread goes to the wrong scenario, or to none. It depends on first-party [`lsd-mono-core`](../lsd-mono-core) and on `kotlinx-coroutines-core`. Core itself has no coroutines dependency.
+`lsd-mono-coroutines` keeps an LSD scenario bound while a Kotlin coroutine moves between threads. Without it, a capture made after the coroutine resumes on another dispatcher thread goes to the wrong scenario, or to none. It depends on first-party [`lsd-mono-jvm`](../lsd-mono-jvm) and on `kotlinx-coroutines-core`. Core itself has no coroutines dependency.
 
 ## Depend on it
 
@@ -10,7 +10,7 @@ testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:<version>")
 
 The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-coroutines"))`.
 
-That pulls in `lsd-mono-core` and `kotlinx-coroutines-core`. The module is built against kotlinx.coroutines 1: the version catalog holds the exact version, and the build fails if anything resolves to another major. A 2.x release would get its own module.
+That pulls in `lsd-mono-jvm` and `kotlinx-coroutines-core`. The module is built against kotlinx.coroutines 1: the version catalog holds the exact version, and the build fails if anything resolves to another major. A 2.x release would get its own module.
 
 ## The problem
 
@@ -26,14 +26,14 @@ scenario.bind().use {
 }
 ```
 
-With several scenarios running, that capture cannot be attributed. It is logged as a warning and kept out of all of them (see [Threads and parallel tests](../lsd-mono-core/README.md#threads-and-parallel-tests)).
+With several scenarios running, that capture cannot be attributed. It is logged as a warning and kept out of all of them (see [Threads and parallel tests](../lsd-mono-jvm/README.md#threads-and-parallel-tests)).
 
 ## Keep the scenario with the coroutine
 
 `withLsdScenario(scenario) { }` binds the scenario to whichever thread the coroutine is running on, and puts each thread back as it found it when the coroutine suspends or ends:
 
 ```kotlin
-import io.lsdconsulting.lsd.mono.coroutines.withLsdScenario
+import io.github.lsdconsulting.lsd.mono.coroutines.withLsdScenario
 
 val lsd = LsdContext.instance
 val scenario = lsd.beginScenario(reportKey = "orders", bindCurrentThread = false)

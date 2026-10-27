@@ -57,7 +57,7 @@ test('shared report: next major version shows the upgrade page, with no console 
 })
 
 test('shared index: status mix lists its report and opens it, with no console error', async ({ page }) => {
-  // indexes/status-mix.json is the index lsd-mono-core writes for reports/multi-scenario-status.json.
+  // indexes/status-mix.json is the index lsd-mono-jvm writes for reports/multi-scenario-status.json.
   const manifest = JSON.parse(conformanceText('indexes/status-mix.json')) as IndexManifest
   const report = conformanceReport('multi-scenario-status')
   const [entry] = manifest.reports

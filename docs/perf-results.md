@@ -339,10 +339,10 @@ The cost per class grows slowly with the number of reports (2 ms at 10 reports, 
 The first view costs about the same at 200 reports as at 5. Switching reports loads one 70 KB script and
 draws one diagram. Reports that were opened before stay in memory (about 50 KB of heap each here).
 
-To rerun (after `./gradlew :modules:lsd-mono-core:jar`):
+To rerun (after `./gradlew :modules:lsd-mono-jvm:jar`):
 
 ```bash
-CP=modules/lsd-mono-core/build/libs/lsd-mono-core-0.0.1-SNAPSHOT.jar:$(find ~/.gradle/caches -name 'kotlin-stdlib-2.3.10.jar' | head -1)
+CP=modules/lsd-mono-jvm/build/libs/lsd-mono-jvm-0.0.1-SNAPSHOT.jar:$(find ~/.gradle/caches -name 'kotlin-stdlib-2.3.10.jar' | head -1)
 java -cp "$CP" docs/perf/IndexPerf.java 200 /tmp/lsd-index-200
 java -cp "$CP" docs/perf/IndexPerfCold.java /tmp/lsd-index-200
 node docs/perf/measure-index.mjs /tmp/lsd-index-200

@@ -13,7 +13,7 @@ import {
   usagePingUrl,
 } from './usage-ping'
 
-const release = { generator: 'lsd-mono-core 0.2.0', options: { usagePing: true } }
+const release = { generator: 'lsd-mono-jvm 0.2.0', options: { usagePing: true } }
 
 function pinger(send = vi.fn<(url: string) => void>()) {
   const p = new UsagePing(false, send)
@@ -36,10 +36,12 @@ describe('usage ping', () => {
   })
 
   it('takes the version only from a release generator', () => {
+    expect(releaseVersion('lsd-mono-jvm 0.2.0')).toBe('0.2.0')
+    expect(releaseVersion('lsd-mono-jvm 12.3.45')).toBe('12.3.45')
+    expect(releaseVersion('lsd-mono-jvm 0.2.1-SNAPSHOT')).toBeNull()
+    expect(releaseVersion('lsd-mono-jvm unknown')).toBeNull()
     expect(releaseVersion('lsd-mono-core 0.2.0')).toBe('0.2.0')
-    expect(releaseVersion('lsd-mono-core 12.3.45')).toBe('12.3.45')
     expect(releaseVersion('lsd-mono-core 0.2.1-SNAPSHOT')).toBeNull()
-    expect(releaseVersion('lsd-mono-core unknown')).toBeNull()
     expect(releaseVersion('ux-fixture')).toBeNull()
     expect(releaseVersion(undefined)).toBeNull()
   })
@@ -64,13 +66,13 @@ describe('usage ping', () => {
   })
 
   it.each([
-    ['usagePing false', { generator: 'lsd-mono-core 0.2.0', options: { usagePing: false } }],
+    ['usagePing false', { generator: 'lsd-mono-jvm 0.2.0', options: { usagePing: false } }],
     [
       'a report that names no options, as the page holds it',
-      { generator: 'lsd-mono-core 0.2.0', options: DEFAULT_OPTIONS },
+      { generator: 'lsd-mono-jvm 0.2.0', options: DEFAULT_OPTIONS },
     ],
-    ['a snapshot build', { generator: 'lsd-mono-core 0.2.1-SNAPSHOT', options: { usagePing: true } }],
-    ['an unknown version', { generator: 'lsd-mono-core unknown', options: { usagePing: true } }],
+    ['a snapshot build', { generator: 'lsd-mono-jvm 0.2.1-SNAPSHOT', options: { usagePing: true } }],
+    ['an unknown version', { generator: 'lsd-mono-jvm unknown', options: { usagePing: true } }],
     ['no report', null],
   ])('sends nothing for %s', (_, source) => {
     const { p, send } = pinger()

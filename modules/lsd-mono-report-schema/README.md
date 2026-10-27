@@ -32,7 +32,7 @@ OpenTelemetry dependency.
 
 | Version | Change |
 |---------|--------|
-| `0.1.0` | The format as lsd-mono-core 0.7 wrote it. |
+| `0.1.0` | The format as lsd-mono-jvm 0.7 wrote it. |
 | `0.2.0` | A message's optional `attributes` and `origin`; `Trace` frozen at three ids and its id forms written down. Only adds: a 0.1 report is a valid 0.2 report. |
 | `0.3.0` | A participant's optional `attributes`, with the same keys and values as a message's. Only adds: a 0.2 report is a valid 0.3 report. |
 
@@ -62,7 +62,7 @@ version still validates it:
   `UnknownEvent`, and a reader drops it. A known kind still has to have its fields.
 - **Optional for any producer:** the report's `options` (each field defaults as its description
   says) and a scenario's timing summary (`accuracy`, `sources`, `clockOrdering`,
-  `clockOrdered`). A producer with no timing analysis leaves them out; lsd-mono-core always
+  `clockOrdered`). A producer with no timing analysis leaves them out; lsd-mono-jvm always
   writes them.
 - **A newer major version** may break any of this, so a reader says it cannot show the report
   rather than guess.
@@ -96,18 +96,18 @@ breaking change, 0.2.0 settles the parts OpenTelemetry touches:
   `peer.service` for a remote one it stands for. No attribute changes how a participant is drawn.
 - **`origin`**, optional on a message, an open enum: `captured` (recorded by the producer while the
   test ran) or `imported` (built afterwards from another record, such as spans). Absent means
-  captured, so lsd-mono-core writes none. It is not `source`, which is the clock domain.
+  captured, so lsd-mono-jvm writes none. It is not `source`, which is the clock domain.
 - **Times stay as they are:** `startedAt` (RFC 3339, which can carry nanoseconds) and `durationMs`
   (to the microsecond). An import loses precision below a microsecond, which a diagram does not
   need.
 
-lsd-mono-core writes neither `attributes` (on a message or a participant) nor `origin` yet, and the report UI does not show them
+lsd-mono-jvm writes neither `attributes` (on a message or a participant) nor `origin` yet, and the report UI does not show them
 yet: they are for producers that import, and for the import module. Span links, should they come,
 would be an optional `links` list on a message, not part of `trace`.
 
 ## Who uses it
 
-- **lsd-mono-core** writes `schemaVersion` and validates real output against both schemas in
+- **lsd-mono-jvm** writes `schemaVersion` and validates real output against both schemas in
   `ReportSchemaTest` (networknt json-schema-validator, test scope only, formats asserted). The
   test also checks that each enum lists exactly the writer's values, and that the writer writes
   only known values: its output follows a copy of the schema with every open enum closed to its
@@ -128,7 +128,7 @@ would be an optional `links` list on a message, not part of `trace`.
 
 ## Today's shape, quirks included
 
-The schemas describe the format as lsd-mono-core 0.7 writes it, not a redesign. Some things a
+The schemas describe the format as lsd-mono-jvm 0.7 writes it, not a redesign. Some things a
 fresh design would do differently:
 
 - **Flat timing summary.** A scenario's `accuracy`, `measuredCoverage`, `pairingCoverage`,
@@ -152,13 +152,13 @@ fresh design would do differently:
 - **Reproducible reports** (`lsd.mono.report.generatedAt` or deterministic ids) leave out each
   message's `capturedAt`; `seq` is absent when a message was not counted.
 - **Times** are RFC 3339 date-times (`format: date-time`, asserted by both validators), so
-  another producer may write an offset. lsd-mono-core writes UTC instants ending in `Z`, to the
+  another producer may write an offset. lsd-mono-jvm writes UTC instants ending in `Z`, to the
   millisecond or finer (`generatedAt` is cut to milliseconds, and printed without them when
   they are zero).
 - **The index** is always titled `LSD reports`. Each entry's `data` (its `<stem>-report.js`) is
-  optional and, without a stem, its `id` is its page's file name; lsd-mono-core writes both today.
+  optional and, without a stem, its `id` is its page's file name; lsd-mono-jvm writes both today.
 - **Non-map payloads.** A message's `data` can be any JSON value: a map, a string or a list.
-- **`generator`** stays free text such as `lsd-mono-core 0.7.0`: the usage ping matches it.
+- **`generator`** stays free text such as `lsd-mono-jvm 0.7.0`: the usage ping matches it.
 
 The report UI also reads reports from before the schema (an older lsd-mono's `<stem>-report.js`
 in the same directory as a newer index), which can lack fields the schema requires. It fills in
@@ -167,6 +167,6 @@ the optional fields and the older ones' defaults in one place when it loads a re
 
 ## Shared test reports
 
-[`conformance/`](conformance/README.md) holds report data both lsd-mono-core and the report UI
+[`conformance/`](conformance/README.md) holds report data both lsd-mono-jvm and the report UI
 are tested against: reports the schema must accept, reports it must reject, an index manifest and
 a generated large report.
