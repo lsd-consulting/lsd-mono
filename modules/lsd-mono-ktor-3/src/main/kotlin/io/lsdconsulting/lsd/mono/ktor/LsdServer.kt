@@ -94,9 +94,10 @@ internal class ServerCapture(
         val id: String,
         val caller: String,
         val parent: String?,
+        /** Shared with the client plugin of a call it took, so exactly one of them draws the reply. */
+        val replied: AtomicBoolean = AtomicBoolean(),
     ) {
         val t0: Long = System.nanoTime()
-        val replied = AtomicBoolean()
     }
 
     suspend fun serve(
@@ -127,7 +128,8 @@ internal class ServerCapture(
             withContext(ServingElement(Serving(inbound.scenario, app) { inbound.id })) { proceed() }
         } catch (e: Throwable) {
             // Nothing inside the plugin (StatusPages, say) turned it into a reply: the exception is
-            // the reply. A cancelled call (the caller went away) has none.
+            // the reply. A cancelled call (the caller went away) has none here: a client plugin in
+            // this JVM draws the failure it saw instead.
             if (e !is CancellationException && inbound.replied.compareAndSet(false, true)) {
                 reply(inbound, Calls.elapsedMs(inbound.t0), "error", e.javaClass.simpleName, e.toString(), null)
             }
@@ -137,8 +139,8 @@ internal class ServerCapture(
 
     private fun inbound(call: ApplicationCall): Inbound? {
         val headers = call.request.headers
-        val pending = headers[Calls.CALL_HEADER]?.let { Calls.pending[it] }?.takeIf { it.take() }
-        if (pending != null) return Inbound(pending.scenario, pending.id, pending.caller, pending.parent)
+        val pending = headers[Calls.CALL_HEADER]?.let { Calls.pending[it] }?.takeIf { it.take(app) }
+        if (pending != null) return Inbound(pending.scenario, pending.id, pending.caller, pending.parent, pending.replied)
         val scenario =
             Calls.lsd.findScenarioByHeader(headers[LsdHeaders.SCENARIO])
                 ?: Calls.lsd.runningScenario()

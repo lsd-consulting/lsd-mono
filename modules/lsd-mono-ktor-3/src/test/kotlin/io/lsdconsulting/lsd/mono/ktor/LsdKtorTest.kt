@@ -169,7 +169,16 @@ class LsdKtorTest {
         val remote = seen.getValue("payments.example.com")
         assertNull(remote[LsdHeaders.SCENARIO], "only allowed hosts are sent the scenario")
         assertNull(remote[Calls.CALLER_HEADER])
-        assertNull(remote[Calls.CALL_HEADER])
+        assertEquals(listOf(Calls.CALL_HEADER), remote.names().filter { Calls.isOwnHeader(it) }, "only the opaque call id")
+    }
+
+    @Test
+    fun `labelled is static for Java callers`() {
+        val labelled = LsdKtor::class.java.getMethod("labelled", io.ktor.serialization.WebsocketContentConverter::class.java)
+        assertTrue(
+            java.lang.reflect.Modifier
+                .isStatic(labelled.modifiers),
+        )
     }
 
     @Test

@@ -222,10 +222,12 @@ class WebSocketTest {
         }
 
         val drawn = report(scenario)
-        assertEquals("GET /echo", drawn.labels[0], drawn.json)
-        assertEquals("text message", drawn.labels[2], drawn.json)
-        assertEquals(1, drawn.labels.count { it.startsWith("close") }, drawn.json)
-        assertTrue(drawn.labels.size <= 5, drawn.json)
+        assertEquals(
+            listOf("GET /echo", "101 Switching Protocols", "text message", "IllegalStateException", "close 1006 closed without a close frame"),
+            drawn.labels,
+            drawn.json,
+        )
+        assertEquals("Echo -> Client", drawn.arrow(drawn.message("IllegalStateException")))
     }
 
     @Test

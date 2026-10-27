@@ -25,6 +25,7 @@ public object LsdKtor {
      * install(WebSockets) { contentConverter = LsdKtor.labelled(KotlinxWebsocketSerializationConverter(Json)) }
      * ```
      */
+    @JvmStatic
     public fun labelled(converter: WebsocketContentConverter): WebsocketContentConverter = Labelled(converter)
 }
 

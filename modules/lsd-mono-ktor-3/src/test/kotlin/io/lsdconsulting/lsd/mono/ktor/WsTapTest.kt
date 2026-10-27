@@ -1,5 +1,6 @@
 package io.lsdconsulting.lsd.mono.ktor
 
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketExtension
 import io.ktor.websocket.WebSocketSession
@@ -99,6 +100,61 @@ class WsTapTest {
                 assertThrows(ClosedReceiveChannelException::class.java) { runBlocking { session.incoming.receive() } }
             }
         assertEquals(listOf(dropped), drawn.labels, drawn.json)
+    }
+
+    @Test
+    fun `nothing is drawn after the close, not frames, errors, a failure or an end`() {
+        val drawn =
+            runBlocking {
+                val scenario = start()
+                val drawing = WsDrawing(scenario, "App", 20)
+                val tap = WsTap(drawing, "App", "Client")
+                tap.inbound(Frame.Close(CloseReason(1000, "bye")))
+                tap.inbound(Frame.Text("late"))
+                tap.outbound(Frame.Binary(true, ByteArray(1)))
+                drawing.error("App", "Client", IllegalStateException("late"))
+                tap.failed(IllegalStateException("late"))
+                tap.ended(IOException("late"))
+                report(scenario)
+            }
+        assertEquals(listOf("close 1000 bye"), drawn.labels, drawn.json)
+    }
+
+    @Test
+    fun `a handler cancelled, or one whose socket closed under it, draws no error`() {
+        val drawn =
+            runBlocking {
+                val scenario = start()
+                WsTap(WsDrawing(scenario, "App", 20), "App", "Client").apply {
+                    failed(kotlinx.coroutines.CancellationException("gone"))
+                    failed(ClosedReceiveChannelException("closed"))
+                }
+                report(scenario)
+            }
+        assertEquals(emptyList<String>(), drawn.labels, drawn.json)
+    }
+
+    @Test
+    fun `a handler that fails is drawn as the error and a drop, from the app`() {
+        val drawn =
+            runBlocking {
+                val scenario = start()
+                WsTap(WsDrawing(scenario, "App", 20), "App", "Client").failed(IllegalStateException("boom"))
+                report(scenario)
+            }
+        assertEquals(listOf("IllegalStateException", dropped), drawn.labels, drawn.json)
+        assertEquals("App -> Client", drawn.arrow(drawn.message("IllegalStateException")))
+    }
+
+    @Test
+    fun `a frame trySend could not send is not drawn`() {
+        val raw = Raw()
+        val drawn =
+            tapped(raw) { session ->
+                raw.sent.close()
+                assertTrue(session.outgoing.trySend(Frame.Text("lost")).isFailure)
+            }
+        assertEquals(emptyList<String>(), drawn.labels, drawn.json)
     }
 
     @Test

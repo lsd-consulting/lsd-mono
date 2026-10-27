@@ -27,7 +27,7 @@ public final class io/lsdconsulting/lsd/mono/ktor/LsdKtor {
 	public static final field DEFAULT_CLIENT Ljava/lang/String;
 	public static final field DEFAULT_MESSAGES_SHOWN I
 	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/ktor/LsdKtor;
-	public final fun labelled (Lio/ktor/serialization/WebsocketContentConverter;)Lio/ktor/serialization/WebsocketContentConverter;
+	public static final fun labelled (Lio/ktor/serialization/WebsocketContentConverter;)Lio/ktor/serialization/WebsocketContentConverter;
 }
 
 public final class io/lsdconsulting/lsd/mono/ktor/LsdServer {

@@ -28,8 +28,15 @@ internal class PendingCall(
 ) {
     private val taken = AtomicBoolean()
 
-    /** True once, for the server plugin that draws this call. */
-    fun take(): Boolean = taken.compareAndSet(false, true)
+    /** Set once the call's reply is drawn, by whichever plugin draws it. */
+    val replied: AtomicBoolean = AtomicBoolean()
+
+    /** The name the server plugin that took the call serves as. */
+    @Volatile var server: String? = null
+        private set
+
+    /** True once, for the server plugin, serving as [app], that draws this call. */
+    fun take(app: String): Boolean = taken.compareAndSet(false, true).also { if (it) server = app }
 
     val isTaken: Boolean get() = taken.get()
 }
@@ -74,6 +81,18 @@ internal object Calls {
 
     /** The client plugin's call id, so the server plugin in the same JVM can take the call over. */
     const val CALL_HEADER: String = "lsd-call"
+
+    /** The headers the client plugin adds, dropped from a copy of a request it tagged. */
+    val OWN_HEADERS: List<String> = listOf(LsdHeaders.SCENARIO, CALLER_HEADER, CALL_HEADER, PARENT_SPAN_HEADER)
+
+    /**
+     * The failure the caller sees: the cause of a cancellation, when it has one (a timeout
+     * cancels the call with a `HttpRequestTimeoutException`), else [e] itself.
+     */
+    fun cause(e: Throwable): Throwable =
+        generateSequence(e) { it.cause?.takeIf { cause -> cause !== it } }.take(MAX_CAUSES).firstOrNull { it !is CancellationException } ?: e
+
+    private const val MAX_CAUSES = 8
 
     private val log = Logger.getLogger("io.lsdconsulting.lsd.mono.ktor")
 

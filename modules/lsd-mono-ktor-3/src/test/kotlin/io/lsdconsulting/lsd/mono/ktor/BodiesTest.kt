@@ -72,6 +72,14 @@ class BodiesTest {
     }
 
     @Test
+    fun `a body of exactly the limit is shown, and one byte more is summarised`() {
+        assertNull(Bodies.summary("text/plain", null, Bodies.LIMIT.toLong()), "a stream of exactly the limit is read")
+        assertEquals(Bodies.tooLarge(Bodies.LIMIT + 1L), Bodies.summary("text/plain", null, Bodies.LIMIT + 1L)?.value)
+        val exact = Shown(ByteArrayContent(big(Bodies.LIMIT))).data
+        assertTrue(exact !is Map<*, *>, "a body in memory of exactly the limit is shown: $exact")
+    }
+
+    @Test
     fun `a body in memory is shown and left as it is`() {
         val shown = Shown(TextContent("""{"a":1}""", json))
         assertNull(shown.passed, "the app's own content goes out")

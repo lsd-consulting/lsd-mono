@@ -9,7 +9,8 @@ import java.security.MessageDigest
  * [LsdKtor.labelled] wrote it, so the arrow is labelled `PriceChanged` rather than
  * `text message`. Looked up by the frame's type, length and SHA-256, so it holds in this JVM at
  * either end of the socket, in memory or over a real one. Bytes written from two different
- * classes name neither. Holds the last [MAX_ENTRIES] messages up to [MAX_BYTES] each.
+ * classes name neither. Holds the [MAX_ENTRIES] messages most recently written or looked up,
+ * up to [MAX_BYTES] each.
  */
 internal object MessageNames {
     const val MAX_ENTRIES: Int = 512

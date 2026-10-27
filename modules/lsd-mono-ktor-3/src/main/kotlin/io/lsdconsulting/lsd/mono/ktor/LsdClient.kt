@@ -6,9 +6,9 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.HttpClientCall
 import io.ktor.client.call.replaceResponse
 import io.ktor.client.plugins.api.ClientPlugin
-import io.ktor.client.plugins.api.Send
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.HttpSendPipeline
 import io.ktor.client.statement.HttpResponseContainer
 import io.ktor.client.statement.HttpResponsePipeline
 import io.ktor.http.Headers
@@ -23,6 +23,7 @@ import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.InternalAPI
 import io.ktor.utils.io.KtorDsl
+import io.ktor.utils.io.readRemaining
 import io.ktor.websocket.DefaultWebSocketSession
 import io.ktor.websocket.WebSocketSession
 import io.lsdconsulting.lsd.mono.core.Interaction
@@ -32,6 +33,7 @@ import io.lsdconsulting.lsd.mono.core.Trace
 import io.lsdconsulting.lsd.mono.ktor.Calls.guarded
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
+import kotlinx.io.readByteArray
 import java.time.Instant
 
 /** Settings for the [LsdClient] plugin. */
@@ -54,7 +56,10 @@ public class LsdClientConfig {
  * server plugin in this JVM, in memory or over a socket, is drawn by that plugin instead, under
  * the name it serves as, so it is drawn once. Calls that stay in memory (a `testApplication`
  * client's) or go to an allowed host (`lsd.mono.propagation.allowedHosts`, loopback by default)
- * carry the scenario in the `lsd-scenario` header; calls to anyone else carry nothing of ours.
+ * carry the scenario in the `lsd-scenario` header; calls to anyone else carry only the opaque
+ * `lsd-call` id, which says nothing of the scenario. Each request that goes to the engine is a
+ * call of its own, so every redirect and retry hop is drawn, whichever order the plugins are
+ * installed in.
  *
  * ```kotlin
  * val client = HttpClient(CIO) { install(LsdClient) { target = "Payments" } }
@@ -64,7 +69,11 @@ public val LsdClient: ClientPlugin<LsdClientConfig> =
     createClientPlugin("LsdClient", ::LsdClientConfig) {
         require(pluginConfig.messagesShown >= 0) { "messagesShown must not be negative" }
         val capture = ClientCapture(pluginConfig.target, pluginConfig.caller, pluginConfig.messagesShown, ClientCapture.inMemory(client))
-        on(Send) { request -> capture.send(request) { proceed(it) } }
+        // Each request as it goes to the engine, inside any redirect or retry plugin, whichever
+        // order they were installed in, so every hop is drawn as its own call.
+        client.sendPipeline.intercept(HttpSendPipeline.Monitoring) {
+            proceedWith(capture.send(context) { proceed() as HttpClientCall })
+        }
         // Before the WebSockets plugin turns the session into the one the app gets.
         client.responsePipeline.intercept(HttpResponsePipeline.Receive) { container ->
             capture.socket(context, container)?.let { proceedWith(it) }
@@ -79,12 +88,13 @@ internal class ClientCapture(
 ) {
     suspend fun send(
         request: HttpRequestBuilder,
-        proceed: suspend (HttpRequestBuilder) -> HttpClientCall,
+        proceed: suspend () -> HttpClientCall,
     ): HttpClientCall {
-        // A request already through this plugin (installed twice) is drawn once.
-        if (request.headers.contains(Calls.CALL_HEADER)) return proceed(request)
+        // A redirect or retry sends a copy of a request this plugin tagged: a call of its own, so
+        // the copy's tags are dropped, and it is tagged again for where it goes now.
+        if (request.headers.contains(Calls.CALL_HEADER)) Calls.OWN_HEADERS.forEach { request.headers.remove(it) }
         val serving = currentCoroutineContext()[ServingElement]?.serving
-        val scenario = guarded(null) { serving?.scenario ?: Calls.lsd.runningScenario() } ?: return proceed(request)
+        val scenario = guarded(null) { serving?.scenario ?: Calls.lsd.runningScenario() } ?: return proceed()
         val call = PendingCall(Calls.newId(), scenario, serving?.app ?: caller, serving?.spanId)
         val url = request.url.build()
         val sent = guarded(Sent(request.method.value, url, null, null)) {
@@ -95,11 +105,16 @@ internal class ClientCapture(
         val t0 = System.nanoTime()
         val response =
             try {
-                proceed(request)
+                proceed()
             } catch (e: Throwable) {
+                val error = Calls.cause(e)
                 if (!call.isTaken) {
                     draw(call, sent, started)
-                    reply(call, sent, Calls.elapsedMs(t0), "error", e.javaClass.simpleName, e.toString(), null)
+                    reply(call, sent, Calls.elapsedMs(t0), "error", error.javaClass.simpleName, error.toString(), null)
+                } else if (call.replied.compareAndSet(false, true)) {
+                    // The server plugin took the call and has not replied (a client timeout
+                    // cancelled its handler): the failure the caller sees is the reply, once.
+                    reply(call, sent, Calls.elapsedMs(t0), "error", error.javaClass.simpleName, error.toString(), null, call.server)
                 }
                 throw e
             } finally {
@@ -163,19 +178,23 @@ internal class ClientCapture(
         url: Url,
         call: PendingCall,
     ) {
+        // The call id goes to every host: it is opaque, and lets the server plugin in this JVM
+        // know the call by whatever name it is reached (its IP, a Docker alias), so it is drawn once.
+        Calls.pending[call.id] = call
+        request.headers.append(Calls.CALL_HEADER, call.id)
         val allowed = inMemory || call.scenario.bind().use { Calls.lsd.scenarioHeaderValue(url.host) } != null
         if (!allowed) return
-        Calls.pending[call.id] = call
         request.headers.append(LsdHeaders.SCENARIO, call.scenario.correlationId)
         request.headers.append(Calls.CALLER_HEADER, call.caller)
-        request.headers.append(Calls.CALL_HEADER, call.id)
         call.parent?.let { request.headers.append(Calls.PARENT_SPAN_HEADER, it) }
     }
 
     /**
      * The call as the app gets it, with its body drawn: one of known length up to the limit is
-     * read now and handed on as the same bytes; one of unknown length is copied as it is read,
-     * and drawn when it ends or is closed. Null to hand on the call as it is.
+     * read now and handed on as the same bytes, a fresh channel on each read (as a saved response
+     * does, which `HttpRequestRetry` relies on); one already saved is in memory, so read whole and
+     * handed on as it is; one of unknown length is copied as it is read, and drawn when it ends
+     * or is closed. Null to hand on the call as it is.
      */
     @OptIn(InternalAPI::class)
     private suspend fun body(
@@ -193,8 +212,13 @@ internal class ClientCapture(
         if (length != null) {
             val head = Bodies.readHead(raw, length.toInt())
             replied(head.getOrNull()?.let { Bodies.show(it, null, contentType) })
-            val channel = head.fold({ ByteReadChannel(it) }, { e -> ByteChannel().also { it.cancel(e) } })
-            return call.replaceResponse { channel }
+            return call.replaceResponse { head.fold({ ByteReadChannel(it) }, { e -> ByteChannel().also { it.cancel(e) } }) }
+        }
+        // A saved response hands out a new channel on each read: its bytes are in memory already.
+        if (raw !== response.rawContent) {
+            val bytes = raw.readRemaining().readByteArray()
+            replied(if (bytes.size > Bodies.LIMIT) Bodies.tooLarge(bytes.size.toLong()) else Bodies.show(bytes, null, contentType))
+            return null
         }
         val pipe = ByteChannel()
         response.launch {
@@ -218,7 +242,8 @@ internal class ClientCapture(
             val session = container.response as? WebSocketSession ?: return@guarded null
             call.attributes.remove(SOCKET)
             // An engine that hands over a session with its own pings and close (OkHttp, Java):
-            // the handshake is drawn, the messages are not.
+            // the handshake is drawn, the messages are not. CIO and the testApplication client
+            // hand over a raw session, so this is never reached on the engines tested here.
             if (session is DefaultWebSocketSession) return@guarded null
             val from = socket.call.caller
             val tap = WsTap(WsDrawing(socket.call.scenario, from, shown), from, socket.to)
@@ -256,11 +281,12 @@ internal class ClientCapture(
         label: String,
         data: Any?,
         headers: Map<String, String>?,
+        from: String? = null,
     ) = guarded(Unit) {
         call.scenario.ingest(
             Interaction(
                 kind = InteractionKind.RESPONSE,
-                from = to(sent.url),
+                from = from ?: to(sent.url),
                 to = call.caller,
                 label = label,
                 status = status,
