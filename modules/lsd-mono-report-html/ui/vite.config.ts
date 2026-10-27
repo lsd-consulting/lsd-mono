@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 // Relative base so dist/ opens via file:// after build.
 export default defineConfig({
   base: './',
+  // The page's own version (src/lib/viewer-version.ts): the Gradle build passes the project version.
+  define: { __LSD_VIEWER_VERSION__: JSON.stringify(process.env.LSD_VIEWER_VERSION || 'dev') },
   build: {
     outDir: 'dist',
     assetsInlineLimit: 100000,

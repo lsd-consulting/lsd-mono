@@ -14,6 +14,12 @@ import { newerMinorNoticeHtml } from '../lib/schema-version'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { repoLinkAttrsHtml } from '../ui/repo-link'
 import { index, session } from './context'
+import { VIEWER_VERSION } from '../lib/viewer-version'
+
+/** The version chip: this page's own version, the same whatever wrote the data. */
+export function viewerLabel(version: string = VIEWER_VERSION): string {
+  return `lsd-mono ${version}`
+}
 export function heroHtml(): string {
   const back = index
     ? `<p class="hero-index">${escapeHtml(index.title)} · report ${index.reports.findIndex((r) => r.id === session.reportId) + 1} of ${index.reports.length}</p>`
@@ -26,7 +32,8 @@ export function heroHtml(): string {
       <h1>${escapeHtml(session.report.title)}</h1>
       <div class="meta">
         <span>Generated ${escapeHtml(formatGeneratedAt(session.report.generatedAt))}</span>
-        <a class="generator-link repo-link" ${repoLinkAttrsHtml(`${session.report.generator}: lsd-mono on GitHub`)}><code>${escapeHtml(session.report.generator)}</code></a>
+        ${session.report.generator ? `<span class="generator">Written by ${escapeHtml(session.report.generator)}</span>` : ''}
+        <a class="version-link repo-link" ${repoLinkAttrsHtml(`${viewerLabel()}: lsd-mono on GitHub`)}><code>${escapeHtml(viewerLabel())}</code></a>
       </div>
     </div>`
 }

@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // The unit tests run as a dev build: src/lib/viewer-version.ts reads `dev`.
+  define: { __LSD_VIEWER_VERSION__: JSON.stringify('dev') },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'lint/**/*.test.js'],

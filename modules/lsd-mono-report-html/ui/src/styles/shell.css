@@ -257,13 +257,13 @@
   padding: 1px 6px;
 }
 /* A flex box, so the chip keeps the size it had before it was a link. */
-.report-hero .generator-link {
+.report-hero .version-link {
   display: flex;
   color: inherit;
   text-decoration: none;
   border-radius: 6px;
 }
-.report-hero .generator-link:hover code {
+.report-hero .version-link:hover code {
   border-color: var(--accent);
   color: var(--accent-strong);
 }

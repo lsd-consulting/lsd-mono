@@ -35,6 +35,8 @@ export default defineConfig({
     command: 'npm run dev -- --host 127.0.0.1 --port 4179 --strictPort',
     url: 'http://127.0.0.1:4179',
     reuseExistingServer: false,
+    // The page's own version (src/lib/viewer-version.ts) as a release, so the usage ping checks can ping.
+    env: { LSD_VIEWER_VERSION: '0.2.0' },
     timeout: 60_000,
   },
 })

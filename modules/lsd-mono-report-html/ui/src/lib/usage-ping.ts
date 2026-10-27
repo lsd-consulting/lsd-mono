@@ -19,14 +19,16 @@ export const REPORT_SOURCES = ['junit', 'cucumber', 'api'] as const
 
 export type ReportSource = (typeof REPORT_SOURCES)[number]
 
+import { VIEWER_VERSION } from './viewer-version'
+
 const CDN = 'https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono'
 
 /**
- * The release version in a report's `generator` (`lsd-mono-jvm 0.2.0`, or `lsd-mono-core 0.2.0` from a
- * release before the rename); null for a snapshot, dev or unknown build.
+ * [version] when it is a release (`0.2.0`); null for a snapshot, dev or unknown build. The page's own
+ * version (viewer-version.ts), not the report's `generator`: the page is the same whatever wrote the data.
  */
-export function releaseVersion(generator: string | undefined): string | null {
-  return /^lsd-mono-(?:jvm|core) (\d+\.\d+\.\d+)$/.exec(generator ?? '')?.[1] ?? null
+export function releaseVersion(version: string | undefined): string | null {
+  return /^\d+\.\d+\.\d+$/.test(version ?? '') ? version! : null
 }
 
 /** The file requested for [event]: pinned to the version, so jsDelivr counts hits per release. No query string. */
@@ -40,11 +42,10 @@ export function sourceEvent(source: unknown): UsageEvent | null {
 }
 
 /**
- * What decides whether a page pings: the report's (or index's) `usagePing` option and `generator`.
- * A report as normaliseReport gives it, or an index manifest, which always has its options.
+ * What decides whether a page pings, with the page's own version: the report's (or index's) `usagePing`
+ * option. A report as normaliseReport gives it, or an index manifest, which always has its options.
  */
 export interface UsagePingSource {
-  generator: string
   options: { usagePing: boolean }
 }
 
@@ -59,18 +60,19 @@ export class UsagePing {
   private version: string | null = null
   private readonly sent = new Set<UsageEvent>()
 
-  /** [devBuild] true (the Vite dev server, check:ux, unit tests) never pings. */
+  /** [devBuild] true (the Vite dev server, check:ux, unit tests) never pings; nor does a [viewerVersion] that is not a release. */
   constructor(
     private readonly devBuild: boolean,
     private readonly send: Send = sendPing,
+    private readonly viewerVersion: string = VIEWER_VERSION,
   ) {}
 
   /**
-   * Turn pinging on for a report written by a release build with `usagePing` true. Anything
-   * else (the option false or missing, a snapshot or unknown version) turns it off.
+   * Turn pinging on for a report with `usagePing` true, on a page from a release build. Anything
+   * else (the option false or missing, a snapshot, dev or unknown page version) turns it off.
    */
   configure(source: UsagePingSource | null | undefined): void {
-    this.version = !this.devBuild && source?.options.usagePing === true ? releaseVersion(source.generator) : null
+    this.version = !this.devBuild && source?.options.usagePing === true ? releaseVersion(this.viewerVersion) : null
   }
 
   /** Whether [ping] would send anything at all. */

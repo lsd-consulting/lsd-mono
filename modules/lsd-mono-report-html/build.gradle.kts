@@ -24,6 +24,10 @@ lsdCoverage {
     lineFloor.set(94)
 }
 
+tasks.test {
+    systemProperty("lsd.mono.test.projectVersion", project.version.toString())
+}
+
 dependencies {
     // ReportWriter takes and writes the model's ReportJson.
     api(project(":modules:lsd-mono-report-model"))
@@ -55,6 +59,11 @@ val reportSingle = tasks.register<Exec>("reportSingle") {
         listOf("sh", "-c", "node -v && npm ci && npm run build:single")
     }
     commandLine(npm)
+    // The page's own version (ui/src/lib/viewer-version.ts): its version chip and usage ping use it,
+    // the same whatever wrote the data.
+    val viewerVersion = project.version.toString()
+    environment("LSD_VIEWER_VERSION", viewerVersion)
+    inputs.property("viewerVersion", viewerVersion)
     inputs.file(reportDir.file("package.json")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(reportDir.file("package-lock.json")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(reportDir.file("index.html")).withPathSensitivity(PathSensitivity.RELATIVE)

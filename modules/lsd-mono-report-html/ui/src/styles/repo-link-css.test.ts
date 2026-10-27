@@ -12,6 +12,6 @@ describe('repository link css', () => {
   })
 
   it('prints the version as plain text', () => {
-    expect(print).toMatch(/\.generator-link\s*\{[^}]*color:\s*inherit[^}]*text-decoration:\s*none/)
+    expect(print).toMatch(/\.version-link\s*\{[^}]*color:\s*inherit[^}]*text-decoration:\s*none/)
   })
 })

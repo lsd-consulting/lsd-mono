@@ -18,7 +18,7 @@ test('the logo is the first Tab stop and shows a focus ring', async ({ page }) =
 
 test('the version is a link and Tab reaches it', async ({ page }) => {
   await openExample(page)
-  const version = page.locator('.report-hero a.generator-link')
+  const version = page.locator('.report-hero a.version-link')
   await expect(version).toHaveAttribute('href', REPO)
   await expect(version).toHaveAttribute('target', '_blank')
   await version.focus()
@@ -28,7 +28,7 @@ test('the version is a link and Tab reaches it', async ({ page }) => {
 
 test('the version prints as plain text', async ({ page }) => {
   await openExample(page, undefined, { media: { media: 'print', reducedMotion: 'reduce' } })
-  const version = page.locator('.report-hero a.generator-link')
+  const version = page.locator('.report-hero a.version-link')
   const style = await version.evaluate((el) => {
     const cs = getComputedStyle(el)
     const parent = getComputedStyle(el.parentElement!)

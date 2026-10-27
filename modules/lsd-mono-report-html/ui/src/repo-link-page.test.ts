@@ -58,19 +58,27 @@ describe('links to the lsd-mono repository', () => {
     expectRepoLink(logo, 'Living Sequence Diagrams: lsd-mono on GitHub')
     expect(logo!.textContent).toBe('LSD')
 
-    const version = document.querySelector<HTMLAnchorElement>('.report-hero .meta a.generator-link')
-    expectRepoLink(version, 'lsd-mono-jvm 0.12.0: lsd-mono on GitHub')
-    expect(version!.querySelector('code')?.textContent).toBe('lsd-mono-jvm 0.12.0')
+    // The chip is the page's own version (dev in tests), not what wrote the data.
+    const version = document.querySelector<HTMLAnchorElement>('.report-hero .meta a.version-link')
+    expectRepoLink(version, 'lsd-mono dev: lsd-mono on GitHub')
+    expect(version!.querySelector('code')?.textContent).toBe('lsd-mono dev')
+    expect(document.querySelector('.report-hero .meta .generator')?.textContent).toBe('Written by lsd-mono-jvm 0.12.0')
   })
 
-  it('keeps a hostile generator as text in the link and its name', async () => {
+  it('leaves out what wrote the data when the report does not say', async () => {
+    window.__LSD_REPORT__ = report('')
+    await import('./main')
+    expect(document.querySelector('.report-hero .meta .generator')).toBeNull()
+    expect(document.querySelector('a.version-link')?.textContent).toBe('lsd-mono dev')
+  })
+
+  it('keeps a hostile generator as text', async () => {
     const hostile = 'x"><img src=x onerror=alert(1)>'
     window.__LSD_REPORT__ = report(hostile)
     await import('./main')
 
-    const version = document.querySelector<HTMLAnchorElement>('a.generator-link')!
-    expect(version.querySelector('img')).toBeNull()
-    expect(version.getAttribute('aria-label')).toBe(`${hostile}: lsd-mono on GitHub`)
-    expect(version.textContent).toBe(hostile)
+    const written = document.querySelector('.report-hero .meta .generator')!
+    expect(written.querySelector('img')).toBeNull()
+    expect(written.textContent).toBe(`Written by ${hostile}`)
   })
 })
