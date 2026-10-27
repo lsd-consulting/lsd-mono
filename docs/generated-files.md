@@ -50,6 +50,7 @@ about them.
 | `modules/lsd-mono-cucumber-8/api/lsd-mono-cucumber-8.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-coroutines/api/lsd-mono-coroutines.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-http4k-6/api/lsd-mono-http4k-6.api` | `./gradlew updateKotlinAbi` |
+| `modules/lsd-mono-ktor-3/api/lsd-mono-ktor-3.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-report-model/api/lsd-mono-report-model.api` | `./gradlew updateKotlinAbi` |
 | `modules/lsd-mono-report-html/api/lsd-mono-report-html.api` | `./gradlew updateKotlinAbi` |
 

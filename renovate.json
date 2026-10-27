@@ -109,6 +109,19 @@
       "groupSlug": "http4k-6"
     },
     {
+      "description": "Stay on Ktor 3. lsd-mono-ktor-3 is built against that major (and reads two of its internal APIs); Ktor 4 is a new lsd-mono-ktor-4 module.",
+      "matchManagers": [
+        "gradle"
+      ],
+      "matchPackageNames": [
+        "io.ktor:ktor-bom"
+      ],
+      "matchCurrentVersion": "/^3\\./",
+      "allowedVersions": "/^3\\./",
+      "groupName": "Ktor 3",
+      "groupSlug": "ktor-3"
+    },
+    {
       "description": "Stay on kotlinx.coroutines 1. lsd-mono-coroutines is built against that major; a 2.x release is a human decision.",
       "matchManagers": [
         "gradle"

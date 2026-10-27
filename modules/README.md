@@ -13,6 +13,7 @@ published `lsd-consulting` libraries (e.g. Maven Central `lsd-core`,
 | `lsd-mono-coroutines/` | `lsd-mono-coroutines` | kotlinx.coroutines **1** support: keeps a scenario bound across thread hops → depends on `:modules:lsd-mono-core` |
 | `lsd-mono-spring-boot-4/` | `lsd-mono-spring-boot-4` | Spring Boot **4** starter: every `@SpringBootTest` draws its Spring MVC and WebFlux, `RestClient`, `RestTemplate`, `WebClient`, Kafka and Spring Data repository calls, no code ([sample report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/)) → depends on `:modules:lsd-mono-core` |
 | `lsd-mono-http4k-6/` | `lsd-mono-http4k-6` | http4k **6** filters: the requests an app serves, the calls it makes and its WebSockets, in memory or on real servers; Java 21 ([sample report](https://lsd-consulting.github.io/lsd-mono/http4k-6/)) → depends on `:modules:lsd-mono-core` |
+| `lsd-mono-ktor-3/` | `lsd-mono-ktor-3` | Ktor **3** plugins: the requests an app serves, the calls its `HttpClient` makes and its WebSockets, in `testApplication` or on real engines ([sample report](https://lsd-consulting.github.io/lsd-mono/ktor-3/)) → depends on `:modules:lsd-mono-core` |
 | `lsd-mono-report-model/` | `lsd-mono-report-model` | The report JSON as plain Kotlin values (`ReportJson` and the rest) and the schema version. No dependencies beyond the Kotlin standard library; lsd-mono-core builds reports from it |
 | `lsd-mono-report-html/` | `lsd-mono-report-html` | Writes a report model as `<stem>-report.json` and the interactive HTML page, and the index of a directory's reports; bundles the single-file report shell → depends on `:modules:lsd-mono-report-model`. lsd-mono-core depends on it |
 | `lsd-mono-report-schema/` | none (not a Gradle project) | JSON Schemas for the report and index data, and the shared test reports. The Kotlin tests read them from the classpath (lsd-mono-report-model's test fixtures); the report UI's types are generated from them |
@@ -28,7 +29,8 @@ lsd-mono-junit-jupiter ─┐
 lsd-mono-cucumber-8 ────┤
 lsd-mono-coroutines ────┤
 lsd-mono-spring-boot-4 ─┼─→ lsd-mono-core ─→ lsd-mono-report-html ─→ lsd-mono-report-model
-lsd-mono-http4k-6 ──────┘
+lsd-mono-http4k-6 ──────┤
+lsd-mono-ktor-3 ────────┘
 
 lsd-mono-report-schema: the contract. lsd-mono-report-model follows it (its tests check),
 and the report UI's TypeScript types are generated from it.
@@ -55,13 +57,14 @@ Where the non-Kotlin parts are:
 | Capturing from coroutines that change threads | add `lsd-mono-coroutines` |
 | Testing a Spring Boot 4 app with `@SpringBootTest` | `lsd-mono-spring-boot-4` (it brings `lsd-mono-core`) |
 | Testing an http4k 6 app | `lsd-mono-http4k-6` (it brings `lsd-mono-core`) and a test integration such as `lsd-mono-junit-jupiter` |
+| Testing a Ktor 3 app | `lsd-mono-ktor-3` (it brings `lsd-mono-core`) and a test integration such as `lsd-mono-junit-jupiter` |
 | Capturing by hand with `LsdContext` | `lsd-mono-core` only |
 | Writing reports without lsd-mono-core (an adapter for another test framework, a trace importer) | `lsd-mono-report-html`, which brings `lsd-mono-report-model` on the compile classpath |
 | Reading or building the report values only, with no files | `lsd-mono-report-model` |
 
 lsd-mono-core brings the report model and writer at run time only (Maven `runtime` scope), so a
 test that uses lsd-mono-core never compiles against them. Code that does use their types declares
-them itself, at the same version as lsd-mono-core: all eight are released together at one version
+them itself, at the same version as lsd-mono-core: all nine are released together at one version
 and are only meant to be used at matching versions
 ([docs/versioning-notes.md](../docs/versioning-notes.md)). Both are experimental for now: their
 types need an opt-in and have no binary-compatibility promise yet (see their READMEs).

@@ -16,6 +16,9 @@ spring-boot-junit = "6.0.3"
 # http4k 6. Only lsd-mono-http4k-6 uses it, compileOnly: the app brings its own http4k. http4k 6
 # is compiled for Java 21, so that module's baseline is 21 (its gradle.properties).
 http4k = "6.61.0.0"
+# Ktor 3. Only lsd-mono-ktor-3 uses it, compileOnly: the app brings its own Ktor (built for Java 8,
+# so that module stays on the repo's baseline).
+ktor = "3.6.0"
 json-schema-validator = "3.0.8"
 spotless = "8.10.4"
 ktlint = "1.8.0"
@@ -51,6 +54,9 @@ spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies"
 
 # http4k 6. Only lsd-mono-http4k-6 uses it.
 http4k-bom = { module = "org.http4k:http4k-bom", version.ref = "http4k" }
+
+# Ktor 3. Only lsd-mono-ktor-3 uses it.
+ktor-bom = { module = "io.ktor:ktor-bom", version.ref = "ktor" }
 
 # kotlinx.coroutines 1. Only lsd-mono-coroutines uses it.
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }

@@ -6,7 +6,7 @@ the API is not stable yet ([versioning-notes.md](versioning-notes.md)).
 
 ## What gets published
 
-Group `io.github.lsd-consulting` (the Central namespace lsd-core already publishes under), one train version for all eight:
+Group `io.github.lsd-consulting` (the Central namespace lsd-core already publishes under), one train version for all nine:
 
 | Artifact | Module |
 | --- | --- |
@@ -16,6 +16,7 @@ Group `io.github.lsd-consulting` (the Central namespace lsd-core already publish
 | `io.github.lsd-consulting:lsd-mono-coroutines` | `modules/lsd-mono-coroutines` |
 | `io.github.lsd-consulting:lsd-mono-spring-boot-4` | `modules/lsd-mono-spring-boot-4` |
 | `io.github.lsd-consulting:lsd-mono-http4k-6` | `modules/lsd-mono-http4k-6` |
+| `io.github.lsd-consulting:lsd-mono-ktor-3` | `modules/lsd-mono-ktor-3` |
 | `io.github.lsd-consulting:lsd-mono-report-model` | `modules/lsd-mono-report-model` |
 | `io.github.lsd-consulting:lsd-mono-report-html` | `modules/lsd-mono-report-html` |
 
