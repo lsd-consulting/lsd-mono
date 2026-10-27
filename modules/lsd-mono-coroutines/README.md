@@ -8,7 +8,7 @@
 testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:<version>")
 ```
 
-The version is on the [Maven Central badge](../../README.md#getting-started) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-coroutines"))`.
+The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-coroutines"))`.
 
 That pulls in `lsd-mono-core` and `kotlinx-coroutines-core`. The module is built against kotlinx.coroutines 1: the version catalog holds the exact version, and the build fails if anything resolves to another major. A 2.x release would get its own module.
 

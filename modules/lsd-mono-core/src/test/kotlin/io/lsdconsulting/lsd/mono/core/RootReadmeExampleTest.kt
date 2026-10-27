@@ -19,10 +19,10 @@ import kotlin.io.path.readLines
 import kotlin.io.path.readText
 
 /**
- * The root README's "Capture a scenario" example is the [example] below, so it compiles against
- * the current API (#68). The test fails when the README block and the marked lines differ, and it
- * runs the example to check the file names the README quotes. The "Draw a flow without a test"
- * `main()` is [flowExample] in the same way.
+ * The lsd-mono-core README's "Capture a scenario by hand" example is the [example] below, so it
+ * compiles against the current API (#68). The test fails when the README block and the marked lines
+ * differ, and it runs the example to check the file names the README quotes. The root README's
+ * "Draw a flow without a test" `main()` is [flowExample] in the same way.
  */
 @LsdTestConfig
 class RootReadmeExampleTest {
@@ -82,13 +82,14 @@ class RootReadmeExampleTest {
     }
 
     private val readme: Path = Path.of("../../README.md")
+    private val coreReadme: Path = Path.of("README.md")
     private val source: Path = Path.of("src/test/kotlin/io/lsdconsulting/lsd/mono/core/RootReadmeExampleTest.kt")
 
-    /** The fenced Kotlin block under "## Capture a scenario". */
+    /** The fenced Kotlin block under "## Capture a scenario by hand" in the lsd-mono-core README. */
     private fun readmeBlock(): List<String> =
-        readme
+        coreReadme
             .readLines()
-            .dropWhile { it != "## Capture a scenario" }
+            .dropWhile { it != "## Capture a scenario by hand" }
             .dropWhile { it != "```kotlin" }
             .drop(1)
             .takeWhile { it != "```" }
@@ -114,29 +115,8 @@ class RootReadmeExampleTest {
     }
 
     /**
-     * The "Getting started" snippets say `X.Y.Z`, not a release: a literal version would be the previous release in
-     * every tag's README, since the tag comes before any commit after it could change it (#78).
-     */
-    @Test
-    fun `the getting started snippets name no release version`() {
-        val gettingStarted =
-            readme
-                .readLines()
-                .dropWhile { it != "## Getting started" }
-                .drop(1)
-                .takeWhile { !it.startsWith("## ") }
-        val versions =
-            gettingStarted.filter { "lsdMonoVersion =" in it || "<lsd-mono.version>" in it }
-        assertEquals(2, versions.size, "the Gradle and Maven snippets each set the version once: $versions")
-        assertTrue(versions.all { "X.Y.Z" in it }, "the snippets say X.Y.Z, not a release: $versions")
-        val literal = Regex("""\b\d+\.\d+\.\d+\b""")
-        val withVersions = gettingStarted.filter { literal.containsMatchIn(it) && "lsd-consulting" in it }
-        assertTrue(withVersions.isEmpty(), "a release version in the Getting started snippets: $withVersions")
-    }
-
-    /**
-     * Every module the build includes is published at the train version, so the root README's
-     * artifact table, docs/releasing.md and modules/README.md list each one, and every count of them
+     * Every module the build includes is published at the train version, so docs/releasing.md and
+     * modules/README.md list each one, and every count of them
      * in the README, releasing.md, docs/versioning-notes.md and modules/README.md is right (#78, #122).
      */
     @Test
@@ -153,11 +133,9 @@ class RootReadmeExampleTest {
         val layout = Path.of("../README.md").readText()
         val versioning = Path.of("../../docs/versioning-notes.md").readText()
         modules.forEach { module ->
-            assertTrue("| `$module` |" in readmeText, "the root README's artifact table lists $module")
             assertTrue("| `io.github.lsd-consulting:$module` | `modules/$module` |" in releasing, "docs/releasing.md lists $module")
             assertTrue("| `$module/` | `$module` |" in layout, "modules/README.md lists $module")
         }
-        assertTrue("all $count on one version" in readmeText, "the root README says all $count on one version")
         assertTrue("one train version for all $count:" in releasing, "docs/releasing.md says all $count")
         // The docs count the artifacts one way, "all six". A digit ("all 5") or a count of the rest
         // ("the other four") would go stale unseen, so neither is allowed.
@@ -184,7 +162,7 @@ class RootReadmeExampleTest {
     fun `the example writes the files the README names`() {
         System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())
         val files = example()
-        val text = readme.readText()
+        val text = coreReadme.readText()
         for (name in listOf(files.diagramHtml.name, files.reportJson.name, "index.html")) {
             assertTrue(tempDir.resolve(name).exists(), "$name was not written")
         }

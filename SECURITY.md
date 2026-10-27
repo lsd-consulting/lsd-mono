@@ -21,4 +21,4 @@ payloads; `lsd.mono.payload.*` sets limits and redaction. Issues in that redacti
 
 A report written by a release requests one small file from jsDelivr when it is opened, to count
 usage. It sends no report content, and `lsd.mono.report.usagePing=false` turns it off. See
-[Usage ping](README.md#usage-ping).
+[Usage ping](docs/usage-ping.md).
