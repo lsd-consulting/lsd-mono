@@ -14,7 +14,7 @@ Each diagram shows who called whom, with what payload, how long it took, and whe
 - **Not only tests:** draw any flow from your own code or by hand ([example](#draw-a-flow-without-a-test)).
 - **A report people read:** a payload inspector, find across payloads, a component view, a timing waterfall, failed tests first, light, dark and high-contrast themes, and it works offline.
 
-**[See a live report →](https://lsd-consulting.github.io/lsd-mono/example-report.html)** (an online shop checkout across 14 services) · [Spring Boot sample](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) · [http4k sample](https://lsd-consulting.github.io/lsd-mono/http4k-6/) (next release) · [Ktor sample](https://lsd-consulting.github.io/lsd-mono/ktor-3/) (next release)
+**[See a live report →](https://lsd-consulting.github.io/lsd-mono/example-report.html)** (an online shop checkout across 14 services) · [Spring Boot sample](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) · [http4k sample](https://lsd-consulting.github.io/lsd-mono/http4k-6/) · [Ktor sample](https://lsd-consulting.github.io/lsd-mono/ktor-3/)
 
 ![A tour of the report: choosing a scenario from the list, zooming in and out and back to the default, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the light, dark and high-contrast themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
 
@@ -27,12 +27,12 @@ Every artifact is `io.github.lsd-consulting:<artifact>:X.Y.Z`, where `X.Y.Z` is 
 | Stack | Add (test scope) | Then | Sample |
 | --- | --- | --- | --- |
 | Spring Boot 4 | `lsd-mono-spring-boot-4` | Nothing: run your `@SpringBootTest`s ([README](modules/lsd-mono-spring-boot-4/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) |
-| http4k 6 (next release) | `lsd-mono-http4k-6` and `lsd-mono-junit-jupiter` | `LsdHttp4k.serverFilter("Shop").then(routes)` ([README](modules/lsd-mono-http4k-6/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/http4k-6/) |
-| Ktor 3 (next release) | `lsd-mono-ktor-3` and `lsd-mono-junit-jupiter` | `install(Lsd) { app = "Shop" }` ([README](modules/lsd-mono-ktor-3/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/ktor-3/) |
+| http4k 6 | `lsd-mono-http4k-6` and `lsd-mono-junit-jupiter` | `LsdHttp4k.serverFilter("Shop").then(routes)` ([README](modules/lsd-mono-http4k-6/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/http4k-6/) |
+| Ktor 3 | `lsd-mono-ktor-3` and `lsd-mono-junit-jupiter` | `install(Lsd) { app = "Shop" }` ([README](modules/lsd-mono-ktor-3/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/ktor-3/) |
 | JUnit Jupiter 6 | `lsd-mono-junit-jupiter` | `@ExtendWith(LsdExtension::class)`, then [capture](#draw-a-flow-without-a-test) in the test ([README](modules/lsd-mono-junit-jupiter/README.md)) | – |
 | Cucumber 8 | `lsd-mono-cucumber-8` | `cucumber.plugin=io.github.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`, then capture in the steps ([README](modules/lsd-mono-cucumber-8/README.md)) | – |
 
-"Next release" means the artifact and its sample report are merged but not yet on Maven Central and the sample site; they go out with the next weekly release. Each integration brings in `lsd-mono-jvm` and uses your own test runtime and framework. For coroutines, or for writing reports without `lsd-mono-jvm`, see [which artifact to depend on](modules/README.md#which-artifact-to-depend-on).
+Each integration brings in `lsd-mono-jvm` and uses your own test runtime and framework. For coroutines, or for writing reports without `lsd-mono-jvm`, see [which artifact to depend on](modules/README.md#which-artifact-to-depend-on).
 
 #### Spring Boot 4 in full
 
