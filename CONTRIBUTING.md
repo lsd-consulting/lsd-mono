@@ -31,10 +31,11 @@ dependencies {
     testImplementation(project(":modules:lsd-mono-coroutines")) // only if tests capture from coroutines
     testImplementation(project(":modules:lsd-mono-spring-boot-4")) // only for @SpringBootTest suites
     testImplementation(project(":modules:lsd-mono-http4k-6")) // only for http4k apps
+    testImplementation(project(":modules:lsd-mono-ktor-3")) // only for Ktor apps
 }
 ```
 
-They are compiled with `--release 17` (`lsd-mono-http4k-6` with `--release 21`, as http4k 6 needs Java 21), and CI tests on Java 17, 21 and 25. Cucumber support is major 8, Spring Boot support major 4, http4k support major 6.
+They are compiled with `--release 17` (`lsd-mono-http4k-6` with `--release 21`, as http4k 6 needs Java 21), and CI tests on Java 17, 21 and 25. Cucumber support is major 8, Spring Boot support major 4, http4k support major 6, Ktor support major 3.
 
 ## Layout
 
@@ -47,6 +48,7 @@ modules/lsd-mono-cucumber-8/      Cucumber 8 plugin
 modules/lsd-mono-coroutines/      keeps a scenario bound across coroutine thread hops
 modules/lsd-mono-spring-boot-4/   Spring Boot 4 starter
 modules/lsd-mono-http4k-6/        http4k 6 filters (HTTP server and client, WebSockets)
+modules/lsd-mono-ktor-3/          Ktor 3 plugins (HTTP server and client, WebSockets)
 build-logic/                      convention plugins (lsd.kotlin-jvm)
 ```
 

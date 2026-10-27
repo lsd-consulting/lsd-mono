@@ -1,0 +1,36 @@
+public final class io/lsdconsulting/lsd/mono/ktor/LsdClientConfig {
+	public fun <init> ()V
+	public final fun getCaller ()Ljava/lang/String;
+	public final fun getMessagesShown ()I
+	public final fun getTarget ()Ljava/lang/String;
+	public final fun setCaller (Ljava/lang/String;)V
+	public final fun setMessagesShown (I)V
+	public final fun setTarget (Ljava/lang/String;)V
+}
+
+public final class io/lsdconsulting/lsd/mono/ktor/LsdClientPlugin {
+	public static final fun getLsdClient ()Lio/ktor/client/plugins/api/ClientPlugin;
+}
+
+public final class io/lsdconsulting/lsd/mono/ktor/LsdConfig {
+	public fun <init> ()V
+	public final fun getApp ()Ljava/lang/String;
+	public final fun getClient ()Ljava/lang/String;
+	public final fun getMessagesShown ()I
+	public final fun setApp (Ljava/lang/String;)V
+	public final fun setClient (Ljava/lang/String;)V
+	public final fun setMessagesShown (I)V
+}
+
+public final class io/lsdconsulting/lsd/mono/ktor/LsdKtor {
+	public static final field DEFAULT_APP Ljava/lang/String;
+	public static final field DEFAULT_CLIENT Ljava/lang/String;
+	public static final field DEFAULT_MESSAGES_SHOWN I
+	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/ktor/LsdKtor;
+	public static final fun labelled (Lio/ktor/serialization/WebsocketContentConverter;)Lio/ktor/serialization/WebsocketContentConverter;
+}
+
+public final class io/lsdconsulting/lsd/mono/ktor/LsdServer {
+	public static final fun getLsd ()Lio/ktor/server/application/ApplicationPlugin;
+}
+

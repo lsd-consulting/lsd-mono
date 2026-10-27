@@ -13,7 +13,7 @@ public object LsdHeaders {
 
     /**
      * Who made an HTTP call, set by an integration's client side so the server side of another
-     * instrumented app (Spring Boot or http4k) names its caller. A contract between integrations.
+     * instrumented app (Spring Boot, http4k or Ktor) names its caller. A contract between integrations.
      */
     @InternalLsdApi
     public const val CALLER: String = "lsd-caller"
