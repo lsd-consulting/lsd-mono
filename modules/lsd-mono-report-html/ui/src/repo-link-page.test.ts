@@ -62,6 +62,7 @@ describe('links to the lsd-mono repository', () => {
     const version = document.querySelector<HTMLAnchorElement>('.report-hero .meta a.version-link')
     expectRepoLink(version, 'lsd-mono dev: lsd-mono on GitHub')
     expect(version!.querySelector('code')?.textContent).toBe('lsd-mono dev')
+    // The page is `dev` in tests, so the generator's own version shows too.
     expect(document.querySelector('.report-hero .meta .generator')?.textContent).toBe('Written by lsd-mono-jvm 0.12.0')
   })
 

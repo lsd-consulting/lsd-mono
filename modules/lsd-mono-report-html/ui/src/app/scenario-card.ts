@@ -14,7 +14,7 @@ import { newerMinorNoticeHtml } from '../lib/schema-version'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { repoLinkAttrsHtml } from '../ui/repo-link'
 import { index, session } from './context'
-import { VIEWER_VERSION } from '../lib/viewer-version'
+import { VIEWER_VERSION, writtenBy } from '../lib/viewer-version'
 
 /** The version chip: this page's own version, the same whatever wrote the data. */
 export function viewerLabel(version: string = VIEWER_VERSION): string {
@@ -32,7 +32,7 @@ export function heroHtml(): string {
       <h1>${escapeHtml(session.report.title)}</h1>
       <div class="meta">
         <span>Generated ${escapeHtml(formatGeneratedAt(session.report.generatedAt))}</span>
-        ${session.report.generator ? `<span class="generator">Written by ${escapeHtml(session.report.generator)}</span>` : ''}
+        ${session.report.generator ? `<span class="generator">Written by ${escapeHtml(writtenBy(session.report.generator))}</span>` : ''}
         <a class="version-link repo-link" ${repoLinkAttrsHtml(`${viewerLabel()}: lsd-mono on GitHub`)}><code>${escapeHtml(viewerLabel())}</code></a>
       </div>
     </div>`
