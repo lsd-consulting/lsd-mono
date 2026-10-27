@@ -1,26 +1,122 @@
-# LSD Mono
+# LSD: living sequence diagrams for the JVM
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-core)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-core)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-core?label=Maven%20Central)](https://central.sonatype.com/namespace/io.github.lsd-consulting)
 [![Build](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml/badge.svg?branch=main)](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml)
-[![jsDelivr hits](https://data.jsdelivr.com/v1/package/gh/lsd-consulting/lsd-mono/badge)](https://www.jsdelivr.com/package/gh/lsd-consulting/lsd-mono)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![Java 17+](https://img.shields.io/badge/Java-17%2B-informational)
+[![Live report](https://img.shields.io/badge/demo-live%20report-brightgreen)](https://lsd-consulting.github.io/lsd-mono/example-report.html)
 
-LSD Mono records a scenario as a sequence of messages and writes an interactive HTML report. [`lsd-mono-core`](modules/lsd-mono-core) is the capture API and the report UI.
+**Draw how your system really talks: from the tests you already have, or from any code with a small API.** Add a test dependency and each test becomes an interactive sequence diagram: who called whom, with what payload, how long it took, and where it failed. Or call the API yourself to draw a flow by hand, from a `main()`, a sample app, a batch job or a tool. Either way the result is a plain HTML report you can open from CI, attach to a pull request or publish as living documentation.
+
+- **No code for Spring Boot 4:** MVC, WebFlux, `WebTestClient`, `RestClient`, `RestTemplate` and `WebClient`, Kafka, Spring Data, and WebSockets with STOMP, drawn from the `@SpringBootTest`s you already have.
+- **One line for http4k 6 and Ktor 3:** server, client and WebSocket filters or plugins, in memory or on real servers.
+- **Any JVM test:** JUnit Jupiter 6 and Cucumber 8.
+- **Not only tests:** a small Kotlin and Java API draws any flow you describe, by hand or from your own code, and writes it as a report ([example below](#draw-a-flow-without-a-test)).
+- **A report people read:** a payload inspector, find across payloads, a component view, a timing waterfall, failed tests first, light, dark and high-contrast themes, and it works offline.
+
+**[See a live report →](https://lsd-consulting.github.io/lsd-mono/example-report.html)** · [Spring Boot sample](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) · [http4k sample](https://lsd-consulting.github.io/lsd-mono/http4k-6/) (next release) · [Ktor sample](https://lsd-consulting.github.io/lsd-mono/ktor-3/) (next release)
 
 ![A tour of the report: choosing a scenario from the list, zooming in and out and back to the default, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the light, dark and high-contrast themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
 
-**[Live example report →](https://lsd-consulting.github.io/lsd-mono/example-report.html)** An online shop checkout across 14 services and five scenarios, built from the latest release. Click an arrow to see its request, reply or event payload.
+The [live example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) follows an online shop checkout across 14 services and five scenarios, built from the latest release. Click an arrow to see its request, reply or event payload.
 
-[`lsd-mono-cucumber-8` README](modules/lsd-mono-cucumber-8/README.md) covers the Cucumber 8 plugin.
+## Draw a flow without a test
 
-[`lsd-mono-junit-jupiter` README](modules/lsd-mono-junit-jupiter/README.md) covers the JUnit Jupiter 6 extension that completes a scenario for each test.
+The capture API works anywhere on the JVM. This `main()` draws a checkout by hand and writes the report:
 
-[`lsd-mono-coroutines` README](modules/lsd-mono-coroutines/README.md) covers keeping a scenario bound while a coroutine moves between threads.
+```kotlin
+import io.lsdconsulting.lsd.mono.core.LsdContext
 
-[`lsd-mono-spring-boot-4` README](modules/lsd-mono-spring-boot-4/README.md) covers the Spring Boot 4 starter that draws an existing `@SpringBootTest` suite with no code.
+fun main() {
+    val files = LsdContext.instance.report("Checkout flow") {
+        scenario("Place an order") {
+            capture {
+                "Customer" calls "Checkout" label "POST /orders"
+                "Checkout" calls "Payments" label "authorise card"
+                "Payments" repliesTo "Checkout" label "authorised"
+                "Checkout" sends "Order events" label "order.placed"
+                "Checkout" repliesTo "Customer" label "201 Created"
+            }
+        }
+    }
+    println("Open ${files.diagramHtml}")
+}
+```
 
-[`lsd-mono-http4k-6` README](modules/lsd-mono-http4k-6/README.md) covers the http4k 6 filters that draw an http4k app's HTTP calls and WebSockets, in memory or on real servers.
+It needs only `lsd-mono-core`. The report goes to `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it), with `index.html` beside it. [Capture a scenario](#capture-a-scenario) shows participants, payloads, facts and activations, and the [lsd-mono-core README](modules/lsd-mono-core/README.md#scenarios-and-reports-in-code) has the Java form.
 
-The source is at https://github.com/lsd-consulting/lsd-mono.
+## Quick start
+
+Pick your stack. Every artifact is `io.github.lsd-consulting:<artifact>:X.Y.Z`, where `X.Y.Z` is the version on the Maven Central badge above, and the report lands in `build/reports/lsd` (open `index.html`).
+
+| Stack | Add (test scope) | Then | Sample |
+| --- | --- | --- | --- |
+| Spring Boot 4 | `lsd-mono-spring-boot-4` | Nothing: run your `@SpringBootTest`s ([README](modules/lsd-mono-spring-boot-4/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) |
+| http4k 6 (next release) | `lsd-mono-http4k-6` and `lsd-mono-junit-jupiter` | `LsdHttp4k.serverFilter("Shop").then(routes)` ([README](modules/lsd-mono-http4k-6/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/http4k-6/) |
+| Ktor 3 (next release) | `lsd-mono-ktor-3` and `lsd-mono-junit-jupiter` | `install(Lsd) { app = "Shop" }` ([README](modules/lsd-mono-ktor-3/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/ktor-3/) |
+| JUnit Jupiter 6 | `lsd-mono-junit-jupiter` | `@ExtendWith(LsdExtension::class)`, then [capture](#capture-a-scenario) in the test ([README](modules/lsd-mono-junit-jupiter/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/example-report.html) |
+| Cucumber 8 | `lsd-mono-cucumber-8` | `cucumber.plugin=io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`, then capture in the steps ([README](modules/lsd-mono-cucumber-8/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/example-report.html) |
+
+"Next release" means the artifact and its sample report are merged but not yet on Maven Central and the sample site; they go out with the next weekly release.
+
+### Spring Boot 4 in full
+
+Gradle (Kotlin DSL):
+
+```kotlin
+dependencies {
+    testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:X.Y.Z") // the version on the badge above
+}
+```
+
+Maven:
+
+```xml
+<dependency>
+    <groupId>io.github.lsd-consulting</groupId>
+    <artifactId>lsd-mono-spring-boot-4</artifactId>
+    <version>X.Y.Z</version><!-- the version on the badge above -->
+    <scope>test</scope>
+</dependency>
+```
+
+Nothing changes in the test:
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class PlaceOrderTest {
+    @Test
+    void placesAnOrder() { /* call the app as you already do */ }
+}
+```
+
+Run the tests and open `build/reports/lsd/index.html`: one report per test class, one scenario per test method, with the app's requests, the calls it makes, its Kafka records, repository calls and WebSocket frames. The starter uses the app's own Spring Boot 4 and needs nothing beyond `spring-boot-starter-test`. The [module README](modules/lsd-mono-spring-boot-4/README.md) covers what is drawn and the settings.
+
+## What the report looks like
+
+The tour at the top clicks around a small shop report: four scenarios with every status, six participants, payloads, and durations. [`FeatureTourSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/FeatureTourSample.kt) captures it. The [lsd-mono-core README](modules/lsd-mono-core/README.md#component-diagram) covers the **Components** view.
+
+The report shows one scenario at a time, chosen from the sidebar, and the choice is kept in the URL. Each scenario has:
+
+- the sequence diagram, fitted to its panel, with zoom steps (− and +), the % readout to go back to the default view, an Overview of the whole width, [find](#find-in-the-diagram) and participant hiding. A diagram taller than the screen extends the page and scrolls with it; the toolbar and the participant header stay at the top while you scroll;
+- a **Sequence | Components** switch over each diagram, for the scenario's component diagram;
+- a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are redacted when captured), a component link's messages, and timing and metrics;
+- a timing summary (wall-clock, calls, slowest call, accuracy) with swim lanes and a waterfall, when the scenario has timing.
+
+The theme follows the operating system (dark, light, or more contrast) until you choose one from the theme menu in the top bar, or step through them with `d`.
+
+### Find in the diagram
+
+Find, in the diagram's toolbar, matches arrow labels, notes and message payloads as you type, ignoring case. Enter / Shift+Enter (or F3, Cmd/Ctrl+G, or the ↑ ↓ buttons) step through the matches, wrapping, and the count says where you are: “2 of 11, 3 in payloads”.
+
+- A label match is banded on the label; a payload match bands the arrow's `{}` marker, so you can tell them apart without colour. The arrow's button says “search match in payload” to screen readers.
+- A payload is searched as the side panel shows it: indented JSON, keys and values, so `"qty": 2` and header names match too. The payloads load the first time you use Find, from the same file the side panel uses, and a large report is searched in short slices so typing never waits.
+- Opening a matching arrow marks every match in its JSON, the first one current and on screen, with its own count and ↑ ↓. Stepping through Find moves an open side panel to the current match; it does not open a closed one.
+- The `{}` button at the end of the field (its name is *Payloads*) turns payloads out of Find and back in, for when they match too much. Pressed, it is boxed; off, it is struck through.
+
+### Example report
+
+The [example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) (the live report linked above) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in five scenarios: a timed checkout, happy path, payment declined (captured out of order), out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, realistic HTTP, SQL and Kafka payloads with headers, timestamps, and warning and errored scenarios. The timed checkout shows the timing API: measured durations, trace and span ids, events put back in clock order (marked clock-ordered), and the Timing view's swim lanes and waterfall. [`KitchenSinkSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/KitchenSinkSample.kt) captures it. The report is not committed. The [Pages workflow](.github/workflows/pages.yml) builds it from each release, once the release is tagged, so it shows the version the snippets below use, and publishes it with the [`index.html`](https://lsd-consulting.github.io/lsd-mono/) that `createIndex()` writes for it.
 
 ## Getting started
 
@@ -32,10 +128,12 @@ The artifacts are on Maven Central under `io.github.lsd-consulting`, all eight o
 | `lsd-mono-junit-jupiter` | A scenario per JUnit Jupiter 6 test ([README](modules/lsd-mono-junit-jupiter/README.md)). |
 | `lsd-mono-cucumber-8` | A scenario per Cucumber 8 scenario ([README](modules/lsd-mono-cucumber-8/README.md)). |
 | `lsd-mono-coroutines` | Captures from coroutines that change threads, with kotlinx.coroutines 1 ([README](modules/lsd-mono-coroutines/README.md)). |
-| `lsd-mono-spring-boot-4` | A scenario per `@SpringBootTest` method with no code, drawing Spring MVC and WebFlux, `RestClient`, `RestTemplate`, `WebClient`, Kafka and Spring Data repository calls, for Spring Boot 4 ([README](modules/lsd-mono-spring-boot-4/README.md)). |
+| `lsd-mono-spring-boot-4` | A scenario per `@SpringBootTest` method with no code, for Spring Boot 4: Spring MVC and WebFlux, `WebTestClient`, `RestClient`, `RestTemplate` and `WebClient` (server-sent events included), Kafka sends, failed sends and consumes (batches included), Spring Data repository calls, and WebSockets with STOMP, across `@Async` and reactive thread hops ([README](modules/lsd-mono-spring-boot-4/README.md)). |
 | `lsd-mono-http4k-6` | http4k 6 filters that draw the requests an app serves, the calls it makes and its WebSockets, in memory or on real servers; Java 21, as http4k 6 is ([README](modules/lsd-mono-http4k-6/README.md)). |
 | `lsd-mono-report-model` | The report as plain Kotlin values, for a producer that writes reports without lsd-mono-core ([README](modules/lsd-mono-report-model/README.md)). lsd-mono-core brings it. |
 | `lsd-mono-report-html` | Writes a report as JSON and as the HTML page, with the report UI bundled ([README](modules/lsd-mono-report-html/README.md)). lsd-mono-core brings it. |
+
+`lsd-mono-http4k-6` is merged but not on Maven Central yet: it is published with the next weekly release, and until then the snippets below will not resolve it. Leave it out, or build it from this repository ([CONTRIBUTING.md](CONTRIBUTING.md#from-this-repository)).
 
 Gradle (Kotlin DSL), with the integrations you use:
 
@@ -79,24 +177,9 @@ Maven:
 
 Each integration brings in `lsd-mono-core`; listing core as well keeps the API you call directly declared. You still bring the test runtime: a JUnit Jupiter engine for `lsd-mono-junit-jupiter`, and Cucumber 8 (`cucumber-java8` and `cucumber-junit-platform-engine`) for `lsd-mono-cucumber-8`; `lsd-mono-spring-boot-4` uses the app's own Spring Boot 4 and `spring-boot-starter-test`, and `lsd-mono-http4k-6` the app's own http4k 6. The module READMEs show the setup for each.
 
-### From this repository
-
-Another project in this build depends on the modules directly:
-
-```kotlin
-dependencies {
-    implementation(project(":modules:lsd-mono-core"))
-    testImplementation(project(":modules:lsd-mono-junit-jupiter"))
-    testImplementation(project(":modules:lsd-mono-cucumber-8"))
-    testImplementation(project(":modules:lsd-mono-coroutines")) // only if tests capture from coroutines
-    testImplementation(project(":modules:lsd-mono-spring-boot-4")) // only for @SpringBootTest suites
-    testImplementation(project(":modules:lsd-mono-http4k-6")) // only for http4k apps
-}
-```
-
-They are compiled with `--release 17` (`lsd-mono-http4k-6` with `--release 21`, as http4k 6 needs Java 21), and CI tests on Java 17, 21 and 25. Cucumber support is major 8, Spring Boot support major 4, http4k support major 6.
-
 ## Capture a scenario
+
+The integrations above capture for you. To draw anything else, from any JVM code, capture it yourself with `LsdContext`:
 
 ```kotlin
 import io.lsdconsulting.lsd.mono.core.LsdContext
@@ -164,7 +247,9 @@ lists each one with its default; a test keeps that table in step with the code.
 
 ## Usage ping
 
-A report written by a release of lsd-mono (not a `-SNAPSHOT` build) counts towards jsDelivr's public hit count, the number on the jsDelivr badge above. When the report opens, the page requests one tiny file from jsDelivr, pinned to the version that wrote the report:
+[![jsDelivr hits](https://data.jsdelivr.com/v1/package/gh/lsd-consulting/lsd-mono/badge)](https://www.jsdelivr.com/package/gh/lsd-consulting/lsd-mono)
+
+A report written by a release of lsd-mono (not a `-SNAPSHOT` build) counts towards jsDelivr's public hit count, the number on the jsDelivr badge here. When the report opens, the page requests one tiny file from jsDelivr, pinned to the version that wrote the report:
 
 ```text
 https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@<version>/ping/<event>.txt
@@ -177,69 +262,11 @@ https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@<version>/ping/<event>.txt
 
 Snapshot builds, the report UI's dev server and checks, and the sample reports this repository publishes never ping.
 
-## What the report looks like
+## Contributing
 
-The tour at the top clicks around a small shop report: four scenarios with every status, six participants, payloads, and durations. [`FeatureTourSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/FeatureTourSample.kt) captures it. The [lsd-mono-core README](modules/lsd-mono-core/README.md#component-diagram) covers the **Components** view.
+Building lsd-mono, depending on the modules from another project in this build, the source layout, regenerating the README tour and building the sample site locally are in [CONTRIBUTING.md](CONTRIBUTING.md). [Generated files](docs/generated-files.md) lists every generated file, and [CI](docs/ci.md) describes the workflows.
 
-The report shows one scenario at a time, chosen from the sidebar, and the choice is kept in the URL. Each scenario has:
-
-- the sequence diagram, fitted to its panel, with zoom steps (− and +), the % readout to go back to the default view, an Overview of the whole width, [find](#find-in-the-diagram) and participant hiding. A diagram taller than the screen extends the page and scrolls with it; the toolbar and the participant header stay at the top while you scroll;
-- a **Sequence | Components** switch over each diagram, for the scenario's component diagram;
-- a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are redacted when captured), a component link's messages, and timing and metrics;
-- a timing summary (wall-clock, calls, slowest call, accuracy) with swim lanes and a waterfall, when the scenario has timing.
-
-The theme follows the operating system (dark, light, or more contrast) until you choose one from the theme menu in the top bar, or step through them with `d`.
-
-### Find in the diagram
-
-Find, in the diagram's toolbar, matches arrow labels, notes and message payloads as you type, ignoring case. Enter / Shift+Enter (or F3, Cmd/Ctrl+G, or the ↑ ↓ buttons) step through the matches, wrapping, and the count says where you are: “2 of 11, 3 in payloads”.
-
-- A label match is banded on the label; a payload match bands the arrow's `{}` marker, so you can tell them apart without colour. The arrow's button says “search match in payload” to screen readers.
-- A payload is searched as the side panel shows it: indented JSON, keys and values, so `"qty": 2` and header names match too. The payloads load the first time you use Find, from the same file the side panel uses, and a large report is searched in short slices so typing never waits.
-- Opening a matching arrow marks every match in its JSON, the first one current and on screen, with its own count and ↑ ↓. Stepping through Find moves an open side panel to the current match; it does not open a closed one.
-- The `{}` button at the end of the field (its name is *Payloads*) turns payloads out of Find and back in, for when they match too much. Pressed, it is boxed; off, it is struck through.
-
-Regenerate the tour from the current UI:
-
-```bash
-./gradlew :modules:lsd-mono-core:readmeSamples
-```
-
-The task captures the tour report with `LsdContext`, then drives the packaged shell with headless Chromium and encodes `docs/readme/feature-tour.gif`. It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
-
-### Example report
-
-The [example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) (the live report linked above) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in five scenarios: a timed checkout, happy path, payment declined (captured out of order), out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, realistic HTTP, SQL and Kafka payloads with headers, timestamps, and warning and errored scenarios. The timed checkout shows the timing API: measured durations, trace and span ids, events put back in clock order (marked clock-ordered), and the Timing view's swim lanes and waterfall. [`KitchenSinkSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/KitchenSinkSample.kt) captures it. The report is not committed. The [Pages workflow](.github/workflows/pages.yml) builds it from each release, once the release is tagged, so it shows the version the snippets above use, and publishes it with the [`index.html`](https://lsd-consulting.github.io/lsd-mono/) that `createIndex()` writes for it. To build the site locally, then open `modules/lsd-mono-core/build/pages/index.html` in a browser:
-
-```bash
-./gradlew :modules:lsd-mono-core:kitchenSinkSample
-```
-
-[Generated files](docs/generated-files.md) lists every generated file, which ones are committed, and how CI keeps them fresh. [CI](docs/ci.md) describes the workflows.
-
-## Build
-
-```bash
-./gradlew build
-```
-
-The Java baseline is 17, set once as `jvm` in `gradle/libs.versions.toml`: the code compiles for it and the tests run on a JDK 17 toolchain (found locally or provisioned by foojay; your default JDK is not changed). `./gradlew test -Plsd.test.jvm=21` runs the tests on another JDK. `:modules:lsd-mono-report-html:build` runs the Vite shell build (`npm ci`, then `npm run build:single`) and vitest is on `check`. Those tasks prepend the nvm Node named in `.nvmrc` (the one CI uses) and leave the default alias alone.
-
-`check` also lints and measures coverage: ktlint for the Kotlin (`./gradlew spotlessApply` fixes formatting), Kover line-coverage floors per module, and for the report UI a type-check of the code and its tests, ESLint, Prettier and Vitest coverage thresholds. See [lint, format and coverage](docs/ci.md#lint-format-and-coverage).
-
-```
-modules/lsd-mono-core/            lsd-mono-core: capture, timing, the report model mapping
-modules/lsd-mono-report-model/    the report as plain Kotlin values
-modules/lsd-mono-report-html/     the report writer, report UI in ui/
-modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
-modules/lsd-mono-cucumber-8/      Cucumber 8 plugin
-modules/lsd-mono-coroutines/      keeps a scenario bound across coroutine thread hops
-modules/lsd-mono-spring-boot-4/   Spring Boot 4 starter
-modules/lsd-mono-http4k-6/        http4k 6 filters (HTTP server and client, WebSockets)
-build-logic/                      convention plugins (lsd.kotlin-jvm)
-```
-
-Legacy behaviour for comparison is upstream at [lsd-core](https://github.com/lsd-consulting/lsd-core). It is not in this tree.
+Coming from the earlier LSD libraries? Their behaviour is upstream at [lsd-core](https://github.com/lsd-consulting/lsd-core); it is not in this tree.
 
 ## License
 

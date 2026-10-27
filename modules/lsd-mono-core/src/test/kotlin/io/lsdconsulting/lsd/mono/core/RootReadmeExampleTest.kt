@@ -21,7 +21,8 @@ import kotlin.io.path.readText
 /**
  * The root README's "Capture a scenario" example is the [example] below, so it compiles against
  * the current API (#68). The test fails when the README block and the marked lines differ, and it
- * runs the example to check the file names the README quotes.
+ * runs the example to check the file names the README quotes. The "Draw a flow without a test"
+ * `main()` is [flowExample] in the same way.
  */
 @LsdTestConfig
 class RootReadmeExampleTest {
@@ -60,6 +61,24 @@ class RootReadmeExampleTest {
         lsd.createIndex()
         // readme:end
         return listing
+    }
+
+    private fun flowExample(): ReportFiles {
+        // readme-flow:start
+        val files = LsdContext.instance.report("Checkout flow") {
+            scenario("Place an order") {
+                capture {
+                    "Customer" calls "Checkout" label "POST /orders"
+                    "Checkout" calls "Payments" label "authorise card"
+                    "Payments" repliesTo "Checkout" label "authorised"
+                    "Checkout" sends "Order events" label "order.placed"
+                    "Checkout" repliesTo "Customer" label "201 Created"
+                }
+            }
+        }
+        println("Open ${files.diagramHtml}")
+        // readme-flow:end
+        return files
     }
 
     private val readme: Path = Path.of("../../README.md")
@@ -173,5 +192,43 @@ class RootReadmeExampleTest {
         assertTrue(text.contains("`${files.reportJson.name}`"), "the README should name ${files.reportJson.name}")
         val payloads = files.diagramHtml.name.replace("-diagram.html", "-payloads.js")
         assertTrue(tempDir.resolve(payloads).exists() && text.contains("`$payloads`"), "the README should name $payloads")
+    }
+
+    /** The `main()` under "## Draw a flow without a test" is [flowExample], with its imports. */
+    @Test
+    fun `the README flow example is the compiled example`() {
+        val block =
+            readme
+                .readLines()
+                .dropWhile { it != "## Draw a flow without a test" }
+                .dropWhile { it != "```kotlin" }
+                .drop(1)
+                .takeWhile { it != "```" }
+        val imports = block.takeWhile { it.isNotBlank() }
+        assertTrue(imports.all { it.startsWith("import ") }, "the README block starts with its imports: $imports")
+        val samePackage = Regex("""import io\.lsdconsulting\.lsd\.mono\.core\.[A-Z]\w*""")
+        val lines = source.readLines()
+        imports
+            .filterNot { samePackage.matches(it) }
+            .forEach { assertTrue(it in lines, "$it is not imported here, so the README example would not compile") }
+        val main = block.drop(imports.size + 1)
+        assertEquals("fun main() {", main.first(), "the README flow example is a main()")
+        assertEquals("}", main.last(), "the README flow example is a main()")
+        val body =
+            lines
+                .dropWhile { !it.trim().startsWith("// readme-flow:start") }
+                .drop(1)
+                .takeWhile { !it.trim().startsWith("// readme-flow:end") }
+                .map { it.removePrefix("        ") }
+        assertEquals(body, main.drop(1).dropLast(1).map { it.removePrefix("    ") }, "copy flowExample into README.md")
+    }
+
+    @Test
+    fun `the flow example writes a report and the index`() {
+        System.setProperty(LsdProperties.OUTPUT_DIR, tempDir.toString())
+        val files = flowExample()
+        assertTrue(files.diagramHtml.exists(), "${files.diagramHtml} was not written")
+        assertTrue(tempDir.resolve("index.html").exists(), "index.html was not written")
+        assertTrue("build/reports/lsd" in readme.readText(), "the README says where the report goes")
     }
 }

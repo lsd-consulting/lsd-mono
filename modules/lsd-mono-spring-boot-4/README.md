@@ -13,6 +13,7 @@ It draws:
 - **Kafka sends that fail**, when the producer rejects the record or the broker never acknowledges it, as an error reply from the topic to the sender, named after the exception (`orders.placed → Shop: RecordTooLargeException`) with its message, so the scenario's errors count it. A successful acknowledgement adds nothing to the diagram, and one that arrives after its test has finished is dropped. This needs `kafka-clients` 4.1 or later (the version Spring Boot 4 manages), the first whose producer interceptors are handed the record's headers on acknowledgement; with an older client (3.x or 4.0) a failed send is still drawn as a plain publish;
 - **Kafka records consumed** by Spring listener containers, so any `@KafkaListener`, whether its container factory is Spring Boot's or the app's, as a consume from the topic to the app, paired with its publish when the test's JVM sent it. A batch listener (`List<ConsumerRecord>` or a `List` of payloads, on a batch factory such as Boot's with `spring.kafka.listener.type=batch`) draws each record in the batch as its own consume (`orders.placed → Shop: consume "lamp-01"`), just as a record listener does;
 - **Spring Data repository calls**, any store, as a call and its reply (`Shop → OrderRepository: save(PlacedOrder(id=7, …))`, then what came back), with a one-line summary of the arguments and the result.
+- **WebSockets, STOMP included**, in a servlet app: each `@EnableWebSocket` handler and each `@EnableWebSocketMessageBroker` STOMP endpoint, as the handshake, each message either way (labels in the popup), errors and the close ([below](#websockets)).
 
 Each part switches on only when its classes are on the test classpath. Nothing below a repository is drawn (no JDBC, no SQL), and JMS is not captured.
 
@@ -83,6 +84,8 @@ An unwrapped client still works while one test runs at a time: the app draws its
 ## Sample report
 
 [The sample report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) ([one scenario on its own](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/kafka-shop-report.html), [the WebFlux shop](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/webflux-report.html)) is what this module's own shop fixtures draw. They are plain `@SpringBootTest` classes that know nothing about LSD; the starter on the test classpath is all it takes:
+
+The site is rebuilt from each release, so a fixture's report appears there with the first release after the fixture is merged: until the next release, the async, reactive bookings, record listener, own clients, streams, `WebTestClient`, `RestClient` streams and WebSocket reports above return 404.
 
 ```java
 @EmbeddedKafka(partitions = 1, topics = ShopApp.TOPIC)
