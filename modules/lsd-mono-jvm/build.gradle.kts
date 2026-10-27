@@ -118,9 +118,14 @@ tasks.named<ProcessResources>("processResources") {
 // with the rest. Remove it after the first release that carries it (docs/releasing.md): the
 // published relocation stays on Central. It is an alias, so a project dependency on this module
 // still resolves to lsd-mono-jvm alone.
+// TODO(#126): remove this publication and checkRelocationPom after the first release that carries
+// the relocation (docs/releasing.md, "The lsd-mono-core relocation").
 publishing {
     publications {
         register<MavenPublication>("relocation") {
+            // Internal Gradle API (MavenPublicationInternal.isAlias): without it, project dependencies on this
+            // module fail with "multiple publications with different coordinates". If a Gradle upgrade breaks
+            // it (a compile error here), fall back to a small separate subproject that publishes only this POM.
             (this as org.gradle.api.publish.maven.internal.publication.MavenPublicationInternal).isAlias = true
             artifactId = "lsd-mono-core"
             pom {
@@ -141,3 +146,46 @@ publishing {
         }
     }
 }
+
+// Guards the relocation POM (#126): fails `check` if the generated lsd-mono-core POM is not packaging
+// pom with a relocation to lsd-mono-jvm at this project's version.
+val relocationPom = tasks.named<GenerateMavenPom>("generatePomFileForRelocationPublication")
+val checkRelocationPom =
+    tasks.register("checkRelocationPom") {
+        group = "verification"
+        description = "Checks the lsd-mono-core relocation POM points at lsd-mono-jvm at this version."
+        val pomFile = relocationPom.map { it.destination }
+        val expectedGroup = provider { project.group.toString() }
+        val expectedVersion = provider { project.version.toString() }
+        inputs.file(pomFile)
+        inputs.property("group", expectedGroup)
+        inputs.property("version", expectedVersion)
+        dependsOn(relocationPom)
+        doLast {
+            val factory = javax.xml.parsers.DocumentBuilderFactory
+                .newInstance()
+            val doc = factory.newDocumentBuilder().parse(pomFile.get())
+
+            fun text(path: String): String? {
+                var node: org.w3c.dom.Element = doc.documentElement
+                for (name in path.split("/")) {
+                    val child = node.getElementsByTagName(name).let { if (it.length == 0) null else it.item(0) }
+                    node = child as? org.w3c.dom.Element ?: return null
+                }
+                return node.textContent.trim()
+            }
+            val expected =
+                mapOf(
+                    "groupId" to expectedGroup.get(),
+                    "artifactId" to "lsd-mono-core",
+                    "version" to expectedVersion.get(),
+                    "packaging" to "pom",
+                    "distributionManagement/relocation/groupId" to "io.github.lsd-consulting",
+                    "distributionManagement/relocation/artifactId" to "lsd-mono-jvm",
+                    "distributionManagement/relocation/version" to expectedVersion.get(),
+                )
+            val wrong = expected.filter { (path, value) -> text(path) != value }.map { (path, value) -> "$path: expected '$value', was '${text(path)}'" }
+            check(wrong.isEmpty()) { "The lsd-mono-core relocation POM (${pomFile.get()}) is wrong (#126):\n" + wrong.joinToString("\n") }
+        }
+    }
+tasks.named("check") { dependsOn(checkRelocationPom) }

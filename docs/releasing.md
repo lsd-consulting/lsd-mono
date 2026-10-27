@@ -33,9 +33,14 @@ coordinate find the new one, `modules/lsd-mono-jvm/build.gradle.kts` adds a seco
 `lsd-mono-jvm` at the same version. It has the full POM `lsd.publishing.gradle.kts` gives every publication, is signed with
 them, and goes out in the same `publishToSonatype closeAndReleaseStagingRepositories` run: no workflow change. It is a
 Gradle alias publication, so projects in this build that depend on `:modules:lsd-mono-jvm` still resolve to
-`lsd-mono-jvm` only. Check it with `./gradlew :modules:lsd-mono-jvm:publishRelocationPublicationToMavenLocal`.
+`lsd-mono-jvm` only. `checkRelocationPom`, part of `check` and so of every build and CI run, fails if the generated
+POM is not packaging `pom` with a relocation to `io.github.lsd-consulting:lsd-mono-jvm` at the project version. To see
+the files, run `./gradlew :modules:lsd-mono-jvm:publishRelocationPublicationToMavenLocal`. That proves the POM (and its
+`.asc` when signing), not the checksums: Maven Local never writes `.md5` or `.sha1`; the upload to Central's staging
+repository adds them, as it does for every other artifact.
 
-Publish it once: remove the `relocation` publication after the first release that carries it. The published relocation
+Publish it once: after the first release that carries it, remove the `relocation` publication and
+`checkRelocationPom` (the `TODO(#126)` in `modules/lsd-mono-jvm/build.gradle.kts`). The published relocation
 POM stays on Central, so `lsd-mono-core` at that version keeps pointing at `lsd-mono-jvm`; later versions exist only as
 `lsd-mono-jvm`.
 
