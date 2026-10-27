@@ -34,6 +34,7 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
+import io.ktor.util.pipeline.PipelinePhase
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
@@ -44,12 +45,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.cancellation.CancellationException
 import io.ktor.client.engine.cio.CIO as ClientCIO
 import io.ktor.server.cio.CIO as ServerCIO
 
@@ -328,5 +331,96 @@ class ClientHopsTest {
 
         val drawn = report(scenario)
         assertEquals(listOf("GET /boom", "IllegalStateException", "GET /after", "200 OK"), drawn.labels, drawn.json)
+    }
+
+    @Test
+    fun `a redirect made while serving a call drops the parent span it copied, and another host gets only the call id`() {
+        val scenario = start()
+        val seen = mutableListOf<Pair<String, Headers>>()
+        val engine =
+            MockEngine { request ->
+                seen += request.url.host to request.headers
+                when (request.url.host) {
+                    "localhost" -> respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "http://127.0.0.1:8089/next"))
+                    "127.0.0.1" -> respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://payments.example.com/new"))
+                    else -> respond("paid")
+                }
+            }
+        val payments = HttpClient(engine) { install(LsdClient) }.also { clients += it }
+        testApplication {
+            application {
+                install(Lsd) { app = "Shop" }
+                routing { get("/checkout") { call.respondText(payments.get("http://localhost:8089/old").bodyAsText()) } }
+            }
+            assertEquals("paid", client.get("/checkout").bodyAsText())
+        }
+
+        val drawn = report(scenario)
+        assertEquals(listOf("localhost", "127.0.0.1", "payments.example.com"), seen.map { it.first }, drawn.json)
+        val (local, redirected) = seen[0].second to seen[1].second
+        assertNotNull(local[Calls.PARENT_SPAN_HEADER], "the first hop nests under the request being served: $local")
+        assertEquals(1, redirected.getAll(Calls.PARENT_SPAN_HEADER)?.size, "an allowed hop gets one parent span, not the copied one too: $redirected")
+        val remote = seen[2].second
+        assertEquals(listOf(Calls.CALL_HEADER), remote.names().filter { Calls.isOwnHeader(it) }.map { it.lowercase() }, "only the opaque call id: $remote")
+        assertEquals(1, remote.getAll(Calls.CALL_HEADER)?.size, "one fresh call id: $remote")
+    }
+
+    /**
+     * Neither CIO nor `testApplication` cancels a handler when its caller goes away, so the
+     * handler is cancelled as an engine that notices a dropped connection would cancel it.
+     */
+    @Test
+    fun `a call cancelled mid-handler (its caller went away) draws no reply for the cancellation`() {
+        val scenario = start()
+        val served = CompletableDeferred<Unit>()
+        testApplication {
+            application {
+                install(Lsd) { app = "Slow" }
+                // Outside the server plugin, so the test waits until the plugin is done with the call.
+                val outermost = PipelinePhase("Served")
+                insertPhaseBefore(items.first(), outermost)
+                intercept(outermost) {
+                    try {
+                        proceed()
+                    } finally {
+                        served.complete(Unit)
+                    }
+                }
+                routing { get("/slow") { throw CancellationException("the caller went away") } }
+            }
+            runCatching { client.get("/slow") }
+            withTimeout(5_000) { served.await() }
+        }
+
+        val drawn = report(scenario)
+        assertEquals(listOf("GET /slow"), drawn.labels, drawn.json)
+    }
+
+    @Test
+    fun `a saved response of exactly the body limit is shown, and one byte more is noted as too large`() {
+        for (size in listOf(Bodies.LIMIT, Bodies.LIMIT + 1)) {
+            val scenario = start("saved-$size")
+            val port =
+                serve {
+                    routing {
+                        get("/big") { call.respondBytesWriter(ContentType.Text.Plain) { writeFully(ByteArray(size) { 'a'.code.toByte() }) } }
+                    }
+                }
+            val app =
+                client {
+                    retry()
+                    lsdClient()
+                }
+            assertEquals(size, runBlocking { app.get("http://localhost:$port/big").bodyAsText() }.length)
+
+            val drawn = report(scenario, "saved-$size")
+            assertEquals(listOf("GET /big", "200 OK"), drawn.labels, "size $size")
+            val body = drawn.messages[1].body()
+            if (size == Bodies.LIMIT) {
+                assertTrue(body is String && body.startsWith("aaaa"), "size $size is shown: ${body.toString().take(80)}")
+            } else {
+                assertEquals("larger than 256 KiB", (body as Map<*, *>)["notShown"], "size $size: $body")
+            }
+        }
     }
 }
