@@ -85,7 +85,7 @@ An unwrapped client still works while one test runs at a time: the app draws its
 
 [The sample report](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) ([one scenario on its own](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/kafka-shop-report.html), [the WebFlux shop](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/webflux-report.html)) is what this module's own shop fixtures draw. They are plain `@SpringBootTest` classes that know nothing about LSD; the starter on the test classpath is all it takes:
 
-The site is rebuilt from each release, so a fixture's report appears there with the first release after the fixture is merged: until the next release, the async, reactive bookings, record listener, own clients, streams, `WebTestClient`, `RestClient` streams and WebSocket reports above return 404.
+The site is rebuilt from each release, so a fixture's report appears there with the first release after the fixture is merged.
 
 ```java
 @EmbeddedKafka(partitions = 1, topics = ShopApp.TOPIC)
