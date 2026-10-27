@@ -20,8 +20,8 @@ val javadocJar =
     }
 
 publishing {
-    // Every publication's POM has what Central requires: the module's own, and any relocation POM a
-    // module adds (lsd-mono-jvm's lsd-mono-core, #126). Name and description default to the module's.
+    // Every publication's POM has what Central requires: the module's own and any other a
+    // module adds. Name and description default to the module's.
     publications.withType<MavenPublication>().configureEach {
         val publication = this
         pom {

@@ -134,7 +134,7 @@ Releases go out weekly, on Tuesday mornings (UK time) when there is something to
 | Core package | `io.lsdconsulting.lsd.mono.core` | `io.github.lsdconsulting.lsd.mono.jvm` |
 | Other modules' packages | `io.lsdconsulting.lsd.mono.*` | `io.github.lsdconsulting.lsd.mono.*` |
 
-Change the dependency and the imports (replace `io.lsdconsulting.lsd.mono.core` first, then `io.lsdconsulting.lsd.mono`). The other artifacts keep their names. The release that renames it also publishes a relocation POM for `lsd-mono-core` at the same version, so Maven follows it to `lsd-mono-jvm` with a warning; the imports still have to change.
+Change the dependency and the imports (replace `io.lsdconsulting.lsd.mono.core` first, then `io.lsdconsulting.lsd.mono`). The other artifacts keep their names. v0.15.0, the release that renamed it, also published a relocation POM for `lsd-mono-core` at 0.15.0, so Maven follows that version to `lsd-mono-jvm` with a warning; the imports still have to change.
 
 ## Contributing
 
