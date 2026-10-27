@@ -10,7 +10,8 @@ import { frames, requestsFlushed } from './ux-helpers'
 /**
  * The production report (dist/lsd-report.html, opened from file:// as a written report is) makes
  * no network request at all, except the usage ping's jsDelivr files when the report allows them.
- * Fonts, styles and script are all inside the file. `npm run check:ux` builds it first.
+ * Fonts, styles and script are all inside the file. `npm run check:ux` builds it first, as page
+ * version 0.2.0, so it pings as a release does.
  */
 
 const shell = fileURLToPath(new URL('../dist/lsd-report.html', import.meta.url))
@@ -81,7 +82,6 @@ test('offline: a release report with the usage ping on requests only the ping fi
 for (const [what, data] of [
   ['the usage ping off', report(false)],
   ['no usagePing option', report(undefined)],
-  ['a snapshot build', report(true, 'lsd-mono-jvm 0.2.1-SNAPSHOT')],
 ] as const) {
   test(`offline: a report with ${what} makes no request at all`, async ({ page }) => {
     expect(await requestsWhile(page, { __LSD_REPORT__: data })).toEqual([])

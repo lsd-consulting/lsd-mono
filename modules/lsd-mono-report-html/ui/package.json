@@ -19,7 +19,7 @@
     "types:check": "node scripts/report-types.mjs --check",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "check:ux": "npm run build:single && playwright test"
+    "check:ux": "LSD_VIEWER_VERSION=0.2.0 npm run build:single && playwright test"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

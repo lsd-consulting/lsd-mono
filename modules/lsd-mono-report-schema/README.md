@@ -158,7 +158,8 @@ fresh design would do differently:
 - **The index** is always titled `LSD reports`. Each entry's `data` (its `<stem>-report.js`) is
   optional and, without a stem, its `id` is its page's file name; lsd-mono-jvm writes both today.
 - **Non-map payloads.** A message's `data` can be any JSON value: a map, a string or a list.
-- **`generator`** stays free text such as `lsd-mono-jvm 0.7.0`: the usage ping matches it.
+- **`generator`** stays free text such as `lsd-mono-jvm 0.7.0`. The page shows it as "Written by …";
+  its version chip and the usage ping use the page's own lsd-mono-report-html version instead.
 
 The report UI also reads reports from before the schema (an older lsd-mono's `<stem>-report.js`
 in the same directory as a newer index), which can lack fields the schema requires. It fills in

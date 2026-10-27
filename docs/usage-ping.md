@@ -2,7 +2,7 @@
 
 [![jsDelivr hits](https://data.jsdelivr.com/v1/package/gh/lsd-consulting/lsd-mono/badge)](https://www.jsdelivr.com/package/gh/lsd-consulting/lsd-mono)
 
-A report written by a release of lsd-mono (not a `-SNAPSHOT` build) counts towards jsDelivr's public hit count, the number on the jsDelivr badge here. When the report opens, the page requests one tiny file from jsDelivr, pinned to the version that wrote the report:
+A report page from a release of lsd-mono (not a `-SNAPSHOT` build) counts towards jsDelivr's public hit count, the number on the jsDelivr badge here. When the report opens, the page requests one tiny file from jsDelivr, pinned to the page's own lsd-mono-report-html version (the viewer's version is the same whatever wrote the data):
 
 ```text
 https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@<version>/ping/<event>.txt

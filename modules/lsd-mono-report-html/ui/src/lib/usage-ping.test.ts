@@ -13,10 +13,12 @@ import {
   usagePingUrl,
 } from './usage-ping'
 
-const release = { generator: 'lsd-mono-jvm 0.2.0', options: { usagePing: true } }
+type UsagePingSourceLike = Parameters<UsagePing['configure']>[0]
 
-function pinger(send = vi.fn<(url: string) => void>()) {
-  const p = new UsagePing(false, send)
+const release = { options: { usagePing: true } }
+
+function pinger(send = vi.fn<(url: string) => void>(), version = '0.2.0') {
+  const p = new UsagePing(false, send, version)
   return { p, send }
 }
 
@@ -35,14 +37,14 @@ describe('usage ping', () => {
     expect(sourceEvent(undefined)).toBeNull()
   })
 
-  it('takes the version only from a release generator', () => {
-    expect(releaseVersion('lsd-mono-jvm 0.2.0')).toBe('0.2.0')
-    expect(releaseVersion('lsd-mono-jvm 12.3.45')).toBe('12.3.45')
-    expect(releaseVersion('lsd-mono-jvm 0.2.1-SNAPSHOT')).toBeNull()
-    expect(releaseVersion('lsd-mono-jvm unknown')).toBeNull()
-    expect(releaseVersion('lsd-mono-core 0.2.0')).toBe('0.2.0')
-    expect(releaseVersion('lsd-mono-core 0.2.1-SNAPSHOT')).toBeNull()
-    expect(releaseVersion('ux-fixture')).toBeNull()
+  it('takes only a release version of the page', () => {
+    expect(releaseVersion('0.2.0')).toBe('0.2.0')
+    expect(releaseVersion('12.3.45')).toBe('12.3.45')
+    expect(releaseVersion('0.2.1-SNAPSHOT')).toBeNull()
+    expect(releaseVersion('dev')).toBeNull()
+    expect(releaseVersion('unknown')).toBeNull()
+    expect(releaseVersion('lsd-mono-jvm 0.2.0')).toBeNull()
+    expect(releaseVersion('')).toBeNull()
     expect(releaseVersion(undefined)).toBeNull()
   })
 
@@ -66,25 +68,31 @@ describe('usage ping', () => {
   })
 
   it.each([
-    ['usagePing false', { generator: 'lsd-mono-jvm 0.2.0', options: { usagePing: false } }],
-    [
-      'a report that names no options, as the page holds it',
-      { generator: 'lsd-mono-jvm 0.2.0', options: DEFAULT_OPTIONS },
-    ],
-    ['a snapshot build', { generator: 'lsd-mono-jvm 0.2.1-SNAPSHOT', options: { usagePing: true } }],
-    ['an unknown version', { generator: 'lsd-mono-jvm unknown', options: { usagePing: true } }],
-    ['no report', null],
-  ])('sends nothing for %s', (_, source) => {
-    const { p, send } = pinger()
+    ['usagePing false', { options: { usagePing: false } }, '0.2.0'],
+    ['a report that names no options, as the page holds it', { options: DEFAULT_OPTIONS }, '0.2.0'],
+    ['a page from a snapshot build', release, '0.2.1-SNAPSHOT'],
+    ['a page from a dev build', release, 'dev'],
+    ['no report', null, '0.2.0'],
+  ])('sends nothing for %s', (_, source, version) => {
+    const { p, send } = pinger(undefined, version)
     p.configure(source)
     expect(p.enabled).toBe(false)
     for (const event of USAGE_EVENTS) p.ping(event)
     expect(send).not.toHaveBeenCalled()
   })
 
+  it('pings with the page version whatever wrote the report', () => {
+    const { p, send } = pinger(undefined, '0.15.0')
+    p.configure({ generator: 'some-other-writer 9.9.9', options: { usagePing: true } } as UsagePingSourceLike)
+    p.ping('report-open')
+    expect(send.mock.calls.map(([url]) => url)).toEqual([
+      'https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@0.15.0/ping/report-open.txt',
+    ])
+  })
+
   it('sends nothing from a dev build, even for a release report', () => {
     const send = vi.fn()
-    const p = new UsagePing(true, send)
+    const p = new UsagePing(true, send, '0.2.0')
     p.configure(release)
     p.ping('report-open')
     expect(send).not.toHaveBeenCalled()
@@ -97,9 +105,13 @@ describe('usage ping', () => {
   })
 
   it('ignores a request that throws or fails, and does not retry it', async () => {
-    const throwing = new UsagePing(false, () => {
-      throw new TypeError('fetch is not defined')
-    })
+    const throwing = new UsagePing(
+      false,
+      () => {
+        throw new TypeError('fetch is not defined')
+      },
+      '0.2.0',
+    )
     throwing.configure(release)
     expect(() => throwing.ping('report-open')).not.toThrow()
 
@@ -107,7 +119,7 @@ describe('usage ping', () => {
     process.on('unhandledRejection', unhandled)
     try {
       const send = vi.fn(() => Promise.reject(new TypeError('Failed to fetch')))
-      const p = new UsagePing(false, send)
+      const p = new UsagePing(false, send, '0.2.0')
       p.configure(release)
       p.ping('report-open')
       p.ping('report-open')

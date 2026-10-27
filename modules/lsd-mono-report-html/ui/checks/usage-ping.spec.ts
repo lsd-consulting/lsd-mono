@@ -10,6 +10,8 @@ import { requestsFlushed } from './ux-helpers'
  * The usage ping (src/lib/usage-ping.ts). The dev server never pings, so these pages opt in with
  * `?lsd-usage-ping-check`, which only the dev build reads. Every jsDelivr request is recorded and
  * then failed, so nothing reaches the CDN and the page has to cope with a blocked or offline ping.
+ * The page version is 0.2.0 here (playwright.config.ts); a snapshot or dev page version never pings
+ * (src/lib/usage-ping.test.ts).
  */
 
 const CDN = 'https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@0.2.0/ping/'
@@ -87,7 +89,6 @@ for (const failWith of ['blockedbyclient', 'internetdisconnected']) {
 
 for (const [what, data, path] of [
   ['usagePing is false', report({ usagePing: false }), OPT_IN],
-  ['the report is from a snapshot build', report({}, 'lsd-mono-jvm 0.2.1-SNAPSHOT'), OPT_IN],
   ['the report has no usagePing option', report({ usagePing: undefined }), OPT_IN],
   ['the page is the dev server without the opt-in', report({}), '/'],
 ] as const) {
