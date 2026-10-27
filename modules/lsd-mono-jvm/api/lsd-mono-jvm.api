@@ -1,0 +1,515 @@
+public final class io/github/lsdconsulting/lsd/mono/jvm/Accuracy : java/lang/Enum {
+	public static final field MEASURED Lio/github/lsdconsulting/lsd/mono/jvm/Accuracy;
+	public static final field STRUCTURE_ONLY Lio/github/lsdconsulting/lsd/mono/jvm/Accuracy;
+	public static final field TIMESTAMPED Lio/github/lsdconsulting/lsd/mono/jvm/Accuracy;
+	public static final field TRACED Lio/github/lsdconsulting/lsd/mono/jvm/Accuracy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/Accuracy;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/Accuracy;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/CallRef {
+	public static final field Companion Lio/github/lsdconsulting/lsd/mono/jvm/CallRef$Companion;
+	public final fun getCallId ()Ljava/lang/String;
+	public static final fun of (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/CallRef$Companion {
+	public final fun of (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/CaptureBlock : io/github/lsdconsulting/lsd/mono/jvm/Capturer {
+	public final fun calls (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun repliesTo (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun sends (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+}
+
+public abstract class io/github/lsdconsulting/lsd/mono/jvm/Capturer {
+	public final fun activate (Ljava/lang/String;)V
+	public final fun activate (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun activate (Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;)V
+	public static synthetic fun activate$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)V
+	public final fun addFact (Ljava/lang/String;)V
+	public final fun addFact (Ljava/lang/String;Ljava/lang/String;)V
+	public static synthetic fun addFact$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
+	public final fun async (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public final fun async (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public static synthetic fun async$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public final fun call (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;
+	public final fun call (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;
+	public final fun call (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;
+	public final fun call (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;
+	public final fun call (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;)Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;
+	public static synthetic fun call$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;
+	public final fun deactivate (Ljava/lang/String;)V
+	public final fun deactivate (Ljava/lang/String;Ljava/time/Instant;)V
+	public static synthetic fun deactivate$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)V
+	public final fun delay ()V
+	public final fun delay (Ljava/lang/String;)V
+	public final fun delay (Ljava/lang/String;Ljava/time/Instant;)V
+	public static synthetic fun delay$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)V
+	public final fun divider (Ljava/lang/String;)V
+	public final fun divider (Ljava/lang/String;Ljava/time/Instant;)V
+	public static synthetic fun divider$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)V
+	public final fun inbound (Ljava/lang/String;)V
+	public final fun inbound (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun inbound (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)V
+	public static synthetic fun inbound$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;ILjava/lang/Object;)V
+	public final fun ingest (Lio/github/lsdconsulting/lsd/mono/jvm/Interaction;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;Ljava/lang/String;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)V
+	public final fun message (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;)V
+	public static synthetic fun message$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;ILjava/lang/Object;)V
+	public final fun note (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun note (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide;)V
+	public final fun note (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide;Ljava/time/Instant;)V
+	public static synthetic fun note$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide;Ljava/time/Instant;ILjava/lang/Object;)V
+	public final fun outbound (Ljava/lang/String;)V
+	public final fun outbound (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun outbound (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)V
+	public static synthetic fun outbound$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;ILjava/lang/Object;)V
+	public final fun response (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun response (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun response (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
+	public final fun response (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)V
+	public final fun response (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;)V
+	public final fun response (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;)V
+	public static synthetic fun response$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;ILjava/lang/Object;)V
+	public final fun section (Ljava/lang/String;)V
+	public final fun section (Ljava/lang/String;Ljava/time/Instant;)V
+	public static synthetic fun section$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)V
+	public final fun spacer ()V
+	public final fun spacer (Ljava/lang/Integer;)V
+	public final fun spacer (Ljava/lang/Integer;Ljava/time/Instant;)V
+	public static synthetic fun spacer$default (Lio/github/lsdconsulting/lsd/mono/jvm/Capturer;Ljava/lang/Integer;Ljava/time/Instant;ILjava/lang/Object;)V
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/ClockOrdering : java/lang/Enum {
+	public static final field ALL_SOURCES Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;
+	public static final field OFF Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;
+	public static final field SAME_SOURCE Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/Interaction {
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/time/Instant;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/Double;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/Boolean;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/lang/Object;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/lang/Object;Ljava/util/Map;)V
+	public synthetic fun <init> (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/lang/Object;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+	public final fun component10 ()Ljava/time/Instant;
+	public final fun component11 ()Ljava/lang/Double;
+	public final fun component12 ()Ljava/lang/Boolean;
+	public final fun component13 ()Ljava/lang/Object;
+	public final fun component14 ()Ljava/util/Map;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Lio/github/lsdconsulting/lsd/mono/jvm/Trace;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/lang/Object;Ljava/util/Map;)Lio/github/lsdconsulting/lsd/mono/jvm/Interaction;
+	public static synthetic fun copy$default (Lio/github/lsdconsulting/lsd/mono/jvm/Interaction;Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/lang/Object;Ljava/util/Map;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/Interaction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getData ()Ljava/lang/Object;
+	public final fun getDurationMs ()Ljava/lang/Double;
+	public final fun getFrom ()Ljava/lang/String;
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getInteractionId ()Ljava/lang/String;
+	public final fun getKind ()Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+	public final fun getLabel ()Ljava/lang/String;
+	public final fun getOrderByStartedAt ()Ljava/lang/Boolean;
+	public final fun getReplyTo ()Ljava/lang/String;
+	public final fun getSource ()Ljava/lang/String;
+	public final fun getStartedAt ()Ljava/time/Instant;
+	public final fun getStatus ()Ljava/lang/String;
+	public final fun getTo ()Ljava/lang/String;
+	public final fun getTrace ()Lio/github/lsdconsulting/lsd/mono/jvm/Trace;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/InteractionKind : java/lang/Enum {
+	public static final field CONSUME Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+	public static final field MESSAGE Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+	public static final field PUBLISH Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+	public static final field REQUEST Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+	public static final field RESPONSE Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;
+}
+
+public abstract interface class io/github/lsdconsulting/lsd/mono/jvm/InteractionSink {
+	public abstract fun accept (Lio/github/lsdconsulting/lsd/mono/jvm/Interaction;)V
+}
+
+public abstract interface annotation class io/github/lsdconsulting/lsd/mono/jvm/InternalLsdApi : java/lang/annotation/Annotation {
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/Lsd {
+	public static final fun lsd (Ljava/util/function/Consumer;)V
+	public static final synthetic fun lsd (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/LsdBinding : java/lang/AutoCloseable {
+	public fun close ()V
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/LsdContext : io/github/lsdconsulting/lsd/mono/jvm/Capturer, io/github/lsdconsulting/lsd/mono/jvm/InteractionSink {
+	public static final field Companion Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext$Companion;
+	public fun <init> ()V
+	public fun accept (Lio/github/lsdconsulting/lsd/mono/jvm/Interaction;)V
+	public final fun addParticipants (Ljava/util/List;)V
+	public final fun addParticipants ([Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;)V
+	public final fun beginScenario ()Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;
+	public final fun beginScenario (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;
+	public final fun beginScenario (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;
+	public final fun beginScenario (Ljava/lang/String;Ljava/lang/String;Z)Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;
+	public static synthetic fun beginScenario$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;
+	public final fun capture (Ljava/util/function/Consumer;)V
+	public final synthetic fun capture (Lkotlin/jvm/functions/Function1;)V
+	public final fun clear ()V
+	public final fun completeReport (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
+	public final fun completeReport (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
+	public static synthetic fun completeReport$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
+	public final fun completeScenario (Ljava/lang/String;)V
+	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;)V
+	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;)V
+	public static synthetic fun completeScenario$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;ILjava/lang/Object;)V
+	public final fun configure (Ljava/util/function/Consumer;)Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;
+	public final fun createIndex ()Ljava/nio/file/Path;
+	public final fun currentScenario ()Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;
+	public final fun findScenario (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;
+	public final fun findScenarioByHeader (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;
+	public static final fun getInstance ()Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;
+	public final fun getPayloads ()Lio/github/lsdconsulting/lsd/mono/jvm/PayloadConverters;
+	public final fun getTimingConfig ()Lio/github/lsdconsulting/lsd/mono/jvm/TimingConfig;
+	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
+	public final synthetic fun report (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public final synthetic fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public final fun scenario (Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public static synthetic fun scenario$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun scenario$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;ILjava/lang/Object;)V
+	public static synthetic fun scenario$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun scenarioHeaderValue (Ljava/lang/String;)Ljava/lang/String;
+	public final fun scenarioHeaderValue (Ljava/net/URI;)Ljava/lang/String;
+	public final fun wrap (Ljava/lang/Runnable;)Ljava/lang/Runnable;
+	public final fun wrap (Ljava/util/concurrent/Callable;)Ljava/util/concurrent/Callable;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/LsdContext$Companion {
+	public final fun getInstance ()Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/LsdHeaders {
+	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/jvm/LsdHeaders;
+	public static final field SCENARIO Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/LsdReport {
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public final synthetic fun scenario (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
+	public final fun scenario (Ljava/lang/String;Ljava/util/function/Consumer;)V
+	public static synthetic fun scenario$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdReport;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun scenario$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdReport;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;ILjava/lang/Object;)V
+	public static synthetic fun scenario$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdReport;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/LsdScenario : io/github/lsdconsulting/lsd/mono/jvm/Capturer {
+	public final fun bind ()Lio/github/lsdconsulting/lsd/mono/jvm/LsdBinding;
+	public final fun capture (Ljava/util/function/Consumer;)V
+	public final synthetic fun capture (Lkotlin/jvm/functions/Function1;)V
+	public final fun complete (Ljava/lang/String;)V
+	public final fun complete (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun complete (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;)V
+	public final fun complete (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;)V
+	public static synthetic fun complete$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdScenario;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;ILjava/lang/Object;)V
+	public final fun discard ()V
+	public final fun getCorrelationId ()Ljava/lang/String;
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getReportKey ()Ljava/lang/String;
+	public final fun isActive ()Z
+	public fun toString ()Ljava/lang/String;
+	public final fun wrap (Ljava/lang/Runnable;)Ljava/lang/Runnable;
+	public final fun wrap (Ljava/util/concurrent/Callable;)Ljava/util/concurrent/Callable;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/MessageSpec {
+	public final fun colour (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun data (Ljava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun label (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun source (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun startedAt (Ljava/time/Instant;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun timing (Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun took (Ljava/lang/Number;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+	public final fun trace (Lio/github/lsdconsulting/lsd/mono/jvm/Trace;)Lio/github/lsdconsulting/lsd/mono/jvm/MessageSpec;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/OrderSource : java/lang/Enum {
+	public static final field CLOCK Lio/github/lsdconsulting/lsd/mono/jvm/OrderSource;
+	public static final field SEQUENCE Lio/github/lsdconsulting/lsd/mono/jvm/OrderSource;
+	public static final field STRUCTURE Lio/github/lsdconsulting/lsd/mono/jvm/OrderSource;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/OrderSource;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/OrderSource;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/PairingSource : java/lang/Enum {
+	public static final field CALL_ID Lio/github/lsdconsulting/lsd/mono/jvm/PairingSource;
+	public static final field GUESSED Lio/github/lsdconsulting/lsd/mono/jvm/PairingSource;
+	public static final field NONE Lio/github/lsdconsulting/lsd/mono/jvm/PairingSource;
+	public static final field TRACE Lio/github/lsdconsulting/lsd/mono/jvm/PairingSource;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/PairingSource;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/PairingSource;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/PayloadConverters {
+	public final fun clear ()V
+	public final fun clearRedaction ()V
+	public final fun redact ([Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/PayloadConverters;
+	public final fun redactWhen (Ljava/util/function/Predicate;)Lio/github/lsdconsulting/lsd/mono/jvm/PayloadConverters;
+	public final fun register (Ljava/lang/Class;Ljava/util/function/Function;)Lio/github/lsdconsulting/lsd/mono/jvm/PayloadConverters;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/PendingCall {
+	public final fun fail (Ljava/lang/Throwable;)V
+	public final fun fail (Ljava/lang/Throwable;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)V
+	public static synthetic fun fail$default (Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;Ljava/lang/Throwable;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;ILjava/lang/Object;)V
+	public final fun getCallId ()Ljava/lang/String;
+	public final fun getRef ()Lio/github/lsdconsulting/lsd/mono/jvm/CallRef;
+	public final fun reply ()V
+	public final fun reply (Ljava/lang/String;)V
+	public final fun reply (Ljava/lang/String;Ljava/lang/Object;)V
+	public final fun reply (Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)V
+	public static synthetic fun reply$default (Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;ILjava/lang/Object;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/ReportFiles {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDiagramHtml ()Ljava/nio/file/Path;
+	public final fun getReportJson ()Ljava/nio/file/Path;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/Timing {
+	public static final field Companion Lio/github/lsdconsulting/lsd/mono/jvm/Timing$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/String;Ljava/lang/Boolean;)V
+	public synthetic fun <init> (Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/String;Ljava/lang/Boolean;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public static final fun at (Ljava/time/Instant;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public final fun component1 ()Ljava/time/Instant;
+	public final fun component2 ()Ljava/lang/Double;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/Boolean;
+	public final fun copy (Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/String;Ljava/lang/Boolean;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public static synthetic fun copy$default (Lio/github/lsdconsulting/lsd/mono/jvm/Timing;Ljava/time/Instant;Ljava/lang/Double;Ljava/lang/String;Ljava/lang/Boolean;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDurationMs ()Ljava/lang/Double;
+	public final fun getOrderByStartedAt ()Ljava/lang/Boolean;
+	public final fun getSource ()Ljava/lang/String;
+	public final fun getStartedAt ()Ljava/time/Instant;
+	public fun hashCode ()I
+	public static final fun none ()Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public static final fun of (Ljava/time/Instant;Ljava/time/Duration;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public fun toString ()Ljava/lang/String;
+	public static final fun took (Ljava/time/Duration;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public static final fun tookMs (D)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public final fun withOrderByStartedAt (Ljava/lang/Boolean;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public final fun withSource (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/Timing$Companion {
+	public final fun at (Ljava/time/Instant;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public final fun none ()Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public final fun of (Ljava/time/Instant;Ljava/time/Duration;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public final fun took (Ljava/time/Duration;)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+	public final fun tookMs (D)Lio/github/lsdconsulting/lsd/mono/jvm/Timing;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/TimingConfig {
+	public final fun effectiveOrderByStartedAt ()Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;
+	public final fun orderByStartedAt ()Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;
+	public final fun orderByStartedAt (Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;)Lio/github/lsdconsulting/lsd/mono/jvm/TimingConfig;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/TimingSource : java/lang/Enum {
+	public static final field DERIVED Lio/github/lsdconsulting/lsd/mono/jvm/TimingSource;
+	public static final field MEASURED Lio/github/lsdconsulting/lsd/mono/jvm/TimingSource;
+	public static final field NONE Lio/github/lsdconsulting/lsd/mono/jvm/TimingSource;
+	public static final field TIMESTAMPED Lio/github/lsdconsulting/lsd/mono/jvm/TimingSource;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/TimingSource;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/TimingSource;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/Trace {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/Trace;
+	public static synthetic fun copy$default (Lio/github/lsdconsulting/lsd/mono/jvm/Trace;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/Trace;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getParentSpanId ()Ljava/lang/String;
+	public final fun getSpanId ()Ljava/lang/String;
+	public final fun getTraceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/domain/MessageType : java/lang/Enum {
+	public static final field ASYNCHRONOUS Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+	public static final field BI_DIRECTIONAL Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+	public static final field LOST Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+	public static final field SHORT_INBOUND Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+	public static final field SHORT_OUTBOUND Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+	public static final field SYNCHRONOUS Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+	public static final field SYNCHRONOUS_RESPONSE Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/domain/MessageType;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide : java/lang/Enum {
+	public static final field LEFT Lio/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide;
+	public static final field OVER Lio/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide;
+	public static final field RIGHT Lio/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/domain/NoteSide;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/domain/Participant {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;
+	public static synthetic fun copy$default (Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getColour ()Ljava/lang/String;
+	public final fun getDisplayName ()Ljava/lang/String;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getType ()Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType : java/lang/Enum {
+	public static final field ACTOR Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public static final field BOUNDARY Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public static final field DATABASE Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public static final field ENTITY Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public static final field PARTICIPANT Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public static final field QUEUE Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public final fun called (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;
+	public final fun called (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;
+	public final fun called (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;
+	public final fun called (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;
+	public static synthetic fun called$default (Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/Participant;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/domain/ParticipantType;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError {
+	public static final field Companion Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;
+	public static synthetic fun copy$default (Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeadline ()Ljava/lang/String;
+	public final fun getMessage ()Ljava/lang/String;
+	public final fun getStack ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static final fun of (Ljava/lang/String;Ljava/lang/Throwable;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError$Companion {
+	public final fun of (Ljava/lang/String;Ljava/lang/Throwable;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/domain/Status : java/lang/Enum {
+	public static final field ERROR Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
+	public static final field SUCCESS Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
+	public static final field WARN Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/properties/LsdProperties {
+	public static final field CUCUMBER_SPLIT_BY_STEPS Ljava/lang/String;
+	public static final field DETERMINISTIC_IDS Ljava/lang/String;
+	public static final field GENERATED_AT Ljava/lang/String;
+	public static final field HIDE_STACKTRACE Ljava/lang/String;
+	public static final field INHERIT_BINDING Ljava/lang/String;
+	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/jvm/properties/LsdProperties;
+	public static final field LABEL_MAX_WIDTH Ljava/lang/String;
+	public static final field METRICS_ENABLED Ljava/lang/String;
+	public static final field OUTPUT_DIR Ljava/lang/String;
+	public static final field PAYLOAD_MAX_DEPTH Ljava/lang/String;
+	public static final field PAYLOAD_MAX_ITEMS Ljava/lang/String;
+	public static final field PAYLOAD_MAX_STRING_LENGTH Ljava/lang/String;
+	public static final field PAYLOAD_MAX_TOTAL_SIZE Ljava/lang/String;
+	public static final field PAYLOAD_REDACT Ljava/lang/String;
+	public static final field PAYLOAD_REDACT_KEYS Ljava/lang/String;
+	public static final field PROPAGATION_ALLOWED_HOSTS Ljava/lang/String;
+	public static final field TIMING_ORDER_BY_STARTED_AT Ljava/lang/String;
+	public static final field USAGE_PING Ljava/lang/String;
+}
+

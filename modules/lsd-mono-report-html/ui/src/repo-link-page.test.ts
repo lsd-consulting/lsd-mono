@@ -51,7 +51,7 @@ function expectRepoLink(link: HTMLAnchorElement | null, name: string) {
 
 describe('links to the lsd-mono repository', () => {
   it('makes the logo and the version links to GitHub, opened in a new tab', async () => {
-    window.__LSD_REPORT__ = report('lsd-mono-core 0.12.0')
+    window.__LSD_REPORT__ = report('lsd-mono-jvm 0.12.0')
     await import('./main')
 
     const logo = document.querySelector<HTMLAnchorElement>('.topbar a.brand-mark')
@@ -59,8 +59,8 @@ describe('links to the lsd-mono repository', () => {
     expect(logo!.textContent).toBe('LSD')
 
     const version = document.querySelector<HTMLAnchorElement>('.report-hero .meta a.generator-link')
-    expectRepoLink(version, 'lsd-mono-core 0.12.0: lsd-mono on GitHub')
-    expect(version!.querySelector('code')?.textContent).toBe('lsd-mono-core 0.12.0')
+    expectRepoLink(version, 'lsd-mono-jvm 0.12.0: lsd-mono on GitHub')
+    expect(version!.querySelector('code')?.textContent).toBe('lsd-mono-jvm 0.12.0')
   })
 
   it('keeps a hostile generator as text in the link and its name', async () => {

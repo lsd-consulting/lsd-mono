@@ -6,7 +6,7 @@ import { isErrorStatus } from './status'
 
 describe('isErrorStatus', () => {
   it('matches the Errors metric: 4xx and 5xx codes, or an error word with no code', () => {
-    // Shared with lsd-mono-core's ScenarioMetricsTest through the shared test reports, so the two rules cannot drift.
+    // Shared with lsd-mono-jvm's ScenarioMetricsTest through the shared test reports, so the two rules cannot drift.
     const vectors = JSON.parse(conformanceText('vectors/status-vectors.json')) as {
       error: string[]
       notError: string[]

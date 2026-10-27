@@ -1,8 +1,8 @@
-public final class io/lsdconsulting/lsd/mono/http4k/LsdHttp4k {
+public final class io/github/lsdconsulting/lsd/mono/http4k/LsdHttp4k {
 	public static final field DEFAULT_APP Ljava/lang/String;
 	public static final field DEFAULT_CLIENT Ljava/lang/String;
 	public static final field DEFAULT_MESSAGES_SHOWN I
-	public static final field INSTANCE Lio/lsdconsulting/lsd/mono/http4k/LsdHttp4k;
+	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/http4k/LsdHttp4k;
 	public static final fun clientFilter ()Lorg/http4k/core/Filter;
 	public static final fun clientFilter (Ljava/lang/String;)Lorg/http4k/core/Filter;
 	public static final fun clientFilter (Ljava/lang/String;Ljava/lang/String;)Lorg/http4k/core/Filter;

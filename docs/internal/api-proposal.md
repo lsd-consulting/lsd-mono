@@ -1,9 +1,9 @@
 # lsd-mono public API proposal (#3)
 
-> Internal design record, kept for history. The API as built is in the KDoc and `modules/lsd-mono-core/api/lsd-mono-core.api`; the risks and notes below describe the time they were written.
+> Internal design record, kept for history. The API as built is in the KDoc and `modules/lsd-mono-jvm/api/lsd-mono-jvm.api`; the risks and notes below describe the time they were written.
 
 Status: **complete**. Slices 1 to 8 are implemented (see "as built" under §6). Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
-Scope: `lsd-mono-core`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
+Scope: `lsd-mono-jvm`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
 Ground rules: unpublished, so no deprecation shims and no `com.lsd.core` compatibility. Kotlin-first, but it must stay usable from Java.
 
 Includes the REVIEW.md items folded into #3: `explicitApi()` and an ABI validator, `createdAt` missing from some builders, the `""` phantom-edge sentinel, `open LsdContext`, and the legacy property keys being kept in two places.
@@ -16,7 +16,7 @@ About 70 top-level public declarations. Nothing is `internal` except a few helpe
 
 Legend: **U** = unused outside its own file or tests. **L** = mirrors legacy lsd-core. **B** = Java-shaped builder. **P** = bag of optional parameters. **X** = implementation detail that leaks out.
 
-### Entry points (`io.lsdconsulting.lsd.mono.core`)
+### Entry points (`io.github.lsdconsulting.lsd.mono.jvm`)
 
 | Type | Public members | Flags |
 |---|---|---|
@@ -119,7 +119,7 @@ internal enum class LsdKey(val key: String, val legacy: String?, val default: St
 ### 3.1 Shape
 
 ```kotlin
-package io.lsdconsulting.lsd.mono.core
+package io.github.lsdconsulting.lsd.mono.jvm
 
 /** Verbs shared by the context (current scenario), a scenario, and a capture block. Not subclassable. */
 public sealed class Capturer {
@@ -372,7 +372,7 @@ kotlin {
     explicitApi()                       // public things need an explicit `public` and a return type
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
     abiValidation {
-        filters { exclude { annotatedWith.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi") } }
+        filters { exclude { annotatedWith.add("io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi") } }
     }
 }
 ```
@@ -525,7 +525,7 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 
 ### Slice 7 as built
 
-- `PayloadSnapshot` is renamed `PayloadConverters`. It stays in the `io.lsdconsulting.lsd.mono.core.capture` package, and `lsd.payloads` is now typed `PayloadConverters`. Its public surface is now:
+- `PayloadSnapshot` is renamed `PayloadConverters`. It stays in the `io.github.lsdconsulting.lsd.mono.jvm.capture` package, and `lsd.payloads` is now typed `PayloadConverters`. Its public surface is now:
   - `register(Class<T>, Function<in T, out Any?>)`, returning `PayloadConverters` for chaining;
   - a Kotlin-only reified `register<T> { … }` (`@JvmSynthetic` and inline, so it isn't in the JVM dump);
   - `clear()`. **Deviation:** this replaces `clearConverters()`, as §2 says, because it is the class's only `clear`.
@@ -558,7 +558,7 @@ Slices 1 and 2 are mechanical and safe, so do them first: they shrink the surfac
 - No description is still written as `""` in the JSON, so the reports are unchanged.
 - The Java overloads are unchanged.
 
-**5. `PayloadConverters`** moved from `core.capture` to `io.lsdconsulting.lsd.mono.core`. The `capture` package is gone.
+**5. `PayloadConverters`** moved from `core.capture` to `io.github.lsdconsulting.lsd.mono.jvm`. The `capture` package is gone.
 
 **6. `completeReport` and `report { }` return `ReportFiles`.**
 - It has `diagramHtml` (the page to open) and `reportJson`. `index.html` loads each report's `-report.js` data script.

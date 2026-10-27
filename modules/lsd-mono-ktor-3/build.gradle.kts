@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.writesSampleReport
+import io.github.lsdconsulting.lsd.mono.gradle.writesSampleReport
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -16,7 +16,7 @@ description = "LSD Mono Ktor 3 integration — plugins that draw a Ktor app's HT
 // (PipelineRequest.setReceiveChannel and HttpResponse.rawContent), as its own plugins do.
 kotlin {
     compilerOptions {
-        optIn.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi")
+        optIn.add("io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi")
     }
 }
 
@@ -27,7 +27,7 @@ majorLines {
 }
 
 dependencies {
-    api(project(":modules:lsd-mono-core"))
+    api(project(":modules:lsd-mono-jvm"))
 
     // Ktor is the application's, not ours: compile against it and ship none of it, so the app's own
     // Ktor 3.x wins. A server-only app has no client, a client-only one no server, and an app
@@ -54,7 +54,7 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     // LsdTestConfig and ReportJson (#74).
-    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
+    testImplementation(testFixtures(project(":modules:lsd-mono-jvm")))
     // The fixtures are plain JUnit tests with LsdExtension, as a Ktor app's tests would be.
     testImplementation(project(":modules:lsd-mono-junit-jupiter"))
     testRuntimeOnly(libs.junit.platform.launcher)
@@ -116,7 +116,7 @@ kover {
 
 // The sample as published on Pages under ktor-3/: the report index plus each report, with stable
 // addresses for the diagrams (files carry a short hash; a report is named after its class). The
-// Pages workflow copies build/pages into the site next to lsd-mono-core's example report.
+// Pages workflow copies build/pages into the site next to lsd-mono-jvm's example report.
 tasks.register<Sync>("sampleReport") {
     group = "documentation"
     description = "Build the Ktor integration's sample report site into build/pages. Not part of build or check."

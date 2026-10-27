@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.writesSampleReport
+import io.github.lsdconsulting.lsd.mono.gradle.writesSampleReport
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -14,7 +14,7 @@ description = "LSD Mono http4k 6 integration — filters that draw an http4k app
 // The server filter finds the scenario on a server's own threads (LsdContext.runningScenario).
 kotlin {
     compilerOptions {
-        optIn.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi")
+        optIn.add("io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi")
     }
 }
 
@@ -25,7 +25,7 @@ majorLines {
 }
 
 dependencies {
-    api(project(":modules:lsd-mono-core"))
+    api(project(":modules:lsd-mono-jvm"))
 
     // http4k is the application's, not ours: compile against it and ship none of it, so the app's
     // own http4k 6.x wins. The WebSocket filter needs http4k-realtime-core, which only apps
@@ -43,7 +43,7 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     // LsdTestConfig and ReportJson (#74).
-    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
+    testImplementation(testFixtures(project(":modules:lsd-mono-jvm")))
     // The fixtures are plain JUnit tests with LsdExtension, as an http4k app's tests would be.
     testImplementation(project(":modules:lsd-mono-junit-jupiter"))
     testRuntimeOnly(libs.junit.platform.launcher)
@@ -105,7 +105,7 @@ kover {
 
 // The sample as published on Pages under http4k-6/: the report index plus each report, with
 // stable addresses for the diagrams (files carry a short hash; a report is named after its class). The Pages workflow copies
-// build/pages into the site next to lsd-mono-core's example report.
+// build/pages into the site next to lsd-mono-jvm's example report.
 tasks.register<Sync>("sampleReport") {
     group = "documentation"
     description = "Build the http4k integration's sample report site into build/pages. Not part of build or check."

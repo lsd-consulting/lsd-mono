@@ -47,7 +47,7 @@ export function normaliseReport(report: ReportJson | Report): Report {
 }
 
 /**
- * [scenario] with its timing summary: what lsd-mono-core would have written for it, as far as
+ * [scenario] with its timing summary: what lsd-mono-jvm would have written for it, as far as
  * the events say. Accuracy is MEASURED when a message has a duration or start time, and
  * STRUCTURE_ONLY otherwise; the sources are the one local clock when there are messages.
  */

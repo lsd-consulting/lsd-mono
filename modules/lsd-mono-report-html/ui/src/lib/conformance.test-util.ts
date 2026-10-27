@@ -1,4 +1,4 @@
-// The shared test reports in modules/lsd-mono-report-schema/conformance, which lsd-mono-core's
+// The shared test reports in modules/lsd-mono-report-schema/conformance, which lsd-mono-jvm's
 // tests write and check too. For the unit tests and the Playwright checks (Node, not the page).
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -22,7 +22,7 @@ export interface Fixture {
   valid?: boolean
   /** For an invalid file: the JSON Pointer of one place the schema rejects. */
   rejectedAt?: string
-  source: 'lsd-mono-core' | 'captured' | 'hand-written' | 'generated'
+  source: 'lsd-mono-jvm' | 'captured' | 'hand-written' | 'generated'
   /**
    * What the page shows for a report it boots though the schema rejects it or it is not one to
    * show: the report, the upgrade page or the cannot-open page. Absent: a valid report is shown.

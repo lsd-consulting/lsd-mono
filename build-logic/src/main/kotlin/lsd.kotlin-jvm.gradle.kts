@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.MajorLines
+import io.github.lsdconsulting.lsd.mono.gradle.MajorLines
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -75,7 +75,7 @@ kotlin {
     abiValidation {
         filters {
             exclude {
-                annotatedWith.add("io.lsdconsulting.lsd.mono.core.InternalLsdApi")
+                annotatedWith.add("io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi")
             }
         }
     }

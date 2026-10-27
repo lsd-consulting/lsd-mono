@@ -7,7 +7,7 @@ report in the directory. The page is the single-file report shell, built from th
 report UI at the same commit and bundled in the jar (`/lsd-mono-report-html/lsd-report.single.html`),
 so a JVM build never needs Node.
 
-lsd-mono-core writes its reports with it. A producer without lsd-mono-core (an adapter for
+lsd-mono-jvm writes its reports with it. A producer without lsd-mono-jvm (an adapter for
 another test framework, or a trace importer) builds a `ReportJson` and writes it the same way:
 
 ```kotlin
@@ -16,13 +16,13 @@ writer.writeReport(report, File("build/reports/lsd"))
 writer.writeIndex(File("build/reports/lsd"))
 ```
 
-`AdapterReportTest` (in `src/test/kotlin/io/lsdconsulting/lsd/mono/example/adapter`) does this with
-this module and lsd-mono-report-model only, no lsd-mono-core: its minimal report is the shared test
+`AdapterReportTest` (in `src/test/kotlin/io/github/lsdconsulting/lsd/mono/example/adapter`) does this with
+this module and lsd-mono-report-model only, no lsd-mono-jvm: its minimal report is the shared test
 report `reports/minimal.json` byte for byte, and what it writes follows the report and index schemas.
 
 | | |
 | --- | --- |
-| **Is** | `ReportWriter`, its `ReportWriterSettings` and `WrittenReport`, in `io.lsdconsulting.lsd.mono.report.html` |
+| **Is** | `ReportWriter`, its `ReportWriterSettings` and `WrittenReport`, in `io.github.lsdconsulting.lsd.mono.report.html` |
 | **Is not** | Capture, timing or properties: the caller passes everything the files need |
 
 ## Experimental: no binary-compatibility promise yet
@@ -31,13 +31,13 @@ report `reports/minimal.json` byte for byte, and what it writes follows the repo
 as every type of the model they take is ([lsd-mono-report-model](../lsd-mono-report-model)): a
 `RequiresOptIn` marker at level ERROR. A Kotlin caller opts in with
 `@OptIn(ExperimentalLsdReportModel::class)` or
-`-opt-in=io.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel`.
+`-opt-in=io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel`.
 
 There is no binary-compatibility promise until the marker goes. **Java callers don't see opt-in
 markers**, so for Java this note is the only warning. The model's wide classes are built with builders
 ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)), the shape meant for 1.0; the
-marker stays until it has been used for a release or two. lsd-mono-core's own API does not
-expose either module, so a test that uses lsd-mono-core, its JUnit or Cucumber integration is not
+marker stays until it has been used for a release or two. lsd-mono-jvm's own API does not
+expose either module, so a test that uses lsd-mono-jvm, its JUnit or Cucumber integration is not
 affected.
 
 The writer reads no properties. `ReportWriterSettings` gives what the index page says beyond the

@@ -19,7 +19,7 @@ const SENTINEL = 'https://sentinel.invalid/flushed'
 const PING = /^https:\/\/cdn\.jsdelivr\.net\/gh\/lsd-consulting\/lsd-mono@0\.2\.0\/ping\/[a-z-]+\.txt$/
 
 /** A report with [usagePing], or, when it is undefined, one from before the option existed. */
-function report(usagePing: boolean | undefined, generator = 'lsd-mono-core 0.2.0'): Report {
+function report(usagePing: boolean | undefined, generator = 'lsd-mono-jvm 0.2.0'): Report {
   const options = { metricsEnabled: true, labelMaxWidth: 200, usagePing, source: 'junit' } as Report['options']
   return { ...uxFixture, generator, options }
 }
@@ -81,7 +81,7 @@ test('offline: a release report with the usage ping on requests only the ping fi
 for (const [what, data] of [
   ['the usage ping off', report(false)],
   ['no usagePing option', report(undefined)],
-  ['a snapshot build', report(true, 'lsd-mono-core 0.2.1-SNAPSHOT')],
+  ['a snapshot build', report(true, 'lsd-mono-jvm 0.2.1-SNAPSHOT')],
 ] as const) {
   test(`offline: a report with ${what} makes no request at all`, async ({ page }) => {
     expect(await requestsWhile(page, { __LSD_REPORT__: data })).toEqual([])
@@ -97,7 +97,7 @@ test('offline: the index page with the usage ping off makes no request at all', 
     ...indexBase(),
     title: 'LSD reports',
     generatedAt: '2026-01-15T12:00:00+00:00',
-    generator: 'lsd-mono-core 0.2.0',
+    generator: 'lsd-mono-jvm 0.2.0',
     options: { usagePing: false },
     reports: [
       {

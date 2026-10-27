@@ -25,14 +25,14 @@ majorLines {
 }
 
 dependencies {
-    api(project(":modules:lsd-mono-core"))
+    api(project(":modules:lsd-mono-jvm"))
 
     // Public API returns ThreadContextElement and takes a CoroutineScope block.
     api(libs.kotlinx.coroutines.core)
 
     testImplementation(platform(libs.junit.bom))
     // LsdTestConfig and ReportJson (#74).
-    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
+    testImplementation(testFixtures(project(":modules:lsd-mono-jvm")))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

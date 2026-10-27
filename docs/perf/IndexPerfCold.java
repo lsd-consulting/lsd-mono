@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.core.LsdContext;
+import io.github.lsdconsulting.lsd.mono.jvm.LsdContext;
 /** A fresh JVM (a new Gradle test fork) rebuilding the index of a full directory. */
 public class IndexPerfCold { public static void main(String[] a) {
   System.setProperty("lsd.mono.report.outputDir", a[0]);

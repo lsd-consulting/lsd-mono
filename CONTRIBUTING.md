@@ -25,7 +25,7 @@ Another project in this build depends on the modules directly:
 
 ```kotlin
 dependencies {
-    implementation(project(":modules:lsd-mono-core"))
+    implementation(project(":modules:lsd-mono-jvm"))
     testImplementation(project(":modules:lsd-mono-junit-jupiter"))
     testImplementation(project(":modules:lsd-mono-cucumber-8"))
     testImplementation(project(":modules:lsd-mono-coroutines")) // only if tests capture from coroutines
@@ -40,7 +40,7 @@ They are compiled with `--release 17` (`lsd-mono-http4k-6` with `--release 21`, 
 ## Layout
 
 ```
-modules/lsd-mono-core/            lsd-mono-core: capture, timing, the report model mapping
+modules/lsd-mono-jvm/            lsd-mono-jvm: capture, timing, the report model mapping
 modules/lsd-mono-report-model/    the report as plain Kotlin values
 modules/lsd-mono-report-html/     the report writer, report UI in ui/
 modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
@@ -57,25 +57,25 @@ build-logic/                      convention plugins (lsd.kotlin-jvm)
 Regenerate the tour GIF at the top of the README from the current UI:
 
 ```bash
-./gradlew :modules:lsd-mono-core:readmeSamples
+./gradlew :modules:lsd-mono-jvm:readmeSamples
 ```
 
 The task captures the tour report with `LsdContext`, then drives the packaged shell with headless Chromium and encodes `docs/readme/feature-tour.gif`. It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
 
-The live sample site (the [example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) and the integrations' sample reports) is built by the [Pages workflow](.github/workflows/pages.yml) from each release, once the release is tagged. To build the example report and its index locally, then open `modules/lsd-mono-core/build/pages/index.html` in a browser:
+The live sample site (the [example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) and the integrations' sample reports) is built by the [Pages workflow](.github/workflows/pages.yml) from each release, once the release is tagged. To build the example report and its index locally, then open `modules/lsd-mono-jvm/build/pages/index.html` in a browser:
 
 ```bash
-./gradlew :modules:lsd-mono-core:kitchenSinkSample
+./gradlew :modules:lsd-mono-jvm:kitchenSinkSample
 ```
 
 ### The example report
 
-The [example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) (the live report linked above) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in five scenarios: a timed checkout, happy path, payment declined (captured out of order), out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, realistic HTTP, SQL and Kafka payloads with headers, timestamps, and warning and errored scenarios. The timed checkout shows the timing API: measured durations, trace and span ids, events put back in clock order (marked clock-ordered), and the Timing view's swim lanes and waterfall. [`KitchenSinkSample.kt`](modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/KitchenSinkSample.kt) captures it. The report is not committed. The [Pages workflow](.github/workflows/pages.yml) builds it from each release, once the release is tagged, so it shows the latest release, and publishes it with the [`index.html`](https://lsd-consulting.github.io/lsd-mono/) that `createIndex()` writes for it.
+The [example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) (the live report linked above) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in five scenarios: a timed checkout, happy path, payment declined (captured out of order), out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, realistic HTTP, SQL and Kafka payloads with headers, timestamps, and warning and errored scenarios. The timed checkout shows the timing API: measured durations, trace and span ids, events put back in clock order (marked clock-ordered), and the Timing view's swim lanes and waterfall. [`KitchenSinkSample.kt`](modules/lsd-mono-jvm/src/readme/kotlin/io/github/lsdconsulting/lsd/mono/jvm/readme/KitchenSinkSample.kt) captures it. The report is not committed. The [Pages workflow](.github/workflows/pages.yml) builds it from each release, once the release is tagged, so it shows the latest release, and publishes it with the [`index.html`](https://lsd-consulting.github.io/lsd-mono/) that `createIndex()` writes for it.
 
 ## Rules
 
-- **Public API.** `lsd-mono-core` uses explicit API mode. A change to the public surface shows up in
-  `modules/lsd-mono-core/api/lsd-mono-core.api`: run `./gradlew updateKotlinAbi` and commit the dump
+- **Public API.** `lsd-mono-jvm` uses explicit API mode. A change to the public surface shows up in
+  `modules/lsd-mono-jvm/api/lsd-mono-jvm.api`: run `./gradlew updateKotlinAbi` and commit the dump
   with the change, so it is reviewed. Report model and writer types (`lsd-mono-report-model`,
   `lsd-mono-report-html`) must never appear in core's public API: core's users would get "cannot
   access class" errors, and the model's experimental opt-in would leak into core's API.

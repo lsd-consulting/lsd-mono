@@ -10,7 +10,7 @@ Group `io.github.lsd-consulting` (the Central namespace lsd-core already publish
 
 | Artifact | Module |
 | --- | --- |
-| `io.github.lsd-consulting:lsd-mono-core` | `modules/lsd-mono-core` |
+| `io.github.lsd-consulting:lsd-mono-jvm` | `modules/lsd-mono-jvm` |
 | `io.github.lsd-consulting:lsd-mono-junit-jupiter` | `modules/lsd-mono-junit-jupiter` |
 | `io.github.lsd-consulting:lsd-mono-cucumber-8` | `modules/lsd-mono-cucumber-8` |
 | `io.github.lsd-consulting:lsd-mono-coroutines` | `modules/lsd-mono-coroutines` |
@@ -24,6 +24,20 @@ Each has its jar, a sources jar, a javadoc jar (Dokka's javadoc format), Gradle 
 description, URL, MIT licence, developer and SCM, all signed (`build-logic/src/main/kotlin/lsd.publishing.gradle.kts`). A module
 under `modules/` with a build is published; `RootReadmeExampleTest` fails when one is missing from this table or the
 root README's.
+
+### The lsd-mono-core relocation
+
+`lsd-mono-core` was renamed `lsd-mono-jvm` ([#126](https://github.com/lsd-consulting/lsd-mono/issues/126)). So builds on the old
+coordinate find the new one, `modules/lsd-mono-jvm/build.gradle.kts` adds a second publication, `relocation`: a POM-only
+`io.github.lsd-consulting:lsd-mono-core` at the train version, with `<distributionManagement><relocation>` naming
+`lsd-mono-jvm` at the same version. It has the full POM `lsd.publishing.gradle.kts` gives every publication, is signed with
+them, and goes out in the same `publishToSonatype closeAndReleaseStagingRepositories` run: no workflow change. It is a
+Gradle alias publication, so projects in this build that depend on `:modules:lsd-mono-jvm` still resolve to
+`lsd-mono-jvm` only. Check it with `./gradlew :modules:lsd-mono-jvm:publishRelocationPublicationToMavenLocal`.
+
+Publish it once: remove the `relocation` publication after the first release that carries it. The published relocation
+POM stays on Central, so `lsd-mono-core` at that version keeps pointing at `lsd-mono-jvm`; later versions exist only as
+`lsd-mono-jvm`.
 
 ## Commit messages
 

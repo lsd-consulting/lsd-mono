@@ -1,5 +1,5 @@
 // The JSON Schemas in modules/lsd-mono-report-schema, compiled once with ajv for the tests that
-// validate reports: formats asserted (ajv-formats), as lsd-mono-core's networknt validator does.
+// validate reports: formats asserted (ajv-formats), as lsd-mono-jvm's networknt validator does.
 import { Ajv2020 } from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
 import { readFileSync } from 'node:fs'

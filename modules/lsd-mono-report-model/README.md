@@ -5,13 +5,13 @@ the report schema ([`modules/lsd-mono-report-schema`](../lsd-mono-report-schema)
 plus the schema version a report follows (`ReportSchema.VERSION`).
 
 It has no dependencies beyond the Kotlin standard library and no behaviour: it is the shape that
-lsd-mono-core builds and lsd-mono-report-html writes. A producer that does not use lsd-mono-core
+lsd-mono-jvm builds and lsd-mono-report-html writes. A producer that does not use lsd-mono-jvm
 (an adapter for another test framework or a trace importer) builds a `ReportJson` from these
 classes and writes it with lsd-mono-report-html.
 
 | | |
 | --- | --- |
-| **Is** | The report's values and their builders, in `io.lsdconsulting.lsd.mono.report.model` |
+| **Is** | The report's values and their builders, in `io.github.lsdconsulting.lsd.mono.report.model` |
 | **Is not** | JSON text, files or the page: lsd-mono-report-html writes those |
 
 The values that grow with the schema (`ReportJson`, `ReportOptionsJson`, `ScenarioJson`,
@@ -74,9 +74,9 @@ and null for one the producer captured.
 ## Experimental: no binary-compatibility promise yet
 
 Every type here is marked `@ExperimentalLsdReportModel`, a `RequiresOptIn` marker at level ERROR
-(like lsd-mono-core's `@InternalLsdApi`). A Kotlin caller opts in with
+(like lsd-mono-jvm's `@InternalLsdApi`). A Kotlin caller opts in with
 `@OptIn(ExperimentalLsdReportModel::class)`, or once per module with
-`-opt-in=io.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel`.
+`-opt-in=io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel`.
 
 There is no binary-compatibility promise until the marker goes:
 

@@ -52,7 +52,7 @@ export function generatorArgs(usage) {
   return { shell, outDir }
 }
 
-/** Write `<stem>-diagram.html` and its deferred `<stem>-payloads.js`, as lsd-mono-core does. */
+/** Write `<stem>-diagram.html` and its deferred `<stem>-payloads.js`, as lsd-mono-jvm does. */
 export function writeSample(shell, outDir, stem, report) {
   const parts = shellParts(report, `${stem}-payloads.js`)
   if (!parts.payloadsJs) throw new Error('expected deferred payloads')

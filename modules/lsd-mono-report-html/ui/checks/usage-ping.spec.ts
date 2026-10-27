@@ -17,7 +17,7 @@ const OPT_IN = '/?lsd-usage-ping-check'
 /** Sent by the check itself, after the page's own requests (requestsFlushed). */
 const SENTINEL = 'sentinel.txt'
 
-function report(options: Partial<NonNullable<Report['options']>>, generator = 'lsd-mono-core 0.2.0'): Report {
+function report(options: Partial<NonNullable<Report['options']>>, generator = 'lsd-mono-jvm 0.2.0'): Report {
   return {
     ...uxFixture,
     generator,
@@ -87,7 +87,7 @@ for (const failWith of ['blockedbyclient', 'internetdisconnected']) {
 
 for (const [what, data, path] of [
   ['usagePing is false', report({ usagePing: false }), OPT_IN],
-  ['the report is from a snapshot build', report({}, 'lsd-mono-core 0.2.1-SNAPSHOT'), OPT_IN],
+  ['the report is from a snapshot build', report({}, 'lsd-mono-jvm 0.2.1-SNAPSHOT'), OPT_IN],
   ['the report has no usagePing option', report({ usagePing: undefined }), OPT_IN],
   ['the page is the dev server without the opt-in', report({}), '/'],
 ] as const) {
@@ -111,7 +111,7 @@ test('usage ping: the index page pings on open and counts each opened report sou
     ...indexBase(),
     title: 'LSD reports',
     generatedAt: '2026-01-15T12:00:00+00:00',
-    generator: 'lsd-mono-core 0.2.0',
+    generator: 'lsd-mono-jvm 0.2.0',
     options: { usagePing: true },
     reports: ['a', 'b'].map((id) => ({
       id,

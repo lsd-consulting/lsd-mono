@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.trainVersion
+import io.github.lsdconsulting.lsd.mono.gradle.trainVersion
 
 plugins {
     // Root is a thin aggregator; convention plugins live in build-logic.
@@ -8,7 +8,7 @@ plugins {
 }
 
 // The Maven Central namespace lsd-consulting already publishes lsd-core under. Packages stay
-// io.lsdconsulting.lsd.mono; only the Maven group differs.
+// io.github.lsdconsulting.lsd.mono; only the Maven group differs.
 group = "io.github.lsd-consulting"
 // The train version: -Plsd.version, else the `vX.Y.Z` tag on this commit, else a snapshot of the
 // next patch (TrainVersion.kt, docs/releasing.md). git failing (no tags, no git) means a snapshot.

@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.LsdCoverage
+import io.github.lsdconsulting.lsd.mono.gradle.LsdCoverage
 import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
 
 // Line coverage with Kover. koverVerify runs on `check` and fails below the module's floor;

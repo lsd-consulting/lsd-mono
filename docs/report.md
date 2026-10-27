@@ -1,6 +1,6 @@
 # The report UI
 
-The tour in the root README clicks around a small shop report: four scenarios with every status, six participants, payloads, and durations. [`FeatureTourSample.kt`](../modules/lsd-mono-core/src/readme/kotlin/io/lsdconsulting/lsd/mono/core/readme/FeatureTourSample.kt) captures it. The [lsd-mono-core README](../modules/lsd-mono-core/README.md#component-diagram) covers the **Components** view.
+The tour in the root README clicks around a small shop report: four scenarios with every status, six participants, payloads, and durations. [`FeatureTourSample.kt`](../modules/lsd-mono-jvm/src/readme/kotlin/io/github/lsdconsulting/lsd/mono/jvm/readme/FeatureTourSample.kt) captures it. The [lsd-mono-jvm README](../modules/lsd-mono-jvm/README.md#component-diagram) covers the **Components** view.
 
 The report shows one scenario at a time, chosen from the sidebar, and the choice is kept in the URL. Each scenario has:
 

@@ -2,7 +2,7 @@
   "schemaVersion": "0.3.0",
   "title": "Timing tree",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "lsd-mono-core (conformance)",
+  "generator": "lsd-mono-jvm (conformance)",
   "status": "success",
   "options": {
     "metricsEnabled": true,

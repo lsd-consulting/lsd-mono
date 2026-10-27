@@ -15,7 +15,7 @@ export interface IndexManifest {
    */
   schemaVersion: string
   /**
-   * Always `LSD reports` from lsd-mono-core.
+   * Always `LSD reports` from lsd-mono-jvm.
    */
   title: string
   /**

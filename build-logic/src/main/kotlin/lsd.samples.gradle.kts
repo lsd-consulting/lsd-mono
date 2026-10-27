@@ -1,7 +1,7 @@
-import io.lsdconsulting.lsd.mono.gradle.nodeCommandLine
-import io.lsdconsulting.lsd.mono.gradle.writesSampleReport
+import io.github.lsdconsulting.lsd.mono.gradle.nodeCommandLine
+import io.github.lsdconsulting.lsd.mono.gradle.writesSampleReport
 
-// Sample reports for lsd-mono-core: the feature tour the root README's GIF clicks around, and the
+// Sample reports for lsd-mono-jvm: the feature tour the root README's GIF clicks around, and the
 // example report the Pages workflow publishes. They are programs in the `readme` source set.
 // Slow, and they write docs/ or build/pages, so none of these tasks is on build or check.
 plugins {
@@ -15,7 +15,7 @@ dependencies {
 }
 
 // The samples run the module's main code, so they need its dependencies too (the report model
-// and writer, for lsd-mono-core).
+// and writer, for lsd-mono-jvm).
 configurations.named("readmeImplementation") { extendsFrom(configurations.getByName("implementation")) }
 
 // The report UI's scripts, which screenshot the sample reports.
@@ -31,7 +31,7 @@ fun registerCapture(
     tasks.register<JavaExec>(name) {
         description = "Capture the $what and write the report HTML."
         classpath = readmeSourceSet.runtimeClasspath
-        this.mainClass.set("io.lsdconsulting.lsd.mono.core.readme.$mainClass")
+        this.mainClass.set("io.github.lsdconsulting.lsd.mono.jvm.readme.$mainClass")
         writesSampleReport(outDir)
     }
 

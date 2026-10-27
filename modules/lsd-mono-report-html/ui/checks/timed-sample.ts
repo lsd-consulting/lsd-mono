@@ -153,7 +153,7 @@ export function timedReport(
     schemaVersion: REPORT_SCHEMA_VERSION,
     title: `timed-${calls}`,
     generatedAt: new Date().toISOString(),
-    generator: 'lsd-mono-core perf fixture',
+    generator: 'lsd-mono-jvm perf fixture',
     status: 'success',
     options: { metricsEnabled: true, labelMaxWidth: 200, usagePing: false, source: 'api' },
     scenarios: [

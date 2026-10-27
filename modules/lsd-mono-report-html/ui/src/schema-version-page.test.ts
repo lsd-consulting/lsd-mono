@@ -18,7 +18,7 @@ function report(schemaVersion: string): Report {
     schemaVersion,
     title: 'Checkout',
     generatedAt: '2026-01-01T12:00:00Z',
-    generator: 'lsd-mono-core 9.0.0',
+    generator: 'lsd-mono-jvm 9.0.0',
     scenarios: [
       {
         ...untimed(),
@@ -41,7 +41,7 @@ function manifest(schemaVersion: string): IndexManifest {
     schemaVersion,
     title: 'LSD reports',
     generatedAt: '2026-01-01T12:00:00Z',
-    generator: 'lsd-mono-core 9.0.0',
+    generator: 'lsd-mono-jvm 9.0.0',
     reports: [
       {
         id: 'checkout',
@@ -121,7 +121,7 @@ describe('a report page', () => {
   it('sends no usage ping from the upgrade page, though a readable release report would', async () => {
     window.__LSD_REPORT__ = {
       ...report(REPORT_SCHEMA_VERSION),
-      generator: 'lsd-mono-core 9.0.0',
+      generator: 'lsd-mono-jvm 9.0.0',
       options: { usagePing: true },
     }
     let usage = await spyOnUsage()

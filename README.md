@@ -1,6 +1,6 @@
 # LSD: living sequence diagrams
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-core?label=Maven%20Central)](https://central.sonatype.com/namespace/io.github.lsd-consulting)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-jvm?label=Maven%20Central)](https://central.sonatype.com/namespace/io.github.lsd-consulting)
 [![Build](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml/badge.svg?branch=main)](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![Java 17+](https://img.shields.io/badge/Java-17%2B-informational)
@@ -30,9 +30,9 @@ Every artifact is `io.github.lsd-consulting:<artifact>:X.Y.Z`, where `X.Y.Z` is 
 | http4k 6 (next release) | `lsd-mono-http4k-6` and `lsd-mono-junit-jupiter` | `LsdHttp4k.serverFilter("Shop").then(routes)` ([README](modules/lsd-mono-http4k-6/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/http4k-6/) |
 | Ktor 3 (next release) | `lsd-mono-ktor-3` and `lsd-mono-junit-jupiter` | `install(Lsd) { app = "Shop" }` ([README](modules/lsd-mono-ktor-3/README.md)) | [report](https://lsd-consulting.github.io/lsd-mono/ktor-3/) |
 | JUnit Jupiter 6 | `lsd-mono-junit-jupiter` | `@ExtendWith(LsdExtension::class)`, then [capture](#draw-a-flow-without-a-test) in the test ([README](modules/lsd-mono-junit-jupiter/README.md)) | – |
-| Cucumber 8 | `lsd-mono-cucumber-8` | `cucumber.plugin=io.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`, then capture in the steps ([README](modules/lsd-mono-cucumber-8/README.md)) | – |
+| Cucumber 8 | `lsd-mono-cucumber-8` | `cucumber.plugin=io.github.lsdconsulting.lsd.mono.cucumber.LsdCucumberPlugin`, then capture in the steps ([README](modules/lsd-mono-cucumber-8/README.md)) | – |
 
-"Next release" means the artifact and its sample report are merged but not yet on Maven Central and the sample site; they go out with the next weekly release. Each integration brings in `lsd-mono-core` and uses your own test runtime and framework. For coroutines, or for writing reports without `lsd-mono-core`, see [which artifact to depend on](modules/README.md#which-artifact-to-depend-on).
+"Next release" means the artifact and its sample report are merged but not yet on Maven Central and the sample site; they go out with the next weekly release. Each integration brings in `lsd-mono-jvm` and uses your own test runtime and framework. For coroutines, or for writing reports without `lsd-mono-jvm`, see [which artifact to depend on](modules/README.md#which-artifact-to-depend-on).
 
 #### Spring Boot 4 in full
 
@@ -72,7 +72,7 @@ Run the tests and open `build/reports/lsd/index.html`: one report per test class
 The API (Kotlin and Java today) draws a flow from any code. This `main()` draws a checkout by hand and writes the report:
 
 ```kotlin
-import io.lsdconsulting.lsd.mono.core.LsdContext
+import io.github.lsdconsulting.lsd.mono.jvm.LsdContext
 
 fun main() {
     val files = LsdContext.instance.report("Checkout flow") {
@@ -90,7 +90,7 @@ fun main() {
 }
 ```
 
-It needs only `lsd-mono-core`. Participants, payloads, facts, activations, the file names and the Java form are in the [lsd-mono-core README](modules/lsd-mono-core/README.md#capture-a-scenario-by-hand).
+It needs only `lsd-mono-jvm`. Participants, payloads, facts, activations, the file names and the Java form are in the [lsd-mono-jvm README](modules/lsd-mono-jvm/README.md#capture-a-scenario-by-hand).
 
 ## What's in a report
 
@@ -113,7 +113,7 @@ A thread that is not bound to a test, such as an HTTP server thread, captures in
 
 Every setting is a `lsd.mono.*` property, read from a system property, an environment variable
 (`LSD_MONO_REPORT_OUTPUTDIR`), a JUnit configuration parameter, or `lsd-mono.properties` on the
-classpath, in that order. The [configuration reference](modules/lsd-mono-core/README.md#configuration-reference)
+classpath, in that order. The [configuration reference](modules/lsd-mono-jvm/README.md#configuration-reference)
 lists each one with its default; a test keeps that table in step with the code.
 
 ## Usage ping
@@ -123,6 +123,18 @@ A report written by a release opens one tiny, never-awaited request to jsDelivr 
 ## Versions and releases
 
 Releases go out weekly, on Tuesday mornings (UK time) when there is something to release, and every artifact shares one version ([docs/releasing.md](docs/releasing.md#when-releases-happen)). The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed. Until v1 they are `0.y.z`, and a minor release may change the API.
+
+### Moving from lsd-mono-core
+
+`lsd-mono-core` is now `lsd-mono-jvm` ([#126](https://github.com/lsd-consulting/lsd-mono/issues/126)), and every package moved from `io.lsdconsulting.lsd.mono` to `io.github.lsdconsulting.lsd.mono`, matching the `io.github.lsd-consulting` group:
+
+| | Before | Now |
+| --- | --- | --- |
+| Core artifact | `io.github.lsd-consulting:lsd-mono-core` | `io.github.lsd-consulting:lsd-mono-jvm` |
+| Core package | `io.lsdconsulting.lsd.mono.core` | `io.github.lsdconsulting.lsd.mono.jvm` |
+| Other modules' packages | `io.lsdconsulting.lsd.mono.*` | `io.github.lsdconsulting.lsd.mono.*` |
+
+Change the dependency and the imports (replace `io.lsdconsulting.lsd.mono.core` first, then `io.lsdconsulting.lsd.mono`). The other artifacts keep their names. The release that renames it also publishes a relocation POM for `lsd-mono-core` at the same version, so Maven follows it to `lsd-mono-jvm` with a warning; the imports still have to change.
 
 ## Contributing
 

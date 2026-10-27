@@ -1,0 +1,19 @@
+package io.github.lsdconsulting.lsd.mono.jvm.domain
+
+/**
+ * Scenario outcome, named after the report's Success, Warn and Error filters.
+ * The report JSON writes `success`, `warn` and `error`.
+ *
+ * The integrations use [WARN] for a test that neither passed nor failed with an error,
+ * such as a disabled or aborted JUnit test or an undefined Cucumber step.
+ */
+public enum class Status {
+    /** Failed: an exception or a failed assertion. */
+    ERROR,
+
+    /** Neither passed nor failed: disabled, aborted or undefined. */
+    WARN,
+
+    /** Passed. */
+    SUCCESS,
+}

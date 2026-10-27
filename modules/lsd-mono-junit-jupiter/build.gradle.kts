@@ -1,4 +1,4 @@
-import io.lsdconsulting.lsd.mono.gradle.registerIntegrationReadmeSamples
+import io.github.lsdconsulting.lsd.mono.gradle.registerIntegrationReadmeSamples
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -16,18 +16,18 @@ description = "LSD Mono JUnit Jupiter 6 integration — extension for living seq
 val readmeSourceSet = sourceSets.create("readme")
 
 dependencies {
-    api(project(":modules:lsd-mono-core"))
+    api(project(":modules:lsd-mono-jvm"))
     api(libs.junit.jupiter.api)
 
     testImplementation(platform(libs.junit.bom))
     // LsdTestConfig and ReportJson (#74).
-    testImplementation(testFixtures(project(":modules:lsd-mono-core")))
+    testImplementation(testFixtures(project(":modules:lsd-mono-jvm")))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.platform.launcher)
 
     // readme source set does not inherit main deps; need core for LsdContext.
     "readmeImplementation"(sourceSets.named("main").get().output)
-    "readmeImplementation"(project(":modules:lsd-mono-core"))
+    "readmeImplementation"(project(":modules:lsd-mono-jvm"))
 }
 
 tasks.test {
@@ -41,6 +41,6 @@ tasks.test {
 // README samples (captureReadmeReport, readmeSamples). Same titles LsdExtension would use.
 registerIntegrationReadmeSamples(
     readmeSourceSet,
-    "io.lsdconsulting.lsd.mono.junitjupiter.readme.JunitReadmeSampleKt",
+    "io.github.lsdconsulting.lsd.mono.junitjupiter.readme.JunitReadmeSampleKt",
     "Capture the JUnit README scenario",
 )

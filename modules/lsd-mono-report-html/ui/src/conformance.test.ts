@@ -5,7 +5,7 @@
 // and the Metrics panel, with no error and no markup made from report text; on a report of a newer
 // major version the upgrade page, and on one whose version is not one the cannot-open page. The
 // index page boots on every index manifest and opens its report.
-// lsd-mono-core's ConformanceTest checks the producer's side.
+// lsd-mono-jvm's ConformanceTest checks the producer's side.
 import { readdirSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CONFORMANCE, fixtureData, fixtures, type Fixture } from './lib/conformance.test-util'
@@ -142,7 +142,7 @@ describe('the page on each shared report', () => {
   })
 
   // Each index entry's data is the shared report of the same title (status-mix is the index
-  // lsd-mono-core writes for multi-scenario-status).
+  // lsd-mono-jvm writes for multi-scenario-status).
   it.each(indexes.map((f) => [f.file, f] as const))(
     'boots the index page on %s and opens its reports',
     async (_, fixture) => {

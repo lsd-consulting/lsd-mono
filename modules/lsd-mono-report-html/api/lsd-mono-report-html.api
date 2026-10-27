@@ -1,21 +1,21 @@
-public final class io/lsdconsulting/lsd/mono/report/html/ReportWriter {
-	public static final field Companion Lio/lsdconsulting/lsd/mono/report/html/ReportWriter$Companion;
-	public fun <init> (Lio/lsdconsulting/lsd/mono/report/html/ReportWriterSettings;)V
-	public static final fun toJson (Lio/lsdconsulting/lsd/mono/report/model/ReportJson;)Ljava/lang/String;
+public final class io/github/lsdconsulting/lsd/mono/report/html/ReportWriter {
+	public static final field Companion Lio/github/lsdconsulting/lsd/mono/report/html/ReportWriter$Companion;
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/report/html/ReportWriterSettings;)V
+	public static final fun toJson (Lio/github/lsdconsulting/lsd/mono/report/model/ReportJson;)Ljava/lang/String;
 	public final fun writeIndex (Ljava/io/File;)Ljava/nio/file/Path;
 	public final fun writeIndex (Ljava/io/File;Ljava/util/List;)Ljava/nio/file/Path;
-	public static synthetic fun writeIndex$default (Lio/lsdconsulting/lsd/mono/report/html/ReportWriter;Ljava/io/File;Ljava/util/List;ILjava/lang/Object;)Ljava/nio/file/Path;
-	public final fun writeReport (Lio/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/io/File;)Lio/lsdconsulting/lsd/mono/report/html/WrittenReport;
-	public final fun writeReport (Lio/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/io/File;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/html/WrittenReport;
-	public final fun writeReport (Lio/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/io/File;Ljava/lang/String;Ljava/lang/String;)Lio/lsdconsulting/lsd/mono/report/html/WrittenReport;
-	public static synthetic fun writeReport$default (Lio/lsdconsulting/lsd/mono/report/html/ReportWriter;Lio/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/io/File;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/lsdconsulting/lsd/mono/report/html/WrittenReport;
+	public static synthetic fun writeIndex$default (Lio/github/lsdconsulting/lsd/mono/report/html/ReportWriter;Ljava/io/File;Ljava/util/List;ILjava/lang/Object;)Ljava/nio/file/Path;
+	public final fun writeReport (Lio/github/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/io/File;)Lio/github/lsdconsulting/lsd/mono/report/html/WrittenReport;
+	public final fun writeReport (Lio/github/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/io/File;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/report/html/WrittenReport;
+	public final fun writeReport (Lio/github/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/io/File;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/report/html/WrittenReport;
+	public static synthetic fun writeReport$default (Lio/github/lsdconsulting/lsd/mono/report/html/ReportWriter;Lio/github/lsdconsulting/lsd/mono/report/model/ReportJson;Ljava/io/File;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/report/html/WrittenReport;
 }
 
-public final class io/lsdconsulting/lsd/mono/report/html/ReportWriter$Companion {
-	public final fun toJson (Lio/lsdconsulting/lsd/mono/report/model/ReportJson;)Ljava/lang/String;
+public final class io/github/lsdconsulting/lsd/mono/report/html/ReportWriter$Companion {
+	public final fun toJson (Lio/github/lsdconsulting/lsd/mono/report/model/ReportJson;)Ljava/lang/String;
 }
 
-public final class io/lsdconsulting/lsd/mono/report/html/ReportWriterSettings {
+public final class io/github/lsdconsulting/lsd/mono/report/html/ReportWriterSettings {
 	public fun <init> (Ljava/lang/String;)V
 	public fun <init> (Ljava/lang/String;Ljava/time/Instant;)V
 	public fun <init> (Ljava/lang/String;Ljava/time/Instant;Z)V
@@ -28,7 +28,7 @@ public final class io/lsdconsulting/lsd/mono/report/html/ReportWriterSettings {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class io/lsdconsulting/lsd/mono/report/html/WrittenReport {
+public final class io/github/lsdconsulting/lsd/mono/report/html/WrittenReport {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDiagramHtml ()Ljava/nio/file/Path;
 	public final fun getReportJson ()Ljava/nio/file/Path;
