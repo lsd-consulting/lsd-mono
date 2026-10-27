@@ -9,7 +9,7 @@ testImplementation("io.github.lsd-consulting:lsd-mono-http4k-6:<version>")
 testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:<version>") // or lsd-mono-cucumber-8
 ```
 
-The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. This module is not on Maven Central yet: it is first published with the next weekly release, and so is its [sample report](https://lsd-consulting.github.io/lsd-mono/http4k-6/). From another project in this repo: `testImplementation(project(":modules:lsd-mono-http4k-6"))`.
+The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. See its [sample report](https://lsd-consulting.github.io/lsd-mono/http4k-6/). From another project in this repo: `testImplementation(project(":modules:lsd-mono-http4k-6"))`.
 
 http4k is not a dependency of this module (it is `compileOnly`): the app's own http4k 6 is used. The HTTP filters need only `http4k-core`; the WebSocket filter and client need `http4k-realtime-core`, which an app with WebSockets already has. http4k 6 needs Java 21, so this module is compiled for Java 21; the rest of lsd-mono stays on 17.
 
