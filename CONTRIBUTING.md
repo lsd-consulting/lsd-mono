@@ -15,6 +15,59 @@ commit first and then run it. See [docs/ci.md](docs/ci.md) for every check and h
 In `modules/lsd-mono-report-html/ui`: `npm run typecheck`, `npm run lint`, `npm test` and
 `npm run check:ux` (Playwright).
 
+The Java baseline is 17, set once as `jvm` in `gradle/libs.versions.toml`: the code compiles for it and the tests run on a JDK 17 toolchain (found locally or provisioned by foojay; your default JDK is not changed). `./gradlew test -Plsd.test.jvm=21` runs the tests on another JDK. `:modules:lsd-mono-report-html:build` runs the Vite shell build (`npm ci`, then `npm run build:single`) and vitest is on `check`. Those tasks prepend the nvm Node named in `.nvmrc` (the one CI uses) and leave the default alias alone.
+
+`check` also lints and measures coverage: ktlint for the Kotlin (`./gradlew spotlessApply` fixes formatting), Kover line-coverage floors per module, and for the report UI a type-check of the code and its tests, ESLint, Prettier and Vitest coverage thresholds. See [lint, format and coverage](docs/ci.md#lint-format-and-coverage).
+
+## From this repository
+
+Another project in this build depends on the modules directly:
+
+```kotlin
+dependencies {
+    implementation(project(":modules:lsd-mono-core"))
+    testImplementation(project(":modules:lsd-mono-junit-jupiter"))
+    testImplementation(project(":modules:lsd-mono-cucumber-8"))
+    testImplementation(project(":modules:lsd-mono-coroutines")) // only if tests capture from coroutines
+    testImplementation(project(":modules:lsd-mono-spring-boot-4")) // only for @SpringBootTest suites
+    testImplementation(project(":modules:lsd-mono-http4k-6")) // only for http4k apps
+    testImplementation(project(":modules:lsd-mono-ktor-3")) // only for Ktor apps
+}
+```
+
+They are compiled with `--release 17` (`lsd-mono-http4k-6` with `--release 21`, as http4k 6 needs Java 21), and CI tests on Java 17, 21 and 25. Cucumber support is major 8, Spring Boot support major 4, http4k support major 6, Ktor support major 3.
+
+## Layout
+
+```
+modules/lsd-mono-core/            lsd-mono-core: capture, timing, the report model mapping
+modules/lsd-mono-report-model/    the report as plain Kotlin values
+modules/lsd-mono-report-html/     the report writer, report UI in ui/
+modules/lsd-mono-junit-jupiter/   JUnit Jupiter 6 extension
+modules/lsd-mono-cucumber-8/      Cucumber 8 plugin
+modules/lsd-mono-coroutines/      keeps a scenario bound across coroutine thread hops
+modules/lsd-mono-spring-boot-4/   Spring Boot 4 starter
+modules/lsd-mono-http4k-6/        http4k 6 filters (HTTP server and client, WebSockets)
+modules/lsd-mono-ktor-3/          Ktor 3 plugins (HTTP server and client, WebSockets)
+build-logic/                      convention plugins (lsd.kotlin-jvm)
+```
+
+## The README tour and the sample site
+
+Regenerate the tour GIF at the top of the README from the current UI:
+
+```bash
+./gradlew :modules:lsd-mono-core:readmeSamples
+```
+
+The task captures the tour report with `LsdContext`, then drives the packaged shell with headless Chromium and encodes `docs/readme/feature-tour.gif`. It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
+
+The live sample site (the [example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) and the integrations' sample reports) is built by the [Pages workflow](.github/workflows/pages.yml) from each release, once the release is tagged. To build the example report and its index locally, then open `modules/lsd-mono-core/build/pages/index.html` in a browser:
+
+```bash
+./gradlew :modules:lsd-mono-core:kitchenSinkSample
+```
+
 ## Rules
 
 - **Public API.** `lsd-mono-core` uses explicit API mode. A change to the public surface shows up in
