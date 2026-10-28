@@ -12,8 +12,14 @@ import { focusDiagramMessage, setFindHooks, syncDiagramWindow } from '../lib/seq
 import { currentMode, getPreferredTheme } from '../ui/theme'
 import { bindThemeMenu, themeControlHtml } from '../ui/theme-menu'
 import { bindHelpDialog, helpDialogHtml } from '../ui/help-dialog'
-import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSidebarCollapsed } from '../ui/sidebar'
-import { statusLabel } from '../ui/format'
+import {
+  applySidebarCollapsed,
+  sidebarTitleText,
+  sidebarToggleGlyph,
+  sidebarToggleLabel,
+  storeSidebarCollapsed,
+} from '../ui/sidebar'
+import { statusGlyph, statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
 import { trackTopbarHeight } from '../lib/topbar-height'
 import { repoLinkAttrsHtml } from '../ui/repo-link'
@@ -64,7 +70,7 @@ export function renderShell(): void {
           .map(
             (s) => `
           <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}">
-            <span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
+            <span class="chip-glyph" aria-hidden="true">${escapeHtml(statusGlyph(s))}</span><span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
           </button>`,
           )
           .join('')}
@@ -81,7 +87,7 @@ export function renderShell(): void {
       <aside class="sidebar" id="sidebar" aria-label="${index ? 'Reports' : 'Scenarios'}">
         <div class="sidebar-head">
           <button type="button" class="nav-fold" id="btn-nav-fold" aria-controls="scenario-nav" aria-expanded="false"><span class="nav-fold-text"></span> <span class="nav-fold-glyph" aria-hidden="true">▾</span></button>
-          <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : `Scenarios · ${total}`}</p>
+          <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : escapeHtml(sidebarTitleText(total))}</p>
           <button type="button" class="icon-btn sidebar-toggle" id="btn-sidebar" aria-controls="sidebar"
             aria-expanded="${!state.sidebarCollapsed}" aria-label="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}"
             title="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}">${escapeHtml(sidebarToggleGlyph(state.sidebarCollapsed))}</button>
