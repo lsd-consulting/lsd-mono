@@ -7,10 +7,11 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -100,9 +101,15 @@ public class WebSocketShopFixture {
             public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
                 registration.addDecoratorFactory(handler -> new WebSocketHandlerDecorator(handler) {
                     @Override
+                    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+                        closes.opened(session);
+                        super.afterConnectionEstablished(session);
+                    }
+
+                    @Override
                     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
                         super.afterConnectionClosed(session, status);
-                        closes.closed();
+                        closes.closed(session);
                     }
                 });
             }
@@ -145,19 +152,31 @@ public class WebSocketShopFixture {
         }
 
         /**
-         * Counts the sockets the app has seen close, so a test can wait for the app's side to finish
-         * with its socket before it ends: the client's side of a close can finish first.
+         * The sockets the app has open, so a test can wait for the app's side to finish with its
+         * socket before it ends: the client's side of a close can finish first. It waits until none
+         * is open rather than counting closes, so a close left over from a test that failed or timed
+         * out cannot stand in for the next test's own (#164).
          */
         @Component
         static class Closes {
-            private final Semaphore closed = new Semaphore(0);
+            private final Set<String> open = ConcurrentHashMap.newKeySet();
 
-            void closed() {
-                closed.release();
+            void opened(WebSocketSession session) {
+                open.add(session.getId());
             }
 
-            void await() throws InterruptedException {
-                assertThat(closed.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+            synchronized void closed(WebSocketSession session) {
+                open.remove(session.getId());
+                notifyAll();
+            }
+
+            synchronized void await() throws InterruptedException {
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+                while (!open.isEmpty()) {
+                    long left = deadline - System.nanoTime();
+                    assertThat(left).as("the app's sockets %s are still open", open).isPositive();
+                    TimeUnit.NANOSECONDS.timedWait(this, left);
+                }
             }
         }
 
@@ -173,8 +192,13 @@ public class WebSocketShopFixture {
             }
 
             @Override
+            public void afterConnectionEstablished(WebSocketSession session) {
+                closes.opened(session);
+            }
+
+            @Override
             public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-                closes.closed();
+                closes.closed(session);
             }
 
             @Override
@@ -276,18 +300,27 @@ public class WebSocketShopFixture {
     @Test
     void refusesAForbiddenSend() throws Exception {
         WebSocketStompClient stomp = new WebSocketStompClient(LsdWebSocketClient.wrap(new StandardWebSocketClient()));
-        CompletableFuture<String> error = new CompletableFuture<>();
+        // The app sends an ERROR frame and closes at once, so the client may see the close before the
+        // frame, or instead of it (#164): either ends the socket for the client. The ERROR itself is
+        // checked on the app's side, in the report.
+        CompletableFuture<String> ended = new CompletableFuture<>();
         StompSession session = stomp.connectAsync("ws://localhost:" + port + "/stomp", new StompSessionHandlerAdapter() {
                     @Override
                     public void handleFrame(StompHeaders headers, Object payload) {
-                        error.complete(headers.getFirst("message"));
+                        ended.complete(headers.getFirst("message"));
+                    }
+
+                    @Override
+                    public void handleTransportError(StompSession session, Throwable exception) {
+                        ended.complete(null);
                     }
                 })
                 .get(10, TimeUnit.SECONDS);
 
         session.send("/app/forbidden", "please".getBytes(StandardCharsets.UTF_8));
 
-        assertThat(error.get(10, TimeUnit.SECONDS)).isNotBlank();
+        String error = ended.get(10, TimeUnit.SECONDS);
+        if (error != null) assertThat(error).isNotBlank();
         closes.await();
     }
 

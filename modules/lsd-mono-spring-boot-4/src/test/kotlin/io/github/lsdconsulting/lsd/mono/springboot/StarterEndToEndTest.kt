@@ -565,7 +565,7 @@ class StarterEndToEndTest {
     fun `a raw WebSocket the app serves is drawn once - handshake, each message either way, and the close`() {
         val summary = execute(WebSocketShopFixture::class.java)
 
-        assertEquals(5, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.exception.toString() })
+        assertEquals(5, summary.testsSucceededCount.toInt(), summary.failures.joinToString { it.testIdentifier.displayName + ": " + it.exception.stackTraceToString() })
         val quoted = ReportJson.read(tempDir.listDirectoryEntries("*-report.json").single()).scenario("web socket shop fixture: quotes price over web socket")
         assertEquals(
             listOf("GET /prices", "101 Switching Protocols", "text message", "text message", "text message", "close 1000 bye"),
