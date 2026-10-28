@@ -21,6 +21,8 @@ Each diagram shows who called whom, with what payload, how long it took, and whe
 
 ### JVM (Kotlin, Java)
 
+<!-- release-version:start (the release workflow updates the versions up to the end marker) -->
+
 Every artifact is `io.github.lsd-consulting:<artifact>:0.15.0`; the snippets below show 0.15.0, and the Maven Central badge above shows the latest version. They run on Java 17 or later (`lsd-mono-http4k-6` needs Java 21, as http4k 6 does), and the report lands in `build/reports/lsd` (open `index.html`).
 
 | Stack | Add (test scope) | Then | Sample |
@@ -53,6 +55,8 @@ Maven:
     <scope>test</scope>
 </dependency>
 ```
+
+<!-- release-version:end -->
 
 Nothing changes in the test:
 

@@ -109,9 +109,19 @@ heading, with a link to the commit, and the text of every `BREAKING CHANGE:` foo
 - Put anything a user must change in a `BREAKING CHANGE:` footer. That text goes into the notes word for word.
 - When a release needs more than that, edit its GitHub release after it is published.
 
-Nothing needs changing after a release. The root README's "Getting started" snippets say `X.Y.Z` instead of a version,
-pointing at the Maven Central badge, so the README in every tag is right; `RootReadmeExampleTest` fails if a literal
-version comes back.
+### The README install snippets
+
+The root README's install snippets show the latest release, between the `<!-- release-version:start -->` and
+`<!-- release-version:end -->` markers. After each new release the `readme` job in release.yml runs
+`tools/release/update-readme-version.sh <version>`, which rewrites every x.y.z inside the markers, and opens a pull
+request `docs: show <version> in the README install snippets` from the branch `docs/readme-v<version>`.
+
+- It does not push to main, which requires the `gate` check.
+- A pull request opened with the workflow's token starts no workflows, so close and reopen it to run `gate`, then merge
+  it. It is a docs commit, so it releases nothing.
+- `RootReadmeExampleTest` checks that the markers are there once each, and that the Gradle and Maven snippets inside
+  them show one x.y.z version and no `X.Y.Z` placeholder.
+- To move the version by hand, run the script with the version and commit the result.
 
 The artifacts show on Maven Central (`repo1.maven.org`) a few minutes to half an hour after the job.
 
