@@ -56,17 +56,17 @@ built up on `main` since the last release, all in one version. A week with nothi
 or breaking change) publishes nothing. Merging to `main` no longer releases by itself.
 
 The reason is Maven Central's monthly publishing limits, which count across the whole `lsd-consulting` organisation:
-**7 releases, 1,000 files and 80 MB a month** (the Central Portal's Usage Center). Every lsd-mono release publishes all
-seven artifacts, about 210 files and 4.4 MB, so releasing on every push went far over them.
+**188 releases, 9,430 files and 1,050 MB a month** (the Central Portal's Usage Center). Every lsd-mono release publishes
+all its artifacts, so releasing on every push would soon go over them.
 
 Renovate fits the week: it opens its pull requests on Monday mornings (UK time), with every minor and patch update in
 one pull request and only versions out for at least three days, so they can be merged before Tuesday's release.
 
 ### The monthly cap
 
-The workflow also stops at **4 releases a calendar month** (UTC), counting lsd-mono's GitHub releases. Change it with the
-repository variable `MAX_RELEASES_PER_MONTH`. Four weekly lsd-mono releases are about 840 files and 18 MB, inside the
-limits, but the limits are the organisation's: releases of the other lsd-consulting libraries count towards the same 7.
+The workflow also stops at a cap of releases a calendar month (UTC), counting lsd-mono's GitHub releases: the repository
+variable `MAX_RELEASES_PER_MONTH`, currently set to **10**, or 4 when it is unset. The limits are the organisation's:
+releases of the other lsd-consulting libraries count towards them too.
 Check the Usage Center before going over the cap.
 
 ### An urgent release

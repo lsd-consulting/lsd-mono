@@ -13,4 +13,6 @@ https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@<version>/ping/<event>.txt
 - **The report doesn't depend on it.** The request is never awaited and a failure is ignored, so a report opened offline, from `file://`, or behind a proxy or Content-Security-Policy that blocks jsDelivr works and looks the same.
 - **Turn it off** with `lsd.mono.report.usagePing=false`, set like any other [property](../README.md#configuration) (for example `LSD_MONO_REPORT_USAGEPING=false`). The setting is written into the report, and `false` means the page makes no request at all.
 
+- **Whatever wrote the data.** A release page pings for any report that opts in, including one from a third-party producer that uses lsd-mono-report-model without lsd-mono-jvm. Before, only a report written by lsd-mono-jvm (or lsd-mono-core) qualified.
+
 Snapshot builds, the report UI's dev server and checks, and the sample reports this repository publishes never ping.
