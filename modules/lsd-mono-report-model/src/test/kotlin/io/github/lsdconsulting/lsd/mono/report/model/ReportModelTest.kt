@@ -3,10 +3,15 @@ package io.github.lsdconsulting.lsd.mono.report.model
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.reflect.KFunction
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.isAccessible
 
 class ReportModelTest {
     @Test
@@ -76,6 +81,90 @@ class ReportModelTest {
             assertFalse(bare.toString().contains("=null"), "unset fields are not printed: $bare")
         }
     }
+
+    /*
+     * Each wide class names its fields four times: the constructor, the Builder, toBuilder() and
+     * the fields() behind equals, hashCode and toString (#149). These go field by field over the
+     * constructor, so a field added there but missed in one of the others fails here.
+     */
+
+    @Test
+    fun `every field is set in the full value of each class, so a new field cannot go untested`() {
+        for ((full, _) in pairs()) {
+            for ((field, value) in fieldsOf(full)) {
+                val where = "${full.javaClass.simpleName}.$field: set it in pairs()"
+                assertNotNull(value, where)
+                if (value is Collection<*>) assertFalse(value.isEmpty(), where)
+                if (value is Map<*, *>) assertFalse(value.isEmpty(), where)
+            }
+        }
+    }
+
+    @Test
+    fun `toBuilder keeps every field, whatever equals compares`() {
+        for ((full, _) in pairs()) {
+            val copy = fieldsOf(rebuild(full))
+            for ((field, value) in fieldsOf(full)) {
+                assertEquals(value, copy[field], "${full.javaClass.simpleName}.toBuilder() keeps $field")
+            }
+        }
+    }
+
+    @Test
+    fun `values that differ in any one field are not equal, and each set field is printed`() {
+        for ((full, bare) in pairs()) {
+            val name = full.javaClass.simpleName
+            val fields = fieldsOf(full)
+            val bareFields = fieldsOf(bare)
+            for ((field, value) in fields) {
+                val changed = construct(full, fields + (field to otherThan(value, bareFields[field], "$name.$field")))
+                assertNotEquals(full, changed, "$name.equals compares $field")
+                assertTrue(full.toString().contains("$field="), "$name.toString() prints $field: $full")
+            }
+        }
+    }
+
+    /** The value's fields as its constructor takes them, by name. */
+    private fun fieldsOf(value: Any): Map<String, Any?> {
+        val klass = value::class
+        val properties = klass.memberProperties.associateBy { it.name }
+        return constructorOf(value).parameters.associate { parameter ->
+            val property = properties.getValue(parameter.name!!)
+            parameter.name!! to property.getter.call(value)
+        }
+    }
+
+    private fun constructorOf(value: Any): KFunction<Any> {
+        @Suppress("UNCHECKED_CAST")
+        val constructor = value::class.primaryConstructor as KFunction<Any>
+        constructor.isAccessible = true
+        return constructor
+    }
+
+    private fun construct(
+        like: Any,
+        fields: Map<String, Any?>,
+    ): Any {
+        val constructor = constructorOf(like)
+        return constructor.callBy(constructor.parameters.associateWith { fields[it.name] })
+    }
+
+    /** A value of the same kind as [value] but not equal to it: the bare one's when that differs. */
+    private fun otherThan(
+        value: Any?,
+        bare: Any?,
+        where: String,
+    ): Any? =
+        when {
+            bare != value -> bare
+            value is String -> "$value-changed"
+            value is Enum<*> -> value.javaClass.enumConstants.first { it != value }
+            value is Long -> value + 1
+            value is Int -> value + 1
+            value is Double -> value + 1
+            value is Boolean -> !value
+            else -> error("$where: give pairs() a bare value that differs, or teach otherThan ${value?.javaClass}")
+        }
 
     @Test
     fun `a builder copies the lists it is given, and its values do not change after build`() {
