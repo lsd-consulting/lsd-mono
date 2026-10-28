@@ -209,4 +209,28 @@ class RootReadmeExampleTest {
         assertTrue(tempDir.resolve("index.html").exists(), "index.html was not written")
         assertTrue("build/reports/lsd" in readme.readText(), "the README says where the report goes")
     }
+
+    /**
+     * The install snippets sit between the release-version markers, which the release workflow
+     * rewrites with tools/release/update-readme-version.sh after each release (docs/releasing.md).
+     * They must all show one released x.y.z version, never a placeholder.
+     */
+    @Test
+    fun `the install snippets show one released version between the markers`() {
+        val text = readme.readText()
+        val start = "<!-- release-version:start"
+        val end = "<!-- release-version:end -->"
+        assertEquals(1, text.split(start).size - 1, "the README has one release-version start marker")
+        assertEquals(1, text.split(end).size - 1, "the README has one release-version end marker")
+        val block = text.substringAfter(start).substringBefore(end)
+        assertTrue("X.Y.Z" !in block, "the snippets show a real version, not X.Y.Z")
+        val versions = Regex("""\b\d+\.\d+\.\d+\b""").findAll(block).map { it.value }.toSet()
+        assertEquals(1, versions.size, "every snippet shows the same version: $versions")
+        assertTrue(
+            versions.single().matches(Regex("""(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)""")),
+            "${versions.single()} is a release version",
+        )
+        assertTrue("lsd-mono-spring-boot-4:${versions.single()}\")" in block, "the Gradle snippet is inside the markers")
+        assertTrue("<version>${versions.single()}</version>" in block, "the Maven snippet is inside the markers")
+    }
 }

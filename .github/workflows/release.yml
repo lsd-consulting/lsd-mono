@@ -25,7 +25,8 @@ name: Release
 # releaseRules there). The order is publish first, then tag: a dry run works out the version,
 # Gradle publishes that version, and only then does semantic-release tag vX.Y.Z and write the
 # GitHub release. A failed publish leaves no tag; a failed tag after a publish is retagged by hand.
-# After a new release, the `pages` job deploys the sample site from the new tag (pages.yml).
+# After a new release, the `pages` job deploys the sample site from the new tag (pages.yml), and the
+# `readme` job opens a pull request that moves the README install snippets to the new version.
 on:
   schedule:
     # Tuesday 07:00 Europe/London: 06:00 UTC during BST, 07:00 UTC during GMT. `plan` skips the other.
@@ -256,3 +257,40 @@ jobs:
     uses: ./.github/workflows/pages.yml
     with:
       ref: v${{ needs.release.outputs.version }}
+
+  readme:
+    # Opens a docs pull request that writes the new version into the README install snippets (the
+    # release-version markers; docs/releasing.md). main requires the gate check, so the job does not
+    # push to main. A pull request this job's token opens starts no workflows: close and reopen it
+    # to run gate, then merge it. A docs commit releases nothing.
+    needs: release
+    if: needs.release.outputs.version
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+      - name: Open the README version pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          tools/release/update-readme-version.sh "$VERSION" README.md
+          if git diff --quiet; then
+            echo "The README already shows $VERSION." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          branch="docs/readme-v$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -am "docs: show $VERSION in the README install snippets"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "docs: show $VERSION in the README install snippets" \
+            --body "Written by the release workflow after v$VERSION (docs/releasing.md). Close and reopen this pull request to run gate, then merge it."
+          echo "Opened the README version pull request for $VERSION." >> "$GITHUB_STEP_SUMMARY"
