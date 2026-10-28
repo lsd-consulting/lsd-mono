@@ -24,6 +24,8 @@ export const diagramState = {
   payloadFind: new Map<string, PayloadFind>(),
   /** The app's side of Find: the panel redraws its marks and follows the current match. */
   findHooks: {} as FindHooks,
+  /** Find's pending bring-on-screen after typing pauses, per scenario id: cancelled when the diagram is rebound or forgotten. */
+  findReveals: new Map<string, ReturnType<typeof setTimeout>>(),
 }
 
 /** What the app does when Find changes. The diagram code does not know about the side panel. */
@@ -43,6 +45,8 @@ export function forgetDiagrams(): void {
   diagramState.mounted.clear()
   diagramState.views.clear()
   diagramState.payloadFind.clear()
+  diagramState.findReveals.forEach((timer) => clearTimeout(timer))
+  diagramState.findReveals.clear()
 }
 
 export interface MountedDiagram {

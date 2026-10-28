@@ -117,6 +117,8 @@ describe('the diagram paints once for several changes in one task (#104)', () =>
     setPayloadLoader(() => Promise.resolve({ 'paints/m1': { order: 1 } }))
   })
   afterEach(() => {
+    // Cancels Find's pending reveal, so it cannot fire after this file's environment is gone (#165).
+    forgetDiagrams()
     document.body.innerHTML = ''
     setPayloadSlicer(null)
     setFindHooks({})
