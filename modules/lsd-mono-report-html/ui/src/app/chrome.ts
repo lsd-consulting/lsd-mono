@@ -15,6 +15,7 @@ import { bindHelpDialog, helpDialogHtml } from '../ui/help-dialog'
 import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSidebarCollapsed } from '../ui/sidebar'
 import { statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
+import { exampleIntroHtml, introDismissed, isExamplePage, rememberIntroDismissed } from '../ui/example-intro'
 import { trackTopbarHeight } from '../lib/topbar-height'
 import { repoLinkAttrsHtml } from '../ui/repo-link'
 import { revealSideways } from '../lib/reveal'
@@ -79,6 +80,7 @@ export function renderShell(): void {
       <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> <span class="help-setting-text">${singleKeysLabelHtml()}</span></label>`)}
     <div class="shell${state.sidebarCollapsed ? ' sidebar-collapsed' : ''}">
       <aside class="sidebar" id="sidebar" aria-label="${index ? 'Reports' : 'Scenarios'}">
+        ${showExampleIntro() ? exampleIntroHtml() : ''}
         <div class="sidebar-head">
           <button type="button" class="nav-fold" id="btn-nav-fold" aria-controls="scenario-nav" aria-expanded="false"><span class="nav-fold-text"></span> <span class="nav-fold-glyph" aria-hidden="true">▾</span></button>
           <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : `Scenarios · ${total}`}</p>
@@ -105,8 +107,32 @@ export function renderShell(): void {
   renderMain()
 }
 
+function localStore(): Storage | null {
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
+
+/** The example site's introduction (#161), until the visitor dismisses it. */
+function showExampleIntro(): boolean {
+  return isExamplePage(window.location, window.__LSD_EXAMPLE__ === true) && !introDismissed(localStore())
+}
+
+function bindExampleIntro(): void {
+  document.querySelector('#example-intro-close')?.addEventListener('click', () => {
+    rememberIntroDismissed(localStore())
+    document.querySelector('#example-intro')?.remove()
+    const heading = document.querySelector<HTMLElement>('#main .scenario-head h2')
+    if (heading) heading.focus({ preventScroll: true })
+    else document.querySelector<HTMLInputElement>('#search')?.focus()
+  })
+}
+
 function bindChrome(): void {
   bindFilters()
+  bindExampleIntro()
   bindTopbarButtons()
   bindSidePanel()
   const main = document.querySelector<HTMLElement>('#main')!
