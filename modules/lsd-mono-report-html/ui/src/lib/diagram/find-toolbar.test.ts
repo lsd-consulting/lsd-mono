@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Scenario } from '../../types'
 import { bindDiagramScroll, renderDiagramHtml, setFindHooks, syncDiagramWindow } from '../sequence-diagram'
 import { setPayloadLoader, setPayloadSlicer } from './payload-find'
-import { forgetDiagrams } from './state'
+import { diagramState, forgetDiagrams } from './state'
 import { flushDiagramPaints } from './invalidate'
 import { untimed } from '../report-fixture.test-util'
 import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
@@ -66,12 +66,41 @@ beforeEach(() => {
   setPayloadLoader(() => Promise.resolve({ 'toolbar/m1': { voucher: 'SNOWDROP-10' } }))
 })
 afterEach(() => {
+  // Cancels Find's pending reveal, so it cannot fire after this file's environment is gone (#165).
+  forgetDiagrams()
   document.body.innerHTML = ''
   setPayloadSlicer(null)
   setFindHooks({})
 })
 
 describe('the Find toolbar and payloads', () => {
+  it('cancels the pending reveal after typing when the diagrams are forgotten or the diagram is bound again (#165)', () => {
+    vi.useFakeTimers()
+    try {
+      const { find, host } = mount(scenario(false))
+      type(find, 'snowdrop')
+      const pending = diagramState.findReveals.get('toolbar')
+      expect(pending).toBeDefined()
+      const timers = vi.getTimerCount()
+      forgetDiagrams()
+      expect(diagramState.findReveals.size).toBe(0)
+      expect(vi.getTimerCount()).toBe(timers - 1)
+
+      type(find, 'snowdrop')
+      const first = diagramState.findReveals.get('toolbar')
+      bindDiagramScroll(host)
+      expect(diagramState.findReveals.has('toolbar')).toBe(false)
+      type(find, 'order')
+      const second = diagramState.findReveals.get('toolbar')
+      type(find, 'orde')
+      // Each keystroke replaces the pending reveal rather than adding one.
+      expect(diagramState.findReveals.size).toBe(1)
+      expect(new Set([first, second, diagramState.findReveals.get('toolbar')]).size).toBe(3)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("names payloads in the field's name and offers the toggle only when there are payloads to search", () => {
     const plain = mount(scenario(false))
     expect(plain.toggle).toBeNull()

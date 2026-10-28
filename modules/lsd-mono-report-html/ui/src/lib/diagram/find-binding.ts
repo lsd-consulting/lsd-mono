@@ -67,7 +67,13 @@ export function refreshPayloads(scenarioId: string): void {
 /** Find's field, its payloads toggle, and Next and Previous. */
 export function bindFind(diagram: Element, scroll: HTMLElement, id: string): void {
   const find = diagram.querySelector<HTMLInputElement>('[data-diagram-find]')
-  let reveal: ReturnType<typeof setTimeout> | undefined
+  // One pending reveal per scenario, kept in diagramState so a re-render or forgetDiagrams cancels it
+  // instead of letting it fire on a scrollport that is gone (#165).
+  const cancelReveal = () => {
+    clearTimeout(diagramState.findReveals.get(id))
+    diagramState.findReveals.delete(id)
+  }
+  cancelReveal()
   // Payloads load the first time Find is used, so they are often ready before the first key.
   find?.addEventListener('focus', () => refreshPayloads(id))
   if (diagramView(id).query) refreshPayloads(id)
@@ -76,10 +82,12 @@ export function bindFind(diagram: Element, scroll: HTMLElement, id: string): voi
     refreshPayloads(id)
     findChanged(id)
     // Typing on a phone has no Enter: bring the first match on screen once typing pauses.
-    clearTimeout(reveal)
-    reveal = setTimeout(() => {
+    cancelReveal()
+    const reveal = setTimeout(() => {
+      diagramState.findReveals.delete(id)
       if (revealFindHit(scroll)) invalidate(id, ['window'])
     }, SEARCH_REVEAL_DELAY_MS)
+    diagramState.findReveals.set(id, reveal)
   })
   diagram.querySelector<HTMLButtonElement>('[data-find-payloads]')?.addEventListener('click', (ev) => {
     const view = diagramView(id)
@@ -92,7 +100,7 @@ export function bindFind(diagram: Element, scroll: HTMLElement, id: string): voi
   })
   diagram.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      clearTimeout(reveal)
+      cancelReveal()
       stepFind(scroll, btn.dataset.findStep === 'prev' ? -1 : 1)
     })
   })
