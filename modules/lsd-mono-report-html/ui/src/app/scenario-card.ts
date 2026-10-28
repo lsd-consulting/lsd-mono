@@ -20,6 +20,7 @@ import { VIEWER_VERSION, writtenBy } from '../lib/viewer-version'
 export function viewerLabel(version: string = VIEWER_VERSION): string {
   return `lsd-mono ${version}`
 }
+
 export function heroHtml(): string {
   const back = index
     ? `<p class="hero-index">${escapeHtml(index.title)} · report ${index.reports.findIndex((r) => r.id === session.reportId) + 1} of ${index.reports.length}</p>`

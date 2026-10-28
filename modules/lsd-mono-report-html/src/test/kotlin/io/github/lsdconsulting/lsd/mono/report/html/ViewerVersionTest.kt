@@ -17,9 +17,11 @@ class ViewerVersionTest {
                 .getResourceAsStream("/lsd-mono-report-html/lsd-report.single.html")
                 ?.use { it.readBytes().toString(Charsets.UTF_8) }
                 ?: error("the shell is on the test classpath")
-        // The minified bundle quotes the string literal with ", ' or `.
-        val literal = Regex("""["'`]${Regex.escape(projectVersion)}["'`]""")
-        assertTrue(literal.containsMatchIn(shell), "shell holds the literal $projectVersion")
+        // The minified bundle assigns VIEWER_VERSION as a quoted literal (`var e=`0.16.0``), with ", ' or `.
+        // Requiring the assignment, not just the string, keeps a coincidental match (such as a
+        // dependency's version string) from passing.
+        val assigned = Regex("""[\w$]+\s*=\s*["'`]${Regex.escape(projectVersion)}["'`]""")
+        assertTrue(assigned.containsMatchIn(shell), "shell assigns the literal $projectVersion")
         assertFalse(shell.contains("__LSD_VIEWER_VERSION__"), "the build replaced the placeholder")
     }
 }

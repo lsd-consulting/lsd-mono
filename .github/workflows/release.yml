@@ -17,8 +17,8 @@ name: Release
 #    Renovate's build(deps) updates; they go out with the next release that has one.
 # 3. The `gate` check (gradle.yml) passed on the commit being released, main's HEAD.
 # 4. Fewer releases this calendar month (UTC) than the cap: the repository variable
-#    MAX_RELEASES_PER_MONTH, 4 when unset. A run by hand can go over it with `override_cap` and a
-#    `reason`, which goes into the run summary.
+#    MAX_RELEASES_PER_MONTH (currently set to 10), 4 when unset. A run by hand can go over it
+#    with `override_cap` and a `reason`, which goes into the run summary.
 #
 # semantic-release (tools/release/.releaserc.json) reads the commits since the last v tag: fix or
 # perf gives a patch, feat a minor. While the major is 0 a breaking change also gives a minor (the

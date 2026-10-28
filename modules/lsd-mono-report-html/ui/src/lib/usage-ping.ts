@@ -2,6 +2,8 @@
 // count for lsd-consulting/lsd-mono shows how the report is used. The report never depends on it:
 // the request is not awaited, its failure is ignored, and nothing renders differently either way.
 
+import { VIEWER_VERSION } from './viewer-version'
+
 /** Every event the report can count. Each has a one-byte file, `ping/<event>.txt`, at the repository root. */
 export const USAGE_EVENTS = [
   'report-open',
@@ -18,8 +20,6 @@ export type UsageEvent = (typeof USAGE_EVENTS)[number]
 export const REPORT_SOURCES = ['junit', 'cucumber', 'api'] as const
 
 export type ReportSource = (typeof REPORT_SOURCES)[number]
-
-import { VIEWER_VERSION } from './viewer-version'
 
 const CDN = 'https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono'
 

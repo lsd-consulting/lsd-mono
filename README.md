@@ -118,7 +118,7 @@ lists each one with its default; a test keeps that table in step with the code.
 
 ## Usage ping
 
-A report written by a release opens one tiny, never-awaited request to jsDelivr naming only the version and the event, so we can count use; no report data is sent, and the report works the same offline. Turn it off with `lsd.mono.report.usagePing=false`. [docs/usage-ping.md](docs/usage-ping.md) has the events and details.
+A report page from a release opens one tiny, never-awaited request to jsDelivr naming only the version and the event, so we can count use; no report data is sent, and the report works the same offline. Turn it off with `lsd.mono.report.usagePing=false`. [docs/usage-ping.md](docs/usage-ping.md) has the events and details.
 
 ## Versions and releases
 
@@ -134,7 +134,7 @@ Releases go out weekly, on Tuesday mornings (UK time) when there is something to
 | Core package | `io.lsdconsulting.lsd.mono.core` | `io.github.lsdconsulting.lsd.mono.jvm` |
 | Other modules' packages | `io.lsdconsulting.lsd.mono.*` | `io.github.lsdconsulting.lsd.mono.*` |
 
-Change the dependency and the imports (replace `io.lsdconsulting.lsd.mono.core` first, then `io.lsdconsulting.lsd.mono`). The other artifacts keep their names. v0.15.0, the release that renamed it, also published a relocation POM for `lsd-mono-core` at 0.15.0, so Maven follows that version to `lsd-mono-jvm` with a warning; the imports still have to change.
+Change the dependency and the imports (replace `io.lsdconsulting.lsd.mono.core` first, then `io.lsdconsulting.lsd.mono`). The other artifacts keep their names. v0.15.0, the release that renamed it, also published a relocation POM for `lsd-mono-core` at 0.15.0, so Maven follows that version to `lsd-mono-jvm` with a warning; the imports still have to change. Only 0.15.0 relocates: on an earlier version, change the coordinate from `lsd-mono-core` to `lsd-mono-jvm` by hand.
 
 ## Contributing
 
