@@ -1,18 +1,27 @@
 # lsd-mono-cucumber-8
 
+Part of [LSD: living sequence diagrams](../../README.md).
+
 `lsd-mono-cucumber-8` is the Cucumber 8 plugin for [lsd-mono-jvm](../lsd-mono-jvm) that turns each scenario into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside your steps. The plugin records pass, fail, or warning when the scenario ends, and writes the report when the feature finishes. It depends on first-party `lsd-mono-jvm`, not the old published `lsd-core`, and there is no PlantUML on this path. It is pinned to Cucumber 8: the catalog holds the exact version (`8.0.4`) and the build fails if anything resolves to another major. A newer Cucumber major gets its own module.
 
 ## Depend on it
 
+<!-- release-version:start (the release workflow updates the versions up to the end marker) -->
+
+[![Maven Central: lsd-mono-cucumber-8](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-cucumber-8?label=lsd-mono-cucumber-8)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-cucumber-8)
+
 ```kotlin
-dependencies {
-    testImplementation("io.github.lsd-consulting:lsd-mono-cucumber-8:<version>")
-    testImplementation("io.cucumber:cucumber-java8:8.0.4")
-    testImplementation("io.cucumber:cucumber-junit-platform-engine:8.0.4")
-}
+testImplementation("io.github.lsd-consulting:lsd-mono-cucumber-8:0.15.0")
 ```
 
-The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo, use `testImplementation(project(":modules:lsd-mono-cucumber-8"))` instead.
+<!-- release-version:end -->
+
+With a Cucumber 8 runtime and step-definition library:
+
+```kotlin
+testImplementation("io.cucumber:cucumber-java8:8.0.4")
+testImplementation("io.cucumber:cucumber-junit-platform-engine:8.0.4")
+```
 
 `lsd-mono-cucumber-8` brings in `lsd-mono-jvm` and `io.cucumber:cucumber-plugin`. You still need a Cucumber 8 runtime and a step-definition library. `cucumber-java8` and `cucumber-junit-platform-engine` are the pair this module is tested with. Stay on Cucumber 8. This build rejects 7.x and 9+.
 
@@ -106,7 +115,7 @@ A passed scenario is stored as a success. The scenario title is the Cucumber sce
 
 These carry no stack trace; a failure keeps its stack behind **Show stack trace**.
 
-Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step (every property is listed in the [core README](../lsd-mono-jvm/README.md#configuration-reference)). That stays in the same diagram. It is not a new page. The step a scenario stopped at gets its section; the steps Cucumber then skips get none, because they never run, and the description lists them as `(skipped)`.
+Set `lsd.mono.cucumber.splitBySteps=true` to insert a section at each step (every property is listed in the [core README](../../docs/jvm-api.md#configuration-reference)). That stays in the same diagram. It is not a new page. The step a scenario stopped at gets its section; the steps Cucumber then skips get none, because they never run, and the description lists them as `(skipped)`.
 
 ## Where the report is written
 
@@ -128,13 +137,7 @@ The diagram for the scenario above after a successful feature.
 
 ![place_order diagram with participant shapes](docs/readme/diagram.png)
 
-Regenerate it from the current UI:
-
-```bash
-./gradlew :modules:lsd-mono-cucumber-8:readmeSamples
-```
-
-The task runs the feature through `LsdCucumberPlugin`, then screenshots the packaged shell with headless Chromium via the report UI's `readme-samples.mjs` (lsd-mono-report-html/ui). It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
+How to regenerate it is in [CONTRIBUTING.md](../../CONTRIBUTING.md#module-readme-screenshots).
 
 ## Build
 

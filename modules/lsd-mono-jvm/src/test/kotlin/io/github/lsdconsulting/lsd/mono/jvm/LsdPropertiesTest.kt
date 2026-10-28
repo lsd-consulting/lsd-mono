@@ -48,10 +48,10 @@ class LsdPropertiesTest {
     }
 
     @Test
-    fun `the README lists every key with its default`() {
+    fun `the API reference lists every key with its default`() {
         val rows =
             Path
-                .of("README.md")
+                .of("../../docs/jvm-api.md")
                 .readLines()
                 .filter { it.startsWith("| `lsd.mono.") }
                 .map { line -> line.split('|').map { it.trim().removeSurrounding("`") } }

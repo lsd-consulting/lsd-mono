@@ -111,10 +111,13 @@ heading, with a link to the commit, and the text of every `BREAKING CHANGE:` foo
 
 ### The README install snippets
 
-The root README's install snippets show the latest release, between the `<!-- release-version:start -->` and
-`<!-- release-version:end -->` markers. After each new release the `readme` job in release.yml runs
-`tools/release/update-readme-version.sh <version>`, which rewrites every x.y.z inside the markers, and opens a pull
-request `docs: show <version> in the README install snippets` from the branch `docs/readme-v<version>`.
+The install snippets in the root README and in each module README show the latest release, between the
+`<!-- release-version:start -->` and `<!-- release-version:end -->` markers (one pair per file, each at the start of a
+line). Each snippet sits next to a Maven Central badge for every artifact it installs. After each new release the
+`readme` job in release.yml runs `tools/release/update-readme-version.sh <version>`, which finds every tracked
+`README.md` (and `docs/*.md`) with the markers and rewrites every x.y.z inside them, and opens one pull request
+`docs: show <version> in the README install snippets` from the branch `docs/readme-v<version>` with every file it changed.
+Keep any other version (such as Cucumber's) outside the markers, or the script rewrites it.
 
 - It does not push to main, which requires the `gate` check.
 - With the `README_PR_TOKEN` repository secret set (a fine-grained PAT or GitHub App token with contents and
@@ -122,8 +125,9 @@ request `docs: show <version> in the README install snippets` from the branch `d
 - Without it, the job falls back to the workflow's token. A pull request opened with that token starts no workflows, so
   close and reopen it to run `gate`, then merge it.
 - It is a docs commit, so it releases nothing.
-- `RootReadmeExampleTest` checks that the markers are there once each, and that the Gradle and Maven snippets inside
-  them show one x.y.z version and no `X.Y.Z` placeholder.
+- `RootReadmeExampleTest` checks that the markers are there once each in every such README, that the snippets inside
+  them show the root README's x.y.z version with no `X.Y.Z` or `<version>` placeholder and a badge per artifact, and
+  that the script rewrites every one of them and changes nothing on a second run.
 - To move the version by hand, run the script with the version and commit the result.
 
 The artifacts show on Maven Central (`repo1.maven.org`) a few minutes to half an hour after the job.

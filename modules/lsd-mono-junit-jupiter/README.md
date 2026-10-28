@@ -1,16 +1,22 @@
 # lsd-mono-junit-jupiter
 
+Part of [LSD: living sequence diagrams](../../README.md).
+
 `lsd-mono-junit-jupiter` is the JUnit Jupiter 6 extension for [lsd-mono-jvm](../lsd-mono-jvm) that turns each test into a living sequence diagram. You still capture the interactions yourself with `LsdContext` inside the test. When the test ends, the extension stores a passed test as a successful scenario, and a failure or abort with a structured error. It writes the report when the class finishes. It depends on first-party `lsd-mono-jvm`, not the old published `lsd-core`, and there is no PlantUML on this path.
 
 It replaces the earlier published `lsd-junit5` and `lsd-junit-jupiter` libraries for projects that use LSD Mono.
 
 ## Depend on it
 
+<!-- release-version:start (the release workflow updates the versions up to the end marker) -->
+
+[![Maven Central: lsd-mono-junit-jupiter](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-junit-jupiter?label=lsd-mono-junit-jupiter)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-junit-jupiter)
+
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:<version>")
+testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:0.15.0")
 ```
 
-The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-junit-jupiter"))`.
+<!-- release-version:end -->
 
 That pulls in `lsd-mono-jvm` and the Jupiter API. You still need a Jupiter engine on the test runtime classpath (the `junit-jupiter` bundle is enough).
 
@@ -98,7 +104,7 @@ build/reports/lsd/PlaceOrderTest-<hash>-diagram.html
 
 `<hash>` is 8 hex characters from the class's unique id, so two classes with the same simple name in different packages get separate reports. It is the same on every run. Open the `-diagram.html` file: it is the interactive diagram. Next to it, `PlaceOrderTest-<hash>-report.json` holds the data. `createIndex()` (called by the extension) writes `index.html`, which shows every report in the directory in one page, failed first, including ones written by other Gradle test forks.
 
-Override the directory with `lsd.mono.report.outputDir` (every property is listed in the [core README](../lsd-mono-jvm/README.md#configuration-reference)). In this module's own tests that is `build/reports/lsd-test`.
+Override the directory with `lsd.mono.report.outputDir` (every property is listed in the [core README](../../docs/jvm-api.md#configuration-reference)). In this module's own tests that is `build/reports/lsd-test`.
 
 Any `lsd.mono.*` property can also go in `src/test/resources/junit-platform.properties`, next to
 your JUnit settings. JUnit configuration parameters come after system properties and
@@ -141,13 +147,7 @@ The diagram for the scenario above after a successful test.
 
 ![PlaceOrderTest diagram with participant shapes](docs/readme/diagram.png)
 
-Regenerate it from the current UI:
-
-```bash
-./gradlew :modules:lsd-mono-junit-jupiter:readmeSamples
-```
-
-The task captures the same scenario the README shows (with the titles `LsdExtension` would use), then screenshots the packaged shell with headless Chromium via the report UI's `readme-samples.mjs` (lsd-mono-report-html/ui). It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
+How to regenerate it is in [CONTRIBUTING.md](../../CONTRIBUTING.md#module-readme-screenshots).
 
 ## Build
 

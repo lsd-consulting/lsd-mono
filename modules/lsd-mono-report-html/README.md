@@ -1,5 +1,7 @@
 # lsd-mono-report-html
 
+Part of [LSD: living sequence diagrams](../../README.md). An internal building block: most users depend on [`lsd-mono-jvm`](../lsd-mono-jvm/README.md) or a framework module instead.
+
 Writes an LSD report: the model ([lsd-mono-report-model](../lsd-mono-report-model)) as
 `<stem>-report.json`, the interactive report page `<stem>-diagram.html`, `<stem>-report.js` for
 the index page, `<stem>-payloads.js` with the message bodies, and `index.html`, which lists every

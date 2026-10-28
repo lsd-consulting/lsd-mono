@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.name
@@ -232,5 +233,78 @@ class RootReadmeExampleTest {
         )
         assertTrue("lsd-mono-spring-boot-4:${versions.single()}\")" in block, "the Gradle snippet is inside the markers")
         assertTrue("<version>${versions.single()}</version>" in block, "the Maven snippet is inside the markers")
+    }
+
+    private val markerStart = "<!-- release-version:start"
+    private val markerEnd = "<!-- release-version:end -->"
+
+    /** The READMEs with install snippets: the root one and every module's that has the markers. */
+    private fun markedReadmes(): List<Path> =
+        listOf(readme) +
+            Path
+                .of("..")
+                .toFile()
+                .listFiles()!!
+                .map { it.toPath().resolve("README.md") }
+                .filter { it.toFile().isFile && it.readLines().any { line -> line.startsWith(markerStart) } }
+                .sorted()
+
+    /**
+     * Every module README's install snippet shows the root README's released version between the
+     * markers, next to a Maven Central badge for each artifact it installs, never `<version>`.
+     */
+    @Test
+    fun `every module install snippet shows the released version`() {
+        val rootVersion =
+            Regex("""lsd-mono-spring-boot-4:(\d+\.\d+\.\d+)""").find(readme.readText())!!.groupValues[1]
+        val modules = markedReadmes().drop(1)
+        assertTrue(modules.size >= 7, "the module READMEs with install snippets: $modules")
+        Path.of("..").toFile().listFiles()!!.map { it.toPath().resolve("README.md") }.filter { it.toFile().isFile }.forEach {
+            assertTrue("<version>" !in it.readText().replace("<version>$rootVersion</version>", ""), "$it shows a real version, not <version>")
+        }
+        modules.forEach { path ->
+            val text = path.readText()
+            assertEquals(1, text.split(markerStart).size - 1, "$path has one release-version start marker")
+            assertEquals(1, text.split(markerEnd).size - 1, "$path has one release-version end marker")
+            val block = text.substringAfter(markerStart).substringBefore(markerEnd)
+            val versions = Regex("""\b\d+\.\d+\.\d+\b""").findAll(block).map { it.value }.toSet()
+            assertEquals(setOf(rootVersion), versions, "$path shows the root README's version")
+            Regex("""io\.github\.lsd-consulting:([\w-]+):""").findAll(block).map { it.groupValues[1] }.forEach { artifact ->
+                assertTrue(
+                    "](https://img.shields.io/maven-central/v/io.github.lsd-consulting/$artifact?" in block &&
+                        "(https://central.sonatype.com/artifact/io.github.lsd-consulting/$artifact)" in block,
+                    "$path has a Maven Central badge for $artifact",
+                )
+            }
+        }
+    }
+
+    /** tools/release/update-readme-version.sh rewrites every marked README, only between the markers, and is idempotent. */
+    @Test
+    fun `the release script rewrites every marked README`(@TempDir dir: Path) {
+        val copies =
+            markedReadmes().mapIndexed { i, path ->
+                dir.resolve("$i.md").also { Files.copy(path, it) }
+            }
+        fun run() {
+            val process =
+                ProcessBuilder(listOf("bash", "../../tools/release/update-readme-version.sh", "98.76.54") + copies.map { it.toString() })
+                    .redirectErrorStream(true)
+                    .start()
+            val output = process.inputStream.bufferedReader().readText()
+            assertEquals(0, process.waitFor(), output)
+        }
+        run()
+        val once = copies.map { it.readText() }
+        run()
+        assertEquals(once, copies.map { it.readText() }, "a second run changes nothing")
+        markedReadmes().zip(once).forEach { (original, rewritten) ->
+            val block = rewritten.substringAfter(markerStart).substringBefore(markerEnd)
+            val versions = Regex("""\b\d+\.\d+\.\d+\b""").findAll(block).map { it.value }.toSet()
+            assertEquals(setOf("98.76.54"), versions, "the script rewrote $original")
+            val text = original.readText()
+            assertEquals(text.substringBefore(markerStart), rewritten.substringBefore(markerStart), "nothing before the markers changes in $original")
+            assertEquals(text.substringAfter(markerEnd), rewritten.substringAfter(markerEnd), "nothing after the markers changes in $original")
+        }
     }
 }
