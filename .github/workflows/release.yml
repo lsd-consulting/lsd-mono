@@ -261,8 +261,10 @@ jobs:
   readme:
     # Opens a docs pull request that writes the new version into the README install snippets (the
     # release-version markers; docs/releasing.md). main requires the gate check, so the job does not
-    # push to main. A pull request this job's token opens starts no workflows: close and reopen it
-    # to run gate, then merge it. A docs commit releases nothing.
+    # push to main. With the README_PR_TOKEN secret set (a fine-grained PAT or GitHub App token with
+    # contents and pull-requests write on lsd-mono), the pull request's checks run on their own.
+    # Without it the job falls back to github.token, whose pull requests start no workflows: close
+    # and reopen it to run gate, then merge it. A docs commit releases nothing.
     needs: release
     if: needs.release.outputs.version
     runs-on: ubuntu-26.04
@@ -274,9 +276,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
+          token: ${{ secrets.README_PR_TOKEN || github.token }}
       - name: Open the README version pull request
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.README_PR_TOKEN || github.token }}
           VERSION: ${{ needs.release.outputs.version }}
         run: |
           tools/release/update-readme-version.sh "$VERSION" README.md
@@ -292,5 +295,5 @@ jobs:
           git push origin "$branch"
           gh pr create --base main --head "$branch" \
             --title "docs: show $VERSION in the README install snippets" \
-            --body "Written by the release workflow after v$VERSION (docs/releasing.md). Close and reopen this pull request to run gate, then merge it."
+            --body "Written by the release workflow after v$VERSION (docs/releasing.md). Merge it once gate passes (if no checks ran, close and reopen it to run gate)."
           echo "Opened the README version pull request for $VERSION." >> "$GITHUB_STEP_SUMMARY"
