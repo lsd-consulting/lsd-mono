@@ -83,7 +83,10 @@ tasks.test {
             rootProject.layout.projectDirectory.file("tools/release/update-readme-version.sh"),
             rootProject.layout.projectDirectory.file("docs/versioning-notes.md"),
             rootProject.layout.projectDirectory.file("modules/README.md"),
-            rootProject.layout.projectDirectory.dir("modules").asFileTree.matching { include("*/README.md") },
+            rootProject.layout.projectDirectory
+                .dir("modules")
+                .asFileTree
+                .matching { include("*/README.md") },
             rootProject.layout.projectDirectory.file("settings.gradle.kts"),
         ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("readmes")

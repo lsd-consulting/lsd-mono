@@ -281,11 +281,14 @@ class RootReadmeExampleTest {
 
     /** tools/release/update-readme-version.sh rewrites every marked README, only between the markers, and is idempotent. */
     @Test
-    fun `the release script rewrites every marked README`(@TempDir dir: Path) {
+    fun `the release script rewrites every marked README`(
+        @TempDir dir: Path,
+    ) {
         val copies =
             markedReadmes().mapIndexed { i, path ->
                 dir.resolve("$i.md").also { Files.copy(path, it) }
             }
+
         fun run() {
             val process =
                 ProcessBuilder(listOf("bash", "../../tools/release/update-readme-version.sh", "98.76.54") + copies.map { it.toString() })
