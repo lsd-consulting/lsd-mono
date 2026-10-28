@@ -3,7 +3,6 @@
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-jvm?label=Maven%20Central)](https://central.sonatype.com/namespace/io.github.lsd-consulting)
 [![Build](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml/badge.svg?branch=main)](https://github.com/lsd-consulting/lsd-mono/actions/workflows/gradle.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-![Java 17+](https://img.shields.io/badge/Java-17%2B-informational)
 [![Live report](https://img.shields.io/badge/demo-live%20report-brightgreen)](https://lsd-consulting.github.io/lsd-mono/example-report.html)
 
 **See how your system really talks.** Interactive sequence diagrams of the calls, messages and payloads between your services, drawn from your tests, from your own code, or by hand.
@@ -22,7 +21,7 @@ Each diagram shows who called whom, with what payload, how long it took, and whe
 
 ### JVM (Kotlin, Java)
 
-Every artifact is `io.github.lsd-consulting:<artifact>:X.Y.Z`, where `X.Y.Z` is the version on the Maven Central badge above. They run on Java 17 or later (`lsd-mono-http4k-6` needs Java 21, as http4k 6 does), and the report lands in `build/reports/lsd` (open `index.html`).
+Every artifact is `io.github.lsd-consulting:<artifact>:0.15.0`; the snippets below show 0.15.0, and the Maven Central badge above shows the latest version. They run on Java 17 or later (`lsd-mono-http4k-6` needs Java 21, as http4k 6 does), and the report lands in `build/reports/lsd` (open `index.html`).
 
 | Stack | Add (test scope) | Then | Sample |
 | --- | --- | --- | --- |
@@ -40,7 +39,7 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:X.Y.Z") // the version on the badge above
+    testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:0.15.0")
 }
 ```
 
@@ -50,7 +49,7 @@ Maven:
 <dependency>
     <groupId>io.github.lsd-consulting</groupId>
     <artifactId>lsd-mono-spring-boot-4</artifactId>
-    <version>X.Y.Z</version><!-- the version on the badge above -->
+    <version>0.15.0</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -111,10 +110,7 @@ A thread that is not bound to a test, such as an HTTP server thread, captures in
 
 ## Configuration
 
-Every setting is a `lsd.mono.*` property, read from a system property, an environment variable
-(`LSD_MONO_REPORT_OUTPUTDIR`), a JUnit configuration parameter, or `lsd-mono.properties` on the
-classpath, in that order. The [configuration reference](modules/lsd-mono-jvm/README.md#configuration-reference)
-lists each one with its default; a test keeps that table in step with the code.
+Every setting is a `lsd.mono.*` property, read from a system property, an environment variable (`LSD_MONO_REPORT_OUTPUTDIR`), a JUnit configuration parameter, or `lsd-mono.properties` on the classpath, in that order. The [configuration reference](modules/lsd-mono-jvm/README.md#configuration-reference) lists each one with its default; a test keeps that table in step with the code.
 
 ## Usage ping
 
@@ -122,7 +118,7 @@ A report page from a release opens one tiny, never-awaited request to jsDelivr n
 
 ## Versions and releases
 
-Releases go out weekly, on Tuesday mornings (UK time) when there is something to release, and every artifact shares one version ([docs/releasing.md](docs/releasing.md#when-releases-happen)). The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed. Until v1 they are `0.y.z`, and a minor release may change the API.
+Releases go out weekly, usually on Tuesday mornings (UK time), when there is something to release, and every artifact shares one version ([docs/releasing.md](docs/releasing.md#when-releases-happen)). The [release notes](https://github.com/lsd-consulting/lsd-mono/releases) say what changed. Until v1 they are `0.y.z`, and a minor release may change the API.
 
 ### Moving from lsd-mono-core
 
@@ -134,13 +130,19 @@ Releases go out weekly, on Tuesday mornings (UK time) when there is something to
 | Core package | `io.lsdconsulting.lsd.mono.core` | `io.github.lsdconsulting.lsd.mono.jvm` |
 | Other modules' packages | `io.lsdconsulting.lsd.mono.*` | `io.github.lsdconsulting.lsd.mono.*` |
 
-Change the dependency and the imports (replace `io.lsdconsulting.lsd.mono.core` first, then `io.lsdconsulting.lsd.mono`). The other artifacts keep their names. v0.15.0, the release that renamed it, also published a relocation POM for `lsd-mono-core` at 0.15.0, so Maven follows that version to `lsd-mono-jvm` with a warning; the imports still have to change. Only 0.15.0 relocates: on an earlier version, change the coordinate from `lsd-mono-core` to `lsd-mono-jvm` by hand.
+To move:
+
+- **Change the dependency** from `lsd-mono-core` to `lsd-mono-jvm`. The other artifacts keep their names.
+- **Replace the imports:** `io.lsdconsulting.lsd.mono.core` first, then `io.lsdconsulting.lsd.mono`.
+- **The relocation POM exists only for 0.15.0.** v0.15.0, the release that renamed it, published `lsd-mono-core` 0.15.0 as a relocation, so Maven follows that version to `lsd-mono-jvm` with a warning; the imports still have to change. On an earlier version, change the coordinate by hand.
+
+### Coming from the earlier LSD libraries
+
+Their behaviour is upstream at [lsd-core](https://github.com/lsd-consulting/lsd-core); it is not in this tree.
 
 ## Contributing
 
 Building lsd-mono, depending on the modules from another project in this build, the source layout, regenerating the README tour and building the sample site locally are in [CONTRIBUTING.md](CONTRIBUTING.md). [Generated files](docs/generated-files.md) lists every generated file, and [CI](docs/ci.md) describes the workflows.
-
-Coming from the earlier LSD libraries? Their behaviour is upstream at [lsd-core](https://github.com/lsd-consulting/lsd-core); it is not in this tree.
 
 ## License
 
