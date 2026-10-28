@@ -117,8 +117,11 @@ The root README's install snippets show the latest release, between the `<!-- re
 request `docs: show <version> in the README install snippets` from the branch `docs/readme-v<version>`.
 
 - It does not push to main, which requires the `gate` check.
-- A pull request opened with the workflow's token starts no workflows, so close and reopen it to run `gate`, then merge
-  it. It is a docs commit, so it releases nothing.
+- With the `README_PR_TOKEN` repository secret set (a fine-grained PAT or GitHub App token with contents and
+  pull-requests write on lsd-mono), the job pushes and opens the pull request with it, and its checks run on their own.
+- Without it, the job falls back to the workflow's token. A pull request opened with that token starts no workflows, so
+  close and reopen it to run `gate`, then merge it.
+- It is a docs commit, so it releases nothing.
 - `RootReadmeExampleTest` checks that the markers are there once each, and that the Gradle and Maven snippets inside
   them show one x.y.z version and no `X.Y.Z` placeholder.
 - To move the version by hand, run the script with the version and commit the result.
