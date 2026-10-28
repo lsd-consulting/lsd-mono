@@ -2,6 +2,7 @@
 // Components, #105), and the report hero above it.
 import type { Scenario } from '../types'
 import { scenarioDescriptionHtml } from '../ui/scenario-summary'
+import { statusDefinitionId } from '../ui/status-legend'
 import { timingStripHtml } from '../ui/timing'
 import { panelControlsHtml, renderDiagramHtml } from '../lib/sequence-diagram'
 import { componentViewHtml } from '../lib/component-view'
@@ -49,7 +50,7 @@ export function scenarioHtml(s: Scenario): string {
   <article class="scenario-card ${escapeAttr(s.status)}" id="card-${escapeAttr(s.id)}" data-status="${escapeAttr(s.status)}" aria-labelledby="scenario-title">
     <div class="scenario-head">
       <h2 id="scenario-title" tabindex="-1">${escapeHtml(s.title)}</h2>
-      <span class="badge ${escapeAttr(s.status)}">${escapeHtml(s.status)}</span>
+      <span class="badge ${escapeAttr(s.status)}" aria-describedby="${escapeAttr(statusDefinitionId(s.status))}">${escapeHtml(s.status)}</span>
     </div>
     ${timingStripHtml(s)}
     <div class="scenario-body">
