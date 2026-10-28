@@ -254,3 +254,42 @@
 .theme-menu [aria-checked="true"] .theme-menu-check {
   visibility: visible;
 }
+
+/* Search's × (#162): shown only while there is text; at least 24×24 px to hit. */
+.search-wrap input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.search-wrap input {
+  padding-right: 40px;
+}
+.search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.search-clear:hover {
+  background: var(--surface-2, var(--border));
+  color: var(--text);
+}
+.search-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.search-clear[hidden],
+.kbd[hidden] {
+  display: none;
+}
