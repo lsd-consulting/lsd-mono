@@ -1,6 +1,7 @@
 // What the page's listeners decide, without doing it (#99): each function reads the event and
 // the state it is given and names the action, so the listeners in keys.ts, chrome.ts and nav.ts
 // only carry it out, and the decisions get unit tests that run in seconds.
+import { collapseFindFrom } from '../lib/diagram/find-binding'
 import type { HashRef } from '../lib/report-hash'
 import type { Scenario } from '../types'
 import { defaultScenarioId } from '../ui/selection'
@@ -64,7 +65,10 @@ export function keyTarget(target: HTMLElement): KeyTarget {
  */
 export function fieldEscapeTargets(field: Element): HTMLElement[] {
   const card = field.closest('.seq-diagram')
-  if (card) return [...card.querySelectorAll<HTMLElement>('.seq-scroll')].slice(0, 1)
+  if (card)
+    return [collapseFindFrom(field), ...card.querySelectorAll<HTMLElement>('.seq-scroll')]
+      .filter((el): el is HTMLElement => el !== null)
+      .slice(0, 2)
   const doc = field.ownerDocument
   const candidates = [
     doc.querySelector<HTMLElement>('#main .scenario-head h2'),

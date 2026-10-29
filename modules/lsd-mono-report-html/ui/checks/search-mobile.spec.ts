@@ -1,6 +1,7 @@
 import { devices, expect, test, type Page } from '@playwright/test'
 import { PAGES, sectionsReport } from './diagram-pages'
 import { openReport } from './open-report'
+import { openFind } from './ux-helpers'
 
 /**
  * Find in the diagram the way a phone types: a tap on the field, then text from the soft
@@ -43,6 +44,7 @@ for (const [phone, device] of Object.entries(PHONES)) {
         await open(page, sectionsReport(30))
         await expect(page.locator('.seq-svg')).toBeVisible()
         const find = page.locator('[data-diagram-find]')
+        await openFind(page)
         await find.tap()
         // The keyboard takes about half the screen.
         const size = page.viewportSize()!
@@ -73,6 +75,7 @@ for (const [phone, device] of Object.entries(PHONES)) {
         await open(page, sectionsReport(30))
         await expect(page.locator('.seq-svg')).toBeVisible()
         const find = page.locator('[data-diagram-find]')
+        await openFind(page)
         await find.tap()
         await page.keyboard.insertText('call 2.1')
         const count = page.locator('.diagram-find-count')
@@ -97,6 +100,7 @@ for (const [phone, device] of Object.entries(PHONES)) {
         await open(page, sectionsReport(30))
         await expect(page.locator('.seq-svg')).toBeVisible()
         const find = page.locator('[data-diagram-find]')
+        await openFind(page)
         await find.tap()
         await page.keyboard.type('call 2.25', { delay: 30 })
         await page.keyboard.press('Enter')

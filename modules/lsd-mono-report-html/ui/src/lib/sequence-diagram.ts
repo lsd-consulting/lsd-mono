@@ -39,6 +39,10 @@ function mountDiagram(scenario: Scenario, labelMaxWidth: number): MountedDiagram
 }
 
 /** Bar chart, drawn in currentColor. Decorative: the button's text is its name. */
+/** Find's magnifier, the collapsed Find on a narrow toolbar (#123). */
+const FIND_ICON_SVG =
+  '<svg class="zoom-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+
 const METRICS_ICON_SVG =
   '<svg class="panel-btn-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M2.5 13.5h11M4.5 11V8M8 11V4M11.5 11V6.5"/></svg>'
 
@@ -83,14 +87,16 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   const find = scenarioSearchState(scenario.id)
   const steppable = find.hits.length > 0 ? '' : ' disabled'
   const label = findFieldLabel(view.includePayloads && scenarioHasPayloads(scenario))
+  const findId = `find-${scenario.id}`
   // The hidden-participants chip is drawn by bindParticipantFilter, and only while
   // something is hidden. The status line announces each hide and show.
   return `
-    <div class="seq-toolbar" role="toolbar" aria-label="Diagram view">
+    <div class="seq-toolbar" role="toolbar" aria-label="Diagram view"${view.query ? ' data-find-open' : ''}>
       ${zoomControlsHtml(sequenceZoomShown(view))}
       <div class="participant-filter" data-participant-filter></div>
       <span class="participant-filter-status visually-hidden" role="status"></span>
-      <label class="diagram-find">
+      <button type="button" class="find-toggle" data-find-toggle aria-expanded="${view.query ? 'true' : 'false'}" aria-controls="${escapeAttr(findId)}" aria-label="Find in diagram" title="Find messages and notes">${FIND_ICON_SVG}</button>
+      <label class="diagram-find" id="${escapeAttr(findId)}">
         <span class="diagram-find-label">Find</span>
         <span class="find-field"><input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="${escapeAttr(label)}" autocomplete="off"/>${payloadToggleHtml(scenario, view)}</span>
         <span class="diagram-find-count" aria-live="polite">${searchStateHtml(find, view.query)}</span>
@@ -176,8 +182,8 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth: number): st
     : ''
   return `
     <div class="seq-diagram" style="${printWidthStyle(width)}">
-      ${jump}
       ${toolbarHtml(scenario, view)}
+      ${jump}
       ${legendsHtml(scenario)}
       ${textViewHtml(
         scenario,

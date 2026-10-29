@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { PAGES, sectionsReport } from './diagram-pages'
+import { openFind } from './ux-helpers'
 
 /**
  * The section jump list above a diagram brings that section to the top of the diagram, in the
@@ -61,6 +62,7 @@ for (const [pageName, open] of Object.entries(PAGES)) {
         await page.setViewportSize(viewport)
         await open(page, sectionsReport(perSection))
         await expect(page.locator('.seq-svg')).toBeVisible()
+        await openFind(page)
         for (const label of [`call 3.${perSection - 2}`, 'call 1.2']) {
           const find = page.locator('[data-diagram-find]')
           await find.fill(label)
