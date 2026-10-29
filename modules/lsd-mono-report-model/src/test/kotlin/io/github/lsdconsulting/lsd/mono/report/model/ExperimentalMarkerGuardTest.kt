@@ -3,13 +3,21 @@ package io.github.lsdconsulting.lsd.mono.report.model
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.io.IOException
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.io.path.invariantSeparatorsPathString
-import kotlin.io.path.isRegularFile
 import kotlin.io.path.readText
+import kotlin.io.path.writeText
 
 /**
  * Every public top-level declaration in lsd-mono-report-model and lsd-mono-report-html carries
@@ -28,6 +36,27 @@ class ExperimentalMarkerGuardTest {
                 }
             }
         assertEquals(emptyList<String>(), findings)
+    }
+
+    @Test
+    fun `the scan skips node_modules, build and hidden folders and missing roots`() {
+        val root = createTempDirectory("guard")
+        try {
+            for (path in listOf(
+                "src/main/A.kt",
+                "src/main/ui/node_modules/.vitest-cache/B.kt",
+                "src/main/build/C.kt",
+                "src/main/.cache/D.kt",
+                "src/main/E.txt",
+            )) {
+                root.resolve(path).also { it.parent.createDirectories() }.writeText("x")
+            }
+            val paths = kotlinSources(root, listOf(root.resolve("src/main"), root.resolve("gone"))).map { it.first }
+            assertEquals(listOf("src/main/A.kt"), paths)
+        } finally {
+            @OptIn(kotlin.io.path.ExperimentalPathApi::class)
+            root.deleteRecursively()
+        }
     }
 
     @Test
@@ -120,15 +149,47 @@ class ExperimentalMarkerGuardTest {
         fun guardedSources(): List<Pair<String, String>> {
             var root = Path.of("").toAbsolutePath()
             while (!root.resolve("settings.gradle.kts").exists()) root = root.parent
-            return Files.walk(root.resolve("modules")).use { paths ->
-                paths
-                    .filter { it.isRegularFile() && it.extension == "kt" }
-                    .map { root.relativize(it).invariantSeparatorsPathString }
-                    .filter { GUARDED.matches(it) }
-                    .sorted()
-                    .map { it to root.resolve(it).readText() }
-                    .toList()
+            return kotlinSources(root, listOf("model", "html").map { root.resolve("modules/lsd-mono-report-$it/src/main") })
+                .filter { (path, _) -> GUARDED.matches(path) }
+        }
+
+        /** Folders the scan never enters: other tools write and delete files there while tests run (#171). */
+        fun skipped(dir: Path): Boolean {
+            val name = dir.fileName?.toString() ?: return false
+            return name == "node_modules" || name == "build" || name.startsWith(".")
+        }
+
+        /**
+         * (path relative to [root], text) for every .kt file under [starts], sorted. Skips [skipped]
+         * folders, and a file or folder that vanishes between listing and reading is left out rather
+         * than failing the scan.
+         */
+        fun kotlinSources(root: Path, starts: List<Path>): List<Pair<String, String>> {
+            val found = mutableListOf<Pair<String, String>>()
+            for (start in starts.filter { it.exists() }) {
+                Files.walkFileTree(
+                    start,
+                    object : SimpleFileVisitor<Path>() {
+                        override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult =
+                            if (dir != start && skipped(dir)) FileVisitResult.SKIP_SUBTREE else FileVisitResult.CONTINUE
+
+                        override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                            if (attrs.isRegularFile && file.extension == "kt") {
+                                try {
+                                    found += root.relativize(file).invariantSeparatorsPathString to file.readText()
+                                } catch (_: NoSuchFileException) {
+                                    // Deleted after it was listed.
+                                }
+                            }
+                            return FileVisitResult.CONTINUE
+                        }
+
+                        override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult =
+                            if (exc is NoSuchFileException) FileVisitResult.CONTINUE else throw exc
+                    },
+                )
             }
+            return found.sortedBy { it.first }
         }
     }
 }
