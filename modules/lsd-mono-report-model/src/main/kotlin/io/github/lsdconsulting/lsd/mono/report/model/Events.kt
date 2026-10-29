@@ -12,7 +12,6 @@ package io.github.lsdconsulting.lsd.mono.report.model
  * and these classes or not, must tolerate an unknown `kind`, skipping it or showing it as unknown,
  * rather than fail or assume this list is complete.
  */
-@ExperimentalLsdReportModel
 public sealed class EventJson {
     public abstract val id: String
     public abstract val startedAt: String?
@@ -23,7 +22,6 @@ public sealed class EventJson {
  * the diagram's edge. Made with [builder]; everything after [type] is optional, and lsd-mono-jvm
  * sets it from what it captured and how it timed it.
  */
-@ExperimentalLsdReportModel
 public class MessageEventJson internal constructor(
     override val id: String,
     public val from: String,
@@ -142,7 +140,6 @@ public class MessageEventJson internal constructor(
         )
 
     /** Makes a [MessageEventJson], with every optional field unset (null, or no attributes) until set. */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val from: String,
@@ -297,7 +294,6 @@ public class MessageEventJson internal constructor(
  * characters for [traceId] and 16 for the span ids; B3 ids, including a 64-bit [traceId], are
  * written as they are too.
  */
-@ExperimentalLsdReportModel
 public data class TraceJson
     @JvmOverloads
     constructor(
@@ -307,7 +303,6 @@ public data class TraceJson
     )
 
 /** A note, over a participant or beside the diagram. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class NoteEventJson internal constructor(
     override val id: String,
     public val text: String,
@@ -340,7 +335,6 @@ public class NoteEventJson internal constructor(
         )
 
     /** Makes a [NoteEventJson]: over its participant ([NotePlacementJson.OVER]) unless placed otherwise. */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val text: String,
@@ -366,7 +360,6 @@ public class NoteEventJson internal constructor(
 }
 
 /** A gap in time, drawn as a break in the lifelines. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class DelayEventJson internal constructor(
     override val id: String,
     public val label: String?,
@@ -391,7 +384,6 @@ public class DelayEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
     ) {
@@ -413,7 +405,6 @@ public class DelayEventJson internal constructor(
 }
 
 /** Empty space in the diagram. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class SpacerEventJson internal constructor(
     override val id: String,
     /** The height in pixels; the page's default when null. */
@@ -439,7 +430,6 @@ public class SpacerEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
     ) {
@@ -461,7 +451,6 @@ public class SpacerEventJson internal constructor(
 }
 
 /** A labelled line across the diagram. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class DividerEventJson internal constructor(
     override val id: String,
     public val label: String,
@@ -485,7 +474,6 @@ public class DividerEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val label: String,
@@ -505,7 +493,6 @@ public class DividerEventJson internal constructor(
 }
 
 /** The start of a titled section of the scenario. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class SectionEventJson internal constructor(
     override val id: String,
     public val title: String,
@@ -529,7 +516,6 @@ public class SectionEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val title: String,
@@ -549,7 +535,6 @@ public class SectionEventJson internal constructor(
 }
 
 /** A lifeline starting or stopping its activation bar. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class LifelineEventJson internal constructor(
     /** Whether the bar starts or stops. */
     public val kind: LifelineKindJson,
@@ -581,7 +566,6 @@ public class LifelineEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val kind: LifelineKindJson,
         private val id: String,

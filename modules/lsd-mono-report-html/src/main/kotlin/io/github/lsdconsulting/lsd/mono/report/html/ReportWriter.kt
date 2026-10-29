@@ -1,6 +1,5 @@
 package io.github.lsdconsulting.lsd.mono.report.html
 
-import io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel
 import io.github.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.github.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.github.lsdconsulting.lsd.mono.report.model.ReportSchema
@@ -48,10 +47,7 @@ import kotlin.concurrent.withLock
  * The writer reads no properties: what it adds itself, the index page's generator, time and
  * usage-ping switch, comes in [settings]. The index lock and the parsed index entries are shared
  * by every writer in the JVM.
- *
- * Experimental, as the model it takes is: see [ExperimentalLsdReportModel].
  */
-@ExperimentalLsdReportModel
 public class ReportWriter(
     private val settings: ReportWriterSettings,
 ) {

@@ -1,6 +1,5 @@
 package io.github.lsdconsulting.lsd.mono.report.html
 
-import io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel
 import java.time.Instant
 
 /**
@@ -9,7 +8,6 @@ import java.time.Instant
  * when null) and whether the page may send the usage ping ([usagePing]). The writer reads no
  * properties or environment of its own.
  */
-@ExperimentalLsdReportModel
 public class ReportWriterSettings
     @JvmOverloads
     constructor(

@@ -10,7 +10,6 @@ package io.github.lsdconsulting.lsd.mono.report.model
  * newer release adds optional setters, which breaks no caller. The small fixed ones ([FactJson],
  * [MetricJson], [TraceJson], [WarningJson], [PairAccuracyJson]) are data classes.
  */
-@ExperimentalLsdReportModel
 public class ReportJson internal constructor(
     /** The report's title, shown at the top of the page and in the index. */
     public val title: String,
@@ -45,7 +44,6 @@ public class ReportJson internal constructor(
         )
 
     /** Makes a [ReportJson]. The options default as [ReportOptionsJson.Builder]'s do; there are no scenarios until added. */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val title: String,
         private val generatedAt: String,
@@ -79,7 +77,6 @@ public class ReportJson internal constructor(
 }
 
 /** Switches for the report page. */
-@ExperimentalLsdReportModel
 public class ReportOptionsJson internal constructor(
     /** When false, scenarios carry no `metrics`. */
     public val metricsEnabled: Boolean,
@@ -116,7 +113,6 @@ public class ReportOptionsJson internal constructor(
         )
 
     /** Makes [ReportOptionsJson]: metrics on, labels cut at 200, the usage ping on, source [KnownReportSource.API]. */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor() {
         private var metricsEnabled: Boolean = true
         private var labelMaxWidth: Int = 200

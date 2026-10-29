@@ -27,20 +27,11 @@ report `reports/minimal.json` byte for byte, and what it writes follows the repo
 | **Is** | `ReportWriter`, its `ReportWriterSettings` and `WrittenReport`, in `io.github.lsdconsulting.lsd.mono.report.html` |
 | **Is not** | Capture, timing or properties: the caller passes everything the files need |
 
-## Experimental: no binary-compatibility promise yet
+## Compatibility
 
-`ReportWriter`, `ReportWriterSettings` and `WrittenReport` are marked `@ExperimentalLsdReportModel`,
-as every type of the model they take is ([lsd-mono-report-model](../lsd-mono-report-model)): a
-`RequiresOptIn` marker at level ERROR. A Kotlin caller opts in with
-`@OptIn(ExperimentalLsdReportModel::class)` or
-`-opt-in=io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel`.
-
-There is no binary-compatibility promise until the marker goes. **Java callers don't see opt-in
-markers**, so for Java this note is the only warning. The model's wide classes are built with builders
-([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)), the shape meant for 1.0; the
-marker stays until it has been used for a release or two. lsd-mono-jvm's own API does not
-expose either module, so a test that uses lsd-mono-jvm, its JUnit or Cucumber integration is not
-affected.
+`ReportWriter`, `ReportWriterSettings` and `WrittenReport` are no longer experimental, and neither is
+the model they take ([lsd-mono-report-model](../lsd-mono-report-model#compatibility)): no opt-in is
+needed: remove any `@OptIn(ExperimentalLsdReportModel::class)`, as the annotation is gone. lsd-mono-jvm's own API does not expose either module.
 
 The writer reads no properties. `ReportWriterSettings` gives what the index page says beyond the
 reports: the generator, the time (the time of writing when it is null) and whether the page may send

@@ -10,14 +10,6 @@ plugins {
 description =
     "LSD Mono report writer: writes a report as JSON and as the interactive, self-contained HTML page, with the report UI bundled"
 
-// The report model is experimental (@ExperimentalLsdReportModel); the writer takes it, and is marked the
-// same way.
-kotlin {
-    compilerOptions {
-        optIn.add("io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel")
-    }
-}
-
 // Line coverage was 95.3% when the floor was set, from this module's own tests. lsd-mono-jvm's
 // tests exercise the writer too, but Kover counts each module's tests only.
 lsdCoverage {

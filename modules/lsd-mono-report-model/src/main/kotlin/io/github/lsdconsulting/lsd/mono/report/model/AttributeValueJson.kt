@@ -10,7 +10,6 @@ package io.github.lsdconsulting.lsd.mono.report.model
  * is one, such as `http.route`, `messaging.destination.name` or, on a participant, `service.name`.
  * Keys starting `lsd.` are kept for lsd-mono's own.
  */
-@ExperimentalLsdReportModel
 public class AttributeValueJson private constructor(
     /** The value: a String, Boolean, Long or Double, or a List of one of those. */
     public val value: Any,

@@ -102,7 +102,7 @@ See [the report UI's README](modules/lsd-mono-report-html/ui/README.md) for how 
   `modules/lsd-mono-jvm/api/lsd-mono-jvm.api`: run `./gradlew updateKotlinAbi` and commit the dump
   with the change, so it is reviewed. Report model and writer types (`lsd-mono-report-model`,
   `lsd-mono-report-html`) must never appear in core's public API: core's users would get "cannot
-  access class" errors, and the model's experimental opt-in would leak into core's API.
+  access class" errors.
 - **No deprecation shims.** Until v1, change the API instead of keeping an old form, and say what to change in a
   `BREAKING CHANGE:` footer.
 - **Conventional commits.** `type(scope)!: subject`, lower case, no full stop. The types, and which of them
