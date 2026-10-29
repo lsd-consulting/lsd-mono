@@ -47,13 +47,19 @@ export function isLegacy(data: unknown): boolean {
   return version === undefined || version === null || (typeof version === 'string' && version.startsWith('0.'))
 }
 
-/** A generator as 1.0.0 writes it, from a 0.x one's `"name version"` text. */
+// What counts as the version in a 0.x generator's text: 0.15.0, v1.2, 0.3.1-SNAPSHOT.
+const LEGACY_VERSION = /^v?\d+(\.\d+)*([-+.][0-9A-Za-z.-]+)?$/
+
+/** A generator as 1.0.0 writes it, from a 0.x one's `"name version"` text; without a version when the rest is not one. */
 export function legacyGenerator(generator: unknown): Generator {
   if (typeof generator === 'object' && generator !== null && 'name' in generator) return generator as Generator
   const text = typeof generator === 'string' ? generator.trim() : ''
   const space = text.indexOf(' ')
   if (space < 0) return { name: text || 'unknown' }
-  return { name: text.slice(0, space), version: text.slice(space + 1) }
+  const version = text.slice(space + 1).trim()
+  // Only a version-shaped rest is a version ("lsd-mono-jvm 0.15.0"); "(conformance)" stays in the name.
+  if (!LEGACY_VERSION.test(version)) return { name: text }
+  return { name: text.slice(0, space), version }
 }
 
 type Json = Record<string, unknown>

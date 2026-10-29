@@ -146,7 +146,7 @@ public class ReportWriter(
         return index
     }
 
-    /** Failures first, then warnings, passes, aborted and skipped; by title within each. */
+    /** Failures first, then warnings, aborted, passes and skipped; by title within each. */
     private val indexOrder: Comparator<ReportFile> =
         compareBy<ReportFile> { STATUS_ORDER.indexOf(it.status).let { rank -> if (rank < 0) STATUS_ORDER.size else rank } }
             .thenBy { it.title.lowercase() }
@@ -378,7 +378,7 @@ public class ReportWriter(
         private const val INDEX_TITLE = "LSD reports"
         private const val MAX_TITLE_CHARS = 80
         private val jvmIndexLock = ReentrantLock()
-        private val STATUS_ORDER = listOf("error", "warn", "success", "aborted", "skipped")
+        private val STATUS_ORDER = listOf("error", "warn", "aborted", "success", "skipped")
 
         /**
          * Parsed index entries, per entry file, kept while the file's size and modified time are

@@ -60,6 +60,11 @@ describe('a report from before 1.0.0', () => {
   it('splits a generator text into a name and a version', () => {
     expect(legacyGenerator('lsd-mono-jvm 0.9.2')).toEqual({ name: 'lsd-mono-jvm', version: '0.9.2' })
     expect(legacyGenerator('custom')).toEqual({ name: 'custom' })
+    expect(legacyGenerator('lsd-mono-jvm 0.15.0')).toEqual({ name: 'lsd-mono-jvm', version: '0.15.0' })
+    expect(legacyGenerator('lsd-mono-jvm v1.2')).toEqual({ name: 'lsd-mono-jvm', version: 'v1.2' })
+    expect(legacyGenerator('lsd-mono-jvm 0.3.1-SNAPSHOT')).toEqual({ name: 'lsd-mono-jvm', version: '0.3.1-SNAPSHOT' })
+    expect(legacyGenerator('lsd-mono-core (conformance)')).toEqual({ name: 'lsd-mono-core (conformance)' })
+    expect(legacyGenerator('my adapter tool')).toEqual({ name: 'my adapter tool' })
     expect(legacyGenerator({ name: 'x', version: '1' })).toEqual({ name: 'x', version: '1' })
   })
 
@@ -103,7 +108,7 @@ describe('a report from before 1.0.0', () => {
 describe('an index from before 1.0.0', () => {
   it('opens with message counts, five status counts and a generator object', () => {
     const index = normaliseIndex(JSON.parse(conformanceText('invalid/legacy-index.json')) as IndexManifestJson)
-    expect(index.generator).toMatchObject({ name: 'lsd-mono-core' })
+    expect(index.generator).toEqual({ name: 'lsd-mono-core (conformance)' })
     expect(index.title).toBe('LSD reports')
     const [report] = index.reports
     expect(report.counts).toEqual({ success: 1, warn: 1, error: 1, skipped: 0, aborted: 0 })

@@ -40,7 +40,7 @@ export function indexNavHtml(manifest: IndexManifest, state: IndexNavState): str
 
 /** "1 error · 2 success": the report's scenarios by outcome, failures first. */
 export function outcomeSummary(counts: Record<Status, number>): string {
-  return (['error', 'warn', 'aborted', 'skipped', 'success'] as Status[])
+  return (['error', 'warn', 'aborted', 'success', 'skipped'] as Status[])
     .filter((st) => counts[st])
     .map((st) => `${counts[st]} ${statusLabel(st).toLowerCase()}`)
     .join(' · ')

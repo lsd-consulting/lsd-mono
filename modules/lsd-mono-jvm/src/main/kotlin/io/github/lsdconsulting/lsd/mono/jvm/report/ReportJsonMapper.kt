@@ -211,8 +211,8 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     when (it) {
                         Status.ERROR -> 0
                         Status.WARN -> 1
-                        Status.SUCCESS -> 2
-                        Status.ABORTED -> 3
+                        Status.ABORTED -> 2
+                        Status.SUCCESS -> 3
                         Status.SKIPPED -> 4
                     }
                 },

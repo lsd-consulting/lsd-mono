@@ -12,7 +12,7 @@ package io.github.lsdconsulting.lsd.mono.report.model
 
 /**
  * The schema's `Status`, closed: a scenario's or a report's outcome. A report's is the worst of its
- * scenarios', in the order [ERROR], [WARN], [SUCCESS], [ABORTED], [SKIPPED]: a report of only
+ * scenarios', in the order [ERROR], [WARN], [ABORTED], [SUCCESS], [SKIPPED]: a report of only
  * skipped scenarios is skipped, and one with none is [SUCCESS].
  */
 public enum class StatusJson(

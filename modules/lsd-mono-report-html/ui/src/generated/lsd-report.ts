@@ -5,7 +5,7 @@
 export const REPORT_SCHEMA_VERSION = '1.0.0'
 
 /**
- * A scenario's outcome. success: it passed. warn: it passed with something to look at, or did not finish (pending, undefined, ambiguous). error: it failed. skipped: it did not run (disabled, or skipped by the runner). aborted: it started and was stopped before it finished, such as by a failed assumption. Closed: a reader can rank and count every value. A report's status is the worst of its scenarios', ranked error, warn, success, aborted, skipped; success when there are none.
+ * A scenario's outcome. success: it passed. warn: it passed with something to look at, or did not finish (pending, undefined, ambiguous). error: it failed. skipped: it did not run (disabled, or skipped by the runner). aborted: it started and was stopped before it finished, such as by a failed assumption. Closed: a reader can rank and count every value. A report's status is the worst of its scenarios', ranked error, warn, aborted, success, skipped; success when there are none.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "Status".
@@ -153,7 +153,7 @@ export type KnownMessageOrigin = 'captured' | 'imported'
 export type MessageOrigin = KnownMessageOrigin | (string & {})
 
 /**
- * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Stable from 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status, ranked error, warn, success, aborted, skipped; success when there are no scenarios. Enum values are lower snake_case. Optional fields are never written empty: a list, object or string that would be empty is left out, and a reader reads a missing one as empty. Required fields are always written.
+ * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Stable from 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status, ranked error, warn, aborted, success, skipped; success when there are no scenarios. Enum values are lower snake_case. Optional fields are never written empty: a list, object or string that would be empty is left out, and a reader reads a missing one as empty. Required fields are always written.
  */
 export interface Report {
   /**

@@ -5,7 +5,7 @@
   "generator": {
     "name": "lsd-mono-jvm"
   },
-  "status": "success",
+  "status": "aborted",
   "options": {
     "metricsEnabled": true,
     "labelMaxChars": 200,

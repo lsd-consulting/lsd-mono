@@ -38,7 +38,7 @@ lsd.createIndex()
 it for a disabled test, the Cucumber plugin for a skipped scenario) or `ABORTED` (stopped part way:
 a failed JUnit assumption). `WARN` is for a pending, undefined or ambiguous Cucumber step, or a
 scenario still running when the report was written. A report's status is its worst scenario's,
-ranked `ERROR` > `WARN` > `SUCCESS` > `ABORTED` > `SKIPPED`.
+ranked `ERROR` > `WARN` > `ABORTED` > `SUCCESS` > `SKIPPED`: a failed assumption is not a pass.
 
 ### Capture verbs
 

@@ -149,7 +149,7 @@ would be an optional `links` list on a message, not part of `trace`.
   skipped Cucumber scenario) and `aborted` (stopped part way, such as a failed JUnit assumption).
   `warn` is left for a pending, undefined or ambiguous step, or a scenario still running. A
   report's or index entry's status is its worst scenario's, ranked
-  error > warn > success > aborted > skipped.
+  error > warn > aborted > success > skipped.
 - **Replies.** A reply's `replyTo` is the `id` of the message it answers; `callId` is the call id
   the producer paired them by, when it had one.
 - **Message status as text.** A message's `status` (an HTTP status, say) is a string even when it
