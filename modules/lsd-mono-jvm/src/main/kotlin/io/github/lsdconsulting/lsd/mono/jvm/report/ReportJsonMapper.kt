@@ -98,11 +98,13 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
             .wallClockMs(timing.wallClockMs)
             .clockOrdering(ClockOrderingJson.valueOf(timing.clockOrdering.name))
             .clockOrderedCount(timing.clockOrdered)
-            .warnings(timing.warnings.map { WarningJson(it.kind.name.lowercase(), it.message) })
+            .warnings(timing.warnings.map { WarningJson.builder(it.kind.name.lowercase(), it.message).build() })
             .reorderedByClock(timing.reorderedByClock)
             .pairAccuracy(
                 timing.pairAccuracy.map {
-                    PairAccuracyJson(it.from.takeIf { it.isNotEmpty() }, it.to.takeIf { it.isNotEmpty() }, AccuracyJson.valueOf(it.accuracy.name))
+                    PairAccuracyJson
+                        .builder(it.from.takeIf { it.isNotEmpty() }, it.to.takeIf { it.isNotEmpty() }, AccuracyJson.valueOf(it.accuracy.name))
+                        .build()
                 },
             ).build()
 

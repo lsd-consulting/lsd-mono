@@ -32,7 +32,7 @@ class RootReadmeExampleTest {
 
     private fun example(): ReportFiles {
         // readme:start
-        val lsd = LsdContext()
+        val lsd = LsdContext.instance
         lsd.addParticipants(
             ACTOR.called("Customer"),
             PARTICIPANT.called("Checkout"),

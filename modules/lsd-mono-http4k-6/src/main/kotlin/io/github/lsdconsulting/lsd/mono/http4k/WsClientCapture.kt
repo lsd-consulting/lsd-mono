@@ -158,30 +158,24 @@ internal class WsClientCapture(
             if (!drawingHere) return true
             guarded(Unit) {
                 call.scenario.ingest(
-                    Interaction(
-                        kind = InteractionKind.REQUEST,
-                        from = local,
-                        to = remote,
-                        label = Calls.label(handshake),
-                        interactionId = call.id,
-                        trace = Trace(call.scenario.correlationId, call.id, call.parent),
-                        source = Calls.SOURCE,
-                        startedAt = started,
-                        headers = Calls.headers(handshake),
-                    ),
+                    Interaction
+                        .builder(InteractionKind.REQUEST, local, remote, Calls.label(handshake))
+                        .interactionId(call.id)
+                        .trace(Trace(call.scenario.correlationId, call.id, call.parent))
+                        .source(Calls.SOURCE)
+                        .startedAt(started)
+                        .headers(Calls.headers(handshake))
+                        .build(),
                 )
                 call.scenario.ingest(
-                    Interaction(
-                        kind = InteractionKind.RESPONSE,
-                        from = remote,
-                        to = local,
-                        label = label,
-                        status = status,
-                        replyTo = call.id,
-                        source = Calls.SOURCE,
-                        durationMs = Calls.elapsedMs(t0),
-                        data = data,
-                    ),
+                    Interaction
+                        .builder(InteractionKind.RESPONSE, remote, local, label)
+                        .status(status)
+                        .replyTo(call.id)
+                        .source(Calls.SOURCE)
+                        .durationMs(Calls.elapsedMs(t0))
+                        .data(data)
+                        .build(),
                 )
             }
             return true

@@ -24,8 +24,8 @@ class MessageVerbTest {
     }
 
     @Test
-    fun `data and then type still work`() {
-        val message = captured { message("A", "B", "event", mapOf("id" to 1), MessageType.ASYNCHRONOUS) }.single()
+    fun `type and then data work positionally`() {
+        val message = captured { message("A", "B", "event", MessageType.ASYNCHRONOUS, mapOf("id" to 1)) }.single()
 
         assertEquals(MessageType.ASYNCHRONOUS, message.type)
         assertEquals("{id=1}", message.data.toString(), "data is snapshotted")

@@ -7,7 +7,7 @@ public class IndexPerf {
     int n = Integer.parseInt(a[0]);
     System.setProperty("lsd.mono.report.outputDir", a[1]);
     System.setProperty("lsd.mono.ids.deterministic", "true");
-    LsdContext lsd = new LsdContext();
+    LsdContext lsd = LsdContext.getInstance();
     String[] svc = {"Customer","Gateway","Orders","Payments","Stock","Mail"};
     long[] write = new long[n], index = new long[n];
     for (int r = 0; r < n; r++) {

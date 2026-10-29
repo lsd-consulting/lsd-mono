@@ -1,6 +1,8 @@
 # lsd-mono public API proposal (#3)
 
 > Internal design record, kept for history. The API as built is in the KDoc and `modules/lsd-mono-jvm/api/lsd-mono-jvm.api`; the risks and notes below describe the time they were written.
+>
+> **Superseded in part by the v1 API tightening (#182):** `Interaction`, `Timing`, `Participant` and `ScenarioError` are no longer data classes (builders, factories and withers instead); `message` takes `type` before `data`; the `LsdContext()` constructor is internal (use `LsdContext.instance`).
 
 Status: **complete**. Slices 1 to 8 are implemented (see "as built" under §6). Audited at `main` = `5fe9520`, so §1 describes the surface before slice 1.
 Scope: `lsd-mono-jvm`, `lsd-mono-junit-jupiter`, `lsd-mono-cucumber-8`.
@@ -50,9 +52,9 @@ Legend: **U** = unused outside its own file or tests. **L** = mirrors legacy lsd
 |---|---|
 | `sealed class SequenceEvent` + `Message`, `Note`, `Divider`, `Section`, `Delay`, `Spacer`, `Lifeline` (public data classes, each with a required `id`) | **X**: callers have to invent ids (`Section(id = "", …)` in Cucumber); `Message.from/to = ""` is a sentinel |
 | `enum MessageType` (7), `NotePlacement`, `LifelineAction` | keep `MessageType`; `LifelineAction` is **L** |
-| `data class Participant(name, id, type, alias, colour)`, `enum ParticipantType` + `called(...)`, `object ParticipantIds` | `alias` is really the display name; `ParticipantIds` **X** |
+| `data class Participant(name, id, type, alias, colour)` (now a plain class made with `ParticipantType.called`), `enum ParticipantType` + `called(...)`, `object ParticipantIds` | `alias` is really the display name; `ParticipantIds` **X** |
 | `data class Fact`, `data class Scenario` | **X** (storage) |
-| `data class ScenarioError(headline, message, stack?)` | keep |
+| `data class ScenarioError(headline, message, stack?)` | keep (now a plain class made with `ScenarioError.of`) |
 | `enum Status { ERROR, FAILURE, SUCCESS }` + `toReportStatus()`, `toCssClass()` | `FAILURE` shows as "Warn" in the UI (**L**); both methods **X** |
 | `fun orderByCreatedAt(...)` | **X** |
 
@@ -177,8 +179,11 @@ public class PendingCall internal constructor(...) {      // thread-safe, first 
     public fun fail(error: Throwable)                      // response labelled with the exception, data = {exception, message}
 }
 
-public data class ScenarioError(val headline: String, val message: String, val stack: String? = null) {
-    public companion object { @JvmStatic public fun of(headline: String, cause: Throwable?): ScenarioError } // honours hideStacktrace; dedupes JUnit and Cucumber
+public class ScenarioError internal constructor(val headline: String, val message: String, val stack: String?) {
+    public companion object {
+        @JvmStatic public fun of(headline: String, cause: Throwable?): ScenarioError // honours hideStacktrace; dedupes JUnit and Cucumber
+        @JvmStatic public fun of(headline: String, message: String, stack: String?): ScenarioError
+    }
 }
 public enum class NoteSide { OVER, LEFT, RIGHT }
 ```
@@ -338,7 +343,7 @@ lsd {
 Scoped scenarios and reports, for samples, `main()` programs and other test frameworks:
 
 ```kotlin
-val path = LsdContext().report("Online shop") {
+val path = LsdContext.instance.report("Online shop") {
     scenario("Place an order", description = "Given … When … Then …") {
         addFact("orderId", "ord-1001")
         capture { "Customer" calls "Web Shop" label "click Place order" }

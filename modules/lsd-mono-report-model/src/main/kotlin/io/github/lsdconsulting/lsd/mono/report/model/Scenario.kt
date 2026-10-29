@@ -250,28 +250,87 @@ public class ScenarioErrorJson internal constructor(
     }
 }
 
-/** A timing warning: its `kind` (one of [KnownWarningKind.ALL], or another) and its sentence. */
-public data class WarningJson(
-    val kind: String,
-    val message: String,
-)
+/** A timing warning: its `kind` (one of [KnownWarningKind.ALL], or another) and its sentence. Made with [builder]. */
+public class WarningJson internal constructor(
+    /** The warning kind: one of [KnownWarningKind.ALL], or another. */
+    public val kind: String,
+    /** The sentence shown. */
+    public val message: String,
+) {
+    /** A builder holding these values, to make a changed copy. */
+    public fun toBuilder(): Builder = Builder(kind, message)
 
-/** The accuracy of the messages between two participants. */
-public data class PairAccuracyJson(
+    override fun equals(other: Any?): Boolean = other is WarningJson && fields() == other.fields()
+
+    override fun hashCode(): Int = fields().hashCode()
+
+    override fun toString(): String = describe("WarningJson", fields())
+
+    private fun fields(): List<Pair<String, Any?>> = listOf("kind" to kind, "message" to message)
+
+    /** Makes a [WarningJson]. A newer release may add optional setters. */
+    public class Builder internal constructor(
+        private val kind: String,
+        private val message: String,
+    ) {
+        public fun build(): WarningJson = WarningJson(kind, message)
+    }
+
+    public companion object {
+        @JvmStatic
+        public fun builder(
+            kind: String,
+            message: String,
+        ): Builder = Builder(kind, message)
+    }
+}
+
+/** The accuracy of the messages between two participants. Made with [builder]. */
+public class PairAccuracyJson internal constructor(
     /** The sender's id, or null for the diagram's edge, as on a message. */
-    val from: String?,
+    public val from: String?,
     /** The receiver's id, or null for the diagram's edge. */
-    val to: String?,
-    val accuracy: AccuracyJson,
-)
+    public val to: String?,
+    /** How the messages between them are timed. */
+    public val accuracy: AccuracyJson,
+) {
+    /** A builder holding these values, to make a changed copy. */
+    public fun toBuilder(): Builder = Builder(from, to, accuracy)
 
-/** A fact shown with a scenario. */
+    override fun equals(other: Any?): Boolean = other is PairAccuracyJson && fields() == other.fields()
+
+    override fun hashCode(): Int = fields().hashCode()
+
+    override fun toString(): String = describe("PairAccuracyJson", fields())
+
+    private fun fields(): List<Pair<String, Any?>> = listOf("from" to from, "to" to to, "accuracy" to accuracy)
+
+    /** Makes a [PairAccuracyJson]. A newer release may add optional setters. */
+    public class Builder internal constructor(
+        private val from: String?,
+        private val to: String?,
+        private val accuracy: AccuracyJson,
+    ) {
+        public fun build(): PairAccuracyJson = PairAccuracyJson(from, to, accuracy)
+    }
+
+    public companion object {
+        @JvmStatic
+        public fun builder(
+            from: String?,
+            to: String?,
+            accuracy: AccuracyJson,
+        ): Builder = Builder(from, to, accuracy)
+    }
+}
+
+/** A fact shown with a scenario. A frozen key/value pair: it stays a data class and gains no fields. */
 public data class FactJson(
     val key: String,
     val value: String,
 )
 
-/** A figure shown with a scenario. */
+/** A figure shown with a scenario. A frozen key/value pair: it stays a data class and gains no fields. */
 public data class MetricJson(
     val key: String,
     val value: String,

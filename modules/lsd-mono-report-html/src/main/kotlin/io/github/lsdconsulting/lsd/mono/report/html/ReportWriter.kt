@@ -29,8 +29,8 @@ import kotlin.concurrent.withLock
  *
  * ```kotlin
  * val writer = ReportWriter(ReportWriterSettings(generator = GeneratorJson("my-adapter", "1.0")))
- * val written = writer.writeReport(report, File("build/reports/lsd"))
- * writer.writeIndex(File("build/reports/lsd"))
+ * val written = writer.writeReport(report, Path.of("build/reports/lsd"))
+ * writer.writeIndex(Path.of("build/reports/lsd"))
  * ```
  *
  * **Several writers, one directory.** Test classes, parallel tests, Gradle forks
@@ -61,10 +61,17 @@ public class ReportWriter(
     @JvmOverloads
     public fun writeReport(
         report: ReportJson,
-        outputDir: File,
+        outputDir: Path,
         reportKey: String? = null,
         fileTitle: String = report.title,
-    ): WrittenReport {
+    ): ReportFiles = writeReport(report, outputDir.toFile(), reportKey, fileTitle)
+
+    private fun writeReport(
+        report: ReportJson,
+        outputDir: File,
+        reportKey: String?,
+        fileTitle: String,
+    ): ReportFiles {
         outputDir.mkdirs()
         val stem = reportFileStem(fileTitle, reportKey)
         val jsonName = "$stem-report.json"
@@ -88,7 +95,7 @@ public class ReportWriter(
         writeAtomically(diagramPath, shell)
         val entry = indexEntry(report, reportKey, fileTitle)
         writeIndexEntry(outputDir, entry)
-        return WrittenReport(diagramHtml = diagramPath, reportJson = jsonPath, entry = entry)
+        return ReportFiles(diagramHtml = diagramPath, reportJson = jsonPath, entry = entry)
     }
 
     /** What the index lists for a report written with [writeReport]. */
@@ -117,9 +124,9 @@ public class ReportWriter(
      */
     @JvmOverloads
     public fun writeIndex(
-        outputDir: File,
-        reports: List<WrittenReport> = emptyList(),
-    ): Path = writeIndexOf(reports.map { it.entry }, outputDir)
+        outputDir: Path,
+        reports: List<ReportFiles> = emptyList(),
+    ): Path = writeIndexOf(reports.map { it.entry }, outputDir.toFile())
 
     /** [writeIndex], with entries that need not have been written: a link-only entry has no stem. */
     internal fun writeIndexOf(

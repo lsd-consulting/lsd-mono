@@ -15,6 +15,7 @@ Part of [LSD: living sequence diagrams](../README.md). The reference for [lsd-mo
   - [Threads and parallel tests](#threads-and-parallel-tests)
   - [Message data](#message-data)
     - [Redaction](#redaction)
+  - [Compatibility and `@InternalLsdApi`](#compatibility-and-internallsdapi)
   - [Escaping](#escaping)
 
 ## Kotlin API
@@ -47,7 +48,7 @@ captures into itself) and a capture block (below) share the same verbs, from the
 
 | Verb | Draws |
 | --- | --- |
-| `message(from, to, label, data, type, colour, timing, trace)` | An arrow; a synchronous call unless `type` says otherwise |
+| `message(from, to, label, type, data, colour, timing, trace)` | An arrow; a synchronous call unless `type` says otherwise |
 | `response(from, to, label, data, timing, trace, replyTo)` | The reply to a call |
 | `call(from, to, label, data, timing, trace)` | A call now, returning a `PendingCall`; its `reply(label, data, timing)` or `fail(error, timing)` draws the timed response later (see [Interceptors](#interceptors)) |
 | `async(from, to, label, data, timing, trace, causedBy)` | An asynchronous message, such as an event on a queue |
@@ -62,11 +63,11 @@ Everything after the first required arguments is optional. A message's timing is
 `Timing.took(duration)` (measured), `Timing.of(instant, duration)`, plus its clock `source`. The
 report orders timed messages by their start, for capture that arrives out of order. Structural
 rows take `at`, an `Instant`. From Java, the overloads cover the common calls
-(`lsd.message("A", "B", "label", body)`). To pass `timing`, pass `null` for the optional
-parameters before it: a `null` type means
-`MessageType.SYNCHRONOUS`. `message(from, to, label, MessageType.LOST)` sets the type, from
-Kotlin and Java alike: a type in the fourth position is never taken as `data`, and Java's
-`message(from, to, label, null)` is a plain synchronous message.
+(`lsd.message("A", "B", "label", MessageType.SYNCHRONOUS, body)`). The type comes before
+`data`, so every overload is unambiguous: `message(from, to, label, MessageType.LOST)` sets the
+type, and Java's `message(from, to, label, null)` is a plain synchronous message (a `null` type
+means `MessageType.SYNCHRONOUS`). To pass `timing`, pass `null` for the optional parameters
+before it. From Kotlin, name `data`: `lsd.message("A", "B", "label", data = body)`.
 
 ### Capture blocks
 
@@ -217,8 +218,19 @@ lsd.call("api", "payments", "authorise",
 val placed = lsd.async("orders", "kafka", "order.placed", timing = Timing.at(t1).withSource("orders"))
 lsd.async("kafka", "billing", "consume", timing = Timing.at(t2), causedBy = placed)
 // From another library (an interceptor or importer): LsdContext is an InteractionSink.
-lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "api", "200", replyTo = callId, durationMs = 12.5))
+lsd.accept(
+    Interaction.builder(InteractionKind.RESPONSE, "payments", "api", "200")
+        .replyTo(callId)
+        .durationMs(12.5)
+        .build(),
+)
 ```
+
+`Interaction` is built with `Interaction.builder(kind, from, to, label)…build()`; `toBuilder()`
+and the `with…` methods copy one with a field changed. `Timing` has no public constructor: start
+from `Timing.at`, `took`, `tookMs`, `of` or `Timing.NONE`, and change one with `withStartedAt`,
+`withDuration` (a `Duration`), `withDurationMs` (fractional ms, or `null`), `withSource` or
+`withOrderByStartedAt`.
 
 An `Interaction`'s `headers` (HTTP or record headers) are shown with its payload as
 `{ "headers": …, "body": data }`, and are redacted like any other map key.
@@ -486,6 +498,25 @@ searched: register a converter that parses it into a map so its keys are checked
 `message` of `PendingCall.fail(error)` is kept as it is, because exception messages are
 free text and rarely hold secrets under a recognisable key. Add
 `redactWhen { it == "message" }` if yours might.
+
+### Compatibility and `@InternalLsdApi`
+
+The public API of each module is checked against an ABI dump in every build. Members marked
+`@InternalLsdApi` are left out of that promise: they exist only for lsd-mono's own integrations
+(JUnit, Cucumber, Spring, coroutines, http4k and Ktor) and can change in any release. They need
+`-opt-in=io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi`, and an integration module must be
+the same lsd-mono version as lsd-mono-jvm. Today they are `LsdContext.runningScenario`,
+`LsdContext.completeReport(title, reportKey, source, …)`, `LsdHeaders.CALLER`,
+`LsdHeaders.PARENT_SPAN`, `LsdProperties.useConfigurationSource` and
+`LsdProperties.cucumberSplitBySteps`. Java callers see no opt-in check, so the same rule applies:
+do not call them. `LsdHeaders.CALLER` and `LsdHeaders.PARENT_SPAN` are also a wire contract
+between services under test: their header names stay stable across versions even though the
+Kotlin members may move.
+
+Value types (`FactJson`, `MetricJson`, `Trace`) are Kotlin data classes whose fields are frozen:
+their `copy` and `componentN` methods are part of the API, so a new field would only ever be added
+in a major version. Other value types (`Interaction`, `Timing`, `Participant`, `ScenarioError`,
+`WarningJson`, `PairAccuracyJson`) are plain classes with factories or builders so they can grow.
 
 ### Escaping
 

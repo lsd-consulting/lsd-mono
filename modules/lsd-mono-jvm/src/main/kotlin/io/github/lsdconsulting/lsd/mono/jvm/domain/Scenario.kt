@@ -1,21 +1,32 @@
 package io.github.lsdconsulting.lsd.mono.jvm.domain
 
+import io.github.lsdconsulting.lsd.mono.jvm.describe
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdProperties
 
 /**
  * Structured failure for a scenario. Rendered by report as text plus a dialog,
  * not as legacy `:target` overlay HTML inside [Scenario.description].
  *
+ * Made with [ScenarioError.of].
+ *
  * @property headline a short title for the failure, such as `Failed` or `Test aborted`.
  * @property message the failure's message; empty when there is none.
  * @property stack the stack trace, or a note when it is hidden or there is no cause.
  */
-public data class ScenarioError(
-    val headline: String,
-    val message: String,
-    val stack: String? = null,
+public class ScenarioError internal constructor(
+    public val headline: String,
+    public val message: String,
+    public val stack: String? = null,
 ) {
-    /** Holds [of]. */
+    override fun equals(other: Any?): Boolean = other is ScenarioError && fields() == other.fields()
+
+    override fun hashCode(): Int = fields().hashCode()
+
+    override fun toString(): String = describe("ScenarioError", fields())
+
+    private fun fields(): List<Pair<String, Any?>> = listOf("headline" to headline, "message" to message, "stack" to stack)
+
+    /** Holds the factories. */
     public companion object {
         internal const val HIDDEN_STACK: String = "[Displaying the stacktrace was disabled or no cause was provided]"
 
@@ -31,6 +42,17 @@ public data class ScenarioError(
                 message = cause?.message.orEmpty(),
                 stack = if (cause == null || LsdProperties.hideStacktrace()) HIDDEN_STACK else cause.stackTraceToString(),
             )
+
+        /**
+         * The error with [headline], [message] and [stack] as given (null: no stack). [stack] has no
+         * default, so `of(headline, null)` still means the [Throwable] form.
+         */
+        @JvmStatic
+        public fun of(
+            headline: String,
+            message: String,
+            stack: String?,
+        ): ScenarioError = ScenarioError(headline, message, stack)
     }
 }
 

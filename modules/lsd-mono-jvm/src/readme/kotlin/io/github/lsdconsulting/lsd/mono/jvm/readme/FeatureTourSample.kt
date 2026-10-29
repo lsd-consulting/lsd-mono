@@ -23,7 +23,7 @@ import java.time.Instant
  * Orders to Orders DB link by name, so keep those in sync with it.
  */
 fun main() {
-    val lsd = LsdContext()
+    val lsd = LsdContext.instance
     lsd.addParticipants(
         ACTOR.called("Customer"),
         BOUNDARY.called("Web Shop"),
@@ -141,7 +141,7 @@ private fun cardDeclined(lsd: LsdContext) {
         "Given a card the issuer will decline\nWhen the customer pays\nThen the order is confirmed",
         status = Status.WARN,
         error =
-            ScenarioError(
+            ScenarioError.of(
                 headline = "AssertionFailedError",
                 message = "expected: <CONFIRMED> but was: <PAYMENT_DECLINED>",
                 stack =
@@ -188,7 +188,7 @@ private fun shippingUpdate(lsd: LsdContext) {
         "Given an order has been paid\nWhen the courier collects it\nThen the order is marked shipped",
         status = Status.ERROR,
         error =
-            ScenarioError(
+            ScenarioError.of(
                 headline = "ConditionTimeoutException",
                 message = "Orders DB never acknowledged 'mark shipped' within 30 s",
                 stack =

@@ -102,9 +102,9 @@ class ReportTextTest {
             .wallClockMs(20.0)
             .clockOrdering(ClockOrderingJson.SAME_SOURCE)
             .clockOrderedCount(1)
-            .warning(WarningJson(KnownWarningKind.LONGER_THAN_PARENT, "too long"))
+            .warning(WarningJson.builder(KnownWarningKind.LONGER_THAN_PARENT, "too long").build())
             .reorderedByClock(listOf("m2"))
-            .pairAccuracy(listOf(PairAccuracyJson("client", "api", AccuracyJson.MEASURED)))
+            .pairAccuracy(listOf(PairAccuracyJson.builder("client", "api", AccuracyJson.MEASURED).build()))
             .build()
     private val report =
         ReportJson

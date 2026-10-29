@@ -61,17 +61,14 @@ internal class WsCapture(
         val id = inbound.id
         guarded(Unit) {
             scenario.ingest(
-                Interaction(
-                    kind = InteractionKind.REQUEST,
-                    from = caller,
-                    to = app,
-                    label = Calls.label(request),
-                    interactionId = id,
-                    trace = Trace(scenario.correlationId, id, inbound.parent),
-                    source = Calls.SOURCE,
-                    startedAt = Instant.now(),
-                    headers = Calls.headers(request),
-                ),
+                Interaction
+                    .builder(InteractionKind.REQUEST, caller, app, Calls.label(request))
+                    .interactionId(id)
+                    .trace(Trace(scenario.correlationId, id, inbound.parent))
+                    .source(Calls.SOURCE)
+                    .startedAt(Instant.now())
+                    .headers(Calls.headers(request))
+                    .build(),
             )
         }
         val t0 = System.nanoTime()
@@ -103,17 +100,14 @@ internal class WsCapture(
         data: Any?,
     ) = guarded(Unit) {
         scenario.ingest(
-            Interaction(
-                kind = InteractionKind.RESPONSE,
-                from = app,
-                to = caller,
-                label = label,
-                status = status,
-                replyTo = id,
-                source = Calls.SOURCE,
-                durationMs = Calls.elapsedMs(t0),
-                data = data,
-            ),
+            Interaction
+                .builder(InteractionKind.RESPONSE, app, caller, label)
+                .status(status)
+                .replyTo(id)
+                .source(Calls.SOURCE)
+                .durationMs(Calls.elapsedMs(t0))
+                .data(data)
+                .build(),
         )
     }
 

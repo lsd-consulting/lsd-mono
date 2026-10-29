@@ -66,17 +66,14 @@ internal class LsdRepositoryInterceptor(
             val args = invocation.arguments.map(Summaries::of)
             SpringScenarios.declare(scenario, ParticipantType.DATABASE.called(target))
             scenario.ingest(
-                Interaction(
-                    kind = InteractionKind.REQUEST,
-                    from = caller,
-                    to = target,
-                    label = Summaries.truncate("${method.name}(${args.joinToString(", ")})"),
-                    interactionId = id,
-                    trace = Trace(scenario.correlationId, id, parent),
-                    source = SpringScenarios.SOURCE,
-                    startedAt = Instant.now(),
-                    data = mapOf("method" to "${method.declaringClass.simpleName}.${method.name}", "arguments" to args),
-                ),
+                Interaction
+                    .builder(InteractionKind.REQUEST, caller, target, Summaries.truncate("${method.name}(${args.joinToString(", ")})"))
+                    .interactionId(id)
+                    .trace(Trace(scenario.correlationId, id, parent))
+                    .source(SpringScenarios.SOURCE)
+                    .startedAt(Instant.now())
+                    .data(mapOf("method" to "${method.declaringClass.simpleName}.${method.name}", "arguments" to args))
+                    .build(),
             )
         }
         val result =
@@ -103,17 +100,14 @@ internal class LsdRepositoryInterceptor(
         data: Any?,
     ) = guarded(Unit) {
         scenario.ingest(
-            Interaction(
-                kind = InteractionKind.RESPONSE,
-                from = target,
-                to = caller,
-                label = label,
-                status = status,
-                replyTo = id,
-                source = SpringScenarios.SOURCE,
-                durationMs = (System.nanoTime() - t0) / 1_000_000.0,
-                data = data,
-            ),
+            Interaction
+                .builder(InteractionKind.RESPONSE, target, caller, label)
+                .status(status)
+                .replyTo(id)
+                .source(SpringScenarios.SOURCE)
+                .durationMs((System.nanoTime() - t0) / 1_000_000.0)
+                .data(data)
+                .build(),
         )
     }
 }

@@ -199,13 +199,14 @@ public final class io/github/lsdconsulting/lsd/mono/report/model/GeneratorJson {
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/KnownMessageOrigin {
+	public static final field ALL Ljava/util/List;
 	public static final field CAPTURED Ljava/lang/String;
 	public static final field IMPORTED Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/report/model/KnownMessageOrigin;
-	public final fun getALL ()Ljava/util/List;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/KnownMessageType {
+	public static final field ALL Ljava/util/List;
 	public static final field ASYNCHRONOUS Ljava/lang/String;
 	public static final field BI_DIRECTIONAL Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/report/model/KnownMessageType;
@@ -214,62 +215,61 @@ public final class io/github/lsdconsulting/lsd/mono/report/model/KnownMessageTyp
 	public static final field SHORT_OUTBOUND Ljava/lang/String;
 	public static final field SYNCHRONOUS Ljava/lang/String;
 	public static final field SYNCHRONOUS_RESPONSE Ljava/lang/String;
-	public final fun getALL ()Ljava/util/List;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/KnownOrderSource {
+	public static final field ALL Ljava/util/List;
 	public static final field CLOCK Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/report/model/KnownOrderSource;
 	public static final field SEQUENCE Ljava/lang/String;
 	public static final field STRUCTURE Ljava/lang/String;
-	public final fun getALL ()Ljava/util/List;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/KnownPairingSource {
+	public static final field ALL Ljava/util/List;
 	public static final field CALL_ID Ljava/lang/String;
 	public static final field GUESSED Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/report/model/KnownPairingSource;
 	public static final field NONE Ljava/lang/String;
 	public static final field TRACE Ljava/lang/String;
-	public final fun getALL ()Ljava/util/List;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/KnownParticipantType {
 	public static final field ACTOR Ljava/lang/String;
+	public static final field ALL Ljava/util/List;
 	public static final field BOUNDARY Ljava/lang/String;
 	public static final field DATABASE Ljava/lang/String;
 	public static final field ENTITY Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/report/model/KnownParticipantType;
 	public static final field PARTICIPANT Ljava/lang/String;
 	public static final field QUEUE Ljava/lang/String;
-	public final fun getALL ()Ljava/util/List;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/KnownReportSource {
+	public static final field ALL Ljava/util/List;
 	public static final field API Ljava/lang/String;
 	public static final field CUCUMBER Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/report/model/KnownReportSource;
 	public static final field JUNIT Ljava/lang/String;
-	public final fun getALL ()Ljava/util/List;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/KnownTimingSource {
+	public static final field ALL Ljava/util/List;
 	public static final field DERIVED Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/report/model/KnownTimingSource;
 	public static final field MEASURED Ljava/lang/String;
 	public static final field NONE Ljava/lang/String;
 	public static final field TIMESTAMPED Ljava/lang/String;
-	public final fun getALL ()Ljava/util/List;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/KnownWarningKind {
+	public static final field ALL Ljava/util/List;
 	public static final field DUPLICATE_SPAN Ljava/lang/String;
 	public static final field DURATION_ON_REPLY_DROPPED Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/report/model/KnownWarningKind;
 	public static final field LONGER_THAN_PARENT Ljava/lang/String;
 	public static final field REPLY_WITHOUT_CALL Ljava/lang/String;
 	public static final field SKEW Ljava/lang/String;
-	public final fun getALL ()Ljava/util/List;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/LifelineEventJson : io/github/lsdconsulting/lsd/mono/report/model/EventJson {
@@ -418,18 +418,23 @@ public final class io/github/lsdconsulting/lsd/mono/report/model/NotePlacementJs
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/report/model/AccuracyJson;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Lio/github/lsdconsulting/lsd/mono/report/model/AccuracyJson;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/report/model/AccuracyJson;)Lio/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson;
-	public static synthetic fun copy$default (Lio/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson;Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/report/model/AccuracyJson;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson;
+	public static final field Companion Lio/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/report/model/AccuracyJson;)Lio/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAccuracy ()Lio/github/lsdconsulting/lsd/mono/report/model/AccuracyJson;
 	public final fun getFrom ()Ljava/lang/String;
 	public final fun getTo ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson$Builder {
+	public final fun build ()Lio/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/report/model/AccuracyJson;)Lio/github/lsdconsulting/lsd/mono/report/model/PairAccuracyJson$Builder;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/ParticipantJson {
@@ -673,15 +678,21 @@ public final class io/github/lsdconsulting/lsd/mono/report/model/TraceJson {
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/model/WarningJson {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/report/model/WarningJson;
-	public static synthetic fun copy$default (Lio/github/lsdconsulting/lsd/mono/report/model/WarningJson;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/report/model/WarningJson;
+	public static final field Companion Lio/github/lsdconsulting/lsd/mono/report/model/WarningJson$Companion;
+	public static final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/report/model/WarningJson$Builder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getKind ()Ljava/lang/String;
 	public final fun getMessage ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lio/github/lsdconsulting/lsd/mono/report/model/WarningJson$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/report/model/WarningJson$Builder {
+	public final fun build ()Lio/github/lsdconsulting/lsd/mono/report/model/WarningJson;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/report/model/WarningJson$Companion {
+	public final fun builder (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/report/model/WarningJson$Builder;
 }
 
