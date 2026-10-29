@@ -70,3 +70,28 @@ export function warnReasonHtml(s: Scenario): string {
   const reason = warnReason(s)
   return reason ? `<p class="warn-reason">Marked Warn because: ${escapeHtml(reason)}.</p>` : ''
 }
+
+/** The "?" by the status chips opens what each status means (#163); Esc or a click away closes it. */
+export function bindStatusLegend(root: Document): void {
+  const btn = root.querySelector<HTMLButtonElement>('#btn-status-legend')
+  const legend = root.querySelector<HTMLElement>('#status-legend')
+  if (!btn || !legend) return
+  const show = (open: boolean) => {
+    legend.hidden = !open
+    btn.setAttribute('aria-expanded', String(open))
+  }
+  btn.addEventListener('click', () => show(Boolean(legend.hidden)))
+  for (const el of [btn, legend]) {
+    el.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Escape' || legend.hidden) return
+      ev.preventDefault()
+      ev.stopPropagation()
+      show(false)
+      btn.focus()
+    })
+  }
+  root.addEventListener('click', (ev) => {
+    const target = ev.target as Node
+    if (!legend.hidden && !legend.contains(target) && !btn.contains(target)) show(false)
+  })
+}

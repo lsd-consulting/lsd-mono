@@ -20,7 +20,7 @@ import {
   storeSidebarCollapsed,
 } from '../ui/sidebar'
 import { statusGlyph, statusLabel } from '../ui/format'
-import { statusDefinitionId, statusLegendHtml } from '../ui/status-legend'
+import { bindStatusLegend, statusDefinitionId, statusLegendHtml } from '../ui/status-legend'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
 import { searchStatusText } from '../ui/search-status'
 import { searchOriginAfter } from './search-origin'
@@ -120,7 +120,7 @@ export function renderShell(): void {
 
 function bindChrome(): void {
   bindFilters()
-  bindStatusLegend()
+  bindStatusLegend(document)
   bindTopbarButtons()
   bindSidePanel()
   const main = document.querySelector<HTMLElement>('#main')!
@@ -186,31 +186,6 @@ function bindFilters(): void {
       renderNav()
       renderMain()
     })
-  })
-}
-
-/** The "?" by the status chips opens what each status means (#163); Esc or a click away closes it. */
-function bindStatusLegend(): void {
-  const btn = document.querySelector<HTMLButtonElement>('#btn-status-legend')
-  const legend = document.querySelector<HTMLElement>('#status-legend')
-  if (!btn || !legend) return
-  const show = (open: boolean) => {
-    legend.hidden = !open
-    btn.setAttribute('aria-expanded', String(open))
-  }
-  btn.addEventListener('click', () => show(Boolean(legend.hidden)))
-  for (const el of [btn, legend]) {
-    el.addEventListener('keydown', (ev) => {
-      if (ev.key !== 'Escape' || legend.hidden) return
-      ev.preventDefault()
-      ev.stopPropagation()
-      show(false)
-      btn.focus()
-    })
-  }
-  document.addEventListener('click', (ev) => {
-    const target = ev.target as Node
-    if (!legend.hidden && !legend.contains(target) && !btn.contains(target)) show(false)
   })
 }
 
