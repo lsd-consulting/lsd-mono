@@ -47,3 +47,27 @@ export function rememberIntroDismissed(storage: Pick<Storage, 'setItem'> | null)
     // Private mode or storage off: it stays dismissed for this page only.
   }
 }
+
+function localStore(win: Window): Storage | null {
+  try {
+    return win.localStorage
+  } catch {
+    return null
+  }
+}
+
+/** The example site's introduction (#161), until the visitor dismisses it. */
+export function showExampleIntro(win: Window): boolean {
+  return isExamplePage(win.location, win.__LSD_EXAMPLE__ === true) && !introDismissed(localStore(win))
+}
+
+/** × dismisses the introduction for good, and hands focus to the scenario heading (or search). */
+export function bindExampleIntro(root: Document, win: Window): void {
+  root.querySelector('#example-intro-close')?.addEventListener('click', () => {
+    rememberIntroDismissed(localStore(win))
+    root.querySelector('#example-intro')?.remove()
+    const heading = root.querySelector<HTMLElement>('#main .scenario-head h2')
+    if (heading) heading.focus({ preventScroll: true })
+    else root.querySelector<HTMLInputElement>('#search')?.focus()
+  })
+}
