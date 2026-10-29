@@ -17,6 +17,8 @@ declare global {
   interface Window {
     /** Set by lsd-mono-report-html's ReportWriter before this bundle boots. Dev: assign before load to preview a capture. */
     __LSD_REPORT__?: ReportJson
+    /** Set by the UI's checks to show the example site's introduction on a local page (#161). */
+    __LSD_EXAMPLE__?: boolean
     /** Full message payloads, loaded when the inspector opens. Not part of the first paint. */
     __LSD_PAYLOADS__?: Record<string, unknown>
     /** What the payload script assigns: each payload's JSON text, parsed when it is read. */

@@ -353,6 +353,48 @@
     color: CanvasText;
   }
 }
+/* The example site's introduction (#161): at the top of the sidebar, so the diagram keeps its place. */
+.example-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.example-intro-body {
+  flex: 1;
+  min-width: 0;
+}
+.example-intro-title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.example-intro p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.example-intro-links {
+  margin-top: 4px;
+}
+.example-intro a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.example-intro-close {
+  flex: none;
+  min-width: 28px;
+  min-height: 28px;
+}
+.sidebar-collapsed .example-intro {
+  display: none;
+}
 /* Search's × (#162): shown only while there is text; at least 24×24 px to hit. */
 .search-wrap input::-webkit-search-cancel-button {
   appearance: none;

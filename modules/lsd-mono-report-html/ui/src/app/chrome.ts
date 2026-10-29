@@ -22,6 +22,7 @@ import {
 import { statusGlyph, statusLabel } from '../ui/format'
 import { bindStatusLegend, statusDefinitionId, statusLegendHtml } from '../ui/status-legend'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
+import { bindExampleIntro, exampleIntroHtml, showExampleIntro } from '../ui/example-intro'
 import { searchStatusText } from '../ui/search-status'
 import { searchOriginAfter } from './search-origin'
 import { clearField } from './keys'
@@ -92,6 +93,7 @@ export function renderShell(): void {
       <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> <span class="help-setting-text">${singleKeysLabelHtml()}</span></label>`)}
     <div class="shell${state.sidebarCollapsed ? ' sidebar-collapsed' : ''}">
       <aside class="sidebar" id="sidebar" aria-label="${index ? 'Reports' : 'Scenarios'}">
+        ${showExampleIntro(window) ? exampleIntroHtml() : ''}
         <div class="sidebar-head">
           <button type="button" class="nav-fold" id="btn-nav-fold" aria-controls="scenario-nav" aria-expanded="false"><span class="nav-fold-text"></span> <span class="nav-fold-glyph" aria-hidden="true">▾</span></button>
           <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : escapeHtml(sidebarTitleText(total))}</p>
@@ -120,6 +122,7 @@ export function renderShell(): void {
 
 function bindChrome(): void {
   bindFilters()
+  bindExampleIntro(document, window)
   bindStatusLegend(document)
   bindTopbarButtons()
   bindSidePanel()
