@@ -7,7 +7,7 @@ import { upgradeHtml } from '../lib/schema-version'
 import { type HashRef } from '../lib/report-hash'
 import { stepSelection } from '../ui/selection'
 import { forgetDiagrams } from '../lib/sequence-diagram'
-import { navFoldLabel, navItemTooltip } from '../ui/sidebar'
+import { navFoldLabel, navItemTooltip, sidebarTitleText } from '../ui/sidebar'
 import { isStacked } from '../lib/media'
 import { statusLabel } from '../ui/format'
 import { indexNavHtml, orEmptyNavHtml } from '../ui/index-nav'
@@ -71,8 +71,15 @@ function paintNavFold(): void {
   sidebar.classList.toggle('nav-folded', !open)
   toggle.setAttribute('aria-expanded', String(open))
   toggle.hidden = state.query.trim() !== ''
-  const count = index ? index.reports.length : session.report.scenarios.length
-  toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(count, index ? 'report' : 'scenario')
+  if (index) {
+    toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(index.reports.length, 'report')
+  } else {
+    const count = session.report.scenarios.length
+    const shown = filtered().length
+    toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(count, 'scenario', shown)
+    const title = sidebar.querySelector('.sidebar-title')
+    if (title) title.textContent = sidebarTitleText(count, shown)
+  }
   toggle.querySelector('.nav-fold-glyph')!.textContent = open ? '▴' : '▾'
 }
 

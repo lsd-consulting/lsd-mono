@@ -36,6 +36,11 @@ export function formatGeneratedAt(iso: string, timeZone?: string): string {
   }
 }
 
+/** A status's glyph, so the chips differ without colour (#158): ✓, ! and ✕ (the error mark). */
+export function statusGlyph(s: string): string {
+  return s === 'success' ? '✓' : s === 'warn' ? '!' : s === 'error' ? '✕' : '•'
+}
+
 export function statusLabel(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }

@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, truncateLabel } from './format'
+import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusGlyph, truncateLabel } from './format'
+
+describe('statusGlyph (#158)', () => {
+  it('gives each status its own glyph, the error one matching the diagram mark', () => {
+    expect(['success', 'warn', 'error'].map(statusGlyph)).toEqual(['✓', '!', '✕'])
+  })
+})
 
 describe('labelMaxWidth (#111)', () => {
   it('defaults to what Kotlin writes when the report has no width', () => {

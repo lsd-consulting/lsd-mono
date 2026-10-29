@@ -184,11 +184,15 @@
   .filters {
     order: 4;
     flex-wrap: nowrap;
-    gap: 4px;
+    gap: 3px;
   }
   .chip {
-    padding: 4px 8px;
+    padding: 4px 6px;
+    gap: 3px;
     min-height: 32px;
+  }
+  .chip .count {
+    padding: 0 3px;
   }
   .report-hero {
     margin-bottom: 12px;

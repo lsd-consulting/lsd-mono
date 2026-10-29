@@ -116,6 +116,37 @@
     color 0.15s,
     transform 0.1s;
 }
+/* A glyph per status, so the chips differ without colour, in greyscale too (#158). */
+.chip .chip-glyph {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  min-width: 0.8em;
+  text-align: center;
+}
+/* Off: a slash through the chip, so which status is hidden shows without colour (#158). */
+.chip {
+  position: relative;
+}
+.chip[aria-pressed="false"] {
+  background: transparent;
+  border-style: dashed;
+}
+.chip[aria-pressed="false"]::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  border-top: 2px solid currentColor;
+  transform: rotate(-14deg);
+  pointer-events: none;
+}
+.chip[aria-pressed="false"] .chip-glyph,
+.chip[aria-pressed="false"] .chip-label,
+.chip[aria-pressed="false"] .count {
+  opacity: 0.75;
+}
 .chip:hover {
   transform: translateY(-1px);
 }
