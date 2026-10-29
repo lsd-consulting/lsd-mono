@@ -102,12 +102,13 @@ class ReportModelSchemaTest {
                 DelayEventJson::class to "DelayEvent",
                 SpacerEventJson::class to "SpacerEvent",
                 LifelineEventJson::class to "ActivateEvent",
+                GeneratorJson::class to "Generator",
             )
 
         /**
          * A constructor parameter whose JSON name differs, as (class, parameter) to JSON name. There
          * are none: the model uses the schema's names, and core renames its own (a participant's
-         * displayName is the model's alias) when it maps to the model. A model parameter named
+         * displayName is the model's displayName) when it maps to the model. A model parameter named
          * otherwise must be listed here, with the writer writing it under the JSON name.
          */
         val RENAMED: Map<Pair<KClass<*>, String?>, String> = emptyMap()

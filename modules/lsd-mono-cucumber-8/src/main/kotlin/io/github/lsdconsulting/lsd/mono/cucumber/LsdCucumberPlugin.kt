@@ -170,6 +170,8 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
             when (result.status) {
                 CucumberStatus.PASSED -> Status.SUCCESS
                 CucumberStatus.FAILED -> Status.ERROR
+                CucumberStatus.SKIPPED -> Status.SKIPPED
+                // Pending, undefined and ambiguous steps ran, but neither passed nor failed.
                 else -> Status.WARN
             }
         // The step (or hook) that gave the test case its result is the one to explain.

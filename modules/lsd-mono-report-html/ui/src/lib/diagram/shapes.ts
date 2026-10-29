@@ -66,15 +66,15 @@ export function activationBarSvg(args: {
   y: number
   width: number
   height: number
-  colour?: string
+  color?: string
   fallback: string
 }): string {
   const { x, y, width, height } = args
-  if (!args.colour) {
+  if (!args.color) {
     return `<rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${escapeAttr(args.fallback)}"/>`
   }
-  const colour = escapeAttr(args.colour)
-  return `<g class="activation-coloured" role="img" aria-label="coloured activation"><title>coloured activation</title><rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${colour}"/><rect class="activation-hatch" x="${x}" y="${y}" width="${width}" height="${height}" fill="url(#act-tint-hatch)"/></g>`
+  const color = escapeAttr(args.color)
+  return `<g class="activation-coloured" role="img" aria-label="coloured activation"><title>coloured activation</title><rect class="activation" x="${x}" y="${y}" width="${width}" height="${height}" rx="3" style="--pc:${color}"/><rect class="activation-hatch" x="${x}" y="${y}" width="${width}" height="${height}" fill="url(#act-tint-hatch)"/></g>`
 }
 
 /**
@@ -125,9 +125,9 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
     half: Math.max(head.shapeHalf, w / 2),
   })
   switch (type) {
-    case 'ACTOR':
+    case 'actor':
       return under({
-        type: 'ACTOR',
+        type: 'actor',
         typeLabel: 'actor',
         shapeHalf: 11,
         shapeSvg: `<g class="participant-actor">
@@ -135,12 +135,12 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
           <path d="M0 16.5 V28 M-11 22 H11 M0 28 L-8 38 M0 28 L8 38"/>
         </g>`,
       })
-    case 'DATABASE': {
+    case 'database': {
       const rx = Math.max(46, Math.ceil(w / 2 + 10))
       const top = two ? 9 : 16
       const body = two ? 34 : 20
       return {
-        type: 'DATABASE',
+        type: 'database',
         typeLabel: 'database',
         labelY: two ? 29 : 34,
         labelYs: two ? [29, 42] : [34],
@@ -152,7 +152,7 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
         </g>`,
       }
     }
-    case 'QUEUE': {
+    case 'queue': {
       // A cylinder lying on its side: messages flow through it left to right. Outline only, so it
       // reads the same in forced colours.
       const hw = Math.max(48, Math.ceil(w / 2 + 18))
@@ -162,7 +162,7 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
       const cy = top + ry
       const cap = 7
       return {
-        type: 'QUEUE',
+        type: 'queue',
         typeLabel: 'queue',
         labelY: two ? 27 : 33,
         labelYs: two ? [27, 40] : [33],
@@ -174,16 +174,16 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
         </g>`,
       }
     }
-    case 'ENTITY':
+    case 'entity':
       return under({
-        type: 'ENTITY',
+        type: 'entity',
         typeLabel: 'entity',
         shapeHalf: 14,
         shapeSvg: `<circle class="participant-shape" cx="0" cy="22" r="14"/>`,
       })
-    case 'BOUNDARY':
+    case 'boundary':
       return under({
-        type: 'BOUNDARY',
+        type: 'boundary',
         typeLabel: 'boundary',
         shapeHalf: 16,
         shapeSvg: `<g class="participant-boundary">
@@ -194,7 +194,7 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
     default: {
       const rw = Math.max(96, evenUp(w + 20))
       return {
-        type: 'PARTICIPANT',
+        type: 'participant',
         typeLabel: 'component',
         labelY: two ? 25 : 32,
         labelYs: two ? [25, 37] : [32],
@@ -210,9 +210,9 @@ export function participantHead(type: string | undefined, name?: FittedName): Pa
 export function participantHeadFor(p: {
   type?: string
   name: string
-  alias?: string
+  displayName?: string
 }): ParticipantHead & { name: FittedName } {
-  const name = fitName(p.alias ?? p.name)
+  const name = fitName(p.displayName ?? p.name)
   return { ...participantHead(p.type, name), name }
 }
 
@@ -236,27 +236,27 @@ export const ASYNC_DASH = '2 4'
 /** Shape/marker rules — colour alone must not distinguish these types (a11y). */
 export function messageArrowSpec(type: MessageType): MessageArrowSpec {
   switch (type) {
-    case 'ASYNCHRONOUS':
+    case 'asynchronous':
       return { dashed: true, dash: ASYNC_DASH, start: 'none', end: 'open', typeCue: null }
-    case 'SYNCHRONOUS_RESPONSE':
+    case 'synchronous_response':
       return { dashed: true, dash: REPLY_DASH, start: 'none', end: 'filled', typeCue: null }
-    case 'LOST':
+    case 'lost':
       return { dashed: false, dash: null, start: 'none', end: 'lost', typeCue: 'lost' }
-    case 'BI_DIRECTIONAL':
+    case 'bi_directional':
       return { dashed: false, dash: null, start: 'filled', end: 'filled', typeCue: '↔' }
-    case 'SHORT_INBOUND':
+    case 'short_inbound':
       return { dashed: false, dash: null, start: 'none', end: 'filled', typeCue: 'in' }
-    case 'SHORT_OUTBOUND':
+    case 'short_outbound':
       return { dashed: false, dash: null, start: 'none', end: 'filled', typeCue: 'out' }
     default:
       return { dashed: false, dash: null, start: 'none', end: 'filled', typeCue: null }
   }
 }
 
-export function arrowMarker(id: string, colour: string, end: ArrowEnd): string {
+export function arrowMarker(id: string, color: string, end: ArrowEnd): string {
   if (end === 'none') return ''
   const markerId = escapeAttr(id)
-  const stroke = escapeAttr(colour)
+  const stroke = escapeAttr(color)
   if (end === 'open') {
     // Async: a larger open chevron than the filled call tip, so the two differ in shape and size.
     return `<marker id="${markerId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
@@ -279,24 +279,24 @@ export function arrowMarker(id: string, colour: string, end: ArrowEnd): string {
  * `var(--accent)` was producing `url(#mk_filled_var(--accent))`, which the
  * browser drops, so only hex tips (sync responses) painted.
  */
-function arrowMarkerId(end: ArrowEnd, colour: string): string {
-  const safe = colour.replace(/[^A-Za-z0-9_-]/g, '')
-  return `mk_${end}_${safe || 'colour'}`
+function arrowMarkerId(end: ArrowEnd, color: string): string {
+  const safe = color.replace(/[^A-Za-z0-9_-]/g, '')
+  return `mk_${end}_${safe || 'color'}`
 }
 
 export function markerSet(): {
-  ensure: (colour: string, end: ArrowEnd) => string
+  ensure: (color: string, end: ArrowEnd) => string
   markup: () => string
 } {
   const markers: string[] = []
   const seen = new Set<string>()
   return {
-    ensure(colour, end) {
+    ensure(color, end) {
       if (end === 'none') return ''
-      const id = arrowMarkerId(end, colour)
+      const id = arrowMarkerId(end, color)
       if (!seen.has(id)) {
         seen.add(id)
-        markers.push(arrowMarker(id, colour, end))
+        markers.push(arrowMarker(id, color, end))
       }
       return id
     },
@@ -305,11 +305,11 @@ export function markerSet(): {
 }
 
 /** A message drawn as a stub from one lifeline toward the diagram edge. */
-export type ShortMessageType = Extract<MessageType, 'SHORT_INBOUND' | 'SHORT_OUTBOUND'>
+export type ShortMessageType = Extract<MessageType, 'short_inbound' | 'short_outbound'>
 
 /** Whether [type] is a short arrow. A type guard, since MessageType is open (any other string). */
 export function isShortMessage(type: MessageType): type is ShortMessageType {
-  return type === 'SHORT_INBOUND' || type === 'SHORT_OUTBOUND'
+  return type === 'short_inbound' || type === 'short_outbound'
 }
 
 /**
@@ -321,7 +321,7 @@ export function shortMessageEndpoints(
   participantX: number,
   width: number,
 ): { x1: number; x2: number } {
-  if (type === 'SHORT_INBOUND') {
+  if (type === 'short_inbound') {
     const x2 = participantX - ACT_W / 2
     const x1 = Math.max(EDGE_INSET, x2 - SHORT_STUB)
     return { x1, x2 }
@@ -343,7 +343,7 @@ export function shortLabelAnchor(
   x1: number,
   x2: number,
 ): { x: number; anchor: 'start' | 'end' } {
-  return type === 'SHORT_OUTBOUND'
+  return type === 'short_outbound'
     ? { x: x1 + SHORT_LABEL_GAP, anchor: 'start' }
     : { x: x2 - SHORT_LABEL_GAP, anchor: 'end' }
 }

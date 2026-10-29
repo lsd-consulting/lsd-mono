@@ -65,12 +65,12 @@ describe('inspector view marker', () => {
     expect(panel.dataset.view).toBe('metrics')
     controller.openLink(
       'pay',
-      { nodes: [], edges: [{ from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 1 }] },
+      { nodes: [], edges: [{ from: 'a', to: 'b', types: ['synchronous'], count: 1 }] },
       0,
       'Pay',
     )
     expect(panel.dataset.view).toBe('link')
-    controller.openMessage('pay', { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'x', type: 'SYNCHRONOUS' })
+    controller.openMessage('pay', { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'x', type: 'synchronous' })
     expect(panel.dataset.view).toBe('message')
     controller.openError({ status: 'error', headline: 'Boom', message: 'bad' })
     expect(panel.dataset.view).toBe('error')

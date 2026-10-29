@@ -14,8 +14,8 @@ const scenario: Scenario = {
   facts: [],
   metrics: [],
   participants: [
-    { id: 'a', name: 'A', type: 'PARTICIPANT' },
-    { id: 'b', name: 'B', type: 'PARTICIPANT' },
+    { id: 'a', name: 'A', type: 'participant' },
+    { id: 'b', name: 'B', type: 'participant' },
   ],
   events: Array.from({ length: 40 }, (_, i) => ({
     kind: 'message' as const,
@@ -23,7 +23,7 @@ const scenario: Scenario = {
     from: 'a',
     to: 'b',
     label: `hop ${i + 1}`,
-    type: 'SYNCHRONOUS' as const,
+    type: 'synchronous' as const,
     data: { method: 'POST', path: `/${i + 1}`, status: 200 },
   })),
 }

@@ -2,11 +2,13 @@
   "schemaVersion": "1.1.0",
   "title": "A report from a newer minor version",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "hand-written",
+  "generator": {
+    "name": "hand-written"
+  },
   "status": "success",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "spock",
     "theme": "dark"
@@ -16,7 +18,6 @@
       "id": "1",
       "title": "Fields this version does not know",
       "status": "success",
-      "description": "",
       "facts": [
         {
           "key": "run",
@@ -35,20 +36,20 @@
         {
           "id": "web",
           "name": "Web",
-          "type": "ACTOR",
+          "type": "actor",
           "group": "edge"
         },
         {
           "id": "api",
           "name": "Api",
-          "type": "PARTICIPANT",
+          "type": "participant",
           "group": "core",
           "icon": "server"
         },
         {
           "id": "robot",
           "name": "Robot",
-          "type": "ROBOT"
+          "type": "robot"
         }
       ],
       "events": [
@@ -58,7 +59,7 @@
           "from": "web",
           "to": "api",
           "label": "GET /orders",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "origin": "replayed",
           "links": [
             {
@@ -76,7 +77,7 @@
           "from": "api",
           "to": "web",
           "label": "200",
-          "type": "SYNCHRONOUS_RESPONSE"
+          "type": "synchronous_response"
         },
         {
           "kind": "message",
@@ -84,7 +85,7 @@
           "from": "web",
           "to": "robot",
           "label": "broadcast",
-          "type": "BROADCAST"
+          "type": "broadcast"
         },
         {
           "kind": "bookmark",
@@ -92,12 +93,12 @@
           "label": "a new kind of row"
         }
       ],
-      "accuracy": "STRUCTURE_ONLY",
+      "accuracy": "structure_only",
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0,
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0,
       "tags": [
         "smoke",
         "checkout"

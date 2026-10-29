@@ -25,14 +25,14 @@ export { syncDiagramWindow } from './diagram/window'
 export { PRINT_MAX_UPSCALE, diagramPads, frameOf, paintedMessageIds, sliceViewTop } from './diagram/geometry'
 export { findFieldLabel } from './diagram/search-reveal'
 
-function mountDiagram(scenario: Scenario, labelMaxWidth: number): MountedDiagram {
+function mountDiagram(scenario: Scenario, labelMaxChars: number): MountedDiagram {
   const rows = layoutRows(scenario.events)
   const diagram: MountedDiagram = {
     scenario,
     rows,
     width: diagramWidth(scenario.participants.length),
     height: bodyHeight(rows),
-    labelMaxWidth,
+    labelMaxChars,
   }
   diagramState.mounted.set(scenario.id, diagram)
   return diagram
@@ -145,12 +145,12 @@ function arrowKeySvg(dash: string | null, tip: 'filled' | 'open'): string {
  */
 export function arrowLegendHtml(scenario: Scenario): string {
   const types = new Set(scenario.events.flatMap((e) => (e.kind === 'message' ? [e.type] : [])))
-  if (!types.has('ASYNCHRONOUS')) return ''
-  const reply = messageArrowSpec('SYNCHRONOUS_RESPONSE')
-  const async = messageArrowSpec('ASYNCHRONOUS')
+  if (!types.has('asynchronous')) return ''
+  const reply = messageArrowSpec('synchronous_response')
+  const async = messageArrowSpec('asynchronous')
   const keys = [
     `<span class="arrow-key">${arrowKeySvg(null, 'filled')}Call</span>`,
-    types.has('SYNCHRONOUS_RESPONSE') ? `<span class="arrow-key">${arrowKeySvg(reply.dash, 'filled')}Reply</span>` : '',
+    types.has('synchronous_response') ? `<span class="arrow-key">${arrowKeySvg(reply.dash, 'filled')}Reply</span>` : '',
     `<span class="arrow-key">${arrowKeySvg(async.dash, 'open')}Async (dotted, open tip)</span>`,
   ]
   return `<p class="arrow-legend">${keys.join('')}</p>`
@@ -163,8 +163,8 @@ function legendsHtml(scenario: Scenario): string {
 }
 
 /** Continuous diagram: sticky participant header, section jump list, virtualised rows. */
-export function renderDiagramHtml(scenario: Scenario, labelMaxWidth: number): string {
-  const diagram = mountDiagram(scenario, labelMaxWidth)
+export function renderDiagramHtml(scenario: Scenario, labelMaxChars: number): string {
+  const diagram = mountDiagram(scenario, labelMaxChars)
   const view = diagramView(scenario.id)
   const frame = frameOf(diagram, view.hidden)
   const width = frame.total

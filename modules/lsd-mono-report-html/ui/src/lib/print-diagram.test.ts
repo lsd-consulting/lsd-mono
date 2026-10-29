@@ -4,7 +4,7 @@ import type { Scenario } from '../types'
 import { HEADER_BLOCK_H } from './layout'
 import { PRINT_MAX_UPSCALE, bindDiagramScroll, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
 import { untimed } from './report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../ui/format'
 
 /** Long enough that the screen window paints only some of the rows. */
 const scenario: Scenario = {
@@ -16,8 +16,8 @@ const scenario: Scenario = {
   facts: [],
   metrics: [],
   participants: [
-    { id: 'api', name: 'Api', type: 'PARTICIPANT' },
-    { id: 'db', name: 'Db', type: 'DATABASE' },
+    { id: 'api', name: 'Api', type: 'participant' },
+    { id: 'db', name: 'Db', type: 'database' },
   ],
   events: Array.from({ length: 80 }, (_, i) => ({
     kind: 'message' as const,
@@ -25,7 +25,7 @@ const scenario: Scenario = {
     from: i % 2 ? 'db' : 'api',
     to: i % 2 ? 'api' : 'db',
     label: `step ${i}`,
-    type: i % 2 ? ('SYNCHRONOUS_RESPONSE' as const) : ('SYNCHRONOUS' as const),
+    type: i % 2 ? ('synchronous_response' as const) : ('synchronous' as const),
   })),
 }
 
@@ -37,7 +37,7 @@ describe('sequence diagram in print', () => {
   let scroll: HTMLElement
 
   beforeEach(() => {
-    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_WIDTH)}</div>`
+    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_CHARS)}</div>`
     scroll = document.querySelector<HTMLElement>('.seq-scroll')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 240 })
     Object.defineProperty(scroll, 'clientWidth', { configurable: true, value: 600 })

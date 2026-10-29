@@ -2,7 +2,10 @@
   "schemaVersion": "0.1.0",
   "title": "Another producer",
   "generatedAt": "2026-01-01T13:00:00.250+01:00",
-  "generator": "acme-trace 3.2",
+  "generator": {
+    "name": "acme-trace",
+    "version": "3.2"
+  },
   "status": "success",
   "scenarios": [
     {
@@ -16,17 +19,16 @@
           "value": "4bf92f3577b34da6"
         }
       ],
-      "metrics": [],
       "participants": [
         {
           "id": "web",
           "name": "Web",
-          "type": "ACTOR"
+          "type": "actor"
         },
         {
           "id": "api",
           "name": "Api",
-          "type": "PARTICIPANT"
+          "type": "participant"
         }
       ],
       "events": [
@@ -36,7 +38,7 @@
           "from": "web",
           "to": "api",
           "label": "POST /checkout",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "startedAt": "2026-01-01T13:00:00.100+01:00"
         },
         {
@@ -45,7 +47,7 @@
           "from": "api",
           "to": "web",
           "label": "201",
-          "type": "SYNCHRONOUS_RESPONSE"
+          "type": "synchronous_response"
         }
       ]
     }

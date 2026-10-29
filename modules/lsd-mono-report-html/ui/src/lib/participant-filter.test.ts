@@ -15,7 +15,7 @@ import {
 import { bindDiagramScroll, diagramView, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
 import { flushDiagramPaints } from './diagram/invalidate'
 import { untimed } from './report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../ui/format'
 
 let n = 0
 /** A fresh scenario id per test: hidden state lives per scenario for the page's life. */
@@ -30,15 +30,15 @@ function scenario(): Scenario {
     facts: [],
     metrics: [],
     participants: [
-      { id: 'client', name: 'Client', type: 'ACTOR' },
-      { id: 'api', name: 'Api', type: 'PARTICIPANT' },
-      { id: 'db', name: 'Orders DB', type: 'DATABASE' },
-      { id: 'bus', name: 'Bus', alias: 'Order events', type: 'QUEUE' },
+      { id: 'client', name: 'Client', type: 'actor' },
+      { id: 'api', name: 'Api', type: 'participant' },
+      { id: 'db', name: 'Orders DB', type: 'database' },
+      { id: 'bus', name: 'Bus', displayName: 'Order events', type: 'queue' },
     ],
     events: [
-      { kind: 'message', id: 'm1', from: 'client', to: 'api', label: 'place order', type: 'SYNCHRONOUS' },
-      { kind: 'message', id: 'm2', from: 'api', to: 'db', label: 'insert', type: 'SYNCHRONOUS' },
-      { kind: 'message', id: 'm3', from: 'api', to: 'bus', label: 'publish', type: 'ASYNCHRONOUS' },
+      { kind: 'message', id: 'm1', from: 'client', to: 'api', label: 'place order', type: 'synchronous' },
+      { kind: 'message', id: 'm2', from: 'api', to: 'db', label: 'insert', type: 'synchronous' },
+      { kind: 'message', id: 'm3', from: 'api', to: 'bus', label: 'publish', type: 'asynchronous' },
       { kind: 'note', id: 'n1', text: 'over the bus', over: 'bus', placement: 'over' },
     ],
   }
@@ -46,7 +46,7 @@ function scenario(): Scenario {
 
 function mount(s: Scenario = scenario()): { s: Scenario; root: HTMLElement; scroll: HTMLElement } {
   const host = document.createElement('div')
-  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
+  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_CHARS)
   document.body.append(host)
   const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
   Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })

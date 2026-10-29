@@ -15,8 +15,8 @@ public class ReportJson internal constructor(
     public val title: String,
     /** When the report was written: an RFC 3339 date-time with `Z` or an offset, such as `2026-10-21T08:00:00Z`. */
     public val generatedAt: String,
-    /** What wrote the report and its version, such as `lsd-mono-jvm 0.7.0`. The usage ping reads it. */
-    public val generator: String,
+    /** What wrote the report, and its version when it has one. */
+    public val generator: GeneratorJson,
     /** The worst scenario outcome: [StatusJson.ERROR], else `WARN`, else `SUCCESS` (also when there are no scenarios). */
     public val status: StatusJson,
     /** Switches for the page. */
@@ -47,7 +47,7 @@ public class ReportJson internal constructor(
     public class Builder internal constructor(
         private val title: String,
         private val generatedAt: String,
-        private val generator: String,
+        private val generator: GeneratorJson,
         private val status: StatusJson,
     ) {
         private var options: ReportOptionsJson = ReportOptionsJson.builder().build()
@@ -70,7 +70,7 @@ public class ReportJson internal constructor(
         public fun builder(
             title: String,
             generatedAt: String,
-            generator: String,
+            generator: GeneratorJson,
             status: StatusJson,
         ): Builder = Builder(title, generatedAt, generator, status)
     }
@@ -80,11 +80,12 @@ public class ReportJson internal constructor(
 public class ReportOptionsJson internal constructor(
     /** When false, scenarios carry no `metrics`. */
     public val metricsEnabled: Boolean,
-    /** Width the diagram cuts message labels to; the full label stays in the report and the side panel. */
-    public val labelMaxWidth: Int,
+    /** Characters the diagram cuts message labels to; the full label stays in the report and the side panel. */
+    public val labelMaxChars: Int,
     /**
-     * Whether the page may send the usage ping. The page also needs a release `generator`. True by
-     * default, as lsd-mono-jvm's `lsd.mono.report.usagePing` is; the writer always writes it.
+     * Whether the page may send the usage ping. The page also needs to be a release build. True by
+     * default, as lsd-mono-jvm's `lsd.mono.report.usagePing` is; the writer always writes it. A
+     * reader takes a report that does not say as false.
      */
     public val usagePing: Boolean,
     /** What wrote the report, counted by the usage ping as `source-<name>`: one of [KnownReportSource.ALL], or another name. */
@@ -94,7 +95,7 @@ public class ReportOptionsJson internal constructor(
     public fun toBuilder(): Builder =
         Builder()
             .metricsEnabled(metricsEnabled)
-            .labelMaxWidth(labelMaxWidth)
+            .labelMaxChars(labelMaxChars)
             .usagePing(usagePing)
             .source(source)
 
@@ -107,7 +108,7 @@ public class ReportOptionsJson internal constructor(
     private fun fields(): List<Pair<String, Any?>> =
         listOf(
             "metricsEnabled" to metricsEnabled,
-            "labelMaxWidth" to labelMaxWidth,
+            "labelMaxChars" to labelMaxChars,
             "usagePing" to usagePing,
             "source" to source,
         )
@@ -115,19 +116,19 @@ public class ReportOptionsJson internal constructor(
     /** Makes [ReportOptionsJson]: metrics on, labels cut at 200, the usage ping on, source [KnownReportSource.API]. */
     public class Builder internal constructor() {
         private var metricsEnabled: Boolean = true
-        private var labelMaxWidth: Int = 200
+        private var labelMaxChars: Int = 200
         private var usagePing: Boolean = true
         private var source: String = KnownReportSource.API
 
         public fun metricsEnabled(value: Boolean): Builder = apply { metricsEnabled = value }
 
-        public fun labelMaxWidth(value: Int): Builder = apply { labelMaxWidth = value }
+        public fun labelMaxChars(value: Int): Builder = apply { labelMaxChars = value }
 
         public fun usagePing(value: Boolean): Builder = apply { usagePing = value }
 
         public fun source(value: String): Builder = apply { source = value }
 
-        public fun build(): ReportOptionsJson = ReportOptionsJson(metricsEnabled, labelMaxWidth, usagePing, source)
+        public fun build(): ReportOptionsJson = ReportOptionsJson(metricsEnabled, labelMaxChars, usagePing, source)
     }
 
     public companion object {
@@ -136,3 +137,20 @@ public class ReportOptionsJson internal constructor(
         public fun builder(): Builder = Builder()
     }
 }
+
+/**
+ * What wrote a report or index: the producer's [name], such as `lsd-mono-jvm`, and its [version]
+ * when it has one, such as `0.7.0`. The page shows "Written by [name]", with the version only when
+ * it is not the page's own.
+ */
+public data class GeneratorJson
+    @JvmOverloads
+    constructor(
+        public val name: String,
+        public val version: String? = null,
+    ) {
+        init {
+            require(name.isNotEmpty()) { "A generator's name is not empty" }
+            require(version == null || version.isNotEmpty()) { "A generator's version is null, not empty" }
+        }
+    }

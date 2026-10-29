@@ -30,15 +30,15 @@ import {
 } from './diagram-view'
 
 const participants: Participant[] = [
-  { id: 'a', name: 'A', type: 'PARTICIPANT' },
-  { id: 'b', name: 'B', type: 'PARTICIPANT' },
-  { id: 'c', name: 'C', type: 'DATABASE' },
+  { id: 'a', name: 'A', type: 'participant' },
+  { id: 'b', name: 'B', type: 'participant' },
+  { id: 'c', name: 'C', type: 'database' },
 ]
 
 const events: DiagramEvent[] = [
-  { kind: 'message', id: 'm1', from: 'a', to: 'c', label: 'Read rows', type: 'SYNCHRONOUS' },
-  { kind: 'message', id: 'm2', from: 'b', to: 'c', label: 'Write', type: 'ASYNCHRONOUS' },
-  { kind: 'message', id: 'm3', from: 'a', to: '', label: 'emit', type: 'SHORT_OUTBOUND' },
+  { kind: 'message', id: 'm1', from: 'a', to: 'c', label: 'Read rows', type: 'synchronous' },
+  { kind: 'message', id: 'm2', from: 'b', to: 'c', label: 'Write', type: 'asynchronous' },
+  { kind: 'message', id: 'm3', from: 'a', to: '', label: 'emit', type: 'short_outbound' },
   { kind: 'note', id: 'n1', text: 'cache miss', over: 'b', placement: 'over' },
   { kind: 'note', id: 'n2', text: 'wide note', placement: 'left' },
   { kind: 'divider', id: 'd1', label: 'Read rows' },
@@ -67,7 +67,7 @@ describe('fitted view includes the top message label', () => {
     from: 'a',
     to: 'b',
     label: 'place order',
-    type: 'SYNCHRONOUS',
+    type: 'synchronous',
   }
 
   it('keeps the label box inside the viewBox and the fitted rect when the diagram is scaled down', () => {

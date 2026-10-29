@@ -39,7 +39,17 @@ export function formatGeneratedAt(iso: string, timeZone?: string): string {
 
 /** A status's glyph, so the chips differ without colour (#158): ✓, ! and ✕ (the error mark). */
 export function statusGlyph(s: string): string {
-  return s === 'success' ? '✓' : s === 'warn' ? '!' : s === 'error' ? '✕' : '•'
+  return s === 'success'
+    ? '✓'
+    : s === 'warn'
+      ? '!'
+      : s === 'error'
+        ? '✕'
+        : s === 'skipped'
+          ? '–'
+          : s === 'aborted'
+            ? '⊘'
+            : '•'
 }
 
 /** A status dot in the sidebar, with its glyph inside so the status is not colour alone (#158). */
@@ -71,9 +81,9 @@ export function statusLabel(s: string): string {
 
 /**
  * The default of `lsd.mono.label.maxWidth`: keep in step with Kotlin's
- * `ReportOptions.DEFAULT_LABEL_MAX_WIDTH` (format.test.ts checks). Only the diagram cuts labels.
+ * `ReportOptions.DEFAULT_LABEL_MAX_CHARS` (format.test.ts checks). Only the diagram cuts labels.
  */
-export const DEFAULT_LABEL_MAX_WIDTH = 200
+export const DEFAULT_LABEL_MAX_CHARS = 200
 const ELLIPSIS = '...'
 
 export function truncateLabel(label: string, maxWidth: number): string {

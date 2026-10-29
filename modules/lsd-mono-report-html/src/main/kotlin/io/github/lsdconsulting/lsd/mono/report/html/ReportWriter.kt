@@ -28,7 +28,7 @@ import kotlin.concurrent.withLock
  * [writeIndex] writes `index.html`, which lists every report in the directory.
  *
  * ```kotlin
- * val writer = ReportWriter(ReportWriterSettings(generator = "my-adapter 1.0"))
+ * val writer = ReportWriter(ReportWriterSettings(generator = GeneratorJson("my-adapter", "1.0")))
  * val written = writer.writeReport(report, File("build/reports/lsd"))
  * writer.writeIndex(File("build/reports/lsd"))
  * ```
@@ -78,9 +78,9 @@ public class ReportWriter(
             Files.deleteIfExists(payloadsPath)
         }
         val payloadsSrc = payloadsName.takeIf { shellBundle.payloads.isNotEmpty() }
-        val shell = renderShell(shellBundle.report, payloadsSrc)
+        val shell = renderShell(shellBundle, payloadsSrc)
         val dataName = "$stem-report.js"
-        writeAtomically(outputDir.resolve(dataName).toPath(), reportDataScript(stem, shellBundle.report, payloadsSrc))
+        writeAtomically(outputDir.resolve(dataName).toPath(), reportDataScript(stem, shellBundle, payloadsSrc))
 
         val jsonPath = outputDir.resolve(jsonName).toPath()
         val diagramPath = outputDir.resolve(diagramName).toPath()
@@ -139,7 +139,7 @@ public class ReportWriter(
         return index
     }
 
-    /** Failures first, then warnings, then the rest; by title within each. */
+    /** Failures first, then warnings, passes, aborted and skipped; by title within each. */
     private val indexOrder: Comparator<ReportFile> =
         compareBy<ReportFile> { STATUS_ORDER.indexOf(it.status).let { rank -> if (rank < 0) STATUS_ORDER.size else rank } }
             .thenBy { it.title.lowercase() }
@@ -155,9 +155,8 @@ public class ReportWriter(
             JsonObject(
                 listOf(
                     "schemaVersion" to JsonString(ReportSchema.VERSION),
-                    "title" to JsonString(INDEX_TITLE),
                     "generatedAt" to JsonString((settings.generatedAt ?: Instant.now()).truncatedTo(ChronoUnit.MILLIS).toString()),
-                    "generator" to JsonString(settings.generator),
+                    "generator" to settings.generator.toJsonValue(),
                     "options" to JsonObject(listOf("usagePing" to JsonBool(settings.usagePing))),
                     "reports" to JsonArray(reportFiles.map(::manifestEntry)),
                 ),
@@ -176,11 +175,7 @@ public class ReportWriter(
                 "href" to JsonString(rf.filename),
                 "counts" to
                     JsonObject(
-                        listOf(
-                            "success" to JsonNumber(rf.counts.success.toString()),
-                            "warn" to JsonNumber(rf.counts.warn.toString()),
-                            "error" to JsonNumber(rf.counts.error.toString()),
-                        ),
+                        rf.counts.byStatus().map { (status, count) -> status to JsonNumber(count.toString()) },
                     ),
                 "scenarios" to
                     JsonArray(
@@ -190,7 +185,7 @@ public class ReportWriter(
                                     "id" to JsonString(it.id),
                                     "title" to JsonString(it.title),
                                     "status" to JsonString(it.status),
-                                    "messages" to JsonNumber(it.messages.toString()),
+                                    "messageCount" to JsonNumber(it.messageCount.toString()),
                                 ),
                             )
                         },
@@ -209,9 +204,7 @@ public class ReportWriter(
                 setProperty("title", Html.wellFormed(entry.title))
                 setProperty("status", entry.status)
                 setProperty("format", INDEX_FORMAT)
-                setProperty("success", entry.counts.success.toString())
-                setProperty("warn", entry.counts.warn.toString())
-                setProperty("error", entry.counts.error.toString())
+                entry.counts.byStatus().forEach { (status, count) -> setProperty(status, count.toString()) }
                 entry.stem?.let { setProperty("stem", it) }
                 entry.dataScript?.let { setProperty("data", it) }
                 setProperty("scenarios", entry.scenarios.size.toString())
@@ -219,7 +212,7 @@ public class ReportWriter(
                     setProperty("scenario.$i.id", s.id)
                     setProperty("scenario.$i.title", Html.wellFormed(s.title))
                     setProperty("scenario.$i.status", s.status)
-                    setProperty("scenario.$i.messages", s.messages.toString())
+                    setProperty("scenario.$i.messages", s.messageCount.toString())
                 }
             }
         val text = StringWriter().also { props.store(it, null) }.toString()
@@ -261,7 +254,7 @@ public class ReportWriter(
             filename,
             props.getProperty("title").orEmpty(),
             props.getProperty("status").orEmpty(),
-            ScenarioCounts(count("success"), count("warn"), count("error")),
+            ScenarioCounts(count("success"), count("warn"), count("error"), count("skipped"), count("aborted")),
             stem = props.getProperty("stem"),
             dataScript = props.getProperty("data"),
             scenarios =
@@ -271,7 +264,7 @@ public class ReportWriter(
                         id = id,
                         title = props.getProperty("scenario.$i.title").orEmpty(),
                         status = props.getProperty("scenario.$i.status").orEmpty(),
-                        messages = props.getProperty("scenario.$i.messages")?.toIntOrNull() ?: 0,
+                        messageCount = props.getProperty("scenario.$i.messages")?.toIntOrNull() ?: 0,
                     )
                 },
         )
@@ -333,7 +326,7 @@ public class ReportWriter(
      * Values are written with `jsonString`, which escapes `<`, `>`, `&`, U+2028/2029 and
      * lone surrogates, so no report text can close the script element.
      */
-    private fun renderShell(report: ReportJson, payloadsFile: String?): String {
+    private fun renderShell(report: ShellReport, payloadsFile: String?): String {
         val src =
             if (payloadsFile == null)
                 ""
@@ -355,7 +348,7 @@ public class ReportWriter(
      * under its stem. The index page adds it with a script element when the report is opened,
      * which works from `file://`, where fetch does not. Payloads stay in `<stem>-payloads.js`.
      */
-    internal fun reportDataScript(stem: String, report: ReportJson, payloadsSrc: String?): String {
+    internal fun reportDataScript(stem: String, report: ShellReport, payloadsSrc: String?): String {
         val payloads = if (payloadsSrc == null) "null" else jsonString(payloadsSrc)
         return "(window.__LSD_REPORTS__=window.__LSD_REPORTS__||{})[${jsonString(stem)}]=" +
             "{report:${report.toJson().trim()},payloadsSrc:$payloads};\n"
@@ -374,11 +367,11 @@ public class ReportWriter(
         private const val SHELL_RESOURCE = "/lsd-mono-report-html/lsd-report.single.html"
         private const val INDEX_DIR = ".lsd-index"
         private const val INDEX_LOCK = ".lock"
-        private const val INDEX_FORMAT = "2"
+        private const val INDEX_FORMAT = "3"
         private const val INDEX_TITLE = "LSD reports"
         private const val MAX_TITLE_CHARS = 80
         private val jvmIndexLock = ReentrantLock()
-        private val STATUS_ORDER = listOf("error", "warn", "success")
+        private val STATUS_ORDER = listOf("error", "warn", "success", "aborted", "skipped")
 
         /**
          * Parsed index entries, per entry file, kept while the file's size and modified time are

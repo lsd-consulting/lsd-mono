@@ -2,11 +2,14 @@
   "schemaVersion": "0.1.0",
   "title": "Checkout Service — Living Sequence Diagrams",
   "generatedAt": "2026-09-30T06:42:11Z",
-  "generator": "lsd-mono-jvm 0.0.1-SNAPSHOT",
+  "generator": {
+    "name": "lsd-mono-jvm",
+    "version": "0.0.1-SNAPSHOT"
+  },
   "status": "error",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "api"
   },
@@ -44,38 +47,38 @@
         {
           "id": "customer",
           "name": "Customer",
-          "type": "ACTOR",
-          "colour": "#38bdf8"
+          "type": "actor",
+          "color": "#38bdf8"
         },
         {
           "id": "api",
           "name": "CheckoutAPI",
-          "type": "PARTICIPANT",
-          "colour": "#34d399"
+          "type": "participant",
+          "color": "#34d399"
         },
         {
           "id": "orders",
           "name": "OrderService",
-          "type": "PARTICIPANT",
-          "colour": "#a78bfa"
+          "type": "participant",
+          "color": "#a78bfa"
         },
         {
           "id": "payments",
           "name": "PaymentGateway",
-          "type": "BOUNDARY",
-          "colour": "#fbbf24"
+          "type": "boundary",
+          "color": "#fbbf24"
         },
         {
           "id": "db",
           "name": "OrdersDB",
-          "type": "DATABASE",
-          "colour": "#94a3b8"
+          "type": "database",
+          "color": "#94a3b8"
         },
         {
           "id": "bus",
           "name": "EventBus",
-          "type": "QUEUE",
-          "colour": "#fb7185"
+          "type": "queue",
+          "color": "#fb7185"
         }
       ],
       "events": [
@@ -95,13 +98,12 @@
           "from": "customer",
           "to": "api",
           "label": "POST /checkout",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "data": {
             "method": "POST",
             "path": "/checkout",
             "status": 202
-          },
-          "payloadId": "sc-happy/m1"
+          }
         },
         {
           "kind": "activate",
@@ -114,9 +116,8 @@
           "from": "api",
           "to": "orders",
           "label": "reserveOrder(cart_88)",
-          "type": "SYNCHRONOUS",
-          "durationMs": 28,
-          "payloadId": "sc-happy/m2"
+          "type": "synchronous",
+          "durationMs": 28
         },
         {
           "kind": "message",
@@ -124,9 +125,8 @@
           "from": "orders",
           "to": "db",
           "label": "INSERT orders",
-          "type": "SYNCHRONOUS",
-          "durationMs": 12,
-          "payloadId": "sc-happy/m3"
+          "type": "synchronous",
+          "durationMs": 12
         },
         {
           "kind": "message",
@@ -134,13 +134,12 @@
           "from": "db",
           "to": "orders",
           "label": "ok",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "data": {
             "method": "POST",
             "path": "/orders",
             "status": 200
-          },
-          "payloadId": "sc-happy/m4"
+          }
         },
         {
           "kind": "message",
@@ -148,11 +147,10 @@
           "from": "orders",
           "to": "api",
           "label": "OrderReserved",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "data": {
             "status": "RESERVED"
-          },
-          "payloadId": "sc-happy/m5"
+          }
         },
         {
           "kind": "deactivate",
@@ -180,10 +178,9 @@
           "from": "api",
           "to": "payments",
           "label": "capture(ord_9f2a1c, 4850)",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "durationMs": 62,
-          "colour": "#34d399",
-          "payloadId": "sc-happy/m6"
+          "color": "#34d399"
         },
         {
           "kind": "message",
@@ -191,12 +188,11 @@
           "from": "payments",
           "to": "api",
           "label": "Captured",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#34d399",
+          "type": "synchronous_response",
+          "color": "#34d399",
           "data": {
             "status": "succeeded"
-          },
-          "payloadId": "sc-happy/m7"
+          }
         },
         {
           "kind": "deactivate",
@@ -209,8 +205,7 @@
           "from": "api",
           "to": "bus",
           "label": "OrderConfirmed",
-          "type": "ASYNCHRONOUS",
-          "payloadId": "sc-happy/m8"
+          "type": "asynchronous"
         },
         {
           "kind": "message",
@@ -218,11 +213,10 @@
           "from": "api",
           "to": "customer",
           "label": "201 Created",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "data": {
             "status": "CONFIRMED"
-          },
-          "payloadId": "sc-happy/m9"
+          }
         },
         {
           "kind": "note",
@@ -237,12 +231,12 @@
           "participantId": "api"
         }
       ],
-      "accuracy": "MEASURED",
+      "accuracy": "measured",
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     },
     {
       "id": "sc-warn",
@@ -277,26 +271,26 @@
         {
           "id": "customer",
           "name": "Customer",
-          "type": "ACTOR",
-          "colour": "#38bdf8"
+          "type": "actor",
+          "color": "#38bdf8"
         },
         {
           "id": "api",
           "name": "CheckoutAPI",
-          "type": "PARTICIPANT",
-          "colour": "#34d399"
+          "type": "participant",
+          "color": "#34d399"
         },
         {
           "id": "payments",
           "name": "PaymentGateway",
-          "type": "BOUNDARY",
-          "colour": "#fbbf24"
+          "type": "boundary",
+          "color": "#fbbf24"
         },
         {
           "id": "bus",
           "name": "EventBus",
-          "type": "QUEUE",
-          "colour": "#fb7185"
+          "type": "queue",
+          "color": "#fb7185"
         }
       ],
       "events": [
@@ -311,8 +305,7 @@
           "from": "customer",
           "to": "api",
           "label": "POST /checkout",
-          "type": "SYNCHRONOUS",
-          "payloadId": "sc-warn/wm1"
+          "type": "synchronous"
         },
         {
           "kind": "activate",
@@ -325,10 +318,9 @@
           "from": "api",
           "to": "payments",
           "label": "capture (attempt 1)",
-          "type": "SYNCHRONOUS",
-          "colour": "#fbbf24",
-          "durationMs": 2000,
-          "payloadId": "sc-warn/wm2"
+          "type": "synchronous",
+          "color": "#fbbf24",
+          "durationMs": 2000
         },
         {
           "kind": "message",
@@ -336,9 +328,8 @@
           "from": "payments",
           "to": "api",
           "label": "TimeoutException",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#fbbf24",
-          "payloadId": "sc-warn/wm3"
+          "type": "synchronous_response",
+          "color": "#fbbf24"
         },
         {
           "kind": "note",
@@ -353,9 +344,8 @@
           "from": "api",
           "to": "payments",
           "label": "capture (attempt 2)",
-          "type": "SYNCHRONOUS",
-          "durationMs": 180,
-          "payloadId": "sc-warn/wm4"
+          "type": "synchronous",
+          "durationMs": 180
         },
         {
           "kind": "message",
@@ -363,12 +353,11 @@
           "from": "payments",
           "to": "api",
           "label": "Captured",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#34d399",
+          "type": "synchronous_response",
+          "color": "#34d399",
           "data": {
             "status": "succeeded"
-          },
-          "payloadId": "sc-warn/wm5"
+          }
         },
         {
           "kind": "deactivate",
@@ -381,13 +370,12 @@
           "from": "api",
           "to": "bus",
           "label": "OrderConfirmed",
-          "type": "ASYNCHRONOUS",
+          "type": "asynchronous",
           "data": {
             "method": "POST",
             "path": "/events/order.confirmed",
             "status": 202
-          },
-          "payloadId": "sc-warn/wm6"
+          }
         },
         {
           "kind": "message",
@@ -395,13 +383,12 @@
           "from": "api",
           "to": "customer",
           "label": "201 Created",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "data": {
             "method": "POST",
             "path": "/checkout",
             "status": 201
-          },
-          "payloadId": "sc-warn/wm7"
+          }
         },
         {
           "kind": "deactivate",
@@ -409,12 +396,12 @@
           "participantId": "api"
         }
       ],
-      "accuracy": "MEASURED",
+      "accuracy": "measured",
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     },
     {
       "id": "sc-error",
@@ -453,26 +440,26 @@
         {
           "id": "customer",
           "name": "Customer",
-          "type": "ACTOR",
-          "colour": "#38bdf8"
+          "type": "actor",
+          "color": "#38bdf8"
         },
         {
           "id": "api",
           "name": "CheckoutAPI",
-          "type": "PARTICIPANT",
-          "colour": "#34d399"
+          "type": "participant",
+          "color": "#34d399"
         },
         {
           "id": "orders",
           "name": "OrderService",
-          "type": "PARTICIPANT",
-          "colour": "#a78bfa"
+          "type": "participant",
+          "color": "#a78bfa"
         },
         {
           "id": "inv",
           "name": "Inventory",
-          "type": "DATABASE",
-          "colour": "#94a3b8"
+          "type": "database",
+          "color": "#94a3b8"
         }
       ],
       "events": [
@@ -487,8 +474,7 @@
           "from": "customer",
           "to": "api",
           "label": "POST /checkout",
-          "type": "SYNCHRONOUS",
-          "payloadId": "sc-error/em1"
+          "type": "synchronous"
         },
         {
           "kind": "activate",
@@ -501,13 +487,12 @@
           "from": "api",
           "to": "orders",
           "label": "reserveOrder",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "data": {
             "method": "POST",
             "path": "/orders/reserve",
             "status": 409
-          },
-          "payloadId": "sc-error/em2"
+          }
         },
         {
           "kind": "message",
@@ -515,8 +500,7 @@
           "from": "orders",
           "to": "inv",
           "label": "checkStock(SOCK-01)",
-          "type": "SYNCHRONOUS",
-          "payloadId": "sc-error/em3"
+          "type": "synchronous"
         },
         {
           "kind": "message",
@@ -524,9 +508,8 @@
           "from": "inv",
           "to": "orders",
           "label": "available=0",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#f87171",
-          "payloadId": "sc-error/em4"
+          "type": "synchronous_response",
+          "color": "#f87171"
         },
         {
           "kind": "message",
@@ -534,9 +517,8 @@
           "from": "orders",
           "to": "api",
           "label": "InsufficientStock",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#f87171",
-          "payloadId": "sc-error/em5"
+          "type": "synchronous_response",
+          "color": "#f87171"
         },
         {
           "kind": "deactivate",
@@ -556,12 +538,11 @@
           "from": "api",
           "to": "customer",
           "label": "409 Conflict",
-          "type": "SYNCHRONOUS_RESPONSE",
-          "colour": "#f87171",
+          "type": "synchronous_response",
+          "color": "#f87171",
           "data": {
             "status": 409
-          },
-          "payloadId": "sc-error/em6"
+          }
         },
         {
           "kind": "deactivate",
@@ -569,12 +550,12 @@
           "participantId": "api"
         }
       ],
-      "accuracy": "STRUCTURE_ONLY",
+      "accuracy": "structure_only",
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     }
   ]
 }

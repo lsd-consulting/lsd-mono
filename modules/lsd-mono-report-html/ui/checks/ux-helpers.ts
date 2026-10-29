@@ -32,9 +32,9 @@ export async function computedColours(page: Page, picks: [selector: string, prop
     const canvas = document.createElement('canvas')
     canvas.width = canvas.height = 1
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!
-    const rgba = (colour: string) => {
+    const rgba = (color: string) => {
       ctx.clearRect(0, 0, 1, 1)
-      ctx.fillStyle = colour
+      ctx.fillStyle = color
       ctx.fillRect(0, 0, 1, 1)
       return [...ctx.getImageData(0, 0, 1, 1).data]
     }
@@ -102,7 +102,7 @@ function wideScenario(id: string, title: string): Scenario {
   const participants = Array.from({ length: 6 }, (_, i): Participant => ({
     id: `p${i}`,
     name: `Service ${i}`,
-    type: 'PARTICIPANT',
+    type: 'participant',
   }))
   const events = Array.from({ length: 30 }, (_, i): MessageEvent => ({
     kind: 'message',
@@ -110,7 +110,7 @@ function wideScenario(id: string, title: string): Scenario {
     from: `p${i % 6}`,
     to: `p${(i + 2) % 6}`,
     label: `call ${i}`,
-    type: 'SYNCHRONOUS',
+    type: 'synchronous',
     data: { n: i },
   }))
   return { ...uxFixture.scenarios[0], id, title, participants, events }

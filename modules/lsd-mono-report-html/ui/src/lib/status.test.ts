@@ -23,7 +23,7 @@ describe('message status pill', () => {
     from: 'pay',
     to: 'api',
     label: 'reply',
-    type: 'SYNCHRONOUS_RESPONSE',
+    type: 'synchronous_response',
     status,
     data,
   })

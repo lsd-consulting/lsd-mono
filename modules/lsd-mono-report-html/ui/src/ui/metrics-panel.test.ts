@@ -7,7 +7,7 @@ import { metricsPanelHtml } from './metrics'
 import { createKeyRouter } from '../lib/keys/router'
 import type { InspectorController } from './inspector'
 import { untimed } from '../lib/report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from './format'
+import { DEFAULT_LABEL_MAX_CHARS } from './format'
 /** Escape as the page's key router gives it to the side panel (#102). */
 function pressEscape(controller: InspectorController): void {
   const router = createKeyRouter(() => ({
@@ -34,11 +34,11 @@ function scenario(overrides: Partial<Scenario> = {}): Scenario {
     facts: [],
     metrics,
     participants: [
-      { id: 'api', name: 'API', type: 'PARTICIPANT' },
-      { id: 'payment-service', name: 'Payments', type: 'PARTICIPANT' },
+      { id: 'api', name: 'API', type: 'participant' },
+      { id: 'payment-service', name: 'Payments', type: 'participant' },
     ],
     events: [
-      { kind: 'message', id: 'm7', from: 'api', to: 'payment-service', label: 'authorise', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'm7', from: 'api', to: 'payment-service', label: 'authorise', type: 'synchronous' },
     ],
     ...overrides,
   }
@@ -50,7 +50,7 @@ function toolbarOf(html: string): string {
 
 describe('metrics button', () => {
   it('sits in the side panel group, alone now the component diagram is a view (#105), and names the scenario it opens', () => {
-    const toolbar = toolbarOf(renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_WIDTH))
+    const toolbar = toolbarOf(renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_CHARS))
     expect(toolbar).toMatch(
       /aria-label="Open in the side panel"><button[^>]*data-show-metrics="pay"[^>]*>(?:(?!<\/button>).)*<span>Metrics<\/span><\/button><\/div>/s,
     )
@@ -58,7 +58,7 @@ describe('metrics button', () => {
   })
 
   it('is left out when there are no metrics, with its group', () => {
-    const toolbar = toolbarOf(renderDiagramHtml(scenario({ metrics: [] }), DEFAULT_LABEL_MAX_WIDTH))
+    const toolbar = toolbarOf(renderDiagramHtml(scenario({ metrics: [] }), DEFAULT_LABEL_MAX_CHARS))
     expect(toolbar).not.toContain('data-show-metrics')
     expect(toolbar).not.toContain('panel-controls')
   })
@@ -67,7 +67,7 @@ describe('metrics button', () => {
 describe('side panel buttons', () => {
   it('say they open the side panel, closed until the app marks one open, named by their text alone', () => {
     const host = document.createElement('div')
-    host.innerHTML = renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_WIDTH)
+    host.innerHTML = renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_CHARS)
     for (const [selector, text] of [['[data-show-metrics]', 'Metrics']] as const) {
       const button = host.querySelector<HTMLButtonElement>(`.panel-controls ${selector}`)!
       expect(button.getAttribute('aria-controls')).toBe('inspector')
@@ -142,7 +142,7 @@ describe('metrics in the side panel', () => {
       from: 'api',
       to: 'payment-service',
       label: 'authorise',
-      type: 'SYNCHRONOUS',
+      type: 'synchronous',
       data: { ok: true },
     }
     controller.openMessage('pay', message)
@@ -159,7 +159,7 @@ describe('metrics in the side panel', () => {
   it('swapping to a component link clears the metrics view', () => {
     const controller = bindInspector(document, { loadPayload: async () => undefined, onClose: () => {} })
     controller.openMetrics('pay', { heading: 'Happy path', metrics })
-    const link = { from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 1 }
+    const link = { from: 'a', to: 'b', types: ['synchronous'], count: 1 }
     controller.openLink('pay', { nodes: [], edges: [link] }, 0, 'Happy path')
     const host = document.querySelector<HTMLElement>('#inspector-metrics')!
     expect(host.hidden).toBe(true)

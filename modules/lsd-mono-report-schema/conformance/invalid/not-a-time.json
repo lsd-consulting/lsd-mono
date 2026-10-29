@@ -2,11 +2,13 @@
   "schemaVersion": "0.1.0",
   "title": "Invalid",
   "generatedAt": "2026-01-01 at noon",
-  "generator": "hand-written",
+  "generator": {
+    "name": "hand-written"
+  },
   "status": "success",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "api"
   },
@@ -15,8 +17,6 @@
       "id": "1",
       "title": "One",
       "status": "success",
-      "description": "",
-      "facts": [],
       "metrics": [
         {
           "key": "Messages",
@@ -27,12 +27,12 @@
         {
           "id": "web",
           "name": "Web",
-          "type": "ACTOR"
+          "type": "actor"
         },
         {
           "id": "api",
           "name": "Api",
-          "type": "PARTICIPANT"
+          "type": "participant"
         }
       ],
       "events": [
@@ -42,7 +42,7 @@
           "from": "web",
           "to": "api",
           "label": "GET /orders",
-          "type": "SYNCHRONOUS"
+          "type": "synchronous"
         },
         {
           "kind": "message",
@@ -50,15 +50,15 @@
           "from": "api",
           "to": "web",
           "label": "200",
-          "type": "SYNCHRONOUS_RESPONSE"
+          "type": "synchronous_response"
         }
       ],
-      "accuracy": "STRUCTURE_ONLY",
+      "accuracy": "structure_only",
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     }
   ]
 }

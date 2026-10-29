@@ -21,13 +21,14 @@ anything else takes a new major version. How it lines up with OpenTelemetry is d
 - Every report and index has a required `schemaVersion`: the semver of the schema it follows,
   apart from the lsd-mono version. This is `1.0.0`.
 - The version is in each schema's `$id`
-  (`https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json`). That URL is
-  not live yet: nothing is published there, so it returns 404. The `$id`s only name the schemas
-  and let the index schema refer to the report schema; read the schemas from this directory.
+  (`https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json`), and each
+  schema is published at its `$id` by the Pages workflow (`.github/workflows/pages.yml`), so a
+  validator can fetch it. This directory is the source; the published copy is made from it.
 - **A minor version only adds**: a new optional field, a new value of an open enum, a new event
   kind. Anything else is breaking and raises the major version: removing or renaming a field,
-  making one required, changing its type or meaning, or a new value of a closed enum. (0.x followed the same rule, stricter than semver's "anything goes"
-  for 0.x, so a 0.x report is still read as before.)
+  making one required, changing its type or meaning, or a new value of a closed enum.
+- 1.0.0 is a clean break from 0.x (see the table). The report UI still opens any 0.x report,
+  and one with no `schemaVersion`: it upgrades it to 1.0.0's shape when it reads it.
 - To change the format: edit the schema, raise the version in both `$id`s and in
   `ReportSchema.VERSION` (lsd-mono-report-model), and regenerate the UI's types (below).
 
@@ -36,7 +37,7 @@ anything else takes a new major version. How it lines up with OpenTelemetry is d
 | `0.1.0` | The format as lsd-mono-jvm 0.7 wrote it. |
 | `0.2.0` | A message's optional `attributes` and `origin`; `Trace` frozen at three ids and its id forms written down. Only adds: a 0.1 report is a valid 0.2 report. |
 | `0.3.0` | A participant's optional `attributes`, with the same keys and values as a message's. Only adds: a 0.2 report is a valid 0.3 report. |
-| `1.0.0` | The format frozen: the same shape as `0.3.0`, with the compatibility rule promised from here on. A 0.3 report is a valid 1.0 report, and the report UI still opens any 0.x report. |
+| `1.0.0` | The format frozen, with the compatibility rule promised from here on. Breaking from 0.x: enum values are lower snake case; scenario statuses `skipped` and `aborted`; `generator` is `{name, version?}`; `alias`→`displayName`, `colour`→`color`, `labelMaxWidth`→`labelMaxChars`, `measuredCoverage`→`measuredRatio`, `pairingCoverage`→`pairedRatio`, `clockOrdered`→`clockOrderedCount`, an index scenario's `messages`→`messageCount`; a reply's `replyTo` is its call's message id (`replyOf` is gone, the call id is `callId`); optional fields are never written empty; the index `title` and `options.usagePing` are optional. The report UI upgrades a 0.x report or index when it reads it. |
 
 ### The compatibility rule
 
@@ -55,8 +56,8 @@ version still validates it:
 
 - **Unknown fields:** objects accept properties they do not list; a reader ignores them.
 - **Open enums** accept any string as well as the values they list, and a reader falls back for
-  a value it does not know: participant type (drawn as `PARTICIPANT`), message type (a
-  `SYNCHRONOUS` arrow), timing, pairing and order sources, timing warning kinds, and the report
+  a value it does not know: participant type (drawn as `participant`), message type (a
+  `synchronous` arrow), timing, pairing and order sources, timing warning kinds, and the report
   `source`. Each one's description says what its fallback is.
 - **Closed enums** are the ones whose meaning a reader cannot guess: `status`, note
   `placement`, `accuracy`, `clockOrdering`, and the `activate`/`deactivate` kind.
@@ -64,7 +65,7 @@ version still validates it:
   `UnknownEvent`, and a reader drops it. A known kind still has to have its fields.
 - **Optional for any producer:** the report's `options` (each field defaults as its description
   says) and a scenario's timing summary (`accuracy`, `sources`, `clockOrdering`,
-  `clockOrdered`). A producer with no timing analysis leaves them out; lsd-mono-jvm always
+  `clockOrderedCount`). A producer with no timing analysis leaves them out; lsd-mono-jvm always
   writes them.
 - **A newer major version** may break any of this, so a reader says it cannot show the report
   rather than guess.
@@ -73,7 +74,9 @@ The report UI (`src/lib/schema-version.ts`) shows a report or index of a newer m
 with a small notice that anything new in it is not shown. For a newer major version it shows a
 page saying to upgrade lsd-mono instead of the report (on the index page, instead of that one
 report), and for a `schemaVersion` that is not a major.minor.patch version a page saying it cannot
-be opened. A report without `schemaVersion` is from before the schema and is shown as usual.
+be opened. A report or index with no `schemaVersion`, or a 0.x one, is from before 1.0.0: the UI
+upgrades it on read (`upgradeLegacyReport` in `src/lib/report-normalise.ts`, `normaliseIndex` in
+`src/lib/report-index.ts`) and shows it as usual.
 
 ## OpenTelemetry
 
@@ -129,45 +132,50 @@ would be an optional `links` list on a message, not part of `trace`.
   validates the golden files, the checks' example reports and the tests' shared report builders
   with ajv, formats included (ajv-formats).
 
-## Today's shape, quirks included
+## The shape, and the rules it keeps
 
-The schemas describe the format as lsd-mono-jvm 0.7 writes it, not a redesign. Some things a
-fresh design would do differently:
-
-- **Flat timing summary.** A scenario's `accuracy`, `measuredCoverage`, `pairingCoverage`,
-  `sources`, `wallClockMs`, `clockOrdering`, `clockOrdered`, `warnings`, `reorderedByClock` and
+- **Flat timing summary.** A scenario's `accuracy`, `measuredRatio`, `pairedRatio`,
+  `sources`, `wallClockMs`, `clockOrdering`, `clockOrderedCount`, `warnings`, `reorderedByClock` and
   `pairAccuracy` sit on the scenario itself, not in a `timing` object. A message's `timing` is
   something else: where its duration came from.
-- **Empty lists left out.** `warnings`, `reorderedByClock` and `pairAccuracy` are absent rather
-  than empty; `facts`, `metrics`, `participants` and `events` are always present, even empty.
-- **`alias` is the display name.** A participant's `alias` is what the Kotlin API calls
-  `displayName`: the name drawn instead of `name`.
-- **Diagram edges are empty strings.** A `SHORT_INBOUND` message's `from` and a `SHORT_OUTBOUND`
-  message's `to` are `""`, not absent; the same goes for `pairAccuracy` pairs.
-- **Mixed case.** Statuses and note placements are lower case (`success`, `over`); participant
-  types, message types and the timing enums are upper case (`DATABASE`, `SYNCHRONOUS`,
-  `STRUCTURE_ONLY`).
-- **Status as text.** A message's `status` (an HTTP status, say) is a string even when it is a
-  number.
+- **One rule for empties.** An optional field is left out rather than written empty: no empty
+  string, list or object. A reader treats absent as empty. Required fields are never empty.
+- **`displayName`** is the name drawn instead of a participant's `name`; `color` its colour.
+- **Diagram edges are absent.** A `short_inbound` message has no `from` and a `short_outbound`
+  message no `to`; the same goes for `pairAccuracy` pairs.
+- **One case.** Every enum value is lower snake case (`success`, `right_of`, `database`,
+  `synchronous_response`, `structure_only`).
+- **Scenario status.** `success`, `warn`, `error`, `skipped` (did not run: a disabled JUnit test, a
+  skipped Cucumber scenario) and `aborted` (stopped part way, such as a failed JUnit assumption).
+  `warn` is left for a pending, undefined or ambiguous step, or a scenario still running. A
+  report's or index entry's status is its worst scenario's, ranked
+  error > warn > success > aborted > skipped.
+- **Replies.** A reply's `replyTo` is the `id` of the message it answers; `callId` is the call id
+  the producer paired them by, when it had one.
+- **Message status as text.** A message's `status` (an HTTP status, say) is a string even when it
+  is a number, and absent when there is none.
 - **Two copies of a report.** `<stem>-report.json` keeps each message's whole `data`. The copy
   in the diagram page and `<stem>-report.js` moves a payload with more than its method, path and
   status to `<stem>-payloads.js`: its `data` keeps only those (or goes), and `payloadId` names it.
+  `payloadId` is only ever in the page's copy, never in `<stem>-report.json`.
 - **Reproducible reports** (`lsd.mono.report.generatedAt` or deterministic ids) leave out each
   message's `capturedAt`; `seq` is absent when a message was not counted.
 - **Times** are RFC 3339 date-times (`format: date-time`, asserted by both validators), so
   another producer may write an offset. lsd-mono-jvm writes UTC instants ending in `Z`, to the
   millisecond or finer (`generatedAt` is cut to milliseconds, and printed without them when
   they are zero).
-- **The index** is always titled `LSD reports`. Each entry's `data` (its `<stem>-report.js`) is
+- **The index** `title` is optional (the page shows `LSD reports` without one), as is
+  `options.usagePing` (default `false`). Each scenario has a `messageCount`. Each entry's `data` (its `<stem>-report.js`) is
   optional and, without a stem, its `id` is its page's file name; lsd-mono-jvm writes both today.
 - **Non-map payloads.** A message's `data` can be any JSON value: a map, a string or a list.
-- **`generator`** stays free text such as `lsd-mono-jvm 0.7.0`. The page shows it as "Written by …";
-  its version chip and the usage ping use the page's own lsd-mono-report-html version instead.
+- **`generator`** is `{ "name": "lsd-mono-jvm", "version": "1.0.0" }`, `version` optional. The
+  page shows the name as "Written by …", with the version only when it is not the page's own; its
+  version chip and the usage ping use the page's own lsd-mono-report-html version.
 
-The report UI also reads reports from before the schema (an older lsd-mono's `<stem>-report.js`
-in the same directory as a newer index), which can lack fields the schema requires. It fills in
-the optional fields and the older ones' defaults in one place when it loads a report
-(`src/lib/report-normalise.ts`).
+The report UI also reads 0.x reports and reports from before the schema (an older lsd-mono's
+`<stem>-report.js` in the same directory as a newer index). It upgrades them to 1.0.0's shape
+(case, names, generator, replies) and fills in the optional fields in one place when it loads a
+report (`src/lib/report-normalise.ts`); `conformance/invalid/legacy-*.json` are its test files.
 
 ## Shared test reports
 

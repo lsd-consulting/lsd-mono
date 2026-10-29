@@ -88,14 +88,14 @@ class RemainingSequenceEventKindsTest {
         assertEquals(48.0, scenario.eventsOf("spacer").first()["heightPx"])
 
         val types = scenario.messages.map { it["type"] }
-        assertEquals(2, types.count { it == "SHORT_INBOUND" })
-        assertEquals(2, types.count { it == "SHORT_OUTBOUND" })
-        assertEquals(1, types.count { it == "LOST" })
-        assertEquals(1, types.count { it == "BI_DIRECTIONAL" })
-        // A short arrow has an empty end, not an invented participant.
-        assertEquals(listOf("", "api"), scenario.message("found").let { listOf(it["from"], it["to"]) })
-        assertEquals(listOf("api", ""), scenario.message("emit").let { listOf(it["from"], it["to"]) })
-        assertEquals(listOf("drop", "pair"), scenario.messages.filter { it["type"] in setOf("LOST", "BI_DIRECTIONAL") }.map { it["label"] })
+        assertEquals(2, types.count { it == "short_inbound" })
+        assertEquals(2, types.count { it == "short_outbound" })
+        assertEquals(1, types.count { it == "lost" })
+        assertEquals(1, types.count { it == "bi_directional" })
+        // A short arrow has no end, not an invented participant.
+        assertEquals(listOf(null, "api"), scenario.message("found").let { listOf(it["from"], it["to"]) })
+        assertEquals(listOf("api", null), scenario.message("emit").let { listOf(it["from"], it["to"]) })
+        assertEquals(listOf("drop", "pair"), scenario.messages.filter { it["type"] in setOf("lost", "bi_directional") }.map { it["label"] })
 
         // No "?" participant, and only the two that were added.
         assertEquals(setOf("api", "db"), scenario.participants.map { it["id"] }.toSet())

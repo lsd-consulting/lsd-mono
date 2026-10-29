@@ -1,8 +1,9 @@
 {
   "schemaVersion": "1.0.0",
-  "title": "LSD reports",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "lsd-mono-jvm (conformance)",
+  "generator": {
+    "name": "lsd-mono-jvm"
+  },
   "options": {
     "usagePing": false
   },
@@ -16,26 +17,28 @@
       "counts": {
         "success": 1,
         "warn": 1,
-        "error": 1
+        "error": 1,
+        "skipped": 0,
+        "aborted": 0
       },
       "scenarios": [
         {
           "id": "1",
           "title": "checkout happy path",
           "status": "success",
-          "messages": 0
+          "messageCount": 0
         },
         {
           "id": "2",
           "title": "payment declined",
           "status": "warn",
-          "messages": 0
+          "messageCount": 0
         },
         {
           "id": "3",
           "title": "inventory outage",
           "status": "error",
-          "messages": 0
+          "messageCount": 0
         }
       ]
     }

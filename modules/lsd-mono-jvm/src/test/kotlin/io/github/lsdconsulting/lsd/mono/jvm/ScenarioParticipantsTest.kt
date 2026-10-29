@@ -48,9 +48,9 @@ class ScenarioParticipantsTest {
     @Test
     fun `parallel scenarios draw the same participants as each does alone`() {
         val alone = tests.keys.associateWith { run(listOf(it)).getValue(it) }
-        assertEquals("save order: client Client PARTICIPANT -> orders Orders DB DATABASE", alone["orders-db"])
-        assertEquals("place order: client Client PARTICIPANT -> orders Order Service BOUNDARY", alone["order-service"])
-        assertEquals("query: client Client PARTICIPANT -> orders-db Orders DB PARTICIPANT", alone["undeclared"])
+        assertEquals("save order: client Client participant -> orders Orders DB database", alone["orders-db"])
+        assertEquals("place order: client Client participant -> orders Order Service boundary", alone["order-service"])
+        assertEquals("query: client Client participant -> orders-db Orders DB participant", alone["undeclared"])
         repeat(200) { iteration ->
             assertEquals(alone, run(tests.keys.toList(), parallel = true), "iteration $iteration")
         }
@@ -67,8 +67,8 @@ class ScenarioParticipantsTest {
         second.message("Client", "Orders", "lookup")
         second.complete("second")
 
-        assertEquals("insert: client Client PARTICIPANT -> orders Orders DATABASE", diagram(lsd, "first"))
-        assertEquals("lookup: client Client PARTICIPANT -> orders Orders PARTICIPANT", diagram(lsd, "second"))
+        assertEquals("insert: client Client participant -> orders Orders database", diagram(lsd, "first"))
+        assertEquals("lookup: client Client participant -> orders Orders participant", diagram(lsd, "second"))
     }
 
     @Test
@@ -83,8 +83,8 @@ class ScenarioParticipantsTest {
         own.message("orders", "Events", "published")
         own.complete("own")
 
-        assertEquals("published: orders Orders DATABASE -> events Events QUEUE", diagram(lsd, "plain"))
-        assertEquals("published: orders Order store BOUNDARY -> events Events QUEUE", diagram(lsd, "own"))
+        assertEquals("published: orders Orders database -> events Events queue", diagram(lsd, "plain"))
+        assertEquals("published: orders Order store boundary -> events Events queue", diagram(lsd, "own"))
     }
 
     @Test

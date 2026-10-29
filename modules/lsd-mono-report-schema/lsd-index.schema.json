@@ -2,15 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-index.schema.json",
   "title": "IndexManifest",
-  "description": "The index page's manifest of every report in an output directory: window.__LSD_INDEX__ in index.html. Each report's data loads from its <stem>-report.js when opened. Stable from 1.0.0: a minor version only adds, and a breaking change takes a new major version. Objects accept properties they do not list.",
+  "description": "The index page's manifest of every report in an output directory: window.__LSD_INDEX__ in index.html. Each report's data loads from its <stem>-report.js when opened. Stable from 1.0.0: a minor version only adds, and a breaking change takes a new major version. Objects accept properties they do not list. Optional fields follow the report's rule: never written empty, and missing reads as empty.",
   "type": "object",
   "required": [
     "schemaVersion",
-    "title",
     "generatedAt",
-    "generator",
-    "options",
-    "reports"
+    "generator"
   ],
   "properties": {
     "schemaVersion": {
@@ -20,7 +17,8 @@
     },
     "title": {
       "type": "string",
-      "description": "Always `LSD reports` from lsd-mono-jvm."
+      "minLength": 1,
+      "description": "A heading for the index. Optional: lsd-mono-jvm does not write it, and the page shows `LSD reports` when it is absent."
     },
     "generatedAt": {
       "type": "string",
@@ -28,28 +26,26 @@
       "description": "When the index was written: an RFC 3339 date-time, with Z or a UTC offset."
     },
     "generator": {
-      "type": "string",
-      "description": "As for a report; the usage ping matches it."
+      "$ref": "lsd-report.schema.json#/$defs/Generator"
     },
     "options": {
       "title": "IndexOptions",
       "type": "object",
-      "required": [
-        "usagePing"
-      ],
       "properties": {
         "usagePing": {
           "type": "boolean",
-          "description": "As for a report."
+          "description": "As for a report: a missing value, or missing options, is read as false."
         }
-      }
+      },
+      "description": "Optional. lsd-mono-jvm writes usagePing."
     },
     "reports": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/IndexReport"
       },
-      "description": "Failed reports first, then warnings, then the rest; by title within each."
+      "description": "Failed reports first, then warnings, passes, aborted and skipped; by title within each. Absent when there are none.",
+      "minItems": 1
     }
   },
   "$defs": {
@@ -60,7 +56,9 @@
       "required": [
         "success",
         "warn",
-        "error"
+        "error",
+        "skipped",
+        "aborted"
       ],
       "properties": {
         "success": {
@@ -74,6 +72,14 @@
         "error": {
           "type": "integer",
           "minimum": 0
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "aborted": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
@@ -84,7 +90,7 @@
         "id",
         "title",
         "status",
-        "messages"
+        "messageCount"
       ],
       "properties": {
         "id": {
@@ -97,7 +103,7 @@
         "status": {
           "$ref": "lsd-report.schema.json#/$defs/Status"
         },
-        "messages": {
+        "messageCount": {
           "type": "integer",
           "minimum": 0,
           "description": "How many message events the scenario has."
@@ -112,8 +118,7 @@
         "title",
         "status",
         "href",
-        "counts",
-        "scenarios"
+        "counts"
       ],
       "properties": {
         "id": {
@@ -143,7 +148,8 @@
           "items": {
             "$ref": "#/$defs/IndexScenario"
           },
-          "description": "In report order, so the index lists them before the data loads."
+          "description": "In report order, so the index lists them before the data loads. Absent when the report has none.",
+          "minItems": 1
         }
       }
     }

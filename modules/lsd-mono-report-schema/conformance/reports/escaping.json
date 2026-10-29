@@ -2,11 +2,13 @@
   "schemaVersion": "1.0.0",
   "title": "report\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "lsd-mono-jvm (conformance)",
+  "generator": {
+    "name": "lsd-mono-jvm"
+  },
   "status": "error",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "api"
   },
@@ -37,13 +39,13 @@
         {
           "id": "a",
           "name": "participant a\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
-          "type": "ACTOR"
+          "type": "actor"
         },
         {
           "id": "b",
           "name": "participant b\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
-          "type": "PARTICIPANT",
-          "alias": "display b\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
+          "type": "participant",
+          "displayName": "display b\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029"
         }
       ],
       "events": [
@@ -58,7 +60,7 @@
           "from": "a",
           "to": "b",
           "label": "label\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "data": {
             "method": "method\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
             "path": "path\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
@@ -68,9 +70,9 @@
             }
           },
           "seq": 1,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE"
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "note",
@@ -95,23 +97,23 @@
           "from": "b",
           "to": "a",
           "label": "response\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "data": "plain body \u003c/script\u003e\u003cscript\u003ealert(3)\u003c/script\u003e",
           "seq": 2,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
-          "replyOf": "2"
+          "replyTo": "2",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         }
       ],
-      "accuracy": "STRUCTURE_ONLY",
-      "measuredCoverage": 0,
-      "pairingCoverage": 0,
+      "accuracy": "structure_only",
+      "measuredRatio": 0,
+      "pairedRatio": 0,
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     }
   ]
 }

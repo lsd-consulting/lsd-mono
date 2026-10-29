@@ -68,10 +68,10 @@ describe('virtualRowRange', () => {
 describe('activationSpans', () => {
   it('pins the bar to the message before activate and the message before deactivate', () => {
     const events: DiagramEvent[] = [
-      { kind: 'message', id: 'open', from: 'client', to: 'api', label: 'POST /orders', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'open', from: 'client', to: 'api', label: 'POST /orders', type: 'synchronous' },
       { kind: 'activate', id: 'a', participantId: 'api' },
-      { kind: 'message', id: 'mid', from: 'api', to: 'db', label: 'insert order', type: 'SYNCHRONOUS' },
-      { kind: 'message', id: 'close', from: 'api', to: 'client', label: '201 Created', type: 'SYNCHRONOUS_RESPONSE' },
+      { kind: 'message', id: 'mid', from: 'api', to: 'db', label: 'insert order', type: 'synchronous' },
+      { kind: 'message', id: 'close', from: 'api', to: 'client', label: '201 Created', type: 'synchronous_response' },
       { kind: 'deactivate', id: 'd', participantId: 'api' },
     ]
     const rows = layoutRows(events)
@@ -81,21 +81,21 @@ describe('activationSpans', () => {
     expect(byId.get('mid')!.y).toBe(byId.get('open')!.y + byId.get('open')!.height)
     const spans = activationSpans(rows, 999)
     expect(spans).toEqual([
-      { participantId: 'api', y0: byId.get('open')!.y, y1: byId.get('close')!.y, colour: undefined, depth: 0 },
+      { participantId: 'api', y0: byId.get('open')!.y, y1: byId.get('close')!.y, color: undefined, depth: 0 },
     ])
   })
 
   it('gives nested bars a depth and lists parents before children (refs #2)', () => {
     const events: DiagramEvent[] = [
-      { kind: 'message', id: 'in', from: 'web', to: 'pay', label: 'authorise', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'in', from: 'web', to: 'pay', label: 'authorise', type: 'synchronous' },
       { kind: 'activate', id: 'a1', participantId: 'pay' },
-      { kind: 'message', id: 'call', from: 'pay', to: 'psp', label: 'charge', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'call', from: 'pay', to: 'psp', label: 'charge', type: 'synchronous' },
       { kind: 'activate', id: 'a2', participantId: 'psp' },
-      { kind: 'message', id: 'self', from: 'psp', to: 'psp', label: 'capture', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'self', from: 'psp', to: 'psp', label: 'capture', type: 'synchronous' },
       { kind: 'activate', id: 'a3', participantId: 'psp' },
-      { kind: 'message', id: 'self2', from: 'psp', to: 'psp', label: 'settle', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'self2', from: 'psp', to: 'psp', label: 'settle', type: 'synchronous' },
       { kind: 'deactivate', id: 'd3', participantId: 'psp' },
-      { kind: 'message', id: 'back', from: 'psp', to: 'pay', label: 'ok', type: 'SYNCHRONOUS_RESPONSE' },
+      { kind: 'message', id: 'back', from: 'psp', to: 'pay', label: 'ok', type: 'synchronous_response' },
       { kind: 'deactivate', id: 'd2', participantId: 'psp' },
       { kind: 'deactivate', id: 'd1', participantId: 'pay' },
     ]
@@ -108,9 +108,9 @@ describe('activationSpans', () => {
 
   it('starts a bar opened by a self-call where the loop returns (refs #2)', () => {
     const events: DiagramEvent[] = [
-      { kind: 'message', id: 'self', from: 'psp', to: 'psp', label: 'capture', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'self', from: 'psp', to: 'psp', label: 'capture', type: 'synchronous' },
       { kind: 'activate', id: 'a', participantId: 'psp' },
-      { kind: 'message', id: 'out', from: 'psp', to: 'bank', label: 'settle', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'out', from: 'psp', to: 'bank', label: 'settle', type: 'synchronous' },
       { kind: 'deactivate', id: 'd', participantId: 'psp' },
     ]
     const rows = layoutRows(events)
@@ -136,9 +136,9 @@ describe('activationSpans', () => {
   it('keeps an activation open across a section row', () => {
     const events: DiagramEvent[] = [
       { kind: 'activate', id: 'a', participantId: 'api' },
-      { kind: 'message', id: 'm1', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'm1', from: 'api', to: 'db', label: 'read', type: 'synchronous' },
       { kind: 'section', id: 's', title: 'Phase 2' },
-      { kind: 'message', id: 'm2', from: 'db', to: 'api', label: 'rows', type: 'SYNCHRONOUS_RESPONSE' },
+      { kind: 'message', id: 'm2', from: 'db', to: 'api', label: 'rows', type: 'synchronous_response' },
       { kind: 'deactivate', id: 'd', participantId: 'api' },
     ]
     const rows = layoutRows(events)
@@ -154,7 +154,7 @@ describe('activationSpans', () => {
 describe('layoutRows', () => {
   it('starts the first row below the message-label rise so the label is inside the body', () => {
     const rows = layoutRows([
-      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'synchronous' },
     ])
     expect(TOP_LABEL_PAD).toBeGreaterThan(MESSAGE_LABEL_RISE)
     expect(rows[0].y).toBe(TOP_LABEL_PAD)
@@ -222,7 +222,7 @@ describe('layoutRows event order', () => {
       from: 'a',
       to: 'b',
       label: id,
-      type: 'SYNCHRONOUS',
+      type: 'synchronous',
       ...(startedAt ? { startedAt } : {}),
     })
     const events: DiagramEvent[] = [
@@ -249,14 +249,14 @@ describe('layoutRows event order', () => {
 describe('activation colour', () => {
   it('copies an activate colour onto the span and leaves a plain activate uncoloured', () => {
     const events: DiagramEvent[] = [
-      { kind: 'activate', id: 'a1', participantId: 'api', colour: '#c026d3' },
-      { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' },
+      { kind: 'activate', id: 'a1', participantId: 'api', color: '#c026d3' },
+      { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'synchronous' },
       { kind: 'deactivate', id: 'd1', participantId: 'api' },
       { kind: 'activate', id: 'a2', participantId: 'db' },
       { kind: 'deactivate', id: 'd2', participantId: 'db' },
     ]
     const spans = activationSpans(layoutRows(events), 400)
-    expect(spans.map((s) => s.colour)).toEqual(['#c026d3', undefined])
+    expect(spans.map((s) => s.color)).toEqual(['#c026d3', undefined])
   })
 })
 
@@ -264,7 +264,7 @@ describe('section spacing', () => {
   it('keeps the following message label clear of the section band', () => {
     const rows = layoutRows([
       { kind: 'section', id: 's', title: 'Phase 2' },
-      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'synchronous' },
     ])
     const section = rows[0]
     const message = rows[1]
@@ -280,7 +280,7 @@ describe('section spacing', () => {
     const rows = layoutRows([
       { kind: 'section', id: 's', title: 'Phase 2' },
       { kind: 'activate', id: 'a', participantId: 'b' },
-      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'synchronous' },
     ])
     const section = rows[0]
     const message = rows[2]

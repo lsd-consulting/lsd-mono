@@ -176,6 +176,12 @@
   border-color: var(--error);
   color: var(--error);
 }
+.chip[aria-pressed="true"].skipped,
+.chip[aria-pressed="true"].aborted {
+  background: var(--surface-2);
+  border-color: var(--text-muted);
+  color: var(--text);
+}
 
 .top-actions {
   display: flex;

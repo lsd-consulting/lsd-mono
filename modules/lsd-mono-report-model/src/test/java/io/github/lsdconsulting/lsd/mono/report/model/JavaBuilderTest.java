@@ -23,7 +23,7 @@ class JavaBuilderTest {
                 .origin(KnownMessageOrigin.IMPORTED)
                 .data(DataValueJson.ofObject(Map.of("amount", DataValueJson.of(new BigDecimal("12.50")))))
                 .build();
-        ReportJson report = ReportJson.builder("Checkout", "2026-01-01T12:00:00Z", "java-adapter 1.0", StatusJson.SUCCESS)
+        ReportJson report = ReportJson.builder("Checkout", "2026-01-01T12:00:00Z", new GeneratorJson("java-adapter", "1.0"), StatusJson.SUCCESS)
                 .options(ReportOptionsJson.builder().usagePing(false).build())
                 .scenario(ScenarioJson.builder("s1", "Pay", StatusJson.SUCCESS)
                         .participant(ParticipantJson.builder("shop", "Shop").type(KnownParticipantType.ACTOR).build())

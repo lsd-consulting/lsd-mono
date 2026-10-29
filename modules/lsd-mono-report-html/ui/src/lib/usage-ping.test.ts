@@ -83,7 +83,10 @@ describe('usage ping', () => {
 
   it('pings with the page version whatever wrote the report', () => {
     const { p, send } = pinger(undefined, '0.15.0')
-    p.configure({ generator: 'some-other-writer 9.9.9', options: { usagePing: true } } as UsagePingSourceLike)
+    p.configure({
+      generator: { name: 'some-other-writer', version: '9.9.9' },
+      options: { usagePing: true },
+    } as UsagePingSourceLike)
     p.ping('report-open')
     expect(send.mock.calls.map(([url]) => url)).toEqual([
       'https://cdn.jsdelivr.net/gh/lsd-consulting/lsd-mono@0.15.0/ping/report-open.txt',

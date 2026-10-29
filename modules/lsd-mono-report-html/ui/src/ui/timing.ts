@@ -4,19 +4,19 @@ import { WATERFALL_FIRST_ROWS, WATERFALL_ROW_ESTIMATE_PX, paintsLanes, windowsWa
 import type { Accuracy, KnownWarningKind, Scenario } from '../types'
 
 const ACCURACY_LABEL: Record<Accuracy, string> = {
-  STRUCTURE_ONLY: 'structure only',
-  TIMESTAMPED: 'timestamped',
-  MEASURED: 'measured',
-  TRACED: 'traced',
+  structure_only: 'structure only',
+  timestamped: 'timestamped',
+  measured: 'measured',
+  traced: 'traced',
 }
 
 // A kind this UI does not know (from a newer producer) shows as it is.
 const WARNING_LABEL: Record<KnownWarningKind, string> & Partial<Record<string, string>> = {
-  REPLY_WITHOUT_CALL: 'reply without call',
-  DURATION_ON_REPLY_DROPPED: 'duration on reply dropped',
-  LONGER_THAN_PARENT: 'longer than parent',
-  DUPLICATE_SPAN: 'duplicate span',
-  SKEW: 'skew',
+  reply_without_call: 'reply without call',
+  duration_on_reply_dropped: 'duration on reply dropped',
+  longer_than_parent: 'longer than parent',
+  duplicate_span: 'duplicate span',
+  skew: 'skew',
 }
 
 const LANE_COLOURS = 6
@@ -30,7 +30,7 @@ function nameOf(scenario: Scenario, id: string): string {
     participantsById.set(scenario, byId)
   }
   const p = byId.get(id)
-  return p?.alias || p?.name || id || '∅'
+  return p?.displayName || p?.name || id || '∅'
 }
 
 const pct = (v: number, total: number) => `${total > 0 ? ((100 * v) / total).toFixed(3) : 0}%`
@@ -47,7 +47,7 @@ export function timingStripHtml(scenario: Scenario): string {
   const accuracy = accuracyLabel(scenario.accuracy)
   const wall = Math.max(scenario.wallClockMs ?? 0, t.totalMs)
   const derivedWall = scenario.wallClockMs == null || scenario.wallClockMs < t.totalMs
-  const clock = scenario.clockOrdered
+  const clock = scenario.clockOrderedCount
   const id = escapeAttr(scenario.id)
   // A chip with a [section] opens the panel at that section (the Accuracy chip: Accuracy by pair).
   const chip = (key: string, value: string, hint: string, extra = '', section = '') =>
@@ -73,17 +73,17 @@ function accuracyLabel(accuracy: Accuracy): string {
 }
 
 function pairingHint(scenario: Scenario): string {
-  const p = scenario.pairingCoverage
+  const p = scenario.pairedRatio
   return p == null ? 'no calls' : `${Math.round(p * 100)}% exactly paired`
 }
 
 /** Badges for one message: clock-ordered, guessed pairing. */
 function orderBadgesHtml(order?: string, pairing?: string): string {
   return [
-    order === 'CLOCK'
+    order === 'clock'
       ? '<span class="tbadge clock" title="Placed by its start time, not capture order">clock</span>'
       : '',
-    pairing === 'GUESSED'
+    pairing === 'guessed'
       ? '<span class="tbadge guessed" title="Reply matched by direction, not by id">guessed</span>'
       : '',
   ].join('')
@@ -115,7 +115,7 @@ export function timingPanelHtml(scenario: Scenario): string {
   const notesHtml = [
     `<span class="pill">${escapeHtml(accuracyLabel(scenario.accuracy))}</span>`,
     t.approximate ? '<span class="pill">approximate start times</span>' : '',
-    scenario.clockOrdered ? `<span class="pill clock">${scenario.clockOrdered} clock-ordered</span>` : '',
+    scenario.clockOrderedCount ? `<span class="pill clock">${scenario.clockOrderedCount} clock-ordered</span>` : '',
     ...(scenario.warnings ?? []).map(
       (w) =>
         `<span class="pill warn" title="${escapeAttr(`${WARNING_LABEL[w.kind] ?? w.kind}: ${w.message}`)}">${escapeHtml(WARNING_LABEL[w.kind] ?? w.kind)}</span>`,
@@ -141,7 +141,7 @@ export const PAIR_ACCURACY_SECTION = 'pair-accuracy'
 export const PAIRS_SHOWN_OPEN = 6
 
 /** Best to worst, for the summary's counts. */
-const ACCURACY_ORDER: readonly string[] = ['TRACED', 'MEASURED', 'TIMESTAMPED', 'STRUCTURE_ONLY']
+const ACCURACY_ORDER: readonly string[] = ['traced', 'measured', 'timestamped', 'structure_only']
 
 /** "20 pairs · 12 traced, 6 timestamped, 2 structure only": the count, then each level's, best first. */
 export function pairAccuracySummary(pairs: readonly { accuracy: Accuracy }[]): string {
@@ -166,7 +166,7 @@ export function pairAccuracySectionHtml(scenario: Scenario): string {
   const items = pairs
     .map(
       (p) =>
-        `<li><span class="who">${escapeHtml(nameOf(scenario, p.from))} → ${escapeHtml(nameOf(scenario, p.to))}</span> <b class="acc-${escapeAttr(p.accuracy.toLowerCase())}">${escapeHtml(accuracyLabel(p.accuracy))}</b></li>`,
+        `<li><span class="who">${escapeHtml(nameOf(scenario, p.from ?? ''))} → ${escapeHtml(nameOf(scenario, p.to ?? ''))}</span> <b class="acc-${escapeAttr(p.accuracy.toLowerCase())}">${escapeHtml(accuracyLabel(p.accuracy))}</b></li>`,
     )
     .join('')
   const list = `<ul class="pair-accuracy">${items}</ul>`
@@ -209,7 +209,7 @@ export function tickLabel(v: number, step: number): string {
 export interface LaneTrack {
   participant: string
   /** lane-cN */
-  colour: number
+  color: number
   bars: Timeline['rows']
 }
 
@@ -223,7 +223,7 @@ export function laneTracks(t: Timeline): LaneTrack[] {
     for (const r of t.rows) if (r.spanMs > 0) byLane.get(r.participant)?.push(r)
     lanes = t.byParticipant.map((p, i) => ({
       participant: p.participant,
-      colour: i % LANE_COLOURS,
+      color: i % LANE_COLOURS,
       bars: byLane.get(p.participant) ?? [],
     }))
     laneCache.set(t, lanes)
@@ -236,7 +236,7 @@ export function laneBarHtml(scenario: Scenario, lane: LaneTrack, j: number): str
   const r = lane.bars[j]
   if (!r) return ''
   const T = timeline(scenario).totalMs || 1
-  return `<button type="button" class="lane-bar lane-c${lane.colour}" style="left:${pct(r.startMs, T)};width:${pct(r.spanMs, T)}" data-show-message="${escapeAttr(r.message.id)}" data-scenario-id="${escapeAttr(scenario.id)}" title="${escapeAttr(`${r.message.label} · ${formatMs(r.spanMs)}`)}" aria-label="${escapeAttr(`${r.message.label}, ${formatMs(r.spanMs)}`)}"></button>`
+  return `<button type="button" class="lane-bar lane-c${lane.color}" style="left:${pct(r.startMs, T)};width:${pct(r.spanMs, T)}" data-show-message="${escapeAttr(r.message.id)}" data-scenario-id="${escapeAttr(scenario.id)}" title="${escapeAttr(`${r.message.label} · ${formatMs(r.spanMs)}`)}" aria-label="${escapeAttr(`${r.message.label}, ${formatMs(r.spanMs)}`)}"></button>`
 }
 
 /**
@@ -294,10 +294,10 @@ function rowHtml(scenario: Scenario, r: Timeline['rows'][number], total: number,
       : `<span class="wf-tick" style="left:${pct(r.startMs, total)}"></span>`
   const dur = r.spanMs > 0 ? `${escapeHtml(formatMs(r.spanMs))}` : '<span class="nt">—</span>'
   const async =
-    m.type === 'ASYNCHRONOUS' || m.type === 'LOST'
+    m.type === 'asynchronous' || m.type === 'lost'
       ? ` <span class="tag">${escapeHtml(m.type.toLowerCase())}</span>`
       : ''
-  return `<li${placeHtml}><button type="button" class="wf-row${m.order === 'CLOCK' ? ' clock' : ''}" style="--d:${r.depth}" data-show-message="${escapeAttr(m.id)}" data-scenario-id="${escapeAttr(id)}">
+  return `<li${placeHtml}><button type="button" class="wf-row${m.order === 'clock' ? ' clock' : ''}" style="--d:${r.depth}" data-show-message="${escapeAttr(m.id)}" data-scenario-id="${escapeAttr(id)}">
     <span class="wf-lab">${orderBadgesHtml(m.order, m.pairing)}<span class="who">${who}</span> ${escapeHtml(m.label)}${async}${r.overrun ? `<span class="warnx" title="${escapeAttr(`The calls inside took ${formatMs(r.childMs)}, longer than this call's measured ${formatMs(r.ownMs)}: the measurements disagree`)}">${escapeHtml(`Calls inside took longer: ${formatMs(r.childMs)} > ${formatMs(r.ownMs)}`)}</span>` : ''}</span>
     <span class="wf-track">${bar}</span>
     <span class="wf-dur">${dur}</span>

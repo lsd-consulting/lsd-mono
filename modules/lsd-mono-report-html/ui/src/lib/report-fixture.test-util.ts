@@ -1,7 +1,7 @@
 // Report pieces for tests that build reports by hand: what lsd-mono-jvm writes when there is
 // nothing more to say, so a fixture names only what it is about. Spread them first, so the
 // fixture's own fields win.
-import type { IndexManifest } from '../generated/lsd-index'
+import type { IndexManifest } from './report-index'
 import { REPORT_SCHEMA_VERSION, type DiagramEvent, type Report, type Scenario } from '../types'
 
 /**
@@ -11,9 +11,9 @@ import { REPORT_SCHEMA_VERSION, type DiagramEvent, type Report, type Scenario } 
  */
 export function untimed(
   events?: readonly DiagramEvent[],
-): Pick<Scenario, 'accuracy' | 'sources' | 'clockOrdering' | 'clockOrdered'> {
+): Pick<Scenario, 'accuracy' | 'sources' | 'clockOrdering' | 'clockOrderedCount'> {
   const clocks = events && !events.some((e) => e.kind === 'message') ? [] : ['local']
-  return { accuracy: 'STRUCTURE_ONLY', sources: clocks, clockOrdering: 'SAME_SOURCE', clockOrdered: 0 }
+  return { accuracy: 'structure_only', sources: clocks, clockOrdering: 'same_source', clockOrderedCount: 0 }
 }
 
 /** A report's schema version, status and default options, with the usage ping off. */
@@ -21,7 +21,7 @@ export function reportBase(): Pick<Report, 'schemaVersion' | 'status' | 'options
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
     status: 'success',
-    options: { metricsEnabled: true, labelMaxWidth: 200, usagePing: false, source: 'api' },
+    options: { metricsEnabled: true, labelMaxChars: 200, usagePing: false, source: 'api' },
   }
 }
 

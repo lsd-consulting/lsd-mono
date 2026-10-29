@@ -93,7 +93,10 @@ describe('the page on each shared report', () => {
       ['invalid/malformed-version.json', 'cannot-open'],
     ])
     expect(pages.filter((f) => fit(f).kind === 'newer-minor').map((f) => f.file)).toEqual(['reports/future-minor.json'])
-    expect(pages.filter((f) => !f.valid).map((f) => f.file)).toEqual(['invalid/missing-schema-version.json'])
+    expect(pages.filter((f) => !f.valid).map((f) => f.file)).toEqual([
+      'invalid/missing-schema-version.json',
+      'invalid/legacy-report.json',
+    ])
   })
 
   it.each(booted.map((f) => [f.file, f] as const))('the manifest says what the page shows for %s', (_, fixture) => {

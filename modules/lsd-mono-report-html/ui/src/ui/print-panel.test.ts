@@ -8,7 +8,7 @@ import { placePrintPanel, printMessageSection } from './print-panel'
 const messageView: PanelPrintView = {
   view: 'message',
   title: 'reserveOrder(<cart>)',
-  metaHtml: '<span class="pill">SYNCHRONOUS</span>',
+  metaHtml: '<span class="pill">synchronous</span>',
   lead: null,
   text: '{\n  "cartId": "<cart_88>"\n}',
 }
@@ -22,10 +22,10 @@ function card(id: string): string {
 
 const graph = componentGraph({
   participants: [
-    { id: 'api', name: 'Api', type: 'PARTICIPANT' },
-    { id: 'db', name: 'Database', type: 'DATABASE' },
+    { id: 'api', name: 'Api', type: 'participant' },
+    { id: 'db', name: 'Database', type: 'database' },
   ],
-  events: [{ kind: 'message', id: 'm1', from: 'api', to: 'db', label: 'insert', type: 'SYNCHRONOUS' }],
+  events: [{ kind: 'message', id: 'm1', from: 'api', to: 'db', label: 'insert', type: 'synchronous' }],
 })
 
 describe('printMessageSection', () => {
@@ -35,7 +35,7 @@ describe('printMessageSection', () => {
     const section = host.querySelector<HTMLElement>('section.print-panel.print-message')!
     expect(section.dataset.printPanel).toBe('message')
     expect(section.querySelector('h3')!.textContent).toBe('Message · reserveOrder(<cart>)')
-    expect(section.querySelector('.meta-row .pill')!.textContent).toBe('SYNCHRONOUS')
+    expect(section.querySelector('.meta-row .pill')!.textContent).toBe('synchronous')
     expect(section.querySelector('pre')!.textContent).toBe(messageView.text)
     expect(section.querySelectorAll('*')).toHaveLength(5)
   })
@@ -86,7 +86,7 @@ describe('inspector printView', () => {
     from: 'api',
     to: 'db',
     label: 'insert',
-    type: 'SYNCHRONOUS',
+    type: 'synchronous',
     data: { body: { n: 1 } },
   }
 

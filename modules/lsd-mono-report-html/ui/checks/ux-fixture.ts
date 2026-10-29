@@ -9,7 +9,7 @@ export const uxFixture: Report = {
   ...reportBase(),
   title: 'UX fixture',
   generatedAt: '2026-01-15T12:00:00+00:00',
-  generator: 'ux-fixture',
+  generator: { name: 'ux-fixture' },
   scenarios: [
     {
       ...untimed(),
@@ -20,10 +20,10 @@ export const uxFixture: Report = {
       facts: [{ key: 'orderId', value: 'ord_ux' }],
       metrics: [{ key: 'Messages', value: '14' }],
       participants: [
-        { id: 'client', name: 'Client', type: 'ACTOR' },
-        { id: 'api', name: 'Api', type: 'PARTICIPANT' },
-        { id: 'db', name: 'Database', type: 'DATABASE' },
-        { id: 'bus', name: 'Queue', type: 'QUEUE' },
+        { id: 'client', name: 'Client', type: 'actor' },
+        { id: 'api', name: 'Api', type: 'participant' },
+        { id: 'db', name: 'Database', type: 'database' },
+        { id: 'bus', name: 'Queue', type: 'queue' },
       ],
       events: Array.from({ length: 14 }, (_, i): MessageEvent => {
         const hop = i % 3
@@ -36,7 +36,7 @@ export const uxFixture: Report = {
           from,
           to,
           label: i === 0 ? label : `${label} ${i}`,
-          type: hop === 2 ? 'SYNCHRONOUS_RESPONSE' : 'SYNCHRONOUS',
+          type: hop === 2 ? 'synchronous_response' : 'synchronous',
           data: {
             method: 'POST',
             path: `/orders/${i}`,

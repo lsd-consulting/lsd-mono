@@ -88,7 +88,7 @@ class ScenarioMetricsTest {
 
         val report = report("Metrics")
         assertEquals(true, report.options["metricsEnabled"])
-        assertEquals(12.0, report.options["labelMaxWidth"])
+        assertEquals(12.0, report.options["labelMaxChars"])
         val scenario = report.scenario("timed")
         assertEquals(listOf("Messages", "Captured duration"), scenario.metrics.map { it.first })
         assertEquals("180 ms", scenario.metric("Captured duration"))
@@ -109,8 +109,8 @@ class ScenarioMetricsTest {
         val report = report("No metrics")
         assertEquals(false, report.options["metricsEnabled"])
         val scenario = report.scenario("quiet")
-        // Present and empty, not missing: an absent list would pass a "no metrics" check vacuously.
-        assertEquals(emptyList<Any?>(), scenario["metrics"])
+        // Nothing is written empty: no metrics means no metrics field.
+        assertFalse("metrics" in scenario.obj, scenario.obj.toString())
         assertFalse("insights" in report.root)
         assertFalse("insights" in scenario.obj)
         assertEquals(listOf("ping"), scenario.labels)

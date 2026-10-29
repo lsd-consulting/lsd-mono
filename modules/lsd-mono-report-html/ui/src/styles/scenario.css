@@ -20,6 +20,10 @@
 .scenario-card.error {
   border-left-color: var(--error);
 }
+.scenario-card.skipped,
+.scenario-card.aborted {
+  border-left-style: dashed;
+}
 
 @keyframes rise {
   from {
@@ -76,6 +80,13 @@
 .badge.error {
   background: var(--error-soft);
   color: var(--error);
+  border-color: transparent;
+}
+/* Not run: neutral, so a skipped or aborted scenario does not read as a pass or a failure. */
+.badge.skipped,
+.badge.aborted {
+  background: var(--surface-2);
+  color: var(--text-muted);
   border-color: transparent;
 }
 .scenario-body {

@@ -7,13 +7,13 @@ import { reportBase, untimed } from '../src/lib/report-fixture.test-util'
 // so a call, a reply and an async message must still differ by the line's dashes and the tip's
 // shape, and the queue keeps its outline.
 
-const TYPES: MessageType[] = ['SYNCHRONOUS', 'SYNCHRONOUS_RESPONSE', 'ASYNCHRONOUS']
+const TYPES: MessageType[] = ['synchronous', 'synchronous_response', 'asynchronous']
 
 const report: Report = {
   ...reportBase(),
   title: 'Forced colours',
   generatedAt: '2026-01-15T12:00:00+00:00',
-  generator: 'forced-colours-arrows',
+  generator: { name: 'forced-colours-arrows' },
   scenarios: [
     {
       ...untimed(),
@@ -24,15 +24,15 @@ const report: Report = {
       facts: [],
       metrics: [],
       participants: [
-        { id: 'a', name: 'Shop', type: 'PARTICIPANT', colour: '#38bdf8' },
-        { id: 'b', name: 'Orders', type: 'PARTICIPANT', colour: '#16a34a' },
-        { id: 'q', name: 'Order events', type: 'QUEUE' },
+        { id: 'a', name: 'Shop', type: 'participant', color: '#38bdf8' },
+        { id: 'b', name: 'Orders', type: 'participant', color: '#16a34a' },
+        { id: 'q', name: 'Order events', type: 'queue' },
       ],
       events: TYPES.map((type): MessageEvent => ({
         kind: 'message',
         id: type,
-        from: type === 'SYNCHRONOUS_RESPONSE' ? 'b' : 'a',
-        to: type === 'SYNCHRONOUS_RESPONSE' ? 'a' : type === 'ASYNCHRONOUS' ? 'q' : 'b',
+        from: type === 'synchronous_response' ? 'b' : 'a',
+        to: type === 'synchronous_response' ? 'a' : type === 'asynchronous' ? 'q' : 'b',
         label: type.toLowerCase(),
         type,
       })),
@@ -69,12 +69,12 @@ for (const theme of ['dark', 'light']) {
           tipWidth: Number(document.getElementById(marker)!.getAttribute('markerWidth')),
         }
       }
-      const queue = document.querySelector('[data-participant-type="QUEUE"] .participant-shape')!
+      const queue = document.querySelector('[data-participant-type="queue"] .participant-shape')!
       return {
         canvasText,
-        call: row('SYNCHRONOUS'),
-        reply: row('SYNCHRONOUS_RESPONSE'),
-        async: row('ASYNCHRONOUS'),
+        call: row('synchronous'),
+        reply: row('synchronous_response'),
+        async: row('asynchronous'),
         queueStroke: getComputedStyle(queue).stroke,
         legend: document.querySelector('.arrow-legend')?.textContent ?? '',
       }

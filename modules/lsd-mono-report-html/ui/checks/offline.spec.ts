@@ -20,8 +20,11 @@ const SENTINEL = 'https://sentinel.invalid/flushed'
 const PING = /^https:\/\/cdn\.jsdelivr\.net\/gh\/lsd-consulting\/lsd-mono@0\.2\.0\/ping\/[a-z-]+\.txt$/
 
 /** A report with [usagePing], or, when it is undefined, one from before the option existed. */
-function report(usagePing: boolean | undefined, generator = 'lsd-mono-jvm 0.2.0'): Report {
-  const options = { metricsEnabled: true, labelMaxWidth: 200, usagePing, source: 'junit' } as Report['options']
+function report(
+  usagePing: boolean | undefined,
+  generator: Report['generator'] = { name: 'lsd-mono-jvm', version: '0.2.0' },
+): Report {
+  const options = { metricsEnabled: true, labelMaxChars: 200, usagePing, source: 'junit' } as Report['options']
   return { ...uxFixture, generator, options }
 }
 
@@ -97,7 +100,7 @@ test('offline: the index page with the usage ping off makes no request at all', 
     ...indexBase(),
     title: 'LSD reports',
     generatedAt: '2026-01-15T12:00:00+00:00',
-    generator: 'lsd-mono-jvm 0.2.0',
+    generator: { name: 'lsd-mono-jvm', version: '0.2.0' },
     options: { usagePing: false },
     reports: [
       {
@@ -106,8 +109,8 @@ test('offline: the index page with the usage ping off makes no request at all', 
         status: 'success',
         href: 'a-diagram.html',
         data: 'a-report.js',
-        counts: { success: 1, warn: 0, error: 0 },
-        scenarios: [{ id: 'ux', title: 'Checkout', status: 'success', messages: 14 }],
+        counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+        scenarios: [{ id: 'ux', title: 'Checkout', status: 'success', messageCount: 14 }],
       },
     ],
   }

@@ -21,7 +21,7 @@ page it gets (`page`: `report`, `upgrade` or `cannot-open`).
 - **lsd-mono-jvm** (`ConformanceTest` and the golden tests) writes every file whose `source` is
   `lsd-mono-jvm` from the same scenarios, checks the output against the schema, and compares it
   with the file byte for byte. Only the time and the generator are set to fixed values
-  (`2026-01-01T12:00:00Z`, `lsd-mono-jvm (conformance)`); ids are the deterministic ones, and the
+  (`2026-01-01T12:00:00Z`, generator `{ "name": "lsd-mono-jvm" }`); ids are the deterministic ones, and the
   usage ping is off. It also checks every other JSON file against the schema with its validator
   (networknt, formats asserted), and that a large written report (100 participants, 400
   messages) follows it.
@@ -29,7 +29,9 @@ page it gets (`page`: `report`, `upgrade` or `cannot-open`).
   (formats asserted), and boots the whole page on every report the schema accepts, the large one
   included, and on each one with a `page`: each scenario in the Sequence and Components views and
   the Metrics panel, with no error and no element made from report text. The report from before
-  versions (`invalid/missing-schema-version.json`) opens as usual; the next-major report gets the
+  versions (`invalid/missing-schema-version.json`) and the captured 0.1.0 report
+  (`invalid/legacy-report.json`) open as usual, upgraded on read (`src/lib/report-legacy.test.ts`
+  checks the upgrade, and that `invalid/legacy-index.json` opens too); the next-major report gets the
   upgrade page and `invalid/malformed-version.json` the cannot-open page instead, and the test
   checks that each `page` is what the UI makes of the file's version. It boots the index page on
   `indexes/status-mix.json` and opens its report (`reports/multi-scenario-status.json`). `src/report-escaping.test.ts` does the same in more detail for

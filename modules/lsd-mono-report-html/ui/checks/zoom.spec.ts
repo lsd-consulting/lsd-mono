@@ -82,10 +82,10 @@ test.describe('at 1440×900', () => {
     // The readout looks like a control: at least 12px, in the text colour.
     const readoutStyle = await reset(page).evaluate((el) => {
       const s = getComputedStyle(el)
-      return { size: Number.parseFloat(s.fontSize), colour: s.color, text: getComputedStyle(document.body).color }
+      return { size: Number.parseFloat(s.fontSize), color: s.color, text: getComputedStyle(document.body).color }
     })
     expect(readoutStyle.size).toBeGreaterThanOrEqual(12)
-    expect(readoutStyle.colour).toBe(readoutStyle.text)
+    expect(readoutStyle.color).toBe(readoutStyle.text)
     await expect(page.locator('.diagram-hint').first()).toContainText('Zoom and overview')
     if (shots) await page.screenshot({ path: `${shots}/q-94-1440-timed-default.png` })
   })
@@ -444,7 +444,7 @@ test('the zoom icons draw in the text colour in every theme', async ({ page }) =
     await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
     for (const button of [zoomOut(page), zoomIn(page), overview(page)]) {
       const drawn = await iconColour(button)
-      expect(drawn.stroke, theme).toBe(drawn.colour)
+      expect(drawn.stroke, theme).toBe(drawn.color)
       expect(drawn.size, theme).toBeGreaterThanOrEqual(14)
     }
   }
@@ -456,7 +456,7 @@ function iconColour(button: Locator) {
     const path = svg.querySelector('path')!
     return {
       stroke: getComputedStyle(path).stroke,
-      colour: getComputedStyle(el).color,
+      color: getComputedStyle(el).color,
       size: svg.getBoundingClientRect().width,
     }
   })
@@ -471,7 +471,7 @@ test.describe('forced colours', () => {
     await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' })
     for (const button of [zoomOut(page), zoomIn(page), overview(page)]) {
       const drawn = await iconColour(button)
-      expect(drawn.stroke).toBe(drawn.colour)
+      expect(drawn.stroke).toBe(drawn.color)
       expect(drawn.stroke).not.toBe('rgba(0, 0, 0, 0)')
     }
     await overview(page).click()

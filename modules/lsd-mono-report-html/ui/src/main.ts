@@ -4,8 +4,8 @@ import './styles/diagram.css'
 import { listenForKeys } from './app/keys'
 import { renderShell } from './app/chrome'
 import { applyHash } from './app/routing'
-import type { ReportJson } from './types'
-import { type IndexManifest, type ReportDataJson } from './lib/report-index'
+import type { Report, ReportJson } from './types'
+import { type IndexManifest, type IndexManifestJson, type ReportDataJson } from './lib/report-index'
 import { syncDiagramWindow } from './lib/sequence-diagram'
 import { applyTheme, followOsTheme, followOtherTabs, forgetLegacyTheme, getPreferredTheme } from './ui/theme'
 import { paintThemeControl } from './ui/theme-menu'
@@ -16,7 +16,7 @@ import { pingSource, usage } from './lib/usage-ping'
 declare global {
   interface Window {
     /** Set by lsd-mono-report-html's ReportWriter before this bundle boots. Dev: assign before load to preview a capture. */
-    __LSD_REPORT__?: ReportJson
+    __LSD_REPORT__?: ReportJson | Report
     /** Set by the UI's checks to show the example site's introduction on a local page (#161). */
     __LSD_EXAMPLE__?: boolean
     /** Full message payloads, loaded when the inspector opens. Not part of the first paint. */
@@ -26,7 +26,7 @@ declare global {
     /** Sibling script that assigns `__LSD_PAYLOAD_TEXT__`. Relative to the report HTML. */
     __LSD_PAYLOADS_SRC__?: string
     /** Set on the index page instead of `__LSD_REPORT__`: every report in the directory. */
-    __LSD_INDEX__?: IndexManifest
+    __LSD_INDEX__?: IndexManifestJson | IndexManifest
     /** Filled by each `<stem>-report.js` as the index page opens reports. */
     __LSD_REPORTS__?: Record<string, ReportDataJson>
   }

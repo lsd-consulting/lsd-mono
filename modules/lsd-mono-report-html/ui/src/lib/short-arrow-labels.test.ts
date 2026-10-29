@@ -2,18 +2,18 @@ import { describe, expect, it } from 'vitest'
 import type { DiagramEvent, Participant } from '../types'
 import { ACT_W, COL_GAP, LEFT_PAD, layoutRows } from './layout'
 import { renderRowSvg } from './sequence-diagram'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../ui/format'
 
 const lane = (i: number) => LEFT_PAD + i * COL_GAP
 
 const participants: Participant[] = [
-  { id: 'customer', name: 'Customer', type: 'ACTOR' },
-  { id: 'orders', name: 'Order Service', type: 'PARTICIPANT' },
-  { id: 'warehouse', name: 'Warehouse', type: 'PARTICIPANT' },
+  { id: 'customer', name: 'Customer', type: 'actor' },
+  { id: 'orders', name: 'Order Service', type: 'participant' },
+  { id: 'warehouse', name: 'Warehouse', type: 'participant' },
 ]
 const base = LEFT_PAD * 2 + 2 * COL_GAP
 
-function msg(id: string, from: string, to: string, label: string, type: string = 'SYNCHRONOUS'): DiagramEvent {
+function msg(id: string, from: string, to: string, label: string, type: string = 'synchronous'): DiagramEvent {
   return { kind: 'message', id, from, to, label, type }
 }
 
@@ -26,10 +26,10 @@ describe('(d) short arrow labels stay off the lifeline and its bar', () => {
 
   it('starts an outbound label past the bar edge and runs away from the lifeline', () => {
     const svg = renderRowSvg(
-      row(msg('o', 'orders', '', 'SMTP relay', 'SHORT_OUTBOUND')),
+      row(msg('o', 'orders', '', 'SMTP relay', 'short_outbound')),
       base,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
     const label = labelOf(svg)
     expect(label.anchor).toBe('start')
@@ -38,10 +38,10 @@ describe('(d) short arrow labels stay off the lifeline and its bar', () => {
 
   it('ends an inbound label before the bar edge', () => {
     const svg = renderRowSvg(
-      row(msg('i', '', 'orders', 'POST /webhooks/courier', 'SHORT_INBOUND')),
+      row(msg('i', '', 'orders', 'POST /webhooks/courier', 'short_inbound')),
       base,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
     const label = labelOf(svg)
     expect(label.anchor).toBe('end')

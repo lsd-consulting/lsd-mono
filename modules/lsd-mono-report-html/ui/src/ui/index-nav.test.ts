@@ -10,10 +10,10 @@ const failed: IndexReport = {
   status: 'error',
   href: 'checkout-diagram.html',
   data: 'checkout-report.js',
-  counts: { success: 1, warn: 0, error: 1 },
+  counts: { success: 1, warn: 0, error: 1, skipped: 0, aborted: 0 },
   scenarios: [
-    { id: 's1', title: 'Place an order', status: 'success', messages: 2 },
-    { id: 's2', title: 'Card declined', status: 'error', messages: 3 },
+    { id: 's1', title: 'Place an order', status: 'success', messageCount: 2 },
+    { id: 's2', title: 'Card declined', status: 'error', messageCount: 3 },
   ],
 }
 const passed: IndexReport = {
@@ -22,22 +22,22 @@ const passed: IndexReport = {
   status: 'success',
   href: 'shipping-diagram.html',
   data: 'shipping-report.js',
-  counts: { success: 1, warn: 0, error: 0 },
-  scenarios: [{ id: 's1', title: 'Track parcel', status: 'success', messages: 1 }],
+  counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+  scenarios: [{ id: 's1', title: 'Track parcel', status: 'success', messageCount: 1 }],
 }
 const link: IndexReport = {
   id: 'x',
   title: 'Elsewhere',
   status: 'warn',
   href: 'elsewhere.html',
-  counts: { success: 0, warn: 0, error: 0 },
+  counts: { success: 0, warn: 0, error: 0, skipped: 0, aborted: 0 },
   scenarios: [],
 }
 const manifest: IndexManifest = {
   ...indexBase(),
   title: 'LSD reports',
   generatedAt: '',
-  generator: '',
+  generator: { name: '' },
   reports: [failed, passed, link],
 }
 const base: IndexNavState = {
@@ -45,7 +45,7 @@ const base: IndexNavState = {
   selectedId: 's2',
   expanded: new Set(['checkout']),
   query: '',
-  status: { success: true, warn: true, error: true },
+  status: { success: true, warn: true, error: true, skipped: true, aborted: true },
   collapsed: false,
 }
 
@@ -85,7 +85,7 @@ describe('index sidebar', () => {
   })
 
   it('hides scenarios the status filters turn off', () => {
-    const ul = nav({ status: { success: false, warn: true, error: true } })
+    const ul = nav({ status: { success: false, warn: true, error: true, skipped: true, aborted: true } })
     expect([...ul.querySelectorAll('[data-nav]')].map((el) => el.getAttribute('data-nav'))).toEqual(['s2'])
     expect([...ul.querySelectorAll('.nav-group-title')].map((el) => el.textContent)).toEqual([
       'Checkout <tests>',
@@ -103,8 +103,10 @@ describe('index sidebar', () => {
   })
 
   it('summarises outcomes failures first', () => {
-    expect(outcomeSummary({ success: 2, warn: 1, error: 3 })).toBe('3 error · 1 warn · 2 success')
-    expect(outcomeSummary({ success: 0, warn: 0, error: 0 })).toBe('')
+    expect(outcomeSummary({ success: 2, warn: 1, error: 3, skipped: 0, aborted: 0 })).toBe(
+      '3 error · 1 warn · 2 success',
+    )
+    expect(outcomeSummary({ success: 0, warn: 0, error: 0, skipped: 0, aborted: 0 })).toBe('')
   })
 })
 

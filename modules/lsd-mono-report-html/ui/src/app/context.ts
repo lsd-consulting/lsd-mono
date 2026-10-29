@@ -1,7 +1,7 @@
 // The page's state: the index manifest, the report session, filters and selection, and the #app root.
 import { sampleReport } from '../data/sample-report'
 import { REPORT_SCHEMA_VERSION, type Report, type Status } from '../types'
-import { type IndexManifest } from '../lib/report-index'
+import { normaliseIndex, type IndexManifest } from '../lib/report-index'
 import { parseReportHash } from '../lib/report-hash'
 import { defaultScenarioId } from '../ui/selection'
 import { getSidebarCollapsed } from '../ui/sidebar'
@@ -22,7 +22,11 @@ export interface State {
 }
 
 /** The index page's manifest. Null on a single report's page. */
-export const index: IndexManifest | null = window.__LSD_REPORT__ ? null : (window.__LSD_INDEX__ ?? null)
+export const index: IndexManifest | null = window.__LSD_REPORT__
+  ? null
+  : window.__LSD_INDEX__
+    ? normaliseIndex(window.__LSD_INDEX__)
+    : null
 
 /**
  * The page's report or index when it is of a newer major version, which this page cannot show:
@@ -51,9 +55,8 @@ function emptyReport(): Report {
     schemaVersion: REPORT_SCHEMA_VERSION,
     title: 'LSD report',
     generatedAt: '',
-    generator: '',
+    generator: { name: 'lsd-mono' },
     status: 'success',
-    scenarios: [],
   })
 }
 
@@ -65,7 +68,6 @@ function indexPlaceholder(manifest: IndexManifest): Report {
     generatedAt: manifest.generatedAt,
     generator: manifest.generator,
     status: 'success',
-    scenarios: [],
   })
 }
 
@@ -75,7 +77,7 @@ if (initialRef?.view === 'components' && !initialRef.messageId) session.diagramV
 
 export const state: State = {
   query: '',
-  status: { success: true, warn: true, error: true },
+  status: { success: true, warn: true, error: true, skipped: true, aborted: true },
   selectedId: initialSelection(),
   sidebarCollapsed: getSidebarCollapsed(),
   expanded: new Set(),

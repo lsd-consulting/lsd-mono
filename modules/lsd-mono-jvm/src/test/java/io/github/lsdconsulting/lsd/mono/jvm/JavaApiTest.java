@@ -89,7 +89,7 @@ class JavaApiTest {
                 "divider", "delay", "delay", "spacer", "spacer", "message", "message", "message", "note", "message",
                 "message", "message", "message", "message", "message"),
             values(json.getEvents(), "kind"));
-        assertTrue(values(json.getMessages(), "timing").contains("MEASURED"), json.toString());
+        assertTrue(values(json.getMessages(), "timing").contains("measured"), json.toString());
         // The order is inline, or in the payloads file when the data is held there.
         boolean inline = json.getMessages().stream()
                 .anyMatch(m -> m.get("data") instanceof Map<?, ?> data && "o-1".equals(data.get("order")));
@@ -98,7 +98,7 @@ class JavaApiTest {
         assertTrue(json.getLabels().contains("IllegalStateException"), json.toString());
         assertEquals(
                 2,
-                values(json.getMessages(), "type").stream().filter("LOST"::equals).count(),
+                values(json.getMessages(), "type").stream().filter("lost"::equals).count(),
                 "a MessageType in the data position is the type");
     }
 
@@ -110,7 +110,7 @@ class JavaApiTest {
         lsd.message("A", "B", "ping");
         lsd.completeScenario("java-timing");
         ScenarioJson json = report(lsd.completeReport("Java timing")).scenario("java-timing");
-        assertEquals("OFF", json.get("clockOrdering"), json.toString());
+        assertEquals("off", json.get("clockOrdering"), json.toString());
 
         lsd.configure(t -> t.orderByStartedAt(null));
         assertEquals(null, lsd.getTimingConfig().orderByStartedAt());
@@ -197,7 +197,7 @@ class JavaApiTest {
 
         ScenarioJson json = report(lsd.completeReport("Java traps", "java-traps")).scenario("Traps");
         assertEquals(List.of("null type", "null type with data"), json.getLabels());
-        assertEquals(List.of("SYNCHRONOUS", "SYNCHRONOUS"), values(json.getMessages(), "type"));
+        assertEquals(List.of("synchronous", "synchronous"), values(json.getMessages(), "type"));
     }
 
     @Test

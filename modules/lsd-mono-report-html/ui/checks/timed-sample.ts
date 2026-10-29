@@ -7,16 +7,16 @@ import { REPORT_SCHEMA_VERSION, type MessageEvent, type Participant, type Report
  * Each request is a call tree with start times and durations on two clocks: the api's own calls
  * carry `startedAt` on the scenario's clock, and the orders service's calls come from a second
  * source, so they are packed inside their parent as the core does. Every call has its reply
- * (`replyOf`), and each request ends with an untimed async publish inside its root call.
+ * (`replyTo`), and each request ends with an untimed async publish inside its root call.
  */
 export const timedParticipants: Participant[] = [
-  { id: 'client', name: 'Client', type: 'ACTOR' },
-  { id: 'api', name: 'Api', type: 'PARTICIPANT' },
-  { id: 'auth', name: 'Auth', type: 'PARTICIPANT' },
-  { id: 'orders', name: 'Orders', type: 'PARTICIPANT' },
-  { id: 'database', name: 'Database', type: 'DATABASE' },
-  { id: 'payments', name: 'Payments', type: 'PARTICIPANT' },
-  { id: 'events', name: 'Events', type: 'QUEUE' },
+  { id: 'client', name: 'Client', type: 'actor' },
+  { id: 'api', name: 'Api', type: 'participant' },
+  { id: 'auth', name: 'Auth', type: 'participant' },
+  { id: 'orders', name: 'Orders', type: 'participant' },
+  { id: 'database', name: 'Database', type: 'database' },
+  { id: 'payments', name: 'Payments', type: 'participant' },
+  { id: 'events', name: 'Events', type: 'queue' },
 ]
 
 interface Step {
@@ -102,11 +102,11 @@ export function timedReport(
         from: step.from,
         to: step.to,
         label: step.label,
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
         source: step.source,
         durationMs: step.ms,
-        timing: 'MEASURED',
-        pairing: 'CALL_ID',
+        timing: 'measured',
+        pairing: 'call_id',
       }
       const data = payload({ label: step.label, path: `${step.path}/${callId}` }, Number(callId))
       if (data !== undefined) call.data = data
@@ -120,10 +120,10 @@ export function timedReport(
         from: step.to,
         to: step.from,
         label: '200 OK',
-        type: 'SYNCHRONOUS_RESPONSE',
+        type: 'synchronous_response',
         source: step.source,
-        replyOf: callId,
-        pairing: 'CALL_ID',
+        replyTo: callId,
+        pairing: 'call_id',
       }
       if (step.parent) reply.parentId = ids[step.parent]
       if (step.key === 'root' || step.key === 'orders') replies.push(reply)
@@ -142,7 +142,7 @@ export function timedReport(
       from: 'api',
       to: 'events',
       label: 'order placed',
-      type: 'ASYNCHRONOUS',
+      type: 'asynchronous',
       source: 'api',
       startedAt: new Date(begin + 35).toISOString(),
       parentId: ids.root,
@@ -153,9 +153,9 @@ export function timedReport(
     schemaVersion: REPORT_SCHEMA_VERSION,
     title: `timed-${calls}`,
     generatedAt: new Date().toISOString(),
-    generator: 'lsd-mono-jvm perf fixture',
+    generator: { name: 'lsd-mono-jvm perf fixture' },
     status: 'success',
-    options: { metricsEnabled: true, labelMaxWidth: 200, usagePing: false, source: 'api' },
+    options: { metricsEnabled: true, labelMaxChars: 200, usagePing: false, source: 'api' },
     scenarios: [
       {
         id: String(calls + 3),
@@ -166,17 +166,17 @@ export function timedReport(
         metrics: [{ key: 'Calls', value: String(calls) }],
         participants: timedParticipants,
         events,
-        accuracy: 'MEASURED',
-        measuredCoverage: 1,
-        pairingCoverage: 1,
+        accuracy: 'measured',
+        measuredRatio: 1,
+        pairedRatio: 1,
         sources: ['api', 'orders'],
         wallClockMs,
-        clockOrdering: 'SAME_SOURCE',
-        clockOrdered: 0,
+        clockOrdering: 'same_source',
+        clockOrderedCount: 0,
         warnings: [],
         pairAccuracy: [
-          { from: 'client', to: 'api', accuracy: 'MEASURED' },
-          { from: 'orders', to: 'database', accuracy: 'TIMESTAMPED' },
+          { from: 'client', to: 'api', accuracy: 'measured' },
+          { from: 'orders', to: 'database', accuracy: 'timestamped' },
         ],
       },
     ],

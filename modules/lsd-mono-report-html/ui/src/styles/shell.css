@@ -74,6 +74,12 @@
 .hist .e {
   background: var(--error);
 }
+.hist .k {
+  background: var(--text-faint);
+}
+.hist .a {
+  background: var(--text-muted);
+}
 
 .scenario-nav {
   list-style: none;
@@ -137,6 +143,12 @@
 }
 .dot.error {
   background: var(--error);
+}
+.dot.skipped {
+  background: var(--text-faint);
+}
+.dot.aborted {
+  background: var(--text-muted);
 }
 .nav-title {
   font-size: 13px;

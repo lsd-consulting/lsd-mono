@@ -5,6 +5,7 @@ import io.github.lsdconsulting.lsd.mono.report.model.DataValueJson
 import io.github.lsdconsulting.lsd.mono.report.model.DelayEventJson
 import io.github.lsdconsulting.lsd.mono.report.model.DividerEventJson
 import io.github.lsdconsulting.lsd.mono.report.model.EventJson
+import io.github.lsdconsulting.lsd.mono.report.model.GeneratorJson
 import io.github.lsdconsulting.lsd.mono.report.model.LifelineEventJson
 import io.github.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.github.lsdconsulting.lsd.mono.report.model.NoteEventJson
@@ -45,19 +46,31 @@ internal data class IndexScenario(
     val id: String,
     val title: String,
     val status: String,
-    val messages: Int,
+    val messageCount: Int,
 )
 
-/** How many of a report's scenarios passed, warned and failed. */
+/** How many of a report's scenarios had each outcome. */
 internal data class ScenarioCounts(
     val success: Int = 0,
     val warn: Int = 0,
     val error: Int = 0,
+    val skipped: Int = 0,
+    val aborted: Int = 0,
 ) {
-    val total: Int get() = success + warn + error
+    val total: Int get() = success + warn + error + skipped + aborted
 
     operator fun plus(other: ScenarioCounts): ScenarioCounts =
-        ScenarioCounts(success + other.success, warn + other.warn, error + other.error)
+        ScenarioCounts(
+            success + other.success,
+            warn + other.warn,
+            error + other.error,
+            skipped + other.skipped,
+            aborted + other.aborted,
+        )
+
+    /** Each count by its status, in the order the index writes them. */
+    fun byStatus(): List<Pair<String, Int>> =
+        listOf("success" to success, "warn" to warn, "error" to error, "skipped" to skipped, "aborted" to aborted)
 
     companion object {
         fun of(statuses: List<String>): ScenarioCounts =
@@ -65,6 +78,8 @@ internal data class ScenarioCounts(
                 success = statuses.count { it == "success" },
                 warn = statuses.count { it == "warn" },
                 error = statuses.count { it == "error" },
+                skipped = statuses.count { it == "skipped" },
+                aborted = statuses.count { it == "aborted" },
             )
     }
 }
@@ -82,39 +97,60 @@ internal fun msNumber(ms: Double): JsonNumber =
             .toPlainString(),
     )
 
-internal fun ReportJson.toJson(): String =
+/** The `generator` object: its name, and its version when it has one. */
+internal fun GeneratorJson.toJsonValue(): JsonValue =
     obj(
-        listOf(
-            "schemaVersion" to JsonString(ReportSchema.VERSION),
-            "title" to JsonString(title),
-            "generatedAt" to JsonString(generatedAt),
-            "generator" to JsonString(generator),
-            "status" to JsonString(status.json),
-            "options" to options.toJsonValue(),
-            "scenarios" to JsonArray(scenarios.map { it.toJsonValue() }),
-        ),
+        buildList {
+            add("name" to JsonString(name))
+            version?.let { add("version" to JsonString(it)) }
+        },
+    )
+
+/**
+ * The report's JSON. Nothing is written empty: an empty list, object or optional string is left
+ * out, as the schema says. [payloadIds] are the `<scenarioId>/<messageId>` keys of the payloads the
+ * diagram page's copy loads on open: their messages get a `payloadId`, which is not part of the
+ * format and never in `<stem>-report.json`.
+ */
+internal fun ReportJson.toJson(payloadIds: Set<String> = emptySet()): String =
+    obj(
+        buildList {
+            add("schemaVersion" to JsonString(ReportSchema.VERSION))
+            add("title" to JsonString(title))
+            add("generatedAt" to JsonString(generatedAt))
+            add("generator" to generator.toJsonValue())
+            add("status" to JsonString(status.json))
+            add("options" to options.toJsonValue())
+            if (scenarios.isNotEmpty()) add("scenarios" to JsonArray(scenarios.map { it.toJsonValue(payloadIds) }))
+        },
     ).render() + "\n"
 
-private fun ScenarioJson.toJsonValue(): JsonValue =
+private fun ScenarioJson.toJsonValue(payloadIds: Set<String>): JsonValue =
     obj(
         buildList {
             add("id" to JsonString(id))
             add("title" to JsonString(title))
             add("status" to JsonString(status.json))
-            add("description" to JsonString(description))
+            if (description.isNotEmpty()) add("description" to JsonString(description))
             error?.let { add("error" to it.toJsonValue()) }
-            add("facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
-            add("metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
-            add("participants" to JsonArray(participants.map { it.toJsonValue() }))
-            add("events" to JsonArray(events.map { it.toJsonValue() }))
+            if (facts.isNotEmpty()) {
+                add("facts" to JsonArray(facts.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
+            }
+            if (metrics.isNotEmpty()) {
+                add("metrics" to JsonArray(metrics.map { obj(listOf("key" to JsonString(it.key), "value" to JsonString(it.value))) }))
+            }
+            if (participants.isNotEmpty()) add("participants" to JsonArray(participants.map { it.toJsonValue() }))
+            if (events.isNotEmpty()) {
+                add("events" to JsonArray(events.map { event -> event.toJsonValue("$id/${event.id}".takeIf { it in payloadIds }) }))
+            }
             // The timing summary: each field when it is set, flat as the schema has it.
             accuracy?.let { add("accuracy" to JsonString(it.json)) }
-            measuredCoverage?.let { add("measuredCoverage" to msNumber(it)) }
-            pairingCoverage?.let { add("pairingCoverage" to msNumber(it)) }
-            sources?.let { add("sources" to JsonArray(it.map(::JsonString))) }
+            measuredRatio?.let { add("measuredRatio" to msNumber(it)) }
+            pairedRatio?.let { add("pairedRatio" to msNumber(it)) }
+            sources?.takeIf { it.isNotEmpty() }?.let { add("sources" to JsonArray(it.map(::JsonString))) }
             wallClockMs?.let { add("wallClockMs" to msNumber(it)) }
             clockOrdering?.let { add("clockOrdering" to JsonString(it.json)) }
-            clockOrdered?.let { add("clockOrdered" to JsonNumber(it.toString())) }
+            clockOrderedCount?.let { add("clockOrderedCount" to JsonNumber(it.toString())) }
             run {
                 val summary = this@toJsonValue
                 if (summary.warnings.isNotEmpty()) {
@@ -131,7 +167,13 @@ private fun ScenarioJson.toJsonValue(): JsonValue =
                         "pairAccuracy" to
                             JsonArray(
                                 summary.pairAccuracy.map {
-                                    obj(listOf("from" to JsonString(it.from), "to" to JsonString(it.to), "accuracy" to JsonString(it.accuracy.json)))
+                                    obj(
+                                        buildList {
+                                            it.from?.let { from -> add("from" to JsonString(from)) }
+                                            it.to?.let { to -> add("to" to JsonString(to)) }
+                                            add("accuracy" to JsonString(it.accuracy.json))
+                                        },
+                                    )
                                 },
                             ),
                     )
@@ -145,7 +187,7 @@ private fun ScenarioErrorJson.toJsonValue(): JsonValue =
         buildList {
             add("headline" to JsonString(headline))
             add("message" to JsonString(message))
-            stack?.let { add("stack" to JsonString(it)) }
+            stack?.takeIf { it.isNotEmpty() }?.let { add("stack" to JsonString(it)) }
         },
     )
 
@@ -153,7 +195,7 @@ private fun ReportOptionsJson.toJsonValue(): JsonValue =
     obj(
         listOf(
             "metricsEnabled" to JsonBool(metricsEnabled),
-            "labelMaxWidth" to JsonNumber(labelMaxWidth.toString()),
+            "labelMaxChars" to JsonNumber(labelMaxChars.toString()),
             "usagePing" to JsonBool(usagePing),
             "source" to JsonString(source),
         ),
@@ -165,28 +207,32 @@ private fun ParticipantJson.toJsonValue(): JsonValue =
             add("id" to JsonString(id))
             add("name" to JsonString(name))
             add("type" to JsonString(type))
-            alias?.let { add("alias" to JsonString(it)) }
-            colour?.let { add("colour" to JsonString(it)) }
+            displayName?.takeIf { it.isNotEmpty() }?.let { add("displayName" to JsonString(it)) }
+            color?.takeIf { it.isNotEmpty() }?.let { add("color" to JsonString(it)) }
             // The builder takes no empty key, as the schema has none.
             if (attributes.isNotEmpty()) add("attributes" to obj(attributes.map { (key, value) -> key to value.toJsonValue() }))
         },
     )
 
-/** The JSON for one event, as the schema's `DiagramEvent` describes it. */
-internal fun EventJson.toJsonValue(): JsonValue =
+/**
+ * The JSON for one event, as the schema's `DiagramEvent` describes it. [payloadId], on a message
+ * in the diagram page's copy: the key of its payload, which loads on open (see [ReportJson.toJson]).
+ */
+internal fun EventJson.toJsonValue(payloadId: String? = null): JsonValue =
     when (this) {
         is MessageEventJson ->
             obj(
                 buildList {
                     add("kind" to JsonString("message"))
                     add("id" to JsonString(id))
-                    add("from" to JsonString(from))
-                    add("to" to JsonString(to))
+                    from?.takeIf { it.isNotEmpty() }?.let { add("from" to JsonString(it)) }
+                    to?.takeIf { it.isNotEmpty() }?.let { add("to" to JsonString(it)) }
                     add("label" to JsonString(label))
                     add("type" to JsonString(type))
-                    colour?.let { add("colour" to JsonString(it)) }
+                    color?.takeIf { it.isNotEmpty() }?.let { add("color" to JsonString(it)) }
                     durationMs?.let { add("durationMs" to msNumber(it)) }
                     data?.let { add("data" to it.toJsonValue()) }
+                    // Page-only: the key into the payload sidecar. Not part of the format.
                     payloadId?.let { add("payloadId" to JsonString(it)) }
                     seq?.let { add("seq" to JsonNumber(it.toString())) }
                     callId?.let { add("callId" to JsonString(it)) }
@@ -208,12 +254,11 @@ internal fun EventJson.toJsonValue(): JsonValue =
                     source?.let { add("source" to JsonString(it)) }
                     startedAt?.let { add("startedAt" to JsonString(it)) }
                     capturedAt?.let { add("capturedAt" to JsonString(it)) }
-                    status?.let { add("status" to JsonString(it)) }
+                    status?.takeIf { it.isNotEmpty() }?.let { add("status" to JsonString(it)) }
                     timing?.let { add("timing" to JsonString(it)) }
                     pairing?.let { add("pairing" to JsonString(it)) }
                     order?.let { add("order" to JsonString(it)) }
                     parentId?.let { add("parentId" to JsonString(it)) }
-                    replyOf?.let { add("replyOf" to JsonString(it)) }
                     // The builder takes no empty key, as the schema has none.
                     if (attributes.isNotEmpty()) add("attributes" to obj(attributes.map { (key, value) -> key to value.toJsonValue() }))
                     origin?.let { add("origin" to JsonString(it)) }
@@ -272,7 +317,7 @@ internal fun EventJson.toJsonValue(): JsonValue =
                     add("kind" to JsonString(kind.json))
                     add("id" to JsonString(id))
                     add("participantId" to JsonString(participantId))
-                    colour?.let { add("colour" to JsonString(it)) }
+                    color?.takeIf { it.isNotEmpty() }?.let { add("color" to JsonString(it)) }
                     startedAt?.let { add("startedAt" to JsonString(it)) }
                 },
             )
@@ -323,7 +368,10 @@ internal fun ReportJson.forShell(): ShellReport {
 internal data class ShellReport(
     val report: ReportJson,
     val payloads: Map<String, DataValueJson>,
-)
+) {
+    /** The page copy's JSON, with `payloadId` on each message whose payload is in [payloads]. */
+    fun toJson(): String = report.toJson(payloads.keys)
+}
 
 private fun splitMessageForShell(
     scenarioId: String,
@@ -338,7 +386,6 @@ private fun splitMessageForShell(
     return event
         .toBuilder()
         .data(split.summary)
-        .payloadId(id)
         .build()
 }
 

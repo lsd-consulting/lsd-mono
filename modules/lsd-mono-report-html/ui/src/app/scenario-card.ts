@@ -34,15 +34,15 @@ export function heroHtml(): string {
       <h1>${escapeHtml(session.report.title)}</h1>
       <div class="meta">
         <span>Generated ${escapeHtml(formatGeneratedAt(session.report.generatedAt))}</span>
-        ${session.report.generator ? `<span class="generator">Written by ${escapeHtml(writtenBy(session.report.generator))}</span>` : ''}
+        ${session.report.generator.name ? `<span class="generator">Written by ${escapeHtml(writtenBy(session.report.generator))}</span>` : ''}
         <a class="version-link repo-link" ${repoLinkAttrsHtml(`${viewerLabel()}: lsd-mono on GitHub`)}><code>${escapeHtml(viewerLabel())}</code></a>
       </div>
     </div>`
 }
 
 export function scenarioHtml(s: Scenario): string {
-  const labelMaxWidth = session.report.options.labelMaxWidth
-  const diagram = renderDiagramHtml(s, labelMaxWidth)
+  const labelMaxChars = session.report.options.labelMaxChars
+  const diagram = renderDiagramHtml(s, labelMaxChars)
   // The chosen view sticks across scenarios (#105); one without component links shows Sequence.
   const components = hasComponentDiagram(s)
   const shown: DiagramViewName = components ? session.diagramView : 'sequence'
