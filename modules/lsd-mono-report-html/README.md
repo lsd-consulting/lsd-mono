@@ -24,7 +24,7 @@ report `reports/minimal.json` byte for byte, and what it writes follows the repo
 
 | | |
 | --- | --- |
-| **Is** | `ReportWriter`, its `ReportWriterSettings` and `ReportFiles` (also what lsd-mono-jvm's `completeReport` returns), in `io.github.lsdconsulting.lsd.mono.report.html` |
+| **Is** | `ReportWriter`, its `ReportWriterSettings` and `ReportFiles`, in `io.github.lsdconsulting.lsd.mono.report.html` |
 | **Is not** | Capture, timing or properties: the caller passes everything the files need |
 
 ## Compatibility

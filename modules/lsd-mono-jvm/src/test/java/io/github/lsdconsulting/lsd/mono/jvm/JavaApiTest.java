@@ -1,6 +1,5 @@
 package io.github.lsdconsulting.lsd.mono.jvm;
 
-import io.github.lsdconsulting.lsd.mono.report.html.ReportFiles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;

@@ -7,7 +7,6 @@ import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.QUEUE
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdConfig
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdProperties
 import io.github.lsdconsulting.lsd.mono.jvm.testing.LsdTestConfig
-import io.github.lsdconsulting.lsd.mono.report.html.ReportFiles
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

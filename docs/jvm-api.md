@@ -494,13 +494,15 @@ free text and rarely hold secrets under a recognisable key. Add
 
 The public API of each module is checked against an ABI dump in every build. Members marked
 `@InternalLsdApi` are left out of that promise: they exist only for lsd-mono's own integrations
-(JUnit, Cucumber, Spring, coroutines) and can change in any release. They need
+(JUnit, Cucumber, Spring, coroutines, http4k and Ktor) and can change in any release. They need
 `-opt-in=io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi`, and an integration module must be
 the same lsd-mono version as lsd-mono-jvm. Today they are `LsdContext.runningScenario`,
 `LsdContext.completeReport(title, reportKey, source, …)`, `LsdHeaders.CALLER`,
 `LsdHeaders.PARENT_SPAN`, `LsdProperties.useConfigurationSource` and
 `LsdProperties.cucumberSplitBySteps`. Java callers see no opt-in check, so the same rule applies:
-do not call them.
+do not call them. `LsdHeaders.CALLER` and `LsdHeaders.PARENT_SPAN` are also a wire contract
+between services under test: their header names stay stable across versions even though the
+Kotlin members may move.
 
 Value types (`FactJson`, `MetricJson`, `Trace`) are Kotlin data classes whose fields are frozen:
 their `copy` and `componentN` methods are part of the API, so a new field would only ever be added

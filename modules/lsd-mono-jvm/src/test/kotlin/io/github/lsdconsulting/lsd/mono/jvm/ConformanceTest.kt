@@ -7,7 +7,6 @@ import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType
 import io.github.lsdconsulting.lsd.mono.jvm.domain.ScenarioError
 import io.github.lsdconsulting.lsd.mono.jvm.domain.Status
 import io.github.lsdconsulting.lsd.mono.jvm.testing.LsdTestConfig
-import io.github.lsdconsulting.lsd.mono.report.html.ReportFiles
 import io.github.lsdconsulting.lsd.mono.report.model.testing.ReportCorpus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

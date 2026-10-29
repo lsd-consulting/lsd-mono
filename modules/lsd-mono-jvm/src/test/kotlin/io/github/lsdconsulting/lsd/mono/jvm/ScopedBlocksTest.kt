@@ -3,7 +3,6 @@ package io.github.lsdconsulting.lsd.mono.jvm
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdProperties
 import io.github.lsdconsulting.lsd.mono.jvm.testing.LsdTestConfig
 import io.github.lsdconsulting.lsd.mono.jvm.testing.ReportJson
-import io.github.lsdconsulting.lsd.mono.report.html.ReportFiles
 import io.github.lsdconsulting.lsd.mono.report.html.testing.ReportFileNames
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals

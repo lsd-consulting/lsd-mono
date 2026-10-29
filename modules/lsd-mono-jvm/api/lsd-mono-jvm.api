@@ -194,9 +194,9 @@ public final class io/github/lsdconsulting/lsd/mono/jvm/LsdContext : io/github/l
 	public final fun capture (Ljava/util/function/Consumer;)V
 	public final synthetic fun capture (Lkotlin/jvm/functions/Function1;)V
 	public final fun clear ()V
-	public final fun completeReport (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/report/html/ReportFiles;
-	public final fun completeReport (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/report/html/ReportFiles;
-	public static synthetic fun completeReport$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/report/html/ReportFiles;
+	public final fun completeReport (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
+	public final fun completeReport (Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
+	public static synthetic fun completeReport$default (Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
 	public final fun completeScenario (Ljava/lang/String;)V
 	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun completeScenario (Ljava/lang/String;Ljava/lang/String;Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;)V
@@ -210,8 +210,8 @@ public final class io/github/lsdconsulting/lsd/mono/jvm/LsdContext : io/github/l
 	public static final fun getInstance ()Lio/github/lsdconsulting/lsd/mono/jvm/LsdContext;
 	public final fun getPayloads ()Lio/github/lsdconsulting/lsd/mono/jvm/PayloadConverters;
 	public final fun getTimingConfig ()Lio/github/lsdconsulting/lsd/mono/jvm/TimingConfig;
-	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Lio/github/lsdconsulting/lsd/mono/report/html/ReportFiles;
-	public final synthetic fun report (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lio/github/lsdconsulting/lsd/mono/report/html/ReportFiles;
+	public final fun report (Ljava/lang/String;Ljava/util/function/Consumer;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
+	public final synthetic fun report (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lio/github/lsdconsulting/lsd/mono/jvm/ReportFiles;
 	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/concurrent/Callable;)Ljava/lang/Object;
 	public final fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/function/Consumer;)V
 	public final synthetic fun scenario (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
@@ -300,6 +300,14 @@ public final class io/github/lsdconsulting/lsd/mono/jvm/PendingCall {
 	public final fun reply (Ljava/lang/String;Ljava/lang/Object;)V
 	public final fun reply (Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;)V
 	public static synthetic fun reply$default (Lio/github/lsdconsulting/lsd/mono/jvm/PendingCall;Ljava/lang/String;Ljava/lang/Object;Lio/github/lsdconsulting/lsd/mono/jvm/Timing;ILjava/lang/Object;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/lsdconsulting/lsd/mono/jvm/ReportFiles {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDiagramHtml ()Ljava/nio/file/Path;
+	public final fun getReportJson ()Ljava/nio/file/Path;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 

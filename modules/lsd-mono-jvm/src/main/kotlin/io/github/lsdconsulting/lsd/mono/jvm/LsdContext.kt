@@ -10,7 +10,6 @@ import io.github.lsdconsulting.lsd.mono.jvm.domain.orderAndAnalyse
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdProperties
 import io.github.lsdconsulting.lsd.mono.jvm.report.ReportJsonMapper
 import io.github.lsdconsulting.lsd.mono.jvm.report.reportWriter
-import io.github.lsdconsulting.lsd.mono.report.html.ReportFiles
 import io.github.lsdconsulting.lsd.mono.report.model.KnownReportSource
 import io.github.lsdconsulting.lsd.mono.report.model.ReportJson
 import java.io.File
@@ -376,7 +375,7 @@ public class LsdContext internal constructor() :
             val report = jsonMapper.toReportJson(title, taken, source)
             val written = reportWriter().writeReport(report = report, outputDir = outputDirectory.toPath(), reportKey = reportKey, fileTitle = fileTitle)
             reports.written(written)
-            return written
+            return ReportFiles(diagramHtml = written.diagramHtml, reportJson = written.reportJson)
         }
 
         /**

@@ -4,7 +4,7 @@ import java.nio.file.Path
 
 /**
  * The files [ReportWriter.writeReport] wrote for one report. They share a stem: the title plus a
- * short hash of the report key. lsd-mono-jvm's `completeReport` and `report { }` return it too.
+ * short hash of the report key.
  */
 public class ReportFiles internal constructor(
     /** `<stem>-diagram.html`: the interactive report page, the one to open. */
