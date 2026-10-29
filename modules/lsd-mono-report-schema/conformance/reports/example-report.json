@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.3.0",
+  "schemaVersion": "1.0.0",
   "title": "Example report",
   "generatedAt": "2026-01-01T12:00:00Z",
   "generator": "lsd-mono-jvm (conformance)",

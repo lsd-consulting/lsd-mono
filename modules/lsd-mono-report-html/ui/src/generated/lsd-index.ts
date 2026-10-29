@@ -7,11 +7,11 @@
 export type Status = 'success' | 'warn' | 'error'
 
 /**
- * The index page's manifest of every report in an output directory: window.__LSD_INDEX__ in index.html. Each report's data loads from its <stem>-report.js when opened. Pre-1.0: may change before 1.0.0. Objects accept properties they do not list.
+ * The index page's manifest of every report in an output directory: window.__LSD_INDEX__ in index.html. Each report's data loads from its <stem>-report.js when opened. Stable from 1.0.0: a minor version only adds, and a breaking change takes a new major version. Objects accept properties they do not list.
  */
 export interface IndexManifest {
   /**
-   * The version of the schema the manifest follows; the same as the reports'. 0.3.0 for this schema.
+   * The version of the schema the manifest follows; the same as the reports'. 1.0.0 for this schema.
    */
   schemaVersion: string
   /**

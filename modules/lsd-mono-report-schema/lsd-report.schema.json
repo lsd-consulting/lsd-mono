@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://lsd-consulting.github.io/lsd-mono/schema/0.3.0/lsd-report.schema.json",
+  "$id": "https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json",
   "title": "Report",
-  "description": "One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.",
+  "description": "One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Stable from 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -16,7 +16,7 @@
     "schemaVersion": {
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
-      "description": "The version of this schema the report follows: semver, apart from the lsd-mono version. 0.3.0 for this schema."
+      "description": "The version of this schema the report follows: semver, apart from the lsd-mono version. 1.0.0 for this schema."
     },
     "title": {
       "type": "string"

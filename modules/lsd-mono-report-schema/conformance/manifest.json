@@ -97,7 +97,7 @@
       "schema": "lsd-report.schema.json",
       "valid": true,
       "source": "hand-written",
-      "about": "schemaVersion 0.4.0 with what a newer minor version may add: fields this version does not know (at the top, in the options, a scenario, a participant, a fact, a metric and a message, span links among them), values of open enums it does not list (participant type ROBOT, message type BROADCAST, origin replayed, source spock) and an event of an unknown kind. Readers of 0.3 must accept it; the UI shows it with a notice."
+      "about": "schemaVersion 1.1.0 with what a newer minor version may add: fields this version does not know (at the top, in the options, a scenario, a participant, a fact, a metric and a message, span links among them), values of open enums it does not list (participant type ROBOT, message type BROADCAST, origin replayed, source spock) and an event of an unknown kind. Readers of 0.3 must accept it; the UI shows it with a notice."
     },
     {
       "file": "reports/otel-fields.json",
@@ -112,7 +112,7 @@
       "valid": true,
       "source": "hand-written",
       "page": "upgrade",
-      "about": "schemaVersion 1.0.0 in a 0.1-shaped report. The 0.x schema does not pin the major, so it accepts it; the UI shows a page saying to upgrade lsd-mono instead of the report."
+      "about": "schemaVersion 2.0.0 in a 0.1-shaped report. The 1.x schema does not pin the major, so it accepts it; the UI shows a page saying to upgrade lsd-mono instead of the report."
     },
     {
       "file": "generated/large.mjs",

@@ -14,21 +14,20 @@ This is a plain directory, not a Gradle project or a published artifact (yet).
 
 ## Versions
 
-**Pre-1.0: the schema may change before 1.0.0.** It is frozen at 1.0.0 with lsd-mono 1.0.0. How
-it lines up with OpenTelemetry is decided ([below](#opentelemetry)): additively, with no
-OpenTelemetry dependency.
+**Stable from 1.0.0.** The format is frozen at 1.0.0: from here, a minor version only adds and
+anything else takes a new major version. How it lines up with OpenTelemetry is decided
+([below](#opentelemetry)): additively, with no OpenTelemetry dependency.
 
 - Every report and index has a required `schemaVersion`: the semver of the schema it follows,
-  apart from the lsd-mono version. This is `0.3.0`.
+  apart from the lsd-mono version. This is `1.0.0`.
 - The version is in each schema's `$id`
-  (`https://lsd-consulting.github.io/lsd-mono/schema/0.3.0/lsd-report.schema.json`). That URL is
+  (`https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json`). That URL is
   not live yet: nothing is published there, so it returns 404. The `$id`s only name the schemas
   and let the index schema refer to the report schema; read the schemas from this directory.
-- **A minor version only adds**, 0.x included: a new optional field, a new value of an open
-  enum, a new event kind. Anything else is breaking and raises the major version, even before
-  1.0: removing or renaming a field, making one required, changing its type or meaning, or a new
-  value of a closed enum. (This is stricter than semver's "anything goes" for 0.x, so a reader
-  can trust a minor version.)
+- **A minor version only adds**: a new optional field, a new value of an open enum, a new event
+  kind. Anything else is breaking and raises the major version: removing or renaming a field,
+  making one required, changing its type or meaning, or a new value of a closed enum. (0.x followed the same rule, stricter than semver's "anything goes"
+  for 0.x, so a 0.x report is still read as before.)
 - To change the format: edit the schema, raise the version in both `$id`s and in
   `ReportSchema.VERSION` (lsd-mono-report-model), and regenerate the UI's types (below).
 
@@ -37,15 +36,16 @@ OpenTelemetry dependency.
 | `0.1.0` | The format as lsd-mono-jvm 0.7 wrote it. |
 | `0.2.0` | A message's optional `attributes` and `origin`; `Trace` frozen at three ids and its id forms written down. Only adds: a 0.1 report is a valid 0.2 report. |
 | `0.3.0` | A participant's optional `attributes`, with the same keys and values as a message's. Only adds: a 0.2 report is a valid 0.3 report. |
+| `1.0.0` | The format frozen: the same shape as `0.3.0`, with the compatibility rule promised from here on. A 0.3 report is a valid 1.0 report, and the report UI still opens any 0.x report. |
 
 ### The compatibility rule
 
 **Readers ignore fields they do not know, and a minor version only adds optional fields** (and
-values of open enums and event kinds), in 0.x and in 1.x alike. A field is never made required,
+values of open enums and event kinds), as it did in 0.x. A field is never made required,
 renamed, removed or given a new type or meaning in a minor version; that takes a new major. The
 rule is the same as OpenTelemetry's own for OTLP ("receivers MUST ignore message fields with
 unknown names"), and the shared test reports prove it: `reports/future-minor.json` (schema
-`0.4.0`, with fields, enum values and an event kind this version does not know) is accepted by
+`1.1.0`, with fields, enum values and an event kind this version does not know) is accepted by
 both validators and opened by the report UI.
 
 ### What a reader does
@@ -77,9 +77,10 @@ be opened. A report without `schemaVersion` is from before the schema and is sho
 
 ## OpenTelemetry
 
-Decided before 1.0: the format stays LSD's own event model (calls and replies as separate arrows,
-notes, sections, dividers), not OpenTelemetry spans, and nothing here depends on OpenTelemetry.
-Importing spans (OTLP files, Jaeger or Tempo) is to be an optional module after 1.0
+Decided before 1.0.0, and kept in it: the format stays LSD's own event model (calls and replies as
+separate arrows, notes, sections, dividers), not OpenTelemetry spans, and nothing here depends on
+OpenTelemetry. Importing spans (OTLP files, Jaeger or Tempo) is to be an optional module, added
+in a 1.x minor version
 ([#96](https://github.com/lsd-consulting/lsd-mono/issues/96)). So that it can be added without a
 breaking change, 0.2.0 settles the parts OpenTelemetry touches:
 

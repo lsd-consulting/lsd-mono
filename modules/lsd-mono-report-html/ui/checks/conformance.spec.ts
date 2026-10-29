@@ -36,7 +36,7 @@ for (const [name, load] of REPORTS) {
     await expect(page.locator('#scenario-title')).toHaveText(report.scenarios[0].title)
     expect((await page.locator('#main').innerText()).trim().length).toBeGreaterThan(0)
     if (report.scenarios[0].participants.length > 0) await expect(page.locator('.seq-svg').first()).toBeVisible()
-    await expect(page.locator('.schema-notice')).toHaveCount(report.schemaVersion === '0.4.0' ? 1 : 0)
+    await expect(page.locator('.schema-notice')).toHaveCount(report.schemaVersion === '1.1.0' ? 1 : 0)
     const violations = await seriousViolations(page)
     expect(violations, formatViolations(violations)).toEqual([])
     expect(problems).toEqual([])
@@ -49,7 +49,7 @@ test('shared report: next major version shows the upgrade page, with no console 
   await openReport(page, { report: conformanceReport('next-major'), wait: 'none' })
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Upgrade lsd-mono to open this report')
-  await expect(page.locator('.schema-upgrade')).toContainText('report format 1.0.0')
+  await expect(page.locator('.schema-upgrade')).toContainText('report format 2.0.0')
   await expect(page.locator('.scenario-card')).toHaveCount(0)
   const violations = await seriousViolations(page)
   expect(violations, formatViolations(violations)).toEqual([])

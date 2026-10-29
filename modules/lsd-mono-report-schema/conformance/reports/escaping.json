@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.3.0",
+  "schemaVersion": "1.0.0",
   "title": "report\"'\u003e\u003cimg src=x onerror=alert(1) data-pwned=1\u003e\u003c/script\u003e\u003c!--\u003csvg onload=alert(2)\u003e\u2028\u2029",
   "generatedAt": "2026-01-01T12:00:00Z",
   "generator": "lsd-mono-jvm (conformance)",

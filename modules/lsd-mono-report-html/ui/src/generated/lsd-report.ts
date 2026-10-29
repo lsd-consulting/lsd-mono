@@ -2,7 +2,7 @@
 // Do not edit: change the schema, then run `npm run types:generate`.
 
 /** The schema version this UI's types follow, as reports write it in `schemaVersion`. */
-export const REPORT_SCHEMA_VERSION = '0.3.0'
+export const REPORT_SCHEMA_VERSION = '1.0.0'
 
 /**
  * A scenario's or report's outcome, in lower case.
@@ -151,11 +151,11 @@ export type KnownMessageOrigin = 'captured' | 'imported'
 export type MessageOrigin = KnownMessageOrigin | (string & {})
 
 /**
- * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.
+ * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Stable from 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.
  */
 export interface Report {
   /**
-   * The version of this schema the report follows: semver, apart from the lsd-mono version. 0.3.0 for this schema.
+   * The version of this schema the report follows: semver, apart from the lsd-mono version. 1.0.0 for this schema.
    */
   schemaVersion: string
   title: string
