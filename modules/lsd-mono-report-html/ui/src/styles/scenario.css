@@ -204,3 +204,18 @@
   letter-spacing: 0;
   color: var(--text-faint);
 }
+
+/* A Warn scenario's reason (#163), above its error panel. */
+.warn-reason {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--warn);
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 13px;
+}
+@media (forced-colors: active) {
+  .warn-reason {
+    border-left-color: CanvasText;
+  }
+}

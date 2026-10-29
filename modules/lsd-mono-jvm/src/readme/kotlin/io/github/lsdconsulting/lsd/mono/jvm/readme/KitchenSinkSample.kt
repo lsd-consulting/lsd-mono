@@ -278,14 +278,16 @@ private fun paymentDeclined(lsd: LsdContext) {
         When the customer pays
         Then the order is confirmed
         """.trimIndent(),
+        // Warn as JUnit reports it: an assumption failed, so the test was aborted, not failed (#163).
         status = Status.WARN,
         error =
             ScenarioError(
-                headline = "AssertionFailedError",
-                message = "expected: <CONFIRMED> but was: <PAYMENT_DECLINED>",
+                headline = "Test aborted",
+                message = "Assumption failed: the issuer sandbox declined the test card, so confirmation was not checked",
                 stack =
                     """
-                    org.opentest4j.AssertionFailedError: expected: <CONFIRMED> but was: <PAYMENT_DECLINED>
+                    org.opentest4j.TestAbortedException: Assumption failed: the issuer sandbox declined the test card, so confirmation was not checked
+                    	at org.junit.jupiter.api.Assumptions.throwAssumptionFailed(Assumptions.java:340)
                     	at com.example.shop.PlaceOrderTest.paysByCard(PlaceOrderTest.kt:88)
                     	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
                     """.trimIndent(),

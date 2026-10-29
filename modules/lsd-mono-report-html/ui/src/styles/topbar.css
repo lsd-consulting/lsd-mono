@@ -286,6 +286,73 @@
   visibility: visible;
 }
 
+/* The status legend (#163): "?" by the chips opens what each status means. */
+.filters {
+  position: relative;
+}
+.chip.legend-btn {
+  min-width: 28px;
+  justify-content: center;
+  font-weight: 700;
+}
+.chip.legend-btn[aria-expanded="true"] {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+.status-legend {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: min(24rem, calc(100vw - 16px));
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.status-legend[hidden] {
+  display: none;
+}
+.status-legend-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.status-legend dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 10px;
+  margin: 0;
+}
+.status-legend dt {
+  margin: 0;
+}
+.status-legend dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+/* On a phone the glyph chips (#158) wrap, so .filters no longer reaches the right edge;
+   pin the legend to the viewport under the bar instead. */
+@media (max-width: 560px) {
+  .status-legend {
+    position: fixed;
+    top: calc(var(--topbar-h, 0px) + 6px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
+@media (forced-colors: active) {
+  .status-legend {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}
 /* The example site's introduction (#161): at the top of the sidebar, so the diagram keeps its place. */
 .example-intro {
   display: flex;

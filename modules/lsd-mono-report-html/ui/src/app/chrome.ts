@@ -20,6 +20,7 @@ import {
   storeSidebarCollapsed,
 } from '../ui/sidebar'
 import { statusGlyph, statusLabel } from '../ui/format'
+import { bindStatusLegend, statusDefinitionId, statusLegendHtml } from '../ui/status-legend'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
 import { bindExampleIntro, exampleIntroHtml, showExampleIntro } from '../ui/example-intro'
 import { searchStatusText } from '../ui/search-status'
@@ -75,11 +76,12 @@ export function renderShell(): void {
         ${(['success', 'warn', 'error'] as Status[])
           .map(
             (s) => `
-          <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}">
+          <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}" aria-describedby="${escapeAttr(statusDefinitionId(s))}">
             <span class="chip-glyph" aria-hidden="true">${escapeHtml(statusGlyph(s))}</span><span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
           </button>`,
           )
           .join('')}
+        ${statusLegendHtml()}
       </div>
       <div class="top-actions">
         ${themeControlHtml(mode, theme)}
@@ -121,6 +123,7 @@ export function renderShell(): void {
 function bindChrome(): void {
   bindFilters()
   bindExampleIntro(document, window)
+  bindStatusLegend(document)
   bindTopbarButtons()
   bindSidePanel()
   const main = document.querySelector<HTMLElement>('#main')!
