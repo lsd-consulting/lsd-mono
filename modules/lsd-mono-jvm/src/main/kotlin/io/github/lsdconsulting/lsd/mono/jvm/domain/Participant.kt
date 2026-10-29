@@ -1,5 +1,7 @@
 package io.github.lsdconsulting.lsd.mono.jvm.domain
 
+import io.github.lsdconsulting.lsd.mono.jvm.describe
+
 /**
  * Lifeline on a sequence diagram.
  *
@@ -14,16 +16,29 @@ package io.github.lsdconsulting.lsd.mono.jvm.domain
  * @property displayName drawn instead of [name] when set.
  * @property colour the lifeline's colour, any CSS colour; the report picks one when null.
  *
+ * Made with [ParticipantType.called]: `ParticipantType.DATABASE.called("Orders")`.
+ *
  * Types match the report union. Legacy PlantUML-only types (`CONTROL`, `COLLECTIONS`)
  * are not carried — use [ParticipantType.PARTICIPANT].
  */
-public data class Participant @JvmOverloads constructor(
-    val name: String,
-    val id: String = ParticipantIds.fromName(name),
-    val type: ParticipantType = ParticipantType.PARTICIPANT,
-    val displayName: String? = null,
-    val colour: String? = null,
-)
+public class Participant internal constructor(
+    public val name: String,
+    public val id: String = ParticipantIds.fromName(name),
+    public val type: ParticipantType = ParticipantType.PARTICIPANT,
+    public val displayName: String? = null,
+    public val colour: String? = null,
+) {
+    internal fun copy(id: String = this.id): Participant = Participant(name, id, type, displayName, colour)
+
+    override fun equals(other: Any?): Boolean = other is Participant && fields() == other.fields()
+
+    override fun hashCode(): Int = fields().hashCode()
+
+    override fun toString(): String = describe("Participant", fields())
+
+    private fun fields(): List<Pair<String, Any?>> =
+        listOf("name" to name, "id" to id, "type" to type, "displayName" to displayName, "colour" to colour)
+}
 
 /** The shape of a participant's header on the diagram. */
 public enum class ParticipantType {

@@ -69,6 +69,7 @@ public object KnownParticipantType {
     public const val BOUNDARY: String = "BOUNDARY"
 
     /** Every known type. */
+    @JvmField
     public val ALL: List<String> = listOf(ACTOR, PARTICIPANT, DATABASE, QUEUE, ENTITY, BOUNDARY)
 }
 
@@ -83,6 +84,7 @@ public object KnownMessageType {
     public const val SHORT_OUTBOUND: String = "SHORT_OUTBOUND"
 
     /** Every known type. */
+    @JvmField
     public val ALL: List<String> =
         listOf(SYNCHRONOUS, SYNCHRONOUS_RESPONSE, ASYNCHRONOUS, LOST, BI_DIRECTIONAL, SHORT_INBOUND, SHORT_OUTBOUND)
 }
@@ -95,6 +97,7 @@ public object KnownTimingSource {
     public const val DERIVED: String = "DERIVED"
 
     /** Every known source. */
+    @JvmField
     public val ALL: List<String> = listOf(NONE, TIMESTAMPED, MEASURED, DERIVED)
 }
 
@@ -106,6 +109,7 @@ public object KnownPairingSource {
     public const val TRACE: String = "TRACE"
 
     /** Every known source. */
+    @JvmField
     public val ALL: List<String> = listOf(NONE, GUESSED, CALL_ID, TRACE)
 }
 
@@ -116,6 +120,7 @@ public object KnownOrderSource {
     public const val CLOCK: String = "CLOCK"
 
     /** Every known source. */
+    @JvmField
     public val ALL: List<String> = listOf(SEQUENCE, STRUCTURE, CLOCK)
 }
 
@@ -128,6 +133,7 @@ public object KnownWarningKind {
     public const val SKEW: String = "SKEW"
 
     /** Every known kind. */
+    @JvmField
     public val ALL: List<String> = listOf(REPLY_WITHOUT_CALL, DURATION_ON_REPLY_DROPPED, LONGER_THAN_PARENT, DUPLICATE_SPAN, SKEW)
 }
 
@@ -140,6 +146,7 @@ public object KnownMessageOrigin {
     public const val IMPORTED: String = "imported"
 
     /** Every known origin. */
+    @JvmField
     public val ALL: List<String> = listOf(CAPTURED, IMPORTED)
 }
 
@@ -155,5 +162,6 @@ public object KnownReportSource {
     public const val API: String = "api"
 
     /** Every known source. */
+    @JvmField
     public val ALL: List<String> = listOf(JUNIT, CUCUMBER, API)
 }

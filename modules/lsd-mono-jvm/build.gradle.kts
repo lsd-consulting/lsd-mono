@@ -27,7 +27,8 @@ dependencies {
     // The report as plain values (ReportJson and the rest), and the writer of its JSON and HTML
     // files with the report UI. Neither is in core's public API.
     implementation(project(":modules:lsd-mono-report-model"))
-    implementation(project(":modules:lsd-mono-report-html"))
+    // api: completeReport and report { } return its ReportFiles.
+    api(project(":modules:lsd-mono-report-html"))
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

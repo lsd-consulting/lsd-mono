@@ -87,7 +87,7 @@ import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.DATABASE
 import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.PARTICIPANT
 import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.QUEUE
 
-val lsd = LsdContext()
+val lsd = LsdContext.instance
 lsd.addParticipants(
     ACTOR.called("Customer"),
     PARTICIPANT.called("Checkout"),
@@ -117,7 +117,7 @@ val listing = lsd.completeReport("Place an order")
 lsd.createIndex()
 ```
 
-`completeReport` writes under `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it). Open `Place-an-order-1153f62c-diagram.html`: the interactive diagram. `Place-an-order-1153f62c-report.json` holds the data. `completeReport` returns both as `ReportFiles` (`diagramHtml`, `reportJson`). The 8 characters are a hash of the title, so two titles that read the same as file names (`Place an order`, `Place-an-order`) never overwrite each other. `createIndex()` writes `index.html`: the same report app with every report in the directory in its sidebar (failed first), including ones written by other test JVMs or modules. A report's data loads when you open it, and `index.html#report=<file stem>` links to one report.
+`completeReport` writes under `build/reports/lsd` (set `lsd.mono.report.outputDir` to move it). Open `Place-an-order-1153f62c-diagram.html`: the interactive diagram. `Place-an-order-1153f62c-report.json` holds the data. `completeReport` returns both as `ReportFiles` (`io.github.lsdconsulting.lsd.mono.report.html`: `diagramHtml`, `reportJson`). The 8 characters are a hash of the title, so two titles that read the same as file names (`Place an order`, `Place-an-order`) never overwrite each other. `createIndex()` writes `index.html`: the same report app with every report in the directory in its sidebar (failed first), including ones written by other test JVMs or modules. A report's data loads when you open it, and `index.html#report=<file stem>` links to one report.
 
 Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arrow. Any other fields load from `Place-an-order-1153f62c-payloads.js` when the panel opens.
 

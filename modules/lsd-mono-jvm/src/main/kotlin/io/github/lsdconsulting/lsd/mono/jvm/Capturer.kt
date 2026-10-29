@@ -42,15 +42,17 @@ import java.time.Instant
 public sealed class Capturer {
     /**
      * A message from [from] to [to]. [type] defaults to [MessageType.SYNCHRONOUS], and so
-     * does a `null` type (so Java can pass `null`).
+     * does a `null` type (so Java can pass `null`). [type] comes before [data], so every Java
+     * overload is unambiguous: `message(from, to, label, MessageType.LOST)` is the type and
+     * `message(from, to, label, null)` a synchronous call; a payload is the fifth argument.
      */
     @JvmOverloads
     public fun message(
         from: String,
         to: String,
         label: String = "",
-        data: Any? = null,
         type: MessageType? = MessageType.SYNCHRONOUS,
+        data: Any? = null,
         colour: String? = null,
         timing: Timing? = null,
         trace: Trace? = null,
@@ -66,21 +68,6 @@ public sealed class Capturer {
                 data = data,
             ).withTiming(timing, trace),
         )
-    }
-
-    /**
-     * A message of [type] with no data. With this overload, `message(from, to, label, MessageType.LOST)`
-     * means the type, from Kotlin and Java. Without it the type would be taken as `data`, because
-     * `data` comes before `type` in the full form. A `null` [type] is a synchronous call with
-     * no data, so Java's `message(from, to, label, null)` (which picks this overload) works.
-     */
-    public fun message(
-        from: String,
-        to: String,
-        label: String,
-        type: MessageType?,
-    ) {
-        message(from, to, label, null, type)
     }
 
     /**

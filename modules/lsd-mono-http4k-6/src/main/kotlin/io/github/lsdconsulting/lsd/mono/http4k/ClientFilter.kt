@@ -91,18 +91,15 @@ internal class ClientFilter(
         data: Any?,
     ) = guarded(Unit) {
         call.scenario.ingest(
-            Interaction(
-                kind = InteractionKind.REQUEST,
-                from = call.caller,
-                to = to(request.uri),
-                label = Calls.label(request),
-                interactionId = call.id,
-                trace = Trace(call.scenario.correlationId, call.id, call.parent),
-                source = Calls.SOURCE,
-                startedAt = started,
-                data = data,
-                headers = Calls.headers(request),
-            ),
+            Interaction
+                .builder(InteractionKind.REQUEST, call.caller, to(request.uri), Calls.label(request))
+                .interactionId(call.id)
+                .trace(Trace(call.scenario.correlationId, call.id, call.parent))
+                .source(Calls.SOURCE)
+                .startedAt(started)
+                .data(data)
+                .headers(Calls.headers(request))
+                .build(),
         )
     }
 
@@ -116,18 +113,15 @@ internal class ClientFilter(
         headers: Map<String, String>?,
     ) = guarded(Unit) {
         call.scenario.ingest(
-            Interaction(
-                kind = InteractionKind.RESPONSE,
-                from = to(request.uri),
-                to = call.caller,
-                label = label,
-                status = status,
-                replyTo = call.id,
-                source = Calls.SOURCE,
-                durationMs = durationMs,
-                data = data,
-                headers = headers,
-            ),
+            Interaction
+                .builder(InteractionKind.RESPONSE, to(request.uri), call.caller, label)
+                .status(status)
+                .replyTo(call.id)
+                .source(Calls.SOURCE)
+                .durationMs(durationMs)
+                .data(data)
+                .headers(headers)
+                .build(),
         )
     }
 

@@ -21,7 +21,9 @@ public data class Trace
 
 /**
  * Timing the caller asserts for one interaction. Every field is optional, and a
- * report with none of them is still a valid structural sketch.
+ * report with none of them is still a valid structural sketch. Made with the factories ([none],
+ * [at], [took], [tookMs], [of]) and changed with the `with…` copies, so a field added later is one
+ * more wither rather than a changed constructor.
  *
  * @property startedAt the caller's wall clock when it started. Trusted only within one [source].
  * @property durationMs a measured duration, fractional milliseconds. It belongs to the call: on a
@@ -30,21 +32,52 @@ public data class Trace
  * @property orderByStartedAt per-interaction hint for clock ordering: `true` opts in (same source
  *   only) even when the report option is [ClockOrdering.OFF], `false` opts out, `null` inherits.
  */
-public data class Timing(
-    val startedAt: Instant? = null,
-    val durationMs: Double? = null,
-    val source: String? = null,
-    val orderByStartedAt: Boolean? = null,
+public class Timing internal constructor(
+    public val startedAt: Instant? = null,
+    public val durationMs: Double? = null,
+    public val source: String? = null,
+    public val orderByStartedAt: Boolean? = null,
 ) {
     init {
         require(durationMs == null || (durationMs >= 0.0 && durationMs.isFinite())) { "durationMs must be finite and >= 0: $durationMs" }
     }
 
-    /** A copy with [orderByStartedAt] set; the Java form of `copy(orderByStartedAt = …)`. */
+    internal fun copy(
+        startedAt: Instant? = this.startedAt,
+        durationMs: Double? = this.durationMs,
+        source: String? = this.source,
+        orderByStartedAt: Boolean? = this.orderByStartedAt,
+    ): Timing = Timing(startedAt, durationMs, source, orderByStartedAt)
+
+    /** A copy started at [startedAt] (null: not known). */
+    public fun withStartedAt(startedAt: Instant?): Timing = copy(startedAt = startedAt)
+
+    /**
+     * A copy that took [durationMs] fractional milliseconds, measured (null: not measured). Named
+     * apart from [withDuration] so `withDurationMs(null)` compiles from Java.
+     */
+    public fun withDurationMs(durationMs: Double?): Timing = copy(durationMs = durationMs)
+
+    /** A copy that took [duration], measured. Kept as fractional milliseconds. */
+    public fun withDuration(duration: Duration): Timing = copy(durationMs = duration.toNanos() / 1_000_000.0)
+
+    /** A copy with [orderByStartedAt] set. */
     public fun withOrderByStartedAt(hint: Boolean?): Timing = copy(orderByStartedAt = hint)
 
     /** A copy in clock domain [source]. */
     public fun withSource(source: String?): Timing = copy(source = source)
+
+    override fun equals(other: Any?): Boolean =
+        other is Timing &&
+            startedAt == other.startedAt &&
+            durationMs == other.durationMs &&
+            source == other.source &&
+            orderByStartedAt == other.orderByStartedAt
+
+    override fun hashCode(): Int = listOf(startedAt, durationMs, source, orderByStartedAt).hashCode()
+
+    override fun toString(): String =
+        "Timing(startedAt=$startedAt, durationMs=$durationMs, source=$source, orderByStartedAt=$orderByStartedAt)"
 
     /** Factories. */
     public companion object {
@@ -76,7 +109,7 @@ public data class Timing(
 }
 
 /** How an interaction's timing is known. Never raised by clock ordering. */
-public enum class TimingSource {
+internal enum class TimingSource {
     /** No duration and no `startedAt`. `capturedAt` alone does not count. */
     NONE,
 
@@ -91,7 +124,7 @@ public enum class TimingSource {
 }
 
 /** How a call was paired with its reply. */
-public enum class PairingSource {
+internal enum class PairingSource {
     /** No reply was found. */
     NONE,
 
@@ -106,7 +139,7 @@ public enum class PairingSource {
 }
 
 /** A scenario's timing accuracy, derived from its interactions. */
-public enum class Accuracy {
+internal enum class Accuracy {
     /** No timing at all. */
     STRUCTURE_ONLY,
 
@@ -136,7 +169,7 @@ public enum class ClockOrdering {
 }
 
 /** Why a message sits where it does in the report. */
-public enum class OrderSource {
+internal enum class OrderSource {
     /** Capture order. */
     SEQUENCE,
 

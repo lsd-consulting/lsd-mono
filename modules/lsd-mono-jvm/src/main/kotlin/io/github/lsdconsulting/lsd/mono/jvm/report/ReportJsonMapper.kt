@@ -98,9 +98,9 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
             .wallClockMs(timing.wallClockMs)
             .clockOrdering(ClockOrderingJson.valueOf(timing.clockOrdering.name))
             .clockOrdered(timing.clockOrdered)
-            .warnings(timing.warnings.map { WarningJson(it.kind.name, it.message) })
+            .warnings(timing.warnings.map { WarningJson.builder(it.kind.name, it.message).build() })
             .reorderedByClock(timing.reorderedByClock)
-            .pairAccuracy(timing.pairAccuracy.map { PairAccuracyJson(it.from, it.to, AccuracyJson.valueOf(it.accuracy.name)) })
+            .pairAccuracy(timing.pairAccuracy.map { PairAccuracyJson.builder(it.from, it.to, AccuracyJson.valueOf(it.accuracy.name)).build() })
             .build()
 
     /** `capturedAt` is a wall-clock hint; reproducible reports leave it out. */

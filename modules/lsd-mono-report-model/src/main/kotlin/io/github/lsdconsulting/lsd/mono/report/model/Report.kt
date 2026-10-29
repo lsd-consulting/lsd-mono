@@ -7,8 +7,9 @@ package io.github.lsdconsulting.lsd.mono.report.model
  * The classes in this package are plain values with no behaviour and no dependencies, so any
  * producer can build a report from them, with or without lsd-mono-jvm. The ones that grow with the
  * schema, this one included, are made with a builder ([builder]) and changed with [toBuilder]: a
- * newer release adds optional setters, which breaks no caller. The small fixed ones ([FactJson],
- * [MetricJson], [TraceJson], [WarningJson], [PairAccuracyJson]) are data classes.
+ * newer release adds optional setters, which breaks no caller. [WarningJson] and [PairAccuracyJson]
+ * are builders too, though small. Only the frozen ones ([FactJson], [MetricJson], [TraceJson]),
+ * whose fields will never change, are data classes.
  */
 public class ReportJson internal constructor(
     /** The report's title, shown at the top of the page and in the index. */
