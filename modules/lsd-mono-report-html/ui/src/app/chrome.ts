@@ -21,6 +21,9 @@ import {
 } from '../ui/sidebar'
 import { statusGlyph, statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
+import { searchStatusText } from '../ui/search-status'
+import { searchOriginAfter } from './search-origin'
+import { clearField } from './keys'
 import { trackTopbarHeight } from '../lib/topbar-height'
 import { repoLinkAttrsHtml } from '../ui/repo-link'
 import { revealSideways } from '../lib/reveal'
@@ -37,7 +40,7 @@ import {
   panelFindQuery,
   refreshPanelFind,
 } from './panel'
-import { counts } from './filters'
+import { counts, filtered } from './filters'
 import { writeScenarioHash } from './url-hash'
 import { index, session, state, app } from './context'
 import { mainClick } from './intents'
@@ -63,7 +66,9 @@ export function renderShell(): void {
       <div class="search-wrap">
         <span class="search-icon" aria-hidden="true">⌕</span>
         <input type="search" id="search" placeholder="${index ? 'Search reports, scenarios…' : 'Search scenarios, facts…'}" value="${escapeAttr(state.query)}" aria-label="Search scenarios" autocomplete="off"/>
-        <span class="kbd">/</span>
+        <button type="button" class="search-clear" id="search-clear" aria-label="Clear search" title="Clear search"${state.query ? '' : ' hidden'}>×</button>
+        <span class="kbd"${state.query ? ' hidden' : ''}>/</span>
+        <span class="visually-hidden" id="search-status" role="status" aria-live="polite"></span>
       </div>
       <div class="filters" role="group" aria-label="Status filters">
         ${(['success', 'warn', 'error'] as Status[])
@@ -128,16 +133,41 @@ function bindChrome(): void {
 /** Search, the status chips, and the empty state's Clear filters button. */
 function bindFilters(): void {
   const search = document.querySelector<HTMLInputElement>('#search')!
+  const clear = document.querySelector<HTMLButtonElement>('#search-clear')!
+  const slash = search.parentElement!.querySelector<HTMLElement>('.kbd')
+  const status = document.querySelector<HTMLElement>('#search-status')!
+  let announce: ReturnType<typeof setTimeout> | undefined
   search.addEventListener('input', () => {
+    const before = state.query
     state.query = search.value
+    const back = searchOriginAfter(before, state.query, state.selectedId)
+    if (back) state.selectedId = back
+    clear.hidden = search.value === ''
+    if (slash) slash.hidden = search.value !== ''
     renderNav()
     renderMain()
+    // The count, once typing pauses, so a screen reader is not read every keystroke.
+    clearTimeout(announce)
+    if (index) return
+    announce = setTimeout(() => {
+      status.textContent = searchStatusText(
+        filtered().length,
+        session.report.scenarios.length,
+        state.query.trim() !== '',
+      )
+    }, 500)
+  })
+  clear.addEventListener('click', () => {
+    clearField(search)
+    search.focus()
   })
   // The empty state's Clear filters button.
   document.querySelector('#main')!.addEventListener('click', (ev) => {
     if (!(ev.target as Element).closest?.('[data-clear-filters]')) return
     state.query = ''
     search.value = ''
+    clear.hidden = true
+    if (slash) slash.hidden = false
     for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
     document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
     renderNav()

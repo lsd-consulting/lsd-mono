@@ -17,6 +17,7 @@ import { index, session, state } from './context'
 import { focusScenarioHeading, renderMain, scrollToScenario } from './main-view'
 import { applyRef } from './routing'
 import { openingScenario } from './intents'
+import { forgetSearchOrigin } from './search-origin'
 export function renderNav(): void {
   paintNavFold()
   if (index) {
@@ -200,6 +201,9 @@ export function revealFiltered(scenarioId: string): void {
   for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
   const search = document.querySelector<HTMLInputElement>('#search')
   if (search) search.value = ''
+  forgetSearchOrigin()
+  const clear = document.querySelector<HTMLElement>('#search-clear')
+  if (clear) clear.hidden = true
   document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
 }
 
@@ -216,6 +220,7 @@ export function selectScenario(id: string): void {
   if (!session.report.scenarios.some((s) => s.id === id)) return
   const main = document.querySelector('#main')!
   const focusInMain = main.contains(document.activeElement)
+  forgetSearchOrigin()
   state.selectedId = id
   renderNav()
   renderMain()
