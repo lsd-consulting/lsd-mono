@@ -238,3 +238,12 @@ export async function scenarioPartTops(
       }
     })
 }
+
+/**
+ * On a narrow toolbar (a phone, or a card beside the side panel) Find sits behind its magnifier
+ * (#123): open it, which focuses the field. Nothing to do on a wide toolbar.
+ */
+export async function openFind(page: Page, within = page.locator('body')): Promise<void> {
+  const toggle = within.locator('[data-find-toggle][aria-expanded="false"]').first()
+  if (await toggle.isVisible()) await toggle.click()
+}

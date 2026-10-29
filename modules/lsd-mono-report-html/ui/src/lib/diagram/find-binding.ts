@@ -98,10 +98,43 @@ export function bindFind(diagram: Element, scroll: HTMLElement, id: string): voi
     refreshPayloads(id)
     findChanged(id)
   })
+  diagram.querySelector<HTMLButtonElement>('[data-find-toggle]')?.addEventListener('click', (ev) => {
+    const toggle = ev.currentTarget as HTMLButtonElement
+    if (toggle.getAttribute('aria-expanded') === 'true') {
+      closeFind(toggle)
+      return
+    }
+    setFindOpen(toggle, true)
+    find?.focus()
+  })
   diagram.querySelectorAll<HTMLButtonElement>('[data-find-step]').forEach((btn) => {
     btn.addEventListener('click', () => {
       cancelReveal()
       stepFind(scroll, btn.dataset.findStep === 'prev' ? -1 : 1)
     })
   })
+}
+
+/** Show or hide Find behind its magnifier on a narrow toolbar (#123). Wide toolbars always show it. */
+function setFindOpen(toggle: HTMLElement, open: boolean): void {
+  toggle.setAttribute('aria-expanded', String(open))
+  toggle.closest('.seq-toolbar')?.toggleAttribute('data-find-open', open)
+}
+
+/** Collapse Find back to its magnifier (the toggle again, or Escape in the empty field). */
+export function closeFind(toggle: HTMLElement): void {
+  setFindOpen(toggle, false)
+}
+
+/**
+ * Escape in an empty Find field on a narrow toolbar (#114 order, #123): Find collapses and focus goes
+ * to its magnifier, which is where it came from. Null when Find is not collapsible here (wide
+ * toolbar: the magnifier is not drawn) or [field] is not Find.
+ */
+export function collapseFindFrom(field: Element): HTMLElement | null {
+  if (!field.matches('[data-diagram-find]')) return null
+  const toggle = field.closest('.seq-toolbar')?.querySelector<HTMLElement>('[data-find-toggle]')
+  if (!toggle || toggle.getClientRects().length === 0) return null
+  closeFind(toggle)
+  return toggle
 }

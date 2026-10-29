@@ -52,13 +52,16 @@ export function sizeStage(scrollport: HTMLElement): void {
   const height = `${scrollport.scrollHeight + (scrollport.offsetHeight - scrollport.clientHeight)}px`
   if (stage.style.height !== height) stage.style.height = height
   // The scrollport sticks below the toolbar while the toolbar sticks. On a phone only the
-  // toolbar's last row (Find) stays stuck; the rows above it scroll away (the lead).
+  // toolbar's last rows (zoom and Find) stay stuck; the rows above them scroll away (the lead).
   const diagram = stage.closest<HTMLElement>('.seq-diagram')
   const toolbar = diagram?.querySelector<HTMLElement>('.seq-toolbar')
   if (!diagram) return
   const sticky = toolbar != null && getComputedStyle(toolbar).position === 'sticky'
-  // The Find row's top is its tallest item's top (the field or the step buttons).
-  const row = [...(toolbar?.querySelectorAll<HTMLElement>('.diagram-find, .find-steps') ?? [])]
+  // The pinned rows start at the zoom group or Find, whichever is higher (#123); hidden ones
+  // (Find collapsed to its magnifier) have no box and do not count.
+  const row = [
+    ...(toolbar?.querySelectorAll<HTMLElement>('.zoom-controls, .find-toggle, .diagram-find, .find-steps') ?? []),
+  ].filter((el) => el.getClientRects().length > 0)
   const rowTop = row.length ? Math.min(...row.map((el) => el.offsetTop)) : null
   const lead = sticky && rowTop != null && isPhone() ? stickyLead(0, rowTop) : 0
   const bar = sticky ? `${toolbar.offsetHeight - lead}px` : '0px'

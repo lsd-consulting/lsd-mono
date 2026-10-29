@@ -60,3 +60,49 @@
   cursor: text;
   min-width: 10rem;
 }
+
+/* Find behind a magnifier (#123): only on a narrow toolbar (a phone, or a card beside the side
+   panel), where the zoom group and Find share one pinned row. The field shows while it is open
+   or holds a query. Escape in the empty field closes it (find-binding.ts). */
+.seq-toolbar .find-toggle {
+  display: none;
+}
+@container seq-toolbar (max-width: 720px) {
+  .seq-toolbar .find-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0 6px;
+  }
+  .seq-toolbar .find-toggle[aria-expanded="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+  .seq-toolbar:not([data-find-open]):not(:has(.diagram-find input:not(:placeholder-shown))) .diagram-find,
+  .seq-toolbar:not([data-find-open]):not(:has(.diagram-find input:not(:placeholder-shown))) .find-steps {
+    display: none;
+  }
+}
+@media (pointer: coarse) {
+  .seq-toolbar .find-toggle {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media (forced-colors: active) {
+  .seq-toolbar .find-toggle[aria-expanded="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+}
+/* The section links and legends sit under the sticky toolbar: one reached by Tab or a jump
+   stops below it, not under it (WCAG 2.4.11). */
+.seq-diagram .section-jump button,
+.seq-diagram .diagram-legends {
+  scroll-margin-top: calc(var(--topbar-h, 0px) + var(--seq-toolbar-h, 0px) + 8px);
+}

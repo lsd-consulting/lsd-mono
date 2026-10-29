@@ -1,5 +1,6 @@
 import { devices, expect, test, type Page } from '@playwright/test'
 import { openExample } from './example-report'
+import { openFind } from './ux-helpers'
 
 // #114: Escape in the page search or a diagram's Find. The first Escape clears the text (the
 // scenario list or the Find matches reset) and keeps focus in the field; the next moves focus to
@@ -28,6 +29,7 @@ const focused = (page: Page) =>
     const el = document.activeElement
     if (!el || el === document.body) return 'BODY'
     if (el.id) return `#${el.id}`
+    if (el.matches('[data-find-toggle]')) return 'magnifier'
     return el.matches('[data-diagram-find]') ? 'find' : el.classList.contains('seq-scroll') ? 'scrollport' : el.tagName
   })
 
@@ -64,6 +66,7 @@ const diagramScroll = (page: Page) =>
 for (const [size, use] of Object.entries(SIZES)) {
   test.describe(`Escape in search and Find at ${size}`, () => {
     test.use(use)
+    const narrow = size !== '1440'
 
     test('search: Esc clears the text and keeps focus, then goes to the scenario heading', async ({ page }) => {
       await openExample(page)
@@ -88,6 +91,7 @@ for (const [size, use] of Object.entries(SIZES)) {
 
     test('Find: Esc clears the text and the matches, then goes to the diagram scrollport', async ({ page }) => {
       await openExample(page)
+      await openFind(page, seq(page))
       await find(page).click()
       await page.keyboard.type('pay')
       await expect.poll(() => hits(page).count()).toBeGreaterThan(0)
@@ -99,7 +103,13 @@ for (const [size, use] of Object.entries(SIZES)) {
       await expect(seq(page).locator('.diagram-find-count')).toHaveText('')
       expect(await focused(page)).toBe('find')
       await page.keyboard.press('Escape')
-      expect(await focused(page)).toBe('scrollport')
+      // A narrow toolbar collapses Find back to its magnifier (#123); a wide one leaves to the drawing.
+      expect(await focused(page)).toBe(narrow ? 'magnifier' : 'scrollport')
+      if (narrow) {
+        await expect(find(page)).toBeHidden()
+        await expect(seq(page).locator('[data-find-toggle]')).toHaveAttribute('aria-expanded', 'false')
+        return
+      }
       // Where focus went shows.
       const ring = await page.evaluate(() => getComputedStyle(document.activeElement!).outlineStyle)
       expect(ring).not.toBe('none')
@@ -115,6 +125,7 @@ for (const [size, use] of Object.entries(SIZES)) {
       const before = await diagramScroll(page)
       await overview(page).click()
       await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
+      await openFind(page, seq(page))
       await find(page).click()
       await page.keyboard.type('pay')
       await expect.poll(() => hits(page).count()).toBeGreaterThan(0)
@@ -125,7 +136,7 @@ for (const [size, use] of Object.entries(SIZES)) {
       expect(await focused(page)).toBe('find')
 
       await page.keyboard.press('Escape')
-      expect(await focused(page)).toBe('scrollport')
+      expect(await focused(page)).toBe(narrow ? 'magnifier' : 'scrollport')
       await expect(overview(page)).toHaveAttribute('aria-pressed', 'true')
 
       await page.keyboard.press('Escape')
@@ -144,6 +155,7 @@ for (const [size, use] of Object.entries(SIZES)) {
       const opener = card(page).locator('button.msg-open').first()
       await opener.click()
       await expect(page.locator('#inspector')).toBeVisible()
+      await openFind(page, seq(page))
       await find(page).click()
       await page.keyboard.type('pay')
       await page.keyboard.press('Escape')
@@ -172,6 +184,7 @@ for (const [size, use] of Object.entries(SIZES)) {
 
     test('a held Esc in Find clears it once and goes no further', async ({ page }) => {
       await openExample(page)
+      await openFind(page, seq(page))
       await find(page).click()
       await page.keyboard.type('pay')
       // A second keydown without a keyup is an auto-repeat.

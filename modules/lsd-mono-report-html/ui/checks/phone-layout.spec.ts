@@ -1,3 +1,4 @@
+import { openFind } from './ux-helpers'
 import { devices, expect, test, type Page } from '@playwright/test'
 import type { Report } from '../src/types'
 import { PAGES, sectionsReport } from './diagram-pages'
@@ -114,9 +115,10 @@ for (const [phone, device] of Object.entries(PHONES)) {
             const search = document.querySelector<HTMLElement>('.search-wrap')!.getBoundingClientRect()
             const brand = document.querySelector<HTMLElement>('.brand')!.getBoundingClientRect()
             const toolbar = document.querySelector<HTMLElement>('.seq-toolbar')!.getBoundingClientRect()
-            const find = document.querySelector<HTMLElement>('.diagram-find')!.getBoundingClientRect()
+            // The pinned row: zoom and the Find magnifier (#123).
+            const zoom = document.querySelector<HTMLElement>('.seq-toolbar .zoom-controls')!.getBoundingClientRect()
             return {
-              findTop: find.top,
+              zoomTop: zoom.top,
               barBottom: bar.bottom,
               barHeight: bar.height,
               panelDocTop: panel.top + scrollY,
@@ -136,10 +138,14 @@ for (const [phone, device] of Object.entries(PHONES)) {
         expect(Math.abs(after.barBottom - after.stuck)).toBeLessThanOrEqual(1)
         expect(after.brandBottom).toBeLessThanOrEqual(1)
         expect(after.searchTop).toBeGreaterThanOrEqual(0)
-        // Only the toolbar's Find row stays, just under the bar.
-        expect(after.findTop).toBeGreaterThanOrEqual(after.barBottom)
-        expect(after.findTop).toBeLessThanOrEqual(after.barBottom + 12)
+        // Only the toolbar's zoom and Find row stays, just under the bar (#123).
+        expect(after.zoomTop).toBeGreaterThanOrEqual(after.barBottom)
+        expect(after.zoomTop).toBeLessThanOrEqual(after.barBottom + 12)
         expect(after.panelDocTop).toBe(panelTop)
+        await expect(page.locator('.seq-toolbar .zoom-controls').first()).toBeInViewport()
+        await expect(page.locator('[data-find-toggle]').first()).toBeInViewport()
+        // The magnifier opens Find in reach, a row under it.
+        await openFind(page)
         await expect(page.locator('[data-diagram-find]')).toBeInViewport()
         await expect(page.locator('[data-find-step="next"]')).toBeInViewport()
         // The Payloads toggle sits in the Find field.

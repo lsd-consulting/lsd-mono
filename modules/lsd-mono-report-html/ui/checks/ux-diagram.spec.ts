@@ -15,6 +15,7 @@ import {
   seriousViolations,
   THEMES,
   zoomOf,
+  openFind,
 } from './ux-helpers'
 import { openReport } from './open-report'
 
@@ -353,6 +354,7 @@ for (const [name, viewport] of [
       return labels.find((text) => text.getBoundingClientRect().left > port.right)?.textContent?.trim() ?? null
     })
     expect(far, 'a painted label beyond the right edge').not.toBeNull()
+    await openFind(page)
     await page.locator('[data-diagram-find]').fill(far!.split(/\s/)[0])
     await page.keyboard.press('Enter')
     await expect
