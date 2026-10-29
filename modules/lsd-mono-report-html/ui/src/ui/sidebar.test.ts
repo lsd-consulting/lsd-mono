@@ -9,6 +9,7 @@ import {
   sidebarToggleLabel,
   storeSidebarCollapsed,
   navFoldLabel,
+  sidebarTitleText,
 } from './sidebar'
 
 describe('sidebar collapse', () => {
@@ -64,5 +65,12 @@ describe('navFoldLabel', () => {
   it('counts the list, singular for one', () => {
     expect(navFoldLabel(5, 'scenario')).toBe('5 scenarios')
     expect(navFoldLabel(1, 'report')).toBe('1 report')
+  })
+
+  it('says how many of them show while a filter hides some (#158)', () => {
+    expect(navFoldLabel(5, 'scenario', 2)).toBe('2 of 5 scenarios')
+    expect(navFoldLabel(5, 'scenario', 5)).toBe('5 scenarios')
+    expect(sidebarTitleText(5)).toBe('Scenarios · 5')
+    expect(sidebarTitleText(5, 0)).toBe('Scenarios · 0 of 5')
   })
 })

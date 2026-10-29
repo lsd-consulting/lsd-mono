@@ -45,7 +45,16 @@ export function applySidebarCollapsed(shell: Element | null, button: Element | n
   button.textContent = sidebarToggleGlyph(collapsed)
 }
 
-/** Narrow-screen list toggle: "5 scenarios" or "1 report". The ▾/▴ glyph is drawn apart. */
-export function navFoldLabel(count: number, noun: 'scenario' | 'report'): string {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`
+/**
+ * Narrow-screen list toggle: "5 scenarios" or "1 report", or "2 of 5 scenarios" while the
+ * filters hide some (#158). The ▾/▴ glyph is drawn apart.
+ */
+export function navFoldLabel(count: number, noun: 'scenario' | 'report', shown: number = count): string {
+  const plural = `${noun}${count === 1 ? '' : 's'}`
+  return shown === count ? `${count} ${plural}` : `${shown} of ${count} ${plural}`
+}
+
+/** The sidebar heading's count: "Scenarios · 5", or "Scenarios · 2 of 5" while filtered (#158). */
+export function sidebarTitleText(count: number, shown: number = count): string {
+  return shown === count ? `Scenarios · ${count}` : `Scenarios · ${shown} of ${count}`
 }

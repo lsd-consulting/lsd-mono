@@ -12,10 +12,19 @@ import { focusDiagramMessage, setFindHooks, syncDiagramWindow } from '../lib/seq
 import { currentMode, getPreferredTheme } from '../ui/theme'
 import { bindThemeMenu, themeControlHtml } from '../ui/theme-menu'
 import { bindHelpDialog, helpDialogHtml } from '../ui/help-dialog'
-import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSidebarCollapsed } from '../ui/sidebar'
-import { statusLabel } from '../ui/format'
+import {
+  applySidebarCollapsed,
+  sidebarTitleText,
+  sidebarToggleGlyph,
+  sidebarToggleLabel,
+  storeSidebarCollapsed,
+} from '../ui/sidebar'
+import { statusGlyph, statusLabel } from '../ui/format'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
 import { exampleIntroHtml, introDismissed, isExamplePage, rememberIntroDismissed } from '../ui/example-intro'
+import { searchStatusText } from '../ui/search-status'
+import { searchOriginAfter } from './search-origin'
+import { clearField } from './keys'
 import { trackTopbarHeight } from '../lib/topbar-height'
 import { repoLinkAttrsHtml } from '../ui/repo-link'
 import { revealSideways } from '../lib/reveal'
@@ -32,7 +41,7 @@ import {
   panelFindQuery,
   refreshPanelFind,
 } from './panel'
-import { counts } from './filters'
+import { counts, filtered } from './filters'
 import { writeScenarioHash } from './url-hash'
 import { index, session, state, app } from './context'
 import { mainClick } from './intents'
@@ -58,14 +67,16 @@ export function renderShell(): void {
       <div class="search-wrap">
         <span class="search-icon" aria-hidden="true">⌕</span>
         <input type="search" id="search" placeholder="${index ? 'Search reports, scenarios…' : 'Search scenarios, facts…'}" value="${escapeAttr(state.query)}" aria-label="Search scenarios" autocomplete="off"/>
-        <span class="kbd">/</span>
+        <button type="button" class="search-clear" id="search-clear" aria-label="Clear search" title="Clear search"${state.query ? '' : ' hidden'}>×</button>
+        <span class="kbd"${state.query ? ' hidden' : ''}>/</span>
+        <span class="visually-hidden" id="search-status" role="status" aria-live="polite"></span>
       </div>
       <div class="filters" role="group" aria-label="Status filters">
         ${(['success', 'warn', 'error'] as Status[])
           .map(
             (s) => `
           <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}">
-            <span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
+            <span class="chip-glyph" aria-hidden="true">${escapeHtml(statusGlyph(s))}</span><span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
           </button>`,
           )
           .join('')}
@@ -83,7 +94,7 @@ export function renderShell(): void {
         ${showExampleIntro() ? exampleIntroHtml() : ''}
         <div class="sidebar-head">
           <button type="button" class="nav-fold" id="btn-nav-fold" aria-controls="scenario-nav" aria-expanded="false"><span class="nav-fold-text"></span> <span class="nav-fold-glyph" aria-hidden="true">▾</span></button>
-          <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : `Scenarios · ${total}`}</p>
+          <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : escapeHtml(sidebarTitleText(total))}</p>
           <button type="button" class="icon-btn sidebar-toggle" id="btn-sidebar" aria-controls="sidebar"
             aria-expanded="${!state.sidebarCollapsed}" aria-label="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}"
             title="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}">${escapeHtml(sidebarToggleGlyph(state.sidebarCollapsed))}</button>
@@ -148,16 +159,41 @@ function bindChrome(): void {
 /** Search, the status chips, and the empty state's Clear filters button. */
 function bindFilters(): void {
   const search = document.querySelector<HTMLInputElement>('#search')!
+  const clear = document.querySelector<HTMLButtonElement>('#search-clear')!
+  const slash = search.parentElement!.querySelector<HTMLElement>('.kbd')
+  const status = document.querySelector<HTMLElement>('#search-status')!
+  let announce: ReturnType<typeof setTimeout> | undefined
   search.addEventListener('input', () => {
+    const before = state.query
     state.query = search.value
+    const back = searchOriginAfter(before, state.query, state.selectedId)
+    if (back) state.selectedId = back
+    clear.hidden = search.value === ''
+    if (slash) slash.hidden = search.value !== ''
     renderNav()
     renderMain()
+    // The count, once typing pauses, so a screen reader is not read every keystroke.
+    clearTimeout(announce)
+    if (index) return
+    announce = setTimeout(() => {
+      status.textContent = searchStatusText(
+        filtered().length,
+        session.report.scenarios.length,
+        state.query.trim() !== '',
+      )
+    }, 500)
+  })
+  clear.addEventListener('click', () => {
+    clearField(search)
+    search.focus()
   })
   // The empty state's Clear filters button.
   document.querySelector('#main')!.addEventListener('click', (ev) => {
     if (!(ev.target as Element).closest?.('[data-clear-filters]')) return
     state.query = ''
     search.value = ''
+    clear.hidden = true
+    if (slash) slash.hidden = false
     for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
     document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
     renderNav()

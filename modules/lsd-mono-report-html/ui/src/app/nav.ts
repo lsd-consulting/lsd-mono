@@ -7,7 +7,7 @@ import { upgradeHtml } from '../lib/schema-version'
 import { type HashRef } from '../lib/report-hash'
 import { stepSelection } from '../ui/selection'
 import { forgetDiagrams } from '../lib/sequence-diagram'
-import { navFoldLabel, navItemTooltip } from '../ui/sidebar'
+import { navFoldLabel, navItemTooltip, sidebarTitleText } from '../ui/sidebar'
 import { isStacked } from '../lib/media'
 import { statusLabel } from '../ui/format'
 import { indexNavHtml, orEmptyNavHtml } from '../ui/index-nav'
@@ -17,6 +17,7 @@ import { index, session, state } from './context'
 import { focusScenarioHeading, renderMain, scrollToScenario } from './main-view'
 import { applyRef } from './routing'
 import { openingScenario } from './intents'
+import { forgetSearchOrigin } from './search-origin'
 export function renderNav(): void {
   paintNavFold()
   if (index) {
@@ -71,8 +72,15 @@ function paintNavFold(): void {
   sidebar.classList.toggle('nav-folded', !open)
   toggle.setAttribute('aria-expanded', String(open))
   toggle.hidden = state.query.trim() !== ''
-  const count = index ? index.reports.length : session.report.scenarios.length
-  toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(count, index ? 'report' : 'scenario')
+  if (index) {
+    toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(index.reports.length, 'report')
+  } else {
+    const count = session.report.scenarios.length
+    const shown = filtered().length
+    toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(count, 'scenario', shown)
+    const title = sidebar.querySelector('.sidebar-title')
+    if (title) title.textContent = sidebarTitleText(count, shown)
+  }
   toggle.querySelector('.nav-fold-glyph')!.textContent = open ? '▴' : '▾'
 }
 
@@ -193,6 +201,9 @@ export function revealFiltered(scenarioId: string): void {
   for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
   const search = document.querySelector<HTMLInputElement>('#search')
   if (search) search.value = ''
+  forgetSearchOrigin()
+  const clear = document.querySelector<HTMLElement>('#search-clear')
+  if (clear) clear.hidden = true
   document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
 }
 
@@ -209,6 +220,7 @@ export function selectScenario(id: string): void {
   if (!session.report.scenarios.some((s) => s.id === id)) return
   const main = document.querySelector('#main')!
   const focusInMain = main.contains(document.activeElement)
+  forgetSearchOrigin()
   state.selectedId = id
   renderNav()
   renderMain()
