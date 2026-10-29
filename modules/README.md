@@ -1,9 +1,16 @@
-# modules/
+# LSD modules
 
-First-party monorepo Gradle projects (versioned alongside this repo). Directory /
-project / artifact names include **`mono`** so they do not clash with existing
-published `lsd-consulting` libraries (e.g. Maven Central `lsd-core`,
-`lsd-junit-jupiter`).
+Part of [LSD: living sequence diagrams](../README.md).
+
+## Which module to pick
+
+- **Testing a Spring Boot 4, http4k 6 or Ktor 3 app?** Add that framework module ([Spring Boot 4](lsd-mono-spring-boot-4/README.md), [http4k 6](lsd-mono-http4k-6/README.md), [Ktor 3](lsd-mono-ktor-3/README.md)); it draws the app's calls for you.
+- **Capturing in your own tests?** Add the test runner module ([JUnit Jupiter 6](lsd-mono-junit-jupiter/README.md) or [Cucumber 8](lsd-mono-cucumber-8/README.md)), plus [coroutines](lsd-mono-coroutines/README.md) if the tests capture from coroutines that change threads.
+- **Drawing outside tests, or by hand?** Use [`lsd-mono-jvm`](lsd-mono-jvm/README.md) on its own. Every other module builds on it.
+
+The [table below](#which-artifact-to-depend-on) has the full list. Directory, project and artifact names include **`mono`** so they do not clash with the earlier published `lsd-consulting` libraries (such as `lsd-core` and `lsd-junit-jupiter`).
+
+## All modules
 
 | Path | Artifact | Purpose |
 |------|----------|---------|

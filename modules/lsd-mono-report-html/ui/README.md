@@ -33,7 +33,19 @@ cd modules/lsd-mono-report-html/ui
 npm run check:ux
 ```
 
-Vitest is also on `./gradlew :modules:lsd-mono-report-html:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` builds the single-file report first (`checks/offline.spec.ts` opens it from `file://`), then runs the checks. It is not on the Gradle build; CI runs it in its own job, without the `@screenshot` tests, whose baselines are macOS screenshots that Linux renders differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`). Each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%, and never below 95%, so labels stay readable (a wider diagram scrolls sideways, with a "More lanes" cue while lanes lie to the right; on a phone that cue is a "More lanes →" button in the toolbar and a slim tab at the right end of the participant header, so nothing covers the drawing below it, which keeps its full width). − and + step through fixed levels from 25% to 250%; the % readout between them goes back to that default view. Overview (Shift+1) shrinks a wide diagram to its whole width, down to 10%, says how many lanes it shows when even that is not enough, and Esc or a second press puts back the zoom and scroll from before; a click in Overview opens the default view there. It refits when the panel width changes until you zoom in or out; the readout turns refitting back on. Sections are `kind: "section"` rows with a jump list. A diagram taller than the screen extends the page: the stage is as tall as the drawing, the toolbar and participant header stay in view, and the page scroll drives the windowed painting (`src/lib/diagram/page-scroll.ts`). Horizontal scrolling stays inside the panel.
+Vitest is also on `./gradlew :modules:lsd-mono-report-html:build` via `reportTest`, and the type-check and lint via `reportLint`. `npm run check:ux` builds the single-file report first (`checks/offline.spec.ts` opens it from `file://`), then runs the checks. It is not on the Gradle build; CI runs it in its own job, without the `@screenshot` tests, whose baselines are macOS screenshots that Linux renders differently (see `docs/ci.md`). Use Node 22.6 or later (`engines` in `package.json`).
+
+### Diagram viewing behaviour
+
+What the checks above lock down:
+
+- **Fit:** each diagram opens fitted to its panel, shrinking a wide one but never enlarging past 100%, and never below 95%, so labels stay readable.
+- **Wide diagrams** scroll sideways, with a "More lanes" cue while lanes lie to the right. On a phone that cue is a "More lanes →" button in the toolbar and a slim tab at the right end of the participant header, so nothing covers the drawing below it, which keeps its full width.
+- **Zoom:** − and + step through fixed levels from 25% to 250%; the % readout between them goes back to that default view.
+- **Overview** (Shift+1) shrinks a wide diagram to its whole width, down to 10%, and says how many lanes it shows when even that is not enough. Esc or a second press puts back the zoom and scroll from before; a click in Overview opens the default view there.
+- **Refit:** it refits when the panel width changes until you zoom in or out; the readout turns refitting back on.
+- **Sections** are `kind: "section"` rows with a jump list.
+- **Tall diagrams** extend the page: the stage is as tall as the drawing, the toolbar and participant header stay in view, and the page scroll drives the windowed painting (`src/lib/diagram/page-scroll.ts`). Horizontal scrolling stays inside the panel.
 
 ## Open the demo
 

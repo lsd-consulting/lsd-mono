@@ -71,15 +71,22 @@ tasks.test {
                 .matching { include("*/src/main/**/*.kt", "*/src/test/**/*.kt", "*/src/test/**/*.java") },
         ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("guardedSources")
-    // LsdPropertiesTest reads this module's README, RootReadmeExampleTest the root one (#68), and
-    // the release docs, the modules list and the versioning notes against the module list (#122).
+    // LsdPropertiesTest reads docs/jvm-api.md, RootReadmeExampleTest this module's README, the root one (#68),
+    // every module's install snippet and the release script, and the release docs, the modules list and the
+    // versioning notes against the module list (#122).
     inputs
         .files(
             layout.projectDirectory.file("README.md"),
             rootProject.layout.projectDirectory.file("README.md"),
+            rootProject.layout.projectDirectory.file("docs/jvm-api.md"),
             rootProject.layout.projectDirectory.file("docs/releasing.md"),
+            rootProject.layout.projectDirectory.file("tools/release/update-readme-version.sh"),
             rootProject.layout.projectDirectory.file("docs/versioning-notes.md"),
             rootProject.layout.projectDirectory.file("modules/README.md"),
+            rootProject.layout.projectDirectory
+                .dir("modules")
+                .asFileTree
+                .matching { include("*/README.md") },
             rootProject.layout.projectDirectory.file("settings.gradle.kts"),
         ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("readmes")

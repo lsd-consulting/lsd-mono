@@ -15,7 +15,9 @@ Each diagram shows who called whom, with what payload, how long it took, and whe
 
 **[See a live report →](https://lsd-consulting.github.io/lsd-mono/example-report.html)** (an online shop checkout across 14 services) · [Spring Boot sample](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) · [http4k sample](https://lsd-consulting.github.io/lsd-mono/http4k-6/) · [Ktor sample](https://lsd-consulting.github.io/lsd-mono/ktor-3/)
 
-![A tour of the report: choosing a scenario from the list, zooming in and out and back to the default, find, an arrow's JSON in a panel dragged wider, the component diagram, metrics, hiding a participant, the light, dark and high-contrast themes, and the collapsed scenario list](docs/readme/feature-tour.gif)
+[![A still from the report tour: the Online shop report with its scenario list, timing summary, description and sequence diagram. Select it to play the animated tour: choosing a scenario, zoom, find, an arrow's JSON, the component diagram, metrics, hiding a participant, the themes and the collapsed scenario list](docs/readme/feature-tour.png)](docs/readme/feature-tour.gif)
+
+*A still from the tour. [Play the animated tour (GIF)](docs/readme/feature-tour.gif).*
 
 ## Supported stacks today
 
@@ -36,6 +38,8 @@ Every artifact is `io.github.lsd-consulting:<artifact>:0.15.0`; the snippets bel
 Each integration brings in `lsd-mono-jvm` and uses your own test runtime and framework. For coroutines, or for writing reports without `lsd-mono-jvm`, see [which artifact to depend on](modules/README.md#which-artifact-to-depend-on).
 
 #### Spring Boot 4 in full
+
+[![Maven Central: lsd-mono-spring-boot-4](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-spring-boot-4?label=lsd-mono-spring-boot-4)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-spring-boot-4)
 
 Gradle (Kotlin DSL):
 
@@ -114,7 +118,7 @@ A thread that is not bound to a test, such as an HTTP server thread, captures in
 
 ## Configuration
 
-Every setting is a `lsd.mono.*` property, read from a system property, an environment variable (`LSD_MONO_REPORT_OUTPUTDIR`), a JUnit configuration parameter, or `lsd-mono.properties` on the classpath, in that order. The [configuration reference](modules/lsd-mono-jvm/README.md#configuration-reference) lists each one with its default; a test keeps that table in step with the code.
+Every setting is a `lsd.mono.*` property, read from a system property, an environment variable (`LSD_MONO_REPORT_OUTPUTDIR`), a JUnit configuration parameter, or `lsd-mono.properties` on the classpath, in that order. The [configuration reference](docs/jvm-api.md#configuration-reference) lists each one with its default; a test keeps that table in step with the code.
 
 ## Usage ping
 

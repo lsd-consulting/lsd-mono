@@ -72,6 +72,30 @@ The live sample site (the [example report](https://lsd-consulting.github.io/lsd-
 
 The [example report](https://lsd-consulting.github.io/lsd-mono/example-report.html) (the live report linked above) is one report that uses every diagram feature, so layout problems are easy to spot. It follows an online shop order across 14 lifelines in five scenarios: a timed checkout, happy path, payment declined (captured out of order), out of stock, and async fulfilment. It covers every participant shape, every arrow type, short arrows to and from the edge, self-calls, nested and overlapping activations, notes, sections, delays, spacers, realistic HTTP, SQL and Kafka payloads with headers, timestamps, and warning and errored scenarios. The timed checkout shows the timing API: measured durations, trace and span ids, events put back in clock order (marked clock-ordered), and the Timing view's swim lanes and waterfall. [`KitchenSinkSample.kt`](modules/lsd-mono-jvm/src/readme/kotlin/io/github/lsdconsulting/lsd/mono/jvm/readme/KitchenSinkSample.kt) captures it. The report is not committed. The [Pages workflow](.github/workflows/pages.yml) builds it from each release, once the release is tagged, so it shows the latest release, and publishes it with the [`index.html`](https://lsd-consulting.github.io/lsd-mono/) that `createIndex()` writes for it.
 
+### Module README screenshots
+
+The diagrams in the JUnit Jupiter and Cucumber READMEs are regenerated from the current UI:
+
+```bash
+./gradlew :modules:lsd-mono-junit-jupiter:readmeSamples
+./gradlew :modules:lsd-mono-cucumber-8:readmeSamples
+```
+
+The JUnit task captures the same scenario its README shows (with the titles `LsdExtension` would use); the Cucumber task runs the feature through `LsdCucumberPlugin`. Each then screenshots the packaged shell with headless Chromium via the report UI's `readme-samples.mjs` (lsd-mono-report-html/ui). It uses the Node major in `.nvmrc` from nvm when that is installed (else the newest nvm Node of at least 22.6), and it does not change the default Node alias. It is not part of `build` or `check`.
+
+## The report UI
+
+```bash
+cd modules/lsd-mono-report-html/ui
+npm ci
+npm test             # vitest — layout, diagram view (zoom/fit/columns/search), SVG cues
+npm run build:single # then open dist/lsd-report.html in Chrome (file://)
+```
+
+`./gradlew :modules:lsd-mono-report-html:build` (and so a build of core) runs `reportSingle` (`npm ci` and `npm run build:single`) and `reportTest` (`npm test`). `build:single` writes `ui/dist/lsd-report.html` (gitignored), and the build packages it from `build/generated/resources`; no built shell is committed. Set `lsd.mono.report.generatedAt` (an ISO-8601 instant) to fix the report's "generated at" time, as the sample tasks do for reproducible output. Needs Node 22.6 or later (`engines` in `ui/package.json`). The Gradle tasks prepend the nvm Node named in the repo's `.nvmrc` (CI's Node) when it is installed, else the newest nvm Node of at least 22.6 (`build-logic` `NodeToolchain.kt`), and do not change your default Node.
+
+See [the report UI's README](modules/lsd-mono-report-html/ui/README.md) for how to run it.
+
 ## Rules
 
 - **Public API.** `lsd-mono-jvm` uses explicit API mode. A change to the public surface shows up in

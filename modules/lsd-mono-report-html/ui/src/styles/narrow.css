@@ -177,9 +177,17 @@
   .search-wrap {
     max-width: none;
     order: 3;
-    /* Too wide for the first row, so search and the chips wrap together onto the second. */
-    flex: 1 1 calc(100% - 160px);
+    /* Takes what the chips (glyphs, counts and the legend ?) leave on the second row. */
+    flex: 1 1 0;
     min-width: 0;
+  }
+  /* A zero-height full-width item before search, so search and the chips always start the
+     second row together, however wide the chips are. */
+  .topbar::after {
+    content: "";
+    order: 2;
+    flex: 0 0 100%;
+    height: 0;
   }
   .filters {
     order: 4;

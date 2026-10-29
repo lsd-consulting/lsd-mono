@@ -116,6 +116,37 @@
     color 0.15s,
     transform 0.1s;
 }
+/* A glyph per status, so the chips differ without colour, in greyscale too (#158). */
+.chip .chip-glyph {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  min-width: 0.8em;
+  text-align: center;
+}
+/* Off: a slash through the chip, so which status is hidden shows without colour (#158). */
+.chip {
+  position: relative;
+}
+.chip[aria-pressed="false"] {
+  background: transparent;
+  border-style: dashed;
+}
+.chip[aria-pressed="false"]::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  border-top: 2px solid currentColor;
+  transform: rotate(-14deg);
+  pointer-events: none;
+}
+.chip[aria-pressed="false"] .chip-glyph,
+.chip[aria-pressed="false"] .chip-label,
+.chip[aria-pressed="false"] .count {
+  opacity: 0.75;
+}
 .chip:hover {
   transform: translateY(-1px);
 }
@@ -304,10 +335,59 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+/* On a phone the glyph chips (#158) wrap, so .filters no longer reaches the right edge;
+   pin the legend to the viewport under the bar instead. */
+@media (max-width: 600px) {
+  .status-legend {
+    position: fixed;
+    top: calc(var(--topbar-h, 0px) + 6px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
 @media (forced-colors: active) {
   .status-legend {
     border: 1px solid CanvasText;
     background: Canvas;
     color: CanvasText;
   }
+}
+/* Search's × (#162): shown only while there is text; at least 24×24 px to hit. */
+.search-wrap input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.search-wrap input {
+  padding-right: 40px;
+}
+.search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.search-clear:hover {
+  background: var(--surface-2, var(--border));
+  color: var(--text);
+}
+.search-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.search-clear[hidden],
+.kbd[hidden] {
+  display: none;
 }
