@@ -9,7 +9,7 @@ import { stepSelection } from '../ui/selection'
 import { forgetDiagrams } from '../lib/sequence-diagram'
 import { navFoldLabel, navItemTooltip, sidebarTitleText } from '../ui/sidebar'
 import { isStacked } from '../lib/media'
-import { statusLabel } from '../ui/format'
+import { statusDotHtml, statusLabel } from '../ui/format'
 import { indexNavHtml, orEmptyNavHtml } from '../ui/index-nav'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { filtered, indexEntry } from './filters'
@@ -39,7 +39,7 @@ export function renderNav(): void {
         return `
       <li>
         <button type="button" data-nav="${escapeAttr(s.id)}"${state.selectedId === s.id ? ' aria-current="true"' : ''} aria-controls="main"${tooltip}>
-          <span class="dot ${escapeAttr(s.status)}"></span>
+          ${statusDotHtml(s.status)}
           <span class="nav-icon" aria-hidden="true">${number}</span>
           <span class="nav-text">
             <div class="nav-title">${escapeHtml(s.title)}</div>

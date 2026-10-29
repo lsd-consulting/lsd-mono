@@ -25,10 +25,10 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), oklch(0.65 0.16 200));
+  background: linear-gradient(135deg, var(--accent), oklch(0.6 0.14 230));
   display: grid;
   place-items: center;
-  color: oklch(0.15 0.02 175);
+  color: oklch(0.15 0.02 200);
   font-size: 11px;
   font-weight: 800;
   box-shadow: var(--shadow-pop);
@@ -432,4 +432,10 @@
 .search-clear[hidden],
 .kbd[hidden] {
   display: none;
+}
+/* The report's title in the bar: one line, cut with an ellipsis rather than pushing search over. */
+.brand-title {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -118,14 +118,17 @@ function headerSlots(
   )
 }
 
-/** A participant header box with no colour of its own: a neutral outline. */
-const HEADER_COLOUR = '#94a3b8'
+/**
+ * A participant header box with no colour of its own: a neutral outline. The value is per theme
+ * (tokens.css): #94a3b8 in dark, #64748b in light, so it keeps 3:1 on a light page.
+ */
+const HEADER_COLOUR = 'var(--diagram-neutral)'
 /** An activation bar whose participant has no colour of its own: the theme's accent. */
 const ACTIVATION_COLOUR = 'var(--accent)'
 /** An arrow (or an activation of an unknown participant) with no colour to take: the default green. */
-const ARROW_COLOUR = '#34d399'
+const ARROW_COLOUR = 'var(--diagram-arrow)'
 /** A response arrow with no colour of its own: neutral, so it reads as the reply to its call. */
-const RESPONSE_COLOUR = '#94a3b8'
+const RESPONSE_COLOUR = 'var(--diagram-neutral)'
 /**
  * A message with no colour of its own whose status is an error (see isErrorStatus, the Errors
  * metric's rule): the theme's error red. The label and inspector still say so in words.
@@ -404,7 +407,7 @@ function renderMessageRow(
   const endId = ensureMarker(rawColour, spec.end)
   const startId = ensureMarker(rawColour, spec.start)
   const colour = escapeAttr(rawColour)
-  const dashed = spec.dashed ? 'stroke-dasharray="5 4"' : ''
+  const dashed = spec.dash ? `stroke-dasharray="${escapeAttr(spec.dash)}"` : ''
   const markerEnd = endId ? `marker-end="url(#${escapeAttr(endId)})"` : ''
   const markerStart = startId ? `marker-start="url(#${escapeAttr(startId)})"` : ''
   const hasData = messageHasPayload(msg)

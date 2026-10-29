@@ -4,6 +4,7 @@ import type { MessageEvent, Scenario } from '../types'
 import { drawnFocusTarget, focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
 import { unscaledViewport } from './diagram-view'
 import { headerHtml } from './diagram/rows'
+import { messageArrowSpec } from './diagram/shapes'
 import { textViewHtml } from './diagram/text-view'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
 import { findFieldLabel, scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
@@ -122,6 +123,39 @@ function payloadLegendHtml(scenario: Scenario): string {
   return `<p class="payload-legend"><span class="payload-legend-key" aria-hidden="true">{}</span><span class="visually-hidden">An arrow marked with braces</span> has a payload: <span class="legend-click">click</span><span class="legend-tap">tap</span> the arrow to open it</p>`
 }
 
+/** A short sample of one arrow kind, as drawn in the diagram: line dash and tip. */
+function arrowKeySvg(dash: string | null, tip: 'filled' | 'open'): string {
+  const line = `<line class="arrow-key-line" x1="1" y1="6" x2="${tip === 'open' ? 25 : 22}" y2="6"${dash ? ` stroke-dasharray="${escapeAttr(dash)}"` : ''}/>`
+  const head =
+    tip === 'open'
+      ? `<path class="arrow-key-line" d="M18 1 L27 6 L18 11" stroke-linejoin="round"/>`
+      : `<path class="arrow-key-fill" d="M21 2 L29 6 L21 10 z"/>`
+  return `<svg width="30" height="12" viewBox="0 0 30 12" aria-hidden="true" focusable="false">${line}${head}</svg>`
+}
+
+/**
+ * The arrow key, when a scenario has async messages: call, reply and async side by side, so
+ * the dotted line and open tip are explained in words, not left to colour or guesswork.
+ */
+export function arrowLegendHtml(scenario: Scenario): string {
+  const types = new Set(scenario.events.flatMap((e) => (e.kind === 'message' ? [e.type] : [])))
+  if (!types.has('ASYNCHRONOUS')) return ''
+  const reply = messageArrowSpec('SYNCHRONOUS_RESPONSE')
+  const async = messageArrowSpec('ASYNCHRONOUS')
+  const keys = [
+    `<span class="arrow-key">${arrowKeySvg(null, 'filled')}Call</span>`,
+    types.has('SYNCHRONOUS_RESPONSE') ? `<span class="arrow-key">${arrowKeySvg(reply.dash, 'filled')}Reply</span>` : '',
+    `<span class="arrow-key">${arrowKeySvg(async.dash, 'open')}Async (dotted, open tip)</span>`,
+  ]
+  return `<p class="arrow-legend">${keys.join('')}</p>`
+}
+
+/** The arrow key and the payload line share one row under the toolbar, wrapping when narrow. */
+function legendsHtml(scenario: Scenario): string {
+  const html = arrowLegendHtml(scenario) + payloadLegendHtml(scenario)
+  return html ? `<div class="diagram-legends">${html}</div>` : ''
+}
+
 /** Continuous diagram: sticky participant header, section jump list, virtualised rows. */
 export function renderDiagramHtml(scenario: Scenario, labelMaxWidth: number): string {
   const diagram = mountDiagram(scenario, labelMaxWidth)
@@ -144,7 +178,7 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth: number): st
     <div class="seq-diagram" style="${printWidthStyle(width)}">
       ${jump}
       ${toolbarHtml(scenario, view)}
-      ${payloadLegendHtml(scenario)}
+      ${legendsHtml(scenario)}
       ${textViewHtml(
         scenario,
         diagram.rows.map((row) => row.event),

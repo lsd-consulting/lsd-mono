@@ -1,7 +1,7 @@
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { visibleScenarios, type IndexManifest, type IndexReport, type IndexScenario } from '../lib/report-index'
 import type { Status } from '../types'
-import { statusLabel } from './format'
+import { statusDotHtml, statusLabel } from './format'
 import { navItemTooltip } from './sidebar'
 
 export interface IndexNavState {
@@ -57,7 +57,7 @@ function groupHtml(r: IndexReport, shown: IndexScenario[], open: boolean, state:
   return `
       <li class="nav-group${r.id === state.reportId ? ' current' : ''}" data-status="${escapeAttr(r.status)}">
         ${head}
-          <span class="dot ${escapeAttr(r.status)}"></span>
+          ${statusDotHtml(r.status)}
           <span class="nav-text">
             <span class="nav-group-title">${escapeHtml(r.title)}</span>
             <span class="nav-meta">${escapeHtml(outcome || 'No scenarios')}</span>
@@ -76,7 +76,7 @@ function itemHtml(r: IndexReport, sc: IndexScenario, state: IndexNavState): stri
   return `
             <li>
               <button type="button" data-nav="${escapeAttr(sc.id)}" data-report="${escapeAttr(r.id)}" data-nav-key="${escapeAttr(JSON.stringify([r.id, sc.id]))}"${current ? ' aria-current="true"' : ''} aria-controls="main"${tip}>
-                <span class="dot ${escapeAttr(sc.status)}"></span>
+                ${statusDotHtml(sc.status)}
                 <span class="nav-icon" aria-hidden="true">${r.scenarios.indexOf(sc) + 1}</span>
                 <span class="nav-text">
                   <div class="nav-title">${escapeHtml(sc.title)}</div>

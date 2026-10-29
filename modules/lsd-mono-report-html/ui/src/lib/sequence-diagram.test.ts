@@ -21,7 +21,7 @@ import {
   participantHead,
   shortMessageEndpoints,
 } from './diagram/shapes'
-import { renderDiagramHtml, renderRowSvg } from './sequence-diagram'
+import { arrowLegendHtml, renderDiagramHtml, renderRowSvg } from './sequence-diagram'
 import type { DiagramEvent, Participant, Scenario } from '../types'
 import { untimed } from './report-fixture.test-util'
 import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
@@ -39,6 +39,7 @@ describe('messageArrowSpec', () => {
   it('gives LOST an X tip and a text cue (not colour-only)', () => {
     expect(messageArrowSpec('LOST')).toEqual({
       dashed: false,
+      dash: null,
       start: 'none',
       end: 'lost',
       typeCue: 'lost',
@@ -48,10 +49,25 @@ describe('messageArrowSpec', () => {
   it('gives BI_DIRECTIONAL dual filled heads and a cue', () => {
     expect(messageArrowSpec('BI_DIRECTIONAL')).toEqual({
       dashed: false,
+      dash: null,
       start: 'filled',
       end: 'filled',
       typeCue: '↔',
     })
+  })
+
+  it('dots an async arrow and dashes a reply, so they differ by the line and the tip', () => {
+    const async = messageArrowSpec('ASYNCHRONOUS')
+    const reply = messageArrowSpec('SYNCHRONOUS_RESPONSE')
+    expect(async).toMatchObject({ dashed: true, dash: '2 4', end: 'open' })
+    expect(reply).toMatchObject({ dashed: true, dash: '5 4', end: 'filled' })
+    expect(async.dash).not.toBe(reply.dash)
+    expect(messageArrowSpec('SYNCHRONOUS')).toMatchObject({ dashed: false, dash: null })
+  })
+
+  it('draws the async open tip larger than the filled call tip', () => {
+    const size = (svg: string) => Number(/markerWidth="([\d.]+)"/.exec(svg)![1])
+    expect(size(arrowMarker('a', '#000', 'open'))).toBeGreaterThan(size(arrowMarker('f', '#000', 'filled')))
   })
 })
 
@@ -273,7 +289,7 @@ describe('renderRowSvg fragments', () => {
       expect(reply(status)).toContain('stroke="var(--error)"')
       expect(reply(status)).toContain('marker-end="url(#mk_filled_var--error)"')
     }
-    expect(reply('200')).toContain('stroke="#94a3b8"')
+    expect(reply('200')).toContain('stroke="var(--diagram-neutral)"')
     expect(reply('200')).not.toContain('var(--error)')
   })
 
@@ -701,12 +717,15 @@ describe('participantHead', () => {
     expect(head.shapeSvg).not.toContain('participant-actor')
   })
 
-  it('draws a queue as a stack of slanted plates', () => {
+  it('draws a queue as a cylinder on its side, outline only', () => {
     const head = participantHead('QUEUE')
     expect(head.typeLabel).toBe('queue')
-    expect(head.shapeSvg.match(/<polygon/g)).toHaveLength(2)
+    expect(head.shapeSvg).toContain('<path class="participant-shape"')
+    expect(head.shapeSvg).toContain('participant-queue-end')
+    expect(head.shapeSvg).not.toContain('<polygon')
     expect(head.shapeSvg).not.toContain('<rect')
-    expect(head.shapeSvg).not.toContain('<ellipse')
+    const ellipse = /<ellipse[^>]*rx="(\d+)" ry="(\d+)"/.exec(head.shapeSvg)!
+    expect(Number(ellipse[2])).toBeGreaterThan(Number(ellipse[1]))
   })
 
   it('draws the default component as a box', () => {
@@ -755,8 +774,8 @@ describe('participantHead', () => {
     expect(header).toContain('data-participant-type="DATABASE"')
     expect(header).toContain('data-participant-type="QUEUE"')
     expect(header).toContain('participant-actor')
-    expect(header).toContain('<ellipse')
-    expect(header.match(/<polygon/g)).toHaveLength(2)
+    expect(header.match(/<ellipse/g)).toHaveLength(2)
+    expect(header).toContain('participant-queue-end')
     expect(header).toContain('<rect class="participant-shape"')
     expect(header).toContain('style="--pc:#38bdf8"')
     expect(header).toContain('aria-label="Participants: User actor, Api component, Orders database, Bus queue"')
@@ -778,6 +797,23 @@ describe('side panel buttons', () => {
       events,
     }
   }
+
+  it('shows the arrow key only when a scenario has async messages, with the reply only when there is one', () => {
+    const call = { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' } as const
+    expect(arrowLegendHtml(scenarioWith([call]))).toBe('')
+    const async = { ...call, id: 'a', type: 'ASYNCHRONOUS' } as const
+    const legend = arrowLegendHtml(scenarioWith([call, async]))
+    expect(legend).toContain('class="arrow-legend"')
+    expect(legend).toContain('Call')
+    expect(legend).toContain('Async (dotted, open tip)')
+    expect(legend).toContain('stroke-dasharray="2 4"')
+    expect(legend).not.toContain('Reply')
+    const reply = { ...call, id: 'r', type: 'SYNCHRONOUS_RESPONSE' } as const
+    const all = arrowLegendHtml(scenarioWith([call, reply, async]))
+    expect(all).toContain('Reply')
+    expect(all).toContain('stroke-dasharray="5 4"')
+    expect(renderDiagramHtml(scenarioWith([call, async]), DEFAULT_LABEL_MAX_WIDTH)).toContain('class="arrow-legend"')
+  })
 
   it('explains the {} marker under the toolbar only when an arrow has a payload', () => {
     const plain = { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' } as const
