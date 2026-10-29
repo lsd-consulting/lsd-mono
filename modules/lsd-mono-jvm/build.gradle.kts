@@ -16,21 +16,13 @@ lsdCoverage {
 description =
     "Living sequence diagrams: capture the interactions in your tests and write an interactive HTML report"
 
-// The report model is experimental (@ExperimentalLsdReportModel); core maps its scenarios to it, as the
-// model and writer move with it in lockstep.
+// Core maps its scenarios to the report model and writes them with the writer, which move with it in
+// lockstep.
 //
-// Never let a model or writer type (io.github.lsdconsulting.lsd.mono.report.model or .report.html) appear in
-// core's public API. This opt-in covers the whole module, so the compiler does not warn here. But
-// core takes the model and writer as implementation, not api: a consumer has them only at runtime,
-// so its compiler would fail with "Cannot access class FactJson", and the experimental opt-in would
-// leak into core's API. checkKotlinAbi fails on such a change; do not accept it with
-// updateKotlinAbi.
-kotlin {
-    compilerOptions {
-        optIn.add("io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel")
-    }
-}
-
+// Never let a model or writer type (io.github.lsdconsulting.lsd.mono.report.model or .report.html)
+// appear in core's public API. Core takes the model and writer as implementation, not api: a
+// consumer has them only at runtime, so its compiler would fail with "Cannot access class
+// FactJson". checkKotlinAbi fails on such a change; do not accept it with updateKotlinAbi.
 dependencies {
     // The report as plain values (ReportJson and the rest), and the writer of its JSON and HTML
     // files with the report UI. Neither is in core's public API.

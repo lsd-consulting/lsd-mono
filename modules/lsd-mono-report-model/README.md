@@ -73,24 +73,19 @@ fits, and `lsd.*` is lsd's own. A message's
 `origin` is `KnownMessageOrigin.IMPORTED` for a message built from another record, such as spans,
 and null for one the producer captured.
 
-## Experimental: no binary-compatibility promise yet
+## Compatibility
 
-Every type here is marked `@ExperimentalLsdReportModel`, a `RequiresOptIn` marker at level ERROR
-(like lsd-mono-jvm's `@InternalLsdApi`). A Kotlin caller opts in with
-`@OptIn(ExperimentalLsdReportModel::class)`, or once per module with
-`-opt-in=io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel`.
+The model's types are not experimental any more: `@ExperimentalLsdReportModel` was removed from
+them once the builders ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)) had been
+released. Changes follow the schema's rule: a minor release adds optional fields, and in the model
+an added field is a new setter on a builder, which changes no constructor, `copy` or `componentN`
+function a caller compiled against, Kotlin or Java. The small fixed values stay data classes because
+their shape is fixed: `TraceJson` is frozen at its three ids, and OpenTelemetry's other span data
+arrives as a message's `attributes` (see the schema's
+[OpenTelemetry](../lsd-mono-report-schema/README.md#opentelemetry)).
 
-There is no binary-compatibility promise until the marker goes:
-
-- The builders ([#118](https://github.com/lsd-consulting/lsd-mono/issues/118)) are the shape meant
-  for 1.0: adding a field adds a setter, and changes no constructor, `copy` or `componentN` function
-  a caller compiled against. The marker stays until that shape has been used for a release or two.
-- **Java callers don't see opt-in markers.** Java compiles against these classes with no warning, so
-  this note is the only one a Java caller gets.
-- The trace and timing fields are settled: `TraceJson` is frozen at its three ids, and
-  OpenTelemetry's other span data arrives as a message's `attributes` (see the schema's
-  [OpenTelemetry](../lsd-mono-report-schema/README.md#opentelemetry)). A message's `data` is a
-  `DataValueJson` (it was `Any?` before 0.10).
+`ExperimentalLsdReportModel` itself is gone (there are no deprecation shims before 1.0): remove
+any `@OptIn(ExperimentalLsdReportModel::class)` or `-opt-in=…ExperimentalLsdReportModel`.
 
 The ABI dump (`api/lsd-mono-report-model.api`) is kept, so that every change shows in review.
 

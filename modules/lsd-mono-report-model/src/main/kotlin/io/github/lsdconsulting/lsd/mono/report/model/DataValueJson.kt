@@ -14,16 +14,13 @@ import java.util.IdentityHashMap
  * [ofList], [ofObject] or [NULL]; or, from plain values (null, strings, booleans, numbers, maps and
  * lists, as lsd-mono-jvm's payload converters make), with [from].
  */
-@ExperimentalLsdReportModel
 public sealed class DataValueJson {
     /** JSON `null`. */
-    @ExperimentalLsdReportModel
     public object NullValue : DataValueJson() {
         override fun toString(): String = "NullValue"
     }
 
     /** A JSON string. */
-    @ExperimentalLsdReportModel
     public class StringValue(
         public val value: String,
     ) : DataValueJson() {
@@ -35,7 +32,6 @@ public sealed class DataValueJson {
     }
 
     /** A JSON boolean. */
-    @ExperimentalLsdReportModel
     public class BooleanValue(
         public val value: Boolean,
     ) : DataValueJson() {
@@ -51,7 +47,6 @@ public sealed class DataValueJson {
      * was given: `12`, `12.5`, `1.0E10`, or a BigDecimal's digits. Two numbers are equal when their
      * text is: `1` and `1.0` are not. Made with [of].
      */
-    @ExperimentalLsdReportModel
     public class NumberValue internal constructor(
         /** The number as written: a JSON number. */
         public val literal: String,
@@ -67,7 +62,6 @@ public sealed class DataValueJson {
     }
 
     /** A JSON array. */
-    @ExperimentalLsdReportModel
     public class ArrayValue(
         items: List<DataValueJson>,
     ) : DataValueJson() {
@@ -81,7 +75,6 @@ public sealed class DataValueJson {
     }
 
     /** A JSON object. Its fields are written in their map's order. */
-    @ExperimentalLsdReportModel
     public class ObjectValue(
         fields: Map<String, DataValueJson>,
     ) : DataValueJson() {

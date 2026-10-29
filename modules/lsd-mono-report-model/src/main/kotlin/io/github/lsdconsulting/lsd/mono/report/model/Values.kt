@@ -9,7 +9,6 @@ package io.github.lsdconsulting.lsd.mono.report.model
  */
 
 /** The schema's `Status`, closed: a scenario's or a report's outcome. */
-@ExperimentalLsdReportModel
 public enum class StatusJson(
     /** The value written. */
     public val json: String,
@@ -20,7 +19,6 @@ public enum class StatusJson(
 }
 
 /** The schema's `NotePlacement`, closed: where a note goes. */
-@ExperimentalLsdReportModel
 public enum class NotePlacementJson(
     /** The value written. */
     public val json: String,
@@ -32,7 +30,6 @@ public enum class NotePlacementJson(
 }
 
 /** The schema's `Accuracy`, closed: how well a scenario's (or a pair's) times are known. */
-@ExperimentalLsdReportModel
 public enum class AccuracyJson(
     /** The value written. */
     public val json: String,
@@ -44,7 +41,6 @@ public enum class AccuracyJson(
 }
 
 /** The schema's `ClockOrdering`, closed: which events were put in clock order. */
-@ExperimentalLsdReportModel
 public enum class ClockOrderingJson(
     /** The value written. */
     public val json: String,
@@ -55,7 +51,6 @@ public enum class ClockOrderingJson(
 }
 
 /** The lifeline event's `kind`, closed in the schema. */
-@ExperimentalLsdReportModel
 public enum class LifelineKindJson(
     /** The value written. */
     public val json: String,
@@ -65,7 +60,6 @@ public enum class LifelineKindJson(
 }
 
 /** The schema's `KnownParticipantType`: the [ParticipantJson.type]s lsd-mono knows. The schema allows others. */
-@ExperimentalLsdReportModel
 public object KnownParticipantType {
     public const val PARTICIPANT: String = "PARTICIPANT"
     public const val ACTOR: String = "ACTOR"
@@ -79,7 +73,6 @@ public object KnownParticipantType {
 }
 
 /** The schema's `KnownMessageType`: the [MessageEventJson.type]s lsd-mono knows. The schema allows others. */
-@ExperimentalLsdReportModel
 public object KnownMessageType {
     public const val SYNCHRONOUS: String = "SYNCHRONOUS"
     public const val SYNCHRONOUS_RESPONSE: String = "SYNCHRONOUS_RESPONSE"
@@ -95,7 +88,6 @@ public object KnownMessageType {
 }
 
 /** The schema's `KnownTimingSource`: how a [MessageEventJson.durationMs] was found. The schema allows others. */
-@ExperimentalLsdReportModel
 public object KnownTimingSource {
     public const val NONE: String = "NONE"
     public const val TIMESTAMPED: String = "TIMESTAMPED"
@@ -107,7 +99,6 @@ public object KnownTimingSource {
 }
 
 /** The schema's `KnownPairingSource`: how a call and its reply were paired. The schema allows others. */
-@ExperimentalLsdReportModel
 public object KnownPairingSource {
     public const val NONE: String = "NONE"
     public const val GUESSED: String = "GUESSED"
@@ -119,7 +110,6 @@ public object KnownPairingSource {
 }
 
 /** The schema's `KnownOrderSource`: what put a message in its place. The schema allows others. */
-@ExperimentalLsdReportModel
 public object KnownOrderSource {
     public const val SEQUENCE: String = "SEQUENCE"
     public const val STRUCTURE: String = "STRUCTURE"
@@ -130,7 +120,6 @@ public object KnownOrderSource {
 }
 
 /** The schema's `KnownWarningKind`: the [WarningJson.kind]s lsd-mono knows. The schema allows others. */
-@ExperimentalLsdReportModel
 public object KnownWarningKind {
     public const val REPLY_WITHOUT_CALL: String = "REPLY_WITHOUT_CALL"
     public const val DURATION_ON_REPLY_DROPPED: String = "DURATION_ON_REPLY_DROPPED"
@@ -143,7 +132,6 @@ public object KnownWarningKind {
 }
 
 /** The schema's `KnownMessageOrigin`: where a [MessageEventJson] came from. The schema allows others. */
-@ExperimentalLsdReportModel
 public object KnownMessageOrigin {
     /** Recorded by the producer while the test ran, as lsd-mono-jvm does. A message with no origin is one. */
     public const val CAPTURED: String = "captured"
@@ -156,7 +144,6 @@ public object KnownMessageOrigin {
 }
 
 /** The schema's `KnownReportSource`: the [ReportOptionsJson.source]s lsd-mono knows. The schema allows others. */
-@ExperimentalLsdReportModel
 public object KnownReportSource {
     /** lsd-mono-junit-jupiter's extension. */
     public const val JUNIT: String = "junit"

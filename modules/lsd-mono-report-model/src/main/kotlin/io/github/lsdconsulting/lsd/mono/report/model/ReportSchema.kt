@@ -4,7 +4,6 @@ package io.github.lsdconsulting.lsd.mono.report.model
  * The report JSON Schema (`modules/lsd-mono-report-schema`) that reports and the index follow.
  * Every report and index is written with [VERSION] as its `schemaVersion`.
  */
-@ExperimentalLsdReportModel
 public object ReportSchema {
     /**
      * Semver, apart from the lsd-mono version: 0.x, and so free to change, until the format is

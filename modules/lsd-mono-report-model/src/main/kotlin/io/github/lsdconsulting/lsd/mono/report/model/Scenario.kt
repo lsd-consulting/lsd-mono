@@ -8,7 +8,6 @@ package io.github.lsdconsulting.lsd.mono.report.model
  * them. lsd-mono-jvm sets all of them or none; one left null (or empty) is not written, and the
  * page works it out.
  */
-@ExperimentalLsdReportModel
 public class ScenarioJson internal constructor(
     /** Unique within the report; the page's links use it. */
     public val id: String,
@@ -100,7 +99,6 @@ public class ScenarioJson internal constructor(
      * Makes a [ScenarioJson]. The description is empty and the lists are empty until set; the
      * timing summary is null (not written) until set.
      */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val title: String,
@@ -212,7 +210,6 @@ public class ScenarioJson internal constructor(
 }
 
 /** Why a scenario failed. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class ScenarioErrorJson internal constructor(
     /** One line, such as the exception's class. */
     public val headline: String,
@@ -232,7 +229,6 @@ public class ScenarioErrorJson internal constructor(
     private fun fields(): List<Pair<String, Any?>> = listOf("headline" to headline, "message" to message, "stack" to stack)
 
     /** Makes a [ScenarioErrorJson], with no stack until set. */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val headline: String,
         private val message: String,
@@ -254,14 +250,12 @@ public class ScenarioErrorJson internal constructor(
 }
 
 /** A timing warning: its `kind` (one of [KnownWarningKind.ALL], or another) and its sentence. */
-@ExperimentalLsdReportModel
 public data class WarningJson(
     val kind: String,
     val message: String,
 )
 
 /** The accuracy of the messages between two participants. */
-@ExperimentalLsdReportModel
 public data class PairAccuracyJson(
     val from: String,
     val to: String,
@@ -269,21 +263,18 @@ public data class PairAccuracyJson(
 )
 
 /** A fact shown with a scenario. */
-@ExperimentalLsdReportModel
 public data class FactJson(
     val key: String,
     val value: String,
 )
 
 /** A figure shown with a scenario. */
-@ExperimentalLsdReportModel
 public data class MetricJson(
     val key: String,
     val value: String,
 )
 
 /** A participant in the diagram. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class ParticipantJson internal constructor(
     /** What events name the participant by. */
     public val id: String,
@@ -327,7 +318,6 @@ public class ParticipantJson internal constructor(
         )
 
     /** Makes a [ParticipantJson]: a [KnownParticipantType.PARTICIPANT] with no alias, colour or attributes until set. */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val name: String,

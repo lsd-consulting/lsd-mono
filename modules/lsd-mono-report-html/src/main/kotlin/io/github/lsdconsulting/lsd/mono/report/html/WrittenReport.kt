@@ -1,13 +1,11 @@
 package io.github.lsdconsulting.lsd.mono.report.html
 
-import io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel
 import java.nio.file.Path
 
 /**
  * The files [ReportWriter.writeReport] wrote for one report. They share a stem: the title plus a
  * short hash of the report key.
  */
-@ExperimentalLsdReportModel
 public class WrittenReport internal constructor(
     /** `<stem>-diagram.html`: the interactive report page, the one to open. */
     public val diagramHtml: Path,

@@ -170,9 +170,6 @@ public abstract class io/github/lsdconsulting/lsd/mono/report/model/EventJson {
 	public abstract fun getStartedAt ()Ljava/lang/String;
 }
 
-public abstract interface annotation class io/github/lsdconsulting/lsd/mono/report/model/ExperimentalLsdReportModel : java/lang/annotation/Annotation {
-}
-
 public final class io/github/lsdconsulting/lsd/mono/report/model/FactJson {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun component1 ()Ljava/lang/String;
