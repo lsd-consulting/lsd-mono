@@ -1,5 +1,7 @@
 # lsd-mono-report-model
 
+Part of [LSD: living sequence diagrams](../../README.md). An internal building block: most users depend on [`lsd-mono-jvm`](../lsd-mono-jvm/README.md) or a framework module instead.
+
 The LSD report as plain Kotlin values: `ReportJson`, its scenarios, participants and events, as
 the report schema ([`modules/lsd-mono-report-schema`](../lsd-mono-report-schema)) describes them,
 plus the schema version a report follows (`ReportSchema.VERSION`).

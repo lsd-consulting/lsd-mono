@@ -1,15 +1,23 @@
 # lsd-mono-ktor-3
 
+Part of [LSD: living sequence diagrams](../../README.md).
+
 `lsd-mono-ktor-3` draws a [Ktor](https://ktor.io) 3 app's HTTP calls and WebSockets on [lsd-mono-jvm](../lsd-mono-jvm)'s living sequence diagrams. It is two Ktor plugins, each one line of setup: `Lsd`, a server plugin for the requests and WebSockets the app serves, and `LsdClient`, an `HttpClient` plugin for the calls and WebSockets the app makes. They work the same in `testApplication` (in memory) and on real engines such as CIO or Netty. There is no PlantUML on this path.
+
+**[See the live sample report →](https://lsd-consulting.github.io/lsd-mono/ktor-3/)**
 
 ## Depend on it
 
+<!-- release-version:start (the release workflow updates the versions up to the end marker) -->
+
+[![Maven Central: lsd-mono-ktor-3](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-ktor-3?label=lsd-mono-ktor-3)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-ktor-3) [![Maven Central: lsd-mono-junit-jupiter](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-junit-jupiter?label=lsd-mono-junit-jupiter)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-junit-jupiter)
+
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-ktor-3:<version>")
-testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:<version>") // or lsd-mono-cucumber-8
+testImplementation("io.github.lsd-consulting:lsd-mono-ktor-3:0.15.0")
+testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:0.15.0") // or lsd-mono-cucumber-8
 ```
 
-The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. See its [sample report](https://lsd-consulting.github.io/lsd-mono/ktor-3/). From another project in this repo: `testImplementation(project(":modules:lsd-mono-ktor-3"))`.
+<!-- release-version:end -->
 
 Ktor is not a dependency of this module (it is `compileOnly`): the app's own Ktor 3 is used. The server plugin needs `ktor-server-core` and the client plugin `ktor-client-core`; WebSockets served need `ktor-server-websockets`, which an app with WebSockets already has (the client's are in `ktor-client-core`). The module runs on the same Java as the rest of lsd-mono (17 or later).
 
@@ -82,7 +90,7 @@ The call to Inventory is drawn once, by Inventory's server plugin under Inventor
 
 ## Sample report
 
-[The sample report](https://lsd-consulting.github.io/lsd-mono/ktor-3/) is what this module's own fixtures draw: [the shop in `testApplication`](https://lsd-consulting.github.io/lsd-mono/ktor-3/shop-report.html), with a test that fails on purpose so the report shows an error scenario; [the same shop on CIO servers](https://lsd-consulting.github.io/lsd-mono/ktor-3/server-shop-report.html), called over sockets; and [a WebSocket of live prices](https://lsd-consulting.github.io/lsd-mono/ktor-3/live-prices-report.html), with its messages labelled `Subscribe` and `PriceChanged`, a busy socket capped, and the shop quoting a price through its own WebSocket client. The source is in [`fixture/`](https://github.com/lsd-consulting/lsd-mono/tree/main/modules/lsd-mono-ktor-3/src/test/kotlin/io/github/lsdconsulting/lsd/mono/ktor/fixture).
+The sample report is what this module's own fixtures draw: [the shop in `testApplication`](https://lsd-consulting.github.io/lsd-mono/ktor-3/shop-report.html), with a test that fails on purpose so the report shows an error scenario; [the same shop on CIO servers](https://lsd-consulting.github.io/lsd-mono/ktor-3/server-shop-report.html), called over sockets; and [a WebSocket of live prices](https://lsd-consulting.github.io/lsd-mono/ktor-3/live-prices-report.html), with its messages labelled `Subscribe` and `PriceChanged`, a busy socket capped, and the shop quoting a price through its own WebSocket client. The source is in [`fixture/`](https://github.com/lsd-consulting/lsd-mono/tree/main/modules/lsd-mono-ktor-3/src/test/kotlin/io/github/lsdconsulting/lsd/mono/ktor/fixture).
 
 Build it yourself with `./gradlew :modules:lsd-mono-ktor-3:sampleReport` and open `modules/lsd-mono-ktor-3/build/pages/index.html`.
 
@@ -90,9 +98,23 @@ Build it yourself with `./gradlew :modules:lsd-mono-ktor-3:sampleReport` and ope
 
 - **Requests the app serves** (`Lsd`): the request as `METHOD /path?query` with its headers and body, before the handler runs; the reply as its status (`201 Created`) with headers, body and latency. A reply StatusPages makes from an exception is drawn as that reply; an exception nothing handles is drawn as an error reply (`IllegalStateException`) and rethrown.
 - **Calls the app makes** (`LsdClient`): the same, from the app being served to the target, nested under the request being served; a client exception (`ConnectException`) is drawn as an error reply and rethrown, a timeout as the exception the caller sees (`HttpRequestTimeoutException`), even when the server plugin in this JVM drew the request. Each retry (`HttpRequestRetry`) and redirect hop (`HttpRedirect`) is drawn as its own call.
-- **Scenario propagation**: the scenario travels in the coroutine context while the app serves a call, so its `HttpClient` calls are drawn in the right test even with several running. The client plugin sends core's `lsd-scenario` header, and the caller's name, to the hosts `lsd.mono.propagation.allowedHosts` allows (by default only loopback; any other host, a redirect's included, gets only the opaque `lsd-call` id), and to any host when the call stays in memory (a `testApplication` client, whose `externalServices` hosts are not real hosts); the server plugin reads it. With no header, the server captures into the bound scenario, or the only one running (see [Threads and parallel tests](../lsd-mono-jvm/README.md#threads-and-parallel-tests)).
-- **Bodies, without consuming them or holding them up**: a body of known length up to 256 KiB is read and handed on as the same bytes. A response of unknown length (chunked, streamed) is handed on at once and copied as the caller reads it: its reply is drawn when the caller has read it to the end (with the body if it came to no more than 256 KiB, else a note of its size; one closed before its end is marked `closed after N bytes, not read to the end`). A request of unknown length is handed to the app unread and drawn as a note (`a stream of unknown length, passed on unread`), since the request is drawn before the app reads it. A body over 256 KiB, a server-sent event stream and a compressed body (`Content-Encoding`, never decompressed or read) are shown as a short note instead. A body whose content type is `application/json` or `+json` is shown as a structure the inspector can fold, read by a small built-in reader so the module needs no JSON library; so is a WebSocket text message that is a JSON object or array. Any other body is shown as text.
-- **WebSockets the app serves** (`Lsd` with Ktor's `WebSockets`): the handshake as a call (`GET /prices`, `101 Switching Protocols`), each message as an arrow (labelled as in [Message labels](#message-labels), with the body in its popup; a text message over 256 KiB has its body noted as not shown, and one sent in fragments or compressed is noted as such), an error that ends the handler as an error arrow, and the close (`close 1000 done`) from whichever side closed, once. A busy socket draws its first `messagesShown` messages and a note of how many more it left out (`… 8 more WebSocket messages not drawn`). Calls the app makes while handling a message are drawn from the app, nested under the last message in.
+- **Each call is drawn in the right test, even with several running.**
+  - The scenario travels in the coroutine context while the app serves a call, so its `HttpClient` calls stay in that test.
+  - The client plugin sends core's `lsd-scenario` header, and the caller's name, to the hosts `lsd.mono.propagation.allowedHosts` allows (by default only loopback). Any other host, a redirect's included, gets only the opaque `lsd-call` id.
+  - A call that stays in memory (a `testApplication` client, whose `externalServices` hosts are not real hosts) sends it to any host. The server plugin reads it.
+  - With no header, the server captures into the bound scenario, or the only one running (see [Threads and parallel tests](../../docs/jvm-api.md#threads-and-parallel-tests)).
+- **Bodies are drawn without consuming them or holding them up.**
+  - A body of known length up to 256 KiB is read and handed on as the same bytes.
+  - A response of unknown length (chunked, streamed) is handed on at once and copied as the caller reads it. Its reply is drawn when the caller has read it to the end: with the body if it came to no more than 256 KiB, else a note of its size. One closed before its end is marked `closed after N bytes, not read to the end`.
+  - A request of unknown length is handed to the app unread and drawn as a note (`a stream of unknown length, passed on unread`), since the request is drawn before the app reads it.
+  - A body over 256 KiB, a server-sent event stream and a compressed body (`Content-Encoding`, never decompressed or read) are shown as a short note instead.
+  - A body whose content type is `application/json` or `+json` is shown as a structure the inspector can fold, read by a small built-in reader so the module needs no JSON library; so is a WebSocket text message that is a JSON object or array. Any other body is shown as text.
+- **WebSockets the app serves** (`Lsd` with Ktor's `WebSockets`) **are drawn as the handshake, each message, errors and the close.**
+  - The handshake is a call (`GET /prices`, `101 Switching Protocols`).
+  - Each message is an arrow, labelled as in [Message labels](#message-labels), with the body in its popup. A text message over 256 KiB has its body noted as not shown, and one sent in fragments or compressed is noted as such.
+  - An error that ends the handler is an error arrow, and the close (`close 1000 done`) is drawn from whichever side closed, once.
+  - A busy socket draws its first `messagesShown` messages and a note of how many more it left out (`… 8 more WebSocket messages not drawn`).
+  - Calls the app makes while handling a message are drawn from the app, nested under the last message in.
 - **WebSockets the app opens** (`LsdClient` with the client's `WebSockets`, `client.webSocket { }`): the same, from the app being served (else `caller`) to the target. The handshake carries the scenario like the client's calls, so a socket that reaches the server plugin in this JVM is drawn there, once, under the server's name; otherwise the client draws it, including a refused handshake (`404 Not Found`) or a failed connect.
 - LSD's own `lsd-*` headers are left off the diagram.
 

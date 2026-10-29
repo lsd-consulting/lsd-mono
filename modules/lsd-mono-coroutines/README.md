@@ -1,14 +1,20 @@
 # lsd-mono-coroutines
 
+Part of [LSD: living sequence diagrams](../../README.md).
+
 `lsd-mono-coroutines` keeps an LSD scenario bound while a Kotlin coroutine moves between threads. Without it, a capture made after the coroutine resumes on another dispatcher thread goes to the wrong scenario, or to none. It depends on first-party [`lsd-mono-jvm`](../lsd-mono-jvm) and on `kotlinx-coroutines-core`. Core itself has no coroutines dependency.
 
 ## Depend on it
 
+<!-- release-version:start (the release workflow updates the versions up to the end marker) -->
+
+[![Maven Central: lsd-mono-coroutines](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-coroutines?label=lsd-mono-coroutines)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-coroutines)
+
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:<version>")
+testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:0.15.0")
 ```
 
-The version is on the [Maven Central badge](../../README.md#jvm-kotlin-java) in the root README. From another project in this repo: `testImplementation(project(":modules:lsd-mono-coroutines"))`.
+<!-- release-version:end -->
 
 That pulls in `lsd-mono-jvm` and `kotlinx-coroutines-core`. The module is built against kotlinx.coroutines 1: the version catalog holds the exact version, and the build fails if anything resolves to another major. A 2.x release would get its own module.
 
@@ -26,7 +32,7 @@ scenario.bind().use {
 }
 ```
 
-With several scenarios running, that capture cannot be attributed. It is logged as a warning and kept out of all of them (see [Threads and parallel tests](../lsd-mono-jvm/README.md#threads-and-parallel-tests)).
+With several scenarios running, that capture cannot be attributed. It is logged as a warning and kept out of all of them (see [Threads and parallel tests](../../docs/jvm-api.md#threads-and-parallel-tests)).
 
 ## Keep the scenario with the coroutine
 

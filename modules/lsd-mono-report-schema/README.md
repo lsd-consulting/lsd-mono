@@ -1,5 +1,7 @@
 # lsd-mono-report-schema
 
+Part of [LSD: living sequence diagrams](../../README.md). An internal building block: most users depend on [`lsd-mono-jvm`](../lsd-mono-jvm/README.md) or a framework module instead.
+
 JSON Schemas (2020-12) for the report data lsd-mono writes, so the format is owned by neither the
 Kotlin writer nor the TypeScript report UI:
 
@@ -19,9 +21,9 @@ OpenTelemetry dependency.
 - Every report and index has a required `schemaVersion`: the semver of the schema it follows,
   apart from the lsd-mono version. This is `0.3.0`.
 - The version is in each schema's `$id`
-  (`https://lsd-consulting.github.io/lsd-mono/schema/0.3.0/lsd-report.schema.json`). Nothing is
-  published at that address yet; the `$id`s name the schemas and let the index schema refer to
-  the report schema.
+  (`https://lsd-consulting.github.io/lsd-mono/schema/0.3.0/lsd-report.schema.json`). That URL is
+  not live yet: nothing is published there, so it returns 404. The `$id`s only name the schemas
+  and let the index schema refer to the report schema; read the schemas from this directory.
 - **A minor version only adds**, 0.x included: a new optional field, a new value of an open
   enum, a new event kind. Anything else is breaking and raises the major version, even before
   1.0: removing or renaming a field, making one required, changing its type or meaning, or a new

@@ -282,9 +282,9 @@ jobs:
           GH_TOKEN: ${{ secrets.README_PR_TOKEN || github.token }}
           VERSION: ${{ needs.release.outputs.version }}
         run: |
-          tools/release/update-readme-version.sh "$VERSION" README.md
+          tools/release/update-readme-version.sh "$VERSION"
           if git diff --quiet; then
-            echo "The README already shows $VERSION." >> "$GITHUB_STEP_SUMMARY"
+            echo "The READMEs already show $VERSION." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           branch="docs/readme-v$VERSION"
