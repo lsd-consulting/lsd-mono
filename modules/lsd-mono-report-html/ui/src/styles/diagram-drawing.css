@@ -11,32 +11,30 @@
   filter: drop-shadow(0 2px 6px oklch(0 0 0 / 0.2));
 }
 .participant-shape {
-  fill: var(--surface);
+  fill: color-mix(in oklab, var(--pc, var(--accent)) 10%, var(--surface));
   stroke: var(--pc-ink);
-  stroke-width: 1.6;
+  stroke-width: 2;
 }
 .participant-actor {
   fill: none;
   stroke: var(--pc-ink);
-  stroke-width: 1.7;
+  stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .participant-actor circle {
-  fill: var(--surface);
+  fill: color-mix(in oklab, var(--pc, var(--accent)) 10%, var(--surface));
 }
 .participant-mark {
   fill: none;
   stroke: var(--pc-ink);
-  stroke-width: 1.7;
+  stroke-width: 2;
   stroke-linecap: round;
-}
-.participant-queue-back {
-  fill: color-mix(in oklab, var(--pc, var(--accent)) 22%, var(--surface));
 }
 .participant-label {
   fill: var(--text);
-  font-size: 11px;
+  /* Matches LABEL_PX in participant-label.ts, which sizes the shapes. */
+  font-size: 13px;
   font-weight: 650;
 }
 
@@ -108,6 +106,45 @@
   font-size: 10.5px;
   font-weight: 700;
 }
+/* The arrow key: what a call, a reply and an async message look like. */
+.diagram-legends {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 18px;
+  padding: 0 12px;
+}
+.diagram-legends > .payload-legend {
+  padding-left: 0;
+  padding-right: 0;
+}
+.arrow-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 2px 0 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.arrow-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.arrow-key svg {
+  flex: none;
+  overflow: visible;
+}
+.arrow-key-line {
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  fill: none;
+}
+.arrow-key-fill {
+  fill: var(--text-muted);
+}
+
 /* Explains the marker, under the toolbar. */
 .payload-legend {
   margin: 0;
@@ -138,6 +175,27 @@
   font-weight: 700;
 }
 @media (forced-colors: active) {
+  /* Arrows, tips and participant outlines in the system text colour. The dash patterns and tip
+     shapes are attributes, so a call, a reply and an async message still differ. */
+  .msg-path,
+  .arrow-ink-stroke,
+  .participant-shape,
+  .participant-actor,
+  .participant-mark,
+  .arrow-key-line {
+    stroke: CanvasText;
+  }
+  .arrow-ink-fill,
+  .arrow-key-fill {
+    fill: CanvasText;
+  }
+  .participant-shape,
+  .participant-actor circle {
+    fill: Canvas;
+  }
+  .participant-label {
+    fill: CanvasText;
+  }
   .payload-legend-key {
     color: CanvasText;
   }

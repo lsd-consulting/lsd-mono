@@ -134,13 +134,13 @@ test('at 1440 the example component diagram opens whole, and 1:1 is its natural 
   await page.setViewportSize({ width: 1440, height: 900 })
   await openComponents(page)
   const opened = await drawing(page)
-  expect(opened.drawnWidth).toBeLessThan(1091)
+  expect(opened.drawnWidth).toBeLessThan(1124)
   expect(opened.topRowInView).toBe(true)
   await actualSize(page)
   const shown = await drawing(page)
-  // Drawn at 1091 px, not shrunk to its box as the side panel did (6.9 px names).
+  // Drawn at 1124 px (13px header names), not shrunk to its box as the side panel did (6.9 px names).
   expect(shown.smallest).toBeGreaterThanOrEqual(11)
-  expect(shown.drawnWidth).toBe(1091)
+  expect(shown.drawnWidth).toBe(1124)
   expect(shown.pageOverflowX).toBeLessThanOrEqual(0)
   if (process.env.LSD_SHOTS) await page.screenshot({ path: `${process.env.LSD_SHOTS}/q-105-1440-example.png` })
 })

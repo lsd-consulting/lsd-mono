@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_LABEL_MAX_WIDTH, formatGeneratedAt, statusGlyph, truncateLabel } from './format'
+import {
+  DEFAULT_LABEL_MAX_WIDTH,
+  formatGeneratedAt,
+  histSegmentHtml,
+  statusDotHtml,
+  statusGlyph,
+  topbarTitleText,
+  truncateLabel,
+} from './format'
 
 describe('statusGlyph (#158)', () => {
   it('gives each status its own glyph, the error one matching the diagram mark', () => {
@@ -47,5 +55,30 @@ describe('formatGeneratedAt', () => {
   it('keeps text that is not an instant, and survives an unknown zone', () => {
     expect(formatGeneratedAt('yesterday')).toBe('yesterday')
     expect(formatGeneratedAt('2026-01-01T12:00:00Z', 'Mars/Olympus')).toBe('2026-01-01T12:00:00Z')
+  })
+})
+
+describe('status glyphs in the sidebar', () => {
+  it('puts the glyph in each dot, hidden from screen readers', () => {
+    expect(statusDotHtml('success')).toBe('<span class="dot success" aria-hidden="true">✓</span>')
+    expect(statusDotHtml('warn')).toContain('>!<')
+    expect(statusDotHtml('error')).toContain('>✕<')
+    expect(statusDotHtml('x"y')).toContain('class="dot x&quot;y"')
+  })
+
+  it('labels a status bar segment with its glyph and count, and leaves an empty one bare', () => {
+    expect(histSegmentHtml('s', 'success', 3, 75)).toBe(
+      '<span class="s" style="width:75%"><span class="hist-label">✓ 3</span></span>',
+    )
+    expect(histSegmentHtml('e', 'error', 0, 0)).toBe('<span class="e" style="width:0%"></span>')
+  })
+})
+
+describe('topbarTitleText', () => {
+  it("names the report, or all reports on an index, never the bare word 'Report'", () => {
+    expect(topbarTitleText(false, ' Online shop ')).toBe('Online shop')
+    expect(topbarTitleText(false, '')).toBe('Test report')
+    expect(topbarTitleText(false)).toBe('Test report')
+    expect(topbarTitleText(true, 'ignored')).toBe('All reports')
   })
 })

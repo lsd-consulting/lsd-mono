@@ -20,6 +20,9 @@ const ASCII_W = [
   8.7, 7.4, 8.7, 8, 7.5, 7.4, 8.4, 8.3, 11.5, 8.2, 8.1, 7.5, 4.7, 4.3, 4.7, 7.4, 6.9, 5.6, 6.5, 7.2, 6.5, 7.2, 6.7, 4.5,
   7.1, 7, 3.2, 3.2, 6.6, 3.3, 10.3, 6.9, 6.9, 7.2, 7.2, 4.8, 6.3, 4.6, 6.9, 6.6, 9.4, 6.4, 6.7, 6.3, 5.2, 4.1, 5.2, 7.5,
 ]
+/** Labels are drawn at [LABEL_PX]; the table above was measured at 11px and scales linearly. */
+export const LABEL_PX = 13
+const SCALE = LABEL_PX / 11
 /** Accented Latin, Greek, Cyrillic and the like. */
 const OTHER_W = 8
 /** CJK, Hangul, emoji: about a full em. */
@@ -27,7 +30,7 @@ const WIDE_W = 11.5
 export const ELLIPSIS = '…'
 
 /** Widest a name line may be before it wraps, in header units (CSS px at zoom 1). */
-export const NAME_MAX_W = 160
+export const NAME_MAX_W = 184
 
 export interface FittedName {
   /** One or two lines as drawn. The last ends in an ellipsis when the name was cut. */
@@ -53,10 +56,10 @@ function glyphWidth(code: number): number {
   return OTHER_W
 }
 
-/** Drawn width of a participant name at 11px semibold. */
+/** Drawn width of a participant name at [LABEL_PX] semibold. */
 export function nameWidth(text: string): number {
   let w = 0
-  for (const ch of text) w += glyphWidth(ch.codePointAt(0)!)
+  for (const ch of text) w += glyphWidth(ch.codePointAt(0)!) * SCALE
   return Math.round(w * 10) / 10
 }
 

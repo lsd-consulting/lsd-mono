@@ -19,7 +19,7 @@ import {
   sidebarToggleLabel,
   storeSidebarCollapsed,
 } from '../ui/sidebar'
-import { statusGlyph, statusLabel } from '../ui/format'
+import { histSegmentHtml, statusGlyph, statusLabel, topbarTitleText } from '../ui/format'
 import { bindStatusLegend, statusDefinitionId, statusLegendHtml } from '../ui/status-legend'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
 import { bindExampleIntro, exampleIntroHtml, showExampleIntro } from '../ui/example-intro'
@@ -61,7 +61,7 @@ export function renderShell(): void {
       <div class="brand">
         <a class="brand-mark repo-link" ${repoLinkAttrsHtml('Living Sequence Diagrams: lsd-mono on GitHub')}>LSD</a>
         <div>
-          <div>Report</div>
+          <div class="brand-title">${escapeHtml(topbarTitleText(Boolean(index), session.report.title))}</div>
           <div class="brand-sub">Living Sequence Diagrams</div>
         </div>
       </div>
@@ -102,9 +102,9 @@ export function renderShell(): void {
             title="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}">${escapeHtml(sidebarToggleGlyph(state.sidebarCollapsed))}</button>
         </div>
         <div class="hist" aria-hidden="true" title="Status mix">
-          <span class="s" style="width:${(c.success / total) * 100 || 0}%"></span>
-          <span class="w" style="width:${(c.warn / total) * 100 || 0}%"></span>
-          <span class="e" style="width:${(c.error / total) * 100 || 0}%"></span>
+          ${histSegmentHtml('s', 'success', c.success, (c.success / total) * 100 || 0)}
+          ${histSegmentHtml('w', 'warn', c.warn, (c.warn / total) * 100 || 0)}
+          ${histSegmentHtml('e', 'error', c.error, (c.error / total) * 100 || 0)}
         </div>
         <ul class="scenario-nav${index ? ' index-nav' : ''}" id="scenario-nav"></ul>
       </aside>

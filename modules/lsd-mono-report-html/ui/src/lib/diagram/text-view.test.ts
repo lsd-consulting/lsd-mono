@@ -23,6 +23,12 @@ describe('messageSpeech', () => {
     )
   })
 
+  it('says async in the label, so the dotted arrow is not a visual-only cue', () => {
+    expect(messageSpeech(msg({ type: 'ASYNCHRONOUS', label: 'OrderPlaced' }), participants)).toBe(
+      'Web UI to Gateway, async: OrderPlaced',
+    )
+  })
+
   it('names self calls and the one end of a short message', () => {
     expect(messageKind(msg({ to: 'web' }))).toBe('self call')
     expect(messageSpeech(msg({ type: 'SHORT_INBOUND', from: '' }), participants)).toContain('to Gateway, inbound')
