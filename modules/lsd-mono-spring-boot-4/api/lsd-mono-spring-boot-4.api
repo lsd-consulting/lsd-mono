@@ -2,8 +2,7 @@ public final class io/github/lsdconsulting/lsd/mono/springboot/LsdAutoConfigurat
 	public fun <init> ()V
 }
 
-public class io/github/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/springframework/test/context/support/AbstractTestExecutionListener {
-	public fun <init> ()V
+public final class io/github/lsdconsulting/lsd/mono/springboot/LsdSpringTestListener : org/springframework/test/context/support/AbstractTestExecutionListener {
 	public fun afterTestClass (Lorg/springframework/test/context/TestContext;)V
 	public fun afterTestMethod (Lorg/springframework/test/context/TestContext;)V
 	public fun beforeTestMethod (Lorg/springframework/test/context/TestContext;)V

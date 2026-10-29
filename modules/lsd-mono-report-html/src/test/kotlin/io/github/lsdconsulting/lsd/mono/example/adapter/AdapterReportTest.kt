@@ -50,7 +50,7 @@ class AdapterReportTest {
     fun `a report built from the model alone is the shared minimal report, byte for byte`(
         @TempDir dir: Path,
     ) {
-        val written = writer().writeReport(minimal(), dir.toFile())
+        val written = writer().writeReport(minimal(), dir)
         assertEquals(ReportCorpus.read("reports/minimal.json"), written.reportJson.readText())
         assertEquals(ReportCorpus.read("reports/minimal.json"), ReportWriter.toJson(minimal()))
     }
@@ -60,8 +60,8 @@ class AdapterReportTest {
         @TempDir dir: Path,
     ) {
         val writer = writer()
-        val written = writer.writeReport(checkout(), dir.toFile())
-        writer.writeIndex(dir.toFile())
+        val written = writer.writeReport(checkout(), dir)
+        writer.writeIndex(dir)
 
         assertEquals(4, ReportSchemas.assertOutputValid(dir), "the JSON, page, data script and index")
         val page = written.diagramHtml.readText()

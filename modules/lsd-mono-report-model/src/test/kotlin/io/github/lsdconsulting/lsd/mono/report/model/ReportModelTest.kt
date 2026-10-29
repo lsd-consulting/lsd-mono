@@ -311,9 +311,9 @@ class ReportModelTest {
                 .wallClockMs(2.0)
                 .clockOrdering(ClockOrderingJson.SAME_SOURCE)
                 .clockOrdered(0)
-                .warning(WarningJson(KnownWarningKind.SKEW, "skew"))
+                .warning(WarningJson.builder(KnownWarningKind.SKEW, "skew").build())
                 .reorderedByClock(listOf("m1"))
-                .pairAccuracy(listOf(PairAccuracyJson("a", "b", AccuracyJson.MEASURED)))
+                .pairAccuracy(listOf(PairAccuracyJson.builder("a", "b", AccuracyJson.MEASURED).build()))
                 .build()
         val options = ReportOptionsJson
             .builder()

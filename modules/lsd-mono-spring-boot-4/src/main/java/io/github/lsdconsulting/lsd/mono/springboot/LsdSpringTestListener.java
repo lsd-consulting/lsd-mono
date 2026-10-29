@@ -9,11 +9,14 @@ import org.springframework.test.context.support.AbstractTestExecutionListener;
  * one scenario per test method, one report per test class, and {@code index.html}.
  */
 @SuppressWarnings("KotlinInternalInJava")
-public class LsdSpringTestListener extends AbstractTestExecutionListener {
+public final class LsdSpringTestListener extends AbstractTestExecutionListener {
     /** After Spring's own listeners have injected the test, before it runs. */
     private static final int ORDER = 5_000;
 
     private final LsdSpringTestLifecycle lifecycle = new LsdSpringTestLifecycle();
+
+    /** Made by Spring from {@code META-INF/spring.factories}, which can call a package-private constructor. */
+    LsdSpringTestListener() {}
 
     @Override
     public int getOrder() {

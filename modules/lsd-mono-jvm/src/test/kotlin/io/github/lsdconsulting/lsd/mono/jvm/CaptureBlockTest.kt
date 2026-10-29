@@ -58,7 +58,7 @@ class CaptureBlockTest {
             }
         val viaVerbs =
             scenario().apply {
-                message("Customer", "Orders", "POST /orders", body, colour = "#f00", timing = Timing(startedAt = at, durationMs = 412.0))
+                message("Customer", "Orders", "POST /orders", data = body, colour = "#f00", timing = Timing(startedAt = at, durationMs = 412.0))
                 activate("Orders")
                 async("Orders", "Events", "order.paid")
                 note("idempotent", on = "Orders")

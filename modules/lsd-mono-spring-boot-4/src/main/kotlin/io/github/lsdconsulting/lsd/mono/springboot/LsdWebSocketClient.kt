@@ -113,17 +113,14 @@ public object LsdWebSocketClient {
         ) = guarded(Unit) {
             if (!SpringScenarios.isRunning(scenario)) return@guarded
             scenario.ingest(
-                Interaction(
-                    kind = InteractionKind.RESPONSE,
-                    from = remote,
-                    to = local,
-                    label = label,
-                    status = status,
-                    replyTo = handshake,
-                    source = SpringScenarios.SOURCE,
-                    durationMs = (System.nanoTime() - t0) / 1_000_000.0,
-                    data = data,
-                ),
+                Interaction
+                    .builder(InteractionKind.RESPONSE, remote, local, label)
+                    .status(status)
+                    .replyTo(handshake)
+                    .source(SpringScenarios.SOURCE)
+                    .durationMs((System.nanoTime() - t0) / 1_000_000.0)
+                    .data(data)
+                    .build(),
             )
         }
 
@@ -139,17 +136,14 @@ public object LsdWebSocketClient {
             ): Socket {
                 val id = SpringScenarios.newId()
                 scenario.ingest(
-                    Interaction(
-                        kind = InteractionKind.REQUEST,
-                        from = local,
-                        to = remote,
-                        label = "GET ${uri.rawPath.ifEmpty { "/" }}${uri.rawQuery?.let { "?$it" } ?: ""}",
-                        interactionId = id,
-                        trace = Trace(scenario.correlationId, id, parent),
-                        source = SpringScenarios.SOURCE,
-                        startedAt = Instant.now(),
-                        headers = headers.headerNames().filterNot(SpringScenarios::isOwnHeader).associateWith { headers.getFirst(it) ?: "" },
-                    ),
+                    Interaction
+                        .builder(InteractionKind.REQUEST, local, remote, "GET ${uri.rawPath.ifEmpty { "/" }}${uri.rawQuery?.let { "?$it" } ?: ""}")
+                        .interactionId(id)
+                        .trace(Trace(scenario.correlationId, id, parent))
+                        .source(SpringScenarios.SOURCE)
+                        .startedAt(Instant.now())
+                        .headers(headers.headerNames().filterNot(SpringScenarios::isOwnHeader).associateWith { headers.getFirst(it) ?: "" })
+                        .build(),
                 )
                 return Socket(scenario, local, remote, id, System.nanoTime(), shown)
             }

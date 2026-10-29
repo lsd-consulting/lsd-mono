@@ -14,8 +14,8 @@ another test framework, or a trace importer) builds a `ReportJson` and writes it
 
 ```kotlin
 val writer = ReportWriter(ReportWriterSettings(generator = "my-adapter 1.0"))
-writer.writeReport(report, File("build/reports/lsd"))
-writer.writeIndex(File("build/reports/lsd"))
+writer.writeReport(report, Path.of("build/reports/lsd"))
+writer.writeIndex(Path.of("build/reports/lsd"))
 ```
 
 `AdapterReportTest` (in `src/test/kotlin/io/github/lsdconsulting/lsd/mono/example/adapter`) does this with
@@ -24,12 +24,12 @@ report `reports/minimal.json` byte for byte, and what it writes follows the repo
 
 | | |
 | --- | --- |
-| **Is** | `ReportWriter`, its `ReportWriterSettings` and `WrittenReport`, in `io.github.lsdconsulting.lsd.mono.report.html` |
+| **Is** | `ReportWriter`, its `ReportWriterSettings` and `ReportFiles`, in `io.github.lsdconsulting.lsd.mono.report.html` |
 | **Is not** | Capture, timing or properties: the caller passes everything the files need |
 
 ## Compatibility
 
-`ReportWriter`, `ReportWriterSettings` and `WrittenReport` are no longer experimental, and neither is
+`ReportWriter`, `ReportWriterSettings` and `ReportFiles` are no longer experimental, and neither is
 the model they take ([lsd-mono-report-model](../lsd-mono-report-model#compatibility)): no opt-in is
 needed: remove any `@OptIn(ExperimentalLsdReportModel::class)`, as the annotation is gone. lsd-mono-jvm's own API does not expose either module.
 

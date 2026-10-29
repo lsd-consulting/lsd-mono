@@ -508,9 +508,15 @@ class TimingApiTest {
     @Test
     fun `the call carries its reply's duration and the paired reply carries none`() {
         val lsd = LsdContext()
-        lsd.accept(Interaction(InteractionKind.REQUEST, "orders", "payments", "POST /pay", interactionId = "c1"))
-        lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "orders", "201", replyTo = "c1", durationMs = 30.5))
-        lsd.accept(Interaction(InteractionKind.PUBLISH, "orders", "kafka", "paid", durationMs = 2.0))
+        lsd.accept(Interaction.builder(InteractionKind.REQUEST, "orders", "payments", "POST /pay").interactionId("c1").build())
+        lsd.accept(
+            Interaction
+                .builder(InteractionKind.RESPONSE, "payments", "orders", "201")
+                .replyTo("c1")
+                .durationMs(30.5)
+                .build(),
+        )
+        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "orders", "kafka", "paid").durationMs(2.0).build())
         lsd.completeScenario("moved", status = Status.SUCCESS)
         val scenario = report(lsd, "Moved")
         assertEquals(30.5, scenario.message("POST /pay")["durationMs"])
@@ -566,9 +572,15 @@ class TimingApiTest {
     fun `interaction headers become the payload's headers, beside the body, and are redacted`() {
         val lsd = LsdContext()
         val headers = mapOf("content-type" to "application/json", "Authorization" to "Bearer secret")
-        lsd.accept(Interaction(InteractionKind.REQUEST, "web", "api", "POST /orders", data = mapOf("id" to 7), headers = headers))
-        lsd.accept(Interaction(InteractionKind.PUBLISH, "api", "kafka", "order.placed", headers = mapOf("lsd-scenario" to "abc")))
-        lsd.accept(Interaction(InteractionKind.MESSAGE, "api", "db", "plain", data = "body only"))
+        lsd.accept(
+            Interaction
+                .builder(InteractionKind.REQUEST, "web", "api", "POST /orders")
+                .data(mapOf("id" to 7))
+                .headers(headers)
+                .build(),
+        )
+        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "api", "kafka", "order.placed").headers(mapOf("lsd-scenario" to "abc")).build())
+        lsd.accept(Interaction.builder(InteractionKind.MESSAGE, "api", "db", "plain").data("body only").build())
         lsd.completeScenario("headers", status = Status.SUCCESS)
         val scenario = report(lsd, "Headers")
         val posted = scenario.message("POST /orders").obj("data")!!
@@ -590,11 +602,28 @@ class TimingApiTest {
     @Test
     fun `ingested lsd-distributed style data is guessed and tops out at MEASURED`() {
         val lsd = LsdContext()
-        lsd.accept(Interaction(InteractionKind.REQUEST, "orders", "payments", "POST /pay", trace = Trace("tid"), source = "orders", startedAt = t(0)))
         lsd.accept(
-            Interaction(InteractionKind.RESPONSE, "payments", "orders", "200", trace = Trace("tid"), source = "orders", startedAt = t(30), durationMs = 30.0),
+            Interaction
+                .builder(InteractionKind.REQUEST, "orders", "payments", "POST /pay")
+                .trace(Trace("tid"))
+                .source("orders")
+                .startedAt(t(0))
+                .build(),
         )
-        lsd.accept(Interaction(InteractionKind.PUBLISH, "orders", "kafka", "paid", durationMs = 0.0))
+        lsd.accept(
+            Interaction
+                .builder(
+                    InteractionKind.RESPONSE,
+                    "payments",
+                    "orders",
+                    "200",
+                ).trace(Trace("tid"))
+                .source("orders")
+                .startedAt(t(30))
+                .durationMs(30.0)
+                .build(),
+        )
+        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "orders", "kafka", "paid").durationMs(0.0).build())
         lsd.completeScenario("distributed", status = Status.SUCCESS)
         val scenario = report(lsd, "Distributed")
         assertEquals(listOf("GUESSED", "GUESSED"), listOf("POST /pay", "200").map { scenario.message(it)["pairing"] })

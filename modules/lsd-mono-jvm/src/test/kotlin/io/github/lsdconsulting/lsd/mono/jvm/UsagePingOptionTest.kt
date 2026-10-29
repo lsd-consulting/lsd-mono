@@ -49,7 +49,7 @@ class UsagePingOptionTest {
         assertEquals(false, options["usagePing"], options.source)
         val diagram = ReportJson.diagram(tempDir.resolve(ReportFileNames.stem("Ping") + "-diagram.html"))
         assertEquals(false, diagram.options["usagePing"], "the page decides from the report it carries")
-        val manifest = ReportJson.index(reportWriter().writeIndex(tempDir.toFile()).parent)
+        val manifest = ReportJson.index(reportWriter().writeIndex(tempDir).parent)
         assertEquals(mapOf("usagePing" to false), manifest.obj("options")?.toMap(), manifest.source.take(300))
     }
 
