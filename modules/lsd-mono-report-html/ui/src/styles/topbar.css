@@ -337,7 +337,7 @@
 }
 /* On a phone the glyph chips (#158) wrap, so .filters no longer reaches the right edge;
    pin the legend to the viewport under the bar instead. */
-@media (max-width: 600px) {
+@media (max-width: 560px) {
   .status-legend {
     position: fixed;
     top: calc(var(--topbar-h, 0px) + 6px);
