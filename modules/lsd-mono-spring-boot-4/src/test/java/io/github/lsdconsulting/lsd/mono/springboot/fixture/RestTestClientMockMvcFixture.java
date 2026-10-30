@@ -94,4 +94,17 @@ public class RestTestClientMockMvcFixture {
                 .expectStatus()
                 .isOk();
     }
+
+    @Test
+    void bindToMockMvcWithLocalhostBaseUrl() {
+        RestTestClient.bindTo(mockMvc)
+                .baseUrl("http://localhost")
+                .requestInterceptor(LsdRestTestClient.interceptor())
+                .build()
+                .get()
+                .uri("/orders/g2")
+                .exchange()
+                .expectStatus()
+                .isOk();
+    }
 }

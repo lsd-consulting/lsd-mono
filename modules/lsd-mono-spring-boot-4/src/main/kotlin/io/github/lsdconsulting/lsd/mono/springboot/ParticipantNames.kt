@@ -29,6 +29,12 @@ internal class ParticipantNames(
 
     private val names = ConcurrentHashMap<String, String>()
 
+    /**
+     * True for a loopback URI while the test runs no server (MockMvc, say): a test client bound in
+     * the JVM with an absolute base URL, whose request never leaves the JVM.
+     */
+    fun isLoopbackWithoutServer(uri: URI): Boolean = isLoopback(uri.host) && env.getProperty("local.server.port") == null
+
     /** True for a call back into this app's own server: its inbound filter draws that one. */
     fun isSelf(uri: URI): Boolean {
         val own = env.getProperty("local.server.port", Int::class.java) ?: return false

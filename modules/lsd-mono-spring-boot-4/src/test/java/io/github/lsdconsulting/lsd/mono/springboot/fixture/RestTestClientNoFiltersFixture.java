@@ -50,4 +50,17 @@ public class RestTestClientNoFiltersFixture {
                 .expectStatus()
                 .isOk();
     }
+
+    @Test
+    void bindToMockMvcWithLocalhostBaseUrl() {
+        RestTestClient.bindTo(mockMvc)
+                .baseUrl("http://localhost")
+                .requestInterceptor(LsdRestTestClient.interceptor())
+                .build()
+                .get()
+                .uri("/orders/e3")
+                .exchange()
+                .expectStatus()
+                .isOk();
+    }
 }

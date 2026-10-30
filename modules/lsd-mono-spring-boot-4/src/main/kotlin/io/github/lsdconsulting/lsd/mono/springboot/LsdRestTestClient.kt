@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
  * once. Sent to a server (`bindToServer`, `TestRestTemplate`), the app's own filter draws them, so
  * this only adds `lsd-scenario` (for loopback hosts, or `lsd.mono.propagation.allowedHosts`).
  * Bound in the JVM (`bindTo(mockMvc)`, `bindToApplicationContext`, `bindToController`,
- * `bindToRouterFunction`), it draws each request and its reply itself, from the test's client to
+ * `bindToRouterFunction`, with or without a loopback base URL), it draws each request and its reply itself, from the test's client to
  * the app, named from the test's application context as the app's filter names them; when the
  * app's filter is in the chain too, the request is drawn once. Applying it more than once, or to
  * Spring Boot's client, adds nothing: a request already marked by it is passed on as it is.
@@ -51,7 +51,10 @@ public object LsdRestTestClient {
         ): ClientHttpResponse {
             val scenario = guarded(null) { SpringScenarios.resolve() } ?: return execution.execute(request, body)
             val uri = request.uri
-            if (uri.host != null) {
+            val inJvm =
+                uri.host == null ||
+                    guarded(false) { SpringScenarios.clientSettingsOf(scenario)?.names?.isLoopbackWithoutServer(uri) == true }
+            if (!inJvm) {
                 // A server's own filter draws the request; this only says which scenario it is in.
                 guarded(Unit) {
                     if (!request.headers.containsHeader(LsdHeaders.SCENARIO)) {
@@ -65,7 +68,10 @@ public object LsdRestTestClient {
             return inJvm(scenario, request, body, execution)
         }
 
-        /** No host: the request never leaves the JVM, and may or may not pass the app's filter. */
+        /**
+         * No host, or a loopback host while the test runs no server: the request never leaves the
+         * JVM, and may or may not pass the app's filter.
+         */
         private fun inJvm(
             scenario: LsdScenario,
             request: HttpRequest,

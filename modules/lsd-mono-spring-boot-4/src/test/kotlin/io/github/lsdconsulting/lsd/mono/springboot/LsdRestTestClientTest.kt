@@ -45,9 +45,11 @@ class LsdRestTestClientTest {
         LsdContext.instance.clear()
     }
 
-    private fun start(): LsdScenario =
+    private fun start(serverPort: Int? = null): LsdScenario =
         LsdContext.instance.beginScenario(reportKey = "rtc", key = "rtc-test").also {
-            SpringScenarios.started(it, MockEnvironment().withProperty("spring.application.name", "shop"))
+            val env = MockEnvironment().withProperty("spring.application.name", "shop")
+            serverPort?.let { port -> env.setProperty("local.server.port", port.toString()) }
+            SpringScenarios.started(it, env)
             scenario = it
         }
 
@@ -160,7 +162,7 @@ class LsdRestTestClientTest {
 
     @Test
     fun `to a loopback server it only adds the scenario, keeping one the test set`() {
-        val scenario = start()
+        val scenario = start(serverPort = 8080)
 
         interceptor.intercept(request("http://localhost:8080/orders/7"), ByteArray(0), ok)
         assertNotNull(sent!!.headers.getFirst(LsdHeaders.SCENARIO))
@@ -170,6 +172,16 @@ class LsdRestTestClientTest {
         assertEquals(listOf("mine"), sent!!.headers[LsdHeaders.SCENARIO])
 
         assertTrue(report(scenario).messages.isEmpty(), "the server's filter draws it")
+    }
+
+    @Test
+    fun `to a loopback host with no server running it draws the call itself`() {
+        val scenario = start()
+
+        interceptor.intercept(request("http://localhost/orders/10"), ByteArray(0), ok)
+
+        assertNotNull(sent!!.headers.getFirst(ClientDrawnCalls.HEADER))
+        assertEquals(listOf("client->shop: GET /orders/10", "shop->client: 200 OK"), report(scenario).drawn())
     }
 
     @Test
