@@ -9,13 +9,6 @@ plugins {
 description =
     "LSD Mono report model: the report JSON as plain Kotlin values, for producers that write a report without lsd-mono-jvm"
 
-// The report model is experimental (@ExperimentalLsdReportModel); its own tests use it freely.
-kotlin {
-    compilerOptions {
-        optIn.add("io.github.lsdconsulting.lsd.mono.report.model.ExperimentalLsdReportModel")
-    }
-}
-
 // The model is plain values; its tests cover nearly all of it. Line coverage was 97.2% when the
 // floor was set (the builders, #118), from the model's own code: the test fixtures
 // (ReportSchemas, ReportCorpus, assertValidJson) are not counted (lsd.coverage).
@@ -35,18 +28,6 @@ dependencies {
     testFixturesImplementation(platform(libs.junit.bom))
     testFixturesImplementation(libs.junit.jupiter.api)
     testFixturesImplementation(libs.json.schema.validator)
-}
-
-tasks.test {
-    // ExperimentalMarkerGuardTest scans report-html's main Kotlin as well as this module's.
-    inputs
-        .files(
-            rootProject.layout.projectDirectory
-                .dir("modules")
-                .asFileTree
-                .matching { include("lsd-mono-report-model/src/main/**/*.kt", "lsd-mono-report-html/src/main/**/*.kt") },
-        ).withPathSensitivity(PathSensitivity.RELATIVE)
-        .withPropertyName("guardedSources")
 }
 
 // The test fixtures are for this repository's tests: keep them out of the published component, so

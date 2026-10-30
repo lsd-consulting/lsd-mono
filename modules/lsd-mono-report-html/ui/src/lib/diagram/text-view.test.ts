@@ -8,7 +8,7 @@ const participants = [
 ]
 
 function msg(over: Partial<MessageEvent>): MessageEvent {
-  return { kind: 'message', id: 'm', from: 'web', to: 'gw', label: 'POST /checkout', type: 'SYNCHRONOUS', ...over }
+  return { kind: 'message', id: 'm', from: 'web', to: 'gw', label: 'POST /checkout', type: 'synchronous', ...over }
 }
 
 describe('messageSpeech', () => {
@@ -18,14 +18,20 @@ describe('messageSpeech', () => {
   })
 
   it('calls out an error status and omits what is absent', () => {
-    expect(messageSpeech(msg({ status: '503', type: 'SYNCHRONOUS_RESPONSE' }), participants)).toBe(
+    expect(messageSpeech(msg({ status: '503', type: 'synchronous_response' }), participants)).toBe(
       'Web UI to Gateway, reply: POST /checkout, error, status 503',
+    )
+  })
+
+  it('says async in the label, so the dotted arrow is not a visual-only cue', () => {
+    expect(messageSpeech(msg({ type: 'asynchronous', label: 'OrderPlaced' }), participants)).toBe(
+      'Web UI to Gateway, async: OrderPlaced',
     )
   })
 
   it('names self calls and the one end of a short message', () => {
     expect(messageKind(msg({ to: 'web' }))).toBe('self call')
-    expect(messageSpeech(msg({ type: 'SHORT_INBOUND', from: '' }), participants)).toContain('to Gateway, inbound')
+    expect(messageSpeech(msg({ type: 'short_inbound', from: '' }), participants)).toContain('to Gateway, inbound')
   })
 
   it('puts the label first for a button name', () => {

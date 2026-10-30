@@ -14,7 +14,7 @@ import {
 } from './report-index'
 import { indexBase, reportBase } from './report-fixture.test-util'
 
-const ALL = { success: true, warn: true, error: true }
+const ALL = { success: true, warn: true, error: true, skipped: true, aborted: true }
 
 function entry(
   id: string,
@@ -22,23 +22,25 @@ function entry(
   scenarios: IndexReport['scenarios'],
   data: string | null = `${id}-report.js`,
 ): IndexReport {
-  const counts = { success: 0, warn: 0, error: 0 }
+  const counts = { success: 0, warn: 0, error: 0, skipped: 0, aborted: 0 }
   for (const s of scenarios) counts[s.status]++
   const status = counts.error ? 'error' : counts.warn ? 'warn' : 'success'
   return { id, title, status, href: `${id}-diagram.html`, data: data ?? undefined, counts, scenarios }
 }
 
 const checkout = entry('checkout', 'Checkout tests', [
-  { id: 's1', title: 'Place an order', status: 'success', messages: 2 },
-  { id: 's2', title: 'Card declined', status: 'error', messages: 3 },
+  { id: 's1', title: 'Place an order', status: 'success', messageCount: 2 },
+  { id: 's2', title: 'Card declined', status: 'error', messageCount: 3 },
 ])
-const shipping = entry('shipping', 'Shipping tests', [{ id: 's1', title: 'Track parcel', status: 'warn', messages: 1 }])
+const shipping = entry('shipping', 'Shipping tests', [
+  { id: 's1', title: 'Track parcel', status: 'warn', messageCount: 1 },
+])
 const link = entry('legacy', 'Elsewhere', [], null)
 const manifest: IndexManifest = {
   ...indexBase(),
   title: 'LSD reports',
   generatedAt: '',
-  generator: 'test',
+  generator: { name: 'test' },
   reports: [link, checkout, shipping],
 }
 
@@ -75,7 +77,7 @@ afterEach(() => {
 
 describe('index manifest', () => {
   it('adds up scenarios by outcome across reports', () => {
-    expect(indexTotals(manifest)).toEqual({ success: 1, warn: 1, error: 1 })
+    expect(indexTotals(manifest)).toEqual({ success: 1, warn: 1, error: 1, skipped: 0, aborted: 0 })
   })
 
   it('opens the first report that has data', () => {
@@ -100,7 +102,13 @@ describe('index manifest', () => {
 })
 
 describe('loading a report', () => {
-  const report: Report = { ...reportBase(), title: 'Checkout tests', generatedAt: '', generator: 'test', scenarios: [] }
+  const report: Report = {
+    ...reportBase(),
+    title: 'Checkout tests',
+    generatedAt: '',
+    generator: { name: 'test' },
+    scenarios: [],
+  }
 
   it('adds the data script once and returns what it registered', async () => {
     serveScripts({

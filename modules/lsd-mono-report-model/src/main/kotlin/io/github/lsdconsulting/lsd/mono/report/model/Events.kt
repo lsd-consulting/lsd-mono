@@ -12,26 +12,24 @@ package io.github.lsdconsulting.lsd.mono.report.model
  * and these classes or not, must tolerate an unknown `kind`, skipping it or showing it as unknown,
  * rather than fail or assume this list is complete.
  */
-@ExperimentalLsdReportModel
 public sealed class EventJson {
     public abstract val id: String
     public abstract val startedAt: String?
 }
 
 /**
- * A message between two participants: an arrow. [from] and [to] are participant ids, or `""` for
- * the diagram's edge. Made with [builder]; everything after [type] is optional, and lsd-mono-jvm
+ * A message between two participants: an arrow. [from] and [to] are participant ids, or null for
+ * the diagram's edge (not written). Made with [builder]; everything after [type] is optional, and lsd-mono-jvm
  * sets it from what it captured and how it timed it.
  */
-@ExperimentalLsdReportModel
 public class MessageEventJson internal constructor(
     override val id: String,
-    public val from: String,
-    public val to: String,
+    public val from: String?,
+    public val to: String?,
     public val label: String,
     /** The schema's `MessageType`: one of [KnownMessageType.ALL], or another, which a reader draws as a call. */
     public val type: String,
-    public val colour: String?,
+    public val color: String?,
     /** How long the message took, in fractional milliseconds. */
     public val durationMs: Double?,
     /**
@@ -40,26 +38,24 @@ public class MessageEventJson internal constructor(
      * numbers, booleans).
      */
     public val data: DataValueJson?,
-    /**
-     * The key into the payload file (`<scenarioId>/<messageId>`) when [data] keeps only method, path
-     * and status. The writer sets it in the diagram page's copy; leave it null.
-     */
-    public val payloadId: String?,
     override val startedAt: String?,
     /** The capture order. Null when not counted. */
     public val seq: Long?,
-    /** The call's id, which its reply names in [replyTo]. */
+    /**
+     * The correlation key a call and its reply share, as the producer captured it (a header, a
+     * request id). Not unique: the call and its reply both carry it.
+     */
     public val callId: String?,
-    /** On a reply: the [callId] of the call it answers. */
+    /** On a reply: the [id] of the call message it answers. */
     public val replyTo: String?,
-    /** On a consume: the publish that caused it. */
+    /** On a consume: the [callId] of the publish that caused it. */
     public val causedBy: String?,
     public val trace: TraceJson?,
     /** The clock domain, such as a service name. Null means local. */
     public val source: String?,
     /** The wall-clock time of capture. Left out of reproducible reports. */
     public val capturedAt: String?,
-    /** The message's status, such as an HTTP status, as text: `200`, `404 Not Found`. */
+    /** The message's status, such as an HTTP status, as text: `200`, `404 Not Found`. Null, not empty, when there is none. */
     public val status: String?,
     /** The schema's `TimingSource`: how [durationMs] was found, one of [KnownTimingSource.ALL] or another. */
     public val timing: String?,
@@ -67,10 +63,8 @@ public class MessageEventJson internal constructor(
     public val pairing: String?,
     /** The schema's `OrderSource`: what put the message in its place, one of [KnownOrderSource.ALL] or another. */
     public val order: String?,
-    /** The id of the call this message runs inside. */
+    /** The [id] of the call message this one runs inside. */
     public val parentId: String?,
-    /** On a paired reply: the id of the call it answers. */
-    public val replyOf: String?,
     /**
      * Facts about the message by OpenTelemetry semantic convention name, such as `http.route`.
      * Keys are not empty; `lsd.` keys are kept for lsd-mono's own. Written when there are any.
@@ -85,10 +79,9 @@ public class MessageEventJson internal constructor(
     /** A builder holding this event's values, to make a changed copy. */
     public fun toBuilder(): Builder =
         Builder(id, from, to, label, type)
-            .colour(colour)
+            .color(color)
             .durationMs(durationMs)
             .data(data)
-            .payloadId(payloadId)
             .startedAt(startedAt)
             .seq(seq)
             .callId(callId)
@@ -102,7 +95,6 @@ public class MessageEventJson internal constructor(
             .pairing(pairing)
             .order(order)
             .parentId(parentId)
-            .replyOf(replyOf)
             .attributes(attributes)
             .origin(origin)
 
@@ -119,10 +111,9 @@ public class MessageEventJson internal constructor(
             "to" to to,
             "label" to label,
             "type" to type,
-            "colour" to colour,
+            "color" to color,
             "durationMs" to durationMs,
             "data" to data,
-            "payloadId" to payloadId,
             "startedAt" to startedAt,
             "seq" to seq,
             "callId" to callId,
@@ -136,24 +127,21 @@ public class MessageEventJson internal constructor(
             "pairing" to pairing,
             "order" to order,
             "parentId" to parentId,
-            "replyOf" to replyOf,
             "attributes" to attributes,
             "origin" to origin,
         )
 
     /** Makes a [MessageEventJson], with every optional field unset (null, or no attributes) until set. */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
-        private val from: String,
-        private val to: String,
+        private val from: String?,
+        private val to: String?,
         private val label: String,
         private val type: String,
     ) {
-        private var colour: String? = null
+        private var color: String? = null
         private var durationMs: Double? = null
         private var data: DataValueJson? = null
-        private var payloadId: String? = null
         private var startedAt: String? = null
         private var seq: Long? = null
         private var callId: String? = null
@@ -167,18 +155,15 @@ public class MessageEventJson internal constructor(
         private var pairing: String? = null
         private var order: String? = null
         private var parentId: String? = null
-        private var replyOf: String? = null
         private val attributes = linkedMapOf<String, AttributeValueJson>()
         private var origin: String? = null
 
-        public fun colour(value: String?): Builder = apply { colour = value }
+        public fun color(value: String?): Builder = apply { color = value }
 
         public fun durationMs(value: Double?): Builder = apply { durationMs = value }
 
         /** The payload, or null for none. [DataValueJson.from] makes one from plain values. */
         public fun data(value: DataValueJson?): Builder = apply { data = value }
-
-        public fun payloadId(value: String?): Builder = apply { payloadId = value }
 
         public fun startedAt(value: String?): Builder = apply { startedAt = value }
 
@@ -205,8 +190,6 @@ public class MessageEventJson internal constructor(
         public fun order(value: String?): Builder = apply { order = value }
 
         public fun parentId(value: String?): Builder = apply { parentId = value }
-
-        public fun replyOf(value: String?): Builder = apply { replyOf = value }
 
         public fun origin(value: String?): Builder = apply { origin = value }
 
@@ -260,10 +243,9 @@ public class MessageEventJson internal constructor(
             to,
             label,
             type,
-            colour,
+            color,
             durationMs,
             data,
-            payloadId,
             startedAt,
             seq,
             callId,
@@ -277,7 +259,6 @@ public class MessageEventJson internal constructor(
             pairing,
             order,
             parentId,
-            replyOf,
             attributes.toMap(),
             origin,
         )
@@ -286,7 +267,7 @@ public class MessageEventJson internal constructor(
     public companion object {
         /** A builder for an event with what the schema requires of one. */
         @JvmStatic
-        public fun builder(id: String, from: String, to: String, label: String, type: String): Builder = Builder(id, from, to, label, type)
+        public fun builder(id: String, from: String?, to: String?, label: String, type: String): Builder = Builder(id, from, to, label, type)
     }
 }
 
@@ -297,7 +278,6 @@ public class MessageEventJson internal constructor(
  * characters for [traceId] and 16 for the span ids; B3 ids, including a 64-bit [traceId], are
  * written as they are too.
  */
-@ExperimentalLsdReportModel
 public data class TraceJson
     @JvmOverloads
     constructor(
@@ -307,7 +287,6 @@ public data class TraceJson
     )
 
 /** A note, over a participant or beside the diagram. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class NoteEventJson internal constructor(
     override val id: String,
     public val text: String,
@@ -340,7 +319,6 @@ public class NoteEventJson internal constructor(
         )
 
     /** Makes a [NoteEventJson]: over its participant ([NotePlacementJson.OVER]) unless placed otherwise. */
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val text: String,
@@ -366,7 +344,6 @@ public class NoteEventJson internal constructor(
 }
 
 /** A gap in time, drawn as a break in the lifelines. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class DelayEventJson internal constructor(
     override val id: String,
     public val label: String?,
@@ -391,7 +368,6 @@ public class DelayEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
     ) {
@@ -413,7 +389,6 @@ public class DelayEventJson internal constructor(
 }
 
 /** Empty space in the diagram. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class SpacerEventJson internal constructor(
     override val id: String,
     /** The height in pixels; the page's default when null. */
@@ -439,7 +414,6 @@ public class SpacerEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
     ) {
@@ -461,7 +435,6 @@ public class SpacerEventJson internal constructor(
 }
 
 /** A labelled line across the diagram. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class DividerEventJson internal constructor(
     override val id: String,
     public val label: String,
@@ -485,7 +458,6 @@ public class DividerEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val label: String,
@@ -505,7 +477,6 @@ public class DividerEventJson internal constructor(
 }
 
 /** The start of a titled section of the scenario. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class SectionEventJson internal constructor(
     override val id: String,
     public val title: String,
@@ -529,7 +500,6 @@ public class SectionEventJson internal constructor(
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val id: String,
         private val title: String,
@@ -549,21 +519,20 @@ public class SectionEventJson internal constructor(
 }
 
 /** A lifeline starting or stopping its activation bar. Made with [builder]. */
-@ExperimentalLsdReportModel
 public class LifelineEventJson internal constructor(
     /** Whether the bar starts or stops. */
     public val kind: LifelineKindJson,
     override val id: String,
     /** The participant whose lifeline it is. */
     public val participantId: String,
-    /** The bar's CSS colour. Only on [LifelineKindJson.ACTIVATE]. */
-    public val colour: String?,
+    /** The bar's CSS color. Only on [LifelineKindJson.ACTIVATE]. */
+    public val color: String?,
     override val startedAt: String?,
 ) : EventJson() {
     /** A builder holding this event's values, to make a changed copy. */
     public fun toBuilder(): Builder =
         Builder(kind, id, participantId)
-            .colour(colour)
+            .color(color)
             .startedAt(startedAt)
 
     override fun equals(other: Any?): Boolean = other is LifelineEventJson && fields() == other.fields()
@@ -577,24 +546,23 @@ public class LifelineEventJson internal constructor(
             "kind" to kind,
             "id" to id,
             "participantId" to participantId,
-            "colour" to colour,
+            "color" to color,
             "startedAt" to startedAt,
         )
 
-    @ExperimentalLsdReportModel
     public class Builder internal constructor(
         private val kind: LifelineKindJson,
         private val id: String,
         private val participantId: String,
     ) {
-        private var colour: String? = null
+        private var color: String? = null
         private var startedAt: String? = null
 
-        public fun colour(value: String?): Builder = apply { colour = value }
+        public fun color(value: String?): Builder = apply { color = value }
 
         public fun startedAt(value: String?): Builder = apply { startedAt = value }
 
-        public fun build(): LifelineEventJson = LifelineEventJson(kind, id, participantId, colour, startedAt)
+        public fun build(): LifelineEventJson = LifelineEventJson(kind, id, participantId, color, startedAt)
     }
 
     public companion object {

@@ -295,10 +295,10 @@ const timedFixture: Report = {
   ...uxFixture,
   scenarios: uxFixture.scenarios.map((scenario) => ({
     ...scenario,
-    accuracy: 'TIMESTAMPED',
+    accuracy: 'timestamped',
     pairAccuracy: [
-      { from: 'client', to: 'api', accuracy: 'MEASURED' },
-      { from: 'api', to: 'db', accuracy: 'TIMESTAMPED' },
+      { from: 'client', to: 'api', accuracy: 'measured' },
+      { from: 'api', to: 'db', accuracy: 'timestamped' },
     ],
     events: scenario.events.map((event) => {
       if (event.kind !== 'message') return event

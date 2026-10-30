@@ -363,7 +363,7 @@ class TimingApiTest {
         lsd.completeScenario("pairs", status = Status.SUCCESS)
         val scenario = report(lsd, "Pairs")
         assertTrue(
-            scenario.obj.objects("pairAccuracy").any { it.toMap() == mapOf("from" to "api", "to" to "bus", "accuracy" to "STRUCTURE_ONLY") },
+            scenario.obj.objects("pairAccuracy").any { it.toMap() == mapOf("from" to "api", "to" to "bus", "accuracy" to "structure_only") },
             scenario.json,
         )
     }
@@ -466,13 +466,13 @@ class TimingApiTest {
         call.reply("200")
         lsd.completeScenario("measured", status = Status.SUCCESS)
         val scenario = report(lsd, "Measured")
-        assertEquals("TRACED", scenario["accuracy"])
-        assertEquals("SAME_SOURCE", scenario["clockOrdering"])
+        assertEquals("traced", scenario["accuracy"])
+        assertEquals("same_source", scenario["clockOrdering"])
         // The call is the measured one, paired by its call id; the reply names it and carries no duration.
         val sent = scenario.message("GET /x")
         val reply = scenario.message("200")
-        assertEquals(listOf("MEASURED", "CALL_ID"), listOf(sent["timing"], sent["pairing"]))
-        assertEquals(listOf("NONE", "CALL_ID"), listOf(reply["timing"], reply["pairing"]))
+        assertEquals(listOf("measured", "call_id"), listOf(sent["timing"], sent["pairing"]))
+        assertEquals(listOf("none", "call_id"), listOf(reply["timing"], reply["pairing"]))
         assertEquals(call.callId, reply["replyTo"])
         assertEquals(listOf("t1", "t1"), listOf(sent, reply).map { it.obj("trace")?.get("traceId") })
         val took = sent["durationMs"] as Double
@@ -487,8 +487,8 @@ class TimingApiTest {
         lsd.call("A", "B", "x", timing = Timing.at(t(0))).reply("ok", timing = Timing.at(t(40)))
         lsd.completeScenario("derived", status = Status.SUCCESS)
         val scenario = report(lsd, "Derived")
-        assertEquals("TIMESTAMPED", scenario["accuracy"])
-        assertEquals(listOf("DERIVED", 40.0), scenario.message("x").let { listOf(it["timing"], it["durationMs"]) })
+        assertEquals("timestamped", scenario["accuracy"])
+        assertEquals(listOf("derived", 40.0), scenario.message("x").let { listOf(it["timing"], it["durationMs"]) })
     }
 
     @Test
@@ -508,9 +508,15 @@ class TimingApiTest {
     @Test
     fun `the call carries its reply's duration and the paired reply carries none`() {
         val lsd = LsdContext()
-        lsd.accept(Interaction(InteractionKind.REQUEST, "orders", "payments", "POST /pay", interactionId = "c1"))
-        lsd.accept(Interaction(InteractionKind.RESPONSE, "payments", "orders", "201", replyTo = "c1", durationMs = 30.5))
-        lsd.accept(Interaction(InteractionKind.PUBLISH, "orders", "kafka", "paid", durationMs = 2.0))
+        lsd.accept(Interaction.builder(InteractionKind.REQUEST, "orders", "payments", "POST /pay").interactionId("c1").build())
+        lsd.accept(
+            Interaction
+                .builder(InteractionKind.RESPONSE, "payments", "orders", "201")
+                .replyTo("c1")
+                .durationMs(30.5)
+                .build(),
+        )
+        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "orders", "kafka", "paid").durationMs(2.0).build())
         lsd.completeScenario("moved", status = Status.SUCCESS)
         val scenario = report(lsd, "Moved")
         assertEquals(30.5, scenario.message("POST /pay")["durationMs"])
@@ -530,7 +536,7 @@ class TimingApiTest {
         b.reply("ok")
         lsd.completeScenario("spans", status = Status.SUCCESS)
         val scenario = report(lsd, "Spans")
-        assertEquals(emptyList<Any?>(), warnings(scenario, "LONGER_THAN_PARENT"), "the child is inside A (300 ms), not B (50 ms)")
+        assertEquals(emptyList<Any?>(), warnings(scenario, "longer_than_parent"), "the child is inside A (300 ms), not B (50 ms)")
     }
 
     @Test
@@ -542,7 +548,7 @@ class TimingApiTest {
         a.reply("ok")
         b.reply("ok")
         lsd.completeScenario("stack", status = Status.SUCCESS)
-        val longer = warnings(report(lsd, "Stack"), "LONGER_THAN_PARENT")
+        val longer = warnings(report(lsd, "Stack"), "longer_than_parent")
         assertEquals(1, longer.size, longer.toString())
         assertTrue(longer.single()!!.startsWith("'child' took 100 ms, more than 'B'"), longer.toString())
     }
@@ -558,7 +564,7 @@ class TimingApiTest {
         // Only the longer child is a warning; a shorter child is fine.
         assertEquals(
             listOf("'authorise' took 250.5 ms, more than 'POST /orders' (100 ms) that it runs inside"),
-            warnings(report(lsd, "Longer"), "LONGER_THAN_PARENT"),
+            warnings(report(lsd, "Longer"), "longer_than_parent"),
         )
     }
 
@@ -566,9 +572,15 @@ class TimingApiTest {
     fun `interaction headers become the payload's headers, beside the body, and are redacted`() {
         val lsd = LsdContext()
         val headers = mapOf("content-type" to "application/json", "Authorization" to "Bearer secret")
-        lsd.accept(Interaction(InteractionKind.REQUEST, "web", "api", "POST /orders", data = mapOf("id" to 7), headers = headers))
-        lsd.accept(Interaction(InteractionKind.PUBLISH, "api", "kafka", "order.placed", headers = mapOf("lsd-scenario" to "abc")))
-        lsd.accept(Interaction(InteractionKind.MESSAGE, "api", "db", "plain", data = "body only"))
+        lsd.accept(
+            Interaction
+                .builder(InteractionKind.REQUEST, "web", "api", "POST /orders")
+                .data(mapOf("id" to 7))
+                .headers(headers)
+                .build(),
+        )
+        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "api", "kafka", "order.placed").headers(mapOf("lsd-scenario" to "abc")).build())
+        lsd.accept(Interaction.builder(InteractionKind.MESSAGE, "api", "db", "plain").data("body only").build())
         lsd.completeScenario("headers", status = Status.SUCCESS)
         val scenario = report(lsd, "Headers")
         val posted = scenario.message("POST /orders").obj("data")!!
@@ -590,16 +602,33 @@ class TimingApiTest {
     @Test
     fun `ingested lsd-distributed style data is guessed and tops out at MEASURED`() {
         val lsd = LsdContext()
-        lsd.accept(Interaction(InteractionKind.REQUEST, "orders", "payments", "POST /pay", trace = Trace("tid"), source = "orders", startedAt = t(0)))
         lsd.accept(
-            Interaction(InteractionKind.RESPONSE, "payments", "orders", "200", trace = Trace("tid"), source = "orders", startedAt = t(30), durationMs = 30.0),
+            Interaction
+                .builder(InteractionKind.REQUEST, "orders", "payments", "POST /pay")
+                .trace(Trace("tid"))
+                .source("orders")
+                .startedAt(t(0))
+                .build(),
         )
-        lsd.accept(Interaction(InteractionKind.PUBLISH, "orders", "kafka", "paid", durationMs = 0.0))
+        lsd.accept(
+            Interaction
+                .builder(
+                    InteractionKind.RESPONSE,
+                    "payments",
+                    "orders",
+                    "200",
+                ).trace(Trace("tid"))
+                .source("orders")
+                .startedAt(t(30))
+                .durationMs(30.0)
+                .build(),
+        )
+        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "orders", "kafka", "paid").durationMs(0.0).build())
         lsd.completeScenario("distributed", status = Status.SUCCESS)
         val scenario = report(lsd, "Distributed")
-        assertEquals(listOf("GUESSED", "GUESSED"), listOf("POST /pay", "200").map { scenario.message(it)["pairing"] })
-        assertEquals("MEASURED", scenario["accuracy"])
-        assertEquals(0.0, scenario["pairingCoverage"])
+        assertEquals(listOf("guessed", "guessed"), listOf("POST /pay", "200").map { scenario.message(it)["pairing"] })
+        assertEquals("measured", scenario["accuracy"])
+        assertEquals(0.0, scenario["pairedRatio"])
     }
 
     @Test
@@ -614,7 +643,7 @@ class TimingApiTest {
         lsd.message("A", "B", "early", timing = Timing.at(t(0)))
         lsd.completeScenario("off", status = Status.SUCCESS)
         val scenario = report(lsd, "Configured")
-        assertEquals("OFF", scenario["clockOrdering"])
+        assertEquals("off", scenario["clockOrdering"])
         assertEquals(listOf("late", "early"), scenario.labels, "OFF keeps capture order")
         lsd.configure { it.orderByStartedAt(null) }
         assertNull(lsd.timingConfig.orderByStartedAt())

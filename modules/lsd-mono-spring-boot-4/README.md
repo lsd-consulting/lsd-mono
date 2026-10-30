@@ -9,6 +9,7 @@ It draws:
 - **inbound Spring MVC** requests the app serves (`Client → Shop: POST /orders`, and the reply with its status and latency);
 - **inbound WebFlux** requests, annotated controllers and router functions alike, drawn the same way;
 - **`WebTestClient` requests** from Spring Boot's auto-configured client (`@AutoConfigureWebTestClient`), bound to the application context or to a running server, drawn in the test's scenario like any other request to the app, and one the test builds itself ([below](#a-webtestclient-the-test-builds-itself));
+- **`RestTestClient` requests** from Spring Boot's auto-configured client (`@AutoConfigureRestTestClient`), bound to MockMvc, the application context or a running server, drawn in the test's scenario even with tests running in parallel, and one the test builds itself ([below](#a-resttestclient-or-testresttemplate-the-test-builds-itself));
 - **outbound `RestClient` and `RestTemplate`** calls made through Spring Boot's `RestClient.Builder` and `RestTemplateBuilder` (`Shop → Pricing: POST /quotes`), with a server-sent event reply drawn as its events while the app streams it;
 - **outbound `WebClient`** calls through any `WebClient.Builder` or `WebClient` bean, Spring Boot's builder or one the app builds itself, with both bodies, and nested under the request being served even after the reactive chain hops threads;
 - **Kafka records sent** through any Spring producer factory the app's beans use (Spring Boot's own, or one the app builds itself), so any `KafkaTemplate`, as a publish from the app to the topic (`Shop → orders.placed: publish "lamp-01"`, with the key, headers and payload);
@@ -59,6 +60,21 @@ WebTestClient client = WebTestClient.bindToController(new OrderController())
 ```
 
 It sends the test's scenario with each request and, with no app filter in the chain, draws the requests itself, with the same names as the app's own filter: the app is named from the test's application context (`lsd.mono.spring.app-name`, else `spring.application.name`) and the caller is `lsd.mono.spring.client-name` (`Client` by default), so the app is one participant however the client is bound. `lsd.mono.spring.multipart.parts.enabled` is read from the same context. Applying it twice, or to Spring Boot's client, adds nothing.
+
+## A RestTestClient or TestRestTemplate the test builds itself
+
+Spring Boot's own `RestTestClient` and `TestRestTemplate` need nothing. A client the test builds needs one interceptor, however it is bound:
+
+```java
+RestTestClient client = RestTestClient.bindToController(new OrderController())
+        .requestInterceptor(LsdRestTestClient.interceptor())
+        .build();
+
+TestRestTemplate template = new TestRestTemplate(
+        new RestTemplateBuilder().additionalInterceptors(LsdRestTestClient.interceptor()));
+```
+
+To a server (a URI with a host) it sends the test's scenario in `lsd-scenario`, so the app's filter draws the request in the right scenario even when other tests run at the same time. In the JVM (MockMvc, the application context, a controller or a router function, with no base URL or a loopback one while the test runs no server) it draws the request and its reply itself, named as the app's own filter names them, and marks the request so that the app's filter, when it is in the chain, serves it under the same call rather than drawing it twice. Applying it more than once, or adding it to Spring Boot's client (`auto.mutate().requestInterceptor(...)`), adds nothing.
 
 ## WebSockets
 
@@ -166,12 +182,16 @@ A test class that already has `@ExtendWith(LsdExtension::class)` ([lsd-mono-juni
   - An `HttpHandlerDecoratorFactory` bean wraps the server's handler, and a `WebTestClient`'s bound to the context, which Spring builds the same way. During a scenario it wraps the response, so after a failure the reply drawn is the body the `WebExceptionHandler` writes (Spring Boot's error JSON).
   - It also reads the head of a multipart request (up to 256 KB, sized or chunked) before the app does, then hands every byte on, so `@RequestPart` and `ServerRequest.multipartData()` work as before. It has to sit in the handler decorator rather than in the `WebFilter`: WebFlux parses multipart data from the request the exchange was created with.
 - A `WebTestClientBuilderCustomizer` adds a filter to Spring Boot's `WebTestClient` that sends the test's scenario in `lsd-scenario` (always when bound to the context, where nothing leaves the JVM; to loopback hosts or `lsd.mono.propagation.allowedHosts` when bound to a server), so the app's own filter draws the request in the right scenario. `LsdWebTestClient.configurer()` adds the same filter to a client the test builds, and, when it is bound to a controller, router function or web handler, the starter's `WebFilter` and response wrapper.
+- A `RestTestClientBuilderCustomizer` adds `LsdRestTestClient.interceptor()` to Spring Boot's `RestTestClient`. Headers the starter adds (`lsd-*`) are left out of the diagram.
 - For `WebClient` it registers a bean post-processor that adds an `ExchangeFilterFunction` to every `WebClient.Builder` bean (Spring Boot's included) and rebuilds every `WebClient` bean that lacks it. The reply is drawn when the app has read its body.
 - Streamed bodies are summarised, never consumed or held whole: a server-sent event stream is drawn as its event count and its first five events (`event`, `id`, `data`), a multipart body as its parts (name, file name, type and size, never the contents). A multipart or event-stream body over 256 KB is summarised from its first 256 KB and marked `truncated`. An event stream read through `RestClient` or `RestTemplate` is copied as the app reads it, and its reply is drawn once: when the app reads to the end, or, marked `truncated`, when it closes the stream before then.
 - Not covered:
   - a client built inline and never a bean (`RestClient.create()`, `new RestTemplate()` in a method, `WebClient.create()`): neither Spring nor the clients offer a global hook short of bytecode instrumentation. Build it from Spring Boot's injected `RestClient.Builder`, `RestTemplateBuilder` or `WebClient.Builder`, or declare it as a bean;
   - a server-sent event response through `RestClient` or `RestTemplate` that the app neither reads to the end nor closes: its reply is never drawn, since nothing marks when the app is done with it. Reading it without the app would consume the stream, so the starter waits for the app;
   - a `WebTestClient` the test builds bound to a controller, router function or web handler, unless it applies `LsdWebTestClient.configurer()` ([above](#a-webtestclient-the-test-builds-itself)).
+  - a test client's own timeout (`ResourceAccessException`) on a call to the server: the diagram shows the server's side, the reply the app wrote (`200 OK`, say), not the client giving up;
+  - headers named `lsd-*` are hidden from the diagram, the starter's own and a test's alike, so a header such as `lsd-tenant` reaches the app but is not shown (a known limitation);
+  - a `RestTestClient`, `TestRestTemplate` or `RestTemplate` the test builds without `LsdRestTestClient.interceptor()`: drawn by the app's filter when the request reaches it, but with tests running in parallel it may land outside its test's scenario, and bound to a controller or router function (no filter in the chain) it is not drawn;
 - Work a request hands to another thread keeps its scenario and the request that handed it over:
   - For Spring's `ThreadPoolTaskExecutor`, `ThreadPoolTaskScheduler` and `SimpleAsyncTaskExecutor` beans (Spring Boot's `applicationTaskExecutor`, so `@Async`, included) it registers a bean post-processor that adds a `TaskDecorator`. It is composed with the app's own decorator (a `CompositeTaskDecorator`, the app's inside), and captures the request when the task is submitted.
   - A plain `ExecutorService` or `ScheduledExecutorService` bean (`Executors.newFixedThreadPool(4)`, a `ThreadPoolExecutorFactoryBean` excepted) is wrapped so each task it is given keeps its scenario: `submit`, `execute`, `invokeAll`, `invokeAny` and the `schedule` methods. It is wrapped only when declared as one of those interfaces, so whatever injects it still gets what it asked for; Spring shuts the pool itself down as before.

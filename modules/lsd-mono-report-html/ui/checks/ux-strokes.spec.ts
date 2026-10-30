@@ -9,20 +9,20 @@ import { reportBase, untimed } from '../src/lib/report-fixture.test-util'
 
 const PALETTE = ['#38bdf8', '#34d399', '#a78bfa', '#fbbf24', '#94a3b8', '#fb7185', '#f87171', '#16a34a', '#fde047']
 const TYPES: MessageType[] = [
-  'SYNCHRONOUS',
-  'SYNCHRONOUS_RESPONSE',
-  'ASYNCHRONOUS',
-  'LOST',
-  'BI_DIRECTIONAL',
-  'SHORT_INBOUND',
-  'SHORT_OUTBOUND',
+  'synchronous',
+  'synchronous_response',
+  'asynchronous',
+  'lost',
+  'bi_directional',
+  'short_inbound',
+  'short_outbound',
 ]
 
 const report: Report = {
   ...reportBase(),
   title: 'Strokes',
   generatedAt: '2026-01-15T12:00:00+00:00',
-  generator: 'ux-strokes',
+  generator: { name: 'ux-strokes' },
   scenarios: [
     {
       ...untimed(),
@@ -33,20 +33,20 @@ const report: Report = {
       facts: [],
       metrics: [],
       participants: [
-        { id: 'a', name: 'A', type: 'ACTOR' },
-        ...PALETTE.map((colour, i) => ({ id: `p${i}`, name: `P${i}`, type: 'PARTICIPANT' as const, colour })),
-        { id: 'db', name: 'Db', type: 'DATABASE' },
-        { id: 'q', name: 'Q', type: 'QUEUE' },
+        { id: 'a', name: 'A', type: 'actor' },
+        ...PALETTE.map((colour, i) => ({ id: `p${i}`, name: `P${i}`, type: 'participant' as const, color: colour })),
+        { id: 'db', name: 'Db', type: 'database' },
+        { id: 'q', name: 'Q', type: 'queue' },
       ],
       events: TYPES.flatMap((type) =>
         [undefined, ...PALETTE].map((colour, i): MessageEvent => ({
           kind: 'message',
           id: `${type}-${i}`,
-          from: type === 'SHORT_INBOUND' ? '' : 'a',
-          to: type === 'SHORT_OUTBOUND' ? '' : 'p0',
+          from: type === 'short_inbound' ? '' : 'a',
+          to: type === 'short_outbound' ? '' : 'p0',
           label: 'x',
           type,
-          colour,
+          color: colour,
           data: { n: 1 },
         })),
       ),
@@ -63,9 +63,9 @@ for (const theme of THEMES) {
       const canvas = document.createElement('canvas')
       canvas.width = canvas.height = 1
       const ctx = canvas.getContext('2d', { willReadFrequently: true })!
-      const rgba = (colour: string) => {
+      const rgba = (color: string) => {
         ctx.clearRect(0, 0, 1, 1)
-        ctx.fillStyle = colour
+        ctx.fillStyle = color
         ctx.fillRect(0, 0, 1, 1)
         return [...ctx.getImageData(0, 0, 1, 1).data]
       }

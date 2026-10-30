@@ -26,12 +26,12 @@ const events: DiagramEvent[] = [
     from: 'a',
     to: 'b',
     label: 'place order',
-    type: 'SYNCHRONOUS',
+    type: 'synchronous',
     data: { method: 'POST' },
   },
   { kind: 'note', id: 'n1', text: 'wait', placement: 'over' },
-  { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'ack', type: 'SYNCHRONOUS_RESPONSE' },
-  { kind: 'message', id: 'm3', from: 'a', to: 'b', label: 'charge', type: 'SYNCHRONOUS', data: { path: '/pay' } },
+  { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'ack', type: 'synchronous_response' },
+  { kind: 'message', id: 'm3', from: 'a', to: 'b', label: 'charge', type: 'synchronous', data: { path: '/pay' } },
 ]
 
 describe('diagram keyboard', () => {
@@ -86,10 +86,10 @@ describe('diagram keyboard', () => {
 
 describe('focus for a message whose lane is hidden', () => {
   const lanes: DiagramEvent[] = [
-    { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'one', type: 'SYNCHRONOUS', data: 1 },
-    { kind: 'message', id: 'm2', from: 'a', to: 'c', label: 'two', type: 'SYNCHRONOUS', data: 2 },
-    { kind: 'message', id: 'm3', from: 'b', to: 'a', label: 'three', type: 'SYNCHRONOUS' },
-    { kind: 'message', id: 'm4', from: 'b', to: 'a', label: 'four', type: 'SYNCHRONOUS', data: 4 },
+    { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'one', type: 'synchronous', data: 1 },
+    { kind: 'message', id: 'm2', from: 'a', to: 'c', label: 'two', type: 'synchronous', data: 2 },
+    { kind: 'message', id: 'm3', from: 'b', to: 'a', label: 'three', type: 'synchronous' },
+    { kind: 'message', id: 'm4', from: 'b', to: 'a', label: 'four', type: 'synchronous', data: 4 },
   ]
 
   it('keeps a drawn, focusable message', () => {
@@ -185,7 +185,7 @@ describe('arrow hit box', () => {
 describe('focus scroll keeps the top label', () => {
   it('scrolls to the label above the arrow, which the first row already insets', () => {
     const rows = layoutRows([
-      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'synchronous' },
     ])
     expect(rows[0].y).toBe(TOP_LABEL_PAD)
     expect(TOP_LABEL_PAD).toBeGreaterThan(MESSAGE_LABEL_RISE)
@@ -205,7 +205,7 @@ describe('focus scroll keeps the top label', () => {
 describe('reduced motion and payload places', () => {
   it('treats a deferred payload id as focusable when the body is not on the message', () => {
     const deferred: DiagramEvent[] = [
-      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS', payloadId: 's/m' },
+      { kind: 'message', id: 'm', from: 'a', to: 'b', label: 'place order', type: 'synchronous', payloadId: 's/m' },
     ]
     expect(messagePlaces(deferred, new Set())[0].focusable).toBe(true)
   })

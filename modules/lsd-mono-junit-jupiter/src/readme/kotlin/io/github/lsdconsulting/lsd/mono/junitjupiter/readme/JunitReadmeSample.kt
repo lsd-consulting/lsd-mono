@@ -17,7 +17,7 @@ import io.github.lsdconsulting.lsd.mono.jvm.domain.Status
  * `POST /orders` so the shared screenshot script can open the inspector).
  */
 fun main() {
-    val lsd = LsdContext()
+    val lsd = LsdContext.instance
     lsd.clear()
     lsd.addParticipants(
         ACTOR.called("Customer"),

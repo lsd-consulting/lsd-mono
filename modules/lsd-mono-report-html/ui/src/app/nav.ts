@@ -7,9 +7,9 @@ import { upgradeHtml } from '../lib/schema-version'
 import { type HashRef } from '../lib/report-hash'
 import { stepSelection } from '../ui/selection'
 import { forgetDiagrams } from '../lib/sequence-diagram'
-import { navFoldLabel, navItemTooltip } from '../ui/sidebar'
+import { navFoldLabel, navItemTooltip, sidebarTitleText } from '../ui/sidebar'
 import { isStacked } from '../lib/media'
-import { statusLabel } from '../ui/format'
+import { statusDotHtml, statusLabel } from '../ui/format'
 import { indexNavHtml, orEmptyNavHtml } from '../ui/index-nav'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { filtered, indexEntry } from './filters'
@@ -17,6 +17,7 @@ import { index, session, state } from './context'
 import { focusScenarioHeading, renderMain, scrollToScenario } from './main-view'
 import { applyRef } from './routing'
 import { openingScenario } from './intents'
+import { forgetSearchOrigin } from './search-origin'
 export function renderNav(): void {
   paintNavFold()
   if (index) {
@@ -38,7 +39,7 @@ export function renderNav(): void {
         return `
       <li>
         <button type="button" data-nav="${escapeAttr(s.id)}"${state.selectedId === s.id ? ' aria-current="true"' : ''} aria-controls="main"${tooltip}>
-          <span class="dot ${escapeAttr(s.status)}"></span>
+          ${statusDotHtml(s.status)}
           <span class="nav-icon" aria-hidden="true">${number}</span>
           <span class="nav-text">
             <div class="nav-title">${escapeHtml(s.title)}</div>
@@ -71,8 +72,15 @@ function paintNavFold(): void {
   sidebar.classList.toggle('nav-folded', !open)
   toggle.setAttribute('aria-expanded', String(open))
   toggle.hidden = state.query.trim() !== ''
-  const count = index ? index.reports.length : session.report.scenarios.length
-  toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(count, index ? 'report' : 'scenario')
+  if (index) {
+    toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(index.reports.length, 'report')
+  } else {
+    const count = session.report.scenarios.length
+    const shown = filtered().length
+    toggle.querySelector('.nav-fold-text')!.textContent = navFoldLabel(count, 'scenario', shown)
+    const title = sidebar.querySelector('.sidebar-title')
+    if (title) title.textContent = sidebarTitleText(count, shown)
+  }
   toggle.querySelector('.nav-fold-glyph')!.textContent = open ? '▴' : '▾'
 }
 
@@ -190,9 +198,12 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
 export function revealFiltered(scenarioId: string): void {
   if (filtered().some((s) => s.id === scenarioId)) return
   state.query = ''
-  for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
+  for (const s of ['success', 'warn', 'error', 'skipped', 'aborted'] as Status[]) state.status[s] = true
   const search = document.querySelector<HTMLInputElement>('#search')
   if (search) search.value = ''
+  forgetSearchOrigin()
+  const clear = document.querySelector<HTMLElement>('#search-clear')
+  if (clear) clear.hidden = true
   document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
 }
 
@@ -209,6 +220,7 @@ export function selectScenario(id: string): void {
   if (!session.report.scenarios.some((s) => s.id === id)) return
   const main = document.querySelector('#main')!
   const focusInMain = main.contains(document.activeElement)
+  forgetSearchOrigin()
   state.selectedId = id
   renderNav()
   renderMain()

@@ -30,10 +30,10 @@ function scenario(): Scenario {
     facts: [],
     metrics: [],
     participants: [
-      { id: 'a', name: 'Shop', type: 'PARTICIPANT' },
-      { id: 'b', name: 'Bank', type: 'PARTICIPANT' },
+      { id: 'a', name: 'Shop', type: 'participant' },
+      { id: 'b', name: 'Bank', type: 'participant' },
     ],
-    events: [{ kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'charge', type: 'SYNCHRONOUS' }],
+    events: [{ kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'charge', type: 'synchronous' }],
   } as unknown as Scenario
 }
 
@@ -118,14 +118,14 @@ function tallScenario(n = 40): Scenario {
   const id = (i: number) => `p${i}`
   return {
     ...base,
-    participants: Array.from({ length: n }, (_, i) => ({ id: id(i), name: `Service ${i}`, type: 'PARTICIPANT' })),
+    participants: Array.from({ length: n }, (_, i) => ({ id: id(i), name: `Service ${i}`, type: 'participant' })),
     events: Array.from({ length: n - 1 }, (_, i) => ({
       kind: 'message',
       id: `m${i}`,
       from: id(i),
       to: id(i + 1),
       label: `call ${i}`,
-      type: 'SYNCHRONOUS',
+      type: 'synchronous',
     })),
   } as unknown as Scenario
 }
@@ -306,14 +306,14 @@ describe('Components zoom', () => {
 
   it('1:1 centres the selected link, else the busiest component on a fresh fit (#120)', () => {
     const s = scenario()
-    s.participants.push({ id: 'c', name: 'Card', type: 'PARTICIPANT' })
+    s.participants.push({ id: 'c', name: 'Card', type: 'participant' })
     s.events.push({
       kind: 'message',
       id: 'm2',
       from: 'c',
       to: 'b',
       label: 'auth',
-      type: 'SYNCHRONOUS',
+      type: 'synchronous',
     })
     const { scroller, id } = view({ width: 100, height: 60 }, s)
     bindComponentZoom(scroller)

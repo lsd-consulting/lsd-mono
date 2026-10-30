@@ -12,9 +12,20 @@ import { focusDiagramMessage, setFindHooks, syncDiagramWindow } from '../lib/seq
 import { currentMode, getPreferredTheme } from '../ui/theme'
 import { bindThemeMenu, themeControlHtml } from '../ui/theme-menu'
 import { bindHelpDialog, helpDialogHtml } from '../ui/help-dialog'
-import { applySidebarCollapsed, sidebarToggleGlyph, sidebarToggleLabel, storeSidebarCollapsed } from '../ui/sidebar'
-import { statusLabel } from '../ui/format'
+import {
+  applySidebarCollapsed,
+  sidebarTitleText,
+  sidebarToggleGlyph,
+  sidebarToggleLabel,
+  storeSidebarCollapsed,
+} from '../ui/sidebar'
+import { histSegmentHtml, statusGlyph, statusLabel, topbarTitleText } from '../ui/format'
+import { bindStatusLegend, statusDefinitionId, statusLegendHtml } from '../ui/status-legend'
 import { cssEscape, escapeAttr, escapeHtml } from '../lib/escape'
+import { bindExampleIntro, exampleIntroHtml, showExampleIntro } from '../ui/example-intro'
+import { searchStatusText } from '../ui/search-status'
+import { searchOriginAfter } from './search-origin'
+import { clearField } from './keys'
 import { trackTopbarHeight } from '../lib/topbar-height'
 import { repoLinkAttrsHtml } from '../ui/repo-link'
 import { revealSideways } from '../lib/reveal'
@@ -31,7 +42,7 @@ import {
   panelFindQuery,
   refreshPanelFind,
 } from './panel'
-import { counts } from './filters'
+import { counts, filtered } from './filters'
 import { writeScenarioHash } from './url-hash'
 import { index, session, state, app } from './context'
 import { mainClick } from './intents'
@@ -50,24 +61,29 @@ export function renderShell(): void {
       <div class="brand">
         <a class="brand-mark repo-link" ${repoLinkAttrsHtml('Living Sequence Diagrams: lsd-mono on GitHub')}>LSD</a>
         <div>
-          <div>Report</div>
+          <div class="brand-title">${escapeHtml(topbarTitleText(Boolean(index), session.report.title))}</div>
           <div class="brand-sub">Living Sequence Diagrams</div>
         </div>
       </div>
       <div class="search-wrap">
         <span class="search-icon" aria-hidden="true">⌕</span>
         <input type="search" id="search" placeholder="${index ? 'Search reports, scenarios…' : 'Search scenarios, facts…'}" value="${escapeAttr(state.query)}" aria-label="Search scenarios" autocomplete="off"/>
-        <span class="kbd">/</span>
+        <button type="button" class="search-clear" id="search-clear" aria-label="Clear search" title="Clear search"${state.query ? '' : ' hidden'}>×</button>
+        <span class="kbd"${state.query ? ' hidden' : ''}>/</span>
+        <span class="visually-hidden" id="search-status" role="status" aria-live="polite"></span>
       </div>
       <div class="filters" role="group" aria-label="Status filters">
-        ${(['success', 'warn', 'error'] as Status[])
+        ${(['success', 'warn', 'error', 'skipped', 'aborted'] as Status[])
+          // Skipped and aborted only get a filter when the report has some.
+          .filter((s) => s === 'success' || s === 'warn' || s === 'error' || c[s] > 0)
           .map(
             (s) => `
-          <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}">
-            <span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
+          <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}" aria-describedby="${escapeAttr(statusDefinitionId(s))}">
+            <span class="chip-glyph" aria-hidden="true">${escapeHtml(statusGlyph(s))}</span><span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
           </button>`,
           )
           .join('')}
+        ${statusLegendHtml()}
       </div>
       <div class="top-actions">
         ${themeControlHtml(mode, theme)}
@@ -79,17 +95,20 @@ export function renderShell(): void {
       <label class="help-setting"><input type="checkbox" id="single-keys"${singleKeysEnabled() ? ' checked' : ''}/> <span class="help-setting-text">${singleKeysLabelHtml()}</span></label>`)}
     <div class="shell${state.sidebarCollapsed ? ' sidebar-collapsed' : ''}">
       <aside class="sidebar" id="sidebar" aria-label="${index ? 'Reports' : 'Scenarios'}">
+        ${showExampleIntro(window) ? exampleIntroHtml() : ''}
         <div class="sidebar-head">
           <button type="button" class="nav-fold" id="btn-nav-fold" aria-controls="scenario-nav" aria-expanded="false"><span class="nav-fold-text"></span> <span class="nav-fold-glyph" aria-hidden="true">▾</span></button>
-          <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : `Scenarios · ${total}`}</p>
+          <p class="sidebar-title">${index ? `Reports · ${index.reports.length} · ${total} scenarios` : escapeHtml(sidebarTitleText(total))}</p>
           <button type="button" class="icon-btn sidebar-toggle" id="btn-sidebar" aria-controls="sidebar"
             aria-expanded="${!state.sidebarCollapsed}" aria-label="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}"
             title="${escapeAttr(sidebarToggleLabel(state.sidebarCollapsed))}">${escapeHtml(sidebarToggleGlyph(state.sidebarCollapsed))}</button>
         </div>
         <div class="hist" aria-hidden="true" title="Status mix">
-          <span class="s" style="width:${(c.success / total) * 100 || 0}%"></span>
-          <span class="w" style="width:${(c.warn / total) * 100 || 0}%"></span>
-          <span class="e" style="width:${(c.error / total) * 100 || 0}%"></span>
+          ${histSegmentHtml('s', 'success', c.success, (c.success / total) * 100 || 0)}
+          ${histSegmentHtml('w', 'warn', c.warn, (c.warn / total) * 100 || 0)}
+          ${histSegmentHtml('e', 'error', c.error, (c.error / total) * 100 || 0)}
+          ${histSegmentHtml('k', 'skipped', c.skipped, (c.skipped / total) * 100 || 0)}
+          ${histSegmentHtml('a', 'aborted', c.aborted, (c.aborted / total) * 100 || 0)}
         </div>
         <ul class="scenario-nav${index ? ' index-nav' : ''}" id="scenario-nav"></ul>
       </aside>
@@ -107,6 +126,8 @@ export function renderShell(): void {
 
 function bindChrome(): void {
   bindFilters()
+  bindExampleIntro(document, window)
+  bindStatusLegend(document)
   bindTopbarButtons()
   bindSidePanel()
   const main = document.querySelector<HTMLElement>('#main')!
@@ -122,17 +143,42 @@ function bindChrome(): void {
 /** Search, the status chips, and the empty state's Clear filters button. */
 function bindFilters(): void {
   const search = document.querySelector<HTMLInputElement>('#search')!
+  const clear = document.querySelector<HTMLButtonElement>('#search-clear')!
+  const slash = search.parentElement!.querySelector<HTMLElement>('.kbd')
+  const status = document.querySelector<HTMLElement>('#search-status')!
+  let announce: ReturnType<typeof setTimeout> | undefined
   search.addEventListener('input', () => {
+    const before = state.query
     state.query = search.value
+    const back = searchOriginAfter(before, state.query, state.selectedId)
+    if (back) state.selectedId = back
+    clear.hidden = search.value === ''
+    if (slash) slash.hidden = search.value !== ''
     renderNav()
     renderMain()
+    // The count, once typing pauses, so a screen reader is not read every keystroke.
+    clearTimeout(announce)
+    if (index) return
+    announce = setTimeout(() => {
+      status.textContent = searchStatusText(
+        filtered().length,
+        session.report.scenarios.length,
+        state.query.trim() !== '',
+      )
+    }, 500)
+  })
+  clear.addEventListener('click', () => {
+    clearField(search)
+    search.focus()
   })
   // The empty state's Clear filters button.
   document.querySelector('#main')!.addEventListener('click', (ev) => {
     if (!(ev.target as Element).closest?.('[data-clear-filters]')) return
     state.query = ''
     search.value = ''
-    for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
+    clear.hidden = true
+    if (slash) slash.hidden = false
+    for (const s of ['success', 'warn', 'error', 'skipped', 'aborted'] as Status[]) state.status[s] = true
     document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
     renderNav()
     renderMain()

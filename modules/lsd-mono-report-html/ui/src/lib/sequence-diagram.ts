@@ -4,6 +4,7 @@ import type { MessageEvent, Scenario } from '../types'
 import { drawnFocusTarget, focusScrollTop, focusablePlaces, messageHasPayload, messagePlaces } from './diagram-a11y'
 import { unscaledViewport } from './diagram-view'
 import { headerHtml } from './diagram/rows'
+import { messageArrowSpec } from './diagram/shapes'
 import { textViewHtml } from './diagram/text-view'
 import { type DiagramView, type MountedDiagram, diagramState, diagramView } from './diagram/state'
 import { findFieldLabel, scenarioSearchState, searchStateHtml } from './diagram/search-reveal'
@@ -24,20 +25,24 @@ export { syncDiagramWindow } from './diagram/window'
 export { PRINT_MAX_UPSCALE, diagramPads, frameOf, paintedMessageIds, sliceViewTop } from './diagram/geometry'
 export { findFieldLabel } from './diagram/search-reveal'
 
-function mountDiagram(scenario: Scenario, labelMaxWidth: number): MountedDiagram {
+function mountDiagram(scenario: Scenario, labelMaxChars: number): MountedDiagram {
   const rows = layoutRows(scenario.events)
   const diagram: MountedDiagram = {
     scenario,
     rows,
     width: diagramWidth(scenario.participants.length),
     height: bodyHeight(rows),
-    labelMaxWidth,
+    labelMaxChars,
   }
   diagramState.mounted.set(scenario.id, diagram)
   return diagram
 }
 
 /** Bar chart, drawn in currentColor. Decorative: the button's text is its name. */
+/** Find's magnifier, the collapsed Find on a narrow toolbar (#123). */
+const FIND_ICON_SVG =
+  '<svg class="zoom-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+
 const METRICS_ICON_SVG =
   '<svg class="panel-btn-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M2.5 13.5h11M4.5 11V8M8 11V4M11.5 11V6.5"/></svg>'
 
@@ -82,14 +87,16 @@ function toolbarHtml(scenario: Scenario, view: DiagramView): string {
   const find = scenarioSearchState(scenario.id)
   const steppable = find.hits.length > 0 ? '' : ' disabled'
   const label = findFieldLabel(view.includePayloads && scenarioHasPayloads(scenario))
+  const findId = `find-${scenario.id}`
   // The hidden-participants chip is drawn by bindParticipantFilter, and only while
   // something is hidden. The status line announces each hide and show.
   return `
-    <div class="seq-toolbar" role="toolbar" aria-label="Diagram view">
+    <div class="seq-toolbar" role="toolbar" aria-label="Diagram view"${view.query ? ' data-find-open' : ''}>
       ${zoomControlsHtml(sequenceZoomShown(view))}
       <div class="participant-filter" data-participant-filter></div>
       <span class="participant-filter-status visually-hidden" role="status"></span>
-      <label class="diagram-find">
+      <button type="button" class="find-toggle" data-find-toggle aria-expanded="${view.query ? 'true' : 'false'}" aria-controls="${escapeAttr(findId)}" aria-label="Find in diagram" title="Find messages and notes">${FIND_ICON_SVG}</button>
+      <label class="diagram-find" id="${escapeAttr(findId)}">
         <span class="diagram-find-label">Find</span>
         <span class="find-field"><input type="search" data-diagram-find value="${escapeAttr(view.query)}" placeholder="Messages and notes" aria-label="${escapeAttr(label)}" autocomplete="off"/>${payloadToggleHtml(scenario, view)}</span>
         <span class="diagram-find-count" aria-live="polite">${searchStateHtml(find, view.query)}</span>
@@ -122,9 +129,42 @@ function payloadLegendHtml(scenario: Scenario): string {
   return `<p class="payload-legend"><span class="payload-legend-key" aria-hidden="true">{}</span><span class="visually-hidden">An arrow marked with braces</span> has a payload: <span class="legend-click">click</span><span class="legend-tap">tap</span> the arrow to open it</p>`
 }
 
+/** A short sample of one arrow kind, as drawn in the diagram: line dash and tip. */
+function arrowKeySvg(dash: string | null, tip: 'filled' | 'open'): string {
+  const line = `<line class="arrow-key-line" x1="1" y1="6" x2="${tip === 'open' ? 25 : 22}" y2="6"${dash ? ` stroke-dasharray="${escapeAttr(dash)}"` : ''}/>`
+  const head =
+    tip === 'open'
+      ? `<path class="arrow-key-line" d="M18 1 L27 6 L18 11" stroke-linejoin="round"/>`
+      : `<path class="arrow-key-fill" d="M21 2 L29 6 L21 10 z"/>`
+  return `<svg width="30" height="12" viewBox="0 0 30 12" aria-hidden="true" focusable="false">${line}${head}</svg>`
+}
+
+/**
+ * The arrow key, when a scenario has async messages: call, reply and async side by side, so
+ * the dotted line and open tip are explained in words, not left to colour or guesswork.
+ */
+export function arrowLegendHtml(scenario: Scenario): string {
+  const types = new Set(scenario.events.flatMap((e) => (e.kind === 'message' ? [e.type] : [])))
+  if (!types.has('asynchronous')) return ''
+  const reply = messageArrowSpec('synchronous_response')
+  const async = messageArrowSpec('asynchronous')
+  const keys = [
+    `<span class="arrow-key">${arrowKeySvg(null, 'filled')}Call</span>`,
+    types.has('synchronous_response') ? `<span class="arrow-key">${arrowKeySvg(reply.dash, 'filled')}Reply</span>` : '',
+    `<span class="arrow-key">${arrowKeySvg(async.dash, 'open')}Async (dotted, open tip)</span>`,
+  ]
+  return `<p class="arrow-legend">${keys.join('')}</p>`
+}
+
+/** The arrow key and the payload line share one row under the toolbar, wrapping when narrow. */
+function legendsHtml(scenario: Scenario): string {
+  const html = arrowLegendHtml(scenario) + payloadLegendHtml(scenario)
+  return html ? `<div class="diagram-legends">${html}</div>` : ''
+}
+
 /** Continuous diagram: sticky participant header, section jump list, virtualised rows. */
-export function renderDiagramHtml(scenario: Scenario, labelMaxWidth: number): string {
-  const diagram = mountDiagram(scenario, labelMaxWidth)
+export function renderDiagramHtml(scenario: Scenario, labelMaxChars: number): string {
+  const diagram = mountDiagram(scenario, labelMaxChars)
   const view = diagramView(scenario.id)
   const frame = frameOf(diagram, view.hidden)
   const width = frame.total
@@ -142,9 +182,9 @@ export function renderDiagramHtml(scenario: Scenario, labelMaxWidth: number): st
     : ''
   return `
     <div class="seq-diagram" style="${printWidthStyle(width)}">
-      ${jump}
       ${toolbarHtml(scenario, view)}
-      ${payloadLegendHtml(scenario)}
+      ${jump}
+      ${legendsHtml(scenario)}
       ${textViewHtml(
         scenario,
         diagram.rows.map((row) => row.event),

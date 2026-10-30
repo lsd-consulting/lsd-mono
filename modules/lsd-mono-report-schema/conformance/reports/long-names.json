@@ -1,12 +1,14 @@
 {
-  "schemaVersion": "0.3.0",
+  "schemaVersion": "1.0.0",
   "title": "Long names and a long report title and a long report title and a long report title and a long report title and a long report title and a long report title",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "lsd-mono-jvm (conformance)",
+  "generator": {
+    "name": "lsd-mono-jvm"
+  },
   "status": "success",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "api"
   },
@@ -36,19 +38,19 @@
         {
           "id": "checkout",
           "name": "Customer facing checkout experience orchestration service (EU West, blue deployment)",
-          "type": "PARTICIPANT"
+          "type": "participant"
         },
         {
           "id": "long",
           "name": "VeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAtVeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAt",
-          "type": "PARTICIPANT",
-          "alias": "VeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAtVeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAt display"
+          "type": "participant",
+          "displayName": "VeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAtVeryLongServiceNameThatKeepsGoingWithoutAnySpacesToBreakAt display"
         },
         {
           "id": "db",
           "name": "Db",
-          "type": "DATABASE",
-          "alias": "The primary relational database cluster for orders and payments"
+          "type": "database",
+          "displayName": "The primary relational database cluster for orders and payments"
         }
       ],
       "events": [
@@ -58,11 +60,11 @@
           "from": "checkout",
           "to": "long",
           "label": "GET /v1/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/very-long-path-segment/items?expand=everything",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "seq": 1,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE"
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "message",
@@ -70,12 +72,12 @@
           "from": "long",
           "to": "checkout",
           "label": "200 OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK OK",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "seq": 2,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
-          "replyOf": "1"
+          "replyTo": "1",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "message",
@@ -83,11 +85,11 @@
           "from": "long",
           "to": "db",
           "label": "SELECT column_1, column_2, column_3, column_4, column_5, column_6, column_7, column_8, column_9, column_10, column_11, column_12, column_13, column_14, column_15, column_16, column_17, column_18, column_19, column_20, column_21, column_22, column_23, column_24, column_25, column_26, column_27, column_28, column_29, column_30, column_31, column_32, column_33, column_34, column_35, column_36, column_37, column_38, column_39, column_40, column_41, column_42, column_43, column_44, column_45, column_46, column_47, column_48, column_49, column_50, column_51, column_52, column_53, column_54, column_55, column_56, column_57, column_58, column_59, column_60 FROM orders",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "seq": 3,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE"
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "message",
@@ -95,12 +97,12 @@
           "from": "db",
           "to": "long",
           "label": "60 rows",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "seq": 4,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
-          "replyOf": "3"
+          "replyTo": "3",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "note",
@@ -110,14 +112,14 @@
           "placement": "over"
         }
       ],
-      "accuracy": "STRUCTURE_ONLY",
-      "measuredCoverage": 0,
-      "pairingCoverage": 0,
+      "accuracy": "structure_only",
+      "measuredRatio": 0,
+      "pairedRatio": 0,
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     }
   ]
 }

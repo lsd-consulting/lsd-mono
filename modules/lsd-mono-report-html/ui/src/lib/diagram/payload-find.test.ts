@@ -5,9 +5,9 @@ import { payloadMatches, refreshPayloadFind, setPayloadLoader, setPayloadSlicer 
 import { diagramState, diagramView, forgetDiagrams } from './state'
 
 const events: DiagramEvent[] = [
-  { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS', payloadId: 's/m1' },
-  { kind: 'message', id: 'm2', from: 'b', to: 'c', label: 'reserve', type: 'SYNCHRONOUS', data: { sku: 'SOCK-1' } },
-  { kind: 'message', id: 'm3', from: 'c', to: 'b', label: 'ok', type: 'SYNCHRONOUS_RESPONSE' },
+  { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'place order', type: 'synchronous', payloadId: 's/m1' },
+  { kind: 'message', id: 'm2', from: 'b', to: 'c', label: 'reserve', type: 'synchronous', data: { sku: 'SOCK-1' } },
+  { kind: 'message', id: 'm3', from: 'c', to: 'b', label: 'ok', type: 'synchronous_response' },
   { kind: 'note', id: 'n1', text: 'gift wrap', over: 'b', placement: 'over' },
 ]
 const scenario = { id: 's', events } as unknown as Scenario

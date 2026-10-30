@@ -6,7 +6,7 @@ import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { diagramState, forgetDiagrams } from './state'
 import { flushDiagramPaints } from './invalidate'
 import { untimed } from '../report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../../ui/format'
 
 function scenario(withPayloads = true): Scenario {
   return {
@@ -18,8 +18,8 @@ function scenario(withPayloads = true): Scenario {
     facts: [],
     metrics: [],
     participants: [
-      { id: 'a', name: 'Client', type: 'ACTOR' },
-      { id: 'b', name: 'Api', type: 'PARTICIPANT' },
+      { id: 'a', name: 'Client', type: 'actor' },
+      { id: 'b', name: 'Api', type: 'participant' },
     ],
     events: [
       {
@@ -28,17 +28,17 @@ function scenario(withPayloads = true): Scenario {
         from: 'a',
         to: 'b',
         label: 'place order',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
         ...(withPayloads ? { payloadId: 'toolbar/m1' } : {}),
       },
-      { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'snowdrop ok', type: 'SYNCHRONOUS_RESPONSE' },
+      { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'snowdrop ok', type: 'synchronous_response' },
     ],
   }
 }
 
 function mount(s: Scenario) {
   const host = document.createElement('div')
-  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
+  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_CHARS)
   document.body.append(host)
   const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
   Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })
@@ -141,5 +141,53 @@ describe('the Find toolbar and payloads', () => {
     expect(host.querySelector('.msg-open[data-message-id="m1"]')!.getAttribute('aria-label')).toBe(
       'Open place order, Client to Api, call, has payload, current search match in payload',
     )
+  })
+})
+
+describe('the Find magnifier on a narrow toolbar (#123)', () => {
+  afterEach(() => {
+    forgetDiagrams()
+    document.body.innerHTML = ''
+  })
+
+  const magnifier = (host: HTMLElement) => host.querySelector<HTMLButtonElement>('[data-find-toggle]')!
+  const toolbar = (host: HTMLElement) => host.querySelector<HTMLElement>('.seq-toolbar')!
+
+  it('comes before the field it controls, collapsed, and the toolbar comes before the section links', () => {
+    const { host, find } = mount(scenario())
+    const button = magnifier(host)
+    expect(button.getAttribute('aria-expanded')).toBe('false')
+    expect(button.getAttribute('aria-controls')).toBe(find.closest('.diagram-find')!.id)
+    expect(button.getAttribute('aria-label')).toBe('Find in diagram')
+    expect(button.compareDocumentPosition(find) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(toolbar(host).hasAttribute('data-find-open')).toBe(false)
+  })
+
+  it('opens Find and focuses the field, and a second press collapses it', () => {
+    const { host, find } = mount(scenario())
+    const button = magnifier(host)
+    button.click()
+    expect(button.getAttribute('aria-expanded')).toBe('true')
+    expect(toolbar(host).hasAttribute('data-find-open')).toBe(true)
+    expect(document.activeElement).toBe(find)
+    button.click()
+    expect(button.getAttribute('aria-expanded')).toBe('false')
+    expect(toolbar(host).hasAttribute('data-find-open')).toBe(false)
+  })
+
+  it('collapseFindFrom closes Find to a drawn magnifier, and does nothing when it is not drawn or the field is not Find', async () => {
+    const { collapseFindFrom } = await import('./find-binding')
+    const { host, find } = mount(scenario())
+    const button = magnifier(host)
+    button.click()
+    // No client rects: a wide toolbar, where the magnifier is not drawn.
+    const rects = vi.spyOn(button, 'getClientRects').mockReturnValue([] as unknown as DOMRectList)
+    expect(collapseFindFrom(find)).toBeNull()
+    expect(button.getAttribute('aria-expanded')).toBe('true')
+    rects.mockReturnValue([{}] as unknown as DOMRectList)
+    expect(collapseFindFrom(host.querySelector('.seq-scroll')!)).toBeNull()
+    expect(collapseFindFrom(find)).toBe(button)
+    expect(button.getAttribute('aria-expanded')).toBe('false')
+    expect(toolbar(host).hasAttribute('data-find-open')).toBe(false)
   })
 })

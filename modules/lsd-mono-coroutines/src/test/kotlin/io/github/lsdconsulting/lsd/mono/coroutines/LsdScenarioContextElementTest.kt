@@ -1,9 +1,9 @@
 package io.github.lsdconsulting.lsd.mono.coroutines
 
-import io.github.lsdconsulting.lsd.mono.jvm.LsdContext
 import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario
 import io.github.lsdconsulting.lsd.mono.jvm.testing.LsdTestConfig
 import io.github.lsdconsulting.lsd.mono.jvm.testing.ReportJson
+import io.github.lsdconsulting.lsd.mono.jvm.testing.isolatedLsdContext
 import io.github.lsdconsulting.lsd.mono.report.model.testing.ReportSchemas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -38,7 +38,7 @@ class LsdScenarioContextElementTest {
     @TempDir
     lateinit var tempDir: Path
 
-    private val lsd = LsdContext()
+    private val lsd = isolatedLsdContext()
 
     @AfterEach
     fun restore() {

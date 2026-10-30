@@ -23,6 +23,21 @@ describe('schemaFit', () => {
     expect(schemaFit(2, '0.1.0')).toEqual({ kind: 'not-a-version', version: '2' })
   })
 
+  it('reads every 0.x report, and a 1.x one of its minor or older, as a 1.0 page', () => {
+    for (const version of ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '1.0.0', '1.0.5']) {
+      expect(schemaFit(version, '1.0.0'), version).toEqual({ kind: 'readable' })
+    }
+    expect(schemaFit('1.1.0', '1.0.0')).toEqual({ kind: 'newer-minor', version: '1.1.0' })
+    expect(schemaFit('2.0.0', '1.0.0')).toEqual({ kind: 'newer-major', version: '2.0.0' })
+  })
+
+  it('is a 1.x page, so the 0.x reports and indexes still open', () => {
+    expect(REPORT_SCHEMA_VERSION.split('.')[0]).toBe('1')
+    expect(schemaFit('0.3.0')).toEqual({ kind: 'readable' })
+    expect(schemaFit('0.1.0')).toEqual({ kind: 'readable' })
+    expect(unreadableFit({ schemaVersion: '0.3.0' })).toBeNull()
+  })
+
   it('compares with the version the UI was generated from by default', () => {
     expect(schemaFit(REPORT_SCHEMA_VERSION)).toEqual({ kind: 'readable' })
     expect(unreadableFit({ schemaVersion: '99.0.0' })).toEqual({ kind: 'newer-major', version: '99.0.0' })

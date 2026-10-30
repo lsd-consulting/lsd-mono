@@ -20,7 +20,7 @@ const manifest: IndexManifest = {
   ...indexBase(),
   title: 'LSD reports',
   generatedAt: '2026-01-15T12:00:00+00:00',
-  generator: 'ux-fixture',
+  generator: { name: 'ux-fixture' },
   reports: [
     {
       id: 'orders',
@@ -28,8 +28,8 @@ const manifest: IndexManifest = {
       status: 'error',
       href: 'orders-diagram.html',
       data: 'orders-report.js',
-      counts: { success: 0, warn: 0, error: 1 },
-      scenarios: [{ id: 'refund', title: 'Refund', status: 'error', messages: 14 }],
+      counts: { success: 0, warn: 0, error: 1, skipped: 0, aborted: 0 },
+      scenarios: [{ id: 'refund', title: 'Refund', status: 'error', messageCount: 14 }],
     },
     {
       id: 'checkout',
@@ -37,8 +37,8 @@ const manifest: IndexManifest = {
       status: 'success',
       href: 'checkout-diagram.html',
       data: 'checkout-report.js',
-      counts: { success: 1, warn: 0, error: 0 },
-      scenarios: [{ id: 'ux', title: 'Checkout', status: 'success', messages: 14 }],
+      counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+      scenarios: [{ id: 'ux', title: 'Checkout', status: 'success', messageCount: 14 }],
     },
   ],
 }

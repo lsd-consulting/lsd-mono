@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
 import org.springframework.boot.restclient.RestClientCustomizer
 import org.springframework.boot.restclient.RestTemplateCustomizer
+import org.springframework.boot.resttestclient.autoconfigure.RestTestClientBuilderCustomizer
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.boot.webtestclient.autoconfigure.WebTestClientBuilderCustomizer
@@ -101,6 +102,23 @@ public class LsdAutoConfiguration {
         @Bean
         public fun lsdWebTestClientCustomizer(): WebTestClientBuilderCustomizer =
             WebTestClientBuilderCustomizer { it.filter(LsdWebTestClient.filter()) }
+    }
+
+    /**
+     * Spring Boot's `RestTestClient`: bound to a server, its requests carry the test's scenario, so
+     * the app draws them in it even when several tests run at once; bound to MockMvc or the
+     * application context, it draws them itself, once (see [LsdRestTestClient]).
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(
+        name = [
+            "org.springframework.boot.resttestclient.autoconfigure.RestTestClientBuilderCustomizer",
+            "org.springframework.test.web.servlet.client.RestTestClient",
+        ],
+    )
+    internal class RestTestClients {
+        @Bean
+        public fun lsdRestTestClientCustomizer(): RestTestClientBuilderCustomizer = LsdRestTestClients.customizer()
     }
 
     /**

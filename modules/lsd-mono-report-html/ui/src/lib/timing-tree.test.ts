@@ -20,7 +20,7 @@ describe('timeline follows the library tree', () => {
   it('pairs duplicate spans as the library did: second inside first', () => {
     const s = scenario('duplicate span')
     expect(row(s, 'second').depth).toBe(row(s, 'first').depth + 1)
-    expect(s.warnings?.map((w) => w.kind)).toEqual(['DUPLICATE_SPAN'])
+    expect(s.warnings?.map((w) => w.kind)).toEqual(['duplicate_span'])
   })
 
   it('keeps the library order when ALL_SOURCES keeps a disagreeing pair apart', () => {

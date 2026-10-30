@@ -16,12 +16,12 @@ const scenario = {
   facts: [],
   metrics: [],
   participants: [
-    { id: 'a', name: 'Shop', type: 'PARTICIPANT' },
-    { id: 'b', name: 'Bank', type: 'PARTICIPANT' },
+    { id: 'a', name: 'Shop', type: 'participant' },
+    { id: 'b', name: 'Bank', type: 'participant' },
   ],
   events: [
-    { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'charge', type: 'SYNCHRONOUS' },
-    { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'charged', type: 'ASYNCHRONOUS' },
+    { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'charge', type: 'synchronous' },
+    { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'charged', type: 'asynchronous' },
   ],
 } as unknown as Scenario
 

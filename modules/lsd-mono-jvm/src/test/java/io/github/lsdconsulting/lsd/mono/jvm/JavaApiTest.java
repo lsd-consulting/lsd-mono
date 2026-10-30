@@ -1,5 +1,6 @@
 package io.github.lsdconsulting.lsd.mono.jvm;
 
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,10 +46,10 @@ class JavaApiTest {
 
         lsd.message("Customer", "Api");
         lsd.message("Customer", "Api", "POST /orders");
-        lsd.message("Customer", "Api", "POST /orders", new Order("o-1"));
-        lsd.message("Customer", "Api", "lost", null, MessageType.LOST);
+        lsd.message("Customer", "Api", "POST /orders", MessageType.SYNCHRONOUS, new Order("o-1"));
+        lsd.message("Customer", "Api", "lost", MessageType.LOST, null);
         lsd.message("Customer", "Api", "lost again", MessageType.LOST);
-        lsd.message("Api", "Db", "late", null, MessageType.SYNCHRONOUS, "#f00", Timing.of(Instant.parse("2026-01-01T00:00:00Z"), java.time.Duration.ofMillis(5)));
+        lsd.message("Api", "Db", "late", MessageType.SYNCHRONOUS, null, "#f00", Timing.of(Instant.parse("2026-01-01T00:00:00Z"), java.time.Duration.ofMillis(5)));
         lsd.response("Db", "Api");
         lsd.response("Db", "Api", "1 row", Map.of("rows", 1));
         lsd.async("Api", "Queue", "order.placed");
@@ -89,7 +90,7 @@ class JavaApiTest {
                 "divider", "delay", "delay", "spacer", "spacer", "message", "message", "message", "note", "message",
                 "message", "message", "message", "message", "message"),
             values(json.getEvents(), "kind"));
-        assertTrue(values(json.getMessages(), "timing").contains("MEASURED"), json.toString());
+        assertTrue(values(json.getMessages(), "timing").contains("measured"), json.toString());
         // The order is inline, or in the payloads file when the data is held there.
         boolean inline = json.getMessages().stream()
                 .anyMatch(m -> m.get("data") instanceof Map<?, ?> data && "o-1".equals(data.get("order")));
@@ -98,7 +99,7 @@ class JavaApiTest {
         assertTrue(json.getLabels().contains("IllegalStateException"), json.toString());
         assertEquals(
                 2,
-                values(json.getMessages(), "type").stream().filter("LOST"::equals).count(),
+                values(json.getMessages(), "type").stream().filter("lost"::equals).count(),
                 "a MessageType in the data position is the type");
     }
 
@@ -110,7 +111,7 @@ class JavaApiTest {
         lsd.message("A", "B", "ping");
         lsd.completeScenario("java-timing");
         ScenarioJson json = report(lsd.completeReport("Java timing")).scenario("java-timing");
-        assertEquals("OFF", json.get("clockOrdering"), json.toString());
+        assertEquals("off", json.get("clockOrdering"), json.toString());
 
         lsd.configure(t -> t.orderByStartedAt(null));
         assertEquals(null, lsd.getTimingConfig().orderByStartedAt());
@@ -186,7 +187,7 @@ class JavaApiTest {
         LsdScenario scenario = lsd.beginScenario("java-traps", "java-traps", false);
         try (LsdBinding bound = scenario.bind()) {
             lsd.message("A", "B", "null type", null);
-            lsd.message("A", "B", "null type with data", Map.of("k", 1), null);
+            lsd.message("A", "B", "null type with data", null, Map.of("k", 1));
             assertSame(scenario, lsd.currentScenario());
         }
         assertEquals(null, lsd.currentScenario(), "closing the binding restores the previous one");
@@ -197,29 +198,18 @@ class JavaApiTest {
 
         ScenarioJson json = report(lsd.completeReport("Java traps", "java-traps")).scenario("Traps");
         assertEquals(List.of("null type", "null type with data"), json.getLabels());
-        assertEquals(List.of("SYNCHRONOUS", "SYNCHRONOUS"), values(json.getMessages(), "type"));
+        assertEquals(List.of("synchronous", "synchronous"), values(json.getMessages(), "type"));
     }
 
     @Test
     void interactionsWithStatusAndHeadersCanBeBuiltFromJava() throws IOException {
         LsdContext lsd = new LsdContext();
-        lsd.accept(new Interaction(InteractionKind.REQUEST, "Web", "Api", "POST /orders", null, "c1"));
-        lsd.accept(new Interaction(InteractionKind.RESPONSE, "Api", "Web", "Created", "201", null, "c1"));
-        lsd.accept(new Interaction(
-                InteractionKind.PUBLISH,
-                "Api",
-                "Kafka",
-                "order.placed",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                Map.of("id", 7),
-                Map.of("content-type", "application/json", "Authorization", "Bearer secret")));
+        lsd.accept(Interaction.builder(InteractionKind.REQUEST, "Web", "Api", "POST /orders").interactionId("c1").build());
+        lsd.accept(Interaction.builder(InteractionKind.RESPONSE, "Api", "Web", "Created").status("201").replyTo("c1").build());
+        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "Api", "Kafka", "order.placed")
+            .data(Map.of("id", 7))
+            .headers(Map.of("content-type", "application/json", "Authorization", "Bearer secret"))
+            .build());
         lsd.completeScenario("java-interactions");
 
         Path file = reportJson(lsd.completeReport("Java interactions"));

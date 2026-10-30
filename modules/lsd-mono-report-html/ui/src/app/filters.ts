@@ -10,7 +10,7 @@ export function counts() {
       acc[s.status]++
       return acc
     },
-    { success: 0, warn: 0, error: 0 } as Record<Status, number>,
+    { success: 0, warn: 0, error: 0, skipped: 0, aborted: 0 } as Record<Status, number>,
   )
 }
 

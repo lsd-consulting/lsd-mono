@@ -15,9 +15,14 @@ Each diagram shows who called whom, with what payload, how long it took, and whe
 
 **[See a live report →](https://lsd-consulting.github.io/lsd-mono/example-report.html)** (an online shop checkout across 14 services) · [Spring Boot sample](https://lsd-consulting.github.io/lsd-mono/spring-boot-4/) · [http4k sample](https://lsd-consulting.github.io/lsd-mono/http4k-6/) · [Ktor sample](https://lsd-consulting.github.io/lsd-mono/ktor-3/)
 
-[![A still from the report tour: the Online shop report with its scenario list, timing summary, description and sequence diagram. Select it to play the animated tour: choosing a scenario, zoom, find, an arrow's JSON, the component diagram, metrics, hiding a participant, the themes and the collapsed scenario list](docs/readme/feature-tour.png)](docs/readme/feature-tour.gif)
+<a href="docs/readme/feature-tour.gif">
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/readme/feature-tour.png">
+  <img src="docs/readme/feature-tour.gif" alt="A still from the report tour: the Online shop report with its scenario list, timing summary, description and sequence diagram. Select it to play the animated tour: choosing a scenario, zoom, find, an arrow's JSON, the component diagram, metrics, hiding a participant, the themes and the collapsed scenario list">
+</picture>
+</a>
 
-*A still from the tour. [Play the animated tour (GIF)](docs/readme/feature-tour.gif).*
+*Animated tour of the report. If your system asks for less motion, you'll see a still; [open the animated tour (GIF)](docs/readme/feature-tour.gif).*
 
 ## Supported stacks today
 

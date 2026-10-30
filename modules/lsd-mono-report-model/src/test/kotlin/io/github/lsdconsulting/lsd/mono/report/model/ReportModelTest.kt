@@ -20,14 +20,14 @@ class ReportModelTest {
             .builder(
                 title = "Orders",
                 generatedAt = "2026-10-21T08:00:00Z",
-                generator = "my-adapter 1.0",
+                generator = GeneratorJson("my-adapter", "1.0"),
                 status = StatusJson.SUCCESS,
             ).build()
         assertEquals(
             ReportOptionsJson
                 .builder()
                 .metricsEnabled(true)
-                .labelMaxWidth(200)
+                .labelMaxChars(200)
                 .usagePing(true)
                 .source("api")
                 .build(),
@@ -39,7 +39,7 @@ class ReportModelTest {
         assertEquals(emptyList<EventJson>(), scenario.events)
         assertNull(scenario.accuracy, "the page works the timing out")
         assertNull(scenario.sources)
-        assertEquals("PARTICIPANT", ParticipantJson.builder("a", "A").build().type)
+        assertEquals("participant", ParticipantJson.builder("a", "A").build().type)
         assertEquals(NotePlacementJson.OVER, NoteEventJson.builder("n1", "hello").build().placement)
         assertEquals(TraceJson("t", null, null), TraceJson("t"), "a trace needs only its trace id")
     }
@@ -163,6 +163,7 @@ class ReportModelTest {
             value is Int -> value + 1
             value is Double -> value + 1
             value is Boolean -> !value
+            value is GeneratorJson -> value.copy(name = value.name + "-changed")
             else -> error("$where: give pairs() a bare value that differs, or teach otherThan ${value?.javaClass}")
         }
 
@@ -266,10 +267,9 @@ class ReportModelTest {
         val message =
             MessageEventJson
                 .builder("m1", "a", "b", "POST /orders", KnownMessageType.SYNCHRONOUS)
-                .colour("red")
+                .color("red")
                 .durationMs(1.5)
                 .data(DataValueJson.from(mapOf("method" to "POST")))
-                .payloadId("s1/m1")
                 .startedAt("2026-10-21T08:00:00Z")
                 .seq(1)
                 .callId("c1")
@@ -283,15 +283,14 @@ class ReportModelTest {
                 .pairing(KnownPairingSource.CALL_ID)
                 .order(KnownOrderSource.SEQUENCE)
                 .parentId("m0")
-                .replyOf("m0")
                 .attribute("http.route", "/orders")
                 .origin(KnownMessageOrigin.IMPORTED)
                 .build()
         val participant = ParticipantJson
             .builder("a", "A")
             .type(KnownParticipantType.ACTOR)
-            .alias("Ay")
-            .colour("blue")
+            .displayName("Ay")
+            .color("blue")
             .attribute("service.name", "a")
             .build()
         val error = ScenarioErrorJson.builder("AssertionError", "expected 2").stack("at Test.kt:1").build()
@@ -305,30 +304,30 @@ class ReportModelTest {
                 .event(message)
                 .error(error)
                 .accuracy(AccuracyJson.MEASURED)
-                .measuredCoverage(1.0)
-                .pairingCoverage(1.0)
+                .measuredRatio(1.0)
+                .pairedRatio(1.0)
                 .sources(listOf("local"))
                 .wallClockMs(2.0)
                 .clockOrdering(ClockOrderingJson.SAME_SOURCE)
-                .clockOrdered(0)
-                .warning(WarningJson(KnownWarningKind.SKEW, "skew"))
+                .clockOrderedCount(0)
+                .warning(WarningJson.builder(KnownWarningKind.SKEW, "skew").build())
                 .reorderedByClock(listOf("m1"))
-                .pairAccuracy(listOf(PairAccuracyJson("a", "b", AccuracyJson.MEASURED)))
+                .pairAccuracy(listOf(PairAccuracyJson.builder("a", "b", AccuracyJson.MEASURED).build()))
                 .build()
         val options = ReportOptionsJson
             .builder()
             .metricsEnabled(false)
-            .labelMaxWidth(80)
+            .labelMaxChars(80)
             .usagePing(false)
             .source(KnownReportSource.JUNIT)
             .build()
         val report = ReportJson
-            .builder("Orders", "2026-10-21T08:00:00Z", "test 1.0", StatusJson.ERROR)
+            .builder("Orders", "2026-10-21T08:00:00Z", GeneratorJson("test", "1.0"), StatusJson.ERROR)
             .options(options)
             .scenario(scenario)
             .build()
         return listOf(
-            report to ReportJson.builder("Orders", "2026-10-21T08:00:00Z", "test 1.0", StatusJson.ERROR).build(),
+            report to ReportJson.builder("Orders", "2026-10-21T08:00:00Z", GeneratorJson("test", "1.0"), StatusJson.ERROR).build(),
             options to ReportOptionsJson.builder().build(),
             scenario to ScenarioJson.builder("s1", "One", StatusJson.ERROR).build(),
             error to ScenarioErrorJson.builder("AssertionError", "expected 2").build(),
@@ -355,7 +354,7 @@ class ReportModelTest {
             SectionEventJson.builder("se1", "Pay").startedAt("2026-10-21T08:00:00Z").build() to SectionEventJson.builder("se1", "Pay").build(),
             LifelineEventJson
                 .builder(LifelineKindJson.ACTIVATE, "l1", "a")
-                .colour("green")
+                .color("green")
                 .startedAt("2026-10-21T08:00:00Z")
                 .build() to
                 LifelineEventJson.builder(LifelineKindJson.ACTIVATE, "l1", "a").build(),

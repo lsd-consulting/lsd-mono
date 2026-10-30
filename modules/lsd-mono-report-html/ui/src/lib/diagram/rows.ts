@@ -110,7 +110,7 @@ function headerSlots(
   return headSlots(
     visible.map((p, i) => ({
       id: p.id,
-      name: p.alias ?? p.name,
+      name: p.displayName ?? p.name,
       typeLabel: participantHead(p.type).typeLabel,
       x: (xFor(i, index) + frame.left) * zoom,
     })),
@@ -118,14 +118,17 @@ function headerSlots(
   )
 }
 
-/** A participant header box with no colour of its own: a neutral outline. */
-const HEADER_COLOUR = '#94a3b8'
+/**
+ * A participant header box with no colour of its own: a neutral outline. The value is per theme
+ * (tokens.css): #94a3b8 in dark, #64748b in light, so it keeps 3:1 on a light page.
+ */
+const HEADER_COLOUR = 'var(--diagram-neutral)'
 /** An activation bar whose participant has no colour of its own: the theme's accent. */
 const ACTIVATION_COLOUR = 'var(--accent)'
 /** An arrow (or an activation of an unknown participant) with no colour to take: the default green. */
-const ARROW_COLOUR = '#34d399'
+const ARROW_COLOUR = 'var(--diagram-arrow)'
 /** A response arrow with no colour of its own: neutral, so it reads as the reply to its call. */
-const RESPONSE_COLOUR = '#94a3b8'
+const RESPONSE_COLOUR = 'var(--diagram-neutral)'
 /**
  * A message with no colour of its own whose status is an error (see isErrorStatus, the Errors
  * metric's rule): the theme's error red. The label and inspector still say so in words.
@@ -134,7 +137,7 @@ const ERROR_COLOUR = 'var(--error)'
 
 /** Each participant's colour by id, using `fallback` for a participant with none. */
 function laneColours(participants: readonly Participant[], fallback: string): Map<string, string> {
-  return new Map(participants.map((p) => [p.id, p.colour ?? fallback]))
+  return new Map(participants.map((p) => [p.id, p.color ?? fallback]))
 }
 
 function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlySet<string>, zoom: number): string {
@@ -144,18 +147,18 @@ function headerSvg(scenario: Scenario, frame: DiagramFrame, hiddenIds: ReadonlyS
   const boxes = visible
     .map((p, i) => {
       const x = xFor(i, index)
-      const name = p.alias ?? p.name
+      const name = p.displayName ?? p.name
       const head = participantHeadFor(p)
-      const colour = escapeAttr(p.colour ?? HEADER_COLOUR)
+      const color = escapeAttr(p.color ?? HEADER_COLOUR)
       return `
-      <g class="participant-box" data-participant="${escapeAttr(p.id)}" data-participant-type="${escapeAttr(head.type)}" transform="translate(${x}, 0)" style="--pc:${colour}">
+      <g class="participant-box" data-participant="${escapeAttr(p.id)}" data-participant-type="${escapeAttr(head.type)}" transform="translate(${x}, 0)" style="--pc:${color}">
         <title>${escapeHtml(name)}, ${head.typeLabel}</title>
         ${head.shapeSvg}
         ${participantLabelSvg(head, head.name)}
       </g>`
     })
     .join('')
-  const summary = visible.map((p) => `${p.alias ?? p.name} ${participantHead(p.type).typeLabel}`).join(', ')
+  const summary = visible.map((p) => `${p.displayName ?? p.name} ${participantHead(p.type).typeLabel}`).join(', ')
   const dispW = width * zoom
   const dispH = HEADER_BLOCK_H * zoom
   return `<svg class="seq-header-svg" viewBox="${-frame.left} 0 ${width} ${HEADER_BLOCK_H}" width="${dispW}" height="${dispH}" role="img" aria-label="Participants: ${escapeAttr(summary)}">${boxes}</svg>`
@@ -202,7 +205,7 @@ export function windowSvg(
         y: y0,
         width: ACT_W,
         height: y1 - y0,
-        colour: span.colour,
+        color: span.color,
         fallback,
       })
     })
@@ -224,7 +227,7 @@ export function windowSvg(
   const buttons: string[] = []
   const body = slice
     .map((row) =>
-      renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxWidth, paint, buttons, viewTop, view.zoom),
+      renderRow(row, width, index, colourOf, ensureMarker, diagram.labelMaxChars, paint, buttons, viewTop, view.zoom),
     )
     .join('')
   const dispW = frame.total * view.zoom
@@ -253,7 +256,7 @@ export function renderRowSvg(
   row: LayoutRow,
   width: number,
   participants: Participant[],
-  labelMaxWidth: number,
+  labelMaxChars: number,
   paint: RowPaint = EMPTY_PAINT,
 ): string {
   const visible = visibleParticipants(participants, paint.hiddenIds)
@@ -262,7 +265,7 @@ export function renderRowSvg(
   const markers = markerSet()
   const ensureMarker = markers.ensure
   const buttons: string[] = []
-  const body = renderRow(row, width, index, colourOf, ensureMarker, labelMaxWidth, paint, buttons, row.y, 1)
+  const body = renderRow(row, width, index, colourOf, ensureMarker, labelMaxChars, paint, buttons, row.y, 1)
   return `<svg><defs>${markers.markup()}</defs>${body}</svg>${buttons.join('')}`
 }
 
@@ -271,8 +274,8 @@ function renderRow(
   width: number,
   index: Map<string, number>,
   colourOf: Map<string, string>,
-  ensureMarker: (colour: string, end: ArrowEnd) => string,
-  labelMaxWidth: number,
+  ensureMarker: (color: string, end: ArrowEnd) => string,
+  labelMaxChars: number,
   paint: RowPaint = EMPTY_PAINT,
   buttons: string[] = [],
   viewTop = 0,
@@ -349,7 +352,7 @@ function renderRow(
     index,
     colourOf,
     ensureMarker,
-    labelMaxWidth,
+    labelMaxChars,
     paint.query,
     buttons,
     viewTop,
@@ -358,9 +361,9 @@ function renderRow(
   )
 }
 
-function messageLabel(msg: MessageEvent, labelMaxWidth: number): string {
+function messageLabel(msg: MessageEvent, labelMaxChars: number): string {
   const full = escapeHtml(msg.label)
-  const shown = escapeHtml(truncateLabel(msg.label, labelMaxWidth))
+  const shown = escapeHtml(truncateLabel(msg.label, labelMaxChars))
   return `<title>${full}</title>${shown}`
 }
 
@@ -386,8 +389,8 @@ function renderMessageRow(
   width: number,
   index: Map<string, number>,
   colourOf: Map<string, string>,
-  ensureMarker: (colour: string, end: ArrowEnd) => string,
-  labelMaxWidth: number,
+  ensureMarker: (color: string, end: ArrowEnd) => string,
+  labelMaxChars: number,
   query: string,
   buttons: string[],
   viewTop: number,
@@ -398,13 +401,13 @@ function renderMessageRow(
   const match = findMatch(msg, query, paint.payloadHits)
   const isError = !!msg.status && isErrorStatus(msg.status)
   const rawColour =
-    msg.colour ||
+    msg.color ||
     (isError ? ERROR_COLOUR : null) ||
-    (msg.type === 'SYNCHRONOUS_RESPONSE' ? RESPONSE_COLOUR : colourOf.get(msg.from || msg.to) || ARROW_COLOUR)
+    (msg.type === 'synchronous_response' ? RESPONSE_COLOUR : colourOf.get(msg.from || msg.to) || ARROW_COLOUR)
   const endId = ensureMarker(rawColour, spec.end)
   const startId = ensureMarker(rawColour, spec.start)
-  const colour = escapeAttr(rawColour)
-  const dashed = spec.dashed ? 'stroke-dasharray="5 4"' : ''
+  const color = escapeAttr(rawColour)
+  const dashed = spec.dash ? `stroke-dasharray="${escapeAttr(spec.dash)}"` : ''
   const markerEnd = endId ? `marker-end="url(#${escapeAttr(endId)})"` : ''
   const markerStart = startId ? `marker-start="url(#${escapeAttr(startId)})"` : ''
   const hasData = messageHasPayload(msg)
@@ -424,7 +427,7 @@ function renderMessageRow(
     Math.max(activationDepthAt(paint.activations ?? [], participantId, at), 0) * ACT_NEST_DX
 
   if (isShortMessage(msg.type)) {
-    const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
+    const participantId = msg.type === 'short_inbound' ? msg.to : msg.from
     const pi = index.get(participantId) ?? 0
     const px = xFor(pi, index) + nest(participantId, y)
     const { x1, x2 } = shortMessageEndpoints(msg.type, px, width)
@@ -432,9 +435,9 @@ function renderMessageRow(
     const label = shortLabelAnchor(msg.type, x1, x2)
     const hitX = (x1 + x2) / 2
     return `
-    <g class="message message-short${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
-      <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${dashed}/>
-      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${mark}${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
+    <g class="message message-short${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${color}">
+      <line class="msg-path" x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="${color}" stroke-width="2" ${markerEnd} ${dashed}/>
+      <text class="msg-label" x="${label.x}" y="-8" text-anchor="${label.anchor}">${mark}${messageLabel(msg, labelMaxChars)}${cue}${dur}${payload}</text>
       ${hasData ? `<circle class="msg-hit" cx="${hitX}" cy="0" r="16"/>` : ''}
     </g>`
   }
@@ -461,9 +464,9 @@ function renderMessageRow(
         ACT_NEST_DX
     const bend = Math.max(out, back) + 48 - ACT_W
     return `
-    <g class="message${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
-      <path class="msg-path" d="M${out} 0 C${bend} 0, ${bend} ${SELF_RETURN_DY}, ${back} ${SELF_RETURN_DY}" fill="none" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-      <text class="msg-label" x="${bend + 8}" y="4">${mark}${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
+    <g class="message${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${color}">
+      <path class="msg-path" d="M${out} 0 C${bend} 0, ${bend} ${SELF_RETURN_DY}, ${back} ${SELF_RETURN_DY}" fill="none" stroke="${color}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
+      <text class="msg-label" x="${bend + 8}" y="4">${mark}${messageLabel(msg, labelMaxChars)}${cue}${dur}${payload}</text>
       ${hasData ? `<circle class="msg-hit" cx="${bend - 8}" cy="11" r="14"/>` : ''}
     </g>`
   }
@@ -472,9 +475,9 @@ function renderMessageRow(
   const lineX1 = x1 + (x2 > x1 ? ACT_W / 2 : -ACT_W / 2) + nest(msg.from, y)
   const lineX2 = x2 + (x2 > x1 ? -ACT_W / 2 : ACT_W / 2) + nest(msg.to, y)
   return `
-  <g class="message${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${colour}">
-    <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${colour}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
-    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${mark}${messageLabel(msg, labelMaxWidth)}${cue}${dur}${payload}</text>
+  <g class="message${hasData ? ' has-data' : ''}${errorClass}${hitClass}" ${typeAttr}${hitAttr} transform="translate(0, ${y})" style="--pc:${color}">
+    <line class="msg-path" x1="${lineX1}" y1="0" x2="${lineX2}" y2="0" stroke="${color}" stroke-width="2" ${markerEnd} ${markerStart} ${dashed}/>
+    <text class="msg-label" x="${labelX}" y="-8" text-anchor="middle">${mark}${messageLabel(msg, labelMaxChars)}${cue}${dur}${payload}</text>
     ${hasData ? `<circle class="msg-hit" cx="${labelX}" cy="0" r="16"/>` : ''}
   </g>`
 }

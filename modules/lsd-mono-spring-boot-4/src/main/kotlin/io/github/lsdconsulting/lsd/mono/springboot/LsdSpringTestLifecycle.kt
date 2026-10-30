@@ -49,7 +49,7 @@ public class LsdSpringTestLifecycle {
                 null -> scenario.complete(title, description, Status.SUCCESS)
                 else ->
                     if (aborted(e)) {
-                        scenario.complete(title, description, Status.WARN, ScenarioError.of("Aborted: ${e.message ?: e.javaClass.simpleName}", e))
+                        scenario.complete(title, description, Status.ABORTED, ScenarioError.of("Aborted: ${e.message ?: e.javaClass.simpleName}", e))
                     } else {
                         scenario.complete(title, description, Status.ERROR, ScenarioError.of(e.message ?: e.javaClass.simpleName, e))
                     }

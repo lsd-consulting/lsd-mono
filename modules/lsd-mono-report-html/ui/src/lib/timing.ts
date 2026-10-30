@@ -46,11 +46,11 @@ interface Node {
   childSum: number
 }
 
-const isCall = (m: MessageEvent) => m.type === 'SYNCHRONOUS' || m.type === 'BI_DIRECTIONAL'
+const isCall = (m: MessageEvent) => m.type === 'synchronous' || m.type === 'bi_directional'
 
 /**
  * Lays the report's call tree on a time axis. The tree comes from the report: each message's
- * `parentId` (the call it runs inside) and each paired reply's `replyOf`, worked out once in the
+ * `parentId` (the call it runs inside) and each paired reply's `replyTo`, worked out once in the
  * library (ids, spans, clock ordering). A call's duration is its `durationMs`: the report
  * writes a paired reply's duration on its call. Starts come from `startedAt` within a single source; otherwise children are packed
  * one after another inside their parent, and the timeline is marked approximate.
@@ -81,8 +81,8 @@ function buildTimeline(scenario: Scenario): Timeline {
   }
   for (const e of scenario.events) {
     if (e.kind !== 'message') continue
-    if (e.type === 'SYNCHRONOUS_RESPONSE') {
-      const call = e.replyOf ? nodes.get(e.replyOf) : undefined
+    if (e.type === 'synchronous_response') {
+      const call = e.replyTo ? nodes.get(e.replyTo) : undefined
       if (call) call.reply = e
       continue
     }
@@ -161,5 +161,5 @@ export function formatMs(ms: number): string {
 
 /** Whether the scenario has any timing worth a Timing view. */
 export function hasTiming(scenario: Scenario): boolean {
-  return scenario.accuracy !== 'STRUCTURE_ONLY'
+  return scenario.accuracy !== 'structure_only'
 }

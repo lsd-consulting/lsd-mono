@@ -25,10 +25,10 @@ function scenario(events: DiagramEvent[], participants: Participant[] = []): Sce
 }
 
 const participants: Participant[] = [
-  { id: 'customer', name: 'Customer', type: 'ACTOR', colour: '#38bdf8' },
-  { id: 'api', name: 'CheckoutAPI', alias: 'API', type: 'PARTICIPANT', colour: '#34d399' },
-  { id: 'db', name: 'OrdersDB', type: 'DATABASE' },
-  { id: 'bus', name: 'EventBus', type: 'QUEUE' },
+  { id: 'customer', name: 'Customer', type: 'actor', color: '#38bdf8' },
+  { id: 'api', name: 'CheckoutAPI', displayName: 'API', type: 'participant', color: '#34d399' },
+  { id: 'db', name: 'OrdersDB', type: 'database' },
+  { id: 'bus', name: 'EventBus', type: 'queue' },
 ]
 
 describe('componentGraph', () => {
@@ -42,7 +42,7 @@ describe('componentGraph', () => {
             from: 'customer',
             to: 'api',
             label: 'POST /checkout',
-            type: 'SYNCHRONOUS',
+            type: 'synchronous',
           },
           {
             kind: 'message',
@@ -50,7 +50,7 @@ describe('componentGraph', () => {
             from: 'api',
             to: 'customer',
             label: '201 Created',
-            type: 'SYNCHRONOUS_RESPONSE',
+            type: 'synchronous_response',
           },
           {
             kind: 'message',
@@ -58,7 +58,7 @@ describe('componentGraph', () => {
             from: 'api',
             to: 'db',
             label: 'INSERT order',
-            type: 'SYNCHRONOUS',
+            type: 'synchronous',
           },
           {
             kind: 'message',
@@ -66,7 +66,7 @@ describe('componentGraph', () => {
             from: 'api',
             to: 'db',
             label: 'SELECT stock',
-            type: 'SYNCHRONOUS',
+            type: 'synchronous',
           },
           {
             kind: 'message',
@@ -74,7 +74,7 @@ describe('componentGraph', () => {
             from: 'api',
             to: 'bus',
             label: 'OrderPlaced',
-            type: 'ASYNCHRONOUS',
+            type: 'asynchronous',
           },
           {
             kind: 'message',
@@ -82,7 +82,7 @@ describe('componentGraph', () => {
             from: '',
             to: 'api',
             label: 'probe',
-            type: 'SHORT_INBOUND',
+            type: 'short_inbound',
           },
           { kind: 'note', id: 'n1', text: 'ignored', placement: 'over' },
         ],
@@ -91,35 +91,35 @@ describe('componentGraph', () => {
     )
 
     expect(graph.nodes.map((n) => n.id)).toEqual(['customer', 'api', 'db', 'bus'])
-    expect(graph.nodes[0]).toMatchObject({ name: 'Customer', type: 'ACTOR', colour: '#38bdf8' })
-    expect(graph.nodes[1]).toMatchObject({ name: 'API', type: 'PARTICIPANT' })
+    expect(graph.nodes[0]).toMatchObject({ name: 'Customer', type: 'actor', color: '#38bdf8' })
+    expect(graph.nodes[1]).toMatchObject({ name: 'API', type: 'participant' })
     expect(graph.edges).toEqual([
       {
         from: 'customer',
         to: 'api',
-        types: ['SYNCHRONOUS'],
+        types: ['synchronous'],
         count: 1,
         label: 'POST /checkout',
-        interactions: [{ label: 'POST /checkout', type: 'SYNCHRONOUS', count: 1, messageIds: ['1'] }],
+        interactions: [{ label: 'POST /checkout', type: 'synchronous', count: 1, messageIds: ['1'] }],
       },
       {
         from: 'api',
         to: 'db',
-        types: ['SYNCHRONOUS'],
+        types: ['synchronous'],
         count: 2,
         label: 'INSERT order',
         interactions: [
-          { label: 'INSERT order', type: 'SYNCHRONOUS', count: 1, messageIds: ['3'] },
-          { label: 'SELECT stock', type: 'SYNCHRONOUS', count: 1, messageIds: ['4'] },
+          { label: 'INSERT order', type: 'synchronous', count: 1, messageIds: ['3'] },
+          { label: 'SELECT stock', type: 'synchronous', count: 1, messageIds: ['4'] },
         ],
       },
       {
         from: 'api',
         to: 'bus',
-        types: ['ASYNCHRONOUS'],
+        types: ['asynchronous'],
         count: 1,
         label: 'OrderPlaced',
-        interactions: [{ label: 'OrderPlaced', type: 'ASYNCHRONOUS', count: 1, messageIds: ['5'] }],
+        interactions: [{ label: 'OrderPlaced', type: 'asynchronous', count: 1, messageIds: ['5'] }],
       },
     ])
   })
@@ -133,15 +133,15 @@ describe('componentGraph', () => {
           from: 'ghost',
           to: 'api',
           label: 'ping',
-          type: 'LOST',
+          type: 'lost',
         },
       ]),
     )
     expect(graph.nodes).toEqual([
-      { id: 'ghost', name: 'ghost', type: 'PARTICIPANT' },
-      { id: 'api', name: 'api', type: 'PARTICIPANT' },
+      { id: 'ghost', name: 'ghost', type: 'participant' },
+      { id: 'api', name: 'api', type: 'participant' },
     ])
-    expect(graph.edges[0].types).toEqual(['LOST'])
+    expect(graph.edges[0].types).toEqual(['lost'])
   })
 
   it('merges mixed types on the same from-to pair', () => {
@@ -153,7 +153,7 @@ describe('componentGraph', () => {
           from: 'a',
           to: 'b',
           label: 'call',
-          type: 'SYNCHRONOUS',
+          type: 'synchronous',
         },
         {
           kind: 'message',
@@ -161,7 +161,7 @@ describe('componentGraph', () => {
           from: 'a',
           to: 'b',
           label: 'notify',
-          type: 'ASYNCHRONOUS',
+          type: 'asynchronous',
         },
         {
           kind: 'message',
@@ -169,13 +169,13 @@ describe('componentGraph', () => {
           from: 'a',
           to: 'b',
           label: '',
-          type: 'BI_DIRECTIONAL',
+          type: 'bi_directional',
         },
       ]),
     )
     expect(graph.edges).toHaveLength(1)
     expect(graph.edges[0]).toMatchObject({
-      types: ['SYNCHRONOUS', 'ASYNCHRONOUS', 'BI_DIRECTIONAL'],
+      types: ['synchronous', 'asynchronous', 'bi_directional'],
       count: 3,
       label: 'call',
     })
@@ -192,7 +192,7 @@ describe('componentGraph', () => {
             from: 'a',
             to: '',
             label: 'out',
-            type: 'SHORT_OUTBOUND',
+            type: 'short_outbound',
           },
         ]),
       ),
@@ -206,7 +206,7 @@ describe('componentGraph', () => {
             from: 'a',
             to: 'b',
             label: 'hi',
-            type: 'SYNCHRONOUS',
+            type: 'synchronous',
           },
         ]),
       ),
@@ -215,7 +215,7 @@ describe('componentGraph', () => {
 })
 
 describe('link interactions', () => {
-  const message = (id: string, label: string, type: MessageType = 'SYNCHRONOUS'): DiagramEvent => ({
+  const message = (id: string, label: string, type: MessageType = 'synchronous'): DiagramEvent => ({
     kind: 'message',
     id,
     from: 'api',
@@ -230,7 +230,7 @@ describe('link interactions', () => {
         message('1', 'INSERT order'),
         message('2', 'SELECT stock'),
         message('3', 'INSERT order'),
-        message('4', 'INSERT order', 'ASYNCHRONOUS'),
+        message('4', 'INSERT order', 'asynchronous'),
         message('5', '  '),
       ]),
     )
@@ -238,22 +238,22 @@ describe('link interactions', () => {
     expect(graph.edges[0].count).toBe(5)
     expect(graph.edges[0].interactions).toEqual([
       // Each with its messages, in order: Show in sequence (#105) goes to the first.
-      { label: 'INSERT order', type: 'SYNCHRONOUS', count: 2, messageIds: ['1', '3'] },
-      { label: 'SELECT stock', type: 'SYNCHRONOUS', count: 1, messageIds: ['2'] },
-      { label: 'INSERT order', type: 'ASYNCHRONOUS', count: 1, messageIds: ['4'] },
-      { label: '', type: 'SYNCHRONOUS', count: 1, messageIds: ['5'] },
+      { label: 'INSERT order', type: 'synchronous', count: 2, messageIds: ['1', '3'] },
+      { label: 'SELECT stock', type: 'synchronous', count: 1, messageIds: ['2'] },
+      { label: 'INSERT order', type: 'asynchronous', count: 1, messageIds: ['4'] },
+      { label: '', type: 'synchronous', count: 1, messageIds: ['5'] },
     ])
   })
 
   it('titles a link with its direction, total, and one line per interaction', () => {
-    expect(typeCue('ASYNCHRONOUS')).toBe('async')
-    expect(COMPONENT_EDGE_TYPES.has('SYNCHRONOUS_RESPONSE')).toBe(false)
+    expect(typeCue('asynchronous')).toBe('async')
+    expect(COMPONENT_EDGE_TYPES.has('synchronous_response')).toBe(false)
     const graph = componentGraph(
       scenario([
         message('1', 'INSERT order'),
         message('2', 'INSERT order'),
         message('3', ''),
-        message('4', 'publish', 'ASYNCHRONOUS'),
+        message('4', 'publish', 'asynchronous'),
       ]),
     )
     expect(componentEdgeTitle(graph.edges[0], 'Checkout', 'Orders DB')).toBe(
@@ -261,7 +261,7 @@ describe('link interactions', () => {
         '\n',
       ),
     )
-    expect(componentEdgeTitle({ from: 'a', to: 'b', types: ['LOST'], count: 1, label: 'ping' }, 'A', 'B')).toBe(
+    expect(componentEdgeTitle({ from: 'a', to: 'b', types: ['lost'], count: 1, label: 'ping' }, 'A', 'B')).toBe(
       'A to B, 1 interaction:\nping · lost',
     )
   })
@@ -275,8 +275,8 @@ describe('link interactions', () => {
   })
 
   it('falls back to the first label for an edge built without interactions', () => {
-    expect(edgeInteractions({ from: 'a', to: 'b', types: ['SYNCHRONOUS', 'ASYNCHRONOUS'], count: 2 })).toEqual([
-      { label: '', type: 'SYNCHRONOUS, ASYNCHRONOUS', count: 2 },
+    expect(edgeInteractions({ from: 'a', to: 'b', types: ['synchronous', 'asynchronous'], count: 2 })).toEqual([
+      { label: '', type: 'synchronous, asynchronous', count: 2 },
     ])
   })
 })

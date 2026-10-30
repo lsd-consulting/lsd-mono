@@ -1,12 +1,14 @@
 {
-  "schemaVersion": "0.3.0",
+  "schemaVersion": "1.0.0",
   "title": "No timing",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "lsd-mono-jvm (conformance)",
+  "generator": {
+    "name": "lsd-mono-jvm"
+  },
   "status": "success",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "api"
   },
@@ -16,7 +18,6 @@
       "title": "Order placed, no timings",
       "status": "success",
       "description": "\u003cmark\u003eGiven\u003c/mark\u003e a cart \u003cmark\u003eWhen\u003c/mark\u003e the customer orders",
-      "facts": [],
       "metrics": [
         {
           "key": "Messages",
@@ -27,22 +28,22 @@
         {
           "id": "customer",
           "name": "Customer",
-          "type": "ACTOR"
+          "type": "actor"
         },
         {
           "id": "shop",
           "name": "Shop",
-          "type": "BOUNDARY"
+          "type": "boundary"
         },
         {
           "id": "orders-db",
           "name": "Orders DB",
-          "type": "DATABASE"
+          "type": "database"
         },
         {
           "id": "order-events",
           "name": "Order events",
-          "type": "QUEUE"
+          "type": "queue"
         }
       ],
       "events": [
@@ -54,13 +55,12 @@
         {
           "kind": "message",
           "id": "2",
-          "from": "",
           "to": "shop",
           "label": "webhook",
-          "type": "SHORT_INBOUND",
+          "type": "short_inbound",
           "seq": 1,
-          "timing": "NONE",
-          "order": "SEQUENCE"
+          "timing": "none",
+          "order": "sequence"
         },
         {
           "kind": "message",
@@ -68,7 +68,7 @@
           "from": "customer",
           "to": "shop",
           "label": "POST /orders",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "data": {
             "method": "POST",
             "path": "/orders",
@@ -77,9 +77,9 @@
             }
           },
           "seq": 2,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE"
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "activate",
@@ -92,11 +92,11 @@
           "from": "shop",
           "to": "orders-db",
           "label": "insert order",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "seq": 3,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence",
           "parentId": "3"
         },
         {
@@ -105,12 +105,12 @@
           "from": "orders-db",
           "to": "shop",
           "label": "1 row",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "seq": 4,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
-          "replyOf": "5"
+          "replyTo": "5",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "message",
@@ -118,14 +118,14 @@
           "from": "shop",
           "to": "order-events",
           "label": "order.placed",
-          "type": "ASYNCHRONOUS",
+          "type": "asynchronous",
           "data": {
             "orderId": "ord-1"
           },
           "seq": 5,
           "callId": "7",
-          "timing": "NONE",
-          "order": "SEQUENCE",
+          "timing": "none",
+          "order": "sequence",
           "parentId": "3"
         },
         {
@@ -146,15 +146,15 @@
           "from": "shop",
           "to": "customer",
           "label": "201 Created",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "data": {
             "status": 201
           },
           "seq": 6,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
-          "replyOf": "3"
+          "replyTo": "3",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "divider",
@@ -172,21 +172,20 @@
           "from": "shop",
           "to": "customer",
           "label": "never arrives",
-          "type": "LOST",
+          "type": "lost",
           "seq": 7,
-          "timing": "NONE",
-          "order": "SEQUENCE"
+          "timing": "none",
+          "order": "sequence"
         },
         {
           "kind": "message",
           "id": "14",
           "from": "shop",
-          "to": "",
           "label": "audit log",
-          "type": "SHORT_OUTBOUND",
+          "type": "short_outbound",
           "seq": 8,
-          "timing": "NONE",
-          "order": "SEQUENCE"
+          "timing": "none",
+          "order": "sequence"
         },
         {
           "kind": "note",
@@ -195,14 +194,14 @@
           "placement": "right"
         }
       ],
-      "accuracy": "STRUCTURE_ONLY",
-      "measuredCoverage": 0,
-      "pairingCoverage": 0,
+      "accuracy": "structure_only",
+      "measuredRatio": 0,
+      "pairedRatio": 0,
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     }
   ]
 }

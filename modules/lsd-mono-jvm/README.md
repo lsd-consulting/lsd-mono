@@ -87,7 +87,7 @@ import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.DATABASE
 import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.PARTICIPANT
 import io.github.lsdconsulting.lsd.mono.jvm.domain.ParticipantType.QUEUE
 
-val lsd = LsdContext()
+val lsd = LsdContext.instance
 lsd.addParticipants(
     ACTOR.called("Customer"),
     PARTICIPANT.called("Checkout"),

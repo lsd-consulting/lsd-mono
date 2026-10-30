@@ -15,6 +15,7 @@ import {
   seriousViolations,
   THEMES,
   zoomOf,
+  openFind,
 } from './ux-helpers'
 import { openReport } from './open-report'
 
@@ -108,18 +109,18 @@ const longNamesReport: Report = {
       id: 'names',
       title: 'Long names',
       participants: [
-        { id: 'client', name: 'Client', alias: 'Signed-in Customer (mobile app)', type: 'ACTOR' },
-        { id: 'api', name: 'Api', alias: 'Public API Gateway (rate limited)', type: 'BOUNDARY' },
-        { id: 'db', name: 'Database', alias: 'Orders DB (PostgreSQL primary)', type: 'DATABASE' },
-        { id: 'bus', name: 'Queue', alias: 'Kafka topic order-events.v2', type: 'QUEUE' },
-        { id: 'basket', name: 'Basket', alias: 'Shopping Basket Aggregate', type: 'ENTITY' },
+        { id: 'client', name: 'Client', displayName: 'Signed-in Customer (mobile app)', type: 'actor' },
+        { id: 'api', name: 'Api', displayName: 'Public API Gateway (rate limited)', type: 'boundary' },
+        { id: 'db', name: 'Database', displayName: 'Orders DB (PostgreSQL primary)', type: 'database' },
+        { id: 'bus', name: 'Queue', displayName: 'Kafka topic order-events.v2', type: 'queue' },
+        { id: 'basket', name: 'Basket', displayName: 'Shopping Basket Aggregate', type: 'entity' },
         {
           id: 'svc',
           name: 'Svc',
-          alias: 'Customer Notification Preferences and Delivery Orchestration Service',
-          type: 'PARTICIPANT',
+          displayName: 'Customer Notification Preferences and Delivery Orchestration Service',
+          type: 'participant',
         },
-        { id: 'stock', name: 'Inventory Service', type: 'PARTICIPANT' },
+        { id: 'stock', name: 'Inventory Service', type: 'participant' },
       ],
     },
   ],
@@ -155,7 +156,7 @@ test('long participant names stay inside their shapes and clear of their neighbo
     expect(box.label.bottom, box.id).toBeLessThanOrEqual(box.header.height + 1)
     expect(box.label.left, box.id).toBeGreaterThanOrEqual(box.header.left)
     expect(box.label.right, box.id).toBeLessThanOrEqual(box.header.right)
-    if (['PARTICIPANT', 'DATABASE', 'QUEUE'].includes(box.type)) {
+    if (['participant', 'database', 'queue'].includes(box.type)) {
       expect(box.label.left, box.id).toBeGreaterThanOrEqual(box.shape.left + 2)
       expect(box.label.right, box.id).toBeLessThanOrEqual(box.shape.right - 2)
     }
@@ -353,6 +354,7 @@ for (const [name, viewport] of [
       return labels.find((text) => text.getBoundingClientRect().left > port.right)?.textContent?.trim() ?? null
     })
     expect(far, 'a painted label beyond the right edge').not.toBeNull()
+    await openFind(page)
     await page.locator('[data-diagram-find]').fill(far!.split(/\s/)[0])
     await page.keyboard.press('Enter')
     await expect

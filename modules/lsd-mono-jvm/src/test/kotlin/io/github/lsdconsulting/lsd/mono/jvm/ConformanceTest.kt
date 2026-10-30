@@ -49,7 +49,7 @@ class ConformanceTest {
             )
             section("Place the order")
             inbound("Shop", "webhook")
-            message("Customer", "Shop", "POST /orders", mapOf("method" to "POST", "path" to "/orders", "body" to mapOf("sku" to "HAT-3")))
+            message("Customer", "Shop", "POST /orders", data = mapOf("method" to "POST", "path" to "/orders", "body" to mapOf("sku" to "HAT-3")))
             activate("Shop")
             message("Shop", "Orders DB", "insert order")
             response("Orders DB", "Shop", "1 row")
@@ -115,7 +115,7 @@ class ConformanceTest {
             )
             addFact("العميل", "أحمد ٤٢")
             addFact("mixed", "Order \u202B#42 مدفوع\u202C paid")
-            message("cafe", "orders", "اطلب ٣ قطع", mapOf("المنتج" to "قبعة", "الكمية" to 3))
+            message("cafe", "orders", "اطلب ٣ قطع", data = mapOf("المنتج" to "قبعة", "الكمية" to 3))
             message("orders", "payments", "חיוב ₪120.50")
             response("payments", "orders", "אושר \u2705")
             message("orders", "jp", "在庫を確認する")
@@ -139,7 +139,7 @@ class ConformanceTest {
                 "a",
                 "b",
                 h("label"),
-                mapOf("method" to h("method"), "path" to h("path"), "status" to h("status"), "body" to mapOf("html" to h("body"))),
+                data = mapOf("method" to h("method"), "path" to h("path"), "status" to h("status"), "body" to mapOf("html" to h("body"))),
             )
             note(h("note"), on = "a")
             divider(h("divider"))
@@ -161,7 +161,7 @@ class ConformanceTest {
         repeat(400) { i ->
             val from = names[i % names.size]
             val to = names[(i * 7 + 1) % names.size]
-            if (i % 4 == 3) lsd.response(to, from, "reply $i") else lsd.message(from, to, "call $i", mapOf("n" to i))
+            if (i % 4 == 3) lsd.response(to, from, "reply $i") else lsd.message(from, to, "call $i", data = mapOf("n" to i))
         }
         lsd.completeScenario("100 participants, 400 messages")
         val json = lsd.completeReport("Large").reportJson.readText()

@@ -1,6 +1,11 @@
-import type { IndexManifest, IndexReport, IndexScenario } from '../generated/lsd-index'
+import type {
+  IndexCounts,
+  IndexManifest as IndexManifestJson,
+  IndexReport as IndexReportJson,
+  IndexScenario,
+} from '../generated/lsd-index'
 import type { Report, ReportJson, Status } from '../types'
-import { normaliseReport } from './report-normalise'
+import { isLegacy, legacyGenerator, normaliseReport } from './report-normalise'
 import { unreadableFit, type UnreadableFit } from './schema-version'
 import { cssEscape } from './escape.ts'
 
@@ -12,11 +17,62 @@ import { cssEscape } from './escape.ts'
  */
 
 // The manifest's shapes are generated from modules/lsd-mono-report-schema/lsd-index.schema.json.
-export type { IndexCounts, IndexManifest, IndexOptions, IndexReport, IndexScenario } from '../generated/lsd-index'
+export type { IndexCounts, IndexManifestJson, IndexReportJson, IndexScenario }
+export type { IndexOptions } from '../generated/lsd-index'
+
+/** An index entry as the page holds it: its scenario list always there (empty when none). */
+export interface IndexReport extends Omit<IndexReportJson, 'scenarios'> {
+  scenarios: IndexScenario[]
+}
+
+/** The manifest as the page holds it: what the index schema leaves out filled in (normaliseIndex). */
+export interface IndexManifest extends Omit<IndexManifestJson, 'title' | 'options' | 'reports'> {
+  title: string
+  options: { usagePing: boolean }
+  reports: IndexReport[]
+}
+
+/** The index page's title when the manifest names none. */
+export const DEFAULT_INDEX_TITLE = 'LSD reports'
+
+type Json = Record<string, unknown>
+
+/**
+ * [manifest] with its optional fields filled in. An index from before schema 1.0.0 is upgraded
+ * too: its generator text becomes an object, a scenario's `messages` its `messageCount`, and
+ * counts without skipped or aborted get them as 0.
+ */
+export function normaliseIndex(manifest: IndexManifestJson | IndexManifest): IndexManifest {
+  const legacy = isLegacy(manifest)
+  const raw = manifest as unknown as Json
+  const reports = ((raw.reports as Json[] | undefined) ?? []).map((r): IndexReport => {
+    const counts = (r.counts ?? {}) as Partial<IndexCounts>
+    const scenarios = ((r.scenarios as Json[] | undefined) ?? []).map((s) => {
+      const out: Json = { ...s }
+      if (legacy && out.messageCount === undefined) out.messageCount = out.messages ?? 0
+      if (legacy) delete out.messages
+      if (legacy && typeof out.status === 'string') out.status = out.status.toLowerCase()
+      return out as unknown as IndexScenario
+    })
+    return {
+      ...(r as unknown as IndexReportJson),
+      status: (legacy && typeof r.status === 'string' ? r.status.toLowerCase() : r.status) as IndexReport['status'],
+      counts: { success: 0, warn: 0, error: 0, skipped: 0, aborted: 0, ...counts },
+      scenarios,
+    }
+  })
+  return {
+    ...manifest,
+    title: manifest.title ?? DEFAULT_INDEX_TITLE,
+    generator: legacyGenerator(raw.generator),
+    options: { usagePing: manifest.options?.usagePing ?? false },
+    reports,
+  }
+}
 
 /** What `<stem>-report.js` adds to `window.__LSD_REPORTS__` under the report's id. */
 export interface ReportDataJson {
-  report: ReportJson
+  report: ReportJson | Report
   /** `<stem>-payloads.js`, or null when every payload is already on its message. */
   payloadsSrc: string | null
 }
@@ -52,11 +108,11 @@ function loadedData(data: ReportDataJson): ReportData {
   return result
 }
 
-const STATUSES: Status[] = ['success', 'warn', 'error']
+const STATUSES: Status[] = ['success', 'warn', 'error', 'skipped', 'aborted']
 
 /** Scenarios by outcome across every report. */
 export function indexTotals(manifest: IndexManifest): Record<Status, number> {
-  const totals: Record<Status, number> = { success: 0, warn: 0, error: 0 }
+  const totals: Record<Status, number> = { success: 0, warn: 0, error: 0, skipped: 0, aborted: 0 }
   for (const report of manifest.reports) for (const s of STATUSES) totals[s] += report.counts[s] ?? 0
   return totals
 }

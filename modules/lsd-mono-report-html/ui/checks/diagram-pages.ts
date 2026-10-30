@@ -16,7 +16,7 @@ export function sectionsReport(perSection: number): Report {
         from: 'a',
         to: 'b',
         label: `call ${s}.${i}`,
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
         data: { n: i },
       })
   }
@@ -24,7 +24,7 @@ export function sectionsReport(perSection: number): Report {
     ...reportBase(),
     title: 'Sections',
     generatedAt: '2026-01-15T12:00:00+00:00',
-    generator: 'ux-fixture',
+    generator: { name: 'ux-fixture' },
     scenarios: [
       {
         ...untimed(),
@@ -35,8 +35,8 @@ export function sectionsReport(perSection: number): Report {
         facts: [],
         metrics: [],
         participants: [
-          { id: 'a', name: 'Client', type: 'PARTICIPANT' },
-          { id: 'b', name: 'Server', type: 'PARTICIPANT' },
+          { id: 'a', name: 'Client', type: 'participant' },
+          { id: 'b', name: 'Server', type: 'participant' },
         ],
         events,
       },
@@ -50,7 +50,7 @@ export function sectionsIndex(report: Report): NonNullable<OpenOptions['index']>
     ...indexBase(),
     title: 'LSD reports',
     generatedAt: report.generatedAt,
-    generator: 'ux-fixture',
+    generator: { name: 'ux-fixture' },
     reports: [
       {
         id: 'sections',
@@ -58,8 +58,8 @@ export function sectionsIndex(report: Report): NonNullable<OpenOptions['index']>
         status: 'success',
         href: 'sections-diagram.html',
         data: 'sections-report.js',
-        counts: { success: 1, warn: 0, error: 0 },
-        scenarios: [{ id: 'sections', title: 'Sections', status: 'success', messages: 0 }],
+        counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+        scenarios: [{ id: 'sections', title: 'Sections', status: 'success', messageCount: 0 }],
       },
     ],
   }

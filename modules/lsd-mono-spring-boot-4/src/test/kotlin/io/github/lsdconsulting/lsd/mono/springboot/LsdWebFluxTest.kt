@@ -288,7 +288,7 @@ class LsdWebFluxTest {
                 ?.string("error"),
             drawn.json,
         )
-        assertEquals(listOf("404", "error"), drawn.messages.filter { it["type"] == "SYNCHRONOUS_RESPONSE" }.map { it["status"].toString() }, drawn.json)
+        assertEquals(listOf("404", "error"), drawn.messages.filter { it["type"] == "synchronous_response" }.map { it["status"].toString() }, drawn.json)
     }
 
     @Test

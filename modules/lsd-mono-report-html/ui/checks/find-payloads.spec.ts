@@ -1,7 +1,7 @@
 import { devices, expect, test, type Page } from '@playwright/test'
 import { findReport, openFindIndex, openFindReport } from './find-fixture'
 import { openReport } from './open-report'
-import { THEMES, computedColours, contrastRatio, formatViolations, seriousViolations } from './ux-helpers'
+import { THEMES, computedColours, contrastRatio, formatViolations, openFind, seriousViolations } from './ux-helpers'
 
 // Find in payloads (#60): the arrows whose payload matches count and step like label matches.
 
@@ -247,6 +247,7 @@ test.describe('on a phone', () => {
   test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch })
   test('tapping a payload match shows its first match on screen below the report', async ({ page }) => {
     await openFindReport(page)
+    await openFind(page)
     await page.locator('[data-diagram-find]').tap()
     await page.keyboard.insertText('snowdrop')
     await expect(page.locator('.diagram-find-count')).toHaveText('1 of 3, 2 in payloads')

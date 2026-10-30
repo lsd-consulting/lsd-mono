@@ -170,6 +170,8 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
             when (result.status) {
                 CucumberStatus.PASSED -> Status.SUCCESS
                 CucumberStatus.FAILED -> Status.ERROR
+                CucumberStatus.SKIPPED -> Status.SKIPPED
+                // Pending, undefined and ambiguous steps ran, but neither passed nor failed.
                 else -> Status.WARN
             }
         // The step (or hook) that gave the test case its result is the one to explain.
@@ -188,13 +190,13 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
         fun lines(vararg parts: String?) = parts.filterNotNull().joinToString("\n").ifEmpty { "No reason given" }
         return when (result.status) {
             CucumberStatus.FAILED -> result.error?.let { ScenarioError.of("Failed", it) }
-            CucumberStatus.PENDING -> ScenarioError("Pending", lines(message, step))
-            CucumberStatus.SKIPPED -> ScenarioError("Skipped", lines(message, step))
-            CucumberStatus.AMBIGUOUS -> ScenarioError("Ambiguous step", lines(message, step))
+            CucumberStatus.PENDING -> ScenarioError.of("Pending", lines(message, step), null)
+            CucumberStatus.SKIPPED -> ScenarioError.of("Skipped", lines(message, step), null)
+            CucumberStatus.AMBIGUOUS -> ScenarioError.of("Ambiguous step", lines(message, step), null)
             CucumberStatus.UNDEFINED -> {
                 val suggested = (cause as? PickleStepTestStep)?.let { snippets["${testCase.uri}:${it.step.line}"] }.orEmpty()
                 val hint = suggested.takeIf { it.isNotEmpty() }?.joinToString("\n", prefix = "\nImplement it with:\n")
-                ScenarioError("Undefined step", lines((cause as? PickleStepTestStep)?.line(), hint))
+                ScenarioError.of("Undefined step", lines((cause as? PickleStepTestStep)?.line(), hint), null)
             }
             else -> null
         }

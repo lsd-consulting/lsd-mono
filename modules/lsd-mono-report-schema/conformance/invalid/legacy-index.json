@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "LSD reports",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "lsd-mono-core (conformance)",
+  "options": {
+    "usagePing": false
+  },
+  "reports": [
+    {
+      "id": "Status-mix-e5e3006b",
+      "title": "Status mix",
+      "status": "error",
+      "href": "Status-mix-e5e3006b-diagram.html",
+      "data": "Status-mix-e5e3006b-report.js",
+      "counts": {
+        "success": 1,
+        "warn": 1,
+        "error": 1
+      },
+      "scenarios": [
+        {
+          "id": "1",
+          "title": "checkout happy path",
+          "status": "success",
+          "messages": 0
+        },
+        {
+          "id": "2",
+          "title": "payment declined",
+          "status": "warn",
+          "messages": 0
+        },
+        {
+          "id": "3",
+          "title": "inventory outage",
+          "status": "error",
+          "messages": 0
+        }
+      ]
+    }
+  ]
+}

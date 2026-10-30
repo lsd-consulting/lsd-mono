@@ -6,18 +6,18 @@ import { isErrorStatus } from '../status'
 
 // A type this UI does not know (from a newer producer) reads as a message.
 const KIND: Record<KnownMessageType, string> & Partial<Record<string, string>> = {
-  SYNCHRONOUS: 'call',
-  SYNCHRONOUS_RESPONSE: 'reply',
-  ASYNCHRONOUS: 'async',
-  LOST: 'lost message',
-  BI_DIRECTIONAL: 'two-way',
-  SHORT_INBOUND: 'inbound',
-  SHORT_OUTBOUND: 'outbound',
+  synchronous: 'call',
+  synchronous_response: 'reply',
+  asynchronous: 'async',
+  lost: 'lost message',
+  bi_directional: 'two-way',
+  short_inbound: 'inbound',
+  short_outbound: 'outbound',
 }
 
 /** Call, reply, async, self call and so on, as a person would say it. */
 export function messageKind(msg: MessageEvent): string {
-  if (msg.from && msg.from === msg.to) return msg.type === 'SYNCHRONOUS_RESPONSE' ? 'self reply' : 'self call'
+  if (msg.from && msg.from === msg.to) return msg.type === 'synchronous_response' ? 'self reply' : 'self call'
   return KIND[msg.type] ?? 'message'
 }
 
@@ -32,9 +32,9 @@ export function messageSpeech(
 ): string {
   const name = (id: string) => participants.find((p) => p.id === id)?.name ?? id
   const ends =
-    msg.type === 'SHORT_INBOUND'
+    msg.type === 'short_inbound'
       ? `to ${name(msg.to)}`
-      : msg.type === 'SHORT_OUTBOUND'
+      : msg.type === 'short_outbound'
         ? `from ${name(msg.from)}`
         : `${name(msg.from)} to ${name(msg.to)}`
   const parts = labelFirst ? [msg.label, ends, messageKind(msg)] : [`${ends}, ${messageKind(msg)}: ${msg.label}`]

@@ -13,7 +13,7 @@
       "schema": "lsd-report.schema.json",
       "valid": true,
       "source": "lsd-mono-jvm",
-      "about": "A structural sketch with no timings (STRUCTURE_ONLY): every arrow type, notes over and at the edge, an activation, a section, a divider and a delay."
+      "about": "A structural sketch with no timings (structure_only): every arrow type, notes over and at the edge, an activation, a section, a divider and a delay."
     },
     {
       "file": "reports/no-components.json",
@@ -97,7 +97,7 @@
       "schema": "lsd-report.schema.json",
       "valid": true,
       "source": "hand-written",
-      "about": "schemaVersion 0.4.0 with what a newer minor version may add: fields this version does not know (at the top, in the options, a scenario, a participant, a fact, a metric and a message, span links among them), values of open enums it does not list (participant type ROBOT, message type BROADCAST, origin replayed, source spock) and an event of an unknown kind. Readers of 0.3 must accept it; the UI shows it with a notice."
+      "about": "schemaVersion 1.1.0 with what a newer minor version may add: fields this version does not know (at the top, in the options, a scenario, a participant, a fact, a metric and a message, span links among them), values of open enums it does not list (participant type ROBOT, message type BROADCAST, origin replayed, source spock) and an event of an unknown kind. Readers of 0.3 must accept it; the UI shows it with a notice."
     },
     {
       "file": "reports/otel-fields.json",
@@ -112,7 +112,7 @@
       "valid": true,
       "source": "hand-written",
       "page": "upgrade",
-      "about": "schemaVersion 1.0.0 in a 0.1-shaped report. The 0.x schema does not pin the major, so it accepts it; the UI shows a page saying to upgrade lsd-mono instead of the report."
+      "about": "schemaVersion 2.0.0 in a 0.1-shaped report. The 1.x schema does not pin the major, so it accepts it; the UI shows a page saying to upgrade lsd-mono instead of the report."
     },
     {
       "file": "generated/large.mjs",
@@ -211,6 +211,23 @@
       "rejectedAt": "/generatedAt",
       "source": "hand-written",
       "about": "Every string hostile, with wrong types and enums too (a string duration, an unknown participant type and placement), control characters and lone surrogates. The page must still show it as text and create no element from it."
+    },
+    {
+      "file": "invalid/legacy-report.json",
+      "schema": "lsd-report.schema.json",
+      "valid": false,
+      "rejectedAt": "/generator",
+      "source": "captured",
+      "page": "report",
+      "about": "A schema 0.1.0 report as lsd-mono-jvm wrote it before 1.0.0 (multi-scenario-status.json at that time): upper-case enum values, a generator string, labelMaxWidth, clockOrdered and empty lists. The 1.0.0 schema rejects it; the UI upgrades it on read and opens it as usual."
+    },
+    {
+      "file": "invalid/legacy-index.json",
+      "schema": "lsd-index.schema.json",
+      "valid": false,
+      "rejectedAt": "/generator",
+      "source": "captured",
+      "about": "A schema 0.1.0 index manifest (status-mix.json before 1.0.0): a generator string, a title, three counts and messages per scenario. The 1.0.0 schema rejects it; the UI upgrades it on read."
     }
   ]
 }

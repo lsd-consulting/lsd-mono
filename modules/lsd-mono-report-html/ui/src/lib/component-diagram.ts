@@ -272,8 +272,8 @@ function nodeSvg(
   const half = Math.max(HIT_HW, head.half)
   const bottom = Math.max(48, head.labelYs[head.labelYs.length - 1] + 6)
   grow(at.x - half, at.y, at.x + half, at.y + bottom)
-  const colour = node.colour ? ` style="--pc:${escapeAttr(node.colour)}"` : ''
-  return `<g class="component-node participant-box" data-component="${escapeAttr(node.id)}" data-participant-type="${escapeAttr(head.type)}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${colour}>
+  const color = node.color ? ` style="--pc:${escapeAttr(node.color)}"` : ''
+  return `<g class="component-node participant-box" data-component="${escapeAttr(node.id)}" data-participant-type="${escapeAttr(head.type)}" transform="translate(${fmt(at.x)}, ${fmt(at.y)})"${color}>
       <title>${escapeHtml(node.name)}, ${head.typeLabel}</title>
       ${head.shapeSvg}
       ${participantLabelSvg(head, head.name)}
@@ -400,11 +400,11 @@ interface EdgeStyle {
 function edgeStyle(edge: ComponentEdge): EdgeStyle {
   if (edge.types.length !== 1) return { cls: 'edge edge-mixed', end: 'lsd-comp-mixed' }
   switch (edge.types[0]) {
-    case 'ASYNCHRONOUS':
+    case 'asynchronous':
       return { cls: 'edge edge-async', end: 'lsd-comp-open' }
-    case 'BI_DIRECTIONAL':
+    case 'bi_directional':
       return { cls: 'edge', start: 'lsd-comp-filled', end: 'lsd-comp-filled' }
-    case 'LOST':
+    case 'lost':
       return { cls: 'edge', end: 'lsd-comp-lost' }
     default:
       return { cls: 'edge', end: 'lsd-comp-filled' }

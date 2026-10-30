@@ -18,7 +18,7 @@ function report(schemaVersion: string): Report {
     schemaVersion,
     title: 'Checkout',
     generatedAt: '2026-01-01T12:00:00Z',
-    generator: 'lsd-mono-jvm 9.0.0',
+    generator: { name: 'lsd-mono-jvm', version: '9.0.0' },
     scenarios: [
       {
         ...untimed(),
@@ -28,8 +28,8 @@ function report(schemaVersion: string): Report {
         description: '',
         facts: [],
         metrics: [],
-        participants: [{ id: 'a', name: 'A', type: 'ACTOR' }],
-        events: [{ kind: 'message', id: 'm1', from: 'a', to: 'a', label: 'think', type: 'SYNCHRONOUS' }],
+        participants: [{ id: 'a', name: 'A', type: 'actor' }],
+        events: [{ kind: 'message', id: 'm1', from: 'a', to: 'a', label: 'think', type: 'synchronous' }],
       },
     ],
   }
@@ -41,7 +41,7 @@ function manifest(schemaVersion: string): IndexManifest {
     schemaVersion,
     title: 'LSD reports',
     generatedAt: '2026-01-01T12:00:00Z',
-    generator: 'lsd-mono-jvm 9.0.0',
+    generator: { name: 'lsd-mono-jvm', version: '9.0.0' },
     reports: [
       {
         id: 'checkout',
@@ -49,8 +49,8 @@ function manifest(schemaVersion: string): IndexManifest {
         status: 'success',
         href: 'checkout-diagram.html',
         data: 'checkout-report.js',
-        counts: { success: 1, warn: 0, error: 0 },
-        scenarios: [{ id: 'pay', title: 'Pay', status: 'success', messages: 1 }],
+        counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+        scenarios: [{ id: 'pay', title: 'Pay', status: 'success', messageCount: 1 }],
       },
     ],
   }
@@ -121,8 +121,8 @@ describe('a report page', () => {
   it('sends no usage ping from the upgrade page, though a readable release report would', async () => {
     window.__LSD_REPORT__ = {
       ...report(REPORT_SCHEMA_VERSION),
-      generator: 'lsd-mono-jvm 9.0.0',
-      options: { usagePing: true },
+      generator: { name: 'lsd-mono-jvm', version: '9.0.0' },
+      options: { metricsEnabled: true, labelMaxChars: 200, usagePing: true },
     }
     let usage = await spyOnUsage()
     await import('./main')
@@ -142,7 +142,7 @@ describe('a report page', () => {
 
 describe('an index page', () => {
   it('shows the upgrade page for an index of a newer major version', async () => {
-    window.__LSD_INDEX__ = { ...manifest(NEWER_MAJOR), reports: undefined } as unknown as IndexManifest
+    window.__LSD_INDEX__ = { ...manifest(NEWER_MAJOR), reports: undefined }
     await import('./main')
     expect(text('h1')).toBe('Upgrade lsd-mono to open this index')
     expect(errors).toEqual([])

@@ -1,5 +1,6 @@
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import type { Scenario } from '../types'
+import { warnReasonHtml } from './status-legend'
 
 /** Search blob includes structured failure text, not only the narrative description. */
 export function scenarioHaystack(s: Scenario): string {
@@ -44,5 +45,5 @@ export function scenarioDescriptionHtml(s: Scenario): string {
         }
       </div>`
     : ''
-  return `<div class="narrative">${narrativeHtml(s.description)}</div>${errorHtml}`
+  return `<div class="narrative">${narrativeHtml(s.description)}</div>${warnReasonHtml(s)}${errorHtml}`
 }

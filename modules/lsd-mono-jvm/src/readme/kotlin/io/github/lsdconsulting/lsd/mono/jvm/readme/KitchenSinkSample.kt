@@ -46,7 +46,7 @@ import java.time.Instant
  * with an ellipsis (full name on hover).
  */
 fun main() {
-    val lsd = LsdContext()
+    val lsd = LsdContext.instance
     exampleParticipants(lsd)
     EXAMPLE_SCENARIOS.forEach { it(lsd) }
 
@@ -172,12 +172,12 @@ private fun happyPath(lsd: LsdContext) {
             "Payment Service",
             "Payment Provider",
             "3-D Secure challenge",
-            mapOf(
+            data = mapOf(
                 "acsUrl" to "https://acs.example-bank.com/3ds2",
                 "threeDSServerTransID" to "8a880dc0-d2d2-4067-bcb1-b08d1690b26e",
                 "messageVersion" to "2.2.0",
             ),
-            BI_DIRECTIONAL,
+            type = BI_DIRECTIONAL,
         )
         activate("Payment Provider")
         "Payment Provider" calls "Payment Provider" label "issuer approves"
@@ -258,11 +258,11 @@ private fun paymentDeclined(lsd: LsdContext) {
         "Order Service",
         "Payment Service",
         "authorise £42.00",
-        req("POST", "/payments/authorise", mapOf("amount" to 4200, "card" to "**** 0002")),
+        data = req("POST", "/payments/authorise", mapOf("amount" to 4200, "card" to "**** 0002")),
         timing = Timing.at(at(1)),
     )
-    lsd.message("Payment Service", "Payment Provider", "authorise", mapOf("amount" to 4200, "card" to "**** 0002"), timing = Timing.at(at(4)))
-    lsd.message("Payment Service", "Fraud Check", "score transaction", req("POST", "/score", mapOf("amount" to 4200)), timing = Timing.at(at(2)))
+    lsd.message("Payment Service", "Payment Provider", "authorise", data = mapOf("amount" to 4200, "card" to "**** 0002"), timing = Timing.at(at(4)))
+    lsd.message("Payment Service", "Fraud Check", "score transaction", data = req("POST", "/score", mapOf("amount" to 4200)), timing = Timing.at(at(2)))
     lsd.response("Fraud Check", "Payment Service", "score 0.41", res(200, mapOf("score" to 0.41, "decision" to "REVIEW")), timing = Timing.at(at(3)))
     lsd.response("Payment Provider", "Payment Service", "do_not_honour", mapOf("code" to "05", "reason" to "do_not_honour"), timing = Timing.at(at(6)))
     lsd.activate("Payment Service", at = at(1))
@@ -278,14 +278,16 @@ private fun paymentDeclined(lsd: LsdContext) {
         When the customer pays
         Then the order is confirmed
         """.trimIndent(),
-        status = Status.WARN,
+        // Aborted as JUnit reports it: an assumption failed, so the test was aborted, not failed.
+        status = Status.ABORTED,
         error =
-            ScenarioError(
-                headline = "AssertionFailedError",
-                message = "expected: <CONFIRMED> but was: <PAYMENT_DECLINED>",
+            ScenarioError.of(
+                headline = "Test aborted",
+                message = "Assumption failed: the issuer sandbox declined the test card, so confirmation was not checked",
                 stack =
                     """
-                    org.opentest4j.AssertionFailedError: expected: <CONFIRMED> but was: <PAYMENT_DECLINED>
+                    org.opentest4j.TestAbortedException: Assumption failed: the issuer sandbox declined the test card, so confirmation was not checked
+                    	at org.junit.jupiter.api.Assumptions.throwAssumptionFailed(Assumptions.java:340)
                     	at com.example.shop.PlaceOrderTest.paysByCard(PlaceOrderTest.kt:88)
                     	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
                     """.trimIndent(),
@@ -350,7 +352,7 @@ private fun asyncFulfilment(lsd: LsdContext) {
         "Given an order has been paid\nWhen the warehouse ships it\nThen the customer is told it is on its way\nAnd the delivery webhook is recorded",
         status = Status.ERROR,
         error =
-            ScenarioError(
+            ScenarioError.of(
                 headline = "ConditionTimeoutException",
                 message = "Orders DB never acknowledged 'mark delivered' within 30 s",
                 stack =
@@ -424,24 +426,37 @@ private fun timedCheckout(lsd: LsdContext) {
     )
     // Ingested from another library, which sends no ids: drawn, but not linked.
     lsd.ingest(
-        Interaction(InteractionKind.PUBLISH, "Notification Service", "Email", "send receipt", source = "notification-service", startedAt = at(640)),
+        Interaction
+            .builder(InteractionKind.PUBLISH, "Notification Service", "Email", "send receipt")
+            .source("notification-service")
+            .startedAt(at(640))
+            .build(),
     )
     // The importer's status drives the Errors metric: the first send fails, the retry succeeds.
     // Its headers sit beside the body in the payload.
     lsd.ingest(
-        Interaction(
-            InteractionKind.REQUEST,
-            "Email",
-            "SMTP Relay",
-            "deliver receipt",
-            interactionId = "smtp-1",
-            data = mapOf("to" to "customer@example.test", "template" to "receipt"),
-            headers = mapOf("content-type" to "message/rfc822", "x-request-id" to "smtp-1"),
-        ),
+        Interaction
+            .builder(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt")
+            .interactionId("smtp-1")
+            .data(mapOf("to" to "customer@example.test", "template" to "receipt"))
+            .headers(mapOf("content-type" to "message/rfc822", "x-request-id" to "smtp-1"))
+            .build(),
     )
-    lsd.ingest(Interaction(InteractionKind.RESPONSE, "SMTP Relay", "Email", "421 try again later", status = "421", replyTo = "smtp-1"))
-    lsd.ingest(Interaction(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt (retry)", interactionId = "smtp-2"))
-    lsd.ingest(Interaction(InteractionKind.RESPONSE, "SMTP Relay", "Email", "250 queued", status = "250", replyTo = "smtp-2"))
+    lsd.ingest(
+        Interaction
+            .builder(InteractionKind.RESPONSE, "SMTP Relay", "Email", "421 try again later")
+            .status("421")
+            .replyTo("smtp-1")
+            .build(),
+    )
+    lsd.ingest(Interaction.builder(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt (retry)").interactionId("smtp-2").build())
+    lsd.ingest(
+        Interaction
+            .builder(InteractionKind.RESPONSE, "SMTP Relay", "Email", "250 queued")
+            .status("250")
+            .replyTo("smtp-2")
+            .build(),
+    )
     lsd.completeScenario(
         "Timed checkout (timing API)",
         """

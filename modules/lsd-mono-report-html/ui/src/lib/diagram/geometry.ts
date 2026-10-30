@@ -24,14 +24,14 @@ import type { DiagramFrame, MountedDiagram } from './state'
 export function frameOf(diagram: MountedDiagram, hiddenIds: ReadonlySet<string>): DiagramFrame {
   const visible = visibleParticipants(diagram.scenario.participants, hiddenIds)
   const base = laneWidth(laneIndex(visible), visible.length)
-  const pads = diagramPads(diagram.scenario.events, visible, diagram.labelMaxWidth)
+  const pads = diagramPads(diagram.scenario.events, visible, diagram.labelMaxChars)
   return { base, ...pads, total: base + pads.left + pads.right }
 }
 
 /** Approximate drawn width of a message label with its type cue and duration. */
-function messageLabelWidth(msg: MessageEvent, labelMaxWidth: number): number {
+function messageLabelWidth(msg: MessageEvent, labelMaxChars: number): number {
   const cue = messageArrowSpec(msg.type).typeCue
-  let text = truncateLabel(msg.label, labelMaxWidth)
+  let text = truncateLabel(msg.label, labelMaxChars)
   if (cue) text += ` [${cue}]`
   if (msg.durationMs != null) text += ` · ${msg.durationMs}ms`
   if (messageHasPayload(msg)) text += '  {}'
@@ -50,7 +50,7 @@ const SELF_LABEL_DX = ACT_W + 36 + 8
 export function diagramPads(
   events: DiagramEvent[],
   visible: Participant[],
-  labelMaxWidth: number,
+  labelMaxChars: number,
 ): { left: number; right: number } {
   const index = laneIndex(visible)
   const width = laneWidth(index, visible.length)
@@ -73,9 +73,9 @@ export function diagramPads(
       continue
     }
     if (event.kind !== 'message') continue
-    const w = messageLabelWidth(event, labelMaxWidth)
+    const w = messageLabelWidth(event, labelMaxChars)
     if (isShortMessage(event.type)) {
-      const id = event.type === 'SHORT_INBOUND' ? event.to : event.from
+      const id = event.type === 'short_inbound' ? event.to : event.from
       const i = index.get(id)
       if (i === undefined) continue
       // Nested bars can push the stub right by a few px; allow two levels.
@@ -124,7 +124,7 @@ export function messageEndpoints(
   width: number,
 ): { x1: number; x2: number } {
   if (isShortMessage(msg.type)) {
-    const participantId = msg.type === 'SHORT_INBOUND' ? msg.to : msg.from
+    const participantId = msg.type === 'short_inbound' ? msg.to : msg.from
     const px = xFor(index.get(participantId) ?? 0, index)
     return shortMessageEndpoints(msg.type, px, width)
   }

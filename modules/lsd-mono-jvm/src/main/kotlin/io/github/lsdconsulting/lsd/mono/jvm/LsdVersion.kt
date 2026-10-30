@@ -1,5 +1,6 @@
 package io.github.lsdconsulting.lsd.mono.jvm
 
+import io.github.lsdconsulting.lsd.mono.report.model.GeneratorJson
 import java.util.Properties
 
 /**
@@ -14,9 +15,9 @@ internal object LsdVersion {
 
     val version: String by lazy { fromResource() ?: fromManifest() ?: "unknown" }
 
-    /** Value of the report's `generator` field. */
-    val generator: String
-        get() = "lsd-mono-jvm $version"
+    /** Value of the report's `generator` field: `lsd-mono-jvm` and this version, when it is known. */
+    val generator: GeneratorJson
+        get() = GeneratorJson("lsd-mono-jvm", version.takeIf { it != "unknown" })
 
     private fun fromResource(): String? =
         LsdVersion::class.java.getResourceAsStream(RESOURCE)?.use { stream ->

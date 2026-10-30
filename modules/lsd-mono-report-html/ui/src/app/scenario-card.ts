@@ -2,6 +2,7 @@
 // Components, #105), and the report hero above it.
 import type { Scenario } from '../types'
 import { scenarioDescriptionHtml } from '../ui/scenario-summary'
+import { statusDefinitionId } from '../ui/status-legend'
 import { timingStripHtml } from '../ui/timing'
 import { panelControlsHtml, renderDiagramHtml } from '../lib/sequence-diagram'
 import { componentViewHtml } from '../lib/component-view'
@@ -33,15 +34,15 @@ export function heroHtml(): string {
       <h1>${escapeHtml(session.report.title)}</h1>
       <div class="meta">
         <span>Generated ${escapeHtml(formatGeneratedAt(session.report.generatedAt))}</span>
-        ${session.report.generator ? `<span class="generator">Written by ${escapeHtml(writtenBy(session.report.generator))}</span>` : ''}
+        ${session.report.generator.name ? `<span class="generator">Written by ${escapeHtml(writtenBy(session.report.generator))}</span>` : ''}
         <a class="version-link repo-link" ${repoLinkAttrsHtml(`${viewerLabel()}: lsd-mono on GitHub`)}><code>${escapeHtml(viewerLabel())}</code></a>
       </div>
     </div>`
 }
 
 export function scenarioHtml(s: Scenario): string {
-  const labelMaxWidth = session.report.options.labelMaxWidth
-  const diagram = renderDiagramHtml(s, labelMaxWidth)
+  const labelMaxChars = session.report.options.labelMaxChars
+  const diagram = renderDiagramHtml(s, labelMaxChars)
   // The chosen view sticks across scenarios (#105); one without component links shows Sequence.
   const components = hasComponentDiagram(s)
   const shown: DiagramViewName = components ? session.diagramView : 'sequence'
@@ -49,7 +50,7 @@ export function scenarioHtml(s: Scenario): string {
   <article class="scenario-card ${escapeAttr(s.status)}" id="card-${escapeAttr(s.id)}" data-status="${escapeAttr(s.status)}" aria-labelledby="scenario-title">
     <div class="scenario-head">
       <h2 id="scenario-title" tabindex="-1">${escapeHtml(s.title)}</h2>
-      <span class="badge ${escapeAttr(s.status)}">${escapeHtml(s.status)}</span>
+      <span class="badge ${escapeAttr(s.status)}" aria-describedby="${escapeAttr(statusDefinitionId(s.status))}">${escapeHtml(s.status)}</span>
     </div>
     ${timingStripHtml(s)}
     <div class="scenario-body">

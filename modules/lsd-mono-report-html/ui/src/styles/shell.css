@@ -43,15 +43,27 @@
 
 .hist {
   display: flex;
-  height: 6px;
+  height: 16px;
   border-radius: 999px;
   overflow: hidden;
   margin: 0 8px 16px;
   background: var(--surface-2);
 }
 .hist > span {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+/* Glyph and count on each segment, like the chips; clipped when a segment is too thin. */
+.hist-label {
+  color: var(--surface);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
 }
 .hist .s {
   background: var(--success);
@@ -61,6 +73,12 @@
 }
 .hist .e {
   background: var(--error);
+}
+.hist .k {
+  background: var(--text-faint);
+}
+.hist .a {
+  background: var(--text-muted);
 }
 
 .scenario-nav {
@@ -81,7 +99,7 @@
   cursor: pointer;
   color: var(--text-muted);
   display: grid;
-  grid-template-columns: 8px 1fr;
+  grid-template-columns: 14px 1fr;
   gap: 10px;
   align-items: start;
   transition:
@@ -104,23 +122,33 @@
   box-shadow: var(--focus);
 }
 .dot {
-  width: 8px;
-  height: 8px;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  margin-top: 6px;
+  margin-top: 3px;
   background: var(--text-faint);
+  /* The status glyph (✓ ! ✕), so the dot is not colour alone. */
+  color: var(--surface);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
 }
 .dot.success {
   background: var(--success);
-  box-shadow: 0 0 8px var(--success);
 }
 .dot.warn {
   background: var(--warn);
-  box-shadow: 0 0 8px var(--warn);
 }
 .dot.error {
   background: var(--error);
-  box-shadow: 0 0 8px var(--error);
+}
+.dot.skipped {
+  background: var(--text-faint);
+}
+.dot.aborted {
+  background: var(--text-muted);
 }
 .nav-title {
   font-size: 13px;
@@ -149,7 +177,7 @@
 .index-nav .nav-group-head {
   width: 100%;
   display: grid;
-  grid-template-columns: 8px 1fr auto;
+  grid-template-columns: 14px 1fr auto;
   gap: 10px;
   align-items: start;
   padding: 8px 12px;
@@ -306,4 +334,14 @@
 .schema-upgrade p {
   margin: 0 0 8px;
   line-height: 1.5;
+}
+
+/* Forced colours turn the fills to Canvas: keep each dot and each bar segment's edges. */
+@media (forced-colors: active) {
+  .dot {
+    border: 1px solid CanvasText;
+  }
+  .hist > span {
+    border: 1px solid CanvasText;
+  }
 }

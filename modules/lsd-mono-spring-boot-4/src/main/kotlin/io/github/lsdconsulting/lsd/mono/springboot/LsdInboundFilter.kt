@@ -66,6 +66,17 @@ internal class LsdInboundFilter(
             chain.doFilter(request, response)
             return
         }
+        // A RestTestClient bound in the JVM drew this call already: serve it under its id, draw nothing.
+        val drawn = guarded(null) { ClientDrawnCalls.drawnByClient(request.getHeader(ClientDrawnCalls.HEADER)) }
+        if (drawn != null) {
+            SpringScenarios.enter(scenario, drawn)
+            try {
+                SpringScenarios.within(SpringScenarios.Current(scenario, drawn)) { chain.doFilter(request, response) }
+            } finally {
+                SpringScenarios.leave(scenario, drawn)
+            }
+            return
+        }
         val cached = guarded(request) { CachedBodyRequest.of(request) }
         val tee = TeeResponse(response)
         val id = SpringScenarios.newId()
@@ -75,21 +86,19 @@ internal class LsdInboundFilter(
         guarded(Unit) {
             val query = request.queryString?.let { "?$it" } ?: ""
             scenario.ingest(
-                Interaction(
-                    kind = InteractionKind.REQUEST,
-                    from = caller,
-                    to = names.app,
-                    label = "${request.method} ${request.requestURI}$query",
-                    interactionId = id,
-                    trace = Trace(scenario.correlationId, id, request.getHeader(PARENT_SPAN_HEADER)),
-                    source = SpringScenarios.SOURCE,
-                    startedAt = started,
-                    data = (cached as? CachedBodyRequest)?.let { Bodies.read(it.body, request.contentType) } ?: parts(request),
-                    headers = request.headerNames
-                        .toList()
-                        .filterNot(SpringScenarios::isOwnHeader)
-                        .associateWith { request.getHeader(it) ?: "" },
-                ),
+                Interaction
+                    .builder(InteractionKind.REQUEST, caller, names.app, "${request.method} ${request.requestURI}$query")
+                    .interactionId(id)
+                    .trace(Trace(scenario.correlationId, id, request.getHeader(PARENT_SPAN_HEADER)))
+                    .source(SpringScenarios.SOURCE)
+                    .startedAt(started)
+                    .data((cached as? CachedBodyRequest)?.let { Bodies.read(it.body, request.contentType) } ?: parts(request))
+                    .headers(
+                        request.headerNames
+                            .toList()
+                            .filterNot(SpringScenarios::isOwnHeader)
+                            .associateWith { request.getHeader(it) ?: "" },
+                    ).build(),
             )
         }
         val reply = Reply(scenario, id, caller, t0, tee)
@@ -180,18 +189,15 @@ internal class LsdInboundFilter(
             guarded(Unit) {
                 val status = if (failure != null && written.status < 400) 500 else written.status
                 scenario.ingest(
-                    Interaction(
-                        kind = InteractionKind.RESPONSE,
-                        from = names.app,
-                        to = caller,
-                        label = statusLabel(status),
-                        status = status.toString(),
-                        replyTo = id,
-                        source = SpringScenarios.SOURCE,
-                        durationMs = (System.nanoTime() - t0) / 1_000_000.0,
-                        data = failure?.toString() ?: written.body(),
-                        headers = written.headerNames.associateWith { written.getHeader(it) ?: "" },
-                    ),
+                    Interaction
+                        .builder(InteractionKind.RESPONSE, names.app, caller, statusLabel(status))
+                        .status(status.toString())
+                        .replyTo(id)
+                        .source(SpringScenarios.SOURCE)
+                        .durationMs((System.nanoTime() - t0) / 1_000_000.0)
+                        .data(failure?.toString() ?: written.body())
+                        .headers(written.headerNames.associateWith { written.getHeader(it) ?: "" })
+                        .build(),
                 )
             }
         }

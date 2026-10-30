@@ -72,8 +72,13 @@ const coveredText = (page: Page) =>
     return { seen: seen.length, covered: covered.map(({ text }) => text) }
   })
 
-/** How far down the screen the stage is once the toolbar has scrolled into view, before #120. */
-const STAGE_AT: Record<number, number> = { 320: 542.5, 390: 524.75, 412: 524.75 }
+/**
+ * How far down the screen the stage is once the toolbar has scrolled into view, before #120. At 320
+ * the pinned zoom row is taller since #123 (1:1 wraps onto a second pinned row), so the places
+ * looked at start a little lower there; the tab covering text at some places at 320 is the open
+ * question above.
+ */
+const STAGE_AT: Record<number, number> = { 320: 560, 390: 524.75, 412: 524.75 }
 
 for (const width of WIDTHS) {
   test(`at ${width} the edge tab and the toolbar button cover no text, and each scrolls right`, async ({

@@ -13,12 +13,12 @@ const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> 
   from,
   to,
   label: id,
-  type: 'SYNCHRONOUS',
+  type: 'synchronous',
   ...extra,
 })
 
 function timed(pairs: number): Scenario {
-  const levels: Accuracy[] = ['TRACED', 'TIMESTAMPED', 'STRUCTURE_ONLY']
+  const levels: Accuracy[] = ['traced', 'timestamped', 'structure_only']
   return {
     ...untimed(),
     id: 'pay',
@@ -30,9 +30,9 @@ function timed(pairs: number): Scenario {
     participants: [],
     events: [
       msg('call', 'web', 'api', { callId: 'c1', durationMs: 12 }),
-      msg('reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1', replyOf: 'call' }),
+      msg('reply', 'api', 'web', { type: 'synchronous_response', callId: 'c1', replyTo: 'call' }),
     ],
-    accuracy: 'TIMESTAMPED',
+    accuracy: 'timestamped',
     pairAccuracy: Array.from({ length: pairs }, (_, i) => ({ from: `a${i}`, to: `b${i}`, accuracy: levels[i % 3] })),
   }
 }

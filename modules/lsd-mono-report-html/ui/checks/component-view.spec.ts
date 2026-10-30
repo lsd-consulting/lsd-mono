@@ -251,7 +251,7 @@ function chainReport(n: number): Report {
         ...uxFixture.scenarios[0],
         id: 'chain',
         title: 'Call chain',
-        participants: Array.from({ length: n }, (_, i) => ({ id: id(i), name: `Service ${i}`, type: 'PARTICIPANT' })),
+        participants: Array.from({ length: n }, (_, i) => ({ id: id(i), name: `Service ${i}`, type: 'participant' })),
         events: Array.from({ length: n - 1 }, (_, i): MessageEvent => ({
           ...(uxFixture.scenarios[0].events[0] as MessageEvent),
           id: `c${i}`,

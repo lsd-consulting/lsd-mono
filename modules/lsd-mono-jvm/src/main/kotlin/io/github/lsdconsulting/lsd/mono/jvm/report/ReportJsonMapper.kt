@@ -69,7 +69,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
         ReportOptionsJson
             .builder()
             .metricsEnabled(metricsEnabled)
-            .labelMaxWidth(labelMaxWidth)
+            .labelMaxChars(labelMaxWidth)
             .usagePing(usagePing)
             .source(knownSource(source))
             .build()
@@ -85,23 +85,28 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                 participants.map {
                     ParticipantJson
                         .builder(id = it.id, name = it.name)
-                        .type(it.type.name)
-                        .alias(it.displayName)
-                        .colour(it.colour)
+                        .type(it.type.name.lowercase())
+                        .displayName(it.displayName)
+                        .color(it.colour)
                         .build()
                 },
             ).events(events.map { it.toEventJson(timing) })
             .accuracy(AccuracyJson.valueOf(timing.accuracy.name))
-            .measuredCoverage(timing.measuredCoverage)
-            .pairingCoverage(timing.pairingCoverage)
+            .measuredRatio(timing.measuredCoverage)
+            .pairedRatio(timing.pairingCoverage)
             .sources(timing.sources)
             .wallClockMs(timing.wallClockMs)
             .clockOrdering(ClockOrderingJson.valueOf(timing.clockOrdering.name))
-            .clockOrdered(timing.clockOrdered)
-            .warnings(timing.warnings.map { WarningJson(it.kind.name, it.message) })
+            .clockOrderedCount(timing.clockOrdered)
+            .warnings(timing.warnings.map { WarningJson.builder(it.kind.name.lowercase(), it.message).build() })
             .reorderedByClock(timing.reorderedByClock)
-            .pairAccuracy(timing.pairAccuracy.map { PairAccuracyJson(it.from, it.to, AccuracyJson.valueOf(it.accuracy.name)) })
-            .build()
+            .pairAccuracy(
+                timing.pairAccuracy.map {
+                    PairAccuracyJson
+                        .builder(it.from.takeIf { it.isNotEmpty() }, it.to.takeIf { it.isNotEmpty() }, AccuracyJson.valueOf(it.accuracy.name))
+                        .build()
+                },
+            ).build()
 
     /** `capturedAt` is a wall-clock hint; reproducible reports leave it out. */
     private val writeCapturedAt: Boolean
@@ -111,25 +116,37 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
         when (this) {
             is Message ->
                 MessageEventJson
-                    // The JSON draws a diagram-edge end as "".
-                    .builder(id = id, from = from.orEmpty(), to = to.orEmpty(), label = label, type = type.name)
-                    .colour(colour?.takeIf { it.isNotBlank() })
+                    // A diagram-edge end is null, and not written.
+                    .builder(id = id, from = from?.takeIf { it.isNotEmpty() }, to = to?.takeIf { it.isNotEmpty() }, label = label, type = type.name.lowercase())
+                    .color(colour?.takeIf { it.isNotBlank() })
                     .durationMs(timing.reportedMs(this))
                     .data(data?.let(::jsonData))
                     .startedAt(startedAt?.toString())
                     .seq(seq.takeIf { it > 0 })
-                    .callId(callRef?.id)
-                    .replyTo(replyTo?.id)
+                    // callId is the key a call and its reply share; replyTo is the call's message id.
+                    .callId(callRef?.id ?: replyTo?.id)
+                    .replyTo(timing.replyOf[id])
                     .causedBy(causedBy?.id)
                     .trace(trace?.let { TraceJson(it.traceId, it.spanId, it.parentSpanId) })
                     .source(source)
                     .capturedAt(capturedAt?.takeIf { writeCapturedAt }?.toString())
-                    .status(status)
-                    .timing(timing.perEvent[id]?.timing?.name)
-                    .pairing(timing.perEvent[id]?.pairing?.name)
-                    .order(timing.perEvent[id]?.order?.name)
-                    .parentId(timing.parentOf[id])
-                    .replyOf(timing.replyOf[id])
+                    .status(status?.takeIf { it.isNotEmpty() })
+                    .timing(
+                        timing.perEvent[id]
+                            ?.timing
+                            ?.name
+                            ?.lowercase(),
+                    ).pairing(
+                        timing.perEvent[id]
+                            ?.pairing
+                            ?.name
+                            ?.lowercase(),
+                    ).order(
+                        timing.perEvent[id]
+                            ?.order
+                            ?.name
+                            ?.lowercase(),
+                    ).parentId(timing.parentOf[id])
                     .build()
             is Note ->
                 NoteEventJson
@@ -158,7 +175,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                         kind = if (action == LifelineAction.ACTIVATE) LifelineKindJson.ACTIVATE else LifelineKindJson.DEACTIVATE,
                         id = id,
                         participantId = participantId,
-                    ).colour(if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null)
+                    ).color(if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null)
                     .startedAt(startedAt?.toString())
                     .build()
         }
@@ -182,6 +199,8 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
             Status.SUCCESS -> StatusJson.SUCCESS
             Status.WARN -> StatusJson.WARN
             Status.ERROR -> StatusJson.ERROR
+            Status.SKIPPED -> StatusJson.SKIPPED
+            Status.ABORTED -> StatusJson.ABORTED
         }
 
     private fun determineOverallStatus(scenarios: List<Scenario>): StatusJson =
@@ -192,7 +211,9 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                     when (it) {
                         Status.ERROR -> 0
                         Status.WARN -> 1
-                        Status.SUCCESS -> 2
+                        Status.ABORTED -> 2
+                        Status.SUCCESS -> 3
+                        Status.SKIPPED -> 4
                     }
                 },
             ).firstOrNull()

@@ -92,7 +92,7 @@ class ReportSchemaTest {
             "times are date-times" to edit(json) { put("generatedAt", "yesterday") },
             "ids are not empty" to edit(json) { scenario(this).put("id", "") },
             "participant names are not empty" to edit(json) { participant(this).put("name", "") },
-            "a known event kind keeps its shape" to edit(json) { event(this).remove("from") },
+            "a known event kind keeps its shape" to edit(json) { event(this).remove("label") },
             "an attribute value is a string, boolean, number or a list of one" to edit(json) {
                 event(this).putObject("attributes").putObject("http.request").put("method", "GET")
             },
@@ -151,7 +151,7 @@ class ReportSchemaTest {
             },
             "no options or timing summary" to edit(json) {
                 remove("options")
-                scenario(this).remove(listOf("accuracy", "sources", "clockOrdering", "clockOrdered"))
+                scenario(this).remove(listOf("accuracy", "sources", "clockOrdering", "clockOrderedCount"))
             },
         )
         accepted.forEach { (rule, edited) -> assertValid(report, edited, rule) }
@@ -162,15 +162,15 @@ class ReportSchemaTest {
         val defs = MAPPER.readTree(ReportSchemas.read(REPORT_FILE)).get("\$defs")
         val writer = mapOf(
             "Status" to Status.entries.map { it.name.lowercase() },
-            "KnownParticipantType" to ParticipantType.entries.map { it.name },
-            "KnownMessageType" to MessageType.entries.map { it.name },
+            "KnownParticipantType" to ParticipantType.entries.map { it.name.lowercase() },
+            "KnownMessageType" to MessageType.entries.map { it.name.lowercase() },
             "NotePlacement" to NoteSide.entries.map { it.name.lowercase() },
-            "KnownTimingSource" to TimingSource.entries.map { it.name },
-            "KnownPairingSource" to PairingSource.entries.map { it.name },
-            "Accuracy" to Accuracy.entries.map { it.name },
-            "ClockOrdering" to ClockOrdering.entries.map { it.name },
-            "KnownOrderSource" to OrderSource.entries.map { it.name },
-            "KnownWarningKind" to WarningKind.entries.map { it.name },
+            "KnownTimingSource" to TimingSource.entries.map { it.name.lowercase() },
+            "KnownPairingSource" to PairingSource.entries.map { it.name.lowercase() },
+            "Accuracy" to Accuracy.entries.map { it.name.lowercase() },
+            "ClockOrdering" to ClockOrdering.entries.map { it.name.lowercase() },
+            "KnownOrderSource" to OrderSource.entries.map { it.name.lowercase() },
+            "KnownWarningKind" to WarningKind.entries.map { it.name.lowercase() },
             "KnownReportSource" to KnownReportSource.ALL,
             // lsd-mono-jvm writes no origin (absent is captured); a producer that imports writes the rest.
             "KnownMessageOrigin" to KnownMessageOrigin.ALL,
@@ -330,8 +330,8 @@ class ReportSchemaTest {
 
         /** Enum values the [everything] report must reach, so the test covers what it says. */
         val ENUM_VALUES =
-            ParticipantType.entries.map { it.name } +
-                MessageType.entries.map { it.name } +
+            ParticipantType.entries.map { it.name.lowercase() } +
+                MessageType.entries.map { it.name.lowercase() } +
                 listOf("success", "warn", "error", "over", "left", "right", "activate", "deactivate") +
                 listOf("message", "note", "divider", "section", "delay", "spacer")
     }

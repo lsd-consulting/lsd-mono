@@ -34,7 +34,7 @@ function fullReport(): Report {
     ...reportBase(),
     title: 'perf',
     generatedAt: '2026-10-03T12:00:00Z',
-    generator: 'test',
+    generator: { name: 'test' },
     scenarios: [
       {
         ...untimed(),
@@ -52,7 +52,7 @@ function fullReport(): Report {
             from: 'client',
             to: 'api',
             label: 'place order',
-            type: 'SYNCHRONOUS',
+            type: 'synchronous',
             data: {
               method: 'POST',
               path: '/v1/orders/1',
@@ -140,7 +140,7 @@ describe('inspector', () => {
 
   it("lists a link's interactions in the panel, one link at a time (#105)", () => {
     const controller = bindInspector(document, { loadPayload: async () => ({}), onClose: () => {} })
-    const call = (id: string, to: string, label: string, type: MessageType = 'SYNCHRONOUS') => ({
+    const call = (id: string, to: string, label: string, type: MessageType = 'synchronous') => ({
       kind: 'message' as const,
       id,
       from: 'a',
@@ -150,15 +150,15 @@ describe('inspector', () => {
     })
     const graph = componentGraph({
       participants: [
-        { id: 'a', name: 'Orders', type: 'PARTICIPANT' },
-        { id: 'b', name: 'Orders <DB>', type: 'DATABASE' },
-        { id: 'c', name: 'Events', type: 'QUEUE' },
+        { id: 'a', name: 'Orders', type: 'participant' },
+        { id: 'b', name: 'Orders <DB>', type: 'database' },
+        { id: 'c', name: 'Events', type: 'queue' },
       ],
       events: [
         call('1', 'b', 'load basket'),
         call('2', 'b', 'reserve stock'),
         call('3', 'b', 'load basket'),
-        call('4', 'c', 'order.paid', 'ASYNCHRONOUS'),
+        call('4', 'c', 'order.paid', 'asynchronous'),
       ],
     })
     controller.openLink('s', graph, 0, 'Links')
@@ -182,11 +182,11 @@ describe('inspector', () => {
     })
     const graph = componentGraph({
       participants: [
-        { id: 'a', name: 'Alpha', type: 'ACTOR' },
-        { id: 'b', name: 'Beta', type: 'PARTICIPANT' },
-        { id: 'c', name: 'Gamma', type: 'DATABASE' },
-        { id: 'd', name: 'Delta', type: 'QUEUE' },
-        { id: 'e', name: 'Epsilon', type: 'PARTICIPANT' },
+        { id: 'a', name: 'Alpha', type: 'actor' },
+        { id: 'b', name: 'Beta', type: 'participant' },
+        { id: 'c', name: 'Gamma', type: 'database' },
+        { id: 'd', name: 'Delta', type: 'queue' },
+        { id: 'e', name: 'Epsilon', type: 'participant' },
       ],
       events: ['b', 'c', 'd', 'e'].map((to, i) => ({
         kind: 'message' as const,
@@ -194,7 +194,7 @@ describe('inspector', () => {
         from: i === 0 ? 'a' : 'b',
         to: i === 0 ? 'b' : to,
         label: `call ${to}`,
-        type: 'SYNCHRONOUS' as const,
+        type: 'synchronous' as const,
       })),
     })
     controller.openLink('s', graph, 1, 'Wide scenario')

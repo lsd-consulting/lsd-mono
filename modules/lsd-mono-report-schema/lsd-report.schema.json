@@ -1,22 +1,21 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://lsd-consulting.github.io/lsd-mono/schema/0.3.0/lsd-report.schema.json",
+  "$id": "https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json",
   "title": "Report",
-  "description": "One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.",
+  "description": "One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Stable from 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status, ranked error, warn, aborted, success, skipped; success when there are no scenarios. Enum values are lower snake_case. Optional fields are never written empty: a list, object or string that would be empty is left out, and a reader reads a missing one as empty. Required fields are always written.",
   "type": "object",
   "required": [
     "schemaVersion",
     "title",
     "generatedAt",
     "generator",
-    "status",
-    "scenarios"
+    "status"
   ],
   "properties": {
     "schemaVersion": {
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
-      "description": "The version of this schema the report follows: semver, apart from the lsd-mono version. 0.3.0 for this schema."
+      "description": "The version of this schema the report follows: semver, apart from the lsd-mono version. 1.0.0 for this schema."
     },
     "title": {
       "type": "string"
@@ -27,8 +26,7 @@
       "description": "When the report was written: an RFC 3339 date-time, with Z or a UTC offset. lsd-mono-jvm writes UTC with Z, to the millisecond or less (the seconds alone when they are whole)."
     },
     "generator": {
-      "type": "string",
-      "description": "The producer and its version, such as `lsd-mono 0.7.0`. The usage ping matches this text, so it does not change shape."
+      "$ref": "#/$defs/Generator"
     },
     "status": {
       "$ref": "#/$defs/Status"
@@ -40,33 +38,37 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/Scenario"
-      }
+      },
+      "description": "Absent when the report has none.",
+      "minItems": 1
     }
   },
   "$defs": {
     "Status": {
       "title": "Status",
-      "description": "A scenario's or report's outcome, in lower case.",
+      "description": "A scenario's outcome. success: it passed. warn: it passed with something to look at, or did not finish (pending, undefined, ambiguous). error: it failed. skipped: it did not run (disabled, or skipped by the runner). aborted: it started and was stopped before it finished, such as by a failed assumption. Closed: a reader can rank and count every value. A report's status is the worst of its scenarios', ranked error, warn, aborted, success, skipped; success when there are none.",
       "enum": [
         "success",
         "warn",
-        "error"
+        "error",
+        "skipped",
+        "aborted"
       ]
     },
     "KnownParticipantType": {
       "title": "KnownParticipantType",
       "enum": [
-        "ACTOR",
-        "PARTICIPANT",
-        "DATABASE",
-        "QUEUE",
-        "ENTITY",
-        "BOUNDARY"
+        "actor",
+        "participant",
+        "database",
+        "queue",
+        "entity",
+        "boundary"
       ]
     },
     "ParticipantType": {
       "title": "ParticipantType",
-      "description": "How a participant is drawn. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as PARTICIPANT.",
+      "description": "How a participant is drawn. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as participant.",
       "anyOf": [
         {
           "$ref": "#/$defs/KnownParticipantType"
@@ -80,18 +82,18 @@
     "KnownMessageType": {
       "title": "KnownMessageType",
       "enum": [
-        "SYNCHRONOUS",
-        "SYNCHRONOUS_RESPONSE",
-        "ASYNCHRONOUS",
-        "LOST",
-        "BI_DIRECTIONAL",
-        "SHORT_INBOUND",
-        "SHORT_OUTBOUND"
+        "synchronous",
+        "synchronous_response",
+        "asynchronous",
+        "lost",
+        "bi_directional",
+        "short_inbound",
+        "short_outbound"
       ]
     },
     "MessageType": {
       "title": "MessageType",
-      "description": "How a message's arrow is drawn. SHORT_INBOUND comes in from the diagram's edge and SHORT_OUTBOUND leaves to it. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as a SYNCHRONOUS arrow.",
+      "description": "How a message's arrow is drawn. short_inbound comes in from the diagram's edge and short_outbound leaves to it. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as a synchronous arrow.",
       "anyOf": [
         {
           "$ref": "#/$defs/KnownMessageType"
@@ -108,15 +110,16 @@
         "over",
         "left",
         "right"
-      ]
+      ],
+      "description": "Closed: the three places a sequence diagram can draw a note."
     },
     "KnownTimingSource": {
       "title": "KnownTimingSource",
       "enum": [
-        "NONE",
-        "TIMESTAMPED",
-        "MEASURED",
-        "DERIVED"
+        "none",
+        "timestamped",
+        "measured",
+        "derived"
       ]
     },
     "TimingSource": {
@@ -135,15 +138,15 @@
     "KnownPairingSource": {
       "title": "KnownPairingSource",
       "enum": [
-        "NONE",
-        "GUESSED",
-        "CALL_ID",
-        "TRACE"
+        "none",
+        "guessed",
+        "call_id",
+        "trace"
       ]
     },
     "PairingSource": {
       "title": "PairingSource",
-      "description": "How a reply was paired with its call. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as NONE.",
+      "description": "How a reply was paired with its call. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as none.",
       "anyOf": [
         {
           "$ref": "#/$defs/KnownPairingSource"
@@ -157,14 +160,14 @@
     "KnownOrderSource": {
       "title": "KnownOrderSource",
       "enum": [
-        "SEQUENCE",
-        "STRUCTURE",
-        "CLOCK"
+        "sequence",
+        "structure",
+        "clock"
       ]
     },
     "OrderSource": {
       "title": "OrderSource",
-      "description": "What put a message where it is. CLOCK: moved by clock ordering (startedAt), shown with a badge. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as SEQUENCE.",
+      "description": "What put a message where it is. clock: moved by clock ordering (startedAt), shown with a badge. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as sequence.",
       "anyOf": [
         {
           "$ref": "#/$defs/KnownOrderSource"
@@ -178,11 +181,11 @@
     "KnownWarningKind": {
       "title": "KnownWarningKind",
       "enum": [
-        "REPLY_WITHOUT_CALL",
-        "DURATION_ON_REPLY_DROPPED",
-        "LONGER_THAN_PARENT",
-        "DUPLICATE_SPAN",
-        "SKEW"
+        "reply_without_call",
+        "duration_on_reply_dropped",
+        "longer_than_parent",
+        "duplicate_span",
+        "skew"
       ]
     },
     "WarningKind": {
@@ -201,21 +204,21 @@
     "Accuracy": {
       "title": "Accuracy",
       "enum": [
-        "STRUCTURE_ONLY",
-        "TIMESTAMPED",
-        "MEASURED",
-        "TRACED"
+        "structure_only",
+        "timestamped",
+        "measured",
+        "traced"
       ],
-      "description": "Optional on a scenario; see Scenario for the default."
+      "description": "Optional on a scenario; see Scenario for the default. Closed: each value is a rung on one ladder the page ranks, so a value it does not know could not be ranked."
     },
     "ClockOrdering": {
       "title": "ClockOrdering",
       "enum": [
-        "OFF",
-        "SAME_SOURCE",
-        "ALL_SOURCES"
+        "off",
+        "same_source",
+        "all_sources"
       ],
-      "description": "Optional on a scenario; default SAME_SOURCE."
+      "description": "Optional on a scenario; default same_source. Closed: the setting the producer ordered by; a new mode would change what the diagram's order means, which is a major change."
     },
     "KnownReportSource": {
       "title": "KnownReportSource",
@@ -246,14 +249,14 @@
           "type": "boolean",
           "description": "When false, every scenario's metrics are empty. Default true."
         },
-        "labelMaxWidth": {
+        "labelMaxChars": {
           "type": "integer",
           "minimum": 1,
           "description": "Characters diagram labels and metric summaries are cut to. Default 200."
         },
         "usagePing": {
           "type": "boolean",
-          "description": "Whether the page may request the usage ping files: at most one fire-and-forget request per event, whose failure is ignored. The page also needs a release generator. Default true, as lsd-mono writes it: on unless lsd.mono.report.usagePing=false. Unlike the other fields, a missing value is read as false, so a report that does not say is never pinged."
+          "description": "Whether the page may request the usage ping files: at most one fire-and-forget request per event, whose failure is ignored. The ping names the viewer's version, not the generator. lsd-mono-jvm writes true unless lsd.mono.report.usagePing=false. A missing value is read as false, so a report that does not say is never pinged."
         },
         "source": {
           "$ref": "#/$defs/ReportSource"
@@ -337,18 +340,18 @@
       "description": "The accuracy of the messages between two participants.",
       "type": "object",
       "required": [
-        "from",
-        "to",
         "accuracy"
       ],
       "properties": {
         "from": {
           "type": "string",
-          "description": "Sender id; an empty string for the diagram's edge, as on a message."
+          "description": "Sender id; absent for the diagram's edge, as on a message.",
+          "minLength": 1
         },
         "to": {
           "type": "string",
-          "description": "Receiver id; an empty string for the diagram's edge, as on a message."
+          "description": "Receiver id; absent for the diagram's edge, as on a message.",
+          "minLength": 1
         },
         "accuracy": {
           "$ref": "#/$defs/Accuracy"
@@ -375,13 +378,14 @@
         "type": {
           "$ref": "#/$defs/ParticipantType"
         },
-        "alias": {
+        "displayName": {
           "type": "string",
-          "description": "The participant's display name (displayName in the Kotlin API), drawn instead of name. Absent when it has none."
+          "description": "The name drawn for the participant instead of name. Absent when it has none.",
+          "minLength": 1
         },
-        "colour": {
+        "color": {
           "type": "string",
-          "description": "A CSS colour for the participant's header."
+          "description": "A CSS color for the participant's header."
         },
         "attributes": {
           "$ref": "#/$defs/Attributes",
@@ -477,13 +481,11 @@
     },
     "MessageEvent": {
       "title": "MessageEvent",
-      "description": "A message between two participants. data is its payload: any JSON value, absent when it has none. In the diagram page's copy, when payloadId is set, only the payload's method, path and status (or nothing) stay in data.",
+      "description": "A message between two participants. data is its payload: any JSON value, absent when it has none. In the diagram page's copy, when payloadId is set, only the payload's method, path and status (or nothing) stay in data. Ids: id identifies the event. callId pairs a call with its reply; replyTo points a reply at its call's id; causedBy points a consume at its publish's callId; parentId points at the enclosing call's id.",
       "type": "object",
       "required": [
         "kind",
         "id",
-        "from",
-        "to",
         "label",
         "type"
       ],
@@ -498,11 +500,13 @@
         },
         "from": {
           "type": "string",
-          "description": "Sender id. An empty string, not an absent field, for a diagram edge: SHORT_INBOUND."
+          "minLength": 1,
+          "description": "Sender id. Absent for a message from the diagram's edge: short_inbound."
         },
         "to": {
           "type": "string",
-          "description": "Receiver id. An empty string, not an absent field, for a diagram edge: SHORT_OUTBOUND."
+          "minLength": 1,
+          "description": "Receiver id. Absent for a message to the diagram's edge: short_outbound."
         },
         "label": {
           "type": "string"
@@ -510,33 +514,31 @@
         "type": {
           "$ref": "#/$defs/MessageType"
         },
-        "colour": {
-          "type": "string"
+        "color": {
+          "type": "string",
+          "description": "A CSS color for the arrow and label."
         },
         "durationMs": {
           "type": "number",
           "description": "Milliseconds, to the microsecond, without trailing zeros."
         },
         "data": true,
-        "payloadId": {
-          "type": "string",
-          "description": "Key into the payload sidecar (<scenarioId>/<messageId>), set in the diagram page's copy when the payload loads on open. Never in <stem>-report.json."
-        },
         "seq": {
           "type": "integer",
           "minimum": 1,
           "description": "Capture order. Absent when not counted."
         },
         "callId": {
-          "type": "string"
+          "type": "string",
+          "description": "The correlation key a call and its reply share, such as a span or request id. On a reply the producer copies its call's callId (lsd-mono-jvm: the id it was given, else the call's message id)."
         },
         "replyTo": {
           "type": "string",
-          "description": "On a reply: the call it answers."
+          "description": "On a reply paired with its call: the message id of the call it answers. Absent on an unpaired reply."
         },
         "causedBy": {
           "type": "string",
-          "description": "On a consume: the publish that caused it."
+          "description": "On a consume: the callId of the publish that caused it."
         },
         "trace": {
           "$ref": "#/$defs/Trace"
@@ -552,7 +554,8 @@
         },
         "status": {
           "type": "string",
-          "description": "The message's status, such as an HTTP status, as text even when it is a number."
+          "minLength": 1,
+          "description": "The message's status, such as an HTTP status, as text even when it is a number. Absent when it has none."
         },
         "timing": {
           "$ref": "#/$defs/TimingSource"
@@ -565,11 +568,7 @@
         },
         "parentId": {
           "type": "string",
-          "description": "Id of the call this message runs inside, as the library nested it (span link, else innermost open call)."
-        },
-        "replyOf": {
-          "type": "string",
-          "description": "On a paired reply: id of the call it answers."
+          "description": "The message id of the call this message runs inside, as the producer nested it (span link, else innermost open call)."
         },
         "attributes": {
           "$ref": "#/$defs/Attributes"
@@ -755,9 +754,9 @@
         "participantId": {
           "type": "string"
         },
-        "colour": {
+        "color": {
           "type": "string",
-          "description": "Activation bar colour. Only on activate, and only when the caller set one."
+          "description": "Activation bar color. Only on activate, and only when the caller set one."
         },
         "startedAt": {
           "type": "string",
@@ -829,17 +828,12 @@
     },
     "Scenario": {
       "title": "Scenario",
-      "description": "One scenario: a test or a feature's scenario. The timing summary (accuracy to pairAccuracy) sits flat on the scenario, not in an object of its own. accuracy says how the scenario's timings were captured. The timing summary (accuracy, sources, clockOrdering, clockOrdered and the optional fields after them) is optional for a producer without timing analysis. A reader's defaults: accuracy MEASURED when a message has a duration or start time, else STRUCTURE_ONLY; sources as described; clockOrdering SAME_SOURCE; clockOrdered 0.",
+      "description": "One scenario: a test or a feature's scenario. The timing summary (accuracy to pairAccuracy) sits flat on the scenario, not in an object of its own. accuracy says how the scenario's timings were captured. The timing summary (accuracy, sources, clockOrdering, clockOrdered and the optional fields after them) is optional for a producer without timing analysis. A reader's defaults: accuracy measured when a message has a duration or start time, else structure_only; sources as described; clockOrdering same_source; clockOrdered 0.",
       "type": "object",
       "required": [
         "id",
         "title",
-        "status",
-        "description",
-        "facts",
-        "metrics",
-        "participants",
-        "events"
+        "status"
       ],
       "properties": {
         "id": {
@@ -855,7 +849,8 @@
         },
         "description": {
           "type": "string",
-          "description": "Plain text; Given, When, Then and And lines are highlighted."
+          "description": "Plain text; Given, When, Then and And lines are highlighted. Absent when there is none.",
+          "minLength": 1
         },
         "error": {
           "$ref": "#/$defs/ScenarioError"
@@ -864,36 +859,44 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/Fact"
-          }
+          },
+          "description": "Absent when there are none.",
+          "minItems": 1
         },
         "metrics": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/Metric"
-          }
+          },
+          "description": "Absent when there are none.",
+          "minItems": 1
         },
         "participants": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/Participant"
-          }
+          },
+          "description": "Absent when there are none.",
+          "minItems": 1
         },
         "events": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/DiagramEvent"
-          }
+          },
+          "description": "Absent when there are none.",
+          "minItems": 1
         },
         "accuracy": {
           "$ref": "#/$defs/Accuracy"
         },
-        "measuredCoverage": {
+        "measuredRatio": {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
           "description": "Share of calls with a measured duration, 0 to 1. Absent when there are no calls."
         },
-        "pairingCoverage": {
+        "pairedRatio": {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
@@ -904,7 +907,8 @@
           "items": {
             "type": "string"
           },
-          "description": "Distinct clock domains of the messages, local included (local is the name for a message with no source). Optional: a reader's default is [\"local\"] when the scenario has messages, else []."
+          "description": "Distinct clock domains of the messages, local included (local is the name for a message with no source). Absent when unknown or empty: a reader's default is [\"local\"] when the scenario has messages, else [].",
+          "minItems": 1
         },
         "wallClockMs": {
           "type": "number",
@@ -913,7 +917,7 @@
         "clockOrdering": {
           "$ref": "#/$defs/ClockOrdering"
         },
-        "clockOrdered": {
+        "clockOrderedCount": {
           "type": "integer",
           "minimum": 0,
           "description": "How many messages clock ordering placed. Default 0."
@@ -923,21 +927,44 @@
           "items": {
             "$ref": "#/$defs/TimingWarning"
           },
-          "description": "Absent, rather than empty, when there are none."
+          "description": "Absent when there are none.",
+          "minItems": 1
         },
         "reorderedByClock": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Ids of the messages clock ordering moved. Absent, rather than empty, when there are none."
+          "description": "Ids of the messages clock ordering moved. Absent when there are none.",
+          "minItems": 1
         },
         "pairAccuracy": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/PairAccuracy"
           },
-          "description": "Accuracy per participant pair, present only when the pairs differ."
+          "description": "Accuracy per participant pair, present only when the pairs differ.",
+          "minItems": 1
+        }
+      }
+    },
+    "Generator": {
+      "title": "Generator",
+      "description": "What wrote the document. The page shows \"Written by <name>\", with the version only when it differs from the viewer's.",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The producer, such as lsd-mono-jvm."
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The producer's version. Absent when it has none, such as a development build."
         }
       }
     }

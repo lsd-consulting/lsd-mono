@@ -12,7 +12,7 @@ import { SEARCH_REVEAL_DELAY_MS } from './search-reveal'
 import { diagramState, forgetDiagrams } from './state'
 import { refitDiagram } from './zoom'
 import { untimed } from '../report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../../ui/format'
 
 let n = 0
 function scenario(messages: number): Scenario {
@@ -20,7 +20,7 @@ function scenario(messages: number): Scenario {
   const participants: Participant[] = ['p0', 'p1', 'p2', 'p3'].map((id, i) => ({
     id,
     name: `Service ${i}`,
-    type: 'PARTICIPANT',
+    type: 'participant',
   }))
   return {
     ...untimed(),
@@ -38,7 +38,7 @@ function scenario(messages: number): Scenario {
       to: i === messages - 1 ? 'p3' : `p${(i % 2) + 1}`,
       // The last message is the only "needle", far down the diagram and on p3's lane.
       label: i === messages - 1 ? 'needle' : `call ${i % 2 === 0 ? 'even' : 'odd'}`,
-      type: 'SYNCHRONOUS' as const,
+      type: 'synchronous' as const,
       // A payload makes each arrow a button, so the painted rows can be read by message.
       payloadId: `repaint-${n}/m${i}`,
     })),
@@ -48,7 +48,7 @@ function scenario(messages: number): Scenario {
 function mount(messages = 6, width = 1400) {
   const s = scenario(messages)
   const host = document.createElement('div')
-  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
+  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_CHARS)
   document.body.append(host)
   let panel = width
   const scroll = host.querySelector<HTMLElement>('.seq-scroll')!

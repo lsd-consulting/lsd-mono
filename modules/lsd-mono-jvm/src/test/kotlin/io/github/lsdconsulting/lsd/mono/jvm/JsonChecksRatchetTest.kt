@@ -33,7 +33,7 @@ class JsonChecksRatchetTest {
     private val allowed =
         mapOf(
             "lsd-mono-report-html/src/test/kotlin/io/github/lsdconsulting/lsd/mono/report/html/JsonTest.kt" to 3,
-            "lsd-mono-jvm/src/test/kotlin/io/github/lsdconsulting/lsd/mono/jvm/Conformance.kt" to 2,
+            "lsd-mono-jvm/src/test/kotlin/io/github/lsdconsulting/lsd/mono/jvm/Conformance.kt" to 1,
             "lsd-mono-jvm/src/test/kotlin/io/github/lsdconsulting/lsd/mono/jvm/PayloadCaptureTest.kt" to 1,
             "lsd-mono-jvm/src/test/kotlin/io/github/lsdconsulting/lsd/mono/jvm/PayloadConvertersTest.kt" to 1,
             "lsd-mono-jvm/src/test/kotlin/io/github/lsdconsulting/lsd/mono/jvm/ReportSchemaTest.kt" to 1,
