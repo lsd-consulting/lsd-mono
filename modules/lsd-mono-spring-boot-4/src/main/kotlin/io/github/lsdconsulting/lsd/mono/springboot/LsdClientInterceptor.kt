@@ -125,7 +125,7 @@ internal class LsdClientInterceptor(
 }
 
 /** The response with its (small) body read once, so the diagram and the caller can both read it. */
-private class BufferedResponse(
+internal class BufferedResponse(
     private val delegate: ClientHttpResponse,
     val bytes: ByteArray,
 ) : ClientHttpResponse {
