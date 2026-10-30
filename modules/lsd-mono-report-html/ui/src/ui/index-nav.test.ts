@@ -69,7 +69,7 @@ describe('index sidebar', () => {
     expect(ul.querySelector('[data-group="shipping"]')?.getAttribute('aria-expanded')).toBe('false')
     expect(ul.querySelector('#nav-group-shipping')?.hasAttribute('hidden')).toBe(true)
     expect(ul.querySelector('a.nav-group-head')?.getAttribute('href')).toBe('elsewhere.html')
-    expect(ul.querySelector('.nav-group.current .nav-meta')?.textContent).toBe('1 error · 1 success')
+    expect(ul.querySelector('.nav-group.current .nav-meta')?.textContent).toBe('1 error · 1 passed')
   })
 
   it('opens every matching group while searching and leaves out groups with no match', () => {
@@ -96,7 +96,7 @@ describe('index sidebar', () => {
   it('moves names into tooltips on the icon rail', () => {
     const ul = nav({ collapsed: true })
     expect(ul.querySelector('[data-group="checkout"]')?.getAttribute('title')).toBe(
-      'Checkout <tests>: 1 error · 1 success',
+      'Checkout <tests>: 1 error · 1 passed',
     )
     expect(ul.querySelector('a.nav-group-head')?.getAttribute('title')).toBe('Elsewhere: no scenarios')
     expect(ul.querySelector('[data-nav="s2"]')?.getAttribute('title')).toBe('Card declined. Error · 3 messages')
@@ -104,7 +104,10 @@ describe('index sidebar', () => {
 
   it('summarises outcomes failures first', () => {
     expect(outcomeSummary({ success: 2, warn: 1, error: 3, skipped: 0, aborted: 0 })).toBe(
-      '3 error · 1 warn · 2 success',
+      '3 errors · 1 warning · 2 passed',
+    )
+    expect(outcomeSummary({ success: 1, warn: 2, error: 1, skipped: 4, aborted: 1 })).toBe(
+      '1 error · 2 warnings · 1 aborted · 1 passed · 4 skipped',
     )
     expect(outcomeSummary({ success: 0, warn: 0, error: 0, skipped: 0, aborted: 0 })).toBe('')
   })

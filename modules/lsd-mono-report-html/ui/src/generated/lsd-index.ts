@@ -25,7 +25,7 @@ export interface IndexManifest {
   generator: Generator
   options?: IndexOptions
   /**
-   * Failed reports first, then warnings, passes, aborted and skipped; by title within each. Absent when there are none.
+   * Failed reports first, then warnings, aborted, passes and skipped; by title within each. Absent when there are none.
    *
    * @minItems 1
    */

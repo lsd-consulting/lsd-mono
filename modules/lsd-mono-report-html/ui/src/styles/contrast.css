@@ -34,6 +34,17 @@
   outline: 2px solid #000;
   outline-offset: 1px;
 }
+/* Skipped and aborted get rings like their chips, so they differ from success's solid circle. */
+[data-theme="contrast"] .dot.skipped {
+  background: #fff;
+  color: #000;
+  border: 2px dotted #000;
+}
+[data-theme="contrast"] .dot.aborted {
+  background: #fff;
+  color: #000;
+  border: 2px dashed #000;
+}
 [data-theme="contrast"] .hist .s {
   background: repeating-linear-gradient(90deg, #000 0 2px, #fff 2px 5px);
 }

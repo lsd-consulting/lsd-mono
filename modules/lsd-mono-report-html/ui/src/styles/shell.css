@@ -335,3 +335,13 @@
   margin: 0 0 8px;
   line-height: 1.5;
 }
+
+/* Forced colours turn the fills to Canvas: keep each dot and each bar segment's edges. */
+@media (forced-colors: active) {
+  .dot {
+    border: 1px solid CanvasText;
+  }
+  .hist > span {
+    border: 1px solid CanvasText;
+  }
+}

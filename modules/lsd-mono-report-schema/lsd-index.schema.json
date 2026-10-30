@@ -44,7 +44,7 @@
       "items": {
         "$ref": "#/$defs/IndexReport"
       },
-      "description": "Failed reports first, then warnings, passes, aborted and skipped; by title within each. Absent when there are none.",
+      "description": "Failed reports first, then warnings, aborted, passes and skipped; by title within each. Absent when there are none.",
       "minItems": 1
     }
   },

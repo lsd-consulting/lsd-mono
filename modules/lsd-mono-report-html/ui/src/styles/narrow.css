@@ -189,9 +189,12 @@
     flex: 0 0 100%;
     height: 0;
   }
+  /* The chips take their own full-width row and wrap, so search keeps the second row
+     however many statuses a report has (five chips left search 55-85 px at 360-390 px). */
   .filters {
     order: 4;
-    flex-wrap: nowrap;
+    flex: 1 0 100%;
+    flex-wrap: wrap;
     gap: 4px;
   }
   .chip {

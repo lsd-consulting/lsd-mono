@@ -13,7 +13,7 @@ export const STATUS_DEFINITIONS: Record<Status, string> = {
     'The test neither passed nor failed, so it is not counted as a failure: a Cucumber step was pending, ' +
     'undefined or ambiguous, or it was still running when the report was written.',
   error: 'The test failed: an assertion failed or an exception was thrown.',
-  skipped: 'The test did not run: it was disabled, or a Cucumber step was skipped.',
+  skipped: 'The test did not run: it was disabled, or skipped by the runner (for example a Cucumber tag or hook).',
   aborted: 'The test started but was aborted rather than failed, for example because an assumption failed.',
 }
 

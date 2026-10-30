@@ -14,6 +14,9 @@ describe('statusGlyph (#158)', () => {
   it('gives each status its own glyph, the error one matching the diagram mark', () => {
     expect(['success', 'warn', 'error'].map(statusGlyph)).toEqual(['✓', '!', '✕'])
   })
+  it('marks skipped and aborted with glyphs common fonts cover, not a minus-like dash', () => {
+    expect(['skipped', 'aborted'].map(statusGlyph)).toEqual(['»', '■'])
+  })
 })
 
 describe('labelMaxChars (#111)', () => {

@@ -38,11 +38,20 @@ export function indexNavHtml(manifest: IndexManifest, state: IndexNavState): str
   return html.trim() ? html : '<li class="nav-empty">No reports match.</li>'
 }
 
-/** "1 error · 2 success": the report's scenarios by outcome, failures first. */
+/** Plain words for the index summary, singular then plural. */
+const SUMMARY_WORDS: Record<Status, [string, string]> = {
+  error: ['error', 'errors'],
+  warn: ['warning', 'warnings'],
+  aborted: ['aborted', 'aborted'],
+  success: ['passed', 'passed'],
+  skipped: ['skipped', 'skipped'],
+}
+
+/** "1 error · 2 warnings · 3 passed": the report's scenarios by outcome, failures first. */
 export function outcomeSummary(counts: Record<Status, number>): string {
   return (['error', 'warn', 'aborted', 'success', 'skipped'] as Status[])
     .filter((st) => counts[st])
-    .map((st) => `${counts[st]} ${statusLabel(st).toLowerCase()}`)
+    .map((st) => `${counts[st]} ${SUMMARY_WORDS[st][counts[st] === 1 ? 0 : 1]}`)
     .join(' · ')
 }
 

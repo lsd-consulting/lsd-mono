@@ -37,7 +37,8 @@ export function formatGeneratedAt(iso: string, timeZone?: string): string {
   }
 }
 
-/** A status's glyph, so the chips differ without colour (#158): ✓, ! and ✕ (the error mark). */
+/** A status's glyph, so the chips differ without colour (#158): ✓, ! and ✕ (the error mark),
+ * » for skipped (it was passed over) and ■ for aborted (a stop). Both are in common fonts, unlike ⊘. */
 export function statusGlyph(s: string): string {
   return s === 'success'
     ? '✓'
@@ -46,9 +47,9 @@ export function statusGlyph(s: string): string {
       : s === 'error'
         ? '✕'
         : s === 'skipped'
-          ? '–'
+          ? '»'
           : s === 'aborted'
-            ? '⊘'
+            ? '■'
             : '•'
 }
 
