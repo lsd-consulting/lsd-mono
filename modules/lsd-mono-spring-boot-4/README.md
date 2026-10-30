@@ -67,7 +67,6 @@ Spring Boot's own `RestTestClient` and `TestRestTemplate` need nothing. A client
 
 ```java
 RestTestClient client = RestTestClient.bindToController(new OrderController())
-        .build().mutate()
         .requestInterceptor(LsdRestTestClient.interceptor())
         .build();
 
@@ -75,7 +74,7 @@ TestRestTemplate template = new TestRestTemplate(
         new RestTemplateBuilder().additionalInterceptors(LsdRestTestClient.interceptor()));
 ```
 
-To a server (a URI with a host) it sends the test's scenario in `lsd-scenario`, so the app's filter draws the request in the right scenario even when other tests run at the same time. In the JVM (MockMvc, the application context, a controller or a router function) it draws the request and its reply itself, named as the app's own filter names them, and marks the request so that the app's filter, when it is in the chain, serves it under the same call rather than drawing it twice.
+To a server (a URI with a host) it sends the test's scenario in `lsd-scenario`, so the app's filter draws the request in the right scenario even when other tests run at the same time. In the JVM (MockMvc, the application context, a controller or a router function) it draws the request and its reply itself, named as the app's own filter names them, and marks the request so that the app's filter, when it is in the chain, serves it under the same call rather than drawing it twice. Applying it more than once, or adding it to Spring Boot's client (`auto.mutate().requestInterceptor(...)`), adds nothing.
 
 ## WebSockets
 
@@ -190,6 +189,7 @@ A test class that already has `@ExtendWith(LsdExtension::class)` ([lsd-mono-juni
   - a client built inline and never a bean (`RestClient.create()`, `new RestTemplate()` in a method, `WebClient.create()`): neither Spring nor the clients offer a global hook short of bytecode instrumentation. Build it from Spring Boot's injected `RestClient.Builder`, `RestTemplateBuilder` or `WebClient.Builder`, or declare it as a bean;
   - a server-sent event response through `RestClient` or `RestTemplate` that the app neither reads to the end nor closes: its reply is never drawn, since nothing marks when the app is done with it. Reading it without the app would consume the stream, so the starter waits for the app;
   - a `WebTestClient` the test builds bound to a controller, router function or web handler, unless it applies `LsdWebTestClient.configurer()` ([above](#a-webtestclient-the-test-builds-itself)).
+  - a `RestTestClient` bound to MockMvc without its filters (`@AutoConfigureMockMvc(addFilters = false)`) and given an absolute base URL (`baseUrl("http://localhost")`): a URI with a host is taken to reach a server, whose filter would draw it, so nothing is drawn. Leave out the base URL (Spring Boot's client has none) or keep the filters;
   - a `RestTestClient`, `TestRestTemplate` or `RestTemplate` the test builds without `LsdRestTestClient.interceptor()`: drawn by the app's filter when the request reaches it, but with tests running in parallel it may land outside its test's scenario, and bound to a controller or router function (no filter in the chain) it is not drawn;
 - Work a request hands to another thread keeps its scenario and the request that handed it over:
   - For Spring's `ThreadPoolTaskExecutor`, `ThreadPoolTaskScheduler` and `SimpleAsyncTaskExecutor` beans (Spring Boot's `applicationTaskExecutor`, so `@Async`, included) it registers a bean post-processor that adds a `TaskDecorator`. It is composed with the app's own decorator (a `CompositeTaskDecorator`, the app's inside), and captures the request when the task is submitted.
