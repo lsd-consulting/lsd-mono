@@ -14,13 +14,15 @@ import kotlin.io.path.writeText
  * tests read too. They are read from the classpath ([ReportCorpus]), so a change to one reruns
  * these tests.
  *
- * A report lsd-mono-jvm writes for the corpus has its time and generator set to [GENERATED_AT]
- * and [GENERATOR], the only parts that change from run to run, and no usage ping ([produce]).
+ * A report lsd-mono-jvm writes for the corpus has its time set to [GENERATED_AT] and its generator's
+ * version dropped, the only parts that change from run to run, and no usage ping ([produce]).
  * Everything else must match the corpus file byte for byte.
  */
 internal object Conformance {
     const val GENERATED_AT = "2026-01-01T12:00:00Z"
-    const val GENERATOR = "lsd-mono-jvm (conformance)"
+
+    /** The corpus's generator: lsd-mono-jvm with no version. */
+    const val GENERATOR = "lsd-mono-jvm"
 
     const val REPORT_SCHEMA = "lsd-report.schema.json"
     const val INDEX_SCHEMA = "lsd-index.schema.json"
@@ -58,11 +60,11 @@ internal object Conformance {
         System.setProperty(LsdProperties.USAGE_PING, "false")
     }
 
-    /** [json] with its time and generator set to the corpus's. */
+    /** [json] with its time set to the corpus's and its generator's version dropped. */
     fun normalise(json: String): String =
         json
             .replace(Regex(""""generatedAt": "[^"]*""""), """"generatedAt": "$GENERATED_AT"""")
-            .replace(Regex(""""generator": "[^"]*""""), """"generator": "$GENERATOR"""")
+            .replace(Regex("""("generator": \{\s*"name": "$GENERATOR"),\s*"version": "[^"]*""""), "$1")
 
     /** [json] (a report or index manifest as written), normalised, follows [schema] and is the corpus file [file]. */
     fun assertProduced(

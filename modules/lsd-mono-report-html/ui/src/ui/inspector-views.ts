@@ -12,9 +12,9 @@ export function messageMetaHtml(scenarioId: string, message: MessageEvent): stri
         <span class="pill">${escapeHtml(message.type)}</span>
         <span class="pill">${escapeHtml(message.from)} → ${escapeHtml(message.to)}</span>
         ${message.durationMs != null ? `<span class="pill">${escapeHtml(message.durationMs)} ms</span>` : ''}
-        ${message.timing && message.timing !== 'NONE' ? `<span class="pill">${escapeHtml(message.timing.toLowerCase())}</span>` : ''}
-        ${message.order === 'CLOCK' ? '<span class="pill clock">clock-ordered</span>' : ''}
-        ${message.pairing === 'GUESSED' ? '<span class="pill">guessed pairing</span>' : ''}
+        ${message.timing && message.timing !== 'none' ? `<span class="pill">${escapeHtml(message.timing.toLowerCase())}</span>` : ''}
+        ${message.order === 'clock' ? '<span class="pill clock">clock-ordered</span>' : ''}
+        ${message.pairing === 'guessed' ? '<span class="pill">guessed pairing</span>' : ''}
         ${statusPill(message.status)}
         ${summaryPills(message.data, message.status)}
         <span class="pill">${escapeHtml(scenarioId)}</span>`

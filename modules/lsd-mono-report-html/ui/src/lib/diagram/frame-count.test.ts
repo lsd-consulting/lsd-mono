@@ -12,7 +12,7 @@ import { refitDiagram } from './zoom'
 import { WHEEL_STEP_PX, zoomByWheel } from './zoom-controls'
 import { flushDiagramPaints } from './invalidate'
 import { untimed } from '../report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../../ui/format'
 
 // applyDiagramFrame is the only code that sets --seq-print-max, once a call: counting those sets
 // counts the frames drawn, however the header was brought up to date (in place since #101).
@@ -43,7 +43,7 @@ function scenario(lanes: number, messages = lanes - 1): Scenario {
   const participants: Participant[] = Array.from({ length: lanes }, (_, i) => ({
     id: `p${i}`,
     name: `Service ${i}`,
-    type: 'PARTICIPANT',
+    type: 'participant',
   }))
   return {
     ...untimed(),
@@ -60,7 +60,7 @@ function scenario(lanes: number, messages = lanes - 1): Scenario {
       from: 'p0',
       to: `p${(i % (lanes - 1)) + 1}`,
       label: `call ${i}`,
-      type: 'SYNCHRONOUS' as const,
+      type: 'synchronous' as const,
     })),
   }
 }
@@ -77,7 +77,7 @@ function mount(lanes: number, width: number, { messages = lanes - 1, scrollbar =
   const host = document.createElement('div')
   let panel = width
   const render = () => {
-    host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
+    host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_CHARS)
     const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
     const spacer = scroll.querySelector<HTMLElement>('.seq-spacer')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })

@@ -5,10 +5,10 @@ import type { Scenario } from '../types'
  * Responses run back along an existing edge, and short arrows have no far end, so neither is an edge.
  */
 export const COMPONENT_EDGE_TYPES: ReadonlySet<string> = new Set([
-  'SYNCHRONOUS',
-  'ASYNCHRONOUS',
-  'BI_DIRECTIONAL',
-  'LOST',
+  'synchronous',
+  'asynchronous',
+  'bi_directional',
+  'lost',
 ])
 
 export interface ComponentNode {
@@ -17,7 +17,7 @@ export interface ComponentNode {
   name: string
   /** Captured participant type. `PARTICIPANT` when the id is not in the participant list. */
   type: string
-  colour?: string
+  color?: string
 }
 
 /** Messages on one link that share a label and a type. */
@@ -101,9 +101,9 @@ export function componentGraph(scenario: Pick<Scenario, 'participants' | 'events
       const participant = known.get(id)
       return {
         id,
-        name: participant?.alias ?? participant?.name ?? id,
-        type: participant?.type ?? 'PARTICIPANT',
-        ...(participant?.colour ? { colour: participant.colour } : {}),
+        name: participant?.displayName ?? participant?.name ?? id,
+        type: participant?.type ?? 'participant',
+        ...(participant?.color ? { color: participant.color } : {}),
       }
     }),
     edges: [...edges.values()].map(({ from, to, types, count, label, interactions }) => ({
@@ -130,13 +130,13 @@ export function hasComponentDiagram(scenario: Pick<Scenario, 'events'>): boolean
 
 export function typeCue(type: string): string {
   switch (type) {
-    case 'SYNCHRONOUS':
+    case 'synchronous':
       return 'sync'
-    case 'ASYNCHRONOUS':
+    case 'asynchronous':
       return 'async'
-    case 'BI_DIRECTIONAL':
+    case 'bi_directional':
       return 'bi'
-    case 'LOST':
+    case 'lost':
       return 'lost'
     default:
       return type.toLowerCase()

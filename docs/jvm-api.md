@@ -34,6 +34,12 @@ lsd.completeReport("My Suite")
 lsd.createIndex()
 ```
 
+`Status` is `SUCCESS`, `WARN`, `ERROR`, `SKIPPED` (the test did not run: the JUnit extension uses
+it for a disabled test, the Cucumber plugin for a skipped scenario) or `ABORTED` (stopped part way:
+a failed JUnit assumption). `WARN` is for a pending, undefined or ambiguous Cucumber step, or a
+scenario still running when the report was written. A report's status is its worst scenario's,
+ranked `ERROR` > `WARN` > `ABORTED` > `SUCCESS` > `SKIPPED`: a failed assumption is not a pass.
+
 ### Capture verbs
 
 `LsdContext` (which captures into the current scenario), `LsdScenario` (which
@@ -229,17 +235,20 @@ from `Timing.at`, `took`, `tookMs`, `of` or `Timing.NONE`, and change one with `
 An `Interaction`'s `headers` (HTTP or record headers) are shown with its payload as
 `{ "headers": …, "body": data }`, and are redacted like any other map key.
 
-Each message in the JSON carries `seq` (capture order), `timing` (`NONE`, `TIMESTAMPED`,
-`MEASURED`, `DERIVED`), `pairing` for calls and replies (`NONE`, `GUESSED`, `CALL_ID`, `TRACE`)
-and `order` (`SEQUENCE`, `STRUCTURE`, `CLOCK`), plus `callId`, `replyTo`, `causedBy`, `trace`,
-`source` and `startedAt` when known. `parentId` names the call a message runs inside (its
-`parentSpanId`, else the innermost open call) and `replyOf` the call a paired reply answers: the
+Each message in the JSON carries `seq` (capture order), `timing` (`none`, `timestamped`,
+`measured`, `derived`), `pairing` for calls and replies (`none`, `guessed`, `call_id`, `trace`)
+and `order` (`sequence`, `structure`, `clock`), plus `callId`, `replyTo`, `causedBy`, `trace`,
+`source` and `startedAt` when known (the JSON writes every enum in lower snake case; the Kotlin
+enums keep their names). `parentId` names the call a message runs inside (its
+`parentSpanId`, else the innermost open call) and a paired reply's `replyTo` the id of the call
+message it answers; `callId` is the call id they were paired by, the value of the Kotlin API's
+`replyTo` parameter. The
 Timing view draws its tree from these, so it always matches the library's pairing. `durationMs` is fractional and sits on the call: a call carries
 its own duration or its reply's, and a paired reply carries none. Each scenario carries `accuracy`
-(`STRUCTURE_ONLY`, `TIMESTAMPED`, `MEASURED`, `TRACED`), `measuredCoverage`, `pairingCoverage`,
-`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrdered` and `warnings`, each
-`{ kind, message }` with `kind` one of `REPLY_WITHOUT_CALL`, `DURATION_ON_REPLY_DROPPED`,
-`LONGER_THAN_PARENT`, `DUPLICATE_SPAN` or `SKEW`. When
+(`structure_only`, `timestamped`, `measured`, `traced`), `measuredRatio`, `pairedRatio`,
+`sources`, `wallClockMs` (single source only), `clockOrdering`, `clockOrderedCount` and `warnings`, each
+`{ kind, message }` with `kind` one of `reply_without_call`, `duration_on_reply_dropped`,
+`longer_than_parent`, `duplicate_span` or `skew`. When
 participant pairs differ, `pairAccuracy` lists `{ from, to, accuracy }` per pair (a reply counts with
 its call), and the Timing view shows it as "Accuracy by pair", its last section (folded under a count per
 accuracy when there are more than six pairs; the card's Accuracy chip opens the panel there).
@@ -404,7 +413,7 @@ that test's scenario. An inherited binding is weaker than one made on the thread
 
 `completeReport` completes any scenarios for that report that are still running, so a forgotten
 `complete` cannot leave one out of the report or let it attract later unbound captures. Each one
-is written with status `WARN`, its key as the title, the events captured so far, and the
+is written with status `WARN` (`warn` in the JSON), its key as the title, the events captured so far, and the
 description "Scenario was not completed before the report was written", which the report shows
 under the scenario. A warning naming them is also logged. Completing such a scenario afterwards
 does nothing. Discard a scenario you do not want in the report before calling `completeReport`.

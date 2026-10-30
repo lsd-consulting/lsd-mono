@@ -13,15 +13,15 @@ import {
 
 const checkout: ComponentGraph = {
   nodes: [
-    { id: 'customer', name: 'Customer', type: 'ACTOR', colour: '#38bdf8' },
-    { id: 'api', name: 'CheckoutAPI', type: 'PARTICIPANT' },
-    { id: 'db', name: 'OrdersDB', type: 'DATABASE' },
-    { id: 'bus', name: 'EventBus', type: 'QUEUE' },
+    { id: 'customer', name: 'Customer', type: 'actor', color: '#38bdf8' },
+    { id: 'api', name: 'CheckoutAPI', type: 'participant' },
+    { id: 'db', name: 'OrdersDB', type: 'database' },
+    { id: 'bus', name: 'EventBus', type: 'queue' },
   ],
   edges: [
-    { from: 'customer', to: 'api', types: ['SYNCHRONOUS'], count: 1, label: 'POST /checkout' },
-    { from: 'api', to: 'db', types: ['SYNCHRONOUS'], count: 2, label: 'INSERT order' },
-    { from: 'api', to: 'bus', types: ['ASYNCHRONOUS'], count: 1, label: 'OrderPlaced' },
+    { from: 'customer', to: 'api', types: ['synchronous'], count: 1, label: 'POST /checkout' },
+    { from: 'api', to: 'db', types: ['synchronous'], count: 2, label: 'INSERT order' },
+    { from: 'api', to: 'bus', types: ['asynchronous'], count: 1, label: 'OrderPlaced' },
   ],
 }
 
@@ -38,15 +38,15 @@ describe('layoutComponents', () => {
   it('terminates on a cycle and keeps every node', () => {
     const { places, ranks } = layoutComponents({
       nodes: [
-        { id: 'a', name: 'A', type: 'PARTICIPANT' },
-        { id: 'b', name: 'B', type: 'PARTICIPANT' },
-        { id: 'c', name: 'C', type: 'PARTICIPANT' },
+        { id: 'a', name: 'A', type: 'participant' },
+        { id: 'b', name: 'B', type: 'participant' },
+        { id: 'c', name: 'C', type: 'participant' },
       ],
       edges: [
-        { from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 1 },
-        { from: 'b', to: 'c', types: ['SYNCHRONOUS'], count: 1 },
-        { from: 'c', to: 'a', types: ['ASYNCHRONOUS'], count: 1 },
-        { from: 'b', to: 'b', types: ['SYNCHRONOUS'], count: 1 },
+        { from: 'a', to: 'b', types: ['synchronous'], count: 1 },
+        { from: 'b', to: 'c', types: ['synchronous'], count: 1 },
+        { from: 'c', to: 'a', types: ['asynchronous'], count: 1 },
+        { from: 'b', to: 'b', types: ['synchronous'], count: 1 },
       ],
     })
     expect(ranks).toEqual([['a'], ['b'], ['c']])
@@ -58,8 +58,8 @@ describe('layoutComponents', () => {
 function chain(n: number): ComponentGraph {
   const id = (i: number) => `c${String(i).padStart(2, '0')}`
   return {
-    nodes: Array.from({ length: n }, (_, i) => ({ id: id(i), name: id(i), type: 'PARTICIPANT' })),
-    edges: Array.from({ length: n - 1 }, (_, i) => ({ from: id(i), to: id(i + 1), types: ['SYNCHRONOUS'], count: 1 })),
+    nodes: Array.from({ length: n }, (_, i) => ({ id: id(i), name: id(i), type: 'participant' })),
+    edges: Array.from({ length: n - 1 }, (_, i) => ({ from: id(i), to: id(i + 1), types: ['synchronous'], count: 1 })),
   }
 }
 
@@ -157,7 +157,7 @@ describe('renderComponentDiagram', () => {
     expect(height).toBeGreaterThan(0)
     expect(svg).toContain('role="group"')
     expect(svg).toContain('aria-label="Checkout component diagram, 4 components, 3 links"')
-    expect(svg).toContain('data-component="customer" data-participant-type="ACTOR"')
+    expect(svg).toContain('data-component="customer" data-participant-type="actor"')
     expect(svg).toContain('class="participant-actor"')
     expect(svg).toContain('class="participant-database"')
     expect(svg).toContain('class="participant-queue"')
@@ -195,12 +195,12 @@ describe('renderComponentDiagram', () => {
     const { svg } = renderComponentDiagram(
       {
         nodes: [
-          { id: 'a', name: 'A', type: 'PARTICIPANT' },
-          { id: 'b', name: 'B', type: 'PARTICIPANT' },
+          { id: 'a', name: 'A', type: 'participant' },
+          { id: 'b', name: 'B', type: 'participant' },
         ],
         edges: [
-          { from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 3, label: 'go' },
-          { from: 'b', to: 'a', types: ['ASYNCHRONOUS'], count: 4, label: 'back' },
+          { from: 'a', to: 'b', types: ['synchronous'], count: 3, label: 'go' },
+          { from: 'b', to: 'a', types: ['asynchronous'], count: 4, label: 'back' },
         ],
       },
       'Pair',
@@ -227,13 +227,13 @@ describe('renderComponentDiagram', () => {
     const { svg } = renderComponentDiagram(
       {
         nodes: [
-          { id: 'a', name: 'A', type: 'PARTICIPANT' },
-          { id: 'b', name: 'B', type: 'PARTICIPANT' },
+          { id: 'a', name: 'A', type: 'participant' },
+          { id: 'b', name: 'B', type: 'participant' },
         ],
         edges: [
-          { from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 1, label: 'go' },
-          { from: 'b', to: 'a', types: ['BI_DIRECTIONAL'], count: 1, label: 'back' },
-          { from: 'a', to: 'a', types: ['LOST'], count: 1, label: 'retry' },
+          { from: 'a', to: 'b', types: ['synchronous'], count: 1, label: 'go' },
+          { from: 'b', to: 'a', types: ['bi_directional'], count: 1, label: 'back' },
+          { from: 'a', to: 'a', types: ['lost'], count: 1, label: 'retry' },
         ],
       },
       'Pair',
@@ -249,10 +249,10 @@ describe('renderComponentDiagram', () => {
     const svg = renderComponentSvg(
       {
         nodes: [
-          { id: 'a', name: '<script>', type: 'PARTICIPANT' },
-          { id: 'b', name: 'B"', type: 'PARTICIPANT' },
+          { id: 'a', name: '<script>', type: 'participant' },
+          { id: 'b', name: 'B"', type: 'participant' },
         ],
-        edges: [{ from: 'a', to: 'b', types: ['SYNCHRONOUS'], count: 1, label: 'a & b' }],
+        edges: [{ from: 'a', to: 'b', types: ['synchronous'], count: 1, label: 'a & b' }],
       },
       'T',
     )

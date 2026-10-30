@@ -145,7 +145,7 @@ export interface ActivationSpan {
   y0: number
   y1: number
   /** From the opening activate event. Absent means the default bar. */
-  colour?: string
+  color?: string
   /** 0 for an outermost bar, 1 for a bar opened inside it, and so on. */
   depth: number
 }
@@ -347,14 +347,14 @@ function arrowY(rows: LayoutRow[], index: number, participantId: string): number
 
 export function activationSpans(rows: LayoutRow[], endY: number): ActivationSpan[] {
   const spans: ActivationSpan[] = []
-  const open = new Map<string, { y: number; colour?: string; depth: number }[]>()
+  const open = new Map<string, { y: number; color?: string; depth: number }[]>()
   for (let index = 0; index < rows.length; index++) {
     const row = rows[index]
     const event = row.event
     if (event.kind === 'activate') {
       const stack = open.get(event.participantId) ?? []
-      const colour = event.colour?.trim() ? event.colour : undefined
-      stack.push({ y: arrowY(rows, index, event.participantId), colour, depth: stack.length })
+      const color = event.color?.trim() ? event.color : undefined
+      stack.push({ y: arrowY(rows, index, event.participantId), color, depth: stack.length })
       open.set(event.participantId, stack)
     } else if (event.kind === 'deactivate') {
       const stack = open.get(event.participantId) ?? []
@@ -364,7 +364,7 @@ export function activationSpans(rows: LayoutRow[], endY: number): ActivationSpan
         participantId: event.participantId,
         y0: opened?.y ?? y,
         y1: y,
-        colour: opened?.colour,
+        color: opened?.color,
         depth: opened?.depth ?? 0,
       })
       open.set(event.participantId, stack)
@@ -373,7 +373,7 @@ export function activationSpans(rows: LayoutRow[], endY: number): ActivationSpan
   for (const [participantId, stack] of open) {
     while (stack.length) {
       const opened = stack.pop()!
-      spans.push({ participantId, y0: opened.y, y1: endY, colour: opened.colour, depth: opened.depth })
+      spans.push({ participantId, y0: opened.y, y1: endY, color: opened.color, depth: opened.depth })
     }
   }
   // Stable sort: same-depth bars keep their order.

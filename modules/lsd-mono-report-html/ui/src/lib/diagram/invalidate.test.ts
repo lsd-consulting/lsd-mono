@@ -6,7 +6,7 @@ import { createInvalidator, flushDiagramPaints, type DiagramPainters } from './i
 import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { forgetDiagrams } from './state'
 import { untimed } from '../report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../../ui/format'
 
 function fakePainters() {
   const calls: string[] = []
@@ -92,8 +92,8 @@ function scenario(): Scenario {
     facts: [],
     metrics: [],
     participants: [
-      { id: 'a', name: 'Client', type: 'ACTOR' },
-      { id: 'b', name: 'Api', type: 'PARTICIPANT' },
+      { id: 'a', name: 'Client', type: 'actor' },
+      { id: 'b', name: 'Api', type: 'participant' },
     ],
     events: [
       {
@@ -102,10 +102,10 @@ function scenario(): Scenario {
         from: 'a',
         to: 'b',
         label: 'place order',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
         payloadId: 'paints/m1',
       },
-      { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'order placed', type: 'SYNCHRONOUS_RESPONSE' },
+      { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'order placed', type: 'synchronous_response' },
     ],
   }
 }
@@ -128,7 +128,7 @@ describe('the diagram paints once for several changes in one task (#104)', () =>
     const changed = vi.fn()
     setFindHooks({ changed })
     const host = document.createElement('div')
-    host.innerHTML = renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_WIDTH)
+    host.innerHTML = renderDiagramHtml(scenario(), DEFAULT_LABEL_MAX_CHARS)
     document.body.append(host)
     const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })

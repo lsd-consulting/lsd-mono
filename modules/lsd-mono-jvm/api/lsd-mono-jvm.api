@@ -432,7 +432,9 @@ public final class io/github/lsdconsulting/lsd/mono/jvm/domain/ScenarioError$Com
 }
 
 public final class io/github/lsdconsulting/lsd/mono/jvm/domain/Status : java/lang/Enum {
+	public static final field ABORTED Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
 	public static final field ERROR Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
+	public static final field SKIPPED Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
 	public static final field SUCCESS Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
 	public static final field WARN Lio/github/lsdconsulting/lsd/mono/jvm/domain/Status;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;

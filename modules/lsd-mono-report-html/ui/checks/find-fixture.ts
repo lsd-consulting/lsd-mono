@@ -18,7 +18,7 @@ export const findReport: Report = {
   ...reportBase(),
   title: 'Find',
   generatedAt: '2026-01-15T12:00:00+00:00',
-  generator: 'ux-fixture',
+  generator: { name: 'ux-fixture' },
   scenarios: [
     {
       ...untimed(),
@@ -29,9 +29,9 @@ export const findReport: Report = {
       facts: [],
       metrics: [],
       participants: [
-        { id: 'a', name: 'Client', type: 'PARTICIPANT' },
-        { id: 'b', name: 'Orders', type: 'PARTICIPANT' },
-        { id: 'c', name: 'Stock', type: 'DATABASE' },
+        { id: 'a', name: 'Client', type: 'participant' },
+        { id: 'b', name: 'Orders', type: 'participant' },
+        { id: 'c', name: 'Stock', type: 'database' },
       ],
       events: [
         {
@@ -40,7 +40,7 @@ export const findReport: Report = {
           from: 'a',
           to: 'b',
           label: 'place order',
-          type: 'SYNCHRONOUS',
+          type: 'synchronous',
           payloadId: 'find/m1',
         },
         {
@@ -49,17 +49,17 @@ export const findReport: Report = {
           from: 'b',
           to: 'c',
           label: 'reserve stock',
-          type: 'SYNCHRONOUS',
+          type: 'synchronous',
           data: { sku: 'SOCK-1', note: 'snowdrop gift wrap', lines: ['SNOWDROP card', 'ribbon', 'snowdrop tag'] },
         },
-        { kind: 'message', id: 'm3', from: 'c', to: 'b', label: 'reserved', type: 'SYNCHRONOUS_RESPONSE' },
+        { kind: 'message', id: 'm3', from: 'c', to: 'b', label: 'reserved', type: 'synchronous_response' },
         {
           kind: 'message',
           id: 'm4',
           from: 'b',
           to: 'a',
           label: 'snowdrop applied',
-          type: 'SYNCHRONOUS_RESPONSE',
+          type: 'synchronous_response',
           data: { ok: true },
         },
       ],
@@ -88,7 +88,7 @@ export async function openFindIndex(page: Page, { legacy = false } = {}): Promis
     ...indexBase(),
     title: 'LSD reports',
     generatedAt: findReport.generatedAt,
-    generator: 'ux-fixture',
+    generator: { name: 'ux-fixture' },
     reports: [
       {
         id: 'find',
@@ -96,8 +96,8 @@ export async function openFindIndex(page: Page, { legacy = false } = {}): Promis
         status: 'success',
         href: 'find-diagram.html',
         data: 'find-report.js',
-        counts: { success: 1, warn: 0, error: 0 },
-        scenarios: [{ id: 'find', title: 'Find in payloads', status: 'success', messages: 4 }],
+        counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+        scenarios: [{ id: 'find', title: 'Find in payloads', status: 'success', messageCount: 4 }],
       },
     ],
   }

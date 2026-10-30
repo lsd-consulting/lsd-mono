@@ -1,5 +1,6 @@
 package io.github.lsdconsulting.lsd.mono.report.html
 
+import io.github.lsdconsulting.lsd.mono.report.model.GeneratorJson
 import io.github.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.github.lsdconsulting.lsd.mono.report.model.ReportOptionsJson
 import io.github.lsdconsulting.lsd.mono.report.model.ScenarioJson
@@ -32,7 +33,7 @@ class ReportWriterTest {
     @TempDir
     lateinit var tempDir: Path
 
-    private val writer = ReportWriter(ReportWriterSettings(generator = "test"))
+    private val writer = ReportWriter(ReportWriterSettings(generator = GeneratorJson("test")))
 
     @Test
     fun `stems are stable, readable and differ for titles that sanitise the same`() {
@@ -120,8 +121,8 @@ class ReportWriterTest {
     fun `an index from one writer lists reports written by others in the same directory`() {
         // Two writers stand in for two Gradle test forks or modules sharing one output dir.
         run {
-            val forkA = ReportWriter(ReportWriterSettings(generator = "fork A"))
-            val forkB = ReportWriter(ReportWriterSettings(generator = "fork B"))
+            val forkA = ReportWriter(ReportWriterSettings(generator = GeneratorJson("fork A")))
+            val forkB = ReportWriter(ReportWriterSettings(generator = GeneratorJson("fork B")))
             forkA.writeReport(report("Fork A", scenarioCount = 1), tempDir)
             forkB.writeReport(report("Fork B", scenarioCount = 1), tempDir)
             forkB.writeIndex(tempDir)
@@ -173,8 +174,8 @@ class ReportWriterTest {
             entry.filterKeys { it in setOf("id", "title", "status", "href", "data") },
             entry.source,
         )
-        assertEquals(mapOf("success" to 2.0, "warn" to 0.0, "error" to 1.0), entry["counts"], entry.source)
-        assertEquals(mapOf("id" to "s0", "title" to "scenario 0", "status" to "error", "messages" to 0.0), entry.objects("scenarios").first(), entry.source)
+        assertEquals(mapOf("success" to 2.0, "warn" to 0.0, "error" to 1.0, "skipped" to 0.0, "aborted" to 0.0), entry["counts"], entry.source)
+        assertEquals(mapOf("id" to "s0", "title" to "scenario 0", "status" to "error", "messageCount" to 0.0), entry.objects("scenarios").first(), entry.source)
         assertTrue(page.contains("""name="viewport""""), "the index is the report shell")
         assertFalse(page.contains("window.__LSD_REPORT__="), "no report is embedded in the index")
     }
@@ -198,10 +199,11 @@ class ReportWriterTest {
 
     @Test
     fun `the index takes its generator, time and ping switch from the settings`() {
-        val settings = ReportWriterSettings(generator = "adapter 1.0", generatedAt = Instant.parse("2026-01-02T03:04:05.678Z"), usagePing = true)
+        val settings =
+            ReportWriterSettings(generator = GeneratorJson("adapter", "1.0"), generatedAt = Instant.parse("2026-01-02T03:04:05.678Z"), usagePing = true)
         val index = manifest(ReportWriter(settings).writeIndex(tempDir).readText())
         assertEquals("2026-01-02T03:04:05.678Z", index.string("generatedAt"), index.source)
-        assertEquals("adapter 1.0", index.string("generator"), index.source)
+        assertEquals(mapOf("name" to "adapter", "version" to "1.0"), index.obj("generator")?.toMap(), index.source)
         assertEquals(mapOf("usagePing" to true), index["options"], index.source)
     }
 
@@ -232,13 +234,13 @@ class ReportWriterTest {
             .builder(
                 title = title,
                 generatedAt = "2026-10-09T08:00:00Z",
-                generator = "test",
+                generator = GeneratorJson("test"),
                 status = if (failing > 0) StatusJson.ERROR else StatusJson.SUCCESS,
             ).options(
                 ReportOptionsJson
                     .builder()
                     .metricsEnabled(false)
-                    .labelMaxWidth(200)
+                    .labelMaxChars(200)
                     .build(),
             ).scenarios(
                 List(scenarioCount) { n ->

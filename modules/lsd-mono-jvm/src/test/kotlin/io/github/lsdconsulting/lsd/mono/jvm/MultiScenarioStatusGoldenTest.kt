@@ -43,7 +43,7 @@ class MultiScenarioStatusGoldenTest {
         assertTrue(generatedAt.endsWith("Z"), "generatedAt should be a UTC instant: $generatedAt")
         assertTrue(Duration.between(written, Instant.now()).abs() < Duration.ofMinutes(5), generatedAt)
         val projectVersion = System.getProperty("lsd.mono.test.projectVersion") ?: error("Gradle sets the project version")
-        assertEquals("lsd-mono-jvm $projectVersion", report.root["generator"], json)
+        assertEquals(mapOf("name" to "lsd-mono-jvm", "version" to projectVersion), report.root.obj("generator")?.toMap(), json)
 
         Conformance.assertProduced("reports/multi-scenario-status.json", json)
 
@@ -56,7 +56,7 @@ class MultiScenarioStatusGoldenTest {
         val entry = (Json.parse(indexJson) as JsonObject).objects("reports").single()
         assertEquals("error", entry["status"], "index should use the error rollup")
         assertEquals(
-            mapOf("success" to 1.0, "warn" to 1.0, "error" to 1.0),
+            mapOf("success" to 1.0, "warn" to 1.0, "error" to 1.0, "skipped" to 0.0, "aborted" to 0.0),
             entry.obj("counts")?.toMap(),
             "index should count the three scenarios",
         )

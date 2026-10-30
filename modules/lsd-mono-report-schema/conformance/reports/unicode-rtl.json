@@ -1,12 +1,14 @@
 {
-  "schemaVersion": "0.3.0",
+  "schemaVersion": "1.0.0",
   "title": "Unicode والعربية",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "lsd-mono-jvm (conformance)",
+  "generator": {
+    "name": "lsd-mono-jvm"
+  },
   "status": "success",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "api"
   },
@@ -36,23 +38,23 @@
         {
           "id": "orders",
           "name": "خدمة الطلبات",
-          "type": "PARTICIPANT"
+          "type": "participant"
         },
         {
           "id": "payments",
           "name": "שירות תשלומים",
-          "type": "PARTICIPANT"
+          "type": "participant"
         },
         {
           "id": "jp",
           "name": "注文サービス",
-          "type": "DATABASE"
+          "type": "database"
         },
         {
           "id": "cafe",
           "name": "Café",
-          "type": "PARTICIPANT",
-          "alias": "Café 👩‍👩‍👧 🇬🇧"
+          "type": "participant",
+          "displayName": "Café 👩‍👩‍👧 🇬🇧"
         }
       ],
       "events": [
@@ -62,15 +64,15 @@
           "from": "cafe",
           "to": "orders",
           "label": "اطلب ٣ قطع",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "data": {
             "المنتج": "قبعة",
             "الكمية": 3
           },
           "seq": 1,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE"
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "message",
@@ -78,11 +80,11 @@
           "from": "orders",
           "to": "payments",
           "label": "חיוב ₪120.50",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "seq": 2,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence",
           "parentId": "1"
         },
         {
@@ -91,12 +93,12 @@
           "from": "payments",
           "to": "orders",
           "label": "אושר ✅",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "seq": 3,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
-          "replyOf": "2"
+          "replyTo": "2",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "message",
@@ -104,11 +106,11 @@
           "from": "orders",
           "to": "jp",
           "label": "在庫を確認する",
-          "type": "SYNCHRONOUS",
+          "type": "synchronous",
           "seq": 4,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence",
           "parentId": "1"
         },
         {
@@ -117,12 +119,12 @@
           "from": "jp",
           "to": "orders",
           "label": "OK 在庫あり",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "seq": 5,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
-          "replyOf": "4"
+          "replyTo": "4",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         },
         {
           "kind": "note",
@@ -137,22 +139,22 @@
           "from": "orders",
           "to": "cafe",
           "label": "تم ✓ — Zoë naïve Ångström हिन्दी ไทย",
-          "type": "SYNCHRONOUS_RESPONSE",
+          "type": "synchronous_response",
           "seq": 6,
-          "timing": "NONE",
-          "pairing": "GUESSED",
-          "order": "SEQUENCE",
-          "replyOf": "1"
+          "replyTo": "1",
+          "timing": "none",
+          "pairing": "guessed",
+          "order": "sequence"
         }
       ],
-      "accuracy": "STRUCTURE_ONLY",
-      "measuredCoverage": 0,
-      "pairingCoverage": 0,
+      "accuracy": "structure_only",
+      "measuredRatio": 0,
+      "pairedRatio": 0,
       "sources": [
         "local"
       ],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     }
   ]
 }

@@ -1,4 +1,4 @@
-// What Success, Warn and Error mean (#163): the legend by the status chips, and a Warn scenario's reason.
+// What Success, Warn, Error, Skipped and Aborted mean (#163): the legend by the status chips, and a Warn scenario's reason.
 import { escapeHtml } from '../lib/escape'
 import type { Scenario, Status } from '../types'
 import { statusLabel } from './format'
@@ -10,10 +10,11 @@ import { statusLabel } from './format'
 export const STATUS_DEFINITIONS: Record<Status, string> = {
   success: 'The test passed.',
   warn:
-    'The test neither passed nor failed, so it is not counted as a failure: it was disabled or aborted ' +
-    '(for example an assumption failed), a Cucumber step was skipped, pending, undefined or ambiguous, ' +
-    'or it was still running when the report was written.',
+    'The test neither passed nor failed, so it is not counted as a failure: a Cucumber step was pending, ' +
+    'undefined or ambiguous, or it was still running when the report was written.',
   error: 'The test failed: an assertion failed or an exception was thrown.',
+  skipped: 'The test did not run: it was disabled, or skipped by the runner (for example a Cucumber tag or hook).',
+  aborted: 'The test started but was aborted rather than failed, for example because an assumption failed.',
 }
 
 /** The id of a status's definition, for `aria-describedby` on the chips and the scenario badge. */
@@ -26,7 +27,6 @@ const NOT_COMPLETED = 'Scenario was not completed before the report was written.
 
 /** Cucumber's error headlines for a Warn result, and what each one means. */
 const CUCUMBER_REASONS: Record<string, string> = {
-  Skipped: 'a step was skipped',
   Pending: 'a step is pending',
   'Undefined step': 'a step is undefined',
   'Ambiguous step': 'a step matches more than one step definition',
@@ -39,20 +39,13 @@ const CUCUMBER_REASONS: Record<string, string> = {
 export function warnReason(s: Pick<Scenario, 'status' | 'description' | 'error'>): string | null {
   if (s.status !== 'warn') return null
   if (s.description.startsWith(NOT_COMPLETED)) return 'it was still running when the report was written'
-  if (/^Test disabled\b/.test(s.description)) return 'the test is disabled'
   const headline = s.error?.headline ?? ''
-  const message = s.error?.message ?? ''
-  if (headline === 'Test aborted' || headline.startsWith('Aborted')) {
-    return /assumption/i.test(`${headline} ${message}`)
-      ? 'an assumption failed, so the test was aborted rather than failed'
-      : 'the test was aborted rather than failed'
-  }
   return CUCUMBER_REASONS[headline] ?? null
 }
 
 /** The legend's disclosure button and its panel. The panel's definitions back aria-describedby. */
 export function statusLegendHtml(): string {
-  const items = (['success', 'warn', 'error'] as Status[])
+  const items = (['success', 'warn', 'error', 'skipped', 'aborted'] as Status[])
     .map(
       (s) =>
         `<dt><span class="badge ${s}">${escapeHtml(statusLabel(s))}</span></dt><dd id="${statusDefinitionId(s)}">${escapeHtml(STATUS_DEFINITIONS[s])}</dd>`,

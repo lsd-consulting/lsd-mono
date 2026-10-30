@@ -8,7 +8,7 @@ for (const width of [390, 320]) {
   }) => {
     await openExample(page, undefined, { viewport: { width, height: 844 } })
     const chips = page.locator('[data-filter]')
-    await expect(chips.locator('.chip-glyph')).toHaveText(['✓', '!', '✕'])
+    await expect(chips.locator('.chip-glyph')).toHaveText(['✓', '!', '✕', '■'])
     const success = page.locator('[data-filter="success"]')
     await expect(success).toHaveAccessibleName(/^Success \d+$/)
     const total = await page.locator('#scenario-nav [data-nav]').count()

@@ -38,11 +38,20 @@ export function indexNavHtml(manifest: IndexManifest, state: IndexNavState): str
   return html.trim() ? html : '<li class="nav-empty">No reports match.</li>'
 }
 
-/** "1 error · 2 success": the report's scenarios by outcome, failures first. */
+/** Plain words for the index summary, singular then plural. */
+const SUMMARY_WORDS: Record<Status, [string, string]> = {
+  error: ['error', 'errors'],
+  warn: ['warning', 'warnings'],
+  aborted: ['aborted', 'aborted'],
+  success: ['passed', 'passed'],
+  skipped: ['skipped', 'skipped'],
+}
+
+/** "1 error · 2 warnings · 3 passed": the report's scenarios by outcome, failures first. */
 export function outcomeSummary(counts: Record<Status, number>): string {
-  return (['error', 'warn', 'success'] as Status[])
+  return (['error', 'warn', 'aborted', 'success', 'skipped'] as Status[])
     .filter((st) => counts[st])
-    .map((st) => `${counts[st]} ${statusLabel(st).toLowerCase()}`)
+    .map((st) => `${counts[st]} ${SUMMARY_WORDS[st][counts[st] === 1 ? 0 : 1]}`)
     .join(' · ')
 }
 
@@ -71,7 +80,7 @@ function groupHtml(r: IndexReport, shown: IndexScenario[], open: boolean, state:
 function itemHtml(r: IndexReport, sc: IndexScenario, state: IndexNavState): string {
   const current = r.id === state.reportId && state.selectedId === sc.id
   const tip = state.collapsed
-    ? ` title="${escapeAttr(navItemTooltip(sc.title, statusLabel(sc.status), sc.messages))}"`
+    ? ` title="${escapeAttr(navItemTooltip(sc.title, statusLabel(sc.status), sc.messageCount))}"`
     : ''
   return `
             <li>
@@ -80,7 +89,7 @@ function itemHtml(r: IndexReport, sc: IndexScenario, state: IndexNavState): stri
                 <span class="nav-icon" aria-hidden="true">${r.scenarios.indexOf(sc) + 1}</span>
                 <span class="nav-text">
                   <div class="nav-title">${escapeHtml(sc.title)}</div>
-                  <div class="nav-meta">${escapeHtml(statusLabel(sc.status))} · ${sc.messages} messages</div>
+                  <div class="nav-meta">${escapeHtml(statusLabel(sc.status))} · ${sc.messageCount} messages</div>
                 </span>
               </button>
             </li>`

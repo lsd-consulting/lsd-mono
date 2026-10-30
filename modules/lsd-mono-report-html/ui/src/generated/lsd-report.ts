@@ -2,15 +2,15 @@
 // Do not edit: change the schema, then run `npm run types:generate`.
 
 /** The schema version this UI's types follow, as reports write it in `schemaVersion`. */
-export const REPORT_SCHEMA_VERSION = '0.3.0'
+export const REPORT_SCHEMA_VERSION = '1.0.0'
 
 /**
- * A scenario's or report's outcome, in lower case.
+ * A scenario's outcome. success: it passed. warn: it passed with something to look at, or did not finish (pending, undefined, ambiguous). error: it failed. skipped: it did not run (disabled, or skipped by the runner). aborted: it started and was stopped before it finished, such as by a failed assumption. Closed: a reader can rank and count every value. A report's status is the worst of its scenarios', ranked error, warn, aborted, success, skipped; success when there are none.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "Status".
  */
-export type Status = 'success' | 'warn' | 'error'
+export type Status = 'success' | 'warn' | 'error' | 'skipped' | 'aborted'
 /**
  * The integration that wrote the report, counted by the usage ping. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as no known source (the usage ping counts no source).
  *
@@ -19,7 +19,7 @@ export type Status = 'success' | 'warn' | 'error'
  */
 export type ReportSource = KnownReportSource | (string & {})
 /**
- * How a participant is drawn. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as PARTICIPANT.
+ * How a participant is drawn. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as participant.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "ParticipantType".
@@ -41,19 +41,19 @@ export type AttributeValue = string | boolean | number | string[] | boolean[] | 
 export type DiagramEvent =
   MessageEvent | NoteEvent | DividerEvent | SectionEvent | DelayEvent | SpacerEvent | ActivateEvent
 /**
- * Optional on a scenario; see Scenario for the default.
+ * Optional on a scenario; see Scenario for the default. Closed: each value is a rung on one ladder the page ranks, so a value it does not know could not be ranked.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "Accuracy".
  */
-export type Accuracy = 'STRUCTURE_ONLY' | 'TIMESTAMPED' | 'MEASURED' | 'TRACED'
+export type Accuracy = 'structure_only' | 'timestamped' | 'measured' | 'traced'
 /**
- * Optional on a scenario; default SAME_SOURCE.
+ * Optional on a scenario; default same_source. Closed: the setting the producer ordered by; a new mode would change what the diagram's order means, which is a major change.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "ClockOrdering".
  */
-export type ClockOrdering = 'OFF' | 'SAME_SOURCE' | 'ALL_SOURCES'
+export type ClockOrdering = 'off' | 'same_source' | 'all_sources'
 /**
  * What a timing warning is about; the Timing view labels its pill from it. Open: a newer producer may send a value not listed here. Readers show a kind they do not know with its message only.
  *
@@ -65,27 +65,29 @@ export type WarningKind = KnownWarningKind | (string & {})
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "KnownParticipantType".
  */
-export type KnownParticipantType = 'ACTOR' | 'PARTICIPANT' | 'DATABASE' | 'QUEUE' | 'ENTITY' | 'BOUNDARY'
+export type KnownParticipantType = 'actor' | 'participant' | 'database' | 'queue' | 'entity' | 'boundary'
 /**
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "KnownMessageType".
  */
 export type KnownMessageType =
-  | 'SYNCHRONOUS'
-  | 'SYNCHRONOUS_RESPONSE'
-  | 'ASYNCHRONOUS'
-  | 'LOST'
-  | 'BI_DIRECTIONAL'
-  | 'SHORT_INBOUND'
-  | 'SHORT_OUTBOUND'
+  | 'synchronous'
+  | 'synchronous_response'
+  | 'asynchronous'
+  | 'lost'
+  | 'bi_directional'
+  | 'short_inbound'
+  | 'short_outbound'
 /**
- * How a message's arrow is drawn. SHORT_INBOUND comes in from the diagram's edge and SHORT_OUTBOUND leaves to it. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as a SYNCHRONOUS arrow.
+ * How a message's arrow is drawn. short_inbound comes in from the diagram's edge and short_outbound leaves to it. Open: a newer producer may send a value not listed here. Readers draw a type they do not know as a synchronous arrow.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "MessageType".
  */
 export type MessageType = KnownMessageType | (string & {})
 /**
+ * Closed: the three places a sequence diagram can draw a note.
+ *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "NotePlacement".
  */
@@ -94,7 +96,7 @@ export type NotePlacement = 'over' | 'left' | 'right'
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "KnownTimingSource".
  */
-export type KnownTimingSource = 'NONE' | 'TIMESTAMPED' | 'MEASURED' | 'DERIVED'
+export type KnownTimingSource = 'none' | 'timestamped' | 'measured' | 'derived'
 /**
  * Where a message's duration came from. Open: a newer producer may send a value not listed here. Readers show a value they do not know as it is.
  *
@@ -106,9 +108,9 @@ export type TimingSource = KnownTimingSource | (string & {})
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "KnownPairingSource".
  */
-export type KnownPairingSource = 'NONE' | 'GUESSED' | 'CALL_ID' | 'TRACE'
+export type KnownPairingSource = 'none' | 'guessed' | 'call_id' | 'trace'
 /**
- * How a reply was paired with its call. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as NONE.
+ * How a reply was paired with its call. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as none.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "PairingSource".
@@ -118,9 +120,9 @@ export type PairingSource = KnownPairingSource | (string & {})
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "KnownOrderSource".
  */
-export type KnownOrderSource = 'SEQUENCE' | 'STRUCTURE' | 'CLOCK'
+export type KnownOrderSource = 'sequence' | 'structure' | 'clock'
 /**
- * What put a message where it is. CLOCK: moved by clock ordering (startedAt), shown with a badge. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as SEQUENCE.
+ * What put a message where it is. clock: moved by clock ordering (startedAt), shown with a badge. Open: a newer producer may send a value not listed here. Readers treat a value they do not know as sequence.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "OrderSource".
@@ -131,7 +133,7 @@ export type OrderSource = KnownOrderSource | (string & {})
  * via the `definition` "KnownWarningKind".
  */
 export type KnownWarningKind =
-  'REPLY_WITHOUT_CALL' | 'DURATION_ON_REPLY_DROPPED' | 'LONGER_THAN_PARENT' | 'DUPLICATE_SPAN' | 'SKEW'
+  'reply_without_call' | 'duration_on_reply_dropped' | 'longer_than_parent' | 'duplicate_span' | 'skew'
 /**
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "KnownReportSource".
@@ -151,11 +153,11 @@ export type KnownMessageOrigin = 'captured' | 'imported'
 export type MessageOrigin = KnownMessageOrigin | (string & {})
 
 /**
- * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Pre-1.0: may change before 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version (0.x included, 1.x alike) only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status: error, then warn, then success; success when there are no scenarios.
+ * One LSD report: its scenarios, each with a sequence diagram's participants and events. Written by lsd-mono-jvm as <stem>-report.json, and as window.__LSD_REPORT__ in the diagram page. Stable from 1.0.0. The compatibility rule: readers ignore fields they do not know, and a minor version only adds optional fields, values of open enums and event kinds. Objects accept properties they do not list, and the open enums (see each one) accept values they do not list, so this schema still validates a report of a newer minor version. status is the worst scenario status, ranked error, warn, aborted, success, skipped; success when there are no scenarios. Enum values are lower snake_case. Optional fields are never written empty: a list, object or string that would be empty is left out, and a reader reads a missing one as empty. Required fields are always written.
  */
 export interface Report {
   /**
-   * The version of this schema the report follows: semver, apart from the lsd-mono version. 0.3.0 for this schema.
+   * The version of this schema the report follows: semver, apart from the lsd-mono version. 1.0.0 for this schema.
    */
   schemaVersion: string
   title: string
@@ -163,13 +165,31 @@ export interface Report {
    * When the report was written: an RFC 3339 date-time, with Z or a UTC offset. lsd-mono-jvm writes UTC with Z, to the millisecond or less (the seconds alone when they are whole).
    */
   generatedAt: string
-  /**
-   * The producer and its version, such as `lsd-mono 0.7.0`. The usage ping matches this text, so it does not change shape.
-   */
-  generator: string
+  generator: Generator
   status: Status
   options?: ReportOptions
-  scenarios: Scenario[]
+  /**
+   * Absent when the report has none.
+   *
+   * @minItems 1
+   */
+  scenarios?: [Scenario, ...Scenario[]]
+}
+/**
+ * What wrote the document. The page shows "Written by <name>", with the version only when it differs from the viewer's.
+ *
+ * This interface was referenced by `Report`'s JSON-Schema
+ * via the `definition` "Generator".
+ */
+export interface Generator {
+  /**
+   * The producer, such as lsd-mono-jvm.
+   */
+  name: string
+  /**
+   * The producer's version. Absent when it has none, such as a development build.
+   */
+  version?: string
 }
 /**
  * Settings the producer wrote the report with. Optional, as is each field: a reader uses the default each field names.
@@ -185,15 +205,15 @@ export interface ReportOptions {
   /**
    * Characters diagram labels and metric summaries are cut to. Default 200.
    */
-  labelMaxWidth?: number
+  labelMaxChars?: number
   /**
-   * Whether the page may request the usage ping files: at most one fire-and-forget request per event, whose failure is ignored. The page also needs a release generator. Default true, as lsd-mono writes it: on unless lsd.mono.report.usagePing=false. Unlike the other fields, a missing value is read as false, so a report that does not say is never pinged.
+   * Whether the page may request the usage ping files: at most one fire-and-forget request per event, whose failure is ignored. The ping names the viewer's version, not the generator. lsd-mono-jvm writes true unless lsd.mono.report.usagePing=false. A missing value is read as false, so a report that does not say is never pinged.
    */
   usagePing?: boolean
   source?: ReportSource
 }
 /**
- * One scenario: a test or a feature's scenario. The timing summary (accuracy to pairAccuracy) sits flat on the scenario, not in an object of its own. accuracy says how the scenario's timings were captured. The timing summary (accuracy, sources, clockOrdering, clockOrdered and the optional fields after them) is optional for a producer without timing analysis. A reader's defaults: accuracy MEASURED when a message has a duration or start time, else STRUCTURE_ONLY; sources as described; clockOrdering SAME_SOURCE; clockOrdered 0.
+ * One scenario: a test or a feature's scenario. The timing summary (accuracy to pairAccuracy) sits flat on the scenario, not in an object of its own. accuracy says how the scenario's timings were captured. The timing summary (accuracy, sources, clockOrdering, clockOrdered and the optional fields after them) is optional for a producer without timing analysis. A reader's defaults: accuracy measured when a message has a duration or start time, else structure_only; sources as described; clockOrdering same_source; clockOrdered 0.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "Scenario".
@@ -206,27 +226,49 @@ export interface Scenario {
   title: string
   status: Status
   /**
-   * Plain text; Given, When, Then and And lines are highlighted.
+   * Plain text; Given, When, Then and And lines are highlighted. Absent when there is none.
    */
-  description: string
+  description?: string
   error?: ScenarioError
-  facts: Fact[]
-  metrics: Metric[]
-  participants: Participant[]
-  events: DiagramEvent[]
+  /**
+   * Absent when there are none.
+   *
+   * @minItems 1
+   */
+  facts?: [Fact, ...Fact[]]
+  /**
+   * Absent when there are none.
+   *
+   * @minItems 1
+   */
+  metrics?: [Metric, ...Metric[]]
+  /**
+   * Absent when there are none.
+   *
+   * @minItems 1
+   */
+  participants?: [Participant, ...Participant[]]
+  /**
+   * Absent when there are none.
+   *
+   * @minItems 1
+   */
+  events?: [DiagramEvent, ...DiagramEvent[]]
   accuracy?: Accuracy
   /**
    * Share of calls with a measured duration, 0 to 1. Absent when there are no calls.
    */
-  measuredCoverage?: number
+  measuredRatio?: number
   /**
    * Share of calls paired with their reply by call id or trace, 0 to 1. Absent when there are no calls.
    */
-  pairingCoverage?: number
+  pairedRatio?: number
   /**
-   * Distinct clock domains of the messages, local included (local is the name for a message with no source). Optional: a reader's default is ["local"] when the scenario has messages, else [].
+   * Distinct clock domains of the messages, local included (local is the name for a message with no source). Absent when unknown or empty: a reader's default is ["local"] when the scenario has messages, else [].
+   *
+   * @minItems 1
    */
-  sources?: string[]
+  sources?: [string, ...string[]]
   /**
    * From the first start to the last end. Only for a single clock domain whose measured calls all have a start. Milliseconds, to the microsecond, without trailing zeros.
    */
@@ -235,19 +277,25 @@ export interface Scenario {
   /**
    * How many messages clock ordering placed. Default 0.
    */
-  clockOrdered?: number
+  clockOrderedCount?: number
   /**
-   * Absent, rather than empty, when there are none.
+   * Absent when there are none.
+   *
+   * @minItems 1
    */
-  warnings?: TimingWarning[]
+  warnings?: [TimingWarning, ...TimingWarning[]]
   /**
-   * Ids of the messages clock ordering moved. Absent, rather than empty, when there are none.
+   * Ids of the messages clock ordering moved. Absent when there are none.
+   *
+   * @minItems 1
    */
-  reorderedByClock?: string[]
+  reorderedByClock?: [string, ...string[]]
   /**
    * Accuracy per participant pair, present only when the pairs differ.
+   *
+   * @minItems 1
    */
-  pairAccuracy?: PairAccuracy[]
+  pairAccuracy?: [PairAccuracy, ...PairAccuracy[]]
 }
 /**
  * Why a failed or aborted scenario did not pass.
@@ -292,13 +340,13 @@ export interface Participant {
   name: string
   type: ParticipantType
   /**
-   * The participant's display name (displayName in the Kotlin API), drawn instead of name. Absent when it has none.
+   * The name drawn for the participant instead of name. Absent when it has none.
    */
-  alias?: string
+  displayName?: string
   /**
-   * A CSS colour for the participant's header.
+   * A CSS color for the participant's header.
    */
-  colour?: string
+  color?: string
   attributes?: Attributes
 }
 /**
@@ -323,13 +371,13 @@ export interface TimingWarning {
  */
 export interface PairAccuracy {
   /**
-   * Sender id; an empty string for the diagram's edge, as on a message.
+   * Sender id; absent for the diagram's edge, as on a message.
    */
-  from: string
+  from?: string
   /**
-   * Receiver id; an empty string for the diagram's edge, as on a message.
+   * Receiver id; absent for the diagram's edge, as on a message.
    */
-  to: string
+  to?: string
   accuracy: Accuracy
 }
 /**
@@ -362,7 +410,7 @@ export interface Attributes1 {
   [k: string]: AttributeValue | undefined
 }
 /**
- * A message between two participants. data is its payload: any JSON value, absent when it has none. In the diagram page's copy, when payloadId is set, only the payload's method, path and status (or nothing) stay in data.
+ * A message between two participants. data is its payload: any JSON value, absent when it has none. In the diagram page's copy, when payloadId is set, only the payload's method, path and status (or nothing) stay in data. Ids: id identifies the event. callId pairs a call with its reply; replyTo points a reply at its call's id; causedBy points a consume at its publish's callId; parentId points at the enclosing call's id.
  *
  * This interface was referenced by `Report`'s JSON-Schema
  * via the `definition` "MessageEvent".
@@ -374,36 +422,38 @@ export interface MessageEvent {
    */
   id: string
   /**
-   * Sender id. An empty string, not an absent field, for a diagram edge: SHORT_INBOUND.
+   * Sender id. Absent for a message from the diagram's edge: short_inbound.
    */
-  from: string
+  from?: string
   /**
-   * Receiver id. An empty string, not an absent field, for a diagram edge: SHORT_OUTBOUND.
+   * Receiver id. Absent for a message to the diagram's edge: short_outbound.
    */
-  to: string
+  to?: string
   label: string
   type: MessageType
-  colour?: string
+  /**
+   * A CSS color for the arrow and label.
+   */
+  color?: string
   /**
    * Milliseconds, to the microsecond, without trailing zeros.
    */
   durationMs?: number
   data?: unknown
   /**
-   * Key into the payload sidecar (<scenarioId>/<messageId>), set in the diagram page's copy when the payload loads on open. Never in <stem>-report.json.
-   */
-  payloadId?: string
-  /**
    * Capture order. Absent when not counted.
    */
   seq?: number
+  /**
+   * The correlation key a call and its reply share, such as a span or request id. On a reply the producer copies its call's callId (lsd-mono-jvm: the id it was given, else the call's message id).
+   */
   callId?: string
   /**
-   * On a reply: the call it answers.
+   * On a reply paired with its call: the message id of the call it answers. Absent on an unpaired reply.
    */
   replyTo?: string
   /**
-   * On a consume: the publish that caused it.
+   * On a consume: the callId of the publish that caused it.
    */
   causedBy?: string
   trace?: Trace
@@ -416,20 +466,16 @@ export interface MessageEvent {
    */
   capturedAt?: string
   /**
-   * The message's status, such as an HTTP status, as text even when it is a number.
+   * The message's status, such as an HTTP status, as text even when it is a number. Absent when it has none.
    */
   status?: string
   timing?: TimingSource
   pairing?: PairingSource
   order?: OrderSource
   /**
-   * Id of the call this message runs inside, as the library nested it (span link, else innermost open call).
+   * The message id of the call this message runs inside, as the producer nested it (span link, else innermost open call).
    */
   parentId?: string
-  /**
-   * On a paired reply: id of the call it answers.
-   */
-  replyOf?: string
   attributes?: Attributes1
   origin?: MessageOrigin
   /**
@@ -549,9 +595,9 @@ export interface ActivateEvent {
   id: string
   participantId: string
   /**
-   * Activation bar colour. Only on activate, and only when the caller set one.
+   * Activation bar color. Only on activate, and only when the caller set one.
    */
-  colour?: string
+  color?: string
   /**
    * When it started, by its source's clock: an RFC 3339 date-time, with Z or a UTC offset. Events are sorted by it before layout when any event in the list has one.
    */

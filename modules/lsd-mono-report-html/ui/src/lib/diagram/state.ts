@@ -54,7 +54,7 @@ export interface MountedDiagram {
   rows: LayoutRow[]
   width: number
   height: number
-  labelMaxWidth: number
+  labelMaxChars: number
 }
 
 export interface DiagramView {

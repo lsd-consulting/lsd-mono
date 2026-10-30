@@ -17,14 +17,14 @@ test('the ? by the chips opens the status legend from the keyboard, and Esc clos
   await expect(legend).toBeHidden()
   await expect(btn).toBeFocused()
   await expect(page.locator('[data-filter="warn"]')).toHaveAccessibleDescription(/neither passed nor failed/)
-  await expect(page.locator('.scenario-head .badge')).toHaveAccessibleDescription(/neither passed nor failed/)
+  await expect(page.locator('#card-133 .scenario-head .badge')).toHaveText(/aborted/i)
 })
 
-test('a Warn scenario says why it is Warn', async ({ page }) => {
+test('an aborted scenario says Aborted, with its own filter, and no Warn reason', async ({ page }) => {
   await openExample(page, '133', { viewport: { width: 1280, height: 900 } })
-  await expect(page.locator('#card-133 .warn-reason')).toHaveText(
-    'Marked Warn because: an assumption failed, so the test was aborted rather than failed.',
-  )
+  await expect(page.locator('#card-133 .warn-reason')).toHaveCount(0)
+  await expect(page.locator('[data-filter="aborted"]')).toHaveAccessibleDescription(/aborted rather than failed/)
+  await expect(page.locator('[data-filter="skipped"]')).toHaveCount(0)
 })
 
 test('the legend fits a 320 px phone', async ({ page }) => {

@@ -1,12 +1,14 @@
 {
-  "schemaVersion": "0.3.0",
+  "schemaVersion": "1.0.0",
   "title": "No components",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "lsd-mono-jvm (conformance)",
+  "generator": {
+    "name": "lsd-mono-jvm"
+  },
   "status": "warn",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "api"
   },
@@ -32,7 +34,6 @@
           "value": "0"
         }
       ],
-      "participants": [],
       "events": [
         {
           "kind": "section",
@@ -55,10 +56,9 @@
           "heightPx": 24
         }
       ],
-      "accuracy": "STRUCTURE_ONLY",
-      "sources": [],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "accuracy": "structure_only",
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     }
   ]
 }

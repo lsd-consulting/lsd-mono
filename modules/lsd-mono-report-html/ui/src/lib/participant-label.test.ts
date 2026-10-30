@@ -15,9 +15,9 @@ import {
 import { layoutComponents, renderComponentDiagram } from './component-diagram'
 import { componentGraph } from './component-graph'
 import { untimed } from './report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../ui/format'
 
-const TYPES: ParticipantType[] = ['ACTOR', 'PARTICIPANT', 'DATABASE', 'QUEUE', 'ENTITY', 'BOUNDARY']
+const TYPES: ParticipantType[] = ['actor', 'participant', 'database', 'queue', 'entity', 'boundary']
 const LONG = 'Customer Notification Preferences and Delivery Orchestration Service'
 const MEDIUM = 'Orders DB (PostgreSQL primary)'
 
@@ -75,7 +75,7 @@ describe('participantHead with a fitted name', () => {
       expect(participantHead(type, fitName('Api')).shapeSvg).toBe(participantHead(type).shapeSvg)
   })
 
-  it.each(['PARTICIPANT', 'DATABASE', 'QUEUE'] as const)('grows the %s shape to hold the name inside it', (type) => {
+  it.each(['participant', 'database', 'queue'] as const)('grows the %s shape to hold the name inside it', (type) => {
     for (const name of ['Inventory Service', 'Payment Provider (ext)', MEDIUM, LONG]) {
       const head = participantHeadFor({ type, name })
       // At least 10px of padding each side of the widest line.
@@ -97,18 +97,18 @@ describe('participantHead with a fitted name', () => {
   })
 
   it('puts two-line names inside a taller box, cylinder and queue', () => {
-    const box = participantHeadFor({ type: 'PARTICIPANT', name: LONG })
+    const box = participantHeadFor({ type: 'participant', name: LONG })
     expect(box.shapeSvg).toContain('height="40"')
     const [top, bottom] = [8, 48]
     expect(box.labelYs[0] - 9).toBeGreaterThanOrEqual(top)
     expect(box.labelYs[1] + 3).toBeLessThanOrEqual(bottom)
-    expect(participantHeadFor({ type: 'DATABASE', name: LONG }).shapeSvg).toContain('v34')
-    expect(participantHeadFor({ type: 'QUEUE', name: LONG }).shapeSvg).toMatch(/ 50 H/)
-    expect(participantHeadFor({ type: 'ACTOR', name: LONG }).shapeSvg).toContain('scale(0.8)')
+    expect(participantHeadFor({ type: 'database', name: LONG }).shapeSvg).toContain('v34')
+    expect(participantHeadFor({ type: 'queue', name: LONG }).shapeSvg).toMatch(/ 50 H/)
+    expect(participantHeadFor({ type: 'actor', name: LONG }).shapeSvg).toContain('scale(0.8)')
   })
 })
 
-function people(names: string[], type: ParticipantType = 'PARTICIPANT'): Participant[] {
+function people(names: string[], type: ParticipantType = 'participant'): Participant[] {
   return names.map((name, i) => ({ id: `p${i}`, name, type }))
 }
 
@@ -129,11 +129,11 @@ describe('lanes', () => {
   })
 
   it('pad the frame when a wide shape sits on an outer lifeline', () => {
-    const pads = diagramPads([], people([LONG, 'Api', LONG]), DEFAULT_LABEL_MAX_WIDTH)
-    const half = participantHeadFor({ type: 'PARTICIPANT', name: LONG }).half
+    const pads = diagramPads([], people([LONG, 'Api', LONG]), DEFAULT_LABEL_MAX_CHARS)
+    const half = participantHeadFor({ type: 'participant', name: LONG }).half
     expect(pads.left).toBeGreaterThanOrEqual(Math.ceil(half - LEFT_PAD + 8))
     expect(pads.right).toBeGreaterThan(0)
-    expect(diagramPads([], people(['Api', 'Db']), DEFAULT_LABEL_MAX_WIDTH)).toEqual({ left: 0, right: 0 })
+    expect(diagramPads([], people(['Api', 'Db']), DEFAULT_LABEL_MAX_CHARS)).toEqual({ left: 0, right: 0 })
   })
 })
 
@@ -147,18 +147,18 @@ describe('sequence header with long names', () => {
     facts: [],
     metrics: [],
     participants: [
-      { id: 'a', name: 'Customer', alias: 'Signed-in Customer (mobile app)', type: 'ACTOR' },
-      { id: 'b', name: LONG, type: 'PARTICIPANT' },
-      { id: 'c', name: MEDIUM, type: 'DATABASE' },
+      { id: 'a', name: 'Customer', displayName: 'Signed-in Customer (mobile app)', type: 'actor' },
+      { id: 'b', name: LONG, type: 'participant' },
+      { id: 'c', name: MEDIUM, type: 'database' },
     ],
     events: [
-      { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'hello', type: 'SYNCHRONOUS' },
-      { kind: 'message', id: 'm2', from: 'b', to: 'c', label: 'save', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'hello', type: 'synchronous' },
+      { kind: 'message', id: 'm2', from: 'b', to: 'c', label: 'save', type: 'synchronous' },
     ],
   }
 
   it('keeps the full name in the title and accessible name, and lifelines under the shapes', () => {
-    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_WIDTH)}</div>`
+    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_CHARS)}</div>`
     const scroll = document.querySelector<HTMLElement>('.seq-scroll')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })
     bindDiagramScroll(document.getElementById('root')!)
@@ -181,15 +181,15 @@ describe('sequence header with long names', () => {
 describe('component diagram with long names', () => {
   const scenario = {
     participants: [
-      { id: 'a', name: LONG, type: 'PARTICIPANT' as const },
-      { id: 'b', name: MEDIUM, type: 'DATABASE' as const },
-      { id: 'c', name: 'Kafka topic order-events.v2 dead letters', type: 'QUEUE' as const },
-      { id: 'd', name: 'Api', type: 'PARTICIPANT' as const },
+      { id: 'a', name: LONG, type: 'participant' as const },
+      { id: 'b', name: MEDIUM, type: 'database' as const },
+      { id: 'c', name: 'Kafka topic order-events.v2 dead letters', type: 'queue' as const },
+      { id: 'd', name: 'Api', type: 'participant' as const },
     ],
     events: [
-      { kind: 'message' as const, id: 'm1', from: 'd', to: 'a', label: 'x', type: 'SYNCHRONOUS' as const },
-      { kind: 'message' as const, id: 'm2', from: 'd', to: 'b', label: 'y', type: 'SYNCHRONOUS' as const },
-      { kind: 'message' as const, id: 'm3', from: 'd', to: 'c', label: 'z', type: 'ASYNCHRONOUS' as const },
+      { kind: 'message' as const, id: 'm1', from: 'd', to: 'a', label: 'x', type: 'synchronous' as const },
+      { kind: 'message' as const, id: 'm2', from: 'd', to: 'b', label: 'y', type: 'synchronous' as const },
+      { kind: 'message' as const, id: 'm3', from: 'd', to: 'c', label: 'z', type: 'asynchronous' as const },
     ],
   }
 

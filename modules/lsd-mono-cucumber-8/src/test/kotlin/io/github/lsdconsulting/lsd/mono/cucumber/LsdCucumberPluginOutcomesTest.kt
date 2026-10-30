@@ -56,7 +56,7 @@ class LsdCucumberPluginOutcomesTest {
                 "fails" to "error",
                 "pending" to "warn",
                 "undefined" to "warn",
-                "skipped" to "warn",
+                "skipped" to "skipped",
                 "ambiguous" to "warn",
                 "hooked" to "success",
             ),

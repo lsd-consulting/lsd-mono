@@ -4,10 +4,10 @@
 // with Tab (plain links, no tabindex tricks). Their styles: styles/repo-link-css.test.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reportBase, untimed } from './lib/report-fixture.test-util'
-import type { Report } from './types'
+import type { Generator, Report } from './types'
 import { REPO_URL } from './ui/repo-link'
 
-function report(generator: string): Report {
+function report(generator: Generator): Report {
   return {
     ...reportBase(),
     title: 'Checkout',
@@ -22,8 +22,8 @@ function report(generator: string): Report {
         description: '',
         facts: [],
         metrics: [],
-        participants: [{ id: 'a', name: 'A', type: 'ACTOR' }],
-        events: [{ kind: 'message', id: 'm1', from: 'a', to: 'a', label: 'think', type: 'SYNCHRONOUS' }],
+        participants: [{ id: 'a', name: 'A', type: 'actor' }],
+        events: [{ kind: 'message', id: 'm1', from: 'a', to: 'a', label: 'think', type: 'synchronous' }],
       },
     ],
   }
@@ -51,7 +51,7 @@ function expectRepoLink(link: HTMLAnchorElement | null, name: string) {
 
 describe('links to the lsd-mono repository', () => {
   it('makes the logo and the version links to GitHub, opened in a new tab', async () => {
-    window.__LSD_REPORT__ = report('lsd-mono-jvm 0.12.0')
+    window.__LSD_REPORT__ = report({ name: 'lsd-mono-jvm', version: '0.12.0' })
     await import('./main')
 
     const logo = document.querySelector<HTMLAnchorElement>('.topbar a.brand-mark')
@@ -67,7 +67,7 @@ describe('links to the lsd-mono repository', () => {
   })
 
   it('leaves out what wrote the data when the report does not say', async () => {
-    window.__LSD_REPORT__ = report('')
+    window.__LSD_REPORT__ = report({ name: '' })
     await import('./main')
     expect(document.querySelector('.report-hero .meta .generator')).toBeNull()
     expect(document.querySelector('a.version-link')?.textContent).toBe('lsd-mono dev')
@@ -75,7 +75,7 @@ describe('links to the lsd-mono repository', () => {
 
   it('keeps a hostile generator as text', async () => {
     const hostile = 'x"><img src=x onerror=alert(1)>'
-    window.__LSD_REPORT__ = report(hostile)
+    window.__LSD_REPORT__ = report({ name: hostile })
     await import('./main')
 
     const written = document.querySelector('.report-hero .meta .generator')!

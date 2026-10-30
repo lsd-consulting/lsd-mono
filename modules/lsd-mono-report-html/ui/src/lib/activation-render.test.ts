@@ -4,7 +4,7 @@ import type { Scenario } from '../types'
 import { ACT_W, COL_GAP, HEADER_BLOCK_H, LEFT_PAD } from './layout'
 import { bindDiagramScroll, renderDiagramHtml, syncDiagramWindow } from './sequence-diagram'
 import { untimed } from './report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../ui/format'
 
 /**
  * Nested bars on a later lifeline (refs #2). The nested bar was drawn at the same x
@@ -19,20 +19,20 @@ const scenario: Scenario = {
   facts: [],
   metrics: [],
   participants: [
-    { id: 'web', name: 'Web', type: 'BOUNDARY' },
-    { id: 'orders', name: 'Orders', type: 'PARTICIPANT' },
-    { id: 'payments', name: 'Payments', type: 'PARTICIPANT' },
-    { id: 'provider', name: 'Provider', type: 'PARTICIPANT' },
+    { id: 'web', name: 'Web', type: 'boundary' },
+    { id: 'orders', name: 'Orders', type: 'participant' },
+    { id: 'payments', name: 'Payments', type: 'participant' },
+    { id: 'provider', name: 'Provider', type: 'participant' },
   ],
   events: [
-    { kind: 'message', id: 'm1', from: 'orders', to: 'payments', label: 'authorise', type: 'SYNCHRONOUS' },
+    { kind: 'message', id: 'm1', from: 'orders', to: 'payments', label: 'authorise', type: 'synchronous' },
     { kind: 'activate', id: 'a1', participantId: 'payments' },
-    { kind: 'message', id: 'm2', from: 'payments', to: 'payments', label: 'retry', type: 'SYNCHRONOUS' },
-    { kind: 'activate', id: 'a2', participantId: 'payments', colour: '#f59e0b' },
-    { kind: 'message', id: 'm3', from: 'payments', to: 'provider', label: 'charge', type: 'SYNCHRONOUS' },
-    { kind: 'message', id: 'm4', from: 'provider', to: 'payments', label: 'ok', type: 'SYNCHRONOUS_RESPONSE' },
+    { kind: 'message', id: 'm2', from: 'payments', to: 'payments', label: 'retry', type: 'synchronous' },
+    { kind: 'activate', id: 'a2', participantId: 'payments', color: '#f59e0b' },
+    { kind: 'message', id: 'm3', from: 'payments', to: 'provider', label: 'charge', type: 'synchronous' },
+    { kind: 'message', id: 'm4', from: 'provider', to: 'payments', label: 'ok', type: 'synchronous_response' },
     { kind: 'deactivate', id: 'd2', participantId: 'payments' },
-    { kind: 'message', id: 'm5', from: 'payments', to: 'orders', label: 'authorised', type: 'SYNCHRONOUS_RESPONSE' },
+    { kind: 'message', id: 'm5', from: 'payments', to: 'orders', label: 'authorised', type: 'synchronous_response' },
     { kind: 'deactivate', id: 'd1', participantId: 'payments' },
   ],
 }
@@ -57,7 +57,7 @@ function arrowX(label: string): { x1: number; x2: number } {
 
 describe('nested activation bars', () => {
   beforeEach(() => {
-    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_WIDTH)}</div>`
+    document.body.innerHTML = `<div id="root">${renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_CHARS)}</div>`
     const scroll = document.querySelector<HTMLElement>('.seq-scroll')!
     Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 900 })
     Object.defineProperty(scroll, 'clientWidth', { configurable: true, value: 900 })

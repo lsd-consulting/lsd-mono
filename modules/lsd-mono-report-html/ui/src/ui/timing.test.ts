@@ -19,7 +19,7 @@ const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> 
   from,
   to,
   label: id,
-  type: 'SYNCHRONOUS',
+  type: 'synchronous',
   ...extra,
 })
 
@@ -40,16 +40,16 @@ const nested = scenario(
   [
     msg('outer', 'web', 'api', { callId: 'c1', durationMs: 50.5 }),
     msg('inner', 'api', 'db', { callId: 'c2', durationMs: 20, parentId: 'outer' }),
-    msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2', replyOf: 'inner' }),
-    msg('event', 'api', 'kafka', { type: 'ASYNCHRONOUS', order: 'CLOCK', parentId: 'outer' }),
-    msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1', replyOf: 'outer' }),
+    msg('inner-reply', 'db', 'api', { type: 'synchronous_response', callId: 'c2', replyTo: 'inner' }),
+    msg('event', 'api', 'kafka', { type: 'asynchronous', order: 'clock', parentId: 'outer' }),
+    msg('outer-reply', 'api', 'web', { type: 'synchronous_response', callId: 'c1', replyTo: 'outer' }),
   ],
-  { accuracy: 'TRACED', clockOrdered: 1, pairingCoverage: 1 },
+  { accuracy: 'traced', clockOrderedCount: 1, pairedRatio: 1 },
 )
 
 describe('timing view', () => {
   it('has no strip or lanes for a structure-only scenario', () => {
-    const plain = scenario([msg('a', 'x', 'y')], { accuracy: 'STRUCTURE_ONLY' })
+    const plain = scenario([msg('a', 'x', 'y')], { accuracy: 'structure_only' })
     expect(hasTiming(plain)).toBe(false)
     expect(timingStripHtml(plain)).toBe('')
     expect(timingPanelHtml(plain)).toContain('No timing captured')
@@ -72,10 +72,10 @@ describe('timing view', () => {
       [
         msg('outer', 'web', 'api', { callId: 'c1', durationMs: 10 }),
         msg('inner', 'api', 'db', { callId: 'c2', durationMs: 25, parentId: 'outer' }),
-        msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2' }),
-        msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
+        msg('inner-reply', 'db', 'api', { type: 'synchronous_response', replyTo: 'c2' }),
+        msg('outer-reply', 'api', 'web', { type: 'synchronous_response', replyTo: 'c1' }),
       ],
-      { accuracy: 'MEASURED' },
+      { accuracy: 'measured' },
     )
     const panel = timingPanelHtml(over)
     expect(panel).toContain('Calls inside took longer: 25 ms &gt; 10 ms')
@@ -89,8 +89,8 @@ describe('timing view', () => {
     const paired: Scenario = {
       ...nested,
       pairAccuracy: [
-        { from: 'web', to: 'api', accuracy: 'TRACED' },
-        { from: 'api', to: 'kafka', accuracy: 'STRUCTURE_ONLY' },
+        { from: 'web', to: 'api', accuracy: 'traced' },
+        { from: 'api', to: 'kafka', accuracy: 'structure_only' },
       ],
     }
     expect(timingPanelHtml(paired)).not.toContain('Accuracy by pair')
@@ -104,7 +104,7 @@ describe('timing view', () => {
   })
 
   it('folds more than six pairs under a summary of the count and each level, six or fewer stay open', () => {
-    const levels: Accuracy[] = ['STRUCTURE_ONLY', 'TRACED', 'TIMESTAMPED', 'TRACED', 'TRACED', 'TIMESTAMPED', 'TRACED']
+    const levels: Accuracy[] = ['structure_only', 'traced', 'timestamped', 'traced', 'traced', 'timestamped', 'traced']
     const pairs = levels.map((accuracy, i) => ({ from: `p${i}`, to: `q${i}`, accuracy }))
     const seven = pairAccuracySectionHtml({ ...nested, pairAccuracy: pairs })
     expect(seven).toMatch(
@@ -118,13 +118,13 @@ describe('timing view', () => {
   })
 
   it('summarises pairs best level first, singular for one, an unknown level as sent and last', () => {
-    expect(pairAccuracySummary([{ accuracy: 'MEASURED' }])).toBe('1 pair · 1 measured')
+    expect(pairAccuracySummary([{ accuracy: 'measured' }])).toBe('1 pair · 1 measured')
     expect(
       pairAccuracySummary([
         { accuracy: 'FUTURE' as Accuracy },
-        { accuracy: 'STRUCTURE_ONLY' },
-        { accuracy: 'MEASURED' },
-        { accuracy: 'TRACED' },
+        { accuracy: 'structure_only' },
+        { accuracy: 'measured' },
+        { accuracy: 'traced' },
       ]),
     ).toBe('4 pairs · 1 traced, 1 measured, 1 structure only, 1 FUTURE')
   })
@@ -133,7 +133,7 @@ describe('timing view', () => {
     expect(
       pairAccuracySectionHtml({
         ...scenario([msg('a', 'x', 'y')]),
-        pairAccuracy: [{ from: 'a', to: 'b', accuracy: 'TRACED' }],
+        pairAccuracy: [{ from: 'a', to: 'b', accuracy: 'traced' }],
       }),
     ).toBe('')
   })
@@ -151,7 +151,7 @@ describe('timing view', () => {
   it('points only the Accuracy chip at Accuracy by pair, and only when there are pairs', () => {
     const sections = (html: string) => [...html.matchAll(/data-metrics-section="([^"]+)"/g)].map((m) => m[1])
     expect(sections(timingStripHtml(nested))).toEqual([])
-    const strip = timingStripHtml({ ...nested, pairAccuracy: [{ from: 'web', to: 'api', accuracy: 'TRACED' }] })
+    const strip = timingStripHtml({ ...nested, pairAccuracy: [{ from: 'web', to: 'api', accuracy: 'traced' }] })
     expect(sections(strip)).toEqual(['pair-accuracy'])
     expect(strip).toMatch(/data-metrics-section="pair-accuracy">\s*<span class="k">Accuracy<\/span>/)
   })
@@ -159,7 +159,7 @@ describe('timing view', () => {
   it('labels warning pills from their kind, with the sentence on hover', () => {
     const panel = timingPanelHtml({
       ...nested,
-      warnings: [{ kind: 'LONGER_THAN_PARENT', message: "'inner' took 30 ms: more than 'outer'" }],
+      warnings: [{ kind: 'longer_than_parent', message: "'inner' took 30 ms: more than 'outer'" }],
     })
     expect(panel).toContain('>longer than parent</span>')
     expect(panel).toContain('title="longer than parent: &#39;inner&#39; took 30 ms: more than &#39;outer&#39;"')
@@ -167,7 +167,7 @@ describe('timing view', () => {
 
   it('escapes labels and participant names', () => {
     const html = timingPanelHtml(
-      scenario([msg('<script>', '<img x>', 'y', { durationMs: 1 })], { accuracy: 'MEASURED' }),
+      scenario([msg('<script>', '<img x>', 'y', { durationMs: 1 })], { accuracy: 'measured' }),
     )
     expect(html).not.toContain('<script>')
     expect(html).not.toContain('<img x>')
@@ -185,9 +185,9 @@ const timed = (extra: Partial<Scenario> = {}) =>
   scenario(
     [
       msg('call', 'web', 'api', { callId: 'c1', durationMs: 40 }),
-      msg('reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1' }),
+      msg('reply', 'api', 'web', { type: 'synchronous_response', replyTo: 'c1' }),
     ],
-    { accuracy: 'MEASURED', ...extra },
+    { accuracy: 'measured', ...extra },
   )
 
 describe('timing strip', () => {
@@ -206,13 +206,13 @@ describe('timing strip', () => {
   it('names the slowest call below the top level, else the slowest top-level one, else nothing timed', () => {
     expect(chip(timingStripHtml(nested), 'Slowest')).toBe('Slowest 20 ms inner')
     expect(chip(timingStripHtml(timed()), 'Slowest')).toBe('Slowest 40 ms call')
-    const untimed = scenario([msg('call', 'web', 'api', { callId: 'c1' })], { accuracy: 'TIMESTAMPED' })
+    const untimed = scenario([msg('call', 'web', 'api', { callId: 'c1' })], { accuracy: 'timestamped' })
     expect(chip(timingStripHtml(untimed), 'Slowest')).toBe('Slowest — nothing timed')
     expect(chip(timingStripHtml(untimed), 'Calls')).toBe('Calls 1 0 timed')
   })
 
   it('says how much was paired when nothing was clock-ordered', () => {
-    expect(chip(timingStripHtml(timed({ pairingCoverage: 0.666 })), 'Accuracy')).toBe(
+    expect(chip(timingStripHtml(timed({ pairedRatio: 0.666 })), 'Accuracy')).toBe(
       'Accuracy measured 67% exactly paired',
     )
     expect(chip(timingStripHtml(timed()), 'Accuracy')).toBe('Accuracy measured no calls')

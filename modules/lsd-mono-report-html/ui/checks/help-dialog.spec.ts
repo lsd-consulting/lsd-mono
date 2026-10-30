@@ -164,11 +164,11 @@ test.describe('at 1440×900', () => {
     for (const target of [help(page), closeButton(page)]) {
       const border = await target.evaluate((el) => {
         const style = getComputedStyle(el)
-        return { style: style.borderTopStyle, width: style.borderTopWidth, colour: style.borderTopColor }
+        return { style: style.borderTopStyle, width: style.borderTopWidth, color: style.borderTopColor }
       })
       expect(border.style).toBe('solid')
       expect(border.width).not.toBe('0px')
-      expect(border.colour).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+      expect(border.color).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
     }
   })
 })

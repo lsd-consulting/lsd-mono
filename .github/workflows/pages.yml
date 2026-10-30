@@ -7,7 +7,10 @@ name: Pages
 # sample report (the shop fixtures, run by its sampleReport task), linked from its README;
 # http4k-6/ is the http4k integration's (lsd-mono-http4k-6's sampleReport), linked from its README;
 # ktor-3/ is the Ktor integration's (lsd-mono-ktor-3's sampleReport), linked from its README.
-# The example report is not committed; nothing else under docs/ is published.
+# schema/<version>/ holds the report and index JSON Schemas at their $id URLs
+# (https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json), copied from
+# modules/lsd-mono-report-schema. The example report is not committed; nothing else under docs/
+# is published.
 #
 # The site is the latest release: the version the README tells people to use. The weekly release
 # (release.yml) calls this workflow with the new vX.Y.Z tag once it is published, so the report
@@ -102,6 +105,13 @@ jobs:
           # The Ktor integration's sample report, under ktor-3/ (its README links there).
           mkdir -p modules/lsd-mono-jvm/build/pages/ktor-3
           cp -R modules/lsd-mono-ktor-3/build/pages/. modules/lsd-mono-jvm/build/pages/ktor-3/
+          # Each JSON Schema at its $id, so a validator can fetch it by that URL.
+          for schema in modules/lsd-mono-report-schema/lsd-report.schema.json modules/lsd-mono-report-schema/lsd-index.schema.json; do
+            path=$(jq -r '."$id" | sub("^https://lsd-consulting.github.io/lsd-mono/"; "")' "$schema")
+            case "$path" in schema/*/*.schema.json) ;; *) echo "::error::$schema has an unexpected \$id"; exit 1 ;; esac
+            mkdir -p "modules/lsd-mono-jvm/build/pages/$(dirname "$path")"
+            cp "$schema" "modules/lsd-mono-jvm/build/pages/$path"
+          done
       - name: Check the site
         run: |
           version=$(./gradlew -q printVersion)
@@ -112,6 +122,10 @@ jobs:
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
           done
           grep -qF 'window.__LSD_INDEX__=' "$site/index.html" || { echo "index.html has no report manifest"; exit 1; }
+          for schema in modules/lsd-mono-report-schema/*.schema.json; do
+            published="$site/$(jq -r '."$id" | sub("^https://lsd-consulting.github.io/lsd-mono/"; "")' "$schema")"
+            cmp -s "$schema" "$published" || { echo "missing or different $published"; exit 1; }
+          done
           # Every script the pages load is published.
           for f in $(grep -ohE 'Example-report-[0-9a-f]{8}-(report|payloads)\.js' "$site/index.html" "$site/example-report.html" "$site"/*-report.js | sort -u); do
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }

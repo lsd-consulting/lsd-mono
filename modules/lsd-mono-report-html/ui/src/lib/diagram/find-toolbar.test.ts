@@ -6,7 +6,7 @@ import { setPayloadLoader, setPayloadSlicer } from './payload-find'
 import { diagramState, forgetDiagrams } from './state'
 import { flushDiagramPaints } from './invalidate'
 import { untimed } from '../report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../../ui/format'
 
 function scenario(withPayloads = true): Scenario {
   return {
@@ -18,8 +18,8 @@ function scenario(withPayloads = true): Scenario {
     facts: [],
     metrics: [],
     participants: [
-      { id: 'a', name: 'Client', type: 'ACTOR' },
-      { id: 'b', name: 'Api', type: 'PARTICIPANT' },
+      { id: 'a', name: 'Client', type: 'actor' },
+      { id: 'b', name: 'Api', type: 'participant' },
     ],
     events: [
       {
@@ -28,17 +28,17 @@ function scenario(withPayloads = true): Scenario {
         from: 'a',
         to: 'b',
         label: 'place order',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
         ...(withPayloads ? { payloadId: 'toolbar/m1' } : {}),
       },
-      { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'snowdrop ok', type: 'SYNCHRONOUS_RESPONSE' },
+      { kind: 'message', id: 'm2', from: 'b', to: 'a', label: 'snowdrop ok', type: 'synchronous_response' },
     ],
   }
 }
 
 function mount(s: Scenario) {
   const host = document.createElement('div')
-  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_WIDTH)
+  host.innerHTML = renderDiagramHtml(s, DEFAULT_LABEL_MAX_CHARS)
   document.body.append(host)
   const scroll = host.querySelector<HTMLElement>('.seq-scroll')!
   Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 600 })

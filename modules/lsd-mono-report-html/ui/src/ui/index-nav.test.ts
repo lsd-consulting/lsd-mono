@@ -10,10 +10,10 @@ const failed: IndexReport = {
   status: 'error',
   href: 'checkout-diagram.html',
   data: 'checkout-report.js',
-  counts: { success: 1, warn: 0, error: 1 },
+  counts: { success: 1, warn: 0, error: 1, skipped: 0, aborted: 0 },
   scenarios: [
-    { id: 's1', title: 'Place an order', status: 'success', messages: 2 },
-    { id: 's2', title: 'Card declined', status: 'error', messages: 3 },
+    { id: 's1', title: 'Place an order', status: 'success', messageCount: 2 },
+    { id: 's2', title: 'Card declined', status: 'error', messageCount: 3 },
   ],
 }
 const passed: IndexReport = {
@@ -22,22 +22,22 @@ const passed: IndexReport = {
   status: 'success',
   href: 'shipping-diagram.html',
   data: 'shipping-report.js',
-  counts: { success: 1, warn: 0, error: 0 },
-  scenarios: [{ id: 's1', title: 'Track parcel', status: 'success', messages: 1 }],
+  counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+  scenarios: [{ id: 's1', title: 'Track parcel', status: 'success', messageCount: 1 }],
 }
 const link: IndexReport = {
   id: 'x',
   title: 'Elsewhere',
   status: 'warn',
   href: 'elsewhere.html',
-  counts: { success: 0, warn: 0, error: 0 },
+  counts: { success: 0, warn: 0, error: 0, skipped: 0, aborted: 0 },
   scenarios: [],
 }
 const manifest: IndexManifest = {
   ...indexBase(),
   title: 'LSD reports',
   generatedAt: '',
-  generator: '',
+  generator: { name: '' },
   reports: [failed, passed, link],
 }
 const base: IndexNavState = {
@@ -45,7 +45,7 @@ const base: IndexNavState = {
   selectedId: 's2',
   expanded: new Set(['checkout']),
   query: '',
-  status: { success: true, warn: true, error: true },
+  status: { success: true, warn: true, error: true, skipped: true, aborted: true },
   collapsed: false,
 }
 
@@ -69,7 +69,7 @@ describe('index sidebar', () => {
     expect(ul.querySelector('[data-group="shipping"]')?.getAttribute('aria-expanded')).toBe('false')
     expect(ul.querySelector('#nav-group-shipping')?.hasAttribute('hidden')).toBe(true)
     expect(ul.querySelector('a.nav-group-head')?.getAttribute('href')).toBe('elsewhere.html')
-    expect(ul.querySelector('.nav-group.current .nav-meta')?.textContent).toBe('1 error · 1 success')
+    expect(ul.querySelector('.nav-group.current .nav-meta')?.textContent).toBe('1 error · 1 passed')
   })
 
   it('opens every matching group while searching and leaves out groups with no match', () => {
@@ -85,7 +85,7 @@ describe('index sidebar', () => {
   })
 
   it('hides scenarios the status filters turn off', () => {
-    const ul = nav({ status: { success: false, warn: true, error: true } })
+    const ul = nav({ status: { success: false, warn: true, error: true, skipped: true, aborted: true } })
     expect([...ul.querySelectorAll('[data-nav]')].map((el) => el.getAttribute('data-nav'))).toEqual(['s2'])
     expect([...ul.querySelectorAll('.nav-group-title')].map((el) => el.textContent)).toEqual([
       'Checkout <tests>',
@@ -96,15 +96,20 @@ describe('index sidebar', () => {
   it('moves names into tooltips on the icon rail', () => {
     const ul = nav({ collapsed: true })
     expect(ul.querySelector('[data-group="checkout"]')?.getAttribute('title')).toBe(
-      'Checkout <tests>: 1 error · 1 success',
+      'Checkout <tests>: 1 error · 1 passed',
     )
     expect(ul.querySelector('a.nav-group-head')?.getAttribute('title')).toBe('Elsewhere: no scenarios')
     expect(ul.querySelector('[data-nav="s2"]')?.getAttribute('title')).toBe('Card declined. Error · 3 messages')
   })
 
   it('summarises outcomes failures first', () => {
-    expect(outcomeSummary({ success: 2, warn: 1, error: 3 })).toBe('3 error · 1 warn · 2 success')
-    expect(outcomeSummary({ success: 0, warn: 0, error: 0 })).toBe('')
+    expect(outcomeSummary({ success: 2, warn: 1, error: 3, skipped: 0, aborted: 0 })).toBe(
+      '3 errors · 1 warning · 2 passed',
+    )
+    expect(outcomeSummary({ success: 1, warn: 2, error: 1, skipped: 4, aborted: 1 })).toBe(
+      '1 error · 2 warnings · 1 aborted · 1 passed · 4 skipped',
+    )
+    expect(outcomeSummary({ success: 0, warn: 0, error: 0, skipped: 0, aborted: 0 })).toBe('')
   })
 })
 

@@ -177,9 +177,10 @@
   .search-wrap {
     max-width: none;
     order: 3;
-    /* Takes what the chips (glyphs, counts and the legend ?) leave on the second row. */
+    /* Takes what the chips (glyphs, counts and the legend ?) leave on the second row, but never
+       less than a usable box: past that the chips scroll sideways instead. */
     flex: 1 1 0;
-    min-width: 0;
+    min-width: 136px;
   }
   /* A zero-height full-width item before search, so search and the chips always start the
      second row together, however wide the chips are. */
@@ -189,10 +190,20 @@
     flex: 0 0 100%;
     height: 0;
   }
+  /* With five statuses the chips are wider than the row leaves them (search was 55-85 px at
+     360-390 px), so they scroll sideways in their own strip and search keeps its width. */
   .filters {
     order: 4;
+    flex: 0 1 auto;
+    min-width: 0;
     flex-wrap: nowrap;
     gap: 4px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    /* Room for the focus ring inside the scroller. */
+    padding: 3px;
+    margin: -3px;
   }
   .chip {
     padding: 4px 8px;

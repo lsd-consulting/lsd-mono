@@ -8,7 +8,7 @@ import { uxFixture } from '../../checks/ux-fixture'
 import { wideReport } from '../../checks/wide-sample'
 import { REPORT_SCHEMA_VERSION } from '../types'
 import { conformanceText } from './conformance.test-util'
-import { reportSchema, schemaErrors as errors } from './report-schema.test-util'
+import { asWritten, reportSchema, schemaErrors as errors } from './report-schema.test-util'
 
 const example = (file: string) =>
   JSON.parse(conformanceText(`reports/${file}`)) as Record<string, unknown> & ExampleReport
@@ -25,8 +25,8 @@ describe('the report schema', () => {
   it('validates the report builders the checks share', () => {
     const sections = sectionsReport(3)
     const built = { uxFixture, findReport, sections, wide: wideReport(5, 12, (_, id) => ({ id })) }
-    for (const [name, report] of Object.entries(built)) expect(errors(report), name).toEqual([])
-    expect(errors(sectionsIndex(sections).manifest, 'index')).toEqual([])
+    for (const [name, report] of Object.entries(built)) expect(errors(asWritten(report)), name).toEqual([])
+    expect(errors(asWritten(sectionsIndex(sections).manifest), 'index')).toEqual([])
   })
 
   it('rejects a report without its schema version, and accepts fields a newer minor version adds', () => {
@@ -39,8 +39,8 @@ describe('the report schema', () => {
   it('takes what a newer minor version or another producer may write', () => {
     const report = example('example-report.json')
     const [scenario] = report.scenarios
-    const { accuracy, sources, clockOrdering, clockOrdered, ...untimed } = scenario
-    expect([accuracy, sources, clockOrdering, clockOrdered]).not.toContain(undefined)
+    const { accuracy, sources, clockOrdering, clockOrderedCount, ...untimed } = scenario
+    expect([accuracy, sources, clockOrdering, clockOrderedCount]).not.toContain(undefined)
     const { options, ...optionless } = report
     expect(options).toBeDefined()
     const changed = {
@@ -71,8 +71,9 @@ describe('the report schema', () => {
     expect(errors(withScenario({ participants: [{ ...scenario.participants[0], name: '' }] }))).toContain(
       '/scenarios/0/participants/0/name: must NOT have fewer than 1 characters',
     )
-    const fromless = Object.fromEntries(Object.entries(message).filter(([key]) => key !== 'from'))
-    expect(errors(withScenario({ events: [fromless] }))).not.toEqual([])
+    const labelless = Object.fromEntries(Object.entries(message).filter(([key]) => key !== 'label'))
+    expect(errors(withScenario({ events: [labelless] }))).not.toEqual([])
+    expect(errors(withScenario({ events: [{ ...message, from: '' }] }))).not.toEqual([])
   })
 
   it('is the version the UI’s types were generated from', () => {

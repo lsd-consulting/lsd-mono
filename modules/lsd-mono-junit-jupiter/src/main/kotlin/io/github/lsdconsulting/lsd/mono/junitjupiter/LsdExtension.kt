@@ -72,7 +72,7 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
         scenarioFor(context).complete(
             prefixParentDisplayName(context),
             description,
-            Status.WARN,
+            Status.SKIPPED,
         )
     }
 
@@ -80,7 +80,7 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
         scenarioFor(context).complete(
             prefixParentDisplayName(context),
             "Test aborted",
-            Status.WARN,
+            Status.ABORTED,
             ScenarioError.of("Test aborted", cause),
         )
     }

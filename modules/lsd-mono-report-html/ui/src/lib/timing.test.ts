@@ -9,7 +9,7 @@ const msg = (id: string, from: string, to: string, extra: Partial<MessageEvent> 
   from,
   to,
   label: id,
-  type: 'SYNCHRONOUS',
+  type: 'synchronous',
   ...extra,
 })
 
@@ -30,11 +30,11 @@ const nested = scenario(
   [
     msg('outer', 'web', 'api', { callId: 'c1', durationMs: 50.5 }),
     msg('inner', 'api', 'db', { callId: 'c2', durationMs: 20, parentId: 'outer' }),
-    msg('inner-reply', 'db', 'api', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c2', replyOf: 'inner' }),
-    msg('event', 'api', 'kafka', { type: 'ASYNCHRONOUS', order: 'CLOCK', parentId: 'outer' }),
-    msg('outer-reply', 'api', 'web', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c1', replyOf: 'outer' }),
+    msg('inner-reply', 'db', 'api', { type: 'synchronous_response', callId: 'c2', replyTo: 'inner' }),
+    msg('event', 'api', 'kafka', { type: 'asynchronous', order: 'clock', parentId: 'outer' }),
+    msg('outer-reply', 'api', 'web', { type: 'synchronous_response', callId: 'c1', replyTo: 'outer' }),
   ],
-  { accuracy: 'TRACED', clockOrdered: 1, pairingCoverage: 1 },
+  { accuracy: 'traced', clockOrderedCount: 1, pairedRatio: 1 },
 )
 
 describe('timeline', () => {
@@ -42,7 +42,7 @@ describe('timeline', () => {
     const t = timeline(
       scenario([
         msg('call', 'a', 'b', { callId: 'c' }),
-        msg('reply', 'b', 'a', { type: 'SYNCHRONOUS_RESPONSE', replyTo: 'c', durationMs: 9 }),
+        msg('reply', 'b', 'a', { type: 'synchronous_response', replyTo: 'c', durationMs: 9 }),
       ]),
     )
     expect(t.rows.map((r) => [r.message.id, r.spanMs])).toEqual([['call', 0]])

@@ -278,8 +278,8 @@ private fun paymentDeclined(lsd: LsdContext) {
         When the customer pays
         Then the order is confirmed
         """.trimIndent(),
-        // Warn as JUnit reports it: an assumption failed, so the test was aborted, not failed (#163).
-        status = Status.WARN,
+        // Aborted as JUnit reports it: an assumption failed, so the test was aborted, not failed.
+        status = Status.ABORTED,
         error =
             ScenarioError.of(
                 headline = "Test aborted",

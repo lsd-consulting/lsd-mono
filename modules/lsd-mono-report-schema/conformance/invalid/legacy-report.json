@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "0.1.0",
+  "title": "Status mix",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": "lsd-mono-core (conformance)",
+  "status": "error",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxWidth": 200,
+    "usagePing": false,
+    "source": "api"
+  },
+  "scenarios": [
+    {
+      "id": "1",
+      "title": "checkout happy path",
+      "status": "success",
+      "description": "placed",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "0"
+        }
+      ],
+      "participants": [],
+      "events": [],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    },
+    {
+      "id": "2",
+      "title": "payment declined",
+      "status": "warn",
+      "description": "card rejected",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "0"
+        }
+      ],
+      "participants": [],
+      "events": [],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    },
+    {
+      "id": "3",
+      "title": "inventory outage",
+      "status": "error",
+      "description": "timeout",
+      "facts": [],
+      "metrics": [
+        {
+          "key": "Messages",
+          "value": "0"
+        }
+      ],
+      "participants": [],
+      "events": [],
+      "accuracy": "STRUCTURE_ONLY",
+      "sources": [],
+      "clockOrdering": "SAME_SOURCE",
+      "clockOrdered": 0
+    }
+  ]
+}

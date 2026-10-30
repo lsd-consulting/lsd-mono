@@ -2,11 +2,13 @@
   "schemaVersion": "0.1.0",
   "title": "Metrics only",
   "generatedAt": "2026-01-01T12:00:00Z",
-  "generator": "hand-written",
+  "generator": {
+    "name": "hand-written"
+  },
   "status": "success",
   "options": {
     "metricsEnabled": true,
-    "labelMaxWidth": 200,
+    "labelMaxChars": 200,
     "usagePing": false,
     "source": "api"
   },
@@ -44,12 +46,9 @@
           "value": "4,095 ms"
         }
       ],
-      "participants": [],
-      "events": [],
-      "accuracy": "STRUCTURE_ONLY",
-      "sources": [],
-      "clockOrdering": "SAME_SOURCE",
-      "clockOrdered": 0
+      "accuracy": "structure_only",
+      "clockOrdering": "same_source",
+      "clockOrderedCount": 0
     }
   ]
 }

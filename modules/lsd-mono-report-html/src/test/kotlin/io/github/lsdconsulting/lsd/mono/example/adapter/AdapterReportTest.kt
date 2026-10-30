@@ -6,6 +6,7 @@ import io.github.lsdconsulting.lsd.mono.report.model.AccuracyJson
 import io.github.lsdconsulting.lsd.mono.report.model.ClockOrderingJson
 import io.github.lsdconsulting.lsd.mono.report.model.DataValueJson
 import io.github.lsdconsulting.lsd.mono.report.model.DividerEventJson
+import io.github.lsdconsulting.lsd.mono.report.model.GeneratorJson
 import io.github.lsdconsulting.lsd.mono.report.model.KnownMessageOrigin
 import io.github.lsdconsulting.lsd.mono.report.model.KnownMessageType
 import io.github.lsdconsulting.lsd.mono.report.model.KnownParticipantType
@@ -69,16 +70,16 @@ class AdapterReportTest {
         assertEquals(ReportSchema.VERSION, report.string("schemaVersion"), "the page carries the report, at the model's schema version")
         assertTrue(page.length > 100_000, "the page has the report UI bundled, ${page.length} characters")
         val index = Json.parse(ReportSchemas.between(dir.resolve("index.html").readText(), "window.__LSD_INDEX__=", ";</script>")) as JsonObject
-        assertEquals("example-adapter 1.0", index.string("generator"), "the index names the adapter")
+        assertEquals(mapOf("name" to "example-adapter", "version" to "1.0"), index.obj("generator")?.toMap(), "the index names the adapter")
     }
 
     private fun writer() =
-        ReportWriter(ReportWriterSettings(generator = "example-adapter 1.0", generatedAt = Instant.parse(GENERATED_AT), usagePing = false))
+        ReportWriter(ReportWriterSettings(generator = GeneratorJson("example-adapter", "1.0"), generatedAt = Instant.parse(GENERATED_AT), usagePing = false))
 
     /** What lsd-mono-jvm writes for one empty scenario, built here without it. */
     private fun minimal() =
         ReportJson
-            .builder(title = "Minimal", generatedAt = GENERATED_AT, generator = "lsd-mono-jvm (conformance)", status = StatusJson.SUCCESS)
+            .builder(title = "Minimal", generatedAt = GENERATED_AT, generator = GeneratorJson("lsd-mono-jvm"), status = StatusJson.SUCCESS)
             .options(ReportOptionsJson.builder().usagePing(false).build())
             .scenario(
                 ScenarioJson
@@ -88,14 +89,14 @@ class AdapterReportTest {
                     .accuracy(AccuracyJson.STRUCTURE_ONLY)
                     .sources(emptyList())
                     .clockOrdering(ClockOrderingJson.SAME_SOURCE)
-                    .clockOrdered(0)
+                    .clockOrderedCount(0)
                     .build(),
             ).build()
 
     /** A report as an adapter for another framework might build it: two services and an exchange, one call imported from spans. */
     private fun checkout() =
         ReportJson
-            .builder(title = "Checkout", generatedAt = GENERATED_AT, generator = "example-adapter 1.0", status = StatusJson.ERROR)
+            .builder(title = "Checkout", generatedAt = GENERATED_AT, generator = GeneratorJson("example-adapter", "1.0"), status = StatusJson.ERROR)
             .options(
                 ReportOptionsJson
                     .builder()
@@ -112,7 +113,7 @@ class AdapterReportTest {
                         ParticipantJson
                             .builder("payments", "Payments")
                             .type("CONTROL")
-                            .colour("#3b82f6")
+                            .color("#3b82f6")
                             .build(),
                     ).event(SectionEventJson.builder("s1", "Pay").build())
                     .event(
@@ -138,7 +139,7 @@ class AdapterReportTest {
                     .accuracy(AccuracyJson.STRUCTURE_ONLY)
                     .sources(emptyList())
                     .clockOrdering(ClockOrderingJson.SAME_SOURCE)
-                    .clockOrdered(0)
+                    .clockOrderedCount(0)
                     .build(),
             ).scenario(ScenarioJson.builder(id = "checkout-2", title = "Card declined", status = StatusJson.ERROR).build())
             .build()

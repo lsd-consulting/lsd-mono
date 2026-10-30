@@ -1,17 +1,18 @@
 package io.github.lsdconsulting.lsd.mono.report.html
 
+import io.github.lsdconsulting.lsd.mono.report.model.GeneratorJson
 import java.time.Instant
 
 /**
  * What [ReportWriter] writes beyond the reports it is given. The index page's manifest says what
- * wrote it ([generator], such as `my-adapter 1.0`), when ([generatedAt], or the time of writing
+ * wrote it ([generator], such as `my-adapter` version `1.0`), when ([generatedAt], or the time of writing
  * when null) and whether the page may send the usage ping ([usagePing]). The writer reads no
  * properties or environment of its own.
  */
 public class ReportWriterSettings
     @JvmOverloads
     constructor(
-        public val generator: String,
+        public val generator: GeneratorJson,
         public val generatedAt: Instant? = null,
         public val usagePing: Boolean = true,
     ) {

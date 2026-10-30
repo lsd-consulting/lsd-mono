@@ -34,7 +34,7 @@ export const PILL_W = 54
 export const PILL_W_TOUCH = 94
 
 export function participantName(p: Participant): string {
-  return p.alias ?? p.name
+  return p.displayName ?? p.name
 }
 
 /** Hidden participants in diagram order. */

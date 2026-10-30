@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_LABEL_MAX_WIDTH,
+  DEFAULT_LABEL_MAX_CHARS,
   formatGeneratedAt,
   histSegmentHtml,
   statusDotHtml,
@@ -14,9 +14,12 @@ describe('statusGlyph (#158)', () => {
   it('gives each status its own glyph, the error one matching the diagram mark', () => {
     expect(['success', 'warn', 'error'].map(statusGlyph)).toEqual(['✓', '!', '✕'])
   })
+  it('marks skipped and aborted with glyphs common fonts cover, not a minus-like dash', () => {
+    expect(['skipped', 'aborted'].map(statusGlyph)).toEqual(['»', '■'])
+  })
 })
 
-describe('labelMaxWidth (#111)', () => {
+describe('labelMaxChars (#111)', () => {
   it('defaults to what Kotlin writes when the report has no width', () => {
     const kotlin = readFileSync(
       new URL(
@@ -27,7 +30,7 @@ describe('labelMaxWidth (#111)', () => {
     )
     const width = /const val DEFAULT_LABEL_MAX_WIDTH = (\d+)/.exec(kotlin)?.[1]
     expect(width, 'DEFAULT_LABEL_MAX_WIDTH in ReportOptions.kt').toBeDefined()
-    expect(DEFAULT_LABEL_MAX_WIDTH).toBe(Number(width))
+    expect(DEFAULT_LABEL_MAX_CHARS).toBe(Number(width))
   })
 
   it('is where the diagram cuts a label, with an ellipsis inside the width', () => {
@@ -35,8 +38,8 @@ describe('labelMaxWidth (#111)', () => {
     expect(truncateLabel('hello world', 6)).toBe('hel...')
     expect(truncateLabel('hello', 2)).toBe('he')
     expect(truncateLabel('hello', 0)).toBe('')
-    expect(truncateLabel('x'.repeat(DEFAULT_LABEL_MAX_WIDTH + 1), DEFAULT_LABEL_MAX_WIDTH)).toHaveLength(
-      DEFAULT_LABEL_MAX_WIDTH,
+    expect(truncateLabel('x'.repeat(DEFAULT_LABEL_MAX_CHARS + 1), DEFAULT_LABEL_MAX_CHARS)).toHaveLength(
+      DEFAULT_LABEL_MAX_CHARS,
     )
   })
 })

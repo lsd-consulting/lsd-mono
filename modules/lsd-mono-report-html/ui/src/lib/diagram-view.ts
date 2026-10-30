@@ -297,8 +297,8 @@ export function visibleColumnIds(participants: Participant[], hiddenIds: Readonl
  */
 function messageNeedsHiddenColumn(msg: MessageEvent, hiddenIds: ReadonlySet<string>): boolean {
   if (hiddenIds.size === 0) return false
-  if (msg.type === 'SHORT_INBOUND') return Boolean(msg.to) && hiddenIds.has(msg.to)
-  if (msg.type === 'SHORT_OUTBOUND') return Boolean(msg.from) && hiddenIds.has(msg.from)
+  if (msg.type === 'short_inbound') return Boolean(msg.to) && hiddenIds.has(msg.to)
+  if (msg.type === 'short_outbound') return Boolean(msg.from) && hiddenIds.has(msg.from)
   return hiddenIds.has(msg.from) || hiddenIds.has(msg.to)
 }
 

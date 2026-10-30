@@ -24,13 +24,13 @@ public final class io/github/lsdconsulting/lsd/mono/report/html/ReportWriter$Com
 }
 
 public final class io/github/lsdconsulting/lsd/mono/report/html/ReportWriterSettings {
-	public fun <init> (Ljava/lang/String;)V
-	public fun <init> (Ljava/lang/String;Ljava/time/Instant;)V
-	public fun <init> (Ljava/lang/String;Ljava/time/Instant;Z)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/time/Instant;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;Ljava/time/Instant;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;Ljava/time/Instant;Z)V
+	public synthetic fun <init> (Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;Ljava/time/Instant;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getGeneratedAt ()Ljava/time/Instant;
-	public final fun getGenerator ()Ljava/lang/String;
+	public final fun getGenerator ()Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;
 	public final fun getUsagePing ()Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

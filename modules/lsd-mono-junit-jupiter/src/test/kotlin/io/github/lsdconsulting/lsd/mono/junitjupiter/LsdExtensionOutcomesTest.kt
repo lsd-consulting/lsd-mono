@@ -93,13 +93,13 @@ class LsdExtensionOutcomesTest {
         assertFalse(failed.json.contains("class=\\\"error\\\""), failed.json)
 
         val disabled = report.scenario("$prefix: is disabled")
-        assertEquals("warn", disabled.status, disabled.json)
+        assertEquals("skipped", disabled.status, disabled.json)
         assertEquals("Test disabled: not today", disabled.description, disabled.json)
         assertEquals(null, disabled.error?.get("headline"), disabled.json)
         assertFalse("after-each" in disabled.labels, disabled.json)
 
         val aborted = report.scenario("$prefix: aborts early")
-        assertEquals("warn", aborted.status, aborted.json)
+        assertEquals("aborted", aborted.status, aborted.json)
         assertEquals("Test aborted", aborted.description, aborted.json)
         val abort = aborted.error ?: error("no error in ${aborted.json}")
         assertEquals("Test aborted", abort["headline"], aborted.json)

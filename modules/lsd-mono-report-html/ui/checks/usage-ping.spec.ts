@@ -19,11 +19,14 @@ const OPT_IN = '/?lsd-usage-ping-check'
 /** Sent by the check itself, after the page's own requests (requestsFlushed). */
 const SENTINEL = 'sentinel.txt'
 
-function report(options: Partial<NonNullable<Report['options']>>, generator = 'lsd-mono-jvm 0.2.0'): Report {
+function report(
+  options: Partial<NonNullable<Report['options']>>,
+  generator: Report['generator'] = { name: 'lsd-mono-jvm', version: '0.2.0' },
+): Report {
   return {
     ...uxFixture,
     generator,
-    options: { metricsEnabled: true, labelMaxWidth: 200, usagePing: true, source: 'junit', ...options },
+    options: { metricsEnabled: true, labelMaxChars: 200, usagePing: true, source: 'junit', ...options },
   }
 }
 
@@ -112,7 +115,7 @@ test('usage ping: the index page pings on open and counts each opened report sou
     ...indexBase(),
     title: 'LSD reports',
     generatedAt: '2026-01-15T12:00:00+00:00',
-    generator: 'lsd-mono-jvm 0.2.0',
+    generator: { name: 'lsd-mono-jvm', version: '0.2.0' },
     options: { usagePing: true },
     reports: ['a', 'b'].map((id) => ({
       id,
@@ -120,8 +123,8 @@ test('usage ping: the index page pings on open and counts each opened report sou
       status: 'success' as const,
       href: `${id}-diagram.html`,
       data: `${id}-report.js`,
-      counts: { success: 1, warn: 0, error: 0 },
-      scenarios: [{ id: 'ux', title: 'Checkout', status: 'success' as const, messages: 14 }],
+      counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+      scenarios: [{ id: 'ux', title: 'Checkout', status: 'success' as const, messageCount: 14 }],
     })),
   }
   await page.route('https://cdn.jsdelivr.net/**', (route) => {

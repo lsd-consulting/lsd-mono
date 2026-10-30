@@ -10,12 +10,12 @@ import { untimed } from '../src/lib/report-fixture.test-util'
  * hop across the diagram, including a full-width span every 25th message.
  */
 const KINDS: { type: Participant['type']; name: string }[] = [
-  { type: 'ACTOR', name: 'User' },
-  { type: 'DATABASE', name: 'Orders' },
-  { type: 'QUEUE', name: 'Queue' },
-  { type: 'PARTICIPANT', name: 'Api' },
-  { type: 'ENTITY', name: 'Entity' },
-  { type: 'BOUNDARY', name: 'Edge' },
+  { type: 'actor', name: 'User' },
+  { type: 'database', name: 'Orders' },
+  { type: 'queue', name: 'Queue' },
+  { type: 'participant', name: 'Api' },
+  { type: 'entity', name: 'Entity' },
+  { type: 'boundary', name: 'Edge' },
 ]
 
 export function wideParticipants(count: number): Participant[] {
@@ -46,7 +46,7 @@ export function wideReport(
   for (let i = 0; i < size; i++) {
     const step = wideStep(i, count)
     const id = i + 1
-    const type = id % 4 === 0 ? 'SYNCHRONOUS_RESPONSE' : 'SYNCHRONOUS'
+    const type = id % 4 === 0 ? 'synchronous_response' : 'synchronous'
     const event: MessageEvent = {
       kind: 'message',
       id: String(id),
@@ -59,7 +59,7 @@ export function wideReport(
     if (data !== undefined) event.data = data
     if (id % 4 === 2) event.durationMs = 15
     // Every fourth message replies to the one before it (its arrow keeps the hop pattern).
-    if (type === 'SYNCHRONOUS_RESPONSE') event.replyOf = String(id - 1)
+    if (type === 'synchronous_response') event.replyTo = String(id - 1)
     events.push(event)
   }
   events.push({
@@ -73,14 +73,14 @@ export function wideReport(
     schemaVersion: REPORT_SCHEMA_VERSION,
     title: `mono-p${count}-m${size}`,
     generatedAt: new Date().toISOString(),
-    generator: 'lsd-mono-jvm wide perf fixture',
+    generator: { name: 'lsd-mono-jvm wide perf fixture' },
     status: 'success',
-    options: { metricsEnabled: true, labelMaxWidth: 200, usagePing: false, source: 'api' },
+    options: { metricsEnabled: true, labelMaxChars: 200, usagePing: false, source: 'api' },
     scenarios: [
       {
         ...untimed(),
         // Every fourth message has a duration, so the Timing view has something to show.
-        accuracy: 'MEASURED',
+        accuracy: 'measured',
         id: `wide-p${count}-m${size}`,
         title: `${count} participants, ${size} messages`,
         status: 'success',

@@ -51,9 +51,9 @@ class CaptureToJsonTest {
         assertEquals(listOf("orderId" to "ord-1"), scenario.facts)
         assertEquals(
             listOf(
-                mapOf("id" to "customer", "name" to "Customer", "type" to "ACTOR", "colour" to "#38bdf8"),
-                mapOf("id" to "api", "name" to "Checkout API", "type" to "PARTICIPANT"),
-                mapOf("id" to "orders-db", "name" to "Orders DB", "type" to "DATABASE"),
+                mapOf("id" to "customer", "name" to "Customer", "type" to "actor", "color" to "#38bdf8"),
+                mapOf("id" to "api", "name" to "Checkout API", "type" to "participant"),
+                mapOf("id" to "orders-db", "name" to "Orders DB", "type" to "database"),
             ),
             scenario.participants.map { it.toMap() },
         )
@@ -66,12 +66,12 @@ class CaptureToJsonTest {
         assertEquals("api", scenario.eventsOf("deactivate").single()["participantId"])
 
         fun line(label: String) = scenario.message(label).let { listOf(it["from"], it["to"], it["type"]) }
-        assertEquals(listOf("customer", "api", "SYNCHRONOUS"), line("POST /checkout"))
+        assertEquals(listOf("customer", "api", "synchronous"), line("POST /checkout"))
         assertEquals(mapOf("cartId" to "cart-1"), scenario.message("POST /checkout").obj("data")?.toMap())
-        assertEquals(listOf("api", "orders-db", "SYNCHRONOUS"), line("INSERT orders"))
+        assertEquals(listOf("api", "orders-db", "synchronous"), line("INSERT orders"))
         assertEquals(12.0, scenario.message("INSERT orders")["durationMs"])
-        assertEquals(listOf("orders-db", "api", "SYNCHRONOUS_RESPONSE"), line("ok"))
-        assertEquals(listOf("api", "customer", "ASYNCHRONOUS"), line("201 Created"))
+        assertEquals(listOf("orders-db", "api", "synchronous_response"), line("ok"))
+        assertEquals(listOf("api", "customer", "asynchronous"), line("201 Created"))
         assertEquals(mapOf("orderId" to "ord-1"), scenario.message("201 Created").obj("data")?.toMap())
         assertEquals("done", scenario.eventsOf("divider").single()["label"])
         val note = scenario.eventsOf("note").single()

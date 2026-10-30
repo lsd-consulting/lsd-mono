@@ -198,7 +198,7 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
 export function revealFiltered(scenarioId: string): void {
   if (filtered().some((s) => s.id === scenarioId)) return
   state.query = ''
-  for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
+  for (const s of ['success', 'warn', 'error', 'skipped', 'aborted'] as Status[]) state.status[s] = true
   const search = document.querySelector<HTMLInputElement>('#search')
   if (search) search.value = ''
   forgetSearchOrigin()

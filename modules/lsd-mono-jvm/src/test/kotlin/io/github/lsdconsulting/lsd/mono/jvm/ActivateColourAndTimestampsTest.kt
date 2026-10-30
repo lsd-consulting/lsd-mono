@@ -31,11 +31,11 @@ class ActivateColourAndTimestampsTest {
         val scenario = ReportJson.single(tempDir, ReportFileNames.stem("Activate colour") + "-report.json").scenario("coloured activation")
         val activations = scenario.eventsOf("activate").associateBy { it["participantId"] }
         assertEquals(setOf("api", "db"), activations.keys)
-        assertEquals("#c026d3", activations.getValue("api")["colour"])
-        assertFalse(activations.getValue("db").containsKey("colour"), activations.getValue("db").toString())
+        assertEquals("#c026d3", activations.getValue("api")["color"])
+        assertFalse(activations.getValue("db").containsKey("color"), activations.getValue("db").toString())
         val deactivate = scenario.eventsOf("deactivate").single()
         assertEquals("api", deactivate["participantId"])
-        assertFalse(deactivate.containsKey("colour"), deactivate.toString())
+        assertFalse(deactivate.containsKey("color"), deactivate.toString())
     }
 
     @Test
@@ -71,7 +71,7 @@ class ActivateColourAndTimestampsTest {
         val scenario = ReportJson.single(tempDir, ReportFileNames.stem("Timestamps") + "-report.json").scenario("reordered")
         // Timed events fill the timed slots in time order; the untimed one keeps its slot.
         assertEquals(listOf("early", "mid", "untimed", "late"), scenario.labels)
-        assertTrue(scenario.messages.any { it["order"] == "CLOCK" }, scenario.toString())
+        assertTrue(scenario.messages.any { it["order"] == "clock" }, scenario.toString())
         assertEquals(
             mapOf("early" to "2026-10-03T09:00:00Z", "mid" to "2026-10-03T10:00:00Z", "untimed" to null, "late" to "2026-10-03T11:00:00Z"),
             scenario.messages.associate { it["label"] to it["startedAt"] },

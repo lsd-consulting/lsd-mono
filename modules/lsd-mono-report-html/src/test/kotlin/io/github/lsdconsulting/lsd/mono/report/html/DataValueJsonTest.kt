@@ -2,6 +2,7 @@ package io.github.lsdconsulting.lsd.mono.report.html
 
 import io.github.lsdconsulting.lsd.mono.report.model.AttributeValueJson
 import io.github.lsdconsulting.lsd.mono.report.model.DataValueJson
+import io.github.lsdconsulting.lsd.mono.report.model.GeneratorJson
 import io.github.lsdconsulting.lsd.mono.report.model.ParticipantJson
 import io.github.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.github.lsdconsulting.lsd.mono.report.model.ScenarioJson
@@ -87,11 +88,11 @@ class DataValueJsonTest {
     }
 
     @Test
-    fun `a participant's attributes are written after its colour, and not when there are none`() {
+    fun `a participant's attributes are written after its color, and not when there are none`() {
         val participant =
             ParticipantJson
                 .builder("orders", "Orders")
-                .colour("blue")
+                .color("blue")
                 .attribute("service.name", "orders")
                 .attribute("service.version", "2.4.1")
                 .attribute("lsd.instances", 3)
@@ -106,7 +107,7 @@ class DataValueJsonTest {
 
         @Suppress("UNCHECKED_CAST")
         val written = scenario["participants"] as List<Map<String, Any?>>
-        assertEquals(listOf("colour", "attributes"), written[0].keys.toList().takeLast(2))
+        assertEquals(listOf("color", "attributes"), written[0].keys.toList().takeLast(2))
         assertEquals(
             listOf<Pair<String, Any?>>(
                 "service.name" to "orders",
@@ -125,7 +126,7 @@ class DataValueJsonTest {
     private fun report(vararg participants: ParticipantJson): String =
         ReportWriter.toJson(
             ReportJson
-                .builder("Participants", "2026-01-01T12:00:00Z", "test", StatusJson.SUCCESS)
+                .builder("Participants", "2026-01-01T12:00:00Z", GeneratorJson("test"), StatusJson.SUCCESS)
                 .scenario(
                     participants
                         .fold(ScenarioJson.builder("s1", "One", StatusJson.SUCCESS)) { builder, participant -> builder.participant(participant) }

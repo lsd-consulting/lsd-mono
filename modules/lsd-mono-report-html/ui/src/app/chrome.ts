@@ -73,7 +73,9 @@ export function renderShell(): void {
         <span class="visually-hidden" id="search-status" role="status" aria-live="polite"></span>
       </div>
       <div class="filters" role="group" aria-label="Status filters">
-        ${(['success', 'warn', 'error'] as Status[])
+        ${(['success', 'warn', 'error', 'skipped', 'aborted'] as Status[])
+          // Skipped and aborted only get a filter when the report has some.
+          .filter((s) => s === 'success' || s === 'warn' || s === 'error' || c[s] > 0)
           .map(
             (s) => `
           <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}" aria-describedby="${escapeAttr(statusDefinitionId(s))}">
@@ -105,6 +107,8 @@ export function renderShell(): void {
           ${histSegmentHtml('s', 'success', c.success, (c.success / total) * 100 || 0)}
           ${histSegmentHtml('w', 'warn', c.warn, (c.warn / total) * 100 || 0)}
           ${histSegmentHtml('e', 'error', c.error, (c.error / total) * 100 || 0)}
+          ${histSegmentHtml('k', 'skipped', c.skipped, (c.skipped / total) * 100 || 0)}
+          ${histSegmentHtml('a', 'aborted', c.aborted, (c.aborted / total) * 100 || 0)}
         </div>
         <ul class="scenario-nav${index ? ' index-nav' : ''}" id="scenario-nav"></ul>
       </aside>
@@ -174,7 +178,7 @@ function bindFilters(): void {
     search.value = ''
     clear.hidden = true
     if (slash) slash.hidden = false
-    for (const s of ['success', 'warn', 'error'] as Status[]) state.status[s] = true
+    for (const s of ['success', 'warn', 'error', 'skipped', 'aborted'] as Status[]) state.status[s] = true
     document.querySelectorAll('[data-filter]').forEach((btn) => btn.setAttribute('aria-pressed', 'true'))
     renderNav()
     renderMain()

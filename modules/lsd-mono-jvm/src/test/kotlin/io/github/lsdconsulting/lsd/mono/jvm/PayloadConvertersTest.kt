@@ -3,6 +3,7 @@ package io.github.lsdconsulting.lsd.mono.jvm
 import io.github.lsdconsulting.lsd.mono.jvm.PayloadConverters.Limits
 import io.github.lsdconsulting.lsd.mono.report.html.ReportWriter
 import io.github.lsdconsulting.lsd.mono.report.model.DataValueJson
+import io.github.lsdconsulting.lsd.mono.report.model.GeneratorJson
 import io.github.lsdconsulting.lsd.mono.report.model.MessageEventJson
 import io.github.lsdconsulting.lsd.mono.report.model.ReportJson
 import io.github.lsdconsulting.lsd.mono.report.model.ScenarioJson
@@ -37,7 +38,7 @@ class PayloadConvertersTest {
     private fun render(data: Any?): String =
         ReportWriter.toJson(
             ReportJson
-                .builder(title = "data", generatedAt = "2026-10-21T08:00:00Z", generator = "test", status = StatusJson.SUCCESS)
+                .builder(title = "data", generatedAt = "2026-10-21T08:00:00Z", generator = GeneratorJson("test"), status = StatusJson.SUCCESS)
                 .scenario(
                     ScenarioJson
                         .builder(id = "s", title = "s", status = StatusJson.SUCCESS)
@@ -48,7 +49,7 @@ class PayloadConvertersTest {
                                     from = "a",
                                     to = "b",
                                     label = "m",
-                                    type = "SYNCHRONOUS",
+                                    type = "synchronous",
                                 ).data(data?.let(DataValueJson::from))
                                 .build(),
                         ).build(),

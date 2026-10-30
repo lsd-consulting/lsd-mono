@@ -17,14 +17,14 @@ const metrics: Metric[] = [{ key: 'Messages', value: '14' }]
 function graph(count: number) {
   const ids = Array.from({ length: count }, (_, i) => `p${i}`)
   return componentGraph({
-    participants: ids.map((id) => ({ id, name: `Service number ${id}`, type: 'PARTICIPANT' as const })),
+    participants: ids.map((id) => ({ id, name: `Service number ${id}`, type: 'participant' as const })),
     events: ids.slice(1).map((to, i) => ({
       kind: 'message' as const,
       id: String(i),
       from: 'p0',
       to,
       label: `call ${to}`,
-      type: 'SYNCHRONOUS' as const,
+      type: 'synchronous' as const,
     })),
   })
 }
@@ -131,7 +131,7 @@ describe('reveal on a phone', () => {
       from: 'a',
       to: 'b',
       label: 'call',
-      type: 'SYNCHRONOUS',
+      type: 'synchronous',
       data: { id: 1 },
     })
     await new Promise((resolve) => setTimeout(resolve, 0))

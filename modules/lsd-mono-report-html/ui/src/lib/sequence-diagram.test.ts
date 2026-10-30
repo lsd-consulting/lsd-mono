@@ -24,11 +24,11 @@ import {
 import { arrowLegendHtml, renderDiagramHtml, renderRowSvg } from './sequence-diagram'
 import type { DiagramEvent, Participant, Scenario } from '../types'
 import { untimed } from './report-fixture.test-util'
-import { DEFAULT_LABEL_MAX_WIDTH } from '../ui/format'
+import { DEFAULT_LABEL_MAX_CHARS } from '../ui/format'
 
 const participants: Participant[] = [
-  { id: 'api', name: 'Api', type: 'PARTICIPANT', colour: '#34d399' },
-  { id: 'db', name: 'Db', type: 'DATABASE', colour: '#94a3b8' },
+  { id: 'api', name: 'Api', type: 'participant', color: '#34d399' },
+  { id: 'db', name: 'Db', type: 'database', color: '#94a3b8' },
 ]
 
 function rowFor(event: DiagramEvent): LayoutRow {
@@ -37,7 +37,7 @@ function rowFor(event: DiagramEvent): LayoutRow {
 
 describe('messageArrowSpec', () => {
   it('gives LOST an X tip and a text cue (not colour-only)', () => {
-    expect(messageArrowSpec('LOST')).toEqual({
+    expect(messageArrowSpec('lost')).toEqual({
       dashed: false,
       dash: null,
       start: 'none',
@@ -47,7 +47,7 @@ describe('messageArrowSpec', () => {
   })
 
   it('gives BI_DIRECTIONAL dual filled heads and a cue', () => {
-    expect(messageArrowSpec('BI_DIRECTIONAL')).toEqual({
+    expect(messageArrowSpec('bi_directional')).toEqual({
       dashed: false,
       dash: null,
       start: 'filled',
@@ -57,12 +57,12 @@ describe('messageArrowSpec', () => {
   })
 
   it('dots an async arrow and dashes a reply, so they differ by the line and the tip', () => {
-    const async = messageArrowSpec('ASYNCHRONOUS')
-    const reply = messageArrowSpec('SYNCHRONOUS_RESPONSE')
+    const async = messageArrowSpec('asynchronous')
+    const reply = messageArrowSpec('synchronous_response')
     expect(async).toMatchObject({ dashed: true, dash: '2 4', end: 'open' })
     expect(reply).toMatchObject({ dashed: true, dash: '5 4', end: 'filled' })
     expect(async.dash).not.toBe(reply.dash)
-    expect(messageArrowSpec('SYNCHRONOUS')).toMatchObject({ dashed: false, dash: null })
+    expect(messageArrowSpec('synchronous')).toMatchObject({ dashed: false, dash: null })
   })
 
   it('draws the async open tip larger than the filled call tip', () => {
@@ -88,7 +88,7 @@ describe('arrowMarker', () => {
 describe('shortMessageEndpoints', () => {
   it('draws SHORT_INBOUND from a stub left of the lifeline to the participant', () => {
     const px = LEFT_PAD
-    const { x1, x2 } = shortMessageEndpoints('SHORT_INBOUND', px, 400)
+    const { x1, x2 } = shortMessageEndpoints('short_inbound', px, 400)
     expect(x2).toBeLessThan(px)
     expect(x1).toBeLessThan(x2)
     expect(x2 - x1).toBeLessThanOrEqual(SHORT_STUB)
@@ -96,7 +96,7 @@ describe('shortMessageEndpoints', () => {
 
   it('draws SHORT_OUTBOUND from the lifeline toward the right edge', () => {
     const px = LEFT_PAD
-    const { x1, x2 } = shortMessageEndpoints('SHORT_OUTBOUND', px, 400)
+    const { x1, x2 } = shortMessageEndpoints('short_outbound', px, 400)
     expect(x1).toBeGreaterThan(px)
     expect(x2).toBeGreaterThan(x1)
     expect(x2 - x1).toBeLessThanOrEqual(SHORT_STUB)
@@ -139,7 +139,7 @@ describe('renderRowSvg fragments', () => {
         from: 'api',
         to: 'db',
         label: 'place order',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
         data: {
           method: 'POST',
           path: '/orders',
@@ -150,7 +150,7 @@ describe('renderRowSvg fragments', () => {
       }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
     expect(html).toContain('<button type="button" class="msg-open"')
     expect(html).toContain('aria-label="Open place order, api to db, call, has payload"')
@@ -175,13 +175,13 @@ describe('renderRowSvg fragments', () => {
           from: 'api',
           to: 'db',
           label: 'ping',
-          type: 'SYNCHRONOUS',
-          order: 'CLOCK',
+          type: 'synchronous',
+          order: 'clock',
           data,
         }),
         400,
         participants,
-        DEFAULT_LABEL_MAX_WIDTH,
+        DEFAULT_LABEL_MAX_CHARS,
       )
     const html = row({ id: 1 })
     expect(html).toContain('<tspan class="msg-payload" dx="6" aria-hidden="true">{}<title>Has a payload')
@@ -197,11 +197,11 @@ describe('renderRowSvg fragments', () => {
         from: 'api',
         to: 'db',
         label: 'ping',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
       }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
     expect(html).not.toContain('msg-open')
   })
@@ -214,12 +214,12 @@ describe('renderRowSvg fragments', () => {
         from: 'api',
         to: 'db',
         label: 'place order',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
         payloadId: 'sc/m-lazy',
       }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
     expect(html).toContain('class="msg-open"')
     expect(html).not.toContain('ord_1')
@@ -233,13 +233,13 @@ describe('renderRowSvg fragments', () => {
         from: 'api',
         to: 'db',
         label: 'drop',
-        type: 'LOST',
+        type: 'lost',
       }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
-    expect(svg).toContain('data-msg-type="LOST"')
+    expect(svg).toContain('data-msg-type="lost"')
     expect(svg).toContain('[lost]')
     expect(svg).toContain('M2 2 L10 10')
   })
@@ -252,16 +252,16 @@ describe('renderRowSvg fragments', () => {
         from: 'api',
         to: 'db',
         label: 'place order',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
       }),
       400,
       [
-        { id: 'api', name: 'Api', type: 'PARTICIPANT', colour: 'var(--accent)' },
-        { id: 'db', name: 'Db', type: 'DATABASE', colour: 'var(--accent)' },
+        { id: 'api', name: 'Api', type: 'participant', color: 'var(--accent)' },
+        { id: 'db', name: 'Db', type: 'database', color: 'var(--accent)' },
       ],
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
-    expect(svg).toContain('data-msg-type="SYNCHRONOUS"')
+    expect(svg).toContain('data-msg-type="synchronous"')
     expect(svg).toContain('marker-end="url(#mk_filled_var--accent)"')
     expect(svg).toContain('id="mk_filled_var--accent"')
     expect(svg).toContain('L10 5 L0 10 z')
@@ -278,12 +278,12 @@ describe('renderRowSvg fragments', () => {
           from: 'db',
           to: 'api',
           label: 'reply',
-          type: 'SYNCHRONOUS_RESPONSE',
+          type: 'synchronous_response',
           status,
         }),
         400,
         participants,
-        DEFAULT_LABEL_MAX_WIDTH,
+        DEFAULT_LABEL_MAX_CHARS,
       )
     for (const status of ['error', '500']) {
       expect(reply(status)).toContain('stroke="var(--error)"')
@@ -302,13 +302,13 @@ describe('renderRowSvg fragments', () => {
           from: 'db',
           to: 'api',
           label: 'reply',
-          type: 'SYNCHRONOUS_RESPONSE',
+          type: 'synchronous_response',
           status,
-          colour,
+          color: colour,
         }),
         400,
         participants,
-        DEFAULT_LABEL_MAX_WIDTH,
+        DEFAULT_LABEL_MAX_CHARS,
       )
     for (const status of ['error', '404', '503']) {
       const svg = reply(status)
@@ -333,13 +333,13 @@ describe('renderRowSvg fragments', () => {
         from: 'db',
         to: 'api',
         label: 'reply',
-        type: 'SYNCHRONOUS_RESPONSE',
+        type: 'synchronous_response',
         status: '503',
-        colour: '#c026d3',
+        color: '#c026d3',
       }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
     expect(svg).toContain('stroke="#c026d3"')
     expect(svg).not.toContain('var(--error)')
@@ -353,13 +353,13 @@ describe('renderRowSvg fragments', () => {
         from: 'api',
         to: 'db',
         label: 'sync',
-        type: 'BI_DIRECTIONAL',
+        type: 'bi_directional',
       }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
-    expect(svg).toContain('data-msg-type="BI_DIRECTIONAL"')
+    expect(svg).toContain('data-msg-type="bi_directional"')
     expect(svg).toContain('marker-start=')
     expect(svg).toContain('marker-end=')
     expect(svg).toContain('[↔]')
@@ -373,13 +373,13 @@ describe('renderRowSvg fragments', () => {
         from: '',
         to: 'api',
         label: 'found',
-        type: 'SHORT_INBOUND',
+        type: 'short_inbound',
       }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
-    expect(inbound).toContain('data-msg-type="SHORT_INBOUND"')
+    expect(inbound).toContain('data-msg-type="short_inbound"')
     expect(inbound).toContain('[in]')
     expect(inbound).toContain('message-short')
 
@@ -390,13 +390,13 @@ describe('renderRowSvg fragments', () => {
         from: 'api',
         to: '',
         label: 'emit',
-        type: 'SHORT_OUTBOUND',
+        type: 'short_outbound',
       }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
-    expect(outbound).toContain('data-msg-type="SHORT_OUTBOUND"')
+    expect(outbound).toContain('data-msg-type="short_outbound"')
     expect(outbound).toContain('[out]')
   })
 
@@ -408,7 +408,7 @@ describe('renderRowSvg fragments', () => {
         from: 'api',
         to: 'db',
         label: 'abcdefghijklmnopqrstuvwxyz',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
       }),
       400,
       participants,
@@ -423,7 +423,7 @@ describe('renderRowSvg fragments', () => {
       rowFor({ kind: 'note', id: 'n1', text: 'L', over: 'api', placement: 'left' }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
     expect(left).toContain('data-placement="left"')
     expect(left).toContain('note-left')
@@ -432,7 +432,7 @@ describe('renderRowSvg fragments', () => {
       rowFor({ kind: 'note', id: 'n2', text: 'R', over: 'api', placement: 'right' }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
     )
     expect(right).toContain('data-placement="right"')
     expect(right).toContain('note-right')
@@ -444,7 +444,7 @@ describe('renderRowSvg fragments', () => {
     expect(card.lines.length).toBeGreaterThan(1)
     const row = rowFor({ kind: 'note', id: 'n-long', text, over: 'api', placement: 'over' })
     expect(row.height).toBeGreaterThan(40)
-    const svg = renderRowSvg(row, 400, participants, DEFAULT_LABEL_MAX_WIDTH)
+    const svg = renderRowSvg(row, 400, participants, DEFAULT_LABEL_MAX_CHARS)
     expect(svg).toContain(`width="${NOTE_CARD_W}"`)
     expect(svg).toContain(`height="${card.height}"`)
     // One tspan per wrapped line.
@@ -466,7 +466,7 @@ describe('renderRowSvg fragments', () => {
         rowFor({ kind: 'note', id: `n-${placement}`, text: 'Payment retried', over: 'api', placement }),
         400,
         participants,
-        DEFAULT_LABEL_MAX_WIDTH,
+        DEFAULT_LABEL_MAX_CHARS,
       )
       // Placement stays layout data on the group.
       expect(svg).toContain(`data-placement="${placement}"`)
@@ -492,7 +492,7 @@ describe('renderRowSvg fragments', () => {
       rowFor({ kind: 'note', id: 'n-hit', text: 'Payment retried', over: 'api', placement: 'over' }),
       400,
       participants,
-      DEFAULT_LABEL_MAX_WIDTH,
+      DEFAULT_LABEL_MAX_CHARS,
       { query: 'retried', hiddenIds: new Set() },
     )
     expect(svg).toContain('search-hit')
@@ -508,7 +508,7 @@ describe('renderRowSvg fragments', () => {
         rowFor({ kind: 'note', id: `n-${placement}`, text, over: 'api', placement }),
         400,
         participants,
-        DEFAULT_LABEL_MAX_WIDTH,
+        DEFAULT_LABEL_MAX_CHARS,
       )
       expect(svg).toContain(`data-placement="${placement}"`)
       expect(svg).toContain(`height="${card.height}"`)
@@ -521,11 +521,11 @@ describe('section separator', () => {
   it('paints a fixed band and leaves the next message label clear of it', () => {
     const events: DiagramEvent[] = [
       { kind: 'section', id: 's', title: 'Phase 2' },
-      { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'place order', type: 'SYNCHRONOUS' },
+      { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'place order', type: 'synchronous' },
     ]
     const rows = layoutRows(events)
-    const sectionSvg = renderRowSvg(rows[0], 400, participants, DEFAULT_LABEL_MAX_WIDTH)
-    const messageSvg = renderRowSvg(rows[1], 400, participants, DEFAULT_LABEL_MAX_WIDTH)
+    const sectionSvg = renderRowSvg(rows[0], 400, participants, DEFAULT_LABEL_MAX_CHARS)
+    const messageSvg = renderRowSvg(rows[1], 400, participants, DEFAULT_LABEL_MAX_CHARS)
     expect(sectionSvg).toContain(`y="${SECTION_BAND_Y}"`)
     expect(sectionSvg).toContain(`height="${SECTION_BAND_H}"`)
     expect(sectionSvg).not.toContain(`height="${rows[0].height - 16}"`)
@@ -537,7 +537,7 @@ describe('section separator', () => {
 })
 
 describe('diagram view paint', () => {
-  const three: Participant[] = [...participants, { id: 'queue', name: 'Queue', type: 'QUEUE' }]
+  const three: Participant[] = [...participants, { id: 'queue', name: 'Queue', type: 'queue' }]
 
   it('shifts the next column left when a participant is hidden', () => {
     const svg = renderRowSvg(
@@ -547,7 +547,7 @@ describe('diagram view paint', () => {
         from: 'api',
         to: 'queue',
         label: 'enqueue',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
       }),
       800,
       three,
@@ -567,7 +567,7 @@ describe('diagram view paint', () => {
         from: 'api',
         to: 'db',
         label: 'read',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
       }),
       400,
       participants,
@@ -586,7 +586,7 @@ describe('diagram view paint', () => {
         from: 'api',
         to: 'db',
         label: 'Read rows',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
       }),
       400,
       participants,
@@ -605,7 +605,7 @@ describe('diagram view paint', () => {
       from: 'api',
       to: 'db',
       label: 'read rows',
-      type: 'SYNCHRONOUS' as const,
+      type: 'synchronous' as const,
       data: { sql: 'select' },
     }
     const paint = (query: string, searchCurrentId: string | null = null) => ({
@@ -653,7 +653,7 @@ describe('diagram view paint', () => {
 
 describe('activationBarSvg', () => {
   it('uses the colour and a hatch plus a text label when colour is set', () => {
-    const svg = activationBarSvg({ x: 1, y: 2, width: 12, height: 40, colour: '#c026d3', fallback: '#34d399' })
+    const svg = activationBarSvg({ x: 1, y: 2, width: 12, height: 40, color: '#c026d3', fallback: '#34d399' })
     expect(svg).toContain('style="--pc:#c026d3"')
     expect(svg).toContain('activation-hatch')
     expect(svg).toContain('aria-label="coloured activation"')
@@ -687,11 +687,11 @@ function headerHtml(participants: Participant[], id: string): string {
         from: participants[0]?.id ?? '',
         to: participants[1]?.id ?? participants[0]?.id ?? '',
         label: 'ping',
-        type: 'SYNCHRONOUS',
+        type: 'synchronous',
       },
     ],
   }
-  const html = renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_WIDTH)
+  const html = renderDiagramHtml(scenario, DEFAULT_LABEL_MAX_CHARS)
   const start = html.indexOf('seq-sticky-header')
   const end = html.indexOf('seq-spacer')
   return html.slice(start, end)
@@ -699,8 +699,8 @@ function headerHtml(participants: Participant[], id: string): string {
 
 describe('participantHead', () => {
   it('draws an actor as a person, not a box', () => {
-    const head = participantHead('ACTOR')
-    expect(head.type).toBe('ACTOR')
+    const head = participantHead('actor')
+    expect(head.type).toBe('actor')
     expect(head.typeLabel).toBe('actor')
     expect(head.shapeSvg).toContain('participant-actor')
     expect(head.shapeSvg).toContain('<circle')
@@ -709,7 +709,7 @@ describe('participantHead', () => {
   })
 
   it('draws a database as a cylinder', () => {
-    const head = participantHead('DATABASE')
+    const head = participantHead('database')
     expect(head.typeLabel).toBe('database')
     expect(head.shapeSvg).toContain('<ellipse')
     expect(head.shapeSvg).toContain('<path')
@@ -718,7 +718,7 @@ describe('participantHead', () => {
   })
 
   it('draws a queue as a cylinder on its side, outline only', () => {
-    const head = participantHead('QUEUE')
+    const head = participantHead('queue')
     expect(head.typeLabel).toBe('queue')
     expect(head.shapeSvg).toContain('<path class="participant-shape"')
     expect(head.shapeSvg).toContain('participant-queue-end')
@@ -729,8 +729,8 @@ describe('participantHead', () => {
   })
 
   it('draws the default component as a box', () => {
-    const head = participantHead('PARTICIPANT')
-    expect(head.type).toBe('PARTICIPANT')
+    const head = participantHead('participant')
+    expect(head.type).toBe('participant')
     expect(head.typeLabel).toBe('component')
     expect(head.shapeSvg).toContain('<rect class="participant-shape"')
     expect(head.shapeSvg).not.toContain('<ellipse')
@@ -740,14 +740,14 @@ describe('participantHead', () => {
 
   it('keeps an unknown type on the component box', () => {
     const head = participantHead('CONTROL')
-    expect(head).toEqual(participantHead('PARTICIPANT'))
+    expect(head).toEqual(participantHead('participant'))
     expect(head.shapeSvg).not.toContain('CONTROL')
     expect(participantHead(undefined)).toEqual(head)
   })
 
   it('draws entity as a circle and boundary as a circle with a bar', () => {
-    const entity = participantHead('ENTITY')
-    const boundary = participantHead('BOUNDARY')
+    const entity = participantHead('entity')
+    const boundary = participantHead('boundary')
     expect(entity.typeLabel).toBe('entity')
     expect(entity.shapeSvg).toContain('<circle')
     expect(entity.shapeSvg).not.toContain('<line')
@@ -759,20 +759,20 @@ describe('participantHead', () => {
 
   it('puts actor, database, queue, and the box in the sticky header once', () => {
     const participants: Participant[] = [
-      { id: 'user', name: 'User', type: 'ACTOR', colour: '#38bdf8' },
-      { id: 'api', name: 'Api', type: 'PARTICIPANT' },
-      { id: 'orders', name: 'Orders', type: 'DATABASE' },
-      { id: 'bus', name: 'Bus', type: 'QUEUE' },
+      { id: 'user', name: 'User', type: 'actor', color: '#38bdf8' },
+      { id: 'api', name: 'Api', type: 'participant' },
+      { id: 'orders', name: 'Orders', type: 'database' },
+      { id: 'bus', name: 'Bus', type: 'queue' },
     ]
     const header = headerHtml(participants, 'shape-header')
     expect(header).toContain('<title>User, actor</title>')
     expect(header).toContain('<title>Api, component</title>')
     expect(header).toContain('<title>Orders, database</title>')
     expect(header).toContain('<title>Bus, queue</title>')
-    expect(header).toContain('data-participant-type="ACTOR"')
-    expect(header).toContain('data-participant-type="PARTICIPANT"')
-    expect(header).toContain('data-participant-type="DATABASE"')
-    expect(header).toContain('data-participant-type="QUEUE"')
+    expect(header).toContain('data-participant-type="actor"')
+    expect(header).toContain('data-participant-type="participant"')
+    expect(header).toContain('data-participant-type="database"')
+    expect(header).toContain('data-participant-type="queue"')
     expect(header).toContain('participant-actor')
     expect(header.match(/<ellipse/g)).toHaveLength(2)
     expect(header).toContain('participant-queue-end')
@@ -799,26 +799,26 @@ describe('side panel buttons', () => {
   }
 
   it('shows the arrow key only when a scenario has async messages, with the reply only when there is one', () => {
-    const call = { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' } as const
+    const call = { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'synchronous' } as const
     expect(arrowLegendHtml(scenarioWith([call]))).toBe('')
-    const async = { ...call, id: 'a', type: 'ASYNCHRONOUS' } as const
+    const async = { ...call, id: 'a', type: 'asynchronous' } as const
     const legend = arrowLegendHtml(scenarioWith([call, async]))
     expect(legend).toContain('class="arrow-legend"')
     expect(legend).toContain('Call')
     expect(legend).toContain('Async (dotted, open tip)')
     expect(legend).toContain('stroke-dasharray="2 4"')
     expect(legend).not.toContain('Reply')
-    const reply = { ...call, id: 'r', type: 'SYNCHRONOUS_RESPONSE' } as const
+    const reply = { ...call, id: 'r', type: 'synchronous_response' } as const
     const all = arrowLegendHtml(scenarioWith([call, reply, async]))
     expect(all).toContain('Reply')
     expect(all).toContain('stroke-dasharray="5 4"')
-    expect(renderDiagramHtml(scenarioWith([call, async]), DEFAULT_LABEL_MAX_WIDTH)).toContain('class="arrow-legend"')
+    expect(renderDiagramHtml(scenarioWith([call, async]), DEFAULT_LABEL_MAX_CHARS)).toContain('class="arrow-legend"')
   })
 
   it('explains the {} marker under the toolbar only when an arrow has a payload', () => {
-    const plain = { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' } as const
-    expect(renderDiagramHtml(scenarioWith([plain]), DEFAULT_LABEL_MAX_WIDTH)).not.toContain('payload-legend')
-    const html = renderDiagramHtml(scenarioWith([{ ...plain, data: { body: '{}' } }]), DEFAULT_LABEL_MAX_WIDTH)
+    const plain = { kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'synchronous' } as const
+    expect(renderDiagramHtml(scenarioWith([plain]), DEFAULT_LABEL_MAX_CHARS)).not.toContain('payload-legend')
+    const html = renderDiagramHtml(scenarioWith([{ ...plain, data: { body: '{}' } }]), DEFAULT_LABEL_MAX_CHARS)
     const legend = html.slice(html.indexOf('class="payload-legend"'), html.indexOf('class="seq-stage"'))
     expect(legend).toContain('aria-hidden="true">{}</span>')
     expect(legend).toContain('An arrow marked with braces</span> has a payload')
@@ -827,8 +827,8 @@ describe('side panel buttons', () => {
 
   it("has no Component diagram button: the drawing is the diagram area's Components view (#105)", () => {
     const html = renderDiagramHtml(
-      scenarioWith([{ kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'SYNCHRONOUS' }]),
-      DEFAULT_LABEL_MAX_WIDTH,
+      scenarioWith([{ kind: 'message', id: 'm', from: 'api', to: 'db', label: 'read', type: 'synchronous' }]),
+      DEFAULT_LABEL_MAX_CHARS,
     )
     expect(html).not.toContain('data-show-components')
     expect(html).not.toContain('Component diagram')

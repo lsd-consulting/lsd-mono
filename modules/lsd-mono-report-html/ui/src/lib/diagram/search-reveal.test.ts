@@ -21,9 +21,9 @@ function row(event: DiagramEvent, y: number, height = 40): LayoutRow {
   return { index: 0, y, height, event }
 }
 const rows: LayoutRow[] = [
-  row({ kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'place order', type: 'SYNCHRONOUS' }, 40),
+  row({ kind: 'message', id: 'm1', from: 'a', to: 'b', label: 'place order', type: 'synchronous' }, 40),
   row({ kind: 'note', id: 'n1', text: 'order is queued', over: 'b', placement: 'over' }, 120, 60),
-  row({ kind: 'message', id: 'm2', from: 'b', to: 'c', label: 'charge order', type: 'SYNCHRONOUS' }, 2000),
+  row({ kind: 'message', id: 'm2', from: 'b', to: 'c', label: 'charge order', type: 'synchronous' }, 2000),
 ]
 
 /** A scrollport of [height] px at [top] on screen, sticking at 56px, with a 50px participant header. */
@@ -133,7 +133,7 @@ describe('find: payload matches', () => {
     const payloadHits = new Set(['m1', 'm9'])
     const extra = [
       ...rows,
-      row({ kind: 'message', id: 'm9', from: 'c', to: 'a', label: 'ok', type: 'SYNCHRONOUS' }, 2400),
+      row({ kind: 'message', id: 'm9', from: 'c', to: 'a', label: 'ok', type: 'synchronous' }, 2400),
     ]
     const state = searchState(extra, 'charge', new Set(), 'm2', payloadHits)
     expect(state.hits.map((r) => r.event.id)).toEqual(['m1', 'm2', 'm9'])

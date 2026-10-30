@@ -29,3 +29,15 @@ export function schemaErrors(data: unknown, schema: 'report' | 'index' = 'report
   const validate = validators[schema]
   return validate(data) ? [] : (validate.errors ?? []).map((e) => `${e.instancePath}: ${e.message}`)
 }
+
+const OMITTED_WHEN_EMPTY = new Set(['description', 'facts', 'metrics', 'from', 'to', 'status', 'warnings'])
+
+/** A UI-shaped fixture as a producer writes it: schema 1.0 never writes an optional field empty. */
+export function asWritten<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(asWritten) as T
+  if (value === null || typeof value !== 'object') return value
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    ([key, v]) => !(OMITTED_WHEN_EMPTY.has(key) && (v === '' || (Array.isArray(v) && v.length === 0))),
+  )
+  return Object.fromEntries(entries.map(([key, v]) => [key, asWritten(v)])) as T
+}
