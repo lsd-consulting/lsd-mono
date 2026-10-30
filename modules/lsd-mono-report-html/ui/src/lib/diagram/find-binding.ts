@@ -85,6 +85,8 @@ export function bindFind(diagram: Element, scroll: HTMLElement, id: string): voi
     cancelReveal()
     const reveal = setTimeout(() => {
       diagramState.findReveals.delete(id)
+      // A diagram taken off the page since the key press has nothing to bring on screen.
+      if (!scroll.isConnected) return
       if (revealFindHit(scroll)) invalidate(id, ['window'])
     }, SEARCH_REVEAL_DELAY_MS)
     diagramState.findReveals.set(id, reveal)
