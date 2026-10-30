@@ -86,6 +86,8 @@ beforeEach(() => {
   setPayloadLoader(() => Promise.resolve({}))
 })
 afterEach(() => {
+  // Cancel the reveal each typing test leaves pending, so it cannot fire after the environment is gone (#184).
+  forgetDiagrams()
   vi.useRealTimers()
   vi.unstubAllGlobals()
   document.body.innerHTML = ''
@@ -138,6 +140,20 @@ describe('the diagram repaints after each kind of change (#104)', () => {
     flushDiagramPaints()
     expect(z.scroll.scrollTop).toBeGreaterThan(0)
     expect(z.scroll.querySelector('.msg-open[data-message-id="m59"]')).not.toBeNull()
+  })
+
+  it('a reveal pending when the diagram leaves the page does nothing when it fires (#184)', () => {
+    vi.useFakeTimers()
+    const z = mount(60)
+    z.type('needle')
+    z.host.remove()
+    const style = vi.fn(() => {
+      throw new Error('reveal ran on a detached diagram')
+    })
+    vi.stubGlobal('getComputedStyle', style)
+    vi.advanceTimersByTime(SEARCH_REVEAL_DELAY_MS)
+    expect(style).not.toHaveBeenCalled()
+    expect(z.scroll.scrollTop).toBe(0)
   })
 
   it('hiding the lane a Find match is on updates the count', () => {
