@@ -66,6 +66,17 @@ internal class LsdInboundFilter(
             chain.doFilter(request, response)
             return
         }
+        // A RestTestClient bound in the JVM drew this call already: serve it under its id, draw nothing.
+        val drawn = guarded(null) { ClientDrawnCalls.drawnByClient(request.getHeader(ClientDrawnCalls.HEADER)) }
+        if (drawn != null) {
+            SpringScenarios.enter(scenario, drawn)
+            try {
+                SpringScenarios.within(SpringScenarios.Current(scenario, drawn)) { chain.doFilter(request, response) }
+            } finally {
+                SpringScenarios.leave(scenario, drawn)
+            }
+            return
+        }
         val cached = guarded(request) { CachedBodyRequest.of(request) }
         val tee = TeeResponse(response)
         val id = SpringScenarios.newId()

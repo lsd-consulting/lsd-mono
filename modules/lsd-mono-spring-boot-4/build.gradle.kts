@@ -56,6 +56,7 @@ dependencies {
     compileOnly("io.micrometer:context-propagation")
     compileOnly("org.springframework:spring-test")
     compileOnly("org.springframework.boot:spring-boot-webtestclient")
+    compileOnly("org.springframework.boot:spring-boot-resttestclient")
     compileOnly("org.springframework:spring-aop")
     compileOnly("org.springframework.data:spring-data-commons")
     compileOnly("org.springframework.kafka:spring-kafka")
@@ -79,6 +80,9 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     // WebTestClientFixture: @AutoConfigureWebTestClient and the customizer the starter registers.
     testImplementation("org.springframework.boot:spring-boot-webtestclient")
+    // RestTestClientFixtures: Boot's RestTestClient and TestRestTemplate, bound to a server or MockMvc.
+    testImplementation("org.springframework.boot:spring-boot-resttestclient")
+    testImplementation("org.springframework.boot:spring-boot-webmvc-test")
     testImplementation("org.springframework.data:spring-data-keyvalue")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka")
     // WebSocketShopFixture: a servlet app with raw WebSocket handlers and a STOMP broker.
