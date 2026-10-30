@@ -38,4 +38,16 @@ public class RestTestClientNoFiltersFixture {
                 .expectStatus()
                 .isOk();
     }
+
+    @Test
+    void doubled() {
+        auto.mutate()
+                .requestInterceptor(LsdRestTestClient.interceptor())
+                .build()
+                .get()
+                .uri("/orders/d3")
+                .exchange()
+                .expectStatus()
+                .isOk();
+    }
 }

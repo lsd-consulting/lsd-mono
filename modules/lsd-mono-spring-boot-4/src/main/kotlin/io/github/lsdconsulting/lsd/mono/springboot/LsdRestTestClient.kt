@@ -35,7 +35,8 @@ import java.util.concurrent.ConcurrentHashMap
  * Bound in the JVM (`bindTo(mockMvc)`, `bindToApplicationContext`, `bindToController`,
  * `bindToRouterFunction`), it draws each request and its reply itself, from the test's client to
  * the app, named from the test's application context as the app's filter names them; when the
- * app's filter is in the chain too, the request is drawn once.
+ * app's filter is in the chain too, the request is drawn once. Applying it more than once, or to
+ * Spring Boot's client, adds nothing: a request already marked by it is passed on as it is.
  */
 public object LsdRestTestClient {
     /** Add it with `RestTestClient.Builder.requestInterceptor(...)` or a `RestTemplateBuilder`. */
@@ -71,13 +72,16 @@ public object LsdRestTestClient {
             body: ByteArray,
             execution: ClientHttpRequestExecution,
         ): ClientHttpResponse {
+            // Already drawn by this interceptor further out (applied twice): pass it on.
+            if (guarded(null) { ClientDrawnCalls.drawnByClient(request.headers.getFirst(ClientDrawnCalls.HEADER)) } != null) {
+                return execution.execute(request, body)
+            }
             val id = SpringScenarios.newId()
             val names = guarded(null) { ClientSettings.of(scenario).names } ?: return execution.execute(request, body)
             val parent = SpringScenarios.parentOf(scenario)
             val caller = if (parent == null) names.client else names.app
             val uri = request.uri
             guarded(Unit) {
-                request.headers.set(LsdHeaders.SCENARIO, scenario.correlationId)
                 request.headers.set(ClientDrawnCalls.HEADER, id)
                 val query = uri.rawQuery?.let { "?$it" } ?: ""
                 scenario.ingest(

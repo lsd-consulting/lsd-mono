@@ -60,8 +60,6 @@ public class RestTestClientMockMvcFixture {
     @Test
     void bindToController() {
         RestTestClient.bindToController(new RestTestClientApp.Orders())
-                .build()
-                .mutate()
                 .requestInterceptor(LsdRestTestClient.interceptor())
                 .build()
                 .get()
@@ -80,6 +78,18 @@ public class RestTestClientMockMvcFixture {
                 .build()
                 .get()
                 .uri("/routed/e2")
+                .exchange()
+                .expectStatus()
+                .isOk();
+    }
+
+    @Test
+    void doubled() {
+        auto.mutate()
+                .requestInterceptor(LsdRestTestClient.interceptor())
+                .build()
+                .get()
+                .uri("/orders/f2")
                 .exchange()
                 .expectStatus()
                 .isOk();
