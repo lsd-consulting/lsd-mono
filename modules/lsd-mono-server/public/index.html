@@ -5,7 +5,7 @@
     <title>LSD server</title>
   </head>
   <body>
-    <!-- An early UI shell for the local LSD server (#186). TODO(#186): open a report, live updates, diff. -->
+    <!-- An early UI shell for the local LSD server (#186). TODO(#186): live updates, diff. -->
     <h1>LSD server</h1>
     <section>
       <h2>Import</h2>
@@ -32,15 +32,18 @@
             const pick = document.createElement('input')
             pick.type = 'checkbox'
             pick.value = report.id
-            const name = document.createElement('span')
-            name.textContent = report.title + ' (' + report.importedAt + ')'
+            const name = document.createElement('a')
+            name.href = '/reports/' + encodeURIComponent(report.id)
+            name.textContent = report.title
+            const when = document.createElement('span')
+            when.textContent = ' (' + new Date(report.importedAt).toLocaleString() + ')'
             const remove = document.createElement('button')
             remove.textContent = 'Delete'
             remove.addEventListener('click', async () => {
               await fetch('/api/reports/' + encodeURIComponent(report.id), { method: 'DELETE' })
               await load()
             })
-            item.append(pick, ' ', name, ' ', remove)
+            item.append(pick, ' ', name, when, ' ', remove)
             return item
           }),
         )

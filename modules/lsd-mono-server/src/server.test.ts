@@ -3,6 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
+import { pathToFileURL } from 'node:url'
 import { WebSocket } from 'ws'
 import { parseConfig } from './config.ts'
 import { startServer, type LsdServer } from './server.ts'
@@ -158,6 +160,55 @@ describe('the server', () => {
       } finally {
         await small.close()
       }
+    })
+  })
+
+  describe('report pages', () => {
+    const SHELL = '<html><body><div id="app"></div><script>const r=window.__LSD_REPORT__??s</script></body></html>'
+    let viewer: LsdServer
+    let viewerBase: string
+    beforeEach(async () => {
+      await writeFile(join(dir, 'shell.html'), SHELL)
+      viewer = await startServer({ ...parseConfig(['--port', '0']), reportsDir: dir }, new FileReportStore(dir), {
+        viewerShell: pathToFileURL(join(dir, 'shell.html')),
+      })
+      viewerBase = `http://127.0.0.1:${viewer.address.port}`
+    })
+    afterEach(() => viewer.close())
+
+    const importAt = async (body: string) =>
+      ((await (await fetch(`${viewerBase}/api/reports/import`, { method: 'POST', body })).json()) as { id: string }).id
+
+    it('opens a stored report in the report UI shell with a back link', async () => {
+      const id = await importAt(MINIMAL)
+      const response = await fetch(`${viewerBase}/reports/${id}`)
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8')
+      const page = await response.text()
+      const injected = /window\.__LSD_REPORT__=(.*?);<\/script>/.exec(page)![1]
+      expect(JSON.parse(injected)).toEqual(JSON.parse(MINIMAL))
+      expect(page).toContain('id="lsd-server-back" href="/"')
+    })
+
+    it('hands a 0.x report to the shell as stored, for the UI to upgrade', async () => {
+      const legacy = fixture('invalid/legacy-report.json')
+      const page = await (await fetch(`${viewerBase}/reports/${await importAt(legacy)}`)).text()
+      expect(JSON.parse(/window\.__LSD_REPORT__=(.*?);<\/script>/.exec(page)![1])).toEqual(JSON.parse(legacy))
+    })
+
+    it('answers unknown and malformed ids with a friendly 404 page', async () => {
+      for (const id of ['0f8fad5b-d9cb-469f-a165-70867728950e', 'nope']) {
+        const response = await fetch(`${viewerBase}/reports/${id}`)
+        expect(response.status).toBe(404)
+        expect(await response.text()).toMatch(/Report not found[\s\S]*href="\/"/)
+      }
+    })
+
+    it('says how to build the viewer when the shell is missing', async () => {
+      await rm(join(dir, 'shell.html'))
+      const response = await fetch(`${viewerBase}/reports/${await importAt(MINIMAL)}`)
+      expect(response.status).toBe(503)
+      expect(await response.text()).toContain('npm run build:single')
     })
   })
 })
