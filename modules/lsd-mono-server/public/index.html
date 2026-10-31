@@ -2,62 +2,331 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>LSD server</title>
+    <style>
+      /* Colours follow the report UI's tokens (modules/lsd-mono-report-html/ui/src/styles/tokens.css). */
+      :root {
+        --bg: oklch(0.97 0.01 250);
+        --surface: oklch(1 0 0);
+        --text: oklch(0.22 0.03 250);
+        --text-muted: oklch(0.42 0.025 250);
+        --border: oklch(0.88 0.015 250);
+        --accent: oklch(0.52 0.11 200);
+        --accent-soft: oklch(0.52 0.11 200 / 0.12);
+        --error: oklch(0.48 0.17 25);
+        --error-soft: oklch(0.48 0.17 25 / 0.12);
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: oklch(0.16 0.02 250);
+          --surface: oklch(0.23 0.028 250);
+          --text: oklch(0.95 0.01 250);
+          --text-muted: oklch(0.72 0.02 250);
+          --border: oklch(0.35 0.03 250 / 0.7);
+          --accent: oklch(0.75 0.13 200);
+          --accent-soft: oklch(0.75 0.13 200 / 0.15);
+          --error: oklch(0.74 0.17 25);
+          --error-soft: oklch(0.74 0.17 25 / 0.16);
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 56rem;
+        margin: 0 auto;
+        padding: 2rem 1.25rem;
+      }
+      h1 {
+        margin: 0 0 1.5rem;
+        font-size: 1.6rem;
+      }
+      h2 {
+        margin: 0 0 0.75rem;
+        font-size: 1.1rem;
+      }
+      section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+      }
+      p {
+        margin: 0 0 0.75rem;
+        color: var(--text-muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      button {
+        font: inherit;
+        color: var(--text);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.3rem 0.8rem;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) {
+        background: var(--accent-soft);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      button.danger {
+        color: var(--error);
+        border-color: var(--error);
+      }
+      button.danger:hover:not(:disabled) {
+        background: var(--error-soft);
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+      }
+      .toolbar label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      #reports {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      #reports li {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0;
+        border-top: 1px solid var(--border);
+      }
+      #reports .title {
+        flex: 1;
+        min-width: 0;
+      }
+      #reports time {
+        display: block;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+      }
+      #empty {
+        padding: 1.5rem 0 0.5rem;
+        text-align: center;
+      }
+      [role='status']:empty {
+        display: none;
+      }
+      [role='status'] {
+        margin-top: 0.75rem;
+        color: var(--text);
+      }
+      dialog {
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        max-width: 28rem;
+      }
+      dialog::backdrop {
+        background: oklch(0 0 0 / 0.4);
+      }
+      dialog .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    </style>
   </head>
   <body>
-    <!-- An early UI shell for the local LSD server (#186). TODO(#186): live updates, diff. -->
-    <h1>LSD server</h1>
-    <section>
-      <h2>Import</h2>
-      <p>An exported LSD report (JSON) or an OTLP JSON telemetry file.</p>
-      <input id="import-file" type="file" accept=".json,application/json" />
-      <button id="import">Import</button>
-      <p id="import-status" role="status"></p>
-    </section>
-    <section>
-      <h2>Reports</h2>
-      <!-- TODO(#186): wire bulk delete to POST /api/reports/bulk-delete with the selected ids. -->
-      <button id="bulk-delete" disabled>Delete selected</button>
-      <ul id="reports"></ul>
-    </section>
-    <script type="module">
-      const list = document.getElementById('reports')
-      const status = document.getElementById('import-status')
+    <!-- The local LSD server's report list (#186). TODO(#186): live updates, diff. -->
+    <main>
+      <h1>LSD server</h1>
+      <section aria-labelledby="import-heading">
+        <h2 id="import-heading">Import</h2>
+        <p>An exported LSD report (JSON) or an OTLP JSON telemetry file.</p>
+        <label class="visually-hidden" for="import-file">Report file</label>
+        <input id="import-file" type="file" accept=".json,application/json" />
+        <button id="import" type="button">Import</button>
+        <p id="import-status" role="status"></p>
+      </section>
+      <section aria-labelledby="reports-heading">
+        <h2 id="reports-heading">Reports</h2>
+        <div class="toolbar" id="toolbar" hidden>
+          <label><input id="select-all" type="checkbox" /> Select all</label>
+          <button id="bulk-delete" class="danger" type="button" disabled>Delete selected</button>
+        </div>
+        <ul id="reports" aria-labelledby="reports-heading"></ul>
+        <p id="empty" hidden>No reports yet. Import one above.</p>
+        <p id="list-status" role="status"></p>
+      </section>
+    </main>
+    <dialog id="confirm" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+      <h2 id="confirm-title">Delete reports?</h2>
+      <p id="confirm-message"></p>
+      <form method="dialog" class="actions">
+        <button value="cancel" autofocus>Cancel</button>
+        <button value="delete" class="danger" id="confirm-delete">Delete</button>
+      </form>
+    </dialog>
+    <script>
+      ;(() => {
+        const byId = (id) => document.getElementById(id)
+        const list = byId('reports')
+        const toolbar = byId('toolbar')
+        const empty = byId('empty')
+        const selectAll = byId('select-all')
+        const bulkDelete = byId('bulk-delete')
+        const listStatus = byId('list-status')
+        const importStatus = byId('import-status')
+        const dialog = byId('confirm')
 
-      async function load() {
-        const reports = await (await fetch('/api/reports')).json()
-        list.replaceChildren(
-          ...reports.map((report) => {
-            const item = document.createElement('li')
-            const pick = document.createElement('input')
-            pick.type = 'checkbox'
-            pick.value = report.id
-            const name = document.createElement('a')
-            name.href = '/reports/' + encodeURIComponent(report.id)
-            name.textContent = report.title
-            const when = document.createElement('span')
-            when.textContent = ' (' + new Date(report.importedAt).toLocaleString() + ')'
-            const remove = document.createElement('button')
-            remove.textContent = 'Delete'
-            remove.addEventListener('click', async () => {
-              await fetch('/api/reports/' + encodeURIComponent(report.id), { method: 'DELETE' })
-              await load()
-            })
-            item.append(pick, ' ', name, when, ' ', remove)
-            return item
-          }),
-        )
-      }
+        const picks = () => [...list.querySelectorAll('input[type=checkbox]')]
+        const plural = (n) => (n === 1 ? '1 report' : n + ' reports')
 
-      document.getElementById('import').addEventListener('click', async () => {
-        const file = document.getElementById('import-file').files[0]
-        if (!file) return
-        const response = await fetch('/api/reports/import', { method: 'POST', body: await file.text() })
-        status.textContent = response.ok ? 'Imported.' : await response.text()
-        await load()
-      })
+        function syncSelection() {
+          const all = picks()
+          const chosen = all.filter((pick) => pick.checked)
+          bulkDelete.disabled = chosen.length === 0
+          bulkDelete.textContent = chosen.length ? 'Delete selected (' + chosen.length + ')' : 'Delete selected'
+          selectAll.checked = all.length > 0 && chosen.length === all.length
+          selectAll.indeterminate = chosen.length > 0 && chosen.length < all.length
+        }
 
-      await load()
+        // Resolves true only when the user picks Delete. textContent only, never markup.
+        function confirmDelete(title, message) {
+          byId('confirm-title').textContent = title
+          byId('confirm-message').textContent = message
+          dialog.returnValue = ''
+          return new Promise((resolve) => {
+            dialog.addEventListener('close', () => resolve(dialog.returnValue === 'delete'), { once: true })
+            dialog.showModal()
+          })
+        }
+
+        async function load() {
+          const reports = await (await fetch('/api/reports')).json()
+          list.replaceChildren(
+            ...reports.map((report) => {
+              const item = document.createElement('li')
+              const pick = document.createElement('input')
+              pick.type = 'checkbox'
+              pick.value = report.id
+              pick.setAttribute('aria-label', 'Select ' + report.title)
+              pick.addEventListener('change', syncSelection)
+              const title = document.createElement('div')
+              title.className = 'title'
+              const name = document.createElement('a')
+              name.href = '/reports/' + encodeURIComponent(report.id)
+              name.textContent = report.title
+              const when = document.createElement('time')
+              when.dateTime = report.importedAt
+              when.textContent = 'Imported ' + new Date(report.importedAt).toLocaleString()
+              title.append(name, when)
+              const remove = document.createElement('button')
+              remove.type = 'button'
+              remove.className = 'danger'
+              remove.textContent = 'Delete'
+              remove.setAttribute('aria-label', 'Delete ' + report.title)
+              remove.addEventListener('click', () => deleteOne(report, remove))
+              item.append(pick, title, remove)
+              return item
+            }),
+          )
+          toolbar.hidden = reports.length === 0
+          empty.hidden = reports.length > 0
+          syncSelection()
+        }
+
+        async function deleteOne(report, opener) {
+          if (
+            !(await confirmDelete('Delete report?', '"' + report.title + '" will be deleted. This cannot be undone.'))
+          ) {
+            opener.focus()
+            return
+          }
+          const response = await fetch('/api/reports/' + encodeURIComponent(report.id), { method: 'DELETE' })
+          listStatus.textContent = response.ok
+            ? 'Deleted "' + report.title + '".'
+            : 'Could not delete "' + report.title + '".'
+          await load()
+          byId('reports-heading').focus()
+        }
+
+        bulkDelete.addEventListener('click', async () => {
+          const ids = picks()
+            .filter((pick) => pick.checked)
+            .map((pick) => pick.value)
+          if (
+            !(await confirmDelete('Delete reports?', plural(ids.length) + ' will be deleted. This cannot be undone.'))
+          ) {
+            bulkDelete.focus()
+            return
+          }
+          const response = await fetch('/api/reports/bulk-delete', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ ids }),
+          })
+          if (response.ok) {
+            const { deleted } = await response.json()
+            listStatus.textContent = 'Deleted ' + plural(deleted.length) + '.'
+          } else {
+            listStatus.textContent = 'Could not delete the selected reports.'
+          }
+          await load()
+          byId('reports-heading').focus()
+        })
+
+        selectAll.addEventListener('change', () => {
+          for (const pick of picks()) pick.checked = selectAll.checked
+          syncSelection()
+        })
+
+        byId('import').addEventListener('click', async () => {
+          const file = byId('import-file').files[0]
+          if (!file) return
+          const response = await fetch('/api/reports/import', { method: 'POST', body: await file.text() })
+          importStatus.textContent = response.ok ? 'Imported.' : await response.text()
+          await load()
+        })
+
+        byId('reports-heading').tabIndex = -1
+        window.lsdReady = load()
+      })()
     </script>
   </body>
 </html>

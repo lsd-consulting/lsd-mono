@@ -24,18 +24,18 @@ npm start -- --expose              # every interface (or LSD_SERVER_EXPOSE=1)
 
 ## What is there
 
-| Path                            | What                                                                                         |
-| ------------------------------- | -------------------------------------------------------------------------------------------- |
-| `GET /`                         | The UI shell: import a file, the report list, delete per report, bulk delete (not wired yet) |
-| `GET /reports/<id>`             | Open one stored report in the report UI, see below                                           |
-| `GET /health`                   | `ok`                                                                                         |
-| `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`                |
-| `GET /api/reports/<id>`         | One stored report's JSON                                                                     |
-| `POST /api/reports/import`      | Import an LSD report (validated, see below) or OTLP JSON (501 until #96)                     |
-| `DELETE /api/reports/<id>`      | Delete one report                                                                            |
-| `POST /api/reports/bulk-delete` | Delete several reports: see below                                                            |
-| `GET /api/diff`                 | 501 for now: side-by-side diff of two reports                                                |
-| `ws://…/ws/captures`            | Real-time captures: sends a `hello` and ignores messages for now                             |
+| Path                            | What                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| `GET /`                         | The report list: import a file, open, delete one or delete a selection, see below |
+| `GET /reports/<id>`             | Open one stored report in the report UI, see below                                |
+| `GET /health`                   | `ok`                                                                              |
+| `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`     |
+| `GET /api/reports/<id>`         | One stored report's JSON                                                          |
+| `POST /api/reports/import`      | Import an LSD report (validated, see below) or OTLP JSON (501 until #96)          |
+| `DELETE /api/reports/<id>`      | Delete one report                                                                 |
+| `POST /api/reports/bulk-delete` | Delete several reports: see below                                                 |
+| `GET /api/diff`                 | 501 for now: side-by-side diff of two reports                                     |
+| `ws://…/ws/captures`            | Real-time captures: sends a `hello` and ignores messages for now                  |
 
 ## Import
 
@@ -61,6 +61,22 @@ Validation mirrors what the report UI can open:
 - **2.0.0 and later** are refused with 422: the report UI would only say to upgrade lsd-mono.
 
 The server reads the schema from the repo checkout, so it runs from the repo for now.
+
+## The report list
+
+`GET /` lists the stored reports, newest first. Each title opens the report.
+
+- **Delete** on a row, or tick reports (or **Select all**) and press **Delete selected**, which
+  calls `POST /api/reports/bulk-delete`. Nothing goes until you confirm in a dialog that names
+  the report, or says how many. Cancel or Escape keeps everything.
+- After a delete the list reloads and a status line says what went.
+- With no reports, the page says so and hides the bulk controls.
+- Light and dark follow the system setting, with the report UI's colours.
+- Every control is labelled for screen readers. Status lines are live regions, and focus goes back
+  to the button you pressed when you cancel.
+
+The page is plain HTML and a script in `public/index.html`, tested in jsdom
+(`src/list-page.test.ts`).
 
 ## Open a report
 
