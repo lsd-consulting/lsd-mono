@@ -27,6 +27,7 @@ npm start -- --expose              # every interface (or LSD_SERVER_EXPOSE=1)
 | Path                            | What                                                                                         |
 | ------------------------------- | -------------------------------------------------------------------------------------------- |
 | `GET /`                         | The UI shell: import a file, the report list, delete per report, bulk delete (not wired yet) |
+| `GET /reports/<id>`             | Open one stored report in the report UI, see below                                           |
 | `GET /health`                   | `ok`                                                                                         |
 | `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`                |
 | `GET /api/reports/<id>`         | One stored report's JSON                                                                     |
@@ -60,6 +61,27 @@ Validation mirrors what the report UI can open:
 - **2.0.0 and later** are refused with 422: the report UI would only say to upgrade lsd-mono.
 
 The server reads the schema from the repo checkout, so it runs from the repo for now.
+
+## Open a report
+
+Click a report's title in the list, or go to `GET /reports/<id>`. The server serves the report
+UI's single-file build with the report injected, the same way the JVM writer does, plus an
+"All reports" link back to the list. 0.x reports open too: the UI upgrades them on read.
+
+| Status | When                             | Body                           |
+| ------ | -------------------------------- | ------------------------------ |
+| 200    | The report exists                | The report page                |
+| 404    | No report with that id           | A page with a link to the list |
+| 503    | The report UI has not been built | A page with the build command  |
+
+The report UI is read from the repo checkout and is not committed, so build it once:
+
+```sh
+cd modules/lsd-mono-report-html/ui
+nvm use
+npm ci
+npm run build:single               # writes ui/dist/lsd-report.html
+```
 
 ## Storage
 

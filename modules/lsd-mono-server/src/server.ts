@@ -5,15 +5,19 @@ import { WebSocketServer } from 'ws'
 import type { ServerConfig } from './config.ts'
 import { detectImport, reportErrors } from './import.ts'
 import { isReportId, type ReportStore } from './store.ts'
+import { DEFAULT_SHELL, MESSAGES, messagePage, readShell, renderReportPage } from './viewer.ts'
 
 const INDEX_HTML = new URL('../public/index.html', import.meta.url)
 const CAPTURES_PATH = '/ws/captures'
+const HTML = 'text/html; charset=utf-8'
 export const MAX_BULK_IDS = 1000
 /** The largest request body the server reads, in bytes; a bigger one gets 413. */
 export const DEFAULT_MAX_BODY_BYTES = 50 * 1024 * 1024
 
 export interface ServerOptions {
   maxBodyBytes?: number
+  /** The report UI's single-file shell (DEFAULT_SHELL). */
+  viewerShell?: URL
 }
 
 class BodyTooLarge extends Error {}
@@ -32,7 +36,7 @@ export async function startServer(
 ): Promise<LsdServer> {
   const limit = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES
   const server = createServer((req, res) => {
-    route(req, res, store, (r) => readBody(r, limit)).catch((error: unknown) => {
+    route(req, res, store, (r) => readBody(r, limit), options.viewerShell ?? DEFAULT_SHELL).catch((error: unknown) => {
       if (error instanceof BodyTooLarge) {
         res.setHeader('connection', 'close')
         return send(res, 413, `The body is over the ${limit} byte limit`)
@@ -58,6 +62,7 @@ async function route(
   res: ServerResponse,
   store: ReportStore,
   readRequest: (req: IncomingMessage) => Promise<string>,
+  viewerShell: URL,
 ): Promise<void> {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname
   const method = req.method ?? 'GET'
@@ -65,6 +70,14 @@ async function route(
 
   if (method === 'GET' && path === '/health') return send(res, 200, 'ok')
   if (method === 'GET' && path === '/') return send(res, 200, await readFile(INDEX_HTML, 'utf8'), 'text/html')
+  const page = /^\/reports\/([^/]+)$/.exec(path)
+  if (method === 'GET' && page) {
+    const json = isReportId(page[1]) ? await store.get(page[1]) : undefined
+    if (json === undefined) return send(res, 404, messagePage(MESSAGES.notFound), HTML)
+    const shell = await readShell(viewerShell)
+    if (shell === undefined) return send(res, 503, messagePage(MESSAGES.noShell), HTML)
+    return send(res, 200, renderReportPage(shell, json), HTML)
+  }
   if (method === 'GET' && path === '/api/reports') return sendJson(res, 200, await store.list())
   if (method === 'POST' && path === '/api/reports/import') {
     const body = await readRequest(req)
