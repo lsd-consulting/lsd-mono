@@ -155,7 +155,8 @@ describe('the server', () => {
             controller.close()
           },
         })
-        const chunked = await fetch(url, { method: 'POST', body: stream, duplex: 'half' })
+        const init: RequestInit & { duplex: 'half' } = { method: 'POST', body: stream, duplex: 'half' }
+        const chunked = await fetch(url, init)
         expect(chunked.status).toBe(413)
       } finally {
         await small.close()
