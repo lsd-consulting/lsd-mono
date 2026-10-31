@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   BUNDLED_SHELL,
+  checkOverride,
   DEFAULT_SHELL,
   MESSAGES,
   messagePage,
@@ -74,6 +75,27 @@ describe('the report viewer', () => {
     expect(DEFAULT_SHELL.href).toMatch(/\/lsd-mono-report-html\/ui\/dist\/lsd-report\.html$/)
     expect(viewerShells('/tmp/mine.html')).toEqual([pathToFileURL('/tmp/mine.html'), BUNDLED_SHELL, DEFAULT_SHELL])
     expect(viewerShells('mine.html')[0]).toEqual(pathToFileURL(join(process.cwd(), 'mine.html')))
+  })
+
+  it('warns when the override is missing or not the viewer, and only then', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'lsd-override-'))
+    try {
+      await writeFile(join(dir, 'shell.html'), SHELL)
+      await writeFile(join(dir, 'other.html'), '<html></html>')
+      const warnings: string[] = []
+      const warn = (line: string) => warnings.push(line)
+      await checkOverride(undefined, warn)
+      await checkOverride(join(dir, 'shell.html'), warn)
+      expect(warnings).toEqual([])
+      await checkOverride(join(dir, 'missing.html'), warn)
+      await checkOverride(join(dir, 'other.html'), warn)
+      expect(warnings).toEqual([
+        `Viewer override ${join(dir, 'missing.html')} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
+        `Viewer override ${join(dir, 'other.html')} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
+      ])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 
   it('has message pages that link back to the list', () => {

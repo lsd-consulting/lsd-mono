@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 /**
  * The report UI's single-file shell, as lsd-mono-report-html builds it (`npm run build:single` in
@@ -23,6 +23,23 @@ export function viewerShells(override?: string): URL[] {
 }
 
 const SHELL_READS = 'window.__LSD_REPORT__??'
+
+/**
+ * Says on stderr (via [warn]) when the [override] viewer is missing or isn't the report viewer, so
+ * a typo doesn't go unnoticed while the server falls back to the next viewer.
+ */
+export async function checkOverride(
+  override: string | undefined,
+  warn: (line: string) => void = console.error,
+): Promise<void> {
+  if (override === undefined) return
+  const [shell] = viewerShells(override)
+  if ((await readShell(shell)) === undefined) {
+    warn(
+      `Viewer override ${fileURLToPath(shell)} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
+    )
+  }
+}
 
 /** The first of [shells] that is the report shell, or undefined when none is built. */
 export async function findShell(shells: readonly URL[]): Promise<string | undefined> {

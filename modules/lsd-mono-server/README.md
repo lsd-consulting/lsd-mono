@@ -40,7 +40,8 @@ When opening a report the server uses the first viewer it finds:
 2. The bundled copy, `viewer/lsd-report.html`.
 3. The report UI's build in the checkout, `modules/lsd-mono-report-html/ui/dist/lsd-report.html`.
 
-A file that is not the report viewer is passed over. With none of them, the page says how to build
+A file that is not the report viewer is passed over. When the override is missing or is not the
+viewer, the server says so on stderr at startup, naming the path, and falls back to the next one. With none of them, the page says how to build
 it.
 
 ### Packaging

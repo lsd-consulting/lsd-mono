@@ -6,7 +6,7 @@ import type { ServerConfig } from './config.ts'
 import { detectImport, reportErrors } from './import.ts'
 import { otlpToReport } from './otlp.ts'
 import { isReportId, type ReportStore } from './store.ts'
-import { findShell, MESSAGES, messagePage, renderReportPage, viewerShells } from './viewer.ts'
+import { checkOverride, findShell, MESSAGES, messagePage, renderReportPage, viewerShells } from './viewer.ts'
 
 const INDEX_HTML = new URL('../public/index.html', import.meta.url)
 const CAPTURES_PATH = '/ws/captures'
@@ -36,6 +36,7 @@ export async function startServer(
   options: ServerOptions = {},
 ): Promise<LsdServer> {
   const limit = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES
+  if (options.viewerShells === undefined) await checkOverride(config.viewer)
   const server = createServer((req, res) => {
     route(req, res, store, (r) => readBody(r, limit), options.viewerShells ?? viewerShells(config.viewer)).catch(
       (error: unknown) => {
