@@ -60,8 +60,9 @@ jobs:
           else
             echo "report=false" >> "$GITHUB_OUTPUT"
           fi
-          # The local server package (#186), the Node version it runs on, or this workflow.
-          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-server/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
+          # The local server package (#186), the report schema it validates imports against, the
+          # Node version it runs on, or this workflow.
+          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-server/|modules/lsd-mono-report-schema/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
             echo "server=true" >> "$GITHUB_OUTPUT"
           else
             echo "server=false" >> "$GITHUB_OUTPUT"
