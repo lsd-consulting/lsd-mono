@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectImport, MAX_ERRORS, otlpToReport, reportErrors } from './import.ts'
+import { detectImport, MAX_ERRORS, reportErrors } from './import.ts'
 
 describe('detectImport', () => {
   it('tells an LSD report from an OTLP export', () => {
@@ -13,10 +13,6 @@ describe('detectImport', () => {
     expect(detectImport('[]')).toBe('unknown')
     expect(detectImport('null')).toBe('unknown')
     expect(detectImport('{}')).toBe('unknown')
-  })
-
-  it('has no OTLP mapping yet', () => {
-    expect(() => otlpToReport()).toThrow(/#186/)
   })
 })
 

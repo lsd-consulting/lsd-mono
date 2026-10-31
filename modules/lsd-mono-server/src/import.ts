@@ -8,7 +8,7 @@ export type ImportKind = 'lsd-report' | 'otlp' | 'unknown'
 /**
  * Tells an LSD report from an OTLP JSON export by its top-level keys. A report from before schema
  * 1.0.0 may have no `schemaVersion`; one with a `scenarios` list still counts, as the report UI
- * opens it. TODO(#186): OTLP protobuf files are not handled yet.
+ * opens it. OTLP protobuf is not JSON, so it is 'unknown'.
  */
 export function detectImport(body: string): ImportKind {
   const json = parseObject(body)
@@ -16,11 +16,6 @@ export function detectImport(body: string): ImportKind {
   if ('resourceSpans' in json) return 'otlp'
   if ('schemaVersion' in json || Array.isArray(json.scenarios)) return 'lsd-report'
   return 'unknown'
-}
-
-/** TODO(#186): map OTLP spans to an LSD report (#96), so it is stored like any other report. */
-export function otlpToReport(): never {
-  throw new Error('OTLP import is not implemented yet (#186)')
 }
 
 // The repo's report schema (modules/lsd-mono-report-schema), read in place rather than copied, so

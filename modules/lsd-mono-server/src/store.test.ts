@@ -82,6 +82,14 @@ describe('FileReportStore', () => {
     expect(await store.list()).toEqual([])
   })
 
+  it('keeps the otlp source of a converted export when it rebuilds the index', async () => {
+    const id = '1f8fad5b-d9cb-469f-a165-70867728950e'
+    await writeFile(join(dir, `${id}.json`), '{"title":"Trace","generator":{"name":"lsd-mono-server OTLP import"}}')
+    await writeFile(join(dir, '2f8fad5b-d9cb-469f-a165-70867728950e.json'), 'not json')
+    const sources = (await new FileReportStore(dir).list()).map((entry) => entry.source)
+    expect(sources.sort()).toEqual(['import', 'otlp'])
+  })
+
   it('never reads outside its directory', async () => {
     expect(await new FileReportStore(dir).get('../secret')).toBeUndefined()
   })
