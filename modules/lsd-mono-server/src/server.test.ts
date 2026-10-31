@@ -194,7 +194,7 @@ describe('the server', () => {
     beforeEach(async () => {
       await writeFile(join(dir, 'shell.html'), SHELL)
       viewer = await startServer({ ...parseConfig(['--port', '0']), reportsDir: dir }, new FileReportStore(dir), {
-        viewerShell: pathToFileURL(join(dir, 'shell.html')),
+        viewerShells: [pathToFileURL(join(dir, 'shell.html'))],
       })
       viewerBase = `http://127.0.0.1:${viewer.address.port}`
     })
@@ -233,8 +233,53 @@ describe('the server', () => {
       const response = await fetch(`${viewerBase}/reports/${await importAt(MINIMAL)}`)
       expect(response.status).toBe(503)
       const page = await response.text()
-      expect(page).toContain('cd modules/lsd-mono-report-html/ui\nnpm ci\nnpm run build:single')
+      expect(page).toContain('cd modules/lsd-mono-server\nnpm run build:viewer')
       expect(page).toContain('prefers-color-scheme: dark')
+      expect(page).toContain('installing the server normally builds')
+    })
+
+    it('opens reports in the first viewer that is built', async () => {
+      const shell = (name: string) => SHELL.replace('<div id="app">', `<div id="${name}">`)
+      const [override, bundled, ui] = ['override', 'bundled', 'ui'].map((name) => join(dir, `${name}.html`))
+      const id = await importAt(MINIMAL)
+      const opened = async (shells: string[]) => {
+        const other = await startServer(
+          { ...parseConfig(['--port', '0']), reportsDir: dir },
+          new FileReportStore(dir),
+          {
+            viewerShells: shells.map((file) => pathToFileURL(file)),
+          },
+        )
+        try {
+          const response = await fetch(`http://127.0.0.1:${other.address.port}/reports/${id}`)
+          return response.status === 200 ? /<div id="(\w+)">/.exec(await response.text())![1] : response.status
+        } finally {
+          await other.close()
+        }
+      }
+      await writeFile(ui, shell('ui'))
+      expect(await opened([override, bundled, ui])).toBe('ui')
+      await writeFile(bundled, shell('bundled'))
+      expect(await opened([override, bundled, ui])).toBe('bundled')
+      await writeFile(override, shell('override'))
+      expect(await opened([override, bundled, ui])).toBe('override')
+      await writeFile(override, '<html>not the viewer</html>')
+      expect(await opened([override, bundled, ui])).toBe('bundled')
+      expect(await opened([join(dir, 'none.html')])).toBe(503)
+    })
+
+    it('uses the viewer given with --viewer', async () => {
+      await writeFile(join(dir, 'mine.html'), SHELL.replace('<div id="app">', '<div id="mine">'))
+      const config = { ...parseConfig(['--port', '0', '--viewer', join(dir, 'mine.html')]), reportsDir: dir }
+      const other = await startServer(config, new FileReportStore(dir))
+      try {
+        const id = await importAt(MINIMAL)
+        expect(await (await fetch(`http://127.0.0.1:${other.address.port}/reports/${id}`)).text()).toContain(
+          '<div id="mine">',
+        )
+      } finally {
+        await other.close()
+      }
     })
   })
 })

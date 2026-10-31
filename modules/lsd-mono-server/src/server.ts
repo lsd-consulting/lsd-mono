@@ -6,7 +6,7 @@ import type { ServerConfig } from './config.ts'
 import { detectImport, reportErrors } from './import.ts'
 import { otlpToReport } from './otlp.ts'
 import { isReportId, type ReportStore } from './store.ts'
-import { DEFAULT_SHELL, MESSAGES, messagePage, readShell, renderReportPage } from './viewer.ts'
+import { checkOverride, findShell, MESSAGES, messagePage, renderReportPage, viewerShells } from './viewer.ts'
 
 const INDEX_HTML = new URL('../public/index.html', import.meta.url)
 const CAPTURES_PATH = '/ws/captures'
@@ -17,8 +17,8 @@ export const DEFAULT_MAX_BODY_BYTES = 50 * 1024 * 1024
 
 export interface ServerOptions {
   maxBodyBytes?: number
-  /** The report UI's single-file shell (DEFAULT_SHELL). */
-  viewerShell?: URL
+  /** Where to look for the report UI's single-file shell, in order (viewerShells). */
+  viewerShells?: readonly URL[]
 }
 
 class BodyTooLarge extends Error {}
@@ -36,14 +36,17 @@ export async function startServer(
   options: ServerOptions = {},
 ): Promise<LsdServer> {
   const limit = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES
+  if (options.viewerShells === undefined) await checkOverride(config.viewer)
   const server = createServer((req, res) => {
-    route(req, res, store, (r) => readBody(r, limit), options.viewerShell ?? DEFAULT_SHELL).catch((error: unknown) => {
-      if (error instanceof BodyTooLarge) {
-        res.setHeader('connection', 'close')
-        return send(res, 413, `The body is over the ${limit} byte limit`)
-      }
-      send(res, 500, String(error))
-    })
+    route(req, res, store, (r) => readBody(r, limit), options.viewerShells ?? viewerShells(config.viewer)).catch(
+      (error: unknown) => {
+        if (error instanceof BodyTooLarge) {
+          res.setHeader('connection', 'close')
+          return send(res, 413, `The body is over the ${limit} byte limit`)
+        }
+        send(res, 500, String(error))
+      },
+    )
   })
   attachCaptures(server)
   await new Promise<void>((resolve, reject) => {
@@ -63,7 +66,7 @@ async function route(
   res: ServerResponse,
   store: ReportStore,
   readRequest: (req: IncomingMessage) => Promise<string>,
-  viewerShell: URL,
+  shells: readonly URL[],
 ): Promise<void> {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname
   const method = req.method ?? 'GET'
@@ -75,7 +78,7 @@ async function route(
   if (method === 'GET' && page) {
     const json = isReportId(page[1]) ? await store.get(page[1]) : undefined
     if (json === undefined) return send(res, 404, messagePage(MESSAGES.notFound), HTML)
-    const shell = await readShell(viewerShell)
+    const shell = await findShell(shells)
     if (shell === undefined) return send(res, 503, messagePage(MESSAGES.noShell), HTML)
     return send(res, 200, renderReportPage(shell, json), HTML)
   }

@@ -21,6 +21,16 @@ describe('parseConfig', () => {
     expect(parseConfig([], { LSD_SERVER_PORT: '7000' }).port).toBe(7000)
   })
 
+  it('reads a viewer override from the flag or the environment', () => {
+    expect(parseConfig([]).viewer).toBeUndefined()
+    expect(parseConfig(['--viewer', 'a.html']).viewer).toBe('a.html')
+    expect(parseConfig(['--viewer=b.html']).viewer).toBe('b.html')
+    expect(parseConfig([], { LSD_SERVER_VIEWER: 'c.html' }).viewer).toBe('c.html')
+    expect(parseConfig([], { LSD_SERVER_VIEWER: '' }).viewer).toBeUndefined()
+    expect(() => parseConfig(['--viewer'])).toThrow(/--viewer/)
+    expect(() => parseConfig(['--viewer='])).toThrow(/--viewer/)
+  })
+
   it('rejects a bad port or an unknown option', () => {
     expect(() => parseConfig(['--port', 'x'])).toThrow(/--port/)
     expect(() => parseConfig(['--port'])).toThrow(/--port/)
