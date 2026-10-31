@@ -33,7 +33,7 @@
             pick.type = 'checkbox'
             pick.value = report.id
             const name = document.createElement('span')
-            name.textContent = report.id
+            name.textContent = report.title + ' (' + report.importedAt + ')'
             const remove = document.createElement('button')
             remove.textContent = 'Delete'
             remove.addEventListener('click', async () => {

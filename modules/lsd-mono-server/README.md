@@ -28,13 +28,33 @@ npm start -- --expose              # every interface (or LSD_SERVER_EXPOSE=1)
 | ------------------------------- | -------------------------------------------------------------------------------------------- |
 | `GET /`                         | The UI shell: import a file, the report list, delete per report, bulk delete (not wired yet) |
 | `GET /health`                   | `ok`                                                                                         |
-| `GET /api/reports`              | The stored reports                                                                           |
+| `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`                |
 | `GET /api/reports/<id>`         | One stored report's JSON                                                                     |
-| `POST /api/reports/import`      | Import an LSD report (stored) or OTLP JSON (501 until the mapping exists, #96)               |
+| `POST /api/reports/import`      | Import an LSD report (201 with its index entry) or OTLP JSON (501 until #96)                 |
 | `DELETE /api/reports/<id>`      | Delete one report                                                                            |
-| `POST /api/reports/bulk-delete` | 501 for now                                                                                  |
+| `POST /api/reports/bulk-delete` | Delete several reports: see below                                                            |
 | `GET /api/diff`                 | 501 for now: side-by-side diff of two reports                                                |
 | `ws://…/ws/captures`            | Real-time captures: sends a `hello` and ignores messages for now                             |
+
+## Storage
+
+Each report is `<id>.json` in the reports directory, next to an `index.json` that the report list
+reads, so listing never opens the reports. Each entry holds the `id`, the report's `title` (or
+"Untitled report"), `importedAt` (ISO-8601), `source` (`import`, later `capture`) and `size` in
+bytes. The index is replaced whole via a temp file and a rename, and writes are queued. A reports
+directory without an index gets one rebuilt from its report files.
+
+## Bulk delete
+
+`POST /api/reports/bulk-delete` with `{"ids": ["…", "…"]}` (1 to 1000 ids):
+
+| Status | When                               | Body                                    |
+| ------ | ---------------------------------- | --------------------------------------- |
+| 200    | At least one report was deleted    | `{"deleted": [...], "notFound": [...]}` |
+| 404    | None of the ids exist              | `{"deleted": [], "notFound": [...]}`    |
+| 400    | The body is not JSON of that shape | A plain-text reason                     |
+
+Duplicate ids count once.
 
 ## Decisions (#186)
 

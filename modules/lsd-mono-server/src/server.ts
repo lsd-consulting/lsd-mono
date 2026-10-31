@@ -8,6 +8,7 @@ import type { ReportStore } from './store.ts'
 
 const INDEX_HTML = new URL('../public/index.html', import.meta.url)
 const CAPTURES_PATH = '/ws/captures'
+export const MAX_BULK_IDS = 1000
 
 export interface LsdServer {
   server: Server
@@ -45,7 +46,7 @@ async function route(req: IncomingMessage, res: ServerResponse, store: ReportSto
     const body = await readBody(req)
     switch (detectImport(body)) {
       case 'lsd-report':
-        return sendJson(res, 201, { id: await store.save(body) })
+        return sendJson(res, 201, await store.save(body, 'import'))
       case 'otlp':
         // TODO(#186): map with otlpToReport (#96), then store it like any report.
         return send(res, 501, 'OTLP import is not implemented yet (#186)')
@@ -53,9 +54,11 @@ async function route(req: IncomingMessage, res: ServerResponse, store: ReportSto
         return send(res, 415, 'Not an LSD report or OTLP JSON')
     }
   }
-  // TODO(#186): read the selected ids from the body and call store.deleteAll(ids).
   if (method === 'POST' && path === '/api/reports/bulk-delete') {
-    return send(res, 501, 'Bulk delete is not implemented yet (#186)')
+    const ids = parseIds(await readBody(req))
+    if (ids === undefined) return send(res, 400, `Expected {"ids": [...]} with 1 to ${MAX_BULK_IDS} report ids`)
+    const result = await store.deleteAll(ids)
+    return sendJson(res, result.deleted.length === 0 ? 404 : 200, result)
   }
   // TODO(#186): a side-by-side diff of two stored reports.
   if (method === 'GET' && path === '/api/diff') return send(res, 501, 'Diff is not implemented yet (#186)')
@@ -82,6 +85,19 @@ function attachCaptures(server: Server): void {
     })
   })
   server.on('close', () => sockets.close())
+}
+
+/** The bulk delete body: `{"ids": [...]}` with 1 to MAX_BULK_IDS strings, else undefined. */
+function parseIds(body: string): string[] | undefined {
+  let json: unknown
+  try {
+    json = JSON.parse(body)
+  } catch {
+    return undefined
+  }
+  const ids = (json as { ids?: unknown } | null)?.ids
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > MAX_BULK_IDS) return undefined
+  return ids.every((id): id is string => typeof id === 'string') ? ids : undefined
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
