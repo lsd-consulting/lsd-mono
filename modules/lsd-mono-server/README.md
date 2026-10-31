@@ -30,11 +30,36 @@ npm start -- --expose              # every interface (or LSD_SERVER_EXPOSE=1)
 | `GET /health`                   | `ok`                                                                                         |
 | `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`                |
 | `GET /api/reports/<id>`         | One stored report's JSON                                                                     |
-| `POST /api/reports/import`      | Import an LSD report (201 with its index entry) or OTLP JSON (501 until #96)                 |
+| `POST /api/reports/import`      | Import an LSD report (validated, see below) or OTLP JSON (501 until #96)                     |
 | `DELETE /api/reports/<id>`      | Delete one report                                                                            |
 | `POST /api/reports/bulk-delete` | Delete several reports: see below                                                            |
 | `GET /api/diff`                 | 501 for now: side-by-side diff of two reports                                                |
 | `ws://…/ws/captures`            | Real-time captures: sends a `hello` and ignores messages for now                             |
+
+## Import
+
+`POST /api/reports/import` with the file as the body:
+
+| Status | When                                | Body                                        |
+| ------ | ----------------------------------- | ------------------------------------------- |
+| 201    | A valid LSD report, now stored      | Its index entry                             |
+| 422    | An LSD report that fails validation | `{"error": "...", "errors": ["path: why"]}` |
+| 415    | Neither an LSD report nor OTLP JSON | A plain-text reason                         |
+| 501    | OTLP JSON (the mapping is #96)      | A plain-text reason                         |
+| 413    | The body is over 50 MiB             | A plain-text reason                         |
+
+Validation mirrors what the report UI can open:
+
+- **1.x** reports are checked against the repo's report schema
+  (`modules/lsd-mono-report-schema/lsd-report.schema.json`, frozen at 1.0.0 in #181), read in
+  place with ajv and formats. The schema accepts newer minors by design. At most 50 errors are
+  listed.
+- **0.x** reports (major 0, or no `schemaVersion` but a `scenarios` list) predate the schema. The
+  report UI upgrades them on read, so they are stored as they are, after a basic check that
+  `title` is a string and `scenarios` a list of objects.
+- **2.0.0 and later** are refused with 422: the report UI would only say to upgrade lsd-mono.
+
+The server reads the schema from the repo checkout, so it runs from the repo for now.
 
 ## Storage
 

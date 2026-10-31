@@ -2,10 +2,15 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { WebSocket } from 'ws'
 import { parseConfig } from './config.ts'
 import { startServer, type LsdServer } from './server.ts'
 import { FileReportStore } from './store.ts'
+
+const fixture = (file: string) =>
+  readFileSync(new URL(`../../lsd-mono-report-schema/conformance/${file}`, import.meta.url), 'utf8')
+const MINIMAL = fixture('reports/minimal.json')
 
 describe('the server', () => {
   let dir: string
@@ -39,7 +44,7 @@ describe('the server', () => {
   })
 
   it('imports, lists, reads and deletes an LSD report', async () => {
-    const body = JSON.stringify({ schemaVersion: '1.0.0', scenarios: [] })
+    const body = MINIMAL
     const imported = await fetch(`${base}/api/reports/import`, { method: 'POST', body })
     expect(imported.status).toBe(201)
     const entry = (await imported.json()) as { id: string; source: string }
@@ -76,11 +81,8 @@ describe('the server', () => {
     const bulkDelete = (body: unknown) =>
       fetch(`${base}/api/reports/bulk-delete`, { method: 'POST', body: JSON.stringify(body) })
     const importOne = async () =>
-      (
-        (await (
-          await fetch(`${base}/api/reports/import`, { method: 'POST', body: '{"schemaVersion":"1.0.0"}' })
-        ).json()) as { id: string }
-      ).id
+      ((await (await fetch(`${base}/api/reports/import`, { method: 'POST', body: MINIMAL })).json()) as { id: string })
+        .id
 
     it('deletes the listed reports and names unknown ids', async () => {
       const [a, b, c] = [await importOne(), await importOne(), await importOne()]
@@ -105,6 +107,57 @@ describe('the server', () => {
 
     it('answers 400 for a body that is not JSON', async () => {
       expect((await fetch(`${base}/api/reports/bulk-delete`, { method: 'POST', body: '{' })).status).toBe(400)
+    })
+  })
+
+  describe('import validation', () => {
+    const importBody = (body: string) => fetch(`${base}/api/reports/import`, { method: 'POST', body })
+
+    it('stores a valid 1.0 report', async () => {
+      const response = await importBody(fixture('reports/example-report.json'))
+      expect(response.status).toBe(201)
+    })
+
+    it('stores a 0.x report, which the report UI upgrades on read', async () => {
+      const response = await importBody(fixture('invalid/legacy-report.json'))
+      expect(response.status).toBe(201)
+      expect(((await response.json()) as { title: string }).title).toBe('Status mix')
+    })
+
+    it('answers 422 with the schema errors for an invalid report', async () => {
+      const invalid = { ...(JSON.parse(MINIMAL) as object), status: 'nope', generatedAt: 'soon' }
+      const response = await importBody(JSON.stringify(invalid))
+      expect(response.status).toBe(422)
+      const body = (await response.json()) as { error: string; errors: string[] }
+      expect(body.error).toBe('Not a valid LSD report')
+      expect(body.errors.length).toBeGreaterThan(0)
+      expect(body.errors).toEqual(
+        expect.arrayContaining([
+          '/status: must be equal to one of the allowed values',
+          '/generatedAt: must match format "date-time"',
+        ]),
+      )
+      expect(await (await fetch(`${base}/api/reports`)).json()).toEqual([])
+    })
+
+    it('answers 413 for a body over the limit', async () => {
+      const small = await startServer({ ...parseConfig(['--port', '0']), reportsDir: dir }, new FileReportStore(dir), {
+        maxBodyBytes: 100,
+      })
+      try {
+        const url = `http://127.0.0.1:${small.address.port}/api/reports/import`
+        expect((await fetch(url, { method: 'POST', body: MINIMAL.padEnd(200) })).status).toBe(413)
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(MINIMAL.padEnd(200)))
+            controller.close()
+          },
+        })
+        const chunked = await fetch(url, { method: 'POST', body: stream, duplex: 'half' })
+        expect(chunked.status).toBe(413)
+      } finally {
+        await small.close()
+      }
     })
   })
 })
