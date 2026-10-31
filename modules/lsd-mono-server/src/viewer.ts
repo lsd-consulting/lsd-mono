@@ -27,39 +27,75 @@ export function scriptJson(json: string): string {
   )
 }
 
-// A link back to the server's list, fixed at the bottom left so it sits outside the report UI's
-// own layout (which only renders into #app).
-const BACK_LINK =
-  '<a id="lsd-server-back" href="/" style="position:fixed;left:12px;bottom:12px;z-index:2147483647;' +
-  'padding:6px 12px;border-radius:6px;background:#1f2937;color:#fff;font:14px system-ui,sans-serif;' +
-  'text-decoration:none;box-shadow:0 1px 4px rgba(0,0,0,.3)">&larr; All reports</a>\n'
+// A bar with a link back to the server's list, first in the body so it is first in tab order and
+// takes its own space above the report UI (which only renders into #app), rather than covering it.
+// Hidden in print. The tab title is set after the shell's scripts, from the report itself.
+const BACK_BAR =
+  '<style>#lsd-server-back{display:block;padding:6px 12px;background:#1f2937;color:#fff;' +
+  'font:14px system-ui,sans-serif;text-decoration:none}#lsd-server-back:focus-visible{outline:2px solid #7dd3fc;' +
+  'outline-offset:-2px}@media print{#lsd-server-back{display:none}}</style>\n' +
+  '<a id="lsd-server-back" href="/">&larr; All reports</a>\n'
 
-/** The shell with [json] as its report and a back link to the list. */
+const TAB_TITLE =
+  "<script>document.title=(window.__LSD_REPORT__&&typeof window.__LSD_REPORT__.title==='string'&&" +
+  "window.__LSD_REPORT__.title.trim()||'Untitled report')+' – LSD server';</script>\n"
+
+/** The shell with [json] as its report, a back bar to the list and a "<title> – LSD server" tab. */
 export function renderReportPage(shell: string, json: string): string {
   const injection = `<script>window.__LSD_REPORT__=${scriptJson(json)};</script>\n`
   const script = shell.indexOf('<script>')
-  const page = script < 0 ? injection + shell : shell.slice(0, script) + injection + shell.slice(script)
+  let page = script < 0 ? injection + shell : shell.slice(0, script) + injection + shell.slice(script)
+  const open = /<body[^>]*>/.exec(page)
+  page =
+    open === null
+      ? BACK_BAR + page
+      : page.slice(0, open.index + open[0].length) + '\n' + BACK_BAR + page.slice(open.index + open[0].length)
   const body = page.lastIndexOf('</body>')
-  return body < 0 ? page + BACK_LINK : page.slice(0, body) + BACK_LINK + page.slice(body)
+  return body < 0 ? page + TAB_TITLE : page.slice(0, body) + TAB_TITLE + page.slice(body)
+}
+
+interface Message {
+  title: string
+  message: string
+  /** Commands to run, shown as a code block. */
+  steps?: { folder: string; commands: string[] }
 }
 
 /** The pages shown when there is no report to show. Fixed text only: nothing from the request. */
 export const MESSAGES = {
-  notFound: ['Report not found', 'There is no stored report with that id. It may have been deleted.'],
-  noShell: [
-    'Report viewer not built',
-    'Build the report UI once: npm ci and npm run build:single in modules/lsd-mono-report-html/ui.',
-  ],
-} as const
+  notFound: { title: 'Report not found', message: 'There is no stored report with that id. It may have been deleted.' },
+  noShell: {
+    title: 'Report viewer not built',
+    message:
+      'The server opens reports in the report UI, which has to be built once. From the lsd-mono checkout, run these, then reload this page:',
+    steps: { folder: 'modules/lsd-mono-report-html/ui', commands: ['npm ci', 'npm run build:single'] },
+  },
+} as const satisfies Record<string, Message>
 
-/** A small page with one of [MESSAGES] and a link back to the list. */
-export function messagePage([title, message]: (typeof MESSAGES)[keyof typeof MESSAGES]): string {
+/** A small page with one of [MESSAGES] and a link back to the list, in light or dark. */
+export function messagePage({ title, message, steps }: Message): string {
+  const code = steps ? `\n    <pre><code>cd ${steps.folder}\n${steps.commands.join('\n')}</code></pre>` : ''
   return `<!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8" /><title>${title} - LSD server</title></head>
-  <body style="font:16px system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>${title} - LSD server</title>
+    <style>
+      body{font:16px/1.5 system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;background:#f5f7fa;color:#1f2733}
+      a{color:#0b6e7f}
+      pre{background:#fff;border:1px solid #d5dbe3;border-radius:8px;padding:0.75rem 1rem;overflow-x:auto}
+      @media (prefers-color-scheme: dark){
+        body{background:#151b24;color:#eef1f5}
+        a{color:#6fd3e3}
+        pre{background:#212a36;border-color:#3a4554}
+      }
+    </style>
+  </head>
+  <body>
     <h1>${title}</h1>
-    <p>${message}</p>
+    <p>${message}</p>${code}
     <p><a href="/">&larr; All reports</a></p>
   </body>
 </html>

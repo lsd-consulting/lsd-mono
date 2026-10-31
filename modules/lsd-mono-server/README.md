@@ -103,11 +103,20 @@ Limits:
 
 ## The report list
 
-`GET /` lists the stored reports, newest first. Each title opens the report.
+`GET /` lists the stored reports, newest first. Each title opens the report. A **Local only** badge
+says that reports are stored on this machine and nothing is uploaded.
 
+- **Import** a file with the picker and **Import**. While it runs, the button says "Importing…"
+  and is disabled, so a double click imports once. Success is announced politely. A refusal is
+  an alert that takes focus: a plain reason, then the first five problems and "and N more".
+- Each row shows when it was imported, in the report UI's date format plus seconds ("31 Oct 2026,
+  21:47:05 GMT"). The time is also in the checkbox, Delete button and dialog wording, so reports
+  with the same title can be told apart.
 - **Delete** on a row, or tick reports (or **Select all**) and press **Delete selected**, which
   calls `POST /api/reports/bulk-delete`. Nothing goes until you confirm in a dialog that names
-  the report, or says how many. Cancel or Escape keeps everything.
+  the report, or lists the first five and "and N more". Cancel or Escape keeps everything. While
+  nothing is selected, **Delete selected** is disabled and says "Select reports first", which
+  screen readers hear as its description.
 - After a delete the list reloads and a status line says what went.
 - With no reports, the page says so and hides the bulk controls.
 - Light and dark follow the system setting, with the report UI's colours.
@@ -120,14 +129,18 @@ The page is plain HTML and a script in `public/index.html`, tested in jsdom
 ## Open a report
 
 Click a report's title in the list, or go to `GET /reports/<id>`. The server serves the report
-UI's single-file build with the report injected, the same way the JVM writer does, plus an
-"All reports" link back to the list. 0.x reports open too: the UI upgrades them on read.
+UI's single-file build with the report injected, the same way the JVM writer does. An
+"All reports" bar above it links back to the list: first in tab order, taking its own space so it
+covers nothing, and hidden in print. The tab is titled "<report title> – LSD server". 0.x reports
+open too: the UI upgrades them on read.
 
 | Status | When                             | Body                           |
 | ------ | -------------------------------- | ------------------------------ |
 | 200    | The report exists                | The report page                |
 | 404    | No report with that id           | A page with a link to the list |
-| 503    | The report UI has not been built | A page with the build command  |
+| 503    | The report UI has not been built | The folder and build commands  |
+
+Both pages fit phones and follow the system's light or dark setting.
 
 The report UI is read from the repo checkout and is not committed, so build it once:
 

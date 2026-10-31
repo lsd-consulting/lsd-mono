@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,16 +10,34 @@ const SHELL =
   '<html><head><script>x</script></head><body><div id="app"></div><script>const r=window.__LSD_REPORT__??s</script></body></html>'
 
 describe('the report viewer', () => {
-  it('puts the report before the shell script and a back link before </body>', () => {
+  it('puts the report before the shell script, the back link first in the body', () => {
     const page = renderReportPage(SHELL, '{"title":"t"}')
     expect(page.indexOf('window.__LSD_REPORT__={"title":"t"};')).toBeLessThan(page.indexOf('<script>x'))
-    expect(page).toMatch(/<a id="lsd-server-back" href="\/"[^>]*>&larr; All reports<\/a>\n<\/body>/)
+    expect(page).toMatch(
+      /<body>\n<style>[^<]*@media print\{#lsd-server-back\{display:none\}\}<\/style>\n<a id="lsd-server-back" href="\/">&larr; All reports<\/a>\n<div id="app">/,
+    )
+    expect(page.indexOf('document.title=')).toBeGreaterThan(page.indexOf('const r='))
+    expect(page).toMatch(/<\/script>\n<\/body>/)
   })
 
   it('works on a shell with no script or body', () => {
-    expect(renderReportPage('<p>', '{}')).toMatch(
-      /^<script>window.__LSD_REPORT__=\{\};<\/script>\n<p><a id="lsd-server-back"/,
+    const page = renderReportPage('<p>', '{}')
+    expect(page).toMatch(
+      /^<style>[\s\S]*<a id="lsd-server-back"[^\n]*\n<script>window.__LSD_REPORT__=\{\};<\/script>\n<p>/,
     )
+    expect(page).toMatch(/<p><script>document\.title=[^\n]*<\/script>\n$/)
+  })
+
+  it('titles the tab after the report, or Untitled report', () => {
+    const title = (json: string) => {
+      const script = /<script>(document\.title=[^<]*)<\/script>/.exec(renderReportPage(SHELL, json))![1]
+      const context = { window: { __LSD_REPORT__: JSON.parse(json) as unknown }, document: { title: '' } }
+      runInNewContext(script, context)
+      return context.document.title
+    }
+    expect(title('{"title":"Checkout"}')).toBe('Checkout – LSD server')
+    expect(title('{"title":"  "}')).toBe('Untitled report – LSD server')
+    expect(title('{"title":5}')).toBe('Untitled report – LSD server')
   })
 
   it('escapes what could end the script', () => {
@@ -42,5 +61,13 @@ describe('the report viewer', () => {
 
   it('has message pages that link back to the list', () => {
     expect(messagePage(MESSAGES.notFound)).toMatch(/<h1>Report not found<\/h1>[\s\S]*<a href="\/">/)
+    expect(messagePage(MESSAGES.notFound)).not.toContain('<pre>')
+  })
+
+  it('works on phones and in dark mode, and gives the exact build steps', () => {
+    const page = messagePage(MESSAGES.noShell)
+    expect(page).toContain('<meta name="viewport" content="width=device-width, initial-scale=1" />')
+    expect(page).toContain('@media (prefers-color-scheme: dark)')
+    expect(page).toContain('<pre><code>cd modules/lsd-mono-report-html/ui\nnpm ci\nnpm run build:single</code></pre>')
   })
 })
