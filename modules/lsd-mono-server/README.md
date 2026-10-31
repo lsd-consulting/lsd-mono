@@ -24,30 +24,31 @@ npm start -- --expose              # every interface (or LSD_SERVER_EXPOSE=1)
 
 ## What is there
 
-| Path                            | What                                                                              |
-| ------------------------------- | --------------------------------------------------------------------------------- |
-| `GET /`                         | The report list: import a file, open, delete one or delete a selection, see below |
-| `GET /reports/<id>`             | Open one stored report in the report UI, see below                                |
-| `GET /health`                   | `ok`                                                                              |
-| `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`     |
-| `GET /api/reports/<id>`         | One stored report's JSON                                                          |
-| `POST /api/reports/import`      | Import an LSD report (validated, see below) or OTLP JSON (501 until #96)          |
-| `DELETE /api/reports/<id>`      | Delete one report                                                                 |
-| `POST /api/reports/bulk-delete` | Delete several reports: see below                                                 |
-| `GET /api/diff`                 | 501 for now: side-by-side diff of two reports                                     |
-| `ws://…/ws/captures`            | Real-time captures: sends a `hello` and ignores messages for now                  |
+| Path                            | What                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| `GET /`                         | The report list: import a file, open, delete one or delete a selection, see below    |
+| `GET /reports/<id>`             | Open one stored report in the report UI, see below                                   |
+| `GET /health`                   | `ok`                                                                                 |
+| `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`        |
+| `GET /api/reports/<id>`         | One stored report's JSON                                                             |
+| `POST /api/reports/import`      | Import an LSD report (validated) or an OTLP/JSON trace export (converted), see below |
+| `DELETE /api/reports/<id>`      | Delete one report                                                                    |
+| `POST /api/reports/bulk-delete` | Delete several reports: see below                                                    |
+| `GET /api/diff`                 | 501 for now: side-by-side diff of two reports                                        |
+| `ws://…/ws/captures`            | Real-time captures: sends a `hello` and ignores messages for now                     |
 
 ## Import
 
 `POST /api/reports/import` with the file as the body:
 
-| Status | When                                | Body                                        |
-| ------ | ----------------------------------- | ------------------------------------------- |
-| 201    | A valid LSD report, now stored      | Its index entry                             |
-| 422    | An LSD report that fails validation | `{"error": "...", "errors": ["path: why"]}` |
-| 415    | Neither an LSD report nor OTLP JSON | A plain-text reason                         |
-| 501    | OTLP JSON (the mapping is #96)      | A plain-text reason                         |
-| 413    | The body is over 50 MiB             | A plain-text reason                         |
+| Status | When                                                           | Body                                        |
+| ------ | -------------------------------------------------------------- | ------------------------------------------- |
+| 201    | A valid LSD report or OTLP export, now stored                  | Its index entry                             |
+| 422    | An LSD report that fails validation                            | `{"error": "...", "errors": ["path: why"]}` |
+| 422    | A malformed OTLP/JSON export                                   | `{"error": "...", "errors": ["path: why"]}` |
+| 500    | An OTLP export whose converted report fails the schema (a bug) | Same shape as 422                           |
+| 415    | Neither, including OTLP protobuf                               | A plain-text reason                         |
+| 413    | The body is over 50 MiB                                        | A plain-text reason                         |
 
 Validation mirrors what the report UI can open:
 
@@ -61,6 +62,44 @@ Validation mirrors what the report UI can open:
 - **2.0.0 and later** are refused with 422: the report UI would only say to upgrade lsd-mono.
 
 The server reads the schema from the repo checkout, so it runs from the repo for now.
+
+## OTLP import (#96)
+
+A body with `resourceSpans` is read as an OTLP/JSON `ExportTraceServiceRequest`, the file an
+OpenTelemetry Collector `file` exporter writes, or a trace exported as OTLP JSON from Jaeger or
+Tempo. It is converted to an LSD 1.0 report, checked with the same schema validator as
+an imported report, and stored with `"source": "otlp"` in the index. The report itself records
+`generator.name` `lsd-mono-server OTLP import`, which is how a rebuilt index keeps that source.
+
+How spans map, using the schema's OTel fields (`trace`, `attributes`, `origin`, `source`,
+`startedAt`, `accuracy`):
+
+- **Traces → scenarios.** One scenario per `traceId` (`trace-<traceId>`), earliest first, titled
+  after its root span. Facts list the trace id, span and service counts.
+- **`service.name` → participants**, with the resource's `service.*` attributes. A server span
+  with no client span in the export is called by a **Caller** actor. A client span with no server
+  span goes to a remote named by `peer.service`, `server.address` or `db.system` (marked
+  `lsd.external`).
+- **CLIENT → SERVER** pairs (linked by `parentSpanId`) become a synchronous call and its reply;
+  **PRODUCER → CONSUMER** pairs become an asynchronous message. A producer or consumer on its own
+  goes through a queue named by `messaging.destination.name`.
+- Each message carries `trace` (`traceId`, `spanId`, `parentSpanId`), the span attributes plus
+  `lsd.span.kind`, `durationMs`, `startedAt`, `source` (the service whose clock it is),
+  `origin: "imported"`, `timing: "measured"` and `pairing: "trace"`. `parentId` nests a call under
+  the call that caused it.
+- **Errors come from span status.** `STATUS_CODE_ERROR` marks the message (`· error`, `✕` on the
+  reply) and fails its scenario, with the status message as the scenario error.
+- **Order is structural first, then start time:** a call, then what it caused by start time, then
+  its reply. Clock skew between hosts cannot move a reply before its call.
+
+Limits:
+
+- OTLP **protobuf** is not supported: send JSON, or it gets 415.
+- Ids must be hex, as OTLP/JSON specifies. Base64 ids (from a protobuf-to-JSON dump) get 422.
+- **INTERNAL** and unspecified spans are not drawn; a fact counts them. Their client and server
+  children still are, called from the internal span's service.
+- Span events, links, `kvlistValue` and `bytesValue` attributes are not mapped.
+- Fetching a trace by id from Jaeger or Tempo is not built: export the trace and import the file.
 
 ## The report list
 

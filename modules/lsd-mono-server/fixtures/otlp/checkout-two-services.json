@@ -1,0 +1,115 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "checkout" } },
+          { "key": "service.version", "value": { "stringValue": "1.4.0" } },
+          { "key": "host.name", "value": { "stringValue": "checkout-7f9c" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "io.opentelemetry.http" },
+          "spans": [
+            {
+              "traceId": "4BF92F3577B34DA6A3CE929D0E0E4736",
+              "spanId": "00f067aa0ba902b7",
+              "name": "POST /checkout",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1767268800000000000",
+              "endTimeUnixNano": "1767268800120000000",
+              "attributes": [
+                { "key": "http.request.method", "value": { "stringValue": "POST" } },
+                { "key": "http.route", "value": { "stringValue": "/checkout" } },
+                { "key": "http.response.status_code", "value": { "intValue": "502" } }
+              ],
+              "status": { "code": "STATUS_CODE_ERROR", "message": "Payment failed" }
+            },
+            {
+              "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+              "spanId": "a1a1a1a1a1a1a1a1",
+              "parentSpanId": "00f067aa0ba902b7",
+              "name": "price basket",
+              "kind": 1,
+              "startTimeUnixNano": "1767268800002000000",
+              "endTimeUnixNano": "1767268800010000000"
+            },
+            {
+              "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+              "spanId": "53995c3f42cd8ad8",
+              "parentSpanId": "a1a1a1a1a1a1a1a1",
+              "name": "POST",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1767268800012000000",
+              "endTimeUnixNano": "1767268800095500000",
+              "attributes": [
+                { "key": "http.request.method", "value": { "stringValue": "POST" } },
+                { "key": "url.full", "value": { "stringValue": "http://payments:8080/payments" } },
+                { "key": "server.address", "value": { "stringValue": "payments" } },
+                { "key": "http.response.status_code", "value": { "intValue": "500" } }
+              ]
+            },
+            {
+              "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+              "spanId": "6e0c63257de34c92",
+              "parentSpanId": "00f067aa0ba902b7",
+              "name": "orders.failed publish",
+              "kind": "SPAN_KIND_PRODUCER",
+              "startTimeUnixNano": "1767268800100000000",
+              "endTimeUnixNano": "1767268800104000000",
+              "attributes": [
+                { "key": "messaging.system", "value": { "stringValue": "kafka" } },
+                { "key": "messaging.destination.name", "value": { "stringValue": "orders.failed" } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [{ "key": "service.name", "value": { "stringValue": "payments" } }]
+      },
+      "scopeSpans": [
+        {
+          "spans": [
+            {
+              "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+              "spanId": "b2b2b2b2b2b2b2b2",
+              "parentSpanId": "53995c3f42cd8ad8",
+              "name": "POST /payments",
+              "kind": "SPAN_KIND_SERVER",
+              "startTimeUnixNano": "1767268800013000000",
+              "endTimeUnixNano": "1767268800094000000",
+              "attributes": [
+                { "key": "http.request.method", "value": { "stringValue": "POST" } },
+                { "key": "http.route", "value": { "stringValue": "/payments" } },
+                { "key": "http.response.status_code", "value": { "intValue": 500 } },
+                {
+                  "key": "lsd.retries",
+                  "value": { "arrayValue": { "values": [{ "intValue": "1" }, { "intValue": "2" }] } }
+                },
+                { "key": "lsd.raw", "value": { "bytesValue": "AAE=" } }
+              ],
+              "status": { "code": 2, "message": "Card declined" }
+            },
+            {
+              "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+              "spanId": "c3c3c3c3c3c3c3c3",
+              "parentSpanId": "b2b2b2b2b2b2b2b2",
+              "name": "SELECT payments",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1767268800020000000",
+              "endTimeUnixNano": "1767268800030000000",
+              "attributes": [
+                { "key": "db.system", "value": { "stringValue": "postgresql" } },
+                { "key": "db.operation.name", "value": { "stringValue": "SELECT" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

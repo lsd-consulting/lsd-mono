@@ -60,9 +60,32 @@ describe('the server', () => {
     expect((await fetch(`${base}/api/reports/not-an-id`, { method: 'DELETE' })).status).toBe(400)
   })
 
+  it('converts an OTLP/JSON export on import and stores it as an otlp report', async () => {
+    const body = readFileSync(new URL('../fixtures/otlp/checkout-two-services.json', import.meta.url), 'utf8')
+    const imported = await fetch(`${base}/api/reports/import`, { method: 'POST', body })
+    expect(imported.status).toBe(201)
+    const entry = (await imported.json()) as { id: string; title: string; source: string }
+    expect(entry).toMatchObject({ title: 'POST /checkout (trace 4bf92f35)', source: 'otlp' })
+    const stored = JSON.parse(await (await fetch(`${base}/api/reports/${entry.id}`)).text()) as { scenarios: unknown[] }
+    expect(stored.scenarios).toHaveLength(1)
+  })
+
+  it('answers 422 with errors for a malformed OTLP export', async () => {
+    const response = await fetch(`${base}/api/reports/import`, { method: 'POST', body: '{"resourceSpans":[]}' })
+    expect(response.status).toBe(422)
+    expect(await response.json()).toEqual({
+      error: 'Not a valid OTLP/JSON trace export',
+      errors: ['/resourceSpans: has no spans'],
+    })
+  })
+
   it('answers 501 for what is not built yet, and 415 or 404 for the rest', async () => {
-    const otlp = JSON.stringify({ resourceSpans: [] })
-    expect((await fetch(`${base}/api/reports/import`, { method: 'POST', body: otlp })).status).toBe(501)
+    const protobuf = await fetch(`${base}/api/reports/import`, {
+      method: 'POST',
+      body: new Uint8Array([0x0a, 0x02, 0x08, 0x01]),
+    })
+    expect(protobuf.status).toBe(415)
+    expect(await protobuf.text()).toMatch(/protobuf is not supported/)
     expect((await fetch(`${base}/api/reports/import`, { method: 'POST', body: 'x' })).status).toBe(415)
     expect((await fetch(`${base}/api/diff`)).status).toBe(501)
     expect((await fetch(`${base}/nowhere`)).status).toBe(404)

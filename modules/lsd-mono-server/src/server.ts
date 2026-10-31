@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { WebSocketServer } from 'ws'
 import type { ServerConfig } from './config.ts'
 import { detectImport, reportErrors } from './import.ts'
+import { otlpToReport } from './otlp.ts'
 import { isReportId, type ReportStore } from './store.ts'
 import { DEFAULT_SHELL, MESSAGES, messagePage, readShell, renderReportPage } from './viewer.ts'
 
@@ -87,11 +88,19 @@ async function route(
         if (errors.length > 0) return sendJson(res, 422, { error: 'Not a valid LSD report', errors })
         return sendJson(res, 201, await store.save(body, 'import'))
       }
-      case 'otlp':
-        // TODO(#186): map with otlpToReport (#96), then store it like any report.
-        return send(res, 501, 'OTLP import is not implemented yet (#186)')
+      case 'otlp': {
+        const converted = otlpToReport(body)
+        if (converted.report === undefined) {
+          return sendJson(res, 422, { error: 'Not a valid OTLP/JSON trace export', errors: converted.errors })
+        }
+        const json = JSON.stringify(converted.report)
+        // The converted report goes through the same check as an imported one.
+        const errors = reportErrors(json)
+        if (errors.length > 0) return sendJson(res, 500, { error: 'The converted report is not valid', errors })
+        return sendJson(res, 201, await store.save(json, 'otlp'))
+      }
       default:
-        return send(res, 415, 'Not an LSD report or OTLP JSON')
+        return send(res, 415, 'Not an LSD report or OTLP JSON (OTLP protobuf is not supported)')
     }
   }
   if (method === 'POST' && path === '/api/reports/bulk-delete') {

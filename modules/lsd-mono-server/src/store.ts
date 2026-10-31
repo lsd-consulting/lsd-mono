@@ -1,9 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { OTLP_GENERATOR } from './otlp.ts'
 
-/** Where a stored report came from. Captures arrive over the WebSocket later (#186). */
-export type ReportSource = 'import' | 'capture'
+/**
+ * Where a stored report came from: an imported LSD report, an OTLP trace export converted on import
+ * (#96), or later a capture over the WebSocket (#186).
+ */
+export type ReportSource = 'import' | 'otlp' | 'capture'
 
 /** One entry in the store's index: what the report list shows without opening each report. */
 export interface StoredReport {
@@ -136,7 +140,7 @@ export class FileReportStore implements ReportStore {
         id,
         title: titleOf(json),
         importedAt: info.mtime.toISOString(),
-        source: 'import',
+        source: sourceOf(json),
         size: info.size,
       })
     }
@@ -153,6 +157,16 @@ export class FileReportStore implements ReportStore {
   // Only ids this store made, so an id can never point outside the directory.
   private fileFor(id: string): string | undefined {
     return ID.test(id) ? join(this.dir, `${id}.json`) : undefined
+  }
+}
+
+/** A rebuilt index can still tell a converted OTLP export by its generator. */
+function sourceOf(json: string): ReportSource {
+  try {
+    const generator = (JSON.parse(json) as { generator?: { name?: unknown } }).generator
+    return generator?.name === OTLP_GENERATOR ? 'otlp' : 'import'
+  } catch {
+    return 'import'
   }
 }
 
