@@ -50,11 +50,11 @@ directory without an index gets one rebuilt from its report files.
 
 | Status | When                               | Body                                    |
 | ------ | ---------------------------------- | --------------------------------------- |
-| 200    | At least one report was deleted    | `{"deleted": [...], "notFound": [...]}` |
-| 404    | None of the ids exist              | `{"deleted": [], "notFound": [...]}`    |
+| 200    | Always, even if no id exists       | `{"deleted": [...], "notFound": [...]}` |
 | 400    | The body is not JSON of that shape | A plain-text reason                     |
 
-Duplicate ids count once.
+Deletes are idempotent: repeating one succeeds. Duplicate ids count once. `DELETE /api/reports/<id>`
+answers 204 whether or not the report existed, and 400 for an id that is not a report id.
 
 ## Decisions (#186)
 

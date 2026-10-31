@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { WebSocketServer } from 'ws'
 import type { ServerConfig } from './config.ts'
 import { detectImport } from './import.ts'
-import type { ReportStore } from './store.ts'
+import { isReportId, type ReportStore } from './store.ts'
 
 const INDEX_HTML = new URL('../public/index.html', import.meta.url)
 const CAPTURES_PATH = '/ws/captures'
@@ -58,7 +58,7 @@ async function route(req: IncomingMessage, res: ServerResponse, store: ReportSto
     const ids = parseIds(await readBody(req))
     if (ids === undefined) return send(res, 400, `Expected {"ids": [...]} with 1 to ${MAX_BULK_IDS} report ids`)
     const result = await store.deleteAll(ids)
-    return sendJson(res, result.deleted.length === 0 ? 404 : 200, result)
+    return sendJson(res, 200, result)
   }
   // TODO(#186): a side-by-side diff of two stored reports.
   if (method === 'GET' && path === '/api/diff') return send(res, 501, 'Diff is not implemented yet (#186)')
@@ -66,7 +66,12 @@ async function route(req: IncomingMessage, res: ServerResponse, store: ReportSto
     const json = await store.get(report[1])
     return json === undefined ? send(res, 404, 'No such report') : send(res, 200, json, 'application/json')
   }
-  if (report && method === 'DELETE') return send(res, (await store.delete(report[1])) ? 204 : 404, '')
+  // Idempotent: deleting a report that is already gone succeeds too. Only a malformed id is refused.
+  if (report && method === 'DELETE') {
+    if (!isReportId(report[1])) return send(res, 400, 'Not a report id')
+    await store.delete(report[1])
+    return send(res, 204, '')
+  }
   return send(res, 404, 'Not found')
 }
 

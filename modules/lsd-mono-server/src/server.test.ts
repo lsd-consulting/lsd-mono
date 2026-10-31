@@ -49,7 +49,8 @@ describe('the server', () => {
     expect(JSON.parse(await (await fetch(`${base}/api/reports/${id}`)).text())).toEqual(JSON.parse(body))
     expect((await fetch(`${base}/api/reports/${id}`, { method: 'DELETE' })).status).toBe(204)
     expect((await fetch(`${base}/api/reports/${id}`)).status).toBe(404)
-    expect((await fetch(`${base}/api/reports/${id}`, { method: 'DELETE' })).status).toBe(404)
+    expect((await fetch(`${base}/api/reports/${id}`, { method: 'DELETE' })).status).toBe(204)
+    expect((await fetch(`${base}/api/reports/not-an-id`, { method: 'DELETE' })).status).toBe(400)
   })
 
   it('answers 501 for what is not built yet, and 415 or 404 for the rest', async () => {
@@ -89,9 +90,9 @@ describe('the server', () => {
       expect(((await (await fetch(`${base}/api/reports`)).json()) as { id: string }[]).map((r) => r.id)).toEqual([c])
     })
 
-    it('answers 404 when none of the ids exist', async () => {
+    it('answers 200 when none of the ids exist, so a repeat is harmless', async () => {
       const response = await bulkDelete({ ids: ['nope'] })
-      expect(response.status).toBe(404)
+      expect(response.status).toBe(200)
       expect(await response.json()).toEqual({ deleted: [], notFound: ['nope'] })
     })
 

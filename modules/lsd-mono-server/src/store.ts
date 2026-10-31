@@ -37,6 +37,11 @@ export interface ReportStore {
   deleteAll(ids: readonly string[]): Promise<BulkDeleteResult>
 }
 
+/** Whether an id has the shape this store gives out (a UUID). */
+export function isReportId(id: string): boolean {
+  return ID.test(id)
+}
+
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const INDEX = 'index.json'
 const UNTITLED = 'Untitled report'
