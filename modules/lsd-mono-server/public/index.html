@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LSD server</title>
+  </head>
+  <body>
+    <!-- An early UI shell for the local LSD server (#186). TODO(#186): open a report, live updates, diff. -->
+    <h1>LSD server</h1>
+    <section>
+      <h2>Import</h2>
+      <p>An exported LSD report (JSON) or an OTLP JSON telemetry file.</p>
+      <input id="import-file" type="file" accept=".json,application/json" />
+      <button id="import">Import</button>
+      <p id="import-status" role="status"></p>
+    </section>
+    <section>
+      <h2>Reports</h2>
+      <!-- TODO(#186): wire bulk delete to POST /api/reports/bulk-delete with the selected ids. -->
+      <button id="bulk-delete" disabled>Delete selected</button>
+      <ul id="reports"></ul>
+    </section>
+    <script type="module">
+      const list = document.getElementById('reports')
+      const status = document.getElementById('import-status')
+
+      async function load() {
+        const reports = await (await fetch('/api/reports')).json()
+        list.replaceChildren(
+          ...reports.map((report) => {
+            const item = document.createElement('li')
+            const pick = document.createElement('input')
+            pick.type = 'checkbox'
+            pick.value = report.id
+            const name = document.createElement('span')
+            name.textContent = report.id
+            const remove = document.createElement('button')
+            remove.textContent = 'Delete'
+            remove.addEventListener('click', async () => {
+              await fetch('/api/reports/' + encodeURIComponent(report.id), { method: 'DELETE' })
+              await load()
+            })
+            item.append(pick, ' ', name, ' ', remove)
+            return item
+          }),
+        )
+      }
+
+      document.getElementById('import').addEventListener('click', async () => {
+        const file = document.getElementById('import-file').files[0]
+        if (!file) return
+        const response = await fetch('/api/reports/import', { method: 'POST', body: await file.text() })
+        status.textContent = response.ok ? 'Imported.' : await response.text()
+        await load()
+      })
+
+      await load()
+    </script>
+  </body>
+</html>

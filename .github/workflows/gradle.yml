@@ -35,6 +35,7 @@ jobs:
     outputs:
       code: ${{ steps.diff.outputs.code }}
       report: ${{ steps.diff.outputs.report }}
+      server: ${{ steps.diff.outputs.server }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -47,7 +48,7 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            { echo "code=true"; echo "report=true"; } >> "$GITHUB_OUTPUT"; exit 0
+            { echo "code=true"; echo "report=true"; echo "server=true"; } >> "$GITHUB_OUTPUT"; exit 0
           fi
           changed=$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '(\.md$|^docs/|^modules/[^/]+/docs/)' || true)
           echo "Build-relevant changes:"; echo "${changed:-none}"
@@ -58,6 +59,12 @@ jobs:
             echo "report=true" >> "$GITHUB_OUTPUT"
           else
             echo "report=false" >> "$GITHUB_OUTPUT"
+          fi
+          # The local server package (#186), the Node version it runs on, or this workflow.
+          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-server/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
+            echo "server=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "server=false" >> "$GITHUB_OUTPUT"
           fi
 
   commits:
@@ -245,11 +252,36 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  server:
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
+    # The local server package (modules/lsd-mono-server, #186): typecheck, lint and its Vitest tests.
+    # It is private and nothing here or in release.yml publishes it.
+    name: server (local server)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: modules/lsd-mono-server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: modules/lsd-mono-server/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
   gate:
     # The one check to require. Passes when every job passed or was skipped (a docs-only change,
-    # or check-ux when the report UI did not change).
+    # or check-ux when the report UI did not change, or server when the server did not).
     if: always()
-    needs: [changes, commits, build, jvm-tests, check-ux]
+    needs: [changes, commits, build, jvm-tests, check-ux, server]
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
