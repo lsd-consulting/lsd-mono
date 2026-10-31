@@ -11,6 +11,8 @@ export interface ServerConfig {
   host: string
   port: number
   reportsDir: string
+  /** A report viewer to try first (`--viewer <file>` or LSD_SERVER_VIEWER), for UI development. */
+  viewer?: string
 }
 
 export const LOCALHOST = '127.0.0.1'
@@ -20,18 +22,29 @@ export const DEFAULT_PORT = 7357
 /** TODO(#186): the server-owned directory is hard-coded for v1; make it configurable later. */
 export const defaultReportsDir = (): string => join(homedir(), '.lsd', 'server', 'reports')
 
-/** Reads `--expose` and `--port <n>` (or `--port=<n>`), and LSD_SERVER_EXPOSE / LSD_SERVER_PORT. */
+/**
+ * Reads `--expose`, `--port <n>` (or `--port=<n>`) and `--viewer <file>` (or `--viewer=<file>`), and
+ * LSD_SERVER_EXPOSE / LSD_SERVER_PORT / LSD_SERVER_VIEWER.
+ */
 export function parseConfig(args: readonly string[], env: NodeJS.ProcessEnv = {}): ServerConfig {
   let host = env.LSD_SERVER_EXPOSE === '1' ? ALL_INTERFACES : LOCALHOST
   let port = env.LSD_SERVER_PORT === undefined ? DEFAULT_PORT : parsePort(env.LSD_SERVER_PORT)
+  let viewer = env.LSD_SERVER_VIEWER || undefined
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--expose') host = ALL_INTERFACES
     else if (arg === '--port') port = parsePort(args[++i])
     else if (arg.startsWith('--port=')) port = parsePort(arg.slice('--port='.length))
-    else throw new Error(`Unknown option '${arg}'. Options: --expose, --port <n>`)
+    else if (arg === '--viewer') viewer = parseViewer(args[++i])
+    else if (arg.startsWith('--viewer=')) viewer = parseViewer(arg.slice('--viewer='.length))
+    else throw new Error(`Unknown option '${arg}'. Options: --expose, --port <n>, --viewer <file>`)
   }
-  return { host, port, reportsDir: defaultReportsDir() }
+  return { host, port, reportsDir: defaultReportsDir(), ...(viewer === undefined ? {} : { viewer }) }
+}
+
+function parseViewer(value: string | undefined): string {
+  if (value === undefined || value === '') throw new Error('--viewer needs a file, the report UI single-file build')
+  return value
 }
 
 function parsePort(value: string | undefined): number {

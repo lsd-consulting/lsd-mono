@@ -6,7 +6,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig(
-  { ignores: ['coverage/', 'node_modules/', 'public/'] },
+  { ignores: ['coverage/', 'node_modules/', 'public/', 'viewer/'] },
   { linterOptions: { reportUnusedDisableDirectives: 'error' } },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
@@ -16,6 +16,6 @@ export default defineConfig(
       globals: { ...globals.node },
     },
   },
-  { files: ['**/*.js'], extends: [tseslint.configs.disableTypeChecked] },
+  { files: ['**/*.js', '**/*.mjs'], extends: [tseslint.configs.disableTypeChecked] },
   prettier,
 )

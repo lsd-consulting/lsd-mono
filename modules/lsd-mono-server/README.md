@@ -14,11 +14,42 @@ Needs the Node version in the repo's `.nvmrc`.
 ```sh
 cd modules/lsd-mono-server
 nvm use
-npm install
+npm install                        # also builds the report viewer, see below
 npm start                          # http://127.0.0.1:7357
 npm start -- --port 8080           # another port (or LSD_SERVER_PORT=8080)
 npm start -- --expose              # every interface (or LSD_SERVER_EXPOSE=1)
+npm start -- --viewer <file>       # a report viewer to try first (or LSD_SERVER_VIEWER=<file>)
 ```
+
+### The report viewer
+
+Reports open in the report UI's single-file build (`modules/lsd-mono-report-html`). `npm install`
+and `npm ci` build it for you: the `prepare` script (`scripts/build-viewer.mjs`) runs `npm ci` and
+`npm run build:single` in `modules/lsd-mono-report-html/ui` and copies the result to
+`viewer/lsd-report.html`, which is gitignored. It takes a few seconds the first time and is skipped
+while the copy is newer than the UI's sources (it copies the UI's own `dist` build instead when that
+is up to date). If the build fails, installing still succeeds with a warning, and reports show the
+"Report viewer not built" page until `npm run build:viewer` (always rebuilds) succeeds.
+`LSD_SERVER_SKIP_VIEWER=1` skips the build, which the server CI job does since its tests bring
+their own viewer.
+
+When opening a report the server uses the first viewer it finds:
+
+1. The `--viewer <file>` or `LSD_SERVER_VIEWER` override, for working on the UI: point it at
+   `modules/lsd-mono-report-html/ui/dist/lsd-report.html` and rerun `npm run build:single` there.
+2. The bundled copy, `viewer/lsd-report.html`.
+3. The report UI's build in the checkout, `modules/lsd-mono-report-html/ui/dist/lsd-report.html`.
+
+A file that is not the report viewer is passed over. With none of them, the page says how to build
+it.
+
+### Packaging
+
+`npm pack` runs `prepack`, which fails unless the viewer is built, and the `files` list ships
+`viewer/lsd-report.html`, so installing the package builds nothing. `npm pack --dry-run` lists it.
+The package stays `"private": true` and unpublished for now.
+TODO(#186): import validation still reads the report schema from the checkout
+(`modules/lsd-mono-report-schema`), which the package does not ship yet.
 
 `npm test`, `npm run lint` and `npm run typecheck` are what CI runs.
 
@@ -134,22 +165,15 @@ UI's single-file build with the report injected, the same way the JVM writer doe
 covers nothing, and hidden in print. The tab is titled "<report title> – LSD server". 0.x reports
 open too: the UI upgrades them on read.
 
-| Status | When                             | Body                           |
-| ------ | -------------------------------- | ------------------------------ |
-| 200    | The report exists                | The report page                |
-| 404    | No report with that id           | A page with a link to the list |
-| 503    | The report UI has not been built | The folder and build commands  |
+| Status | When                       | Body                           |
+| ------ | -------------------------- | ------------------------------ |
+| 200    | The report exists          | The report page                |
+| 404    | No report with that id     | A page with a link to the list |
+| 503    | No report viewer was found | The folder and build command   |
 
 Both pages fit phones and follow the system's light or dark setting.
 
-The report UI is read from the repo checkout and is not committed, so build it once:
-
-```sh
-cd modules/lsd-mono-report-html/ui
-nvm use
-npm ci
-npm run build:single               # writes ui/dist/lsd-report.html
-```
+The viewer comes from `npm install`, see [The report viewer](#the-report-viewer).
 
 ## Storage
 

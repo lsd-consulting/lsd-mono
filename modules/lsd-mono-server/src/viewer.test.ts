@@ -4,7 +4,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { MESSAGES, messagePage, readShell, renderReportPage, scriptJson } from './viewer.ts'
+import {
+  BUNDLED_SHELL,
+  DEFAULT_SHELL,
+  MESSAGES,
+  messagePage,
+  readShell,
+  renderReportPage,
+  scriptJson,
+  viewerShells,
+} from './viewer.ts'
 
 const SHELL =
   '<html><head><script>x</script></head><body><div id="app"></div><script>const r=window.__LSD_REPORT__??s</script></body></html>'
@@ -59,6 +68,14 @@ describe('the report viewer', () => {
     }
   })
 
+  it('looks for the override, then the bundled viewer, then the report UI build', () => {
+    expect(viewerShells()).toEqual([BUNDLED_SHELL, DEFAULT_SHELL])
+    expect(BUNDLED_SHELL.href).toMatch(/\/lsd-mono-server\/viewer\/lsd-report\.html$/)
+    expect(DEFAULT_SHELL.href).toMatch(/\/lsd-mono-report-html\/ui\/dist\/lsd-report\.html$/)
+    expect(viewerShells('/tmp/mine.html')).toEqual([pathToFileURL('/tmp/mine.html'), BUNDLED_SHELL, DEFAULT_SHELL])
+    expect(viewerShells('mine.html')[0]).toEqual(pathToFileURL(join(process.cwd(), 'mine.html')))
+  })
+
   it('has message pages that link back to the list', () => {
     expect(messagePage(MESSAGES.notFound)).toMatch(/<h1>Report not found<\/h1>[\s\S]*<a href="\/">/)
     expect(messagePage(MESSAGES.notFound)).not.toContain('<pre>')
@@ -68,6 +85,6 @@ describe('the report viewer', () => {
     const page = messagePage(MESSAGES.noShell)
     expect(page).toContain('<meta name="viewport" content="width=device-width, initial-scale=1" />')
     expect(page).toContain('@media (prefers-color-scheme: dark)')
-    expect(page).toContain('<pre><code>cd modules/lsd-mono-report-html/ui\nnpm ci\nnpm run build:single</code></pre>')
+    expect(page).toContain('<pre><code>cd modules/lsd-mono-server\nnpm run build:viewer</code></pre>')
   })
 })

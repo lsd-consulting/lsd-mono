@@ -1,4 +1,6 @@
 import { readFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 /**
  * The report UI's single-file shell, as lsd-mono-report-html builds it (`npm run build:single` in
@@ -8,7 +10,28 @@ import { readFile } from 'node:fs/promises'
  */
 export const DEFAULT_SHELL = new URL('../../lsd-mono-report-html/ui/dist/lsd-report.html', import.meta.url)
 
+/** The copy `npm install` builds (scripts/build-viewer.mjs) and the package ships. */
+export const BUNDLED_SHELL = new URL('../viewer/lsd-report.html', import.meta.url)
+
+/**
+ * Where the server looks for the shell, in order: an explicit [override] (a path, relative to the
+ * working directory), the bundled copy, then the report UI's own build in the checkout.
+ */
+export function viewerShells(override?: string): URL[] {
+  const bundled = [BUNDLED_SHELL, DEFAULT_SHELL]
+  return override === undefined ? bundled : [pathToFileURL(resolve(override)), ...bundled]
+}
+
 const SHELL_READS = 'window.__LSD_REPORT__??'
+
+/** The first of [shells] that is the report shell, or undefined when none is built. */
+export async function findShell(shells: readonly URL[]): Promise<string | undefined> {
+  for (const shell of shells) {
+    const html = await readShell(shell)
+    if (html !== undefined) return html
+  }
+  return undefined
+}
 
 /** Reads the shell, or undefined when it isn't built (or isn't the report shell). */
 export async function readShell(shell: URL): Promise<string | undefined> {
@@ -67,8 +90,8 @@ export const MESSAGES = {
   noShell: {
     title: 'Report viewer not built',
     message:
-      'The server opens reports in the report UI, which has to be built once. From the lsd-mono checkout, run these, then reload this page:',
-    steps: { folder: 'modules/lsd-mono-report-html/ui', commands: ['npm ci', 'npm run build:single'] },
+      'The server opens reports in the report UI, which installing the server normally builds. That step was skipped or failed. From the lsd-mono checkout, run this, then reload this page:',
+    steps: { folder: 'modules/lsd-mono-server', commands: ['npm run build:viewer'] },
   },
 } as const satisfies Record<string, Message>
 

@@ -7,8 +7,18 @@
   "engines": {
     "node": ">=22.6"
   },
+  "files": [
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "public/",
+    "viewer/lsd-report.html",
+    "README.md"
+  ],
   "scripts": {
     "start": "node --experimental-strip-types src/main.ts",
+    "prepare": "node scripts/build-viewer.mjs",
+    "prepack": "node scripts/build-viewer.mjs --required",
+    "build:viewer": "node scripts/build-viewer.mjs --force",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && prettier --check .",

@@ -273,7 +273,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: modules/lsd-mono-server/package-lock.json
+      # The tests use their own viewer stand-in, so skip the report UI build `prepare` runs.
       - run: npm ci
+        env:
+          LSD_SERVER_SKIP_VIEWER: '1'
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
