@@ -24,7 +24,7 @@ describe('the report viewer', () => {
     const page = renderReportPage(SHELL, '{"title":"t"}')
     expect(page.indexOf('window.__LSD_REPORT__={"title":"t"};')).toBeLessThan(page.indexOf('<script>x'))
     expect(page).toMatch(
-      /<body>\n<style>[^<]*@media print\{#lsd-server-back\{display:none\}\}<\/style>\n<a id="lsd-server-back" href="\/">&larr; All reports<\/a>\n<div id="app">/,
+      /<body>\n<style>[^<]*@media print\{#lsd-studio-back\{display:none\}\}<\/style>\n<a id="lsd-studio-back" href="\/">&larr; All reports<\/a>\n<div id="app">/,
     )
     expect(page.indexOf('document.title=')).toBeGreaterThan(page.indexOf('const r='))
     expect(page).toMatch(/<\/script>\n<\/body>/)
@@ -33,7 +33,7 @@ describe('the report viewer', () => {
   it('works on a shell with no script or body', () => {
     const page = renderReportPage('<p>', '{}')
     expect(page).toMatch(
-      /^<style>[\s\S]*<a id="lsd-server-back"[^\n]*\n<script>window.__LSD_REPORT__=\{\};<\/script>\n<p>/,
+      /^<style>[\s\S]*<a id="lsd-studio-back"[^\n]*\n<script>window.__LSD_REPORT__=\{\};<\/script>\n<p>/,
     )
     expect(page).toMatch(/<p><script>document\.title=[^\n]*<\/script>\n$/)
   })
@@ -45,9 +45,9 @@ describe('the report viewer', () => {
       runInNewContext(script, context)
       return context.document.title
     }
-    expect(title('{"title":"Checkout"}')).toBe('Checkout – LSD server')
-    expect(title('{"title":"  "}')).toBe('Untitled report – LSD server')
-    expect(title('{"title":5}')).toBe('Untitled report – LSD server')
+    expect(title('{"title":"Checkout"}')).toBe('Checkout – LSD Studio')
+    expect(title('{"title":"  "}')).toBe('Untitled report – LSD Studio')
+    expect(title('{"title":5}')).toBe('Untitled report – LSD Studio')
   })
 
   it('escapes what could end the script', () => {
@@ -71,7 +71,7 @@ describe('the report viewer', () => {
 
   it('looks for the override, then the bundled viewer, then the report UI build', () => {
     expect(viewerShells()).toEqual([BUNDLED_SHELL, DEFAULT_SHELL])
-    expect(BUNDLED_SHELL.href).toMatch(/\/lsd-mono-server\/viewer\/lsd-report\.html$/)
+    expect(BUNDLED_SHELL.href).toMatch(/\/lsd-mono-studio\/viewer\/lsd-report\.html$/)
     expect(DEFAULT_SHELL.href).toMatch(/\/lsd-mono-report-html\/ui\/dist\/lsd-report\.html$/)
     expect(viewerShells('/tmp/mine.html')).toEqual([pathToFileURL('/tmp/mine.html'), BUNDLED_SHELL, DEFAULT_SHELL])
     expect(viewerShells('mine.html')[0]).toEqual(pathToFileURL(join(process.cwd(), 'mine.html')))
@@ -90,8 +90,8 @@ describe('the report viewer', () => {
       await checkOverride(join(dir, 'missing.html'), warn)
       await checkOverride(join(dir, 'other.html'), warn)
       expect(warnings).toEqual([
-        `Viewer override ${join(dir, 'missing.html')} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
-        `Viewer override ${join(dir, 'other.html')} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
+        `LSD Studio: viewer override ${join(dir, 'missing.html')} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
+        `LSD Studio: viewer override ${join(dir, 'other.html')} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
       ])
     } finally {
       await rm(dir, { recursive: true, force: true })
@@ -107,6 +107,6 @@ describe('the report viewer', () => {
     const page = messagePage(MESSAGES.noShell)
     expect(page).toContain('<meta name="viewport" content="width=device-width, initial-scale=1" />')
     expect(page).toContain('@media (prefers-color-scheme: dark)')
-    expect(page).toContain('<pre><code>cd modules/lsd-mono-server\nnpm run build:viewer</code></pre>')
+    expect(page).toContain('<pre><code>cd modules/lsd-mono-studio\nnpm run build:viewer</code></pre>')
   })
 })

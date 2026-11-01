@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 /**
  * How the server starts. Secure by default (#186): it binds to localhost only, and only the
- * explicit `--expose` flag (or LSD_SERVER_EXPOSE=1) binds it to every interface.
+ * explicit `--expose` flag (or LSD_STUDIO_EXPOSE=1) binds it to every interface.
  *
  * No access control yet. TODO(#186): add it as a future feature, once the expose flag is in use.
  */
@@ -11,7 +11,7 @@ export interface ServerConfig {
   host: string
   port: number
   reportsDir: string
-  /** A report viewer to try first (`--viewer <file>` or LSD_SERVER_VIEWER), for UI development. */
+  /** A report viewer to try first (`--viewer <file>` or LSD_STUDIO_VIEWER), for UI development. */
   viewer?: string
 }
 
@@ -24,12 +24,15 @@ export const defaultReportsDir = (): string => join(homedir(), '.lsd', 'server',
 
 /**
  * Reads `--expose`, `--port <n>` (or `--port=<n>`) and `--viewer <file>` (or `--viewer=<file>`), and
- * LSD_SERVER_EXPOSE / LSD_SERVER_PORT / LSD_SERVER_VIEWER.
+ * LSD_STUDIO_EXPOSE / LSD_STUDIO_PORT / LSD_STUDIO_VIEWER. The LSD_SERVER_* names from before the
+ * rename still work; an LSD_STUDIO_* one wins.
  */
 export function parseConfig(args: readonly string[], env: NodeJS.ProcessEnv = {}): ServerConfig {
-  let host = env.LSD_SERVER_EXPOSE === '1' ? ALL_INTERFACES : LOCALHOST
-  let port = env.LSD_SERVER_PORT === undefined ? DEFAULT_PORT : parsePort(env.LSD_SERVER_PORT)
-  let viewer = env.LSD_SERVER_VIEWER || undefined
+  const expose = env.LSD_STUDIO_EXPOSE ?? env.LSD_SERVER_EXPOSE
+  const envPort = env.LSD_STUDIO_PORT ?? env.LSD_SERVER_PORT
+  let host = expose === '1' ? ALL_INTERFACES : LOCALHOST
+  let port = envPort === undefined ? DEFAULT_PORT : parsePort(envPort)
+  let viewer = (env.LSD_STUDIO_VIEWER ?? env.LSD_SERVER_VIEWER) || undefined
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--expose') host = ALL_INTERFACES

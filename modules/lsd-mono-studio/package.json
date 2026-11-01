@@ -1,23 +1,28 @@
 {
-  "name": "@lsd-consulting/lsd-server",
+  "name": "lsd-mono-studio",
   "version": "0.0.0",
   "private": true,
-  "description": "Local LSD server: import, keep, compare and watch LSD reports (early scaffold, #186)",
+  "description": "LSD Studio: import, keep, compare and watch LSD reports locally (early scaffold, #186)",
   "type": "module",
   "engines": {
     "node": ">=22.6"
   },
+  "bin": {
+    "lsd-mono-studio": "bin/lsd-mono-studio.js"
+  },
   "files": [
-    "src/**/*.ts",
-    "!src/**/*.test.ts",
+    "bin/",
+    "dist/",
     "public/",
     "viewer/lsd-report.html",
+    "schema/lsd-report.schema.json",
     "README.md"
   ],
   "scripts": {
     "start": "node --experimental-strip-types src/main.ts",
-    "prepare": "node scripts/build-viewer.mjs",
-    "prepack": "node scripts/build-viewer.mjs --required",
+    "prepare": "node scripts/copy-schema.mjs && node scripts/build-viewer.mjs",
+    "prepack": "node scripts/copy-schema.mjs && node scripts/build-viewer.mjs --required && npm run build",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "build:viewer": "node scripts/build-viewer.mjs --force",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",

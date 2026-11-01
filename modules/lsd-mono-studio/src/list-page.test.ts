@@ -243,7 +243,7 @@ describe('report list page', () => {
     down.chooseFile('{}')
     down.byId('import').click()
     await down.settle()
-    expect(down.byId('import-error').textContent).toBe('Could not reach the server. Is it still running?')
+    expect(down.byId('import-error').textContent).toBe('Could not reach LSD Studio. Is it still running?')
     const empty = await openPage([], { status: 502, body: '' })
     empty.chooseFile('{}')
     empty.byId('import').click()

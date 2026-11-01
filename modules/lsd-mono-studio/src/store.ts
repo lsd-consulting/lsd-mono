@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { OTLP_GENERATOR } from './otlp.ts'
+import { LEGACY_OTLP_GENERATORS, OTLP_GENERATOR } from './otlp.ts'
 
 /**
  * Where a stored report came from: an imported LSD report, an OTLP trace export converted on import
@@ -164,7 +164,10 @@ export class FileReportStore implements ReportStore {
 function sourceOf(json: string): ReportSource {
   try {
     const generator = (JSON.parse(json) as { generator?: { name?: unknown } }).generator
-    return generator?.name === OTLP_GENERATOR ? 'otlp' : 'import'
+    const name = generator?.name
+    return name === OTLP_GENERATOR || (typeof name === 'string' && LEGACY_OTLP_GENERATORS.includes(name))
+      ? 'otlp'
+      : 'import'
   } catch {
     return 'import'
   }

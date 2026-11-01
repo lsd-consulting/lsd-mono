@@ -35,7 +35,7 @@ jobs:
     outputs:
       code: ${{ steps.diff.outputs.code }}
       report: ${{ steps.diff.outputs.report }}
-      server: ${{ steps.diff.outputs.server }}
+      studio: ${{ steps.diff.outputs.studio }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -48,7 +48,7 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            { echo "code=true"; echo "report=true"; echo "server=true"; } >> "$GITHUB_OUTPUT"; exit 0
+            { echo "code=true"; echo "report=true"; echo "studio=true"; } >> "$GITHUB_OUTPUT"; exit 0
           fi
           changed=$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '(\.md$|^docs/|^modules/[^/]+/docs/)' || true)
           echo "Build-relevant changes:"; echo "${changed:-none}"
@@ -60,12 +60,12 @@ jobs:
           else
             echo "report=false" >> "$GITHUB_OUTPUT"
           fi
-          # The local server package (#186), the report schema it validates imports against, the
+          # LSD Studio (#186), the report schema it validates imports against and ships, the
           # Node version it runs on, or this workflow.
-          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-server/|modules/lsd-mono-report-schema/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
-            echo "server=true" >> "$GITHUB_OUTPUT"
+          if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-studio/|modules/lsd-mono-report-schema/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
+            echo "studio=true" >> "$GITHUB_OUTPUT"
           else
-            echo "server=false" >> "$GITHUB_OUTPUT"
+            echo "studio=false" >> "$GITHUB_OUTPUT"
           fi
 
   commits:
@@ -253,17 +253,17 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  server:
+  studio:
     needs: changes
-    if: needs.changes.outputs.server == 'true'
-    # The local server package (modules/lsd-mono-server, #186): typecheck, lint and its Vitest tests.
+    if: needs.changes.outputs.studio == 'true'
+    # LSD Studio (modules/lsd-mono-studio, #186): typecheck, lint and its Vitest tests.
     # It is private and nothing here or in release.yml publishes it.
-    name: server (local server)
+    name: studio (LSD Studio)
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: modules/lsd-mono-server
+        working-directory: modules/lsd-mono-studio
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -272,20 +272,20 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: modules/lsd-mono-server/package-lock.json
+          cache-dependency-path: modules/lsd-mono-studio/package-lock.json
       # The tests use their own viewer stand-in, so skip the report UI build `prepare` runs.
       - run: npm ci
         env:
-          LSD_SERVER_SKIP_VIEWER: '1'
+          LSD_STUDIO_SKIP_VIEWER: '1'
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
 
   gate:
     # The one check to require. Passes when every job passed or was skipped (a docs-only change,
-    # or check-ux when the report UI did not change, or server when the server did not).
+    # or check-ux when the report UI did not change, or studio when LSD Studio did not).
     if: always()
-    needs: [changes, commits, build, jvm-tests, check-ux, server]
+    needs: [changes, commits, build, jvm-tests, check-ux, studio]
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:

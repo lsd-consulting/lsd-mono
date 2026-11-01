@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <title>LSD server</title>
+    <title>LSD Studio</title>
     <style>
       /* Colours follow the report UI's tokens (modules/lsd-mono-report-html/ui/src/styles/tokens.css). */
       :root {
@@ -224,10 +224,10 @@
     </style>
   </head>
   <body>
-    <!-- The local LSD server's report list (#186). TODO(#186): live updates, diff. -->
+    <!-- LSD Studio's report list (#186). TODO(#186): live updates, diff. -->
     <main>
       <header>
-        <h1>LSD server</h1>
+        <h1>LSD Studio</h1>
         <p class="local">
           <strong>Local only</strong>
           <span>Reports are stored on this machine. Nothing is uploaded.</span>
@@ -469,7 +469,7 @@
               showImportError(...(await importFailure(response)))
             }
           } catch {
-            showImportError('Could not reach the server. Is it still running?')
+            showImportError('Could not reach LSD Studio. Is it still running?')
           } finally {
             importButton.disabled = false
             importButton.textContent = 'Import'

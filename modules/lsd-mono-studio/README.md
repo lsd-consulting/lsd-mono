@@ -1,10 +1,10 @@
-# LSD server (early scaffold)
+# LSD Studio (early scaffold)
 
 Part of [LSD: living sequence diagrams](../../README.md). Tracked in
 [#186](https://github.com/lsd-consulting/lsd-mono/issues/186).
 
-A local server you start yourself, to import, keep, compare and watch LSD reports. It is a
-Node package, so it works without a JVM. **This is a scaffold:** the routes and pages exist, most
+LSD Studio is a local server you start yourself, to import, keep, compare and watch LSD reports.
+It is a Node package (`lsd-mono-studio`, run as `npx lsd-mono-studio` once published), so it works without a JVM. **This is a scaffold:** the routes and pages exist, most
 of what they do is still a `TODO(#186)`, and it is not published anywhere yet (`"private": true`).
 
 ## Run it
@@ -12,14 +12,16 @@ of what they do is still a `TODO(#186)`, and it is not published anywhere yet (`
 Needs the Node version in the repo's `.nvmrc`.
 
 ```sh
-cd modules/lsd-mono-server
+cd modules/lsd-mono-studio
 nvm use
 npm install                        # also builds the report viewer, see below
 npm start                          # http://127.0.0.1:7357
-npm start -- --port 8080           # another port (or LSD_SERVER_PORT=8080)
-npm start -- --expose              # every interface (or LSD_SERVER_EXPOSE=1)
-npm start -- --viewer <file>       # a report viewer to try first (or LSD_SERVER_VIEWER=<file>)
+npm start -- --port 8080           # another port (or LSD_STUDIO_PORT=8080)
+npm start -- --expose              # every interface (or LSD_STUDIO_EXPOSE=1)
+npm start -- --viewer <file>       # a report viewer to try first (or LSD_STUDIO_VIEWER=<file>)
 ```
+
+The `LSD_SERVER_*` names from before the rename still work. When both are set, `LSD_STUDIO_*` wins.
 
 ### The report viewer
 
@@ -30,27 +32,32 @@ and `npm ci` build it for you: the `prepare` script (`scripts/build-viewer.mjs`)
 while the copy is newer than the UI's sources (it copies the UI's own `dist` build instead when that
 is up to date). If the build fails, installing still succeeds with a warning, and reports show the
 "Report viewer not built" page until `npm run build:viewer` (always rebuilds) succeeds.
-`LSD_SERVER_SKIP_VIEWER=1` skips the build, which the server CI job does since its tests bring
+`LSD_STUDIO_SKIP_VIEWER=1` (or `LSD_SERVER_SKIP_VIEWER=1`) skips the build, which the studio CI job does since its tests bring
 their own viewer.
 
-When opening a report the server uses the first viewer it finds:
+When opening a report LSD Studio uses the first viewer it finds:
 
-1. The `--viewer <file>` or `LSD_SERVER_VIEWER` override, for working on the UI: point it at
+1. The `--viewer <file>` or `LSD_STUDIO_VIEWER` override, for working on the UI: point it at
    `modules/lsd-mono-report-html/ui/dist/lsd-report.html` and rerun `npm run build:single` there.
 2. The bundled copy, `viewer/lsd-report.html`.
 3. The report UI's build in the checkout, `modules/lsd-mono-report-html/ui/dist/lsd-report.html`.
 
 A file that is not the report viewer is passed over. When the override is missing or is not the
-viewer, the server says so on stderr at startup, naming the path, and falls back to the next one. With none of them, the page says how to build
+viewer, LSD Studio says so on stderr at startup, naming the path, and falls back to the next one. With none of them, the page says how to build
 it.
 
 ### Packaging
 
-`npm pack` runs `prepack`, which fails unless the viewer is built, and the `files` list ships
-`viewer/lsd-report.html`, so installing the package builds nothing. `npm pack --dry-run` lists it.
-The package stays `"private": true` and unpublished for now.
-TODO(#186): import validation still reads the report schema from the checkout
-(`modules/lsd-mono-report-schema`), which the package does not ship yet.
+`npm pack` runs `prepack`. It copies the report schema, builds the viewer (failing if it can't),
+and compiles `src` to `dist/` with `tsc -p tsconfig.build.json`, because Node does not strip types
+from files under `node_modules`. The `files` list ships `bin/`, `dist/`, `public/`,
+`viewer/lsd-report.html`, `schema/lsd-report.schema.json` and this README, so installing the
+published package builds nothing, and `npx lsd-mono-studio` (`bin/lsd-mono-studio.js`) runs
+`dist/main.js`. The package stays `"private": true` and unpublished for now.
+
+The report schema is copied from `modules/lsd-mono-report-schema` to `schema/` (gitignored) by
+`prepare` and `prepack` (`scripts/copy-schema.mjs`). At runtime the bundled copy is used first,
+then the checkout's.
 
 `npm test`, `npm run lint` and `npm run typecheck` are what CI runs.
 
@@ -93,7 +100,7 @@ Validation mirrors what the report UI can open:
   `title` is a string and `scenarios` a list of objects.
 - **2.0.0 and later** are refused with 422: the report UI would only say to upgrade lsd-mono.
 
-The server reads the schema from the repo checkout, so it runs from the repo for now.
+The schema is the bundled copy in `schema/`, or the checkout's when that is missing, see [Packaging](#packaging).
 
 ## OTLP import (#96)
 
@@ -101,7 +108,9 @@ A body with `resourceSpans` is read as an OTLP/JSON `ExportTraceServiceRequest`,
 OpenTelemetry Collector `file` exporter writes, or a trace exported as OTLP JSON from Jaeger or
 Tempo. It is converted to an LSD 1.0 report, checked with the same schema validator as
 an imported report, and stored with `"source": "otlp"` in the index. The report itself records
-`generator.name` `lsd-mono-server OTLP import`, which is how a rebuilt index keeps that source.
+`generator.name` `LSD Studio (OTLP import)`, which the report header shows and which is how a
+rebuilt index keeps that source. Reports converted before the rename, with
+`lsd-mono-server OTLP import`, are still recognised.
 
 How spans map, using the schema's OTel fields (`trace`, `attributes`, `origin`, `source`,
 `startedAt`, `accuracy`):
@@ -160,10 +169,10 @@ The page is plain HTML and a script in `public/index.html`, tested in jsdom
 
 ## Open a report
 
-Click a report's title in the list, or go to `GET /reports/<id>`. The server serves the report
+Click a report's title in the list, or go to `GET /reports/<id>`. LSD Studio serves the report
 UI's single-file build with the report injected, the same way the JVM writer does. An
 "All reports" bar above it links back to the list: first in tab order, taking its own space so it
-covers nothing, and hidden in print. The tab is titled "<report title> – LSD server". 0.x reports
+covers nothing, and hidden in print. The tab is titled "<report title> – LSD Studio". 0.x reports
 open too: the UI upgrades them on read.
 
 | Status | When                       | Body                           |
@@ -198,7 +207,7 @@ answers 204 whether or not the report existed, and 400 for an id that is not a r
 
 ## Decisions (#186)
 
-1. **Secure by default.** Binds to `127.0.0.1`. Only `--expose` (or `LSD_SERVER_EXPOSE=1`) binds every interface.
+1. **Secure by default.** Binds to `127.0.0.1`. Only `--expose` (or `LSD_STUDIO_EXPOSE=1`) binds every interface.
 2. **Import** takes exported LSD report JSON and OTLP JSON telemetry exports. Both land as stored reports.
 3. **Storage** is a directory the server owns, hard-coded to `~/.lsd/server/reports` for v1.
 4. **No access control** yet. It comes later, after the expose flag.
