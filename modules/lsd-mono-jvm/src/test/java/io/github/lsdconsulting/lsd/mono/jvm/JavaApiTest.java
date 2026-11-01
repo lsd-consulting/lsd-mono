@@ -15,6 +15,7 @@ import io.github.lsdconsulting.lsd.mono.jvm.testing.LsdTestConfig;
 import io.github.lsdconsulting.lsd.mono.jvm.testing.ReportJson;
 import io.github.lsdconsulting.lsd.mono.jvm.testing.ScenarioJson;
 import io.github.lsdconsulting.lsd.mono.report.model.testing.JsonObject;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -36,7 +38,8 @@ class JavaApiTest {
     @TempDir
     Path tempDir;
 
-    record Order(String id) {}
+    record Order(String id) {
+    }
 
     @Test
     void everyVerbCanBeCalledFromJava() throws Exception {
@@ -93,14 +96,14 @@ class JavaApiTest {
         assertTrue(values(json.getMessages(), "timing").contains("measured"), json.toString());
         // The order is inline, or in the payloads file when the data is held there.
         boolean inline = json.getMessages().stream()
-                .anyMatch(m -> m.get("data") instanceof Map<?, ?> data && "o-1".equals(data.get("order")));
+            .anyMatch(m -> m.get("data") instanceof Map<?, ?> data && "o-1".equals(data.get("order")));
         assertTrue(inline || Files.readString(payloads(tempDir)).contains("o-1"), json.toString());
         assertTrue(values(json.getMessages(), "startedAt").contains("2026-01-01T00:00:00Z"), json.toString());
         assertTrue(json.getLabels().contains("IllegalStateException"), json.toString());
         assertEquals(
-                2,
-                values(json.getMessages(), "type").stream().filter("lost"::equals).count(),
-                "a MessageType in the data position is the type");
+            2,
+            values(json.getMessages(), "type").stream().filter("lost"::equals).count(),
+            "a MessageType in the data position is the type");
     }
 
     @Test
@@ -173,14 +176,16 @@ class JavaApiTest {
             ReportJson other = report(lsd.completeReport("Java default"));
             assertEquals(List.of("wrapped"), labels(other));
             assertTrue(
-                    other.getScenarios().stream().anyMatch(s -> s.getError() != null && "boom".equals(s.getError().get("message"))),
-                    other.getText());
+                other.getScenarios().stream().anyMatch(s -> s.getError() != null && "boom".equals(s.getError().get("message"))),
+                other.getText());
         } finally {
             pool.shutdownNow();
         }
     }
 
-    /** Only IOException, from reading the report: binding a scenario must not force a catch. */
+    /**
+     * Only IOException, from reading the report: binding a scenario must not force a catch.
+     */
     @Test
     void nullsAndBindingsNeedNoWorkaroundsFromJava() throws IOException {
         LsdContext lsd = new LsdContext();
@@ -204,12 +209,35 @@ class JavaApiTest {
     @Test
     void interactionsWithStatusAndHeadersCanBeBuiltFromJava() throws IOException {
         LsdContext lsd = new LsdContext();
-        lsd.accept(Interaction.builder(InteractionKind.REQUEST, "Web", "Api", "POST /orders").interactionId("c1").build());
-        lsd.accept(Interaction.builder(InteractionKind.RESPONSE, "Api", "Web", "Created").status("201").replyTo("c1").build());
-        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "Api", "Kafka", "order.placed")
-            .data(Map.of("id", 7))
-            .headers(Map.of("content-type", "application/json", "Authorization", "Bearer secret"))
-            .build());
+        lsd.accept(
+            Interaction.Companion.builder()
+            .kind(InteractionKind.REQUEST)
+            .from("Web")
+            .to("Api")
+            .label("POST /orders")
+            .interactionId("c1")
+            .build()
+        );
+        lsd.accept(
+            Interaction.Companion.builder()
+                .kind(InteractionKind.RESPONSE)
+                .from("Api")
+                .to("Web")
+                .label("Created")
+                .status("201")
+                .replyTo("c1")
+                .build()
+        );
+        lsd.accept(
+            Interaction.Companion.builder()
+                .kind(InteractionKind.PUBLISH)
+                .from("Api")
+                .to("Kafka")
+                .label("order.placed")
+                .data(Map.of("id", 7))
+                .headers(Map.of("content-type", "application/json", "Authorization", "Bearer secret"))
+                .build()
+        );
         lsd.completeScenario("java-interactions");
 
         Path file = reportJson(lsd.completeReport("Java interactions"));
@@ -251,12 +279,16 @@ class JavaApiTest {
         return ReportJson.Companion.read(reportJson(files));
     }
 
-    /** Every scenario's message labels, in report order. */
+    /**
+     * Every scenario's message labels, in report order.
+     */
     private static List<String> labels(ReportJson report) {
         return report.getScenarios().stream().flatMap(s -> s.getLabels().stream()).toList();
     }
 
-    /** The [key] of each of [objects], in order (null where it is absent). */
+    /**
+     * The [key] of each of [objects], in order (null where it is absent).
+     */
     private static List<Object> values(List<JsonObject> objects, String key) {
         List<Object> found = new ArrayList<>();
         for (JsonObject o : objects) found.add(o.get(key));

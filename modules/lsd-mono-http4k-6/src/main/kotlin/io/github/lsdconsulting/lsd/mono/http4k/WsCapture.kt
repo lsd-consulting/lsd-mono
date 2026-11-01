@@ -61,14 +61,17 @@ internal class WsCapture(
         val id = inbound.id
         guarded(Unit) {
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.REQUEST, caller, app, Calls.label(request))
-                    .interactionId(id)
-                    .trace(Trace(scenario.correlationId, id, inbound.parent))
-                    .source(Calls.SOURCE)
-                    .startedAt(Instant.now())
-                    .headers(Calls.headers(request))
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.REQUEST,
+                    from = caller,
+                    to = app,
+                    label = Calls.label(request),
+                    interactionId = (id),
+                    trace = (Trace(scenario.correlationId, id, inbound.parent)),
+                    source = (Calls.SOURCE),
+                    startedAt = (Instant.now()),
+                    headers = (Calls.headers(request)),
+                ),
             )
         }
         val t0 = System.nanoTime()
@@ -100,14 +103,17 @@ internal class WsCapture(
         data: Any?,
     ) = guarded(Unit) {
         scenario.ingest(
-            Interaction
-                .builder(InteractionKind.RESPONSE, app, caller, label)
-                .status(status)
-                .replyTo(id)
-                .source(Calls.SOURCE)
-                .durationMs(Calls.elapsedMs(t0))
-                .data(data)
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = app,
+                to = caller,
+                label = label,
+                status = status,
+                replyTo = id,
+                source = Calls.SOURCE,
+                durationMs = Calls.elapsedMs(t0),
+                data = data,
+            ),
         )
     }
 
@@ -118,7 +124,8 @@ internal class WsCapture(
         val caller: String,
         val handshake: Request,
     ) {
-        @Volatile private var lastIn: String? = null
+        @Volatile
+        private var lastIn: String? = null
 
         fun tap(ws: Websocket): Websocket {
             // Registered before the app's own handlers, so a message is drawn before its replies.

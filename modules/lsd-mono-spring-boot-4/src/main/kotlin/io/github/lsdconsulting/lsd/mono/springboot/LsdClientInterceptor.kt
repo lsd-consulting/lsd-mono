@@ -55,15 +55,18 @@ internal class LsdClientInterceptor(
         guarded(Unit) {
             val query = uri.rawQuery?.let { "?$it" } ?: ""
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.REQUEST, caller, target, "${request.method} ${uri.rawPath.ifEmpty { "/" }}$query")
-                    .interactionId(id)
-                    .trace(Trace(scenario.correlationId, id, parent))
-                    .source(SpringScenarios.SOURCE)
-                    .startedAt(started)
-                    .data(Bodies.read(body, request.headers.contentType?.toString()))
-                    .headers(flatten(request.headers))
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.REQUEST,
+                    from = caller,
+                    to = target,
+                    label = "${request.method} ${uri.rawPath.ifEmpty { "/" }}$query",
+                    interactionId = id,
+                    trace = Trace(scenario.correlationId, id, parent),
+                    source = SpringScenarios.SOURCE,
+                    startedAt = started,
+                    data = Bodies.read(body, request.headers.contentType?.toString()),
+                    headers = flatten(request.headers),
+                ),
             )
         }
         val response =
@@ -105,15 +108,18 @@ internal class LsdClientInterceptor(
         headers: Map<String, String>? = null,
     ) = guarded(Unit) {
         scenario.ingest(
-            Interaction
-                .builder(InteractionKind.RESPONSE, from, to, label)
-                .status(status)
-                .replyTo(id)
-                .source(SpringScenarios.SOURCE)
-                .durationMs((System.nanoTime() - t0) / 1_000_000.0)
-                .data(data)
-                .headers(headers)
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = from,
+                to = to,
+                label = label,
+                status = status,
+                replyTo = id,
+                source = SpringScenarios.SOURCE,
+                durationMs = (System.nanoTime() - t0) / 1_000_000.0,
+                data = data,
+                headers = headers,
+            ),
         )
     }
 

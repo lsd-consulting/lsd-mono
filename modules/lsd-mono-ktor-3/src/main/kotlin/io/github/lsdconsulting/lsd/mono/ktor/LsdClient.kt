@@ -258,15 +258,18 @@ internal class ClientCapture(
         started: Instant,
     ) = guarded(Unit) {
         call.scenario.ingest(
-            Interaction
-                .builder(InteractionKind.REQUEST, call.caller, to(sent.url), Calls.label(sent.method, sent.url.encodedPath, sent.url.encodedQuery))
-                .interactionId(call.id)
-                .trace(Trace(call.scenario.correlationId, call.id, call.parent))
-                .source(Calls.SOURCE)
-                .startedAt(started)
-                .data(sent.data)
-                .headers(sent.headers)
-                .build(),
+            Interaction(
+                kind = InteractionKind.REQUEST,
+                from = call.caller,
+                to = to(sent.url),
+                label = Calls.label(sent.method, sent.url.encodedPath, sent.url.encodedQuery),
+                interactionId = call.id,
+                trace = Trace(call.scenario.correlationId, call.id, call.parent),
+                source = Calls.SOURCE,
+                startedAt = started,
+                data = sent.data,
+                headers = sent.headers,
+            ),
         )
     }
 
@@ -281,15 +284,18 @@ internal class ClientCapture(
         from: String? = null,
     ) = guarded(Unit) {
         call.scenario.ingest(
-            Interaction
-                .builder(InteractionKind.RESPONSE, from ?: to(sent.url), call.caller, label)
-                .status(status)
-                .replyTo(call.id)
-                .source(Calls.SOURCE)
-                .durationMs(durationMs)
-                .data(data)
-                .headers(headers)
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = from ?: to(sent.url),
+                to = call.caller,
+                label = label,
+                status = (status),
+                replyTo = (call.id),
+                source = (Calls.SOURCE),
+                durationMs = (durationMs),
+                data = (data),
+                headers = (headers),
+            ),
         )
     }
 

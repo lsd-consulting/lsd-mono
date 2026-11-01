@@ -28,9 +28,13 @@ class ValueTypesJavaTest {
     private static final Instant T0 = Instant.parse("2026-01-01T00:00:00Z");
 
     @Test
-    void interactionBuilderToBuilderAndWithers() {
+    void interactionBuilderToBuilder() {
         Interaction call =
-                Interaction.builder(InteractionKind.REQUEST, "web", "api", "POST /orders")
+                Interaction.Companion.builder()
+                    .kind(InteractionKind.REQUEST)
+                    .from("web")
+                    .to("api")
+                    .label("POST /orders")
                         .interactionId("c1")
                         .startedAt(T0)
                         .durationMs(12.5)
@@ -44,15 +48,6 @@ class ValueTypesJavaTest {
         Interaction same = call.toBuilder().build();
         assertEquals(call, same);
         assertEquals(call.hashCode(), same.hashCode());
-
-        Interaction relabelled = call.withLabel("PUT /orders");
-        assertEquals("PUT /orders", relabelled.getLabel());
-        assertNotEquals(call, relabelled);
-        assertEquals(call, relabelled.withLabel("POST /orders"));
-        assertTrue(call.toString().contains("POST /orders"));
-
-        Interaction labelDefaulted = Interaction.builder(InteractionKind.RESPONSE, "api", "web").build();
-        assertEquals("", labelDefaulted.getLabel());
     }
 
     @Test

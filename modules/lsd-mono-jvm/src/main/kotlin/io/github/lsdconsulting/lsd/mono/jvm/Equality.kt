@@ -10,5 +10,7 @@ package io.github.lsdconsulting.lsd.mono.jvm
 /** `Name(field=value, …)`, as a data class would print it, leaving out null fields. */
 internal fun describe(
     name: String,
-    fields: List<Pair<String, Any?>>,
-): String = fields.filterNot { (_, value) -> value == null }.joinToString(", ", "$name(", ")") { (key, value) -> "$key=$value" }
+    fields: Map<String, Any?>,
+): String = fields.filterValues { it != null }.toList().joinToString(", ", "$name(", ")") { (key, value) ->
+    "$key=$value"
+}

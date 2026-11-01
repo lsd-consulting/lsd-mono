@@ -56,14 +56,17 @@ internal class WsDrawing(
             }
             val id = SpringScenarios.newId()
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.MESSAGE, from, to, label)
-                    .status(status)
-                    .interactionId(id)
-                    .source(SpringScenarios.SOURCE)
-                    .startedAt(Instant.now())
-                    .data(data)
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.MESSAGE,
+                    from = from,
+                    to = to,
+                    label = label,
+                    status = status,
+                    interactionId = id,
+                    source = SpringScenarios.SOURCE,
+                    startedAt = Instant.now(),
+                    data = data,
+                ),
             )
             id
         }
@@ -81,11 +84,14 @@ internal class WsDrawing(
             if (more > 0) scenario.note("… $more more WebSocket message${if (more == 1) "" else "s"} not drawn", on = noteOn)
             val why = status.reason?.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.MESSAGE, from, to, "close ${status.code}$why")
-                    .source(SpringScenarios.SOURCE)
-                    .startedAt(Instant.now())
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.MESSAGE,
+                    from = from,
+                    to = to,
+                    label = "close ${status.code}$why",
+                    source = SpringScenarios.SOURCE,
+                    startedAt = Instant.now(),
+                ),
             )
             true
         }
@@ -97,13 +103,16 @@ internal class WsDrawing(
     ) = guarded(Unit) {
         if (closed.get() || !SpringScenarios.isRunning(scenario)) return@guarded
         scenario.ingest(
-            Interaction
-                .builder(InteractionKind.MESSAGE, from, to, e.javaClass.simpleName)
-                .status("error")
-                .source(SpringScenarios.SOURCE)
-                .startedAt(Instant.now())
-                .data(e.toString())
-                .build(),
+            Interaction(
+                kind = InteractionKind.MESSAGE,
+                from = from,
+                to = to,
+                label = e.javaClass.simpleName,
+                status = "error",
+                source = SpringScenarios.SOURCE,
+                startedAt = Instant.now(),
+                data = e.toString(),
+            ),
         )
     }
 

@@ -42,13 +42,16 @@ internal class WsDrawing(
             val id = Calls.newId()
             val (label, data) = describe(frame, unread)
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.MESSAGE, from, to, label)
-                    .interactionId(id)
-                    .source(Calls.SOURCE)
-                    .startedAt(Instant.now())
-                    .data(data)
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.MESSAGE,
+                    from = from,
+                    to = to,
+                    label = label,
+                    interactionId = id,
+                    source = Calls.SOURCE,
+                    startedAt = Instant.now(),
+                    data = data,
+                ),
             )
             id
         }
@@ -63,11 +66,14 @@ internal class WsDrawing(
         val more = skipped.get()
         if (more > 0) scenario.note("… $more more WebSocket message${if (more == 1) "" else "s"} not drawn", on = noteOn)
         scenario.ingest(
-            Interaction
-                .builder(InteractionKind.MESSAGE, from, to, closeLabel(reason))
-                .source(Calls.SOURCE)
-                .startedAt(Instant.now())
-                .build(),
+            Interaction(
+                kind = InteractionKind.MESSAGE,
+                from = from,
+                to = to,
+                label = closeLabel(reason),
+                source = Calls.SOURCE,
+                startedAt = Instant.now(),
+            ),
         )
     }
 
@@ -78,13 +84,16 @@ internal class WsDrawing(
     ) = guarded(Unit) {
         if (closed.get()) return@guarded
         scenario.ingest(
-            Interaction
-                .builder(InteractionKind.MESSAGE, from, to, e.javaClass.simpleName)
-                .status("error")
-                .source(Calls.SOURCE)
-                .startedAt(Instant.now())
-                .data(e.toString())
-                .build(),
+            Interaction(
+                kind = InteractionKind.MESSAGE,
+                from = from,
+                to = to,
+                label = e.javaClass.simpleName,
+                status = "error",
+                source = Calls.SOURCE,
+                startedAt = Instant.now(),
+                data = e.toString(),
+            ),
         )
     }
 

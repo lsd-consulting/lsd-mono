@@ -508,15 +508,18 @@ class TimingApiTest {
     @Test
     fun `the call carries its reply's duration and the paired reply carries none`() {
         val lsd = LsdContext()
-        lsd.accept(Interaction.builder(InteractionKind.REQUEST, "orders", "payments", "POST /pay").interactionId("c1").build())
+        lsd.accept(Interaction(kind = InteractionKind.REQUEST, from = "orders", to = "payments", label = "POST /pay", interactionId = "c1"))
         lsd.accept(
-            Interaction
-                .builder(InteractionKind.RESPONSE, "payments", "orders", "201")
-                .replyTo("c1")
-                .durationMs(30.5)
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = "payments",
+                to = "orders",
+                label = "201",
+                replyTo = "c1",
+                durationMs = 30.5,
+            ),
         )
-        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "orders", "kafka", "paid").durationMs(2.0).build())
+        lsd.accept(Interaction(kind = InteractionKind.PUBLISH, from = "orders", to = "kafka", label = "paid", durationMs = 2.0))
         lsd.completeScenario("moved", status = Status.SUCCESS)
         val scenario = report(lsd, "Moved")
         assertEquals(30.5, scenario.message("POST /pay")["durationMs"])
@@ -573,14 +576,17 @@ class TimingApiTest {
         val lsd = LsdContext()
         val headers = mapOf("content-type" to "application/json", "Authorization" to "Bearer secret")
         lsd.accept(
-            Interaction
-                .builder(InteractionKind.REQUEST, "web", "api", "POST /orders")
-                .data(mapOf("id" to 7))
-                .headers(headers)
-                .build(),
+            Interaction(
+                kind = InteractionKind.REQUEST,
+                from = "web",
+                to = "api",
+                label = "POST /orders",
+                data = mapOf("id" to 7),
+                headers = headers,
+            ),
         )
-        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "api", "kafka", "order.placed").headers(mapOf("lsd-scenario" to "abc")).build())
-        lsd.accept(Interaction.builder(InteractionKind.MESSAGE, "api", "db", "plain").data("body only").build())
+        lsd.accept(Interaction(kind = InteractionKind.PUBLISH, from = "api", to = "kafka", label = "order.placed", headers = mapOf("lsd-scenario" to "abc")))
+        lsd.accept(Interaction(kind = InteractionKind.MESSAGE, from = "api", to = "db", label = "plain", data = "body only"))
         lsd.completeScenario("headers", status = Status.SUCCESS)
         val scenario = report(lsd, "Headers")
         val posted = scenario.message("POST /orders").obj("data")!!
@@ -603,27 +609,29 @@ class TimingApiTest {
     fun `ingested lsd-distributed style data is guessed and tops out at MEASURED`() {
         val lsd = LsdContext()
         lsd.accept(
-            Interaction
-                .builder(InteractionKind.REQUEST, "orders", "payments", "POST /pay")
-                .trace(Trace("tid"))
-                .source("orders")
-                .startedAt(t(0))
-                .build(),
+            Interaction(
+                kind = InteractionKind.REQUEST,
+                from = "orders",
+                to = "payments",
+                label = "POST /pay",
+                trace = Trace("tid"),
+                source = "orders",
+                startedAt = t(0),
+            ),
         )
         lsd.accept(
-            Interaction
-                .builder(
-                    InteractionKind.RESPONSE,
-                    "payments",
-                    "orders",
-                    "200",
-                ).trace(Trace("tid"))
-                .source("orders")
-                .startedAt(t(30))
-                .durationMs(30.0)
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = "payments",
+                to = "orders",
+                label = "200",
+                trace = Trace("tid"),
+                source = "orders",
+                startedAt = t(30),
+                durationMs = 30.0,
+            ),
         )
-        lsd.accept(Interaction.builder(InteractionKind.PUBLISH, "orders", "kafka", "paid").durationMs(0.0).build())
+        lsd.accept(Interaction(kind = InteractionKind.PUBLISH, from = "orders", to = "kafka", label = "paid", durationMs = 0.0))
         lsd.completeScenario("distributed", status = Status.SUCCESS)
         val scenario = report(lsd, "Distributed")
         assertEquals(listOf("guessed", "guessed"), listOf("POST /pay", "200").map { scenario.message(it)["pairing"] })

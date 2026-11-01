@@ -44,23 +44,29 @@ class ScenarioMetricsTest {
     @Test
     fun `interaction statuses drive the error count`() {
         val lsd = LsdContext()
-        lsd.accept(Interaction.builder(InteractionKind.REQUEST, "api", "pay", "POST /pay").interactionId("c1").build())
+        lsd.accept(Interaction(kind = InteractionKind.REQUEST, from = "api", to = "pay", label = "POST /pay", interactionId = "c1"))
         lsd.accept(
-            Interaction
-                .builder(InteractionKind.RESPONSE, "pay", "api", "503")
-                .status("503")
-                .replyTo("c1")
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = "pay",
+                to = "api",
+                label = "503",
+                status = "503",
+                replyTo = "c1",
+            ),
         )
-        lsd.accept(Interaction.builder(InteractionKind.REQUEST, "api", "pay", "POST /pay").interactionId("c2").build())
+        lsd.accept(Interaction(kind = InteractionKind.REQUEST, from = "api", to = "pay", label = "POST /pay", interactionId = "c2"))
         lsd.accept(
-            Interaction
-                .builder(InteractionKind.RESPONSE, "pay", "api", "201")
-                .status("201 Created")
-                .replyTo("c2")
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = "pay",
+                to = "api",
+                label = "201",
+                status = "201 Created",
+                replyTo = "c2",
+            ),
         )
-        lsd.accept(Interaction.builder(InteractionKind.CONSUME, "kafka", "mail", "receipt").status("FAILED").build())
+        lsd.accept(Interaction(kind = InteractionKind.CONSUME, from = "kafka", to = "mail", label = "receipt", status = "FAILED"))
         lsd.completeScenario("errors", status = Status.SUCCESS)
         lsd.message("A", "B", "untagged")
         lsd.completeScenario("none", status = Status.SUCCESS)

@@ -85,15 +85,18 @@ internal class LsdWebFilter(
         guarded(Unit) {
             val query = request.uri.rawQuery?.let { "?$it" } ?: ""
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.REQUEST, caller, names.app, "${request.method.name()} ${request.path.value()}$query")
-                    .interactionId(id)
-                    .trace(Trace(scenario.correlationId, id, request.headers.getFirst(LsdInboundFilter.PARENT_SPAN_HEADER)))
-                    .source(SpringScenarios.SOURCE)
-                    .startedAt(Instant.now())
-                    .data(body?.let { Bodies.read(it, request.headers.contentType?.toString()) } ?: InboundParts.of(request)?.parts)
-                    .headers(flatten(request.headers))
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.REQUEST,
+                    from = caller,
+                    to = names.app,
+                    label = "${request.method.name()} ${request.path.value()}$query",
+                    interactionId = id,
+                    trace = Trace(scenario.correlationId, id, request.headers.getFirst(LsdInboundFilter.PARENT_SPAN_HEADER)),
+                    source = SpringScenarios.SOURCE,
+                    startedAt = Instant.now(),
+                    data = body?.let { Bodies.read(it, request.headers.contentType?.toString()) } ?: InboundParts.of(request)?.parts,
+                    headers = flatten(request.headers),
+                ),
             )
         }
         val response = TappedResponse(exchange.response)
@@ -117,15 +120,18 @@ internal class LsdWebFilter(
             // error word, so it is neither drawn red nor counted as an error; a test that gave up
             // fails on its own.
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.RESPONSE, names.app, caller, status?.let(::statusLabel) ?: CANCELLED)
-                    .status(status?.toString() ?: CANCELLED)
-                    .replyTo(id)
-                    .source(SpringScenarios.SOURCE)
-                    .durationMs((System.nanoTime() - t0) / 1_000_000.0)
-                    .data(data)
-                    .headers(headers)
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.RESPONSE,
+                    from = names.app,
+                    to = caller,
+                    label = status?.let(::statusLabel) ?: CANCELLED,
+                    status = status?.toString() ?: CANCELLED,
+                    replyTo = id,
+                    source = SpringScenarios.SOURCE,
+                    durationMs = (System.nanoTime() - t0) / 1_000_000.0,
+                    data = data,
+                    headers = headers,
+                ),
             )
         }
 
