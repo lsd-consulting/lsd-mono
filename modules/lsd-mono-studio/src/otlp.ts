@@ -17,8 +17,14 @@
  * Only the JSON encoding with hex ids (as the OpenTelemetry Collector's file exporter writes) is read.
  */
 
-/** What generator.name is set to, so the store can tell converted reports apart. */
-export const OTLP_GENERATOR = 'lsd-mono-server OTLP import'
+/**
+ * What generator.name is set to, so the store can tell converted reports apart. The report UI shows
+ * it in the report header.
+ */
+export const OTLP_GENERATOR = 'LSD Studio (OTLP import)'
+
+/** The generator names converted reports had before, still told apart when an index is rebuilt. */
+export const LEGACY_OTLP_GENERATORS: readonly string[] = ['lsd-mono-server OTLP import']
 
 const MAX_ERRORS = 50
 const TRACE_ID = /^[0-9a-f]{32}$/i

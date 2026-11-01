@@ -31,6 +31,13 @@ describe('parseConfig', () => {
     expect(() => parseConfig(['--viewer='])).toThrow(/--viewer/)
   })
 
+  it('reads LSD_STUDIO_* first and still reads the LSD_SERVER_* names', () => {
+    expect(parseConfig([], { LSD_STUDIO_EXPOSE: '1' }).host).toBe(ALL_INTERFACES)
+    expect(parseConfig([], { LSD_STUDIO_EXPOSE: '0', LSD_SERVER_EXPOSE: '1' }).host).toBe(LOCALHOST)
+    expect(parseConfig([], { LSD_STUDIO_PORT: '7001', LSD_SERVER_PORT: '7000' }).port).toBe(7001)
+    expect(parseConfig([], { LSD_STUDIO_VIEWER: 'd.html', LSD_SERVER_VIEWER: 'c.html' }).viewer).toBe('d.html')
+  })
+
   it('rejects a bad port or an unknown option', () => {
     expect(() => parseConfig(['--port', 'x'])).toThrow(/--port/)
     expect(() => parseConfig(['--port'])).toThrow(/--port/)

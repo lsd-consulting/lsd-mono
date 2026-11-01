@@ -20,7 +20,7 @@ describe('the server', () => {
   let base: string
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'lsd-server-'))
+    dir = await mkdtemp(join(tmpdir(), 'lsd-studio-'))
     running = await startServer({ ...parseConfig(['--port', '0']), reportsDir: dir }, new FileReportStore(dir))
     base = `http://127.0.0.1:${running.address.port}`
   })
@@ -211,7 +211,7 @@ describe('the server', () => {
       const page = await response.text()
       const injected = /window\.__LSD_REPORT__=(.*?);<\/script>/.exec(page)![1]
       expect(JSON.parse(injected)).toEqual(JSON.parse(MINIMAL))
-      expect(page).toContain('id="lsd-server-back" href="/"')
+      expect(page).toContain('id="lsd-studio-back" href="/"')
     })
 
     it('hands a 0.x report to the shell as stored, for the UI to upgrade', async () => {
@@ -233,9 +233,9 @@ describe('the server', () => {
       const response = await fetch(`${viewerBase}/reports/${await importAt(MINIMAL)}`)
       expect(response.status).toBe(503)
       const page = await response.text()
-      expect(page).toContain('cd modules/lsd-mono-server\nnpm run build:viewer')
+      expect(page).toContain('cd modules/lsd-mono-studio\nnpm run build:viewer')
       expect(page).toContain('prefers-color-scheme: dark')
-      expect(page).toContain('installing the server normally builds')
+      expect(page).toContain('installing it normally builds')
     })
 
     it('opens reports in the first viewer that is built', async () => {

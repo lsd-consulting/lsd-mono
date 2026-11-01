@@ -36,7 +36,7 @@ export async function checkOverride(
   const [shell] = viewerShells(override)
   if ((await readShell(shell)) === undefined) {
     warn(
-      `Viewer override ${fileURLToPath(shell)} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
+      `LSD Studio: viewer override ${fileURLToPath(shell)} is missing or not the report viewer; falling back to the bundled viewer or the report UI build.`,
     )
   }
 }
@@ -71,16 +71,16 @@ export function scriptJson(json: string): string {
 // takes its own space above the report UI (which only renders into #app), rather than covering it.
 // Hidden in print. The tab title is set after the shell's scripts, from the report itself.
 const BACK_BAR =
-  '<style>#lsd-server-back{display:block;padding:6px 12px;background:#1f2937;color:#fff;' +
-  'font:14px system-ui,sans-serif;text-decoration:none}#lsd-server-back:focus-visible{outline:2px solid #7dd3fc;' +
-  'outline-offset:-2px}@media print{#lsd-server-back{display:none}}</style>\n' +
-  '<a id="lsd-server-back" href="/">&larr; All reports</a>\n'
+  '<style>#lsd-studio-back{display:block;padding:6px 12px;background:#1f2937;color:#fff;' +
+  'font:14px system-ui,sans-serif;text-decoration:none}#lsd-studio-back:focus-visible{outline:2px solid #7dd3fc;' +
+  'outline-offset:-2px}@media print{#lsd-studio-back{display:none}}</style>\n' +
+  '<a id="lsd-studio-back" href="/">&larr; All reports</a>\n'
 
 const TAB_TITLE =
   "<script>document.title=(window.__LSD_REPORT__&&typeof window.__LSD_REPORT__.title==='string'&&" +
-  "window.__LSD_REPORT__.title.trim()||'Untitled report')+' – LSD server';</script>\n"
+  "window.__LSD_REPORT__.title.trim()||'Untitled report')+' – LSD Studio';</script>\n"
 
-/** The shell with [json] as its report, a back bar to the list and a "<title> – LSD server" tab. */
+/** The shell with [json] as its report, a back bar to the list and a "<title> – LSD Studio" tab. */
 export function renderReportPage(shell: string, json: string): string {
   const injection = `<script>window.__LSD_REPORT__=${scriptJson(json)};</script>\n`
   const script = shell.indexOf('<script>')
@@ -107,8 +107,8 @@ export const MESSAGES = {
   noShell: {
     title: 'Report viewer not built',
     message:
-      'The server opens reports in the report UI, which installing the server normally builds. That step was skipped or failed. From the lsd-mono checkout, run this, then reload this page:',
-    steps: { folder: 'modules/lsd-mono-server', commands: ['npm run build:viewer'] },
+      'LSD Studio opens reports in the report UI, which installing it normally builds. That step was skipped or failed. From the lsd-mono checkout, run this, then reload this page:',
+    steps: { folder: 'modules/lsd-mono-studio', commands: ['npm run build:viewer'] },
   },
 } as const satisfies Record<string, Message>
 
@@ -121,7 +121,7 @@ export function messagePage({ title, message, steps }: Message): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <title>${title} - LSD server</title>
+    <title>${title} - LSD Studio</title>
     <style>
       body{font:16px/1.5 system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;background:#f5f7fa;color:#1f2733}
       a{color:#0b6e7f}

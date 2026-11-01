@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { detectImport, MAX_ERRORS, reportErrors } from './import.ts'
+import { BUNDLED_SCHEMA, detectImport, findSchema, MAX_ERRORS, REPO_SCHEMA, reportErrors } from './import.ts'
+
+describe('findSchema', () => {
+  const missing = new URL('file:///nowhere/lsd-report.schema.json')
+
+  it('uses the bundled copy first, then the repo schema', () => {
+    expect(BUNDLED_SCHEMA.href).toMatch(/\/lsd-mono-studio\/schema\/lsd-report\.schema\.json$/)
+    expect(REPO_SCHEMA.href).toMatch(/\/lsd-mono-report-schema\/lsd-report\.schema\.json$/)
+    expect(findSchema([REPO_SCHEMA, missing])).toBe(REPO_SCHEMA)
+    expect(findSchema([missing, REPO_SCHEMA])).toBe(REPO_SCHEMA)
+  })
+
+  it('says where it looked when there is none', () => {
+    expect(() => findSchema([missing])).toThrow(/No report schema at \/nowhere\/lsd-report\.schema\.json/)
+  })
+})
 
 describe('detectImport', () => {
   it('tells an LSD report from an OTLP export', () => {

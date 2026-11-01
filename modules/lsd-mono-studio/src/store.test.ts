@@ -7,7 +7,7 @@ import { FileReportStore } from './store.ts'
 describe('FileReportStore', () => {
   let dir: string
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'lsd-server-'))
+    dir = await mkdtemp(join(tmpdir(), 'lsd-studio-'))
   })
   afterEach(async () => {
     await rm(dir, { recursive: true, force: true })
@@ -86,8 +86,12 @@ describe('FileReportStore', () => {
     const id = '1f8fad5b-d9cb-469f-a165-70867728950e'
     await writeFile(join(dir, `${id}.json`), '{"title":"Trace","generator":{"name":"lsd-mono-server OTLP import"}}')
     await writeFile(join(dir, '2f8fad5b-d9cb-469f-a165-70867728950e.json'), 'not json')
+    await writeFile(
+      join(dir, '3f8fad5b-d9cb-469f-a165-70867728950e.json'),
+      '{"title":"Trace","generator":{"name":"LSD Studio (OTLP import)"}}',
+    )
     const sources = (await new FileReportStore(dir).list()).map((entry) => entry.source)
-    expect(sources.sort()).toEqual(['import', 'otlp'])
+    expect(sources.sort()).toEqual(['import', 'otlp', 'otlp'])
   })
 
   it('never reads outside its directory', async () => {

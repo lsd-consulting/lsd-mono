@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { Ajv2020 } from 'ajv/dist/2020.js'
 import ajvFormats from 'ajv-formats'
 
@@ -18,9 +18,21 @@ export function detectImport(body: string): ImportKind {
   return 'unknown'
 }
 
-// The repo's report schema (modules/lsd-mono-report-schema), read in place rather than copied, so
-// the server checks against the same file the writer and the report UI are tested against.
-const REPORT_SCHEMA = new URL('../../lsd-mono-report-schema/lsd-report.schema.json', import.meta.url)
+/** The copy of the report schema that `npm install` makes (scripts/copy-schema.mjs) and the package ships. */
+export const BUNDLED_SCHEMA = new URL('../schema/lsd-report.schema.json', import.meta.url)
+/**
+ * The repo's report schema (modules/lsd-mono-report-schema), the same file the writer and the report
+ * UI are tested against.
+ */
+export const REPO_SCHEMA = new URL('../../lsd-mono-report-schema/lsd-report.schema.json', import.meta.url)
+
+/** The first schema that exists: the bundled copy, then the repo's. */
+export function findSchema(candidates: readonly URL[] = [BUNDLED_SCHEMA, REPO_SCHEMA]): URL {
+  const found = candidates.find((candidate) => existsSync(candidate))
+  if (found === undefined) throw new Error(`No report schema at ${candidates.map((c) => c.pathname).join(' or ')}`)
+  return found
+}
+const REPORT_SCHEMA = findSchema()
 
 const ajv = new Ajv2020({ allErrors: true, strict: true })
 // ajv-formats is CommonJS: under NodeNext its types put the plugin on `.default`, but Node's ESM

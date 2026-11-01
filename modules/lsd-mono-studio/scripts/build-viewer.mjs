@@ -7,8 +7,8 @@
 //   --force      build even when the copy is up to date
 //
 // Without --required a failed build only warns, so installing still works and the server shows
-// its "Report viewer not built" page. LSD_SERVER_SKIP_VIEWER=1 skips the build (the server CI
-// job, whose tests use their own viewer stand-in).
+// its "Report viewer not built" page. LSD_STUDIO_SKIP_VIEWER=1 (or the older LSD_SERVER_SKIP_VIEWER=1)
+// skips the build (the studio CI job, whose tests use their own viewer stand-in).
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -34,7 +34,7 @@ const SHELL_READS = 'window.__LSD_REPORT__??'
 const args = process.argv.slice(2)
 const required = args.includes('--required')
 const force = args.includes('--force')
-const log = (message) => console.log(`lsd-server viewer: ${message}`)
+const log = (message) => console.log(`LSD Studio viewer: ${message}`)
 
 function newest(path) {
   if (!existsSync(path)) return 0
@@ -58,7 +58,8 @@ function copy() {
 }
 
 function build() {
-  if (process.env.LSD_SERVER_SKIP_VIEWER === '1' && !required) return log('skipped (LSD_SERVER_SKIP_VIEWER=1)')
+  const skip = process.env.LSD_STUDIO_SKIP_VIEWER ?? process.env.LSD_SERVER_SKIP_VIEWER
+  if (skip === '1' && !required) return log('skipped (LSD_STUDIO_SKIP_VIEWER=1)')
   if (!existsSync(join(UI, 'package.json'))) {
     // Installed from the package: the viewer came with it.
     if (isViewer(OUT)) return
@@ -82,12 +83,12 @@ try {
 } catch (error) {
   const reason = error instanceof Error ? error.message : String(error)
   if (required) {
-    console.error(`lsd-server viewer: ${reason}`)
+    console.error(`LSD Studio viewer: ${reason}`)
     process.exit(1)
   }
   console.warn(
-    `\nWARNING lsd-server viewer: ${reason}.\n` +
-      'The server still runs, but opening a report shows "Report viewer not built" until\n' +
-      '`npm run build:viewer` succeeds in modules/lsd-mono-server.\n',
+    `\nWARNING LSD Studio viewer: ${reason}.\n` +
+      'LSD Studio still runs, but opening a report shows "Report viewer not built" until\n' +
+      '`npm run build:viewer` succeeds in modules/lsd-mono-studio.\n',
   )
 }
