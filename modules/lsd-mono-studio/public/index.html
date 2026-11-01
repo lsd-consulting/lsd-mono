@@ -347,8 +347,10 @@
                 timeZoneName: 'short',
               })
         }
-        // A report as people tell same-title reports apart: its title and when it was imported.
-        const named = (report) => report.title + ', imported ' + when(report.importedAt)
+        // How a report got here: a live capture streamed in, anything else imported.
+        const arrived = (report) => (report.source === 'capture' ? 'captured' : 'imported')
+        // A report as people tell same-title reports apart: its title and when it arrived.
+        const named = (report) => report.title + ', ' + arrived(report) + ' ' + when(report.importedAt)
         const SHOWN = 5
         // At most [SHOWN] items, then "and N more".
         function fillList(target, lines) {
@@ -388,14 +390,34 @@
           })
         }
 
+        // The list as last drawn, so a refresh that finds nothing new leaves the page alone.
+        let drawn = ''
         async function load() {
-          const reports = await (await fetch('/api/reports')).json()
+          const text = await (await fetch('/api/reports')).text()
+          draw(text)
+        }
+        // Redraws only when the list changed, keeping what is selected.
+        async function refresh() {
+          const response = await fetch('/api/reports')
+          if (!response.ok) return
+          const text = await response.text()
+          if (text !== drawn) draw(text)
+        }
+        function draw(text) {
+          drawn = text
+          const reports = JSON.parse(text)
+          const kept = new Set(
+            picks()
+              .filter((pick) => pick.checked)
+              .map((pick) => pick.value),
+          )
           list.replaceChildren(
             ...reports.map((report) => {
               const item = document.createElement('li')
               const pick = document.createElement('input')
               pick.type = 'checkbox'
               pick.value = report.id
+              pick.checked = kept.has(report.id)
               pick.dataset.named = named(report)
               pick.setAttribute('aria-label', 'Select ' + named(report))
               pick.addEventListener('change', syncSelection)
@@ -406,7 +428,7 @@
               name.textContent = report.title
               const time = document.createElement('time')
               time.dateTime = report.importedAt
-              time.textContent = 'Imported ' + when(report.importedAt)
+              time.textContent = (arrived(report) === 'captured' ? 'Captured ' : 'Imported ') + when(report.importedAt)
               title.append(name, time)
               const remove = document.createElement('button')
               remove.type = 'button'
@@ -623,6 +645,15 @@
         )
 
         byId('reports-heading').tabIndex = -1
+        // New and growing live captures show up on their own: the list is checked every few seconds
+        // while the tab is visible and no dialog is open, and at once when the tab is shown again.
+        const REFRESH_MS = 3000
+        const visible = () => document.visibilityState === 'visible'
+        const tick = () => {
+          if (visible() && !dialog.open) refresh().catch(() => {})
+        }
+        setInterval(tick, REFRESH_MS)
+        document.addEventListener('visibilitychange', tick)
         window.lsdReady = load()
       })()
     </script>

@@ -167,7 +167,7 @@ says that reports are stored on this machine and nothing is uploaded.
   get "Imported 2 of 3 files." with a line per file, and an alert listing each refused file with
   its reason and first problem. Files not named `.json` are refused without being sent. The file
   picker is the keyboard way to do the same.
-- Each row shows when it was imported, in the report UI's date format plus seconds ("31 Oct 2026,
+- Each row shows when it was imported (or "Captured" for a live capture), in the report UI's date format plus seconds ("31 Oct 2026,
   21:47:05 GMT"). The time is also in the checkbox, Delete button and dialog wording, so reports
   with the same title can be told apart.
 - **Delete** on a row, or tick reports (or **Select all**) and press **Delete selected**, which
@@ -176,6 +176,9 @@ says that reports are stored on this machine and nothing is uploaded.
   nothing is selected, **Delete selected** is disabled and says "Select reports first", which
   screen readers hear as its description.
 - After a delete the list reloads and a status line says what went.
+- The list checks for changes every 3 seconds while the tab is visible and no dialog is open, and
+  at once when the tab is shown again, so a new or growing live capture appears without a reload.
+  It redraws only when something changed, and keeps the selection.
 - With no reports, the page says so and hides the bulk controls.
 - Light and dark follow the system setting, with the report UI's colours.
 - Every control is labelled for screen readers. Status lines are live regions, and focus goes back
@@ -242,14 +245,15 @@ not know, so an older server reads a newer sender. A breaking change is a new ma
 is otherwise ignored: the capture goes on. `report.done` gets `stored` and close code `1000`.
 
 **The live report.** It is stored at the hello and rewritten after every accepted message. A
-running scenario shows as `warn` with the fact "Live: still capturing"; until the first scenario
+report carries each scenario's `measuredRatio` and `pairedRatio`, computed as for OTLP imports, so
+the Accuracy card reads them. A running scenario shows as `warn` with the fact "Live: still capturing"; until the first scenario
 starts, a placeholder scenario says it is waiting. If the socket closes before `report.done`,
 running scenarios become `aborted` ("Capture cut off") and the report is kept.
 
 **Watching it.** An open live report page polls `GET /api/reports/<id>/live` once a second and
 reloads when the revision changes, keeping its scroll position; it stops once the capture is done.
 The report UI renders a report once, so a reload is the simple, robust update. The report list
-shows a new capture when it is reloaded.
+shows a new capture within a few seconds.
 
 **Contract fixtures.** [`protocol/fixtures/`](protocol/fixtures) holds message streams, one frame
 per line, valid and invalid, and a `manifest.json` with the replies, close code and stored report

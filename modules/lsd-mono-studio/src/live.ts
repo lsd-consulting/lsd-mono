@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { reportAjv } from './import.ts'
 import { LIVE_GENERATOR, type ReportStore } from './store.ts'
+import { callShares } from './timing.ts'
 
 /** The protocol this server speaks (protocol/lsd-live.schema.json). */
 export const LIVE_PROTOCOL = 'lsd-live'
@@ -245,6 +246,7 @@ export class CaptureSession {
         ...(s.error && { error: s.error }),
         ...(s.participants.length > 0 && { participants: s.participants }),
         ...(s.events.length > 0 && { events: s.events }),
+        ...callShares(s.events),
       }
     })
     // A report needs a scenario: until the first one starts (or when none ever does) a placeholder says so.

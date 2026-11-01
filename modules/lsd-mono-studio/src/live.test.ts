@@ -123,6 +123,25 @@ describe('the live capture protocol', () => {
     })
   })
 
+  it('gives each scenario the call shares the Accuracy card reads, as they grow', async () => {
+    const session = new CaptureSession(store, live)
+    const lines = streamLines('streams/checkout.jsonl')
+    const shares = async () =>
+      (JSON.parse((await store.get(session.id!))!) as { scenarios: Record<string, unknown>[] }).scenarios.map((s) => [
+        s.measuredRatio,
+        s.pairedRatio,
+      ])
+    for (const line of lines.slice(0, 2)) await session.receive(line)
+    expect(await shares()).toEqual([[undefined, undefined]])
+    for (const line of lines.slice(2, 4)) await session.receive(line)
+    expect(await shares()).toEqual([[1, 0]])
+    for (const line of lines.slice(4)) await session.receive(line)
+    expect(await shares()).toEqual([
+      [1, 1],
+      [1, 1],
+    ])
+  })
+
   it('names the sender errors on the scenarios they are about', async () => {
     const session = new CaptureSession(store, live)
     for (const line of streamLines('streams/sender-error.jsonl')) await session.receive(line)
