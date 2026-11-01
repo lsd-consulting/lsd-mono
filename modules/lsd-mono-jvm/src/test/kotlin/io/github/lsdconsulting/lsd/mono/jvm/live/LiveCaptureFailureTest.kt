@@ -136,6 +136,8 @@ class LiveCaptureFailureTest {
             val ms = timed { live.written("a") }
             assertTrue(ms < SHORT.toMillis(), "took ${ms}ms")
             assertEquals(listOf("hello"), types(studio))
+            // The refusal is read on the socket's thread, which can warn after written returns.
+            eventually { warnings.isNotEmpty() }
             assertTrue(warnings.single().contains("refused this sender's protocol version 0.1.0"), warnings.toString())
             studio.replies.forEach { LiveCaptureTest().assertValidFrame(it) }
         }
