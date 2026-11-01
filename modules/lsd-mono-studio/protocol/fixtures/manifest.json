@@ -1,0 +1,260 @@
+{
+  "description": "Message streams in the lsd-live protocol. Each .jsonl line is one WebSocket text frame, sent as it is. expect.replies lists what the server answers, by the 1-based line that caused it; lines with no entry get no answer. expect.close is the close code the server ends with (absent: the stream ends and the sender closes). expect.report is the stored report once the socket has closed. A sender's tests can assert it produces a valid stream; the server's tests replay each one.",
+  "protocolVersion": "0.1.0",
+  "streams": [
+    {
+      "file": "streams/checkout.jsonl",
+      "valid": true,
+      "about": "Two scenarios, calls with replies, one failing",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "welcome"
+          },
+          {
+            "line": 12,
+            "type": "stored"
+          }
+        ],
+        "close": 1000,
+        "report": {
+          "title": "Checkout service tests",
+          "status": "error",
+          "scenarios": [
+            {
+              "id": "pays",
+              "status": "success",
+              "events": 4
+            },
+            {
+              "id": "declined",
+              "status": "error",
+              "events": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "streams/minimal.jsonl",
+      "valid": true,
+      "about": "A hello and nothing captured: the report holds a placeholder scenario",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "welcome"
+          },
+          {
+            "line": 2,
+            "type": "stored"
+          }
+        ],
+        "close": 1000,
+        "report": {
+          "title": "Live capture",
+          "status": "skipped",
+          "scenarios": [
+            {
+              "id": "no-scenarios",
+              "status": "skipped",
+              "events": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "streams/cut-off.jsonl",
+      "valid": true,
+      "about": "The sender goes away mid-scenario: the scenario is kept as aborted",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "welcome"
+          }
+        ],
+        "report": {
+          "title": "Checkout service tests",
+          "status": "aborted",
+          "scenarios": [
+            {
+              "id": "pays",
+              "status": "aborted",
+              "events": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "streams/newer-minor.jsonl",
+      "valid": true,
+      "about": "A newer minor with fields this version does not define: accepted, the fields ignored",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "welcome"
+          },
+          {
+            "line": 5,
+            "type": "stored"
+          }
+        ],
+        "close": 1000,
+        "report": {
+          "title": "From a newer sender",
+          "status": "success",
+          "scenarios": [
+            {
+              "id": "s",
+              "status": "success",
+              "events": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "streams/sender-error.jsonl",
+      "valid": true,
+      "about": "Errors from the sender become facts; the stream goes on",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "welcome"
+          },
+          {
+            "line": 6,
+            "type": "stored"
+          }
+        ],
+        "close": 1000,
+        "report": {
+          "title": "Checkout service tests",
+          "status": "warn",
+          "scenarios": [
+            {
+              "id": "s",
+              "status": "warn",
+              "events": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "streams/unsupported-major.jsonl",
+      "valid": false,
+      "about": "A hello with another major is refused and the socket closed",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "error",
+            "code": "unsupported-version"
+          }
+        ],
+        "close": 4001
+      }
+    },
+    {
+      "file": "streams/no-hello.jsonl",
+      "valid": false,
+      "about": "Anything before a hello is refused and the socket closed",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "error",
+            "code": "hello-required"
+          }
+        ],
+        "close": 4002
+      }
+    },
+    {
+      "file": "streams/wrong-protocol.jsonl",
+      "valid": false,
+      "about": "A hello for another protocol is refused and the socket closed",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "error",
+            "code": "invalid-message"
+          }
+        ],
+        "close": 4002
+      }
+    },
+    {
+      "file": "streams/bad-messages.jsonl",
+      "valid": false,
+      "about": "After the hello, a bad message is refused and ignored; the stream goes on",
+      "expect": {
+        "replies": [
+          {
+            "line": 1,
+            "type": "welcome"
+          },
+          {
+            "line": 2,
+            "type": "error",
+            "code": "invalid-json"
+          },
+          {
+            "line": 3,
+            "type": "error",
+            "code": "unknown-scenario"
+          },
+          {
+            "line": 5,
+            "type": "error",
+            "code": "invalid-message"
+          },
+          {
+            "line": 6,
+            "type": "error",
+            "code": "invalid-message"
+          },
+          {
+            "line": 7,
+            "type": "error",
+            "code": "duplicate-scenario"
+          },
+          {
+            "line": 8,
+            "type": "error",
+            "code": "duplicate-hello"
+          },
+          {
+            "line": 11,
+            "type": "error",
+            "code": "scenario-ended"
+          },
+          {
+            "line": 12,
+            "type": "stored"
+          }
+        ],
+        "close": 1000,
+        "report": {
+          "title": "Checkout service tests",
+          "status": "success",
+          "scenarios": [
+            {
+              "id": "s",
+              "status": "success",
+              "events": 1
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

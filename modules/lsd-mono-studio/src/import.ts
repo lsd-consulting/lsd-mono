@@ -36,7 +36,9 @@ export function findSchema(candidates: readonly URL[] = [BUNDLED_SCHEMA, REPO_SC
 }
 const REPORT_SCHEMA = findSchema()
 
-const ajv = new Ajv2020({ allErrors: true, strict: true })
+/** The validator with the report schema, which the live protocol schema (live.ts) refers to. */
+export const reportAjv = new Ajv2020({ allErrors: true, strict: true })
+const ajv = reportAjv
 // ajv-formats is CommonJS: under NodeNext its types put the plugin on `.default`, but Node's ESM
 // import of it is module.exports, which is the plugin itself.
 const addFormats = ajvFormats as unknown as typeof ajvFormats.default

@@ -17,6 +17,7 @@
     "viewer/lsd-report.html",
     "schema/lsd-report.schema.json",
     "samples/",
+    "protocol/",
     "README.md"
   ],
   "scripts": {
@@ -26,6 +27,7 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "build:viewer": "node scripts/build-viewer.mjs --force",
     "test": "vitest run --coverage",
+    "replay": "node scripts/replay-capture.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write ."

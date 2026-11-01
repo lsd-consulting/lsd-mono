@@ -1,0 +1,5 @@
+{"type":"hello","protocol":"lsd-live","version":"0.7.2","title":"From a newer sender","features":["batching"]}
+{"type":"scenario.start","scenarioId":"s","title":"Fields this server does not know are ignored","tags":["new"]}
+{"type":"event","scenarioId":"s","event":{"kind":"message","id":"m1","from":"a","to":"b","label":"GET /x","type":"synchronous","callId":"c1","durationMs":1,"timing":"measured","startedAt":"2026-11-01T11:00:00.000Z"},"sentAt":"2026-11-01T11:00:00.001Z"}
+{"type":"scenario.end","scenarioId":"s","status":"success"}
+{"type":"report.done"}

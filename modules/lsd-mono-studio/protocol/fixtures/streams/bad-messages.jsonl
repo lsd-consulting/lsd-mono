@@ -1,0 +1,13 @@
+{"type":"hello","protocol":"lsd-live","version":"0.1.0","title":"Checkout service tests","sender":{"name":"fixture"}}
+this is not json
+{"type":"event","scenarioId":"nope","event":{"kind":"message","id":"m1","from":"a","to":"b","label":"GET /x","type":"synchronous","callId":"c1","durationMs":1,"timing":"measured","startedAt":"2026-11-01T11:00:00.000Z"}}
+{"type":"scenario.start","scenarioId":"s","title":"Survives bad messages"}
+{"type":"event","scenarioId":"s","event":{"kind":"message","id":"m1"}}
+{"type":"teleport","scenarioId":"s"}
+{"type":"scenario.start","scenarioId":"s","title":"Again"}
+{"type":"hello","protocol":"lsd-live","version":"0.1.0"}
+{"type":"event","scenarioId":"s","event":{"kind":"message","id":"m1","from":"a","to":"b","label":"GET /x","type":"synchronous","callId":"c1","durationMs":1,"timing":"measured","startedAt":"2026-11-01T11:00:00.000Z"}}
+{"type":"scenario.end","scenarioId":"s","status":"success"}
+{"type":"event","scenarioId":"s","event":{"kind":"message","id":"m2","from":"a","to":"b","label":"GET /y","type":"synchronous","callId":"c2","durationMs":1,"timing":"measured","startedAt":"2026-11-01T11:00:00.000Z"}}
+{"type":"report.done"}
+{"type":"report.done"}
