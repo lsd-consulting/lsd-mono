@@ -1,28 +1,72 @@
-# LSD Studio (early scaffold)
+# LSD Studio
 
-Part of [LSD: living sequence diagrams](../../README.md). Tracked in
-[#186](https://github.com/lsd-consulting/lsd-mono/issues/186).
+LSD Studio runs locally on your machine and turns LSD reports and traces into sequence diagrams.
 
-LSD Studio is a local server you start yourself, to import, keep, compare and watch LSD reports.
-It is a Node package (`lsd-mono-studio`, run as `npx lsd-mono-studio` once published), so it works without a JVM. **This is a scaffold:** the routes and pages exist, most
-of what they do is still a `TODO(#186)`, and it is not published anywhere yet (`"private": true`).
+Part of [LSD: living sequence diagrams](../../README.md). It keeps the reports you give it on this
+machine, lists them, and opens any of them in the same interactive report the tests write. Nothing
+is uploaded. It is early: work is tracked in [#186](https://github.com/lsd-consulting/lsd-mono/issues/186).
 
-## Run it
+![The LSD Studio report list with the sample trace imported](docs/report-list.png)
 
-Needs the Node version in the repo's `.nvmrc`.
+## Start it
+
+LSD Studio is not published yet: the package is private (`0.0.0`), and whether it goes to npm is
+still to be decided. Until then, run it from a checkout of this repo, with the Node version in the
+repo's `.nvmrc`:
 
 ```sh
 cd modules/lsd-mono-studio
 nvm use
-npm install                        # also builds the report viewer, see below
-npm start                          # http://127.0.0.1:7357
-npm start -- --port 8080           # another port (or LSD_STUDIO_PORT=8080)
-npm start -- --expose              # every interface (or LSD_STUDIO_EXPOSE=1)
-npm start -- --viewer <file>       # a report viewer to try first (or LSD_STUDIO_VIEWER=<file>)
-npm start -- --demo                # import the sample trace at startup, once
+npm install      # once: installs dependencies and builds the report viewer
+npm start        # then open http://127.0.0.1:7357
 ```
 
-The `LSD_SERVER_*` names from before the rename still work. When both are set, `LSD_STUDIO_*` wins.
+`npm start -- --demo` imports a sample trace at startup, so there is something to open straight
+away. Without it, an empty list offers **Try a sample**, which does the same.
+
+| Option            | Environment variable       | What                                         |
+| ----------------- | -------------------------- | -------------------------------------------- |
+| `--port 8080`     | `LSD_STUDIO_PORT=8080`     | Another port (default 7357)                  |
+| `--expose`        | `LSD_STUDIO_EXPOSE=1`      | Listen on every interface, not only this one |
+| `--demo`          |                            | Import the sample trace at startup, once     |
+| `--viewer <file>` | `LSD_STUDIO_VIEWER=<file>` | A report viewer build to try first           |
+
+Reports are kept in `~/.lsd/server/reports`.
+
+## Three ways in
+
+1. **The sample.** **Try a sample** on the empty list, or `--demo`: a small trace of an order placed
+   through four services.
+2. **A trace from your tracing tool.** Export a trace as OTLP JSON from Jaeger or Tempo, or write
+   one with an OpenTelemetry Collector's `file` exporter (the way in for Zipkin, whose own export
+   is Zipkin JSON, not OTLP), then choose the files with **Import** or drop
+   them on the page. Exported LSD reports (`*-report.json`) import the same way. Several files can
+   be imported at once. See [OTLP import](#otlp-import-96) for how spans become a diagram.
+3. **Live from your tests (experimental).** Point a JVM test run at LSD Studio and each report
+   appears in the list while its tests run, marked "Capturing…", from JUnit, Cucumber or Spring
+   Boot alike:
+
+    ```sh
+    LSD_MONO_STUDIO_URL=ws://127.0.0.1:7357/ws/captures ./gradlew test
+    ```
+
+    or `lsd.mono.studio.url` in `lsd-mono.properties`. The setting, and the
+    [protocol](#live-capture-protocol-152) behind it, can change in any release. See
+    [Live capture to LSD Studio](../lsd-mono-jvm/README.md#live-capture-to-lsd-studio-experimental).
+
+The list checks for new and growing reports every few seconds. Select a title to open the report;
+**Delete** removes one, or tick several and **Delete selected**.
+
+## For contributors
+
+The rest of this page is how LSD Studio is built and what it speaks.
+
+### Options and older names
+
+Each option above also reads an environment variable, and `LSD_STUDIO_SKIP_VIEWER=1` skips the
+viewer build at install. The `LSD_SERVER_*` names from before the rename (`LSD_SERVER_PORT`,
+`LSD_SERVER_EXPOSE`, `LSD_SERVER_VIEWER`, `LSD_SERVER_SKIP_VIEWER`) still work. When both are set,
+`LSD_STUDIO_*` wins.
 
 ### The report viewer
 
@@ -52,9 +96,10 @@ it.
 `npm pack` runs `prepack`. It copies the report schema, builds the viewer (failing if it can't),
 and compiles `src` to `dist/` with `tsc -p tsconfig.build.json`, because Node does not strip types
 from files under `node_modules`. The `files` list ships `bin/`, `dist/`, `public/`,
-`viewer/lsd-report.html`, `schema/lsd-report.schema.json` and this README, so installing the
-published package builds nothing, and `npx lsd-mono-studio` (`bin/lsd-mono-studio.js`) runs
-`dist/main.js`. The package stays `"private": true` and unpublished for now.
+`viewer/lsd-report.html`, `schema/lsd-report.schema.json`, `samples/`, `protocol/` and this README, so installing a
+packed tarball builds nothing, and its `lsd-mono-studio` command (`bin/lsd-mono-studio.js`) runs
+`dist/main.js`. The package stays `"private": true` and unpublished until publishing to npm is
+decided.
 
 The report schema is copied from `modules/lsd-mono-report-schema` to `schema/` (gitignored) by
 `prepare` and `prepack` (`scripts/copy-schema.mjs`). At runtime the bundled copy is used first,
@@ -62,7 +107,7 @@ then the checkout's.
 
 `npm test`, `npm run lint` and `npm run typecheck` are what CI runs.
 
-## What is there
+### What is there
 
 | Path                            | What                                                                                             |
 | ------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -78,7 +123,7 @@ then the checkout's.
 | `GET /api/reports/<id>/live`    | A live capture's `{revision, live}`; 404 for other reports                                       |
 | `ws://…/ws/captures`            | Live capture in the `lsd-live` protocol, see [Live capture protocol](#live-capture-protocol-152) |
 
-## Import
+### Import
 
 `POST /api/reports/import` with the file as the body:
 
@@ -104,7 +149,7 @@ Validation mirrors what the report UI can open:
 
 The schema is the bundled copy in `schema/`, or the checkout's when that is missing, see [Packaging](#packaging).
 
-## Sample trace
+### Sample trace
 
 The package ships `samples/sample-trace.json`, a small OTLP/JSON trace of a made-up order placed
 through four services (storefront, orders, inventory and payments). The empty report list offers
@@ -113,7 +158,7 @@ through `POST /api/reports/import` like a chosen file. `--demo` imports it at st
 report with its title converted from OTLP is already stored, so repeated runs keep one copy; after
 it is deleted, the next `--demo` run imports it again.
 
-## OTLP import (#96)
+### OTLP import (#96)
 
 A body with `resourceSpans` is read as an OTLP/JSON `ExportTraceServiceRequest`, the file an
 OpenTelemetry Collector `file` exporter writes, or a trace exported as OTLP JSON from Jaeger or
@@ -153,7 +198,7 @@ Limits:
 - Span events, links, `kvlistValue` and `bytesValue` attributes are not mapped.
 - Fetching a trace by id from Jaeger or Tempo is not built: export the trace and import the file.
 
-## The report list
+### The report list
 
 `GET /` lists the stored reports, newest first. Each title opens the report. A **Local only** badge
 says that reports are stored on this machine and nothing is uploaded.
@@ -187,7 +232,7 @@ says that reports are stored on this machine and nothing is uploaded.
 The page is plain HTML and a script in `public/index.html`, tested in jsdom
 (`src/list-page.test.ts`).
 
-## Open a report
+### Open a report
 
 Click a report's title in the list, or go to `GET /reports/<id>`. LSD Studio serves the report
 UI's single-file build with the report injected, the same way the JVM writer does. An
@@ -205,7 +250,7 @@ Both pages fit phones and follow the system's light or dark setting.
 
 The viewer comes from `npm install`, see [The report viewer](#the-report-viewer).
 
-## Live capture protocol (#152)
+### Live capture protocol (#152)
 
 A sender (a test run, a capture filter) opens `ws://127.0.0.1:7357/ws/captures` and streams what it
 captures as it happens. The server builds a report from it, stored like an import (source
@@ -268,10 +313,11 @@ npm run replay -- protocol/fixtures/streams/checkout.jsonl --delay 800
 
 `--url` points it elsewhere (default `ws://127.0.0.1:7357/ws/captures`).
 
-**Next:** a JVM sender in `lsd-mono-jvm` that streams a test run in this protocol, asserted against
-these fixtures.
+**Senders.** `lsd-mono-jvm` streams test runs in this protocol (experimental, see
+[Live capture to LSD Studio](../lsd-mono-jvm/README.md#live-capture-to-lsd-studio-experimental)),
+and its tests check every frame against this schema and these fixtures.
 
-## Storage
+### Storage
 
 Each report is `<id>.json` in the reports directory, next to an `index.json` that the report list
 reads, so listing never opens the reports. Each entry holds the `id`, the report's `title` (or
@@ -279,7 +325,7 @@ reads, so listing never opens the reports. Each entry holds the `id`, the report
 bytes. The index is replaced whole via a temp file and a rename, and writes are queued. A reports
 directory without an index gets one rebuilt from its report files.
 
-## Bulk delete
+### Bulk delete
 
 `POST /api/reports/bulk-delete` with `{"ids": ["…", "…"]}` (1 to 1000 ids):
 
@@ -291,7 +337,7 @@ directory without an index gets one rebuilt from its report files.
 Deletes are idempotent: repeating one succeeds. Duplicate ids count once. `DELETE /api/reports/<id>`
 answers 204 whether or not the report existed, and 400 for an id that is not a report id.
 
-## Decisions (#186)
+### Decisions (#186)
 
 1. **Secure by default.** Binds to `127.0.0.1`. Only `--expose` (or `LSD_STUDIO_EXPOSE=1`) binds every interface.
 2. **Import** takes exported LSD report JSON and OTLP JSON telemetry exports. Both land as stored reports.
