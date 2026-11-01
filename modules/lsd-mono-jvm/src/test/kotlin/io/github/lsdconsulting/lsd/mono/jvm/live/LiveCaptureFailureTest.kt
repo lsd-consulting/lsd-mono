@@ -132,12 +132,13 @@ class LiveCaptureFailureTest {
             val live = capture(studio.url)
             live.begun("a")
             assertTrue(studio.awaitClosed())
+            // The refusal is read on the socket's thread. Until it is, a send can fail first with
+            // a plainer warning, so this waits for it: the test is about the refusal's wording.
+            eventually { warnings.isNotEmpty() }
             live.completed("a", Scenario("one"))
             val ms = timed { live.written("a") }
             assertTrue(ms < SHORT.toMillis(), "took ${ms}ms")
             assertEquals(listOf("hello"), types(studio))
-            // The refusal is read on the socket's thread, which can warn after written returns.
-            eventually { warnings.isNotEmpty() }
             assertTrue(warnings.single().contains("refused this sender's protocol version 0.1.0"), warnings.toString())
             studio.replies.forEach { LiveCaptureTest().assertValidFrame(it) }
         }
