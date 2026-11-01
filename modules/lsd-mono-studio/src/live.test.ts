@@ -4,14 +4,18 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { reportErrors } from './import.ts'
-import { CaptureSession, LiveReports, protocolErrors, type Outcome } from './live.ts'
+import { CaptureSession, LiveReports, protocolErrors, replyErrors, type Outcome } from './live.ts'
 import { FileReportStore } from './store.ts'
 
 /** The shared contract: protocol/fixtures/manifest.json and the streams it lists. */
 interface Expected {
   replies: { line: number; type: string; code?: string }[]
   close?: number
-  report?: { title: string; status: string; scenarios: { id: string; status: string; events: number }[] }
+  report?: {
+    title: string
+    status: string
+    scenarios: { id: string; status: string; events: number; measuredRatio?: number; pairedRatio?: number }[]
+  }
 }
 interface Stream {
   file: string
@@ -33,6 +37,7 @@ async function replay(session: CaptureSession, lines: string[]) {
   for (const [index, line] of lines.entries()) {
     const outcome: Outcome = await session.receive(line)
     for (const reply of outcome.replies) {
+      expect(replyErrors(reply)).toEqual([])
       replies.push({
         line: index + 1,
         type: reply.type as string,
@@ -89,12 +94,18 @@ describe('the live capture protocol', () => {
       expect(reportErrors(json)).toEqual([])
       const report = JSON.parse(json) as {
         status: string
-        scenarios: { id: string; status: string; events?: unknown[] }[]
+        scenarios: { id: string; status: string; events?: unknown[]; measuredRatio?: number; pairedRatio?: number }[]
       }
       expect(report.status).toBe(expected.status)
-      expect(report.scenarios.map((s) => ({ id: s.id, status: s.status, events: s.events?.length ?? 0 }))).toEqual(
-        expected.scenarios,
-      )
+      expect(
+        report.scenarios.map((s, i) => ({
+          id: s.id,
+          status: s.status,
+          events: s.events?.length ?? 0,
+          ...('measuredRatio' in (expected.scenarios[i] ?? {}) && { measuredRatio: s.measuredRatio }),
+          ...('pairedRatio' in (expected.scenarios[i] ?? {}) && { pairedRatio: s.pairedRatio }),
+        })),
+      ).toEqual(expected.scenarios)
       expect(live.get(entry.id)?.live).toBe(false)
     })
 
