@@ -9,6 +9,7 @@ package io.github.lsdconsulting.lsd.mono.jvm
     message = "Live capture to LSD Studio is experimental: it follows protocol v0 and can change in any release.",
     level = RequiresOptIn.Level.WARNING,
 )
-@Retention(AnnotationRetention.BINARY)
+// RUNTIME rather than BINARY, so ExperimentalStudioApiGuardTest can check what carries it.
+@Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY)
 public annotation class ExperimentalLsdStudioApi

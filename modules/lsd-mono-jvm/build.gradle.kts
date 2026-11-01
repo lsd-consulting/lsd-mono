@@ -32,6 +32,8 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.json.schema.validator)
+    // ExperimentalStudioApiGuardTest reads Kotlin visibility and annotations.
+    testImplementation(libs.kotlin.reflect)
     // ExampleReportGoldenTest writes the example report's scenarios (the readme source set's
     // KitchenSinkSample) and compares them with the shared test report captured from it.
     testImplementation(sourceSets["readme"].output)
