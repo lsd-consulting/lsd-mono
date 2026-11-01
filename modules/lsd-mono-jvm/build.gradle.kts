@@ -82,6 +82,11 @@ tasks.test {
             rootProject.layout.projectDirectory.file("settings.gradle.kts"),
         ).withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("readmes")
+    // LiveCaptureTest checks the live sender against lsd-mono-studio's protocol schema and fixtures (#186).
+    inputs
+        .dir(rootProject.layout.projectDirectory.dir("modules/lsd-mono-studio/protocol"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("liveProtocol")
     systemProperty("lsd.mono.report.outputDir", "build/reports/lsd-mono")
     systemProperty("lsd.mono.test.projectVersion", project.version.toString())
 }

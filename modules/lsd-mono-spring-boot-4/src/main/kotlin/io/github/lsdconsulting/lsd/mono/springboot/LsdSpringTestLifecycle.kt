@@ -28,6 +28,7 @@ public class LsdSpringTestLifecycle {
             val key = "spring:${testContext.testClass.name}#${testContext.testMethod.name}@${System.identityHashCode(testContext.testInstance)}"
             lsd.findScenario(key)?.discard()
             val reportKey = reportKey(testContext.testClass)
+            lsd.reportTitle(reportKey, classTitle(outerClass(testContext.testClass)))
             val scenario = lsd.beginScenario(reportKey = reportKey, key = key)
             val environment = testContext.applicationContext.environment
             val client = environment.getProperty("lsd.mono.spring.client-name") ?: ParticipantNames.DEFAULT_CLIENT

@@ -131,7 +131,8 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
     /** Begin [testCase]'s scenario in its feature's report, noting the feature for the end of the run. */
     private fun begin(testCase: TestCase, bindCurrentThread: Boolean): LsdScenario {
         val key = featureKey(testCase.uri)
-        features.computeIfAbsent(key) { Feature(featureTitle(testCase.uri, testCase.name), featureOrder.incrementAndGet()) }
+        val feature = features.computeIfAbsent(key) { Feature(featureTitle(testCase.uri, testCase.name), featureOrder.incrementAndGet()) }
+        lsd.reportTitle(key, featureNames[key] ?: feature.fileTitle)
         return lsd.beginScenario(reportKey = key, key = testCase.scenarioKey(), bindCurrentThread = bindCurrentThread)
     }
 

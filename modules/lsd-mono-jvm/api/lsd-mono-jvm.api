@@ -92,6 +92,9 @@ public final class io/github/lsdconsulting/lsd/mono/jvm/ClockOrdering : java/lan
 	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/jvm/ClockOrdering;
 }
 
+public abstract interface annotation class io/github/lsdconsulting/lsd/mono/jvm/ExperimentalLsdStudioApi : java/lang/annotation/Annotation {
+}
+
 public final class io/github/lsdconsulting/lsd/mono/jvm/Interaction {
 	public static final field Companion Lio/github/lsdconsulting/lsd/mono/jvm/Interaction$Companion;
 	public static final fun builder (Lio/github/lsdconsulting/lsd/mono/jvm/InteractionKind;Ljava/lang/String;Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/jvm/Interaction$Builder;
@@ -459,6 +462,7 @@ public final class io/github/lsdconsulting/lsd/mono/jvm/properties/LsdProperties
 	public static final field PAYLOAD_REDACT Ljava/lang/String;
 	public static final field PAYLOAD_REDACT_KEYS Ljava/lang/String;
 	public static final field PROPAGATION_ALLOWED_HOSTS Ljava/lang/String;
+	public static final field STUDIO_URL Ljava/lang/String;
 	public static final field TIMING_ORDER_BY_STARTED_AT Ljava/lang/String;
 	public static final field USAGE_PING Ljava/lang/String;
 }

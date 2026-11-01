@@ -49,9 +49,11 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
         useConfigurationParameters(context)
     }
 
+    @OptIn(io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi::class)
     override fun beforeEach(context: ExtensionContext) {
         useConfigurationParameters(context)
         lsdContext.findScenario(context.uniqueId)?.discard()
+        lsdContext.reportTitle(reportKey(context), reportContext(context).displayName)
         lsdContext.beginScenario(reportKey = reportKey(context), key = context.uniqueId)
     }
 
@@ -127,11 +129,14 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
             ?: lsdContext.beginScenario(reportKey = reportKey(context), key = context.uniqueId, bindCurrentThread = false)
 
     /** The top-level class's unique id: one report per top-level class, nested classes included. */
-    private fun reportKey(context: ExtensionContext): String {
+    private fun reportKey(context: ExtensionContext): String = reportContext(context).uniqueId
+
+    /** The top-level class's context, whose display name titles the report. */
+    private fun reportContext(context: ExtensionContext): ExtensionContext {
         var current = context
         while (true) {
-            val parent = current.parent.orElse(null) ?: return current.uniqueId
-            if (!parent.parent.isPresent) return current.uniqueId
+            val parent = current.parent.orElse(null) ?: return current
+            if (!parent.parent.isPresent) return current
             current = parent
         }
     }

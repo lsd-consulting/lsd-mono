@@ -7,6 +7,8 @@ import io.github.lsdconsulting.lsd.mono.jvm.domain.ScenarioError
 import io.github.lsdconsulting.lsd.mono.jvm.domain.SequenceEvent
 import io.github.lsdconsulting.lsd.mono.jvm.domain.Status
 import io.github.lsdconsulting.lsd.mono.jvm.domain.orderAndAnalyse
+import io.github.lsdconsulting.lsd.mono.jvm.live.LiveCapture
+import io.github.lsdconsulting.lsd.mono.jvm.live.LiveFrames
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdProperties
 import io.github.lsdconsulting.lsd.mono.jvm.report.ReportJsonMapper
 import io.github.lsdconsulting.lsd.mono.jvm.report.reportWriter
@@ -98,6 +100,9 @@ public class LsdContext internal constructor() :
         private val participants = ParticipantRegistry(participantOrder)
         private val jsonMapper = ReportJsonMapper { idGenerator.next() }
 
+        /** Streams reports to LSD Studio while they run, when `lsd.mono.studio.url` is set. */
+        private val live = LiveCapture(LiveFrames(jsonMapper), url = LsdProperties::studioUrl)
+
         private val scenarios = ScenarioRegistry(this, lock)
         private val binder = EventBinder { idGenerator }
 
@@ -142,7 +147,19 @@ public class LsdContext internal constructor() :
             reportKey: String? = null,
             key: String = UUID.randomUUID().toString(),
             bindCurrentThread: Boolean = true,
-        ): LsdScenario = scenarios.begin(reportKey, key, bindCurrentThread)
+        ): LsdScenario = scenarios.begin(reportKey, key, bindCurrentThread).also { live.begun(reportKey) }
+
+        /**
+         * The title [reportKey]'s report will be written with, given before its first scenario
+         * begins, so a live capture to LSD Studio is titled from the start. For integrations.
+         */
+        @InternalLsdApi
+        public fun reportTitle(
+            reportKey: String?,
+            title: String,
+        ) {
+            live.title(reportKey, title)
+        }
 
         /**
          * The scenario the calling thread is bound to, if it is still running. That is the one
@@ -375,6 +392,7 @@ public class LsdContext internal constructor() :
             val report = jsonMapper.toReportJson(title, taken, source)
             val written = reportWriter().writeReport(report = report, outputDir = outputDirectory.toPath(), reportKey = reportKey, fileTitle = fileTitle)
             reports.written(written)
+            live.written(reportKey)
             return ReportFiles(diagramHtml = written.diagramHtml, reportJson = written.reportJson)
         }
 
@@ -492,21 +510,24 @@ public class LsdContext internal constructor() :
             scenarios.forget(scenario)
             CaptureLog.unreplied(title, scenario.abandonCalls())
             val (events, timing) = orderAndAnalyse(captured, timingConfig.effectiveOrderByStartedAt())
-            synchronized(lock) {
-                val stored =
-                    Scenario(
-                        title = title,
-                        description = description.orEmpty(),
-                        status = status,
-                        facts = facts,
-                        participants = registryOf(scenario).usedBy(events, sharedWith(scenario)),
-                        events = events,
-                        error = error,
-                        timing = timing,
-                    )
-                val order = if (scenario === defaultScenario) scenarios.nextOrder() else scenario.sequence
-                reports.add(scenario.reportKey, order, stored)
-            }
+            val stored =
+                synchronized(lock) {
+                    val stored =
+                        Scenario(
+                            title = title,
+                            description = description.orEmpty(),
+                            status = status,
+                            facts = facts,
+                            participants = registryOf(scenario).usedBy(events, sharedWith(scenario)),
+                            events = events,
+                            error = error,
+                            timing = timing,
+                        )
+                    val order = if (scenario === defaultScenario) scenarios.nextOrder() else scenario.sequence
+                    reports.add(scenario.reportKey, order, stored)
+                    stored
+                }
+            live.completed(scenario.reportKey, stored)
         }
 
         internal fun discard(scenario: LsdScenario) {

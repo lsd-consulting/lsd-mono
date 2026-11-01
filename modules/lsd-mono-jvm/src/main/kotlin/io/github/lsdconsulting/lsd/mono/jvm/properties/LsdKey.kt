@@ -1,5 +1,7 @@
 package io.github.lsdconsulting.lsd.mono.jvm.properties
 
+import io.github.lsdconsulting.lsd.mono.jvm.ExperimentalLsdStudioApi
+
 /**
  * Every property lsd-mono reads, with its default: the one place they are defined. The table in the lsd-mono-jvm README documents the same rows, and
  * `LsdPropertiesTest` fails when the two differ.
@@ -29,6 +31,9 @@ internal enum class LsdKey(
     PROPAGATION_ALLOWED_HOSTS(LsdProperties.PROPAGATION_ALLOWED_HOSTS, "localhost,127.0.0.1,::1"),
     INHERIT_BINDING(LsdProperties.INHERIT_BINDING, "true"),
     TIMING_ORDER_BY_STARTED_AT(LsdProperties.TIMING_ORDER_BY_STARTED_AT, "source"),
+
+    @OptIn(ExperimentalLsdStudioApi::class)
+    STUDIO_URL(LsdProperties.STUDIO_URL, null),
     ;
 
     /** The value the user set under the key, else [default]. */
