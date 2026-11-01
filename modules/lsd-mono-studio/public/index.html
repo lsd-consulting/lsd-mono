@@ -192,6 +192,14 @@
         padding: 0 0.6rem;
         font-size: 0.8rem;
       }
+      /* A line of its own under the heading and the local-only badge, in the body colour. */
+      header .intro {
+        flex-basis: 100%;
+        max-width: 44rem;
+        margin: 0;
+        color: var(--text);
+        font-size: 1rem;
+      }
       #bulk-hint {
         margin: 0;
         font-size: 0.85rem;
@@ -231,6 +239,10 @@
         <p class="local">
           <strong>Local only</strong>
           <span>Reports are stored on this machine. Nothing is uploaded.</span>
+        </p>
+        <p class="intro" id="intro">
+          Your local home for sequence diagrams: import LSD reports or OpenTelemetry traces, keep them on this machine,
+          and open any of them as a diagram.
         </p>
       </header>
       <section aria-labelledby="import-heading">
