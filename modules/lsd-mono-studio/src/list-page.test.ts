@@ -7,6 +7,7 @@ interface Entry {
   id: string
   title: string
   importedAt: string
+  source?: string
 }
 
 interface Call {
@@ -124,7 +125,15 @@ async function openPage(initial: Entry[], importAnswer?: ImportAnswer | ((body?:
     doc.body.dispatchEvent(event)
     return { event, dropEffect }
   }
-  return { doc, calls, answer, settle, byId, titles, pick, change, chooseFile, drag }
+  const setReports = (next: Entry[]) => {
+    reports = [...next]
+  }
+  // The tab as the browser reports it: shown or hidden, with the event a browser fires.
+  const setVisibility = (state: 'visible' | 'hidden') => {
+    Object.defineProperty(doc, 'visibilityState', { value: state, configurable: true })
+    doc.dispatchEvent(new dom.window.Event('visibilitychange'))
+  }
+  return { doc, calls, answer, settle, byId, titles, pick, change, chooseFile, drag, setReports, setVisibility }
 }
 
 describe('report list page', () => {
@@ -156,6 +165,44 @@ describe('report list page', () => {
       `Delete Checkout, imported ${AT}`,
     )
     expect(page.doc.querySelector('#reports time')?.textContent).toBe(`Imported ${AT}`)
+  })
+
+  it('labels a live capture as captured, not imported', async () => {
+    const page = await openPage([
+      { ...entry('a', 'Checkout'), source: 'capture' },
+      { ...entry('b', 'Trace'), source: 'otlp' },
+    ])
+    const times = [...page.doc.querySelectorAll('#reports time')].map((t) => t.textContent)
+    expect(times).toEqual([`Captured ${AT}`, `Imported ${AT}`])
+    expect(page.doc.querySelector('#reports button')?.getAttribute('aria-label')).toBe(
+      `Delete Checkout, captured ${AT}`,
+    )
+  })
+
+  it('picks up new and changed reports when the tab is shown, keeping the selection', async () => {
+    const page = await openPage([entry('a', 'Checkout'), entry('b', 'Payments')])
+    page.pick(1)
+    page.setReports([entry('c', 'Live'), entry('a', 'Checkout'), entry('b', 'Payments')])
+    page.setVisibility('visible')
+    await page.settle()
+    expect(page.titles()).toEqual(['Live', 'Checkout', 'Payments'])
+    const checked = [...page.doc.querySelectorAll<HTMLInputElement>('#reports input')].map((box) => box.checked)
+    expect(checked).toEqual([false, false, true])
+    expect(page.byId('bulk-delete').textContent).toBe('Delete selected (1)')
+  })
+
+  it('leaves the list alone when nothing changed, and does not refresh a hidden tab', async () => {
+    const page = await openPage([entry('a', 'Checkout')])
+    const before = page.doc.querySelector('#reports li')
+    page.setVisibility('visible')
+    await page.settle()
+    expect(page.doc.querySelector('#reports li')).toBe(before)
+    const fetches = page.calls.length
+    page.setReports([])
+    page.setVisibility('hidden')
+    await page.settle()
+    expect(page.calls.length).toBe(fetches)
+    expect(page.titles()).toEqual(['Checkout'])
   })
 
   it('tells same-title reports apart by when they were imported', async () => {
