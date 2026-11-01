@@ -21,4 +21,16 @@ class LiveJsonTest {
         assertEquals(listOf("1", "\"a,b\"", "{\"c\":[2]}"), LiveJson.items("""[1,"a,b",{"c":[2]}]"""))
         assertEquals(emptyMap<String, String>(), LiveJson.members("{}"))
     }
+
+    @Test
+    fun `compact and members handle escaped quotes and backslashes next to whitespace`() {
+        val text = "{ \"a\" : \"say \\\" hi \\\" \" ,\n \"b\" : \"C:\\\\ dir \\\\\" , \"c\" : [ 1 ] }"
+        val compact = LiveJson.compact(text)
+        assertEquals("{\"a\":\"say \\\" hi \\\" \",\"b\":\"C:\\\\ dir \\\\\",\"c\":[1]}", compact)
+        val members = LiveJson.members(compact)
+        assertEquals(listOf("a", "b", "c"), members.keys.toList())
+        assertEquals("\"say \\\" hi \\\" \"", members["a"])
+        assertEquals("\"C:\\\\ dir \\\\\"", members["b"])
+        assertEquals("[1]", members["c"])
+    }
 }
