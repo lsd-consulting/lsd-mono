@@ -1,0 +1,2 @@
+{"type":"scenario.start","scenarioId":"s","title":"Too early"}
+{"type":"hello","protocol":"lsd-live","version":"0.1.0","title":"Checkout service tests","sender":{"name":"fixture"}}

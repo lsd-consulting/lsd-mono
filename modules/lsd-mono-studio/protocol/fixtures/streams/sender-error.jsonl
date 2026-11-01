@@ -1,0 +1,6 @@
+{"type":"hello","protocol":"lsd-live","version":"0.1.0","title":"Checkout service tests","sender":{"name":"fixture"}}
+{"type":"scenario.start","scenarioId":"s","title":"A capture that failed"}
+{"type":"error","scenarioId":"s","message":"Could not read the response body"}
+{"type":"error","message":"Clock skew detected"}
+{"type":"scenario.end","scenarioId":"s","status":"warn"}
+{"type":"report.done"}

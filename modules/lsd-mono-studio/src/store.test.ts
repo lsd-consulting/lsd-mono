@@ -39,6 +39,20 @@ describe('FileReportStore', () => {
     expect(JSON.parse(await readFile(join(dir, 'index.json'), 'utf8'))).toEqual([entry])
   })
 
+  it('replaces a stored report in place, keeping its id, source and import time', async () => {
+    const store = new FileReportStore(dir)
+    const live = await store.save('{"title":"Live"}', 'capture')
+    const other = await store.save('{"title":"Other"}')
+    const json = '{"title":"Live, grown"}'
+    const replaced = await store.replace(live.id, json)
+    expect(replaced).toEqual({ ...live, title: 'Live, grown', size: json.length })
+    expect(await store.get(live.id)).toBe(json)
+    expect(await store.list()).toEqual(expect.arrayContaining([other, replaced]))
+    expect(await store.list()).toHaveLength(2)
+    expect((await readdir(dir)).filter((f) => f.endsWith('.tmp'))).toEqual([])
+    expect(await store.replace('0f8fad5b-d9cb-469f-a165-70867728950e', json)).toBeUndefined()
+  })
+
   it('falls back to "Untitled report" without a usable title', async () => {
     const store = new FileReportStore(dir)
     expect((await store.save('{}')).title).toBe('Untitled report')

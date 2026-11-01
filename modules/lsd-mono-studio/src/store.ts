@@ -3,9 +3,12 @@ import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/p
 import { join } from 'node:path'
 import { LEGACY_OTLP_GENERATORS, OTLP_GENERATOR } from './otlp.ts'
 
+/** live.ts's generator name, here so the store does not load the protocol schema. */
+export const LIVE_GENERATOR = 'LSD Studio (live capture)'
+
 /**
  * Where a stored report came from: an imported LSD report, an OTLP trace export converted on import
- * (#96), or later a capture over the WebSocket (#186).
+ * (#96), or a live capture over the WebSocket (#152, #186).
  */
 export type ReportSource = 'import' | 'otlp' | 'capture'
 
@@ -36,6 +39,8 @@ export interface ReportStore {
   get(id: string): Promise<string | undefined>
   /** Stores the report JSON and returns its index entry. */
   save(json: string, source?: ReportSource): Promise<StoredReport>
+  /** Rewrites a stored report (a live capture as it grows); undefined when there is no such report. */
+  replace(id: string, json: string): Promise<StoredReport | undefined>
   delete(id: string): Promise<boolean>
   /** Deletes each id that exists and says which ids were not there. */
   deleteAll(ids: readonly string[]): Promise<BulkDeleteResult>
@@ -88,6 +93,20 @@ export class FileReportStore implements ReportStore {
       await mkdir(this.dir, { recursive: true })
       await writeFile(join(this.dir, `${entry.id}.json`), json)
       await this.writeIndex([...index, entry])
+      return entry
+    })
+  }
+
+  replace(id: string, json: string): Promise<StoredReport | undefined> {
+    return this.exclusive(async () => {
+      const index = await this.readIndex()
+      const at = index.findIndex((entry) => entry.id === id)
+      if (at < 0) return undefined
+      const entry: StoredReport = { ...index[at], title: titleOf(json), size: Buffer.byteLength(json) }
+      const temp = join(this.dir, `${id}.json.${randomUUID()}.tmp`)
+      await writeFile(temp, json)
+      await rename(temp, this.fileFor(id)!)
+      await this.writeIndex(index.map((old, i) => (i === at ? entry : old)))
       return entry
     })
   }
@@ -165,6 +184,7 @@ function sourceOf(json: string): ReportSource {
   try {
     const generator = (JSON.parse(json) as { generator?: { name?: unknown } }).generator
     const name = generator?.name
+    if (name === LIVE_GENERATOR) return 'capture'
     return name === OTLP_GENERATOR || (typeof name === 'string' && LEGACY_OTLP_GENERATORS.includes(name))
       ? 'otlp'
       : 'import'

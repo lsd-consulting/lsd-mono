@@ -14,6 +14,42 @@ const fixture = (file: string) =>
   readFileSync(new URL(`../../lsd-mono-report-schema/conformance/${file}`, import.meta.url), 'utf8')
 const MINIMAL = fixture('reports/minimal.json')
 
+/** A stream from the shared protocol fixtures (protocol/fixtures/streams). */
+const stream = (name: string) =>
+  readFileSync(new URL(`../protocol/fixtures/streams/${name}.jsonl`, import.meta.url), 'utf8')
+    .split('\n')
+    .filter((line) => line !== '')
+
+const open = (port: number) =>
+  new Promise<WebSocket>((resolve, reject) => {
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/ws/captures`)
+    socket.once('open', () => resolve(socket))
+    socket.once('error', reject)
+  })
+
+const collect = (socket: WebSocket) => {
+  const replies: Record<string, unknown>[] = []
+  socket.on('message', (data: Buffer) => replies.push(JSON.parse(data.toString()) as Record<string, unknown>))
+  return replies
+}
+
+async function until(check: () => boolean | Promise<boolean>) {
+  for (let i = 0; i < 200; i++) {
+    if (await check()) return
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  throw new Error('Timed out')
+}
+
+/** Sends every line, then waits for the server to close the socket. */
+async function capture(port: number, lines: string[]) {
+  const socket = await open(port)
+  const replies = collect(socket)
+  const closed = new Promise<number>((resolve) => socket.once('close', (code: number) => resolve(code)))
+  for (const line of lines) socket.send(line)
+  return { replies, code: await closed }
+}
+
 describe('the server', () => {
   let dir: string
   let running: LsdServer
@@ -100,15 +136,51 @@ describe('the server', () => {
     expect((await fetch(`${base}/nowhere`)).status).toBe(404)
   })
 
-  it('greets a capture socket with the protocol', async () => {
-    const socket = new WebSocket(`ws://127.0.0.1:${running.address.port}/ws/captures`)
-    const hello = await new Promise<string>((resolve, reject) => {
-      socket.once('message', (data: Buffer) => resolve(data.toString()))
-      socket.once('error', reject)
+  it('replays a capture stream into a stored report on the list', async () => {
+    const { replies, code } = await capture(running.address.port, stream('checkout'))
+    expect(code).toBe(1000)
+    const [welcome, stored] = replies
+    expect(welcome).toMatchObject({ type: 'welcome', protocol: 'lsd-live', version: '0.1.0' })
+    expect(welcome.url).toBe(`/reports/${welcome.reportId as string}`)
+    expect(stored).toEqual({ type: 'stored', reportId: welcome.reportId })
+    const list = (await (await fetch(`${base}/api/reports`)).json()) as { id: string; source: string; title: string }[]
+    expect(list).toMatchObject([{ id: welcome.reportId, source: 'capture', title: 'Checkout service tests' }])
+    expect(await (await fetch(`${base}/api/reports/${welcome.reportId as string}/live`)).json()).toEqual({
+      revision: 12,
+      live: false,
     })
-    socket.send('{}')
+  })
+
+  it('closes a capture socket with an unsupported major', async () => {
+    const { replies, code } = await capture(running.address.port, stream('unsupported-major'))
+    expect(code).toBe(4001)
+    expect(replies).toMatchObject([{ type: 'error', code: 'unsupported-version' }])
+    expect(await (await fetch(`${base}/api/reports`)).json()).toEqual([])
+  })
+
+  it('refuses binary frames and finishes a capture when its socket closes', async () => {
+    const socket = await open(running.address.port)
+    const replies = collect(socket)
+    socket.send(stream('cut-off')[0])
+    socket.send(Buffer.from([1, 2, 3]))
+    await until(() => replies.length === 2)
+    expect(replies[1]).toMatchObject({ type: 'error', code: 'invalid-json' })
     socket.close()
-    expect(JSON.parse(hello)).toEqual({ type: 'hello', protocol: 'lsd-captures', version: 0 })
+    const id = replies[0].reportId as string
+    await until(
+      async () => ((await (await fetch(`${base}/api/reports/${id}/live`)).json()) as { live: boolean }).live === false,
+    )
+    const report = (await (await fetch(`${base}/api/reports/${id}`)).json()) as { status: string }
+    expect(report).toMatchObject({ status: 'skipped', scenarios: [{ title: 'Nothing captured' }] })
+  })
+
+  it('answers 404 for the live state of a report that is not a capture', async () => {
+    const { id } = (await (await fetch(`${base}/api/reports/import`, { method: 'POST', body: MINIMAL })).json()) as {
+      id: string
+    }
+    const response = await fetch(`${base}/api/reports/${id}/live`)
+    expect(response.status).toBe(404)
+    expect(await response.text()).toBe('Not a live capture')
   })
 
   describe('bulk delete', () => {
@@ -221,6 +293,27 @@ describe('the server', () => {
       const injected = /window\.__LSD_REPORT__=(.*?);<\/script>/.exec(page)![1]
       expect(JSON.parse(injected)).toEqual(JSON.parse(MINIMAL))
       expect(page).toContain('id="lsd-studio-back" href="/"')
+    })
+
+    it('makes an open live report reload when it changes, until the capture is done', async () => {
+      const socket = await open(viewer.address.port)
+      const replies = collect(socket)
+      const [hello, start, , , , , , , , , , done] = stream('checkout')
+      socket.send(hello)
+      socket.send(start)
+      await until(() => replies.length === 1)
+      const id = replies[0].reportId as string
+      await until(
+        async () =>
+          ((await (await fetch(`${viewerBase}/api/reports/${id}/live`)).json()) as { revision: number }).revision === 2,
+      )
+      const page = await (await fetch(`${viewerBase}/reports/${id}`)).text()
+      expect(page).toContain(`"url":"/api/reports/${id}/live","revision":2,"every":1000`)
+      expect(page.indexOf('lsd-live-scroll')).toBeLessThan(page.indexOf('</body>'))
+      socket.send(done)
+      await until(() => replies.length === 2)
+      expect(await (await fetch(`${viewerBase}/reports/${id}`)).text()).not.toContain('lsd-live-scroll')
+      socket.close()
     })
 
     it('hands a 0.x report to the shell as stored, for the UI to upgrade', async () => {

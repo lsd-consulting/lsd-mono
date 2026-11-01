@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lsd-consulting.github.io/lsd-mono/protocol/0/lsd-live.schema.json",
+  "title": "LSD live capture protocol, version 0",
+  "description": "The messages a capturing sender (a test run, a filter in a service) sends to LSD Studio over the WebSocket at /ws/captures, one JSON object per text frame, and the messages the server sends back. The first message from a sender is a hello. The version is semver: a server accepts a hello with the same major at any minor and refuses any other major. A minor only adds optional fields or message types, so a receiver ignores fields it does not know. Captured events are the report schema's DiagramEvent, so a live report has the same shape as a written one.",
+  "anyOf": [{ "$ref": "#/$defs/SenderMessage" }, { "$ref": "#/$defs/ServerMessage" }],
+  "$defs": {
+    "Version": {
+      "description": "Semver of the protocol the message follows. This schema is 0.1.0.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "ScenarioId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "SenderMessage": {
+      "description": "A message from the sender, told apart by type.",
+      "oneOf": [
+        { "$ref": "#/$defs/Hello" },
+        { "$ref": "#/$defs/ScenarioStart" },
+        { "$ref": "#/$defs/CapturedEvent" },
+        { "$ref": "#/$defs/ScenarioEnd" },
+        { "$ref": "#/$defs/ReportDone" },
+        { "$ref": "#/$defs/SenderError" }
+      ]
+    },
+    "Hello": {
+      "description": "The handshake, first and once. It names the protocol and its version, and the report the captures build.",
+      "type": "object",
+      "required": ["type", "protocol", "version"],
+      "properties": {
+        "type": { "const": "hello" },
+        "protocol": { "const": "lsd-live" },
+        "version": { "$ref": "#/$defs/Version" },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "The report's title. Absent: Live capture."
+        },
+        "sender": {
+          "type": "object",
+          "required": ["name"],
+          "properties": { "name": { "type": "string", "minLength": 1 }, "version": { "type": "string" } }
+        }
+      }
+    },
+    "ScenarioStart": {
+      "description": "A scenario begins. Its id is the sender's and is unique within the report.",
+      "type": "object",
+      "required": ["type", "scenarioId", "title"],
+      "properties": {
+        "type": { "const": "scenario.start" },
+        "scenarioId": { "$ref": "#/$defs/ScenarioId" },
+        "title": { "type": "string", "minLength": 1 },
+        "participants": {
+          "type": "array",
+          "items": {
+            "$ref": "https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json#/$defs/Participant"
+          }
+        }
+      }
+    },
+    "CapturedEvent": {
+      "description": "One captured interaction or other diagram row, in capture order, in a started scenario.",
+      "type": "object",
+      "required": ["type", "scenarioId", "event"],
+      "properties": {
+        "type": { "const": "event" },
+        "scenarioId": { "$ref": "#/$defs/ScenarioId" },
+        "event": {
+          "$ref": "https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json#/$defs/DiagramEvent"
+        }
+      }
+    },
+    "ScenarioEnd": {
+      "description": "A scenario finished, with its outcome.",
+      "type": "object",
+      "required": ["type", "scenarioId", "status"],
+      "properties": {
+        "type": { "const": "scenario.end" },
+        "scenarioId": { "$ref": "#/$defs/ScenarioId" },
+        "status": {
+          "$ref": "https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json#/$defs/Status"
+        },
+        "error": {
+          "$ref": "https://lsd-consulting.github.io/lsd-mono/schema/1.0.0/lsd-report.schema.json#/$defs/ScenarioError"
+        }
+      }
+    },
+    "ReportDone": {
+      "description": "The sender is finished. The server stores the report as it stands and closes the socket.",
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "const": "report.done" } }
+    },
+    "SenderError": {
+      "description": "Something went wrong on the sender's side, such as a capture that failed. The report keeps it as a fact; the stream goes on.",
+      "type": "object",
+      "required": ["type", "message"],
+      "properties": {
+        "type": { "const": "error" },
+        "message": { "type": "string", "minLength": 1 },
+        "scenarioId": { "$ref": "#/$defs/ScenarioId" }
+      }
+    },
+    "ServerMessage": {
+      "description": "A message from the server.",
+      "oneOf": [{ "$ref": "#/$defs/Welcome" }, { "$ref": "#/$defs/ServerError" }, { "$ref": "#/$defs/Stored" }]
+    },
+    "Welcome": {
+      "description": "The answer to an accepted hello: the protocol version the server speaks and where the live report is.",
+      "type": "object",
+      "required": ["type", "protocol", "version", "reportId", "url"],
+      "properties": {
+        "type": { "const": "welcome" },
+        "protocol": { "const": "lsd-live" },
+        "version": { "$ref": "#/$defs/Version" },
+        "reportId": { "type": "string" },
+        "url": { "type": "string", "description": "The report page's path on the server." }
+      }
+    },
+    "ServerError": {
+      "description": "A refused message. unsupported-version and hello-required close the socket (4001, 4002); the others leave it open and the message is ignored.",
+      "type": "object",
+      "required": ["type", "code", "message"],
+      "properties": {
+        "type": { "const": "error" },
+        "code": {
+          "enum": [
+            "invalid-json",
+            "invalid-message",
+            "unsupported-version",
+            "hello-required",
+            "duplicate-hello",
+            "unknown-scenario",
+            "duplicate-scenario",
+            "scenario-ended",
+            "report-done"
+          ]
+        },
+        "message": { "type": "string" },
+        "errors": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Stored": {
+      "description": "The answer to report.done, sent before the server closes the socket (1000).",
+      "type": "object",
+      "required": ["type", "reportId"],
+      "properties": { "type": { "const": "stored" }, "reportId": { "type": "string" } }
+    }
+  }
+}

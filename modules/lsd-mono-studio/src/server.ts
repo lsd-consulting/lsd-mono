@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { WebSocketServer } from 'ws'
 import type { ServerConfig } from './config.ts'
 import { importBody } from './import.ts'
+import { CaptureSession, LiveReports } from './live.ts'
 import { readSample } from './sample.ts'
 import { isReportId, type ReportStore } from './store.ts'
 import { checkOverride, findShell, MESSAGES, messagePage, renderReportPage, viewerShells } from './viewer.ts'
@@ -37,8 +38,9 @@ export async function startServer(
 ): Promise<LsdServer> {
   const limit = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES
   if (options.viewerShells === undefined) await checkOverride(config.viewer)
+  const live = new LiveReports()
   const server = createServer((req, res) => {
-    route(req, res, store, (r) => readBody(r, limit), options.viewerShells ?? viewerShells(config.viewer)).catch(
+    route(req, res, store, live, (r) => readBody(r, limit), options.viewerShells ?? viewerShells(config.viewer)).catch(
       (error: unknown) => {
         if (error instanceof BodyTooLarge) {
           res.setHeader('connection', 'close')
@@ -48,7 +50,7 @@ export async function startServer(
       },
     )
   })
-  attachCaptures(server)
+  attachCaptures(server, store, live)
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
     server.listen(config.port, config.host, resolve)
@@ -65,6 +67,7 @@ async function route(
   req: IncomingMessage,
   res: ServerResponse,
   store: ReportStore,
+  live: LiveReports,
   readRequest: (req: IncomingMessage) => Promise<string>,
   shells: readonly URL[],
 ): Promise<void> {
@@ -80,7 +83,15 @@ async function route(
     if (json === undefined) return send(res, 404, messagePage(MESSAGES.notFound), HTML)
     const shell = await findShell(shells)
     if (shell === undefined) return send(res, 503, messagePage(MESSAGES.noShell), HTML)
-    return send(res, 200, renderReportPage(shell, json), HTML)
+    const capture = live.get(page[1])
+    const watch = capture?.live ? { id: page[1], revision: capture.revision } : undefined
+    return send(res, 200, renderReportPage(shell, json, watch), HTML)
+  }
+  // An open live report polls this to know when to reload (renderReportPage).
+  const watched = /^\/api\/reports\/([^/]+)\/live$/.exec(path)
+  if (method === 'GET' && watched) {
+    const capture = live.get(watched[1])
+    return capture === undefined ? send(res, 404, 'Not a live capture') : sendJson(res, 200, capture)
   }
   if (method === 'GET' && path === '/api/reports') return sendJson(res, 200, await store.list())
   if (method === 'POST' && path === '/api/reports/import') {
@@ -115,17 +126,32 @@ async function route(
 }
 
 /**
- * Real-time captures over a WebSocket. The interface is the protocol, not any one capture library:
- * anything that captures interactions (for example a Ktor filter pointed at this server) connects
- * and sends events. TODO(#186): define the message shape (the report schema's event shape or
- * something smaller, see #152), store the captures and push them to open UI pages.
+ * Live captures over a WebSocket, in the lsd-live protocol (protocol/lsd-live.schema.json, #152).
+ * The interface is the protocol, not any one capture library: anything that captures interactions
+ * connects, says hello and sends events. Each connection builds one report, stored like an import.
+ * Messages on one socket are handled in order.
  */
-function attachCaptures(server: Server): void {
-  const sockets = new WebSocketServer({ server, path: CAPTURES_PATH })
+function attachCaptures(server: Server, store: ReportStore, live: LiveReports): void {
+  const sockets = new WebSocketServer({ server, path: CAPTURES_PATH, maxPayload: DEFAULT_MAX_BODY_BYTES })
   sockets.on('connection', (socket) => {
-    socket.send(JSON.stringify({ type: 'hello', protocol: 'lsd-captures', version: 0 }))
-    socket.on('message', () => {
-      // TODO(#186): parse and handle capture messages.
+    const session = new CaptureSession(store, live)
+    let queue: Promise<unknown> = Promise.resolve()
+    let closing = false
+    socket.on('message', (data: Buffer, binary: boolean) => {
+      queue = queue.then(async () => {
+        if (closing) return
+        const outcome = binary
+          ? { replies: [{ type: 'error', code: 'invalid-json', message: 'Send text frames' }] }
+          : await session.receive(data.toString('utf8'))
+        for (const reply of outcome.replies) socket.send(JSON.stringify(reply))
+        if (outcome.close !== undefined) {
+          closing = true
+          socket.close(outcome.close)
+        }
+      })
+    })
+    socket.on('close', () => {
+      queue = queue.then(() => session.closed())
     })
   })
   server.on('close', () => sockets.close())

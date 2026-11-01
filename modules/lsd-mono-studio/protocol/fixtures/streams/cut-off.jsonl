@@ -1,0 +1,3 @@
+{"type":"hello","protocol":"lsd-live","version":"0.1.0","title":"Checkout service tests","sender":{"name":"fixture"}}
+{"type":"scenario.start","scenarioId":"pays","title":"A customer pays for their basket","participants":[{"id":"customer","name":"customer","type":"actor"},{"id":"checkout","name":"checkout","type":"participant"},{"id":"payments","name":"payments","type":"participant"}]}
+{"type":"event","scenarioId":"pays","event":{"kind":"message","id":"m1","from":"customer","to":"checkout","label":"POST /checkout","type":"synchronous","callId":"c1","durationMs":42.5,"timing":"measured","startedAt":"2026-11-01T11:00:00.000Z"}}

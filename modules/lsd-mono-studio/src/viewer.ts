@@ -80,8 +80,28 @@ const TAB_TITLE =
   "<script>document.title=(window.__LSD_REPORT__&&typeof window.__LSD_REPORT__.title==='string'&&" +
   "window.__LSD_REPORT__.title.trim()||'Untitled report')+' – LSD Studio';</script>\n"
 
+/** How often an open live report asks whether it has changed, in milliseconds. */
+export const LIVE_POLL_MS = 1000
+
+/**
+ * For a report being captured: asks the server for its revision and reloads when it changes, keeping
+ * the scroll position, until the capture is done. The report UI renders a report once, so a reload is
+ * the simplest way to show new events; polling needs no socket for the page to keep open.
+ */
+function liveScript(id: string, revision: number): string {
+  const state = scriptJson(JSON.stringify({ url: `/api/reports/${id}/live`, revision, every: LIVE_POLL_MS }))
+  return (
+    `<script>(function(s){var k='lsd-live-scroll:'+s.url,y=sessionStorage.getItem(k);` +
+    `if(y!==null){sessionStorage.removeItem(k);addEventListener('load',function(){scrollTo(0,Number(y))})}` +
+    `function poll(){fetch(s.url).then(function(r){return r.ok?r.json():null}).then(function(l){` +
+    `if(l&&l.revision!==s.revision){sessionStorage.setItem(k,String(scrollY));location.reload()}` +
+    `else if(l&&l.live)setTimeout(poll,s.every)},function(){setTimeout(poll,s.every)})}` +
+    `setTimeout(poll,s.every)})(${state});</script>\n`
+  )
+}
+
 /** The shell with [json] as its report, a back bar to the list and a "<title> – LSD Studio" tab. */
-export function renderReportPage(shell: string, json: string): string {
+export function renderReportPage(shell: string, json: string, live?: { id: string; revision: number }): string {
   const injection = `<script>window.__LSD_REPORT__=${scriptJson(json)};</script>\n`
   const script = shell.indexOf('<script>')
   let page = script < 0 ? injection + shell : shell.slice(0, script) + injection + shell.slice(script)
@@ -91,7 +111,8 @@ export function renderReportPage(shell: string, json: string): string {
       ? BACK_BAR + page
       : page.slice(0, open.index + open[0].length) + '\n' + BACK_BAR + page.slice(open.index + open[0].length)
   const body = page.lastIndexOf('</body>')
-  return body < 0 ? page + TAB_TITLE : page.slice(0, body) + TAB_TITLE + page.slice(body)
+  const tail = TAB_TITLE + (live ? liveScript(live.id, live.revision) : '')
+  return body < 0 ? page + tail : page.slice(0, body) + tail + page.slice(body)
 }
 
 interface Message {

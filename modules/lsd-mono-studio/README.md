@@ -64,18 +64,19 @@ then the checkout's.
 
 ## What is there
 
-| Path                            | What                                                                                 |
-| ------------------------------- | ------------------------------------------------------------------------------------ |
-| `GET /`                         | The report list: import a file, open, delete one or delete a selection, see below    |
-| `GET /reports/<id>`             | Open one stored report in the report UI, see below                                   |
-| `GET /health`                   | `ok`                                                                                 |
-| `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`        |
-| `GET /api/reports/<id>`         | One stored report's JSON                                                             |
-| `POST /api/reports/import`      | Import an LSD report (validated) or an OTLP/JSON trace export (converted), see below |
-| `DELETE /api/reports/<id>`      | Delete one report                                                                    |
-| `POST /api/reports/bulk-delete` | Delete several reports: see below                                                    |
-| `GET /api/diff`                 | 501 for now: side-by-side diff of two reports                                        |
-| `ws://…/ws/captures`            | Real-time captures: sends a `hello` and ignores messages for now                     |
+| Path                            | What                                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `GET /`                         | The report list: import a file, open, delete one or delete a selection, see below                |
+| `GET /reports/<id>`             | Open one stored report in the report UI, see below                                               |
+| `GET /health`                   | `ok`                                                                                             |
+| `GET /api/reports`              | The report index, newest first: `id`, `title`, `importedAt`, `source`, `size`                    |
+| `GET /api/reports/<id>`         | One stored report's JSON                                                                         |
+| `POST /api/reports/import`      | Import an LSD report (validated) or an OTLP/JSON trace export (converted), see below             |
+| `DELETE /api/reports/<id>`      | Delete one report                                                                                |
+| `POST /api/reports/bulk-delete` | Delete several reports: see below                                                                |
+| `GET /api/diff`                 | 501 for now: side-by-side diff of two reports                                                    |
+| `GET /api/reports/<id>/live`    | A live capture's `{revision, live}`; 404 for other reports                                       |
+| `ws://…/ws/captures`            | Live capture in the `lsd-live` protocol, see [Live capture protocol](#live-capture-protocol-152) |
 
 ## Import
 
@@ -201,11 +202,76 @@ Both pages fit phones and follow the system's light or dark setting.
 
 The viewer comes from `npm install`, see [The report viewer](#the-report-viewer).
 
+## Live capture protocol (#152)
+
+A sender (a test run, a capture filter) opens `ws://127.0.0.1:7357/ws/captures` and streams what it
+captures as it happens. The server builds a report from it, stored like an import (source
+`capture`), so it shows on the report list and opens like any other report.
+
+**The schema** is [`protocol/lsd-live.schema.json`](protocol/lsd-live.schema.json) (JSON Schema
+2020-12). It lives in this module, not in `lsd-mono-report-schema`: that module is published and its
+versions are frozen once released, while this protocol is v0 and has one implementation. Captured
+events and statuses are not redefined: the protocol refers to the report schema's `DiagramEvent`,
+`Participant`, `Status` and `ScenarioError` by `$id`, so a sender sends exactly what a report holds. A
+JVM sender's tests in this repo can read the schema and the fixtures from
+`modules/lsd-mono-studio/protocol/`. When a second implementation ships, it moves next to the report
+schema and is published with it.
+
+**Messages.** Every message is one JSON text frame with a `type`:
+
+| From   | `type`           | Fields                                                                     |
+| ------ | ---------------- | -------------------------------------------------------------------------- |
+| sender | `hello`          | `protocol: "lsd-live"`, `version`, optional `title`, `sender.name`         |
+| sender | `scenario.start` | `scenarioId`, `title`, optional `participants`                             |
+| sender | `event`          | `scenarioId`, `event`: one report `DiagramEvent`                           |
+| sender | `scenario.end`   | `scenarioId`, `status`, optional `error`                                   |
+| sender | `error`          | `message`, optional `scenarioId`: the sender's own trouble, kept as a fact |
+| sender | `report.done`    | The capture is complete                                                    |
+| server | `welcome`        | `protocol`, `version`, `reportId`, `url` of the report page                |
+| server | `error`          | `code`, `message`, optional `errors` (schema paths)                        |
+| server | `stored`         | `reportId`, after `report.done`                                            |
+
+**Versioning.** `version` is semver; this server speaks `0.1.0`. The server takes a hello of the
+same major at any minor and refuses any other major with `unsupported-version` and close code
+`4001`. A minor only adds optional fields or message types, and both sides ignore fields they do
+not know, so an older server reads a newer sender. A breaking change is a new major.
+
+**Errors.** The first message must be a valid `hello`; anything else gets an error and close code
+`4002`. After the hello, a bad message (`invalid-json`, `invalid-message`, `unknown-scenario`,
+`duplicate-scenario`, `scenario-ended`, `duplicate-hello`, `report-done`) gets an error reply and
+is otherwise ignored: the capture goes on. `report.done` gets `stored` and close code `1000`.
+
+**The live report.** It is stored at the hello and rewritten after every accepted message. A
+running scenario shows as `warn` with the fact "Live: still capturing"; until the first scenario
+starts, a placeholder scenario says it is waiting. If the socket closes before `report.done`,
+running scenarios become `aborted` ("Capture cut off") and the report is kept.
+
+**Watching it.** An open live report page polls `GET /api/reports/<id>/live` once a second and
+reloads when the revision changes, keeping its scroll position; it stops once the capture is done.
+The report UI renders a report once, so a reload is the simple, robust update. The report list
+shows a new capture when it is reloaded.
+
+**Contract fixtures.** [`protocol/fixtures/`](protocol/fixtures) holds message streams, one frame
+per line, valid and invalid, and a `manifest.json` with the replies, close code and stored report
+each one must produce. This module's tests replay every stream; a sender's tests can check it
+produces streams the schema accepts and that match them.
+
+**Replay one** to a running studio, for a demo or to try a sender's output:
+
+```bash
+npm run replay -- protocol/fixtures/streams/checkout.jsonl --delay 800
+```
+
+`--url` points it elsewhere (default `ws://127.0.0.1:7357/ws/captures`).
+
+**Next:** a JVM sender in `lsd-mono-jvm` that streams a test run in this protocol, asserted against
+these fixtures.
+
 ## Storage
 
 Each report is `<id>.json` in the reports directory, next to an `index.json` that the report list
 reads, so listing never opens the reports. Each entry holds the `id`, the report's `title` (or
-"Untitled report"), `importedAt` (ISO-8601), `source` (`import`, later `capture`) and `size` in
+"Untitled report"), `importedAt` (ISO-8601), `source` (`import`, `otlp` or `capture`) and `size` in
 bytes. The index is replaced whole via a temp file and a rename, and writes are queued. A reports
 directory without an index gets one rebuilt from its report files.
 
@@ -230,4 +296,4 @@ answers 204 whether or not the report existed, and 400 for an id that is not a r
 5. **Cleanup is manual:** delete per report and bulk delete. No maximum count, no auto-expiry.
 6. **Real-time captures** use a WebSocket interface defined by its protocol, not by any capture
    library. A Ktor filter pointed at the server is one example of a client. The message shape is
-   still to settle (#152).
+   the `lsd-live` protocol, v0 (#152).
