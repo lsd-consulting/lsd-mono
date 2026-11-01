@@ -141,6 +141,9 @@
         padding: 1.5rem 0 0.5rem;
         text-align: center;
       }
+      #empty p {
+        margin-bottom: 0.75rem;
+      }
       [role='status']:empty,
       [role='alert']:empty {
         display: none;
@@ -191,6 +194,14 @@
         border-radius: 999px;
         padding: 0 0.6rem;
         font-size: 0.8rem;
+      }
+      /* A line of its own under the heading and the local-only badge, in the body colour. */
+      header .intro {
+        flex-basis: 100%;
+        max-width: 44rem;
+        margin: 0;
+        color: var(--text);
+        font-size: 1rem;
       }
       #bulk-hint {
         margin: 0;
@@ -259,6 +270,10 @@
           <strong>Local only</strong>
           <span>Reports are stored on this machine. Nothing is uploaded.</span>
         </p>
+        <p class="intro" id="intro">
+          Your local home for sequence diagrams: import LSD reports or OpenTelemetry traces, keep them on this machine,
+          and open any of them as a diagram.
+        </p>
       </header>
       <section aria-labelledby="import-heading">
         <h2 id="import-heading">Import</h2>
@@ -282,7 +297,10 @@
           <p id="bulk-hint">Select reports first</p>
         </div>
         <ul id="reports" aria-labelledby="reports-heading"></ul>
-        <p id="empty" hidden>No reports yet. Import one above.</p>
+        <div id="empty" hidden>
+          <p>No reports yet. Import one above, or try a sample: an order placed through four services.</p>
+          <button id="try-sample" type="button">Try a sample</button>
+        </div>
         <p id="list-status" role="status"></p>
       </section>
     </main>
@@ -564,15 +582,16 @@
           if (files.length) importFiles(files)
         })
 
-        importButton.addEventListener('click', async () => {
-          const file = byId('import-file').files[0]
-          if (!file || importButton.disabled) return
-          importButton.disabled = true
-          importButton.textContent = 'Importing…'
+        // Imports what read() gives, with the button busy meanwhile so it cannot run twice.
+        async function runImport(button, read) {
+          if (button.disabled) return
+          const label = button.textContent
+          button.disabled = true
+          button.textContent = 'Importing…'
           importStatus.textContent = ''
           importError.replaceChildren()
           try {
-            const response = await fetch('/api/reports/import', { method: 'POST', body: await file.text() })
+            const response = await fetch('/api/reports/import', { method: 'POST', body: await read() })
             if (response.ok) {
               const report = await response.json()
               importStatus.textContent = 'Imported "' + report.title + '".'
@@ -582,11 +601,26 @@
           } catch {
             showImportError('Could not reach LSD Studio. Is it still running?')
           } finally {
-            importButton.disabled = false
-            importButton.textContent = 'Import'
+            button.disabled = false
+            button.textContent = label
           }
           await load()
+        }
+
+        importButton.addEventListener('click', () => {
+          const file = byId('import-file').files[0]
+          if (file) return runImport(importButton, () => file.text())
         })
+
+        // The bundled sample trace, through the same import as a chosen file.
+        const trySample = byId('try-sample')
+        trySample.addEventListener('click', () =>
+          runImport(trySample, async () => {
+            const response = await fetch('/samples/sample-trace.json')
+            if (!response.ok) throw new Error('No sample')
+            return response.text()
+          }),
+        )
 
         byId('reports-heading').tabIndex = -1
         window.lsdReady = load()

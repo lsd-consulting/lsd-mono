@@ -13,6 +13,8 @@ export interface ServerConfig {
   reportsDir: string
   /** A report viewer to try first (`--viewer <file>` or LSD_STUDIO_VIEWER), for UI development. */
   viewer?: string
+  /** `--demo`: import the bundled sample trace at startup, unless it is already stored. */
+  demo?: boolean
 }
 
 export const LOCALHOST = '127.0.0.1'
@@ -23,7 +25,7 @@ export const DEFAULT_PORT = 7357
 export const defaultReportsDir = (): string => join(homedir(), '.lsd', 'server', 'reports')
 
 /**
- * Reads `--expose`, `--port <n>` (or `--port=<n>`) and `--viewer <file>` (or `--viewer=<file>`), and
+ * Reads `--expose`, `--port <n>` (or `--port=<n>`), `--viewer <file>` (or `--viewer=<file>`) and `--demo`, and
  * LSD_STUDIO_EXPOSE / LSD_STUDIO_PORT / LSD_STUDIO_VIEWER. The LSD_SERVER_* names from before the
  * rename still work; an LSD_STUDIO_* one wins.
  */
@@ -32,17 +34,25 @@ export function parseConfig(args: readonly string[], env: NodeJS.ProcessEnv = {}
   const envPort = env.LSD_STUDIO_PORT ?? env.LSD_SERVER_PORT
   let host = expose === '1' ? ALL_INTERFACES : LOCALHOST
   let port = envPort === undefined ? DEFAULT_PORT : parsePort(envPort)
+  let demo = false
   let viewer = (env.LSD_STUDIO_VIEWER ?? env.LSD_SERVER_VIEWER) || undefined
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--expose') host = ALL_INTERFACES
+    else if (arg === '--demo') demo = true
     else if (arg === '--port') port = parsePort(args[++i])
     else if (arg.startsWith('--port=')) port = parsePort(arg.slice('--port='.length))
     else if (arg === '--viewer') viewer = parseViewer(args[++i])
     else if (arg.startsWith('--viewer=')) viewer = parseViewer(arg.slice('--viewer='.length))
-    else throw new Error(`Unknown option '${arg}'. Options: --expose, --port <n>, --viewer <file>`)
+    else throw new Error(`Unknown option '${arg}'. Options: --expose, --port <n>, --viewer <file>, --demo`)
   }
-  return { host, port, reportsDir: defaultReportsDir(), ...(viewer === undefined ? {} : { viewer }) }
+  return {
+    host,
+    port,
+    reportsDir: defaultReportsDir(),
+    ...(viewer === undefined ? {} : { viewer }),
+    ...(demo ? { demo } : {}),
+  }
 }
 
 function parseViewer(value: string | undefined): string {

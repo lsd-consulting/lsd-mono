@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { Ajv2020 } from 'ajv/dist/2020.js'
 import ajvFormats from 'ajv-formats'
+import { otlpToReport } from './otlp.ts'
+import type { ReportStore, StoredReport } from './store.ts'
 
 /** What an imported file is. Both kinds land as stored reports (#186). */
 export type ImportKind = 'lsd-report' | 'otlp' | 'unknown'
@@ -90,5 +92,40 @@ function parseObject(body: string): Record<string, unknown> | undefined {
       : undefined
   } catch {
     return undefined
+  }
+}
+
+/** What an import answers: its status, and the stored report or the reason it was refused. */
+export interface ImportResult {
+  status: 201 | 415 | 422 | 500
+  report?: StoredReport
+  error?: string
+  errors?: string[]
+}
+
+/**
+ * Imports an uploaded body: an LSD report is checked and stored, an OTLP/JSON export is converted,
+ * checked and stored. `POST /api/reports/import` and `--demo` both come through here.
+ */
+export async function importBody(body: string, store: ReportStore): Promise<ImportResult> {
+  switch (detectImport(body)) {
+    case 'lsd-report': {
+      const errors = reportErrors(body)
+      if (errors.length > 0) return { status: 422, error: 'Not a valid LSD report', errors }
+      return { status: 201, report: await store.save(body, 'import') }
+    }
+    case 'otlp': {
+      const converted = otlpToReport(body)
+      if (converted.report === undefined) {
+        return { status: 422, error: 'Not a valid OTLP/JSON trace export', errors: converted.errors }
+      }
+      const json = JSON.stringify(converted.report)
+      // The converted report goes through the same check as an imported one.
+      const errors = reportErrors(json)
+      if (errors.length > 0) return { status: 500, error: 'The converted report is not valid', errors }
+      return { status: 201, report: await store.save(json, 'otlp') }
+    }
+    default:
+      return { status: 415, error: 'Not an LSD report or OTLP JSON (OTLP protobuf is not supported)' }
   }
 }
