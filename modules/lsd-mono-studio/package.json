@@ -16,6 +16,7 @@
     "public/",
     "viewer/lsd-report.html",
     "schema/lsd-report.schema.json",
+    "samples/",
     "README.md"
   ],
   "scripts": {

@@ -16,6 +16,7 @@ interface Call {
 }
 
 const HTML = await readFile(new URL('../public/index.html', import.meta.url), 'utf8')
+const SAMPLE = '{"resourceSpans":[]}'
 
 function entry(id: string, title: string, importedAt = '2026-10-31T21:00:00.000Z'): Entry {
   return { id, title, importedAt }
@@ -51,6 +52,7 @@ async function openPage(initial: Entry[], importAnswer?: ImportAnswer | (() => P
     const method = init.method ?? 'GET'
     calls.push({ method, url, body: typeof init.body === 'string' ? init.body : undefined })
     if (method === 'GET' && url === '/api/reports') return Promise.resolve(json(reports))
+    if (method === 'GET' && url === '/samples/sample-trace.json') return Promise.resolve(new Response(SAMPLE))
     if (method === 'DELETE') {
       const id = decodeURIComponent(url.split('/').pop() ?? '')
       reports = reports.filter((report) => report.id !== id)
@@ -279,6 +281,32 @@ describe('report list page', () => {
     expect(page.byId('import-status').getAttribute('role')).toBe('status')
     expect(page.byId('import-status').textContent).toBe('Imported "Checkout".')
     expect(page.byId('import-error').textContent).toBe('')
+  })
+
+  it('offers the sample trace from the empty state and imports it like a chosen file', async () => {
+    let finish: (response: Response) => void = () => undefined
+    const page = await openPage([], () => new Promise((resolve) => (finish = resolve)))
+    const button = page.byId<HTMLButtonElement>('try-sample')
+    expect(page.byId('empty').hidden).toBe(false)
+    expect(button.textContent).toBe('Try a sample')
+    button.click()
+    await page.settle()
+    expect(button.disabled).toBe(true)
+    button.click()
+    finish(json({ id: 's', title: 'POST /orders (trace 5a3c1e0b)', importedAt: '2026-10-31T21:00:00.000Z' }))
+    await page.settle()
+    const imports = page.calls.filter((call) => call.url === '/api/reports/import')
+    expect(imports).toEqual([{ method: 'POST', url: '/api/reports/import', body: SAMPLE }])
+    expect(button.disabled).toBe(false)
+    expect(button.textContent).toBe('Try a sample')
+    expect(page.byId('import-status').textContent).toBe('Imported "POST /orders (trace 5a3c1e0b)".')
+  })
+
+  it('shows a refused sample import like any other', async () => {
+    const page = await openPage([], { status: 422, body: JSON.stringify({ error: 'Not valid', errors: ['/x'] }) })
+    page.byId('try-sample').click()
+    await page.settle()
+    expect(page.byId('import-error').textContent).toContain('Not valid.')
   })
 
   it('does nothing on import with no file chosen', async () => {
