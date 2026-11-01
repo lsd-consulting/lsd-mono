@@ -43,7 +43,7 @@ interface ImportAnswer {
   body: string
 }
 
-async function openPage(initial: Entry[], importAnswer?: ImportAnswer | (() => Promise<Response>)) {
+async function openPage(initial: Entry[], importAnswer?: ImportAnswer | ((body?: string) => Promise<Response>)) {
   let reports = [...initial]
   const calls: Call[] = []
   // What the next confirmation dialog answers: 'delete' or 'cancel'.
@@ -66,7 +66,7 @@ async function openPage(initial: Entry[], importAnswer?: ImportAnswer | (() => P
     }
     if (method === 'POST' && url === '/api/reports/import' && importAnswer) {
       return typeof importAnswer === 'function'
-        ? importAnswer()
+        ? importAnswer(typeof init.body === 'string' ? init.body : undefined)
         : Promise.resolve(new Response(importAnswer.body, { status: importAnswer.status }))
     }
     return Promise.resolve(new Response('unexpected', { status: 500 }))
@@ -105,7 +105,26 @@ async function openPage(initial: Entry[], importAnswer?: ImportAnswer | (() => P
   const chooseFile = (text: string) => {
     Object.defineProperty(byId('import-file'), 'files', { value: [{ text: () => Promise.resolve(text) }] })
   }
-  return { doc, calls, answer, settle, byId, titles, pick, change, chooseFile }
+  // jsdom has no DataTransfer: a drag event carrying files, as a browser sends it.
+  const drag = (type: string, files: { name: string; text: string }[] = [], types = ['Files']) => {
+    const event = new dom.window.Event(type, { bubbles: true, cancelable: true })
+    const dropEffect = { value: 'none' }
+    Object.defineProperty(event, 'dataTransfer', {
+      value: {
+        types,
+        files: files.map((file) => ({ name: file.name, text: () => Promise.resolve(file.text) })),
+        get dropEffect() {
+          return dropEffect.value
+        },
+        set dropEffect(value: string) {
+          dropEffect.value = value
+        },
+      },
+    })
+    doc.body.dispatchEvent(event)
+    return { event, dropEffect }
+  }
+  return { doc, calls, answer, settle, byId, titles, pick, change, chooseFile, drag }
 }
 
 describe('report list page', () => {
@@ -281,6 +300,113 @@ describe('report list page', () => {
     expect(page.byId('import-status').getAttribute('role')).toBe('status')
     expect(page.byId('import-status').textContent).toBe('Imported "Checkout".')
     expect(page.byId('import-error').textContent).toBe('')
+  })
+
+  it('highlights the page while files are dragged over it, until they leave', async () => {
+    const page = await openPage([])
+    const zone = page.byId('drop-zone')
+    expect(zone.hidden).toBe(true)
+    expect(zone.getAttribute('aria-hidden')).toBe('true')
+    expect(page.drag('dragenter').event.defaultPrevented).toBe(true)
+    expect(zone.hidden).toBe(false)
+    page.drag('dragenter')
+    const over = page.drag('dragover')
+    expect(over.event.defaultPrevented).toBe(true)
+    expect(over.dropEffect.value).toBe('copy')
+    page.drag('dragleave')
+    expect(zone.hidden).toBe(false)
+    page.drag('dragleave')
+    expect(zone.hidden).toBe(true)
+  })
+
+  it('ignores drags that carry no files, such as selected text', async () => {
+    const page = await openPage([])
+    expect(page.drag('dragenter', [], ['text/plain']).event.defaultPrevented).toBe(false)
+    expect(page.byId('drop-zone').hidden).toBe(true)
+    page.drag('drop', [], ['text/plain'])
+    await page.settle()
+    expect(page.calls.filter((call) => call.method === 'POST')).toEqual([])
+  })
+
+  it('imports one dropped file with the same messages as the file picker', async () => {
+    const page = await openPage([], { status: 201, body: JSON.stringify(entry('a', 'Checkout')) })
+    page.drag('dragenter')
+    page.drag('drop', [{ name: 'checkout.json', text: '{"schemaVersion":"1.0.0"}' }])
+    expect(page.byId('drop-zone').hidden).toBe(true)
+    await page.settle()
+    expect(page.calls.filter((call) => call.method === 'POST')).toEqual([
+      { method: 'POST', url: '/api/reports/import', body: '{"schemaVersion":"1.0.0"}' },
+    ])
+    expect(page.byId('import-status').textContent).toBe('Imported "Checkout".')
+  })
+
+  it('shows a refused dropped file as the plain reason and its problems', async () => {
+    const page = await openPage([], {
+      status: 422,
+      body: JSON.stringify({ error: 'Not a valid LSD report', errors: ['/title: must be string'] }),
+    })
+    page.drag('drop', [{ name: 'bad.json', text: '{}' }])
+    await page.settle()
+    const alert = page.byId('import-error')
+    expect(alert.querySelector('p')?.textContent).toBe('Not a valid LSD report.')
+    expect([...alert.querySelectorAll('li')].map((item) => item.textContent)).toEqual(['/title: must be string'])
+    expect(page.doc.activeElement).toBe(alert)
+  })
+
+  it('imports several dropped files one by one and says how each went', async () => {
+    const page = await openPage([], (body) =>
+      Promise.resolve(
+        body === 'good'
+          ? json(entry('a', 'Checkout'))
+          : new Response(JSON.stringify({ error: 'Not a valid OTLP/JSON trace export', errors: ['no spans'] }), {
+              status: 422,
+            }),
+      ),
+    )
+    page.drag('drop', [
+      { name: 'one.json', text: 'good' },
+      { name: 'trace.json', text: 'bad' },
+      { name: 'notes.txt', text: 'good' },
+      { name: 'TWO.JSON', text: 'good' },
+    ])
+    await page.settle()
+    expect(page.calls.filter((call) => call.method === 'POST').map((call) => call.body)).toEqual([
+      'good',
+      'bad',
+      'good',
+    ])
+    const status = page.byId('import-status')
+    expect(status.querySelector('span')?.textContent).toBe('Imported 2 of 4 files.')
+    expect([...status.querySelectorAll('li')].map((item) => item.textContent)).toEqual([
+      'one.json: imported "Checkout"',
+      'TWO.JSON: imported "Checkout"',
+    ])
+    const alert = page.byId('import-error')
+    expect(alert.querySelector('p')?.textContent).toBe('2 of 4 files were not imported.')
+    expect([...alert.querySelectorAll('li')].map((item) => item.textContent)).toEqual([
+      'trace.json: Not a valid OTLP/JSON trace export. no spans',
+      'notes.txt: Not a .json file.',
+    ])
+    expect(page.byId<HTMLButtonElement>('import').disabled).toBe(false)
+  })
+
+  it('says so when a dropped file cannot reach the server, and ignores drops while importing', async () => {
+    let finish: (response: Response) => void = () => undefined
+    let calls = 0
+    const page = await openPage([], () => {
+      calls++
+      return calls === 1 ? new Promise((resolve) => (finish = resolve)) : Promise.reject(new Error('down'))
+    })
+    page.drag('drop', [
+      { name: 'a.json', text: '1' },
+      { name: 'b.json', text: '2' },
+    ])
+    await page.settle()
+    page.drag('drop', [{ name: 'c.json', text: '3' }])
+    finish(json(entry('a', 'Checkout')))
+    await page.settle()
+    expect(calls).toBe(2)
+    expect(page.byId('import-error').textContent).toContain('b.json: Could not reach LSD Studio')
   })
 
   it('offers the sample trace from the empty state and imports it like a chosen file', async () => {

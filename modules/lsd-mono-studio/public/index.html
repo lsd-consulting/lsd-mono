@@ -224,6 +224,33 @@
         gap: 0.5rem;
         margin-top: 1rem;
       }
+      /* Shown while files are dragged over the page; the page is the drop target, this only says so. */
+      #drop-zone {
+        position: fixed;
+        inset: 0.75rem;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px dashed var(--accent);
+        border-radius: 16px;
+        background: color-mix(in oklch, var(--bg) 80%, transparent);
+        pointer-events: none;
+      }
+      #drop-zone p {
+        margin: 0;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        background: var(--surface);
+        border: 1px solid var(--accent);
+        color: var(--text);
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+      #import-status ul {
+        margin: 0;
+        padding-left: 1.25rem;
+      }
       .visually-hidden {
         position: absolute;
         width: 1px;
@@ -250,7 +277,10 @@
       </header>
       <section aria-labelledby="import-heading">
         <h2 id="import-heading">Import</h2>
-        <p>An exported LSD report (JSON) or an OTLP JSON telemetry file.</p>
+        <p>
+          An exported LSD report (JSON) or an OTLP JSON telemetry file. You can also drop .json files anywhere on this
+          page.
+        </p>
         <label class="visually-hidden" for="import-file">Report file</label>
         <input id="import-file" type="file" accept=".json,application/json" />
         <button id="import" type="button">Import</button>
@@ -274,6 +304,7 @@
         <p id="list-status" role="status"></p>
       </section>
     </main>
+    <div id="drop-zone" aria-hidden="true" hidden><p>Drop .json files to import them</p></div>
     <dialog id="confirm" aria-labelledby="confirm-title" aria-describedby="confirm-message">
       <h2 id="confirm-title">Delete reports?</h2>
       <p id="confirm-message"></p>
@@ -470,6 +501,86 @@
           }
           return [text.trim() || 'The import failed (' + response.status + ').', []]
         }
+
+        // Dropped files, one after another through the same import: the plain messages for one
+        // file, else a line per file, the imported ones as a status and the refused ones as an alert.
+        async function importFiles(files) {
+          if (importButton.disabled) return
+          importButton.disabled = true
+          importButton.textContent = 'Importing…'
+          importStatus.textContent = ''
+          importError.replaceChildren()
+          const imported = []
+          const refused = []
+          for (const file of files) {
+            if (!/\.json$/i.test(file.name)) {
+              refused.push([file.name, 'Not a .json file.', []])
+              continue
+            }
+            try {
+              const response = await fetch('/api/reports/import', { method: 'POST', body: await file.text() })
+              if (response.ok) imported.push([file.name, (await response.json()).title])
+              else refused.push([file.name, ...(await importFailure(response))])
+            } catch {
+              refused.push([file.name, 'Could not reach LSD Studio. Is it still running?', []])
+            }
+          }
+          importButton.disabled = false
+          importButton.textContent = 'Import'
+          if (files.length === 1) {
+            if (imported.length) importStatus.textContent = 'Imported "' + imported[0][1] + '".'
+            else showImportError(refused[0][1], refused[0][2])
+          } else {
+            if (imported.length) {
+              const lines = document.createElement('ul')
+              fillList(
+                lines,
+                imported.map(([name, title]) => name + ': imported "' + title + '"'),
+              )
+              const summary = document.createElement('span')
+              summary.textContent = 'Imported ' + imported.length + ' of ' + files.length + ' files.'
+              importStatus.replaceChildren(summary, lines)
+            }
+            if (refused.length) {
+              showImportError(
+                refused.length + ' of ' + files.length + ' files were not imported.',
+                refused.map(
+                  ([name, message, problems]) => name + ': ' + message + (problems.length ? ' ' + problems[0] : ''),
+                ),
+              )
+            }
+          }
+          await load()
+        }
+
+        // Files dragged anywhere over the page. The file picker above is the keyboard way in.
+        const dropZone = byId('drop-zone')
+        const carriesFiles = (event) => [...(event.dataTransfer?.types ?? [])].includes('Files')
+        let depth = 0
+        document.addEventListener('dragenter', (event) => {
+          if (!carriesFiles(event)) return
+          event.preventDefault()
+          depth++
+          dropZone.hidden = false
+        })
+        document.addEventListener('dragover', (event) => {
+          if (!carriesFiles(event)) return
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'copy'
+        })
+        document.addEventListener('dragleave', (event) => {
+          if (!carriesFiles(event)) return
+          depth = Math.max(0, depth - 1)
+          if (depth === 0) dropZone.hidden = true
+        })
+        document.addEventListener('drop', (event) => {
+          if (!carriesFiles(event)) return
+          event.preventDefault()
+          depth = 0
+          dropZone.hidden = true
+          const files = [...event.dataTransfer.files]
+          if (files.length) importFiles(files)
+        })
 
         // Imports what read() gives, with the button busy meanwhile so it cannot run twice.
         async function runImport(button, read) {
