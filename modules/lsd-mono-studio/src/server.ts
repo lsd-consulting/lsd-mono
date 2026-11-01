@@ -93,7 +93,15 @@ async function route(
     const capture = live.get(watched[1])
     return capture === undefined ? send(res, 404, 'Not a live capture') : sendJson(res, 200, capture)
   }
-  if (method === 'GET' && path === '/api/reports') return sendJson(res, 200, await store.list())
+  // A capture still running is marked capturing, so the list can say so (public/index.html).
+  if (method === 'GET' && path === '/api/reports') {
+    const reports = await store.list()
+    return sendJson(
+      res,
+      200,
+      reports.map((entry) => (live.get(entry.id)?.live ? { ...entry, capturing: true } : entry)),
+    )
+  }
   if (method === 'POST' && path === '/api/reports/import') {
     const result = await importBody(await readRequest(req), store)
     if (result.status === 201) return sendJson(res, 201, result.report)
