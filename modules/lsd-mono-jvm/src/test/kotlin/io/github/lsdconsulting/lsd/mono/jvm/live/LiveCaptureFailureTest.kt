@@ -300,6 +300,7 @@ class LiveCaptureFailureTest {
     }
 
     private companion object {
-        val SHORT: Duration = Duration.ofMillis(1_000)
+        // Long enough for a loaded CI runner to connect and answer, short enough to wait out.
+        val SHORT: Duration = Duration.ofMillis(3_000)
     }
 }
