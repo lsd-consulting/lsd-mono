@@ -15,6 +15,7 @@ export const CLOSE_HELLO_REQUIRED = 4002
 const protocolSchema = JSON.parse(readFileSync(PROTOCOL_SCHEMA, 'utf8')) as { $id: string }
 reportAjv.addSchema(protocolSchema)
 const validateSenderMessage = reportAjv.getSchema(`${protocolSchema.$id}#/$defs/SenderMessage`)!
+const validateServerMessage = reportAjv.getSchema(`${protocolSchema.$id}#/$defs/ServerMessage`)!
 
 type Json = Record<string, unknown>
 type Status = 'success' | 'warn' | 'error' | 'skipped' | 'aborted'
@@ -32,6 +33,12 @@ export interface Outcome {
 export function protocolErrors(message: unknown): string[] {
   if (validateSenderMessage(message)) return []
   return (validateSenderMessage.errors ?? []).slice(0, 20).map((e) => `${e.instancePath || '/'}: ${e.message}`)
+}
+
+/** Why [reply] is not a server message the protocol allows; empty when it is. */
+export function replyErrors(reply: unknown): string[] {
+  if (validateServerMessage(reply)) return []
+  return (validateServerMessage.errors ?? []).slice(0, 20).map((e) => `${e.instancePath || '/'}: ${e.message}`)
 }
 
 /** The major of a semver string. */

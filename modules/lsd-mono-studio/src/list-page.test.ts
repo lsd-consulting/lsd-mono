@@ -8,6 +8,7 @@ interface Entry {
   title: string
   importedAt: string
   source?: string
+  capturing?: boolean
 }
 
 interface Call {
@@ -72,10 +73,15 @@ async function openPage(initial: Entry[], importAnswer?: ImportAnswer | ((body?:
     }
     return Promise.resolve(new Response('unexpected', { status: 500 }))
   }
+  // The page's timers, run by the test: each setInterval callback and its delay.
+  const intervals: { run: () => void; ms: number }[] = []
   const dom = new JSDOM(HTML, {
     runScripts: 'dangerously',
     beforeParse(window) {
-      Object.assign(window, { fetch: fakeFetch })
+      Object.assign(window, {
+        fetch: fakeFetch,
+        setInterval: (run: () => void, ms: number) => intervals.push({ run, ms }),
+      })
       // jsdom has <dialog> but not showModal: open it, then answer like a user clicking a button.
       const proto = window.HTMLDialogElement.prototype
       proto.showModal = function (this: HTMLDialogElement) {
@@ -102,10 +108,14 @@ async function openPage(initial: Entry[], importAnswer?: ImportAnswer | ((body?:
     const box = doc.querySelectorAll<HTMLInputElement>('#reports input[type=checkbox]')[index]
     change(box, !box.checked)
   }
-  // jsdom cannot set a file input's files, so stand one in for the picker.
-  const chooseFile = (text: string) => {
-    Object.defineProperty(byId('import-file'), 'files', { value: [{ text: () => Promise.resolve(text) }] })
+  // jsdom cannot set a file input's files, so stand them in for the picker.
+  const chooseFiles = (files: { name: string; text: string }[]) => {
+    Object.defineProperty(byId('import-file'), 'files', {
+      value: files.map((file) => ({ name: file.name, text: () => Promise.resolve(file.text) })),
+      configurable: true,
+    })
   }
+  const chooseFile = (text: string) => chooseFiles([{ name: 'report.json', text }])
   // jsdom has no DataTransfer: a drag event carrying files, as a browser sends it.
   const drag = (type: string, files: { name: string; text: string }[] = [], types = ['Files']) => {
     const event = new dom.window.Event(type, { bubbles: true, cancelable: true })
@@ -133,7 +143,22 @@ async function openPage(initial: Entry[], importAnswer?: ImportAnswer | ((body?:
     Object.defineProperty(doc, 'visibilityState', { value: state, configurable: true })
     doc.dispatchEvent(new dom.window.Event('visibilitychange'))
   }
-  return { doc, calls, answer, settle, byId, titles, pick, change, chooseFile, drag, setReports, setVisibility }
+  return {
+    doc,
+    calls,
+    answer,
+    settle,
+    byId,
+    titles,
+    pick,
+    change,
+    chooseFile,
+    chooseFiles,
+    drag,
+    setReports,
+    setVisibility,
+    intervals,
+  }
 }
 
 describe('report list page', () => {
@@ -228,6 +253,83 @@ describe('report list page', () => {
     expect(page.doc.querySelector('header .local')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       'Local only Reports are stored on this machine. Nothing is uploaded.',
     )
+  })
+
+  it('says a capture still running is capturing, and a deleted capture was captured, not imported', async () => {
+    const page = await openPage([{ ...entry('a', 'Checkout'), source: 'capture', capturing: true }])
+    const time = page.doc.querySelector('#reports time')
+    expect(time?.textContent).toBe(`Capturing… started ${AT}`)
+    expect(time?.className).toBe('capturing')
+    page.answer.next = 'cancel'
+    page.doc.querySelector<HTMLButtonElement>('#reports button')?.click()
+    await page.settle()
+    expect(page.byId('confirm-message').textContent).toBe(
+      `"Checkout", captured ${AT}, will be deleted. This cannot be undone.`,
+    )
+  })
+
+  it('marks live capture as experimental', async () => {
+    const page = await openPage([])
+    expect(page.byId('live-note').textContent).toContain('Live capture is experimental.')
+  })
+
+  it('keeps keyboard focus on the same control when a refresh redraws the list', async () => {
+    const page = await openPage([entry('a', 'Checkout'), entry('b', 'Payments')])
+    const rowButton = (id: string) =>
+      page.doc.querySelector<HTMLButtonElement>(`#reports li[data-id="${id}"] [data-role="delete"]`)
+    rowButton('b')?.focus()
+    page.setReports([entry('c', 'Live'), entry('a', 'Checkout'), entry('b', 'Payments')])
+    page.setVisibility('visible')
+    await page.settle()
+    expect(page.titles()).toEqual(['Live', 'Checkout', 'Payments'])
+    expect(page.doc.activeElement).toBe(rowButton('b'))
+    page.doc.querySelector<HTMLInputElement>('#reports li[data-id="a"] input')?.focus()
+    page.setReports([entry('a', 'Checkout 2'), entry('b', 'Payments')])
+    page.setVisibility('visible')
+    await page.settle()
+    expect(page.doc.activeElement).toBe(page.doc.querySelector('#reports li[data-id="a"] input'))
+  })
+
+  it('moves focus to the list heading when the focused report is gone after a refresh', async () => {
+    const page = await openPage([entry('a', 'Checkout'), entry('b', 'Payments')])
+    page.doc.querySelector<HTMLElement>('#reports li[data-id="a"] a')?.focus()
+    page.setReports([entry('b', 'Payments')])
+    page.setVisibility('visible')
+    await page.settle()
+    expect(page.doc.activeElement).toBe(page.byId('reports-heading'))
+  })
+
+  it('says politely how many reports a refresh found', async () => {
+    const page = await openPage([entry('a', 'Checkout')])
+    page.setReports([entry('b', 'Live'), entry('a', 'Checkout')])
+    page.setVisibility('visible')
+    await page.settle()
+    expect(page.byId('list-status').textContent).toBe('1 new report.')
+    page.setReports([entry('d', 'D'), entry('c', 'C'), entry('b', 'Live')])
+    page.setVisibility('visible')
+    await page.settle()
+    expect(page.byId('list-status').textContent).toBe('2 new reports.')
+  })
+
+  it('refreshes every 3 seconds, but not while hidden or while a dialog is open', async () => {
+    const page = await openPage([entry('a', 'Checkout')])
+    expect(page.intervals.map((timer) => timer.ms)).toEqual([3000])
+    const [timer] = page.intervals
+    page.setReports([entry('b', 'Live'), entry('a', 'Checkout')])
+    const fetches = page.calls.length
+    timer.run()
+    await page.settle()
+    expect(page.calls.length).toBe(fetches)
+    page.byId<HTMLDialogElement>('confirm').open = true
+    page.setVisibility('visible')
+    timer.run()
+    await page.settle()
+    expect(page.calls.length).toBe(fetches)
+    expect(page.titles()).toEqual(['Checkout'])
+    page.byId<HTMLDialogElement>('confirm').open = false
+    timer.run()
+    await page.settle()
+    expect(page.titles()).toEqual(['Live', 'Checkout'])
   })
 
   it('confirms, deletes one report, refreshes and says so', async () => {
@@ -437,6 +539,24 @@ describe('report list page', () => {
     expect(page.byId<HTMLButtonElement>('import').disabled).toBe(false)
   })
 
+  it('says one refused file was not imported, in the singular', async () => {
+    const page = await openPage([], (body) =>
+      Promise.resolve(
+        body === 'good'
+          ? json(entry('a', 'Checkout'))
+          : new Response(JSON.stringify({ error: 'Not a valid OTLP/JSON trace export', errors: ['no spans'] }), {
+              status: 422,
+            }),
+      ),
+    )
+    page.drag('drop', [
+      { name: 'one.json', text: 'good' },
+      { name: 'trace.json', text: 'bad' },
+    ])
+    await page.settle()
+    expect(page.byId('import-error').querySelector('p')?.textContent).toBe('1 of 2 files was not imported.')
+  })
+
   it('says so when a dropped file cannot reach the server, and ignores drops while importing', async () => {
     let finish: (response: Response) => void = () => undefined
     let calls = 0
@@ -480,6 +600,62 @@ describe('report list page', () => {
     page.byId('try-sample').click()
     await page.settle()
     expect(page.byId('import-error').textContent).toContain('Not valid.')
+  })
+
+  it('lets the file picker choose several files and imports them like a drop', async () => {
+    const page = await openPage([], (body) =>
+      Promise.resolve(
+        body === 'good'
+          ? json(entry('a', 'Checkout'))
+          : new Response(JSON.stringify({ error: 'Not a valid LSD report', errors: ['/title'] }), { status: 422 }),
+      ),
+    )
+    expect(page.byId<HTMLInputElement>('import-file').multiple).toBe(true)
+    page.chooseFiles([
+      { name: 'one.json', text: 'good' },
+      { name: 'two.json', text: 'bad' },
+    ])
+    page.byId('import').click()
+    await page.settle()
+    expect(page.byId('import-status').querySelector('span')?.textContent).toBe('Imported 1 of 2 files.')
+    expect([...page.byId('import-error').querySelectorAll('li')].map((item) => item.textContent)).toEqual([
+      'two.json: Not a valid LSD report. /title',
+    ])
+  })
+
+  it('runs one import at a time, whichever way it starts, and disables both import buttons meanwhile', async () => {
+    let finish: (response: Response) => void = () => undefined
+    const page = await openPage([], () => new Promise((resolve) => (finish = resolve)))
+    const sample = page.byId<HTMLButtonElement>('try-sample')
+    const button = page.byId<HTMLButtonElement>('import')
+    page.drag('drop', [{ name: 'a.json', text: '1' }])
+    await page.settle()
+    expect(sample.disabled).toBe(true)
+    expect(button.disabled).toBe(true)
+    expect(button.textContent).toBe('Importing…')
+    sample.dispatchEvent(new page.doc.defaultView!.MouseEvent('dblclick'))
+    sample.click()
+    sample.click()
+    page.chooseFile('{}')
+    button.click()
+    finish(json(entry('a', 'Checkout')))
+    await page.settle()
+    expect(page.calls.filter((call) => call.method === 'POST')).toHaveLength(1)
+    expect(sample.disabled).toBe(false)
+    expect(sample.textContent).toBe('Try a sample')
+    expect(button.textContent).toBe('Import')
+  })
+
+  it('frees the import buttons even when reading a file fails', async () => {
+    const page = await openPage([], { status: 201, body: '{}' })
+    Object.defineProperty(page.byId('import-file'), 'files', {
+      value: [{ name: 'gone.json', text: () => Promise.reject(new Error('gone')) }],
+    })
+    page.byId('import').click()
+    await page.settle()
+    expect(page.byId('import-error').textContent).toBe('Could not reach LSD Studio. Is it still running?')
+    expect(page.byId<HTMLButtonElement>('import').disabled).toBe(false)
+    expect(page.byId<HTMLButtonElement>('try-sample').disabled).toBe(false)
   })
 
   it('does nothing on import with no file chosen', async () => {

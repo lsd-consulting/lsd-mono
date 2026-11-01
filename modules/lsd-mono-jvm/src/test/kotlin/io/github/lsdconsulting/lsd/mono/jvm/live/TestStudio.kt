@@ -17,17 +17,43 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * A WebSocket server for tests that answers like LSD Studio's live endpoint: welcome to a hello,
- * stored to report.done (then close 1000). With [refuseVersion] it answers the hello with
- * unsupported-version and closes 4001. Text frames only; enough of RFC 6455 for the JDK client.
+ * stored to report.done (then close 1000), or as [mode] says when it goes wrong. Text frames only;
+ * enough of RFC 6455 for the JDK client.
  */
 internal class TestStudio(
-    private val refuseVersion: Boolean = false,
+    private val mode: Mode = Mode.ANSWERS,
 ) : AutoCloseable {
+    enum class Mode {
+        /** Welcome, then stored and close 1000 on report.done. */
+        ANSWERS,
+
+        /** Never answers anything, and never closes. */
+        STALLS,
+
+        /** Closes 1000 on report.done without saying stored. */
+        NO_STORED_REPLY,
+
+        /** Welcome, then closes 1011 (server error) at once. */
+        CLOSES_1011,
+
+        /** Welcome and a non-fatal error for the hello, then answers as usual. */
+        NON_FATAL_ERROR,
+
+        /** Refuses the hello as an unsupported major, closing 4001. */
+        UNSUPPORTED_MAJOR,
+
+        /** Refuses the hello as hello-required, closing 4002. */
+        ERROR_REPLY,
+    }
+
     private val server = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
     val url: String = "ws://127.0.0.1:${server.localPort}/ws/captures"
 
     /** Every text frame received, on every connection, in order. */
     val frames: MutableList<String> = CopyOnWriteArrayList()
+
+    /** Every text frame sent back, for checking against the protocol schema. */
+    val replies: MutableList<String> = CopyOnWriteArrayList()
     val connections = AtomicInteger()
     private val closed = CountDownLatch(1)
 
@@ -89,17 +115,33 @@ internal class TestStudio(
         output: OutputStream,
         frame: JsonObject,
     ): Boolean {
+        if (mode == Mode.STALLS) return true
         when (frame.string("type")) {
             "hello" ->
-                if (refuseVersion) {
-                    send(output, """{"type":"error","code":"unsupported-version","message":"This server speaks lsd-live 9.x."}""")
-                    close(output, 4001)
-                    return false
-                } else {
-                    send(output, """{"type":"welcome","protocol":"lsd-live","version":"0.1.0","reportId":"r1"}""")
+                when (mode) {
+                    Mode.UNSUPPORTED_MAJOR -> {
+                        send(output, """{"type":"error","code":"unsupported-version","message":"This server speaks lsd-live 9.x."}""")
+                        close(output, 4001)
+                        return false
+                    }
+                    Mode.ERROR_REPLY -> {
+                        send(output, """{"type":"error","code":"hello-required","message":"Send a hello first."}""")
+                        close(output, 4002)
+                        return false
+                    }
+                    else -> {
+                        send(output, WELCOME)
+                        if (mode == Mode.CLOSES_1011) {
+                            close(output, 1011)
+                            return false
+                        }
+                        if (mode == Mode.NON_FATAL_ERROR) {
+                            send(output, """{"type":"error","code":"invalid-message","message":"Not a valid hello message."}""")
+                        }
+                    }
                 }
             "report.done" -> {
-                send(output, """{"type":"stored","reportId":"r1"}""")
+                if (mode != Mode.NO_STORED_REPLY) send(output, """{"type":"stored","reportId":"r1"}""")
                 close(output, 1000)
                 return false
             }
@@ -139,6 +181,7 @@ internal class TestStudio(
         output: OutputStream,
         text: String,
     ) {
+        replies.add(text)
         val bytes = text.toByteArray()
         output.write(0x81)
         if (bytes.size < 126) {
@@ -162,5 +205,9 @@ internal class TestStudio(
 
     override fun close() {
         server.close()
+    }
+
+    private companion object {
+        const val WELCOME = """{"type":"welcome","protocol":"lsd-live","version":"0.1.0","reportId":"r1","url":"/reports/r1"}"""
     }
 }

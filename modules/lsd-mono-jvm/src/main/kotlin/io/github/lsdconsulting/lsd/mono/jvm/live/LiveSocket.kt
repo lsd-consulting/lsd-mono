@@ -7,11 +7,16 @@ import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 
-/** One open WebSocket to LSD Studio. [send] blocks until the frame is sent or fails. */
+/**
+ * One open WebSocket to LSD Studio. [send] blocks until the frame is sent or fails; [close] waits
+ * briefly for a clean close; [abort] drops the connection at once, without blocking.
+ */
 internal interface LiveSocket {
     fun send(text: String)
 
     fun close()
+
+    fun abort()
 }
 
 /** Opens a [LiveSocket]; [onText] gets each whole text frame the server sends, [onClose] its close code. */
@@ -87,6 +92,8 @@ internal class JdkLiveConnector(
                     socket.abort()
                 }
             }
+
+            override fun abort() = socket.abort()
         }
     }
 }

@@ -57,8 +57,10 @@ class LiveCaptureTest {
                     status = Status.ERROR,
                     error = ScenarioError.of("Payment declined", "Expected 200 but was 402", null),
                 )
-                lsd.completeReport("Checkout service tests", "checkout")
+                val files = lsd.completeReport("Checkout service tests", "checkout")
                 assertTrue(studio.awaitClosed(), "the stream ends")
+                studio.replies.forEach(::assertValidFrame)
+                assertEquals(manifestShares("checkout"), writtenShares(files.reportJson))
                 studio.frames.toList()
             }
         frames.forEach(::assertValidFrame)
@@ -116,6 +118,7 @@ class LiveCaptureTest {
             lsd.message("A", "B", "hi")
             lsd.completeScenario("quiet")
             lsd.completeReport("Quiet", "quiet")
+            // LiveCaptureFailureTest checks that no worker thread starts; this checks the default end to end.
             Thread.sleep(200)
             assertEquals(0, studio.connections.get())
         }
@@ -140,7 +143,7 @@ class LiveCaptureTest {
 
     @Test
     fun `a refused protocol version is warned about, the stream stops and the report is written`() {
-        TestStudio(refuseVersion = true).use { studio ->
+        TestStudio(TestStudio.Mode.UNSUPPORTED_MAJOR).use { studio ->
             System.setProperty(LsdProperties.STUDIO_URL, studio.url)
             val lsd = LsdContext()
             lsd.beginScenario("refused")
@@ -162,9 +165,20 @@ class LiveCaptureTest {
         assertTrue(Files.exists(lsd.completeReport("Wrong", "wrong").reportJson))
     }
 
+    /** Each scenario's measuredRatio and pairedRatio as the manifest expects them for [stream]. */
+    private fun manifestShares(stream: String): List<List<Double?>> {
+        val manifest = Json.parse(PROTOCOL.resolve("fixtures/manifest.json").readText()) as JsonObject
+        val expected = manifest.objects("streams").single { it.string("file") == "streams/$stream.jsonl" }
+        return checkNotNull(expected.obj("expect")?.obj("report")).objects("scenarios").map(::shares)
+    }
+
+    private fun writtenShares(report: Path): List<List<Double?>> = (Json.parse(report.readText()) as JsonObject).objects("scenarios").map(::shares)
+
+    private fun shares(scenario: JsonObject): List<Double?> = listOf("measuredRatio", "pairedRatio").map { (scenario[it] as Number?)?.toDouble() }
+
     private fun fixture(name: String): List<String> = PROTOCOL.resolve("fixtures/streams/$name.jsonl").readLines().filter(String::isNotBlank)
 
-    private fun assertValidFrame(frame: String) {
+    internal fun assertValidFrame(frame: String) {
         val errors = liveSchema.validate(frame, InputFormat.JSON).map { "${it.instanceLocation}: ${it.message}" }
         assertEquals(emptyList<String>(), errors, frame)
     }
@@ -224,7 +238,7 @@ class LiveCaptureTest {
         }
     }
 
-    private companion object {
+    internal companion object {
         val PROTOCOL: Path = Path.of("../lsd-mono-studio/protocol")
 
         val liveSchema =

@@ -121,6 +121,10 @@ Capture is thread-safe, and both integrations support parallel runs (JUnit's `ju
 
 A thread that is not bound to a test, such as an HTTP server thread, captures into the running test when only one test is running. When several are running, LSD cannot tell which test the capture belongs to: it logs a warning and keeps the capture out of all of them. Carry the test onto threads you start with `LsdContext.instance.wrap(task)` or `lsd.currentScenario()?.bind()`. A coroutine that changes dispatcher thread drops a thread binding; use `withLsdScenario` from the [coroutines module](modules/lsd-mono-coroutines/README.md).
 
+## LSD Studio
+
+LSD Studio runs on your machine and turns LSD reports and traces into sequence diagrams: start it and choose **Try a sample**. See [LSD Studio](modules/lsd-mono-studio/README.md).
+
 ## Configuration
 
 Every setting is a `lsd.mono.*` property, read from a system property, an environment variable (`LSD_MONO_REPORT_OUTPUTDIR`), a JUnit configuration parameter, or `lsd-mono.properties` on the classpath, in that order. The [configuration reference](docs/jvm-api.md#configuration-reference) lists each one with its default; a test keeps that table in step with the code.

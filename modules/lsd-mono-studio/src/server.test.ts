@@ -165,6 +165,8 @@ describe('the server', () => {
     socket.send(Buffer.from([1, 2, 3]))
     await until(() => replies.length === 2)
     expect(replies[1]).toMatchObject({ type: 'error', code: 'invalid-json' })
+    const listed = async () => ((await (await fetch(`${base}/api/reports`)).json()) as { capturing?: boolean }[])[0]
+    expect((await listed()).capturing).toBe(true)
     socket.close()
     const id = replies[0].reportId as string
     await until(
@@ -172,6 +174,7 @@ describe('the server', () => {
     )
     const report = (await (await fetch(`${base}/api/reports/${id}`)).json()) as { status: string }
     expect(report).toMatchObject({ status: 'skipped', scenarios: [{ title: 'Nothing captured' }] })
+    expect((await listed()).capturing).toBeUndefined()
   })
 
   it('answers 404 for the live state of a report that is not a capture', async () => {

@@ -203,6 +203,15 @@
         color: var(--text);
         font-size: 1rem;
       }
+      #live-note {
+        margin: 0 0 0.75rem;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+      }
+      #reports time.capturing {
+        font-weight: 600;
+        color: var(--text);
+      }
       #bulk-hint {
         margin: 0;
         font-size: 0.85rem;
@@ -262,7 +271,7 @@
     </style>
   </head>
   <body>
-    <!-- LSD Studio's report list (#186). TODO(#186): live updates, diff. -->
+    <!-- LSD Studio's report list (#186). TODO(#186): diff. -->
     <main>
       <header>
         <h1>LSD Studio</h1>
@@ -281,14 +290,17 @@
           An exported LSD report (JSON) or an OTLP JSON telemetry file. You can also drop .json files anywhere on this
           page.
         </p>
-        <label class="visually-hidden" for="import-file">Report file</label>
-        <input id="import-file" type="file" accept=".json,application/json" />
+        <label class="visually-hidden" for="import-file">Report files</label>
+        <input id="import-file" type="file" accept=".json,application/json" multiple />
         <button id="import" type="button">Import</button>
         <p id="import-status" role="status"></p>
         <div id="import-error" role="alert" tabindex="-1"></div>
       </section>
       <section aria-labelledby="reports-heading">
         <h2 id="reports-heading">Reports</h2>
+        <p class="hint" id="live-note">
+          Reports captured live from your tests appear here as they run. Live capture is experimental.
+        </p>
         <div class="toolbar" id="toolbar" hidden>
           <label><input id="select-all" type="checkbox" /> Select all</label>
           <button id="bulk-delete" class="danger" type="button" aria-describedby="bulk-hint" disabled>
@@ -392,33 +404,62 @@
 
         // The list as last drawn, so a refresh that finds nothing new leaves the page alone.
         let drawn = ''
+        // The ids last drawn, so a refresh can say how many reports are new.
+        let known = new Set()
         async function load() {
           const text = await (await fetch('/api/reports')).text()
           draw(text)
         }
-        // Redraws only when the list changed, keeping what is selected.
+        // Redraws only when the list changed, keeping what is selected and focused, and says politely
+        // how many reports arrived since the last look.
         async function refresh() {
           const response = await fetch('/api/reports')
           if (!response.ok) return
           const text = await response.text()
-          if (text !== drawn) draw(text)
+          if (text === drawn) return
+          const before = known
+          draw(text)
+          const added = [...known].filter((id) => !before.has(id)).length
+          if (added > 0) listStatus.textContent = (added === 1 ? '1 new report' : added + ' new reports') + '.'
         }
+        // The control in a row that has focus, as its report id and role, so a redraw can give it back.
+        function focusedControl() {
+          const active = document.activeElement
+          if (!active || !list.contains(active) || !active.dataset.role) return undefined
+          return { id: active.closest('li')?.dataset.id, role: active.dataset.role }
+        }
+        function restoreFocus(focused) {
+          if (!focused) return
+          const row = [...list.children].find((item) => item.dataset.id === focused.id)
+          const control = row?.querySelector('[data-role="' + focused.role + '"]')
+          if (control) control.focus()
+          else byId('reports-heading').focus()
+        }
+        // How a row says when its report arrived: a capture still running is "Capturing…".
+        const arrival = (report) =>
+          report.capturing
+            ? 'Capturing… started ' + when(report.importedAt)
+            : (arrived(report) === 'captured' ? 'Captured ' : 'Imported ') + when(report.importedAt)
         function draw(text) {
           drawn = text
           const reports = JSON.parse(text)
+          known = new Set(reports.map((report) => report.id))
           const kept = new Set(
             picks()
               .filter((pick) => pick.checked)
               .map((pick) => pick.value),
           )
+          const focused = focusedControl()
           list.replaceChildren(
             ...reports.map((report) => {
               const item = document.createElement('li')
+              item.dataset.id = report.id
               const pick = document.createElement('input')
               pick.type = 'checkbox'
               pick.value = report.id
               pick.checked = kept.has(report.id)
               pick.dataset.named = named(report)
+              pick.dataset.role = 'pick'
               pick.setAttribute('aria-label', 'Select ' + named(report))
               pick.addEventListener('change', syncSelection)
               const title = document.createElement('div')
@@ -426,14 +467,17 @@
               const name = document.createElement('a')
               name.href = '/reports/' + encodeURIComponent(report.id)
               name.textContent = report.title
+              name.dataset.role = 'open'
               const time = document.createElement('time')
               time.dateTime = report.importedAt
-              time.textContent = (arrived(report) === 'captured' ? 'Captured ' : 'Imported ') + when(report.importedAt)
+              time.textContent = arrival(report)
+              if (report.capturing) time.className = 'capturing'
               title.append(name, time)
               const remove = document.createElement('button')
               remove.type = 'button'
               remove.className = 'danger'
               remove.textContent = 'Delete'
+              remove.dataset.role = 'delete'
               remove.setAttribute('aria-label', 'Delete ' + named(report))
               remove.addEventListener('click', () => deleteOne(report, remove))
               item.append(pick, title, remove)
@@ -443,6 +487,7 @@
           toolbar.hidden = reports.length === 0
           empty.hidden = reports.length > 0
           syncSelection()
+          restoreFocus(focused)
         }
 
         async function deleteOne(report, opener) {
@@ -451,7 +496,9 @@
               'Delete report?',
               '"' +
                 report.title +
-                '", imported ' +
+                '", ' +
+                arrived(report) +
+                ' ' +
                 when(report.importedAt) +
                 ', will be deleted. This cannot be undone.',
             ))
@@ -524,35 +571,54 @@
           return [text.trim() || 'The import failed (' + response.status + ').', []]
         }
 
-        // Dropped files, one after another through the same import: the plain messages for one
-        // file, else a line per file, the imported ones as a status and the refused ones as an alert.
-        async function importFiles(files) {
-          if (importButton.disabled) return
+        // One import at a time, from any way in: the file picker, a drop or the sample. Both import
+        // buttons are disabled meanwhile, and [button] says it is busy.
+        const trySample = byId('try-sample')
+        let importing = false
+        async function busy(button, work) {
+          if (importing) return
+          importing = true
+          const label = button.textContent
           importButton.disabled = true
-          importButton.textContent = 'Importing…'
+          trySample.disabled = true
+          button.textContent = 'Importing…'
           importStatus.textContent = ''
           importError.replaceChildren()
-          const imported = []
-          const refused = []
-          for (const file of files) {
-            if (!/\.json$/i.test(file.name)) {
-              refused.push([file.name, 'Not a .json file.', []])
-              continue
-            }
-            try {
-              const response = await fetch('/api/reports/import', { method: 'POST', body: await file.text() })
-              if (response.ok) imported.push([file.name, (await response.json()).title])
-              else refused.push([file.name, ...(await importFailure(response))])
-            } catch {
-              refused.push([file.name, 'Could not reach LSD Studio. Is it still running?', []])
-            }
+          try {
+            await work()
+          } finally {
+            importing = false
+            importButton.disabled = false
+            trySample.disabled = false
+            button.textContent = label
           }
-          importButton.disabled = false
-          importButton.textContent = 'Import'
-          if (files.length === 1) {
-            if (imported.length) importStatus.textContent = 'Imported "' + imported[0][1] + '".'
-            else showImportError(refused[0][1], refused[0][2])
-          } else {
+          await load()
+        }
+
+        // Files, one after another through the same import: the plain messages for one file, else a
+        // line per file, the imported ones as a status and the refused ones as an alert.
+        function importFiles(files, button = importButton) {
+          return busy(button, async () => {
+            const imported = []
+            const refused = []
+            for (const file of files) {
+              if (!/\.json$/i.test(file.name)) {
+                refused.push([file.name, 'Not a .json file.', []])
+                continue
+              }
+              try {
+                const response = await fetch('/api/reports/import', { method: 'POST', body: await file.text() })
+                if (response.ok) imported.push([file.name, (await response.json()).title])
+                else refused.push([file.name, ...(await importFailure(response))])
+              } catch {
+                refused.push([file.name, 'Could not reach LSD Studio. Is it still running?', []])
+              }
+            }
+            if (files.length === 1) {
+              if (imported.length) importStatus.textContent = 'Imported "' + imported[0][1] + '".'
+              else showImportError(refused[0][1], refused[0][2])
+              return
+            }
             if (imported.length) {
               const lines = document.createElement('ul')
               fillList(
@@ -565,14 +631,16 @@
             }
             if (refused.length) {
               showImportError(
-                refused.length + ' of ' + files.length + ' files were not imported.',
+                refused.length +
+                  ' of ' +
+                  files.length +
+                  (refused.length === 1 ? ' files was not imported.' : ' files were not imported.'),
                 refused.map(
                   ([name, message, problems]) => name + ': ' + message + (problems.length ? ' ' + problems[0] : ''),
                 ),
               )
             }
-          }
-          await load()
+          })
         }
 
         // Files dragged anywhere over the page. The file picker above is the keyboard way in.
@@ -604,44 +672,26 @@
           if (files.length) importFiles(files)
         })
 
-        // Imports what read() gives, with the button busy meanwhile so it cannot run twice.
-        async function runImport(button, read) {
-          if (button.disabled) return
-          const label = button.textContent
-          button.disabled = true
-          button.textContent = 'Importing…'
-          importStatus.textContent = ''
-          importError.replaceChildren()
-          try {
-            const response = await fetch('/api/reports/import', { method: 'POST', body: await read() })
-            if (response.ok) {
-              const report = await response.json()
-              importStatus.textContent = 'Imported "' + report.title + '".'
-            } else {
-              showImportError(...(await importFailure(response)))
-            }
-          } catch {
-            showImportError('Could not reach LSD Studio. Is it still running?')
-          } finally {
-            button.disabled = false
-            button.textContent = label
-          }
-          await load()
-        }
-
         importButton.addEventListener('click', () => {
-          const file = byId('import-file').files[0]
-          if (file) return runImport(importButton, () => file.text())
+          const files = [...(byId('import-file').files ?? [])]
+          if (files.length) return importFiles(files)
         })
 
         // The bundled sample trace, through the same import as a chosen file.
-        const trySample = byId('try-sample')
         trySample.addEventListener('click', () =>
-          runImport(trySample, async () => {
-            const response = await fetch('/samples/sample-trace.json')
-            if (!response.ok) throw new Error('No sample')
-            return response.text()
-          }),
+          importFiles(
+            [
+              {
+                name: 'sample-trace.json',
+                text: async () => {
+                  const response = await fetch('/samples/sample-trace.json')
+                  if (!response.ok) throw new Error('No sample')
+                  return response.text()
+                },
+              },
+            ],
+            trySample,
+          ),
         )
 
         byId('reports-heading').tabIndex = -1

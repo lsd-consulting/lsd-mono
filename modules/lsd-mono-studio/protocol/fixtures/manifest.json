@@ -1,5 +1,5 @@
 {
-  "description": "Message streams in the lsd-live protocol. Each .jsonl line is one WebSocket text frame, sent as it is. expect.replies lists what the server answers, by the 1-based line that caused it; lines with no entry get no answer. expect.close is the close code the server ends with (absent: the stream ends and the sender closes). expect.report is the stored report once the socket has closed. A sender's tests can assert it produces a valid stream; the server's tests replay each one.",
+  "description": "Message streams in the lsd-live protocol. Each .jsonl line is one WebSocket text frame, sent as it is. expect.replies lists what the server answers, by the 1-based line that caused it; lines with no entry get no answer. expect.close is the close code the server ends with (absent: the stream ends and the sender closes). expect.report is the stored report once the socket has closed; a scenario's measuredRatio and pairedRatio, where given, are its timing shares. A sender's tests can assert it produces a valid stream; the server's tests replay each one.",
   "protocolVersion": "0.1.0",
   "streams": [
     {
@@ -25,12 +25,16 @@
             {
               "id": "pays",
               "status": "success",
-              "events": 4
+              "events": 4,
+              "measuredRatio": 1,
+              "pairedRatio": 1
             },
             {
               "id": "declined",
               "status": "error",
-              "events": 2
+              "events": 2,
+              "measuredRatio": 1,
+              "pairedRatio": 1
             }
           ]
         }
