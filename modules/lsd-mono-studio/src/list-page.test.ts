@@ -147,6 +147,16 @@ describe('report list page', () => {
     expect(new Set(labels).size).toBe(2)
   })
 
+  it('says what LSD Studio is for under its heading', async () => {
+    const page = await openPage([])
+    const intro = page.byId('intro')
+    expect(intro.tagName).toBe('P')
+    expect(intro.closest('header')?.querySelector('h1')?.textContent).toBe('LSD Studio')
+    expect(intro.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Your local home for sequence diagrams: import LSD reports or OpenTelemetry traces, keep them on this machine, and open any of them as a diagram.',
+    )
+  })
+
   it('says it is local only', async () => {
     const page = await openPage([])
     expect(page.doc.querySelector('header .local')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
