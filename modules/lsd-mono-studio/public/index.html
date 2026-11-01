@@ -631,7 +631,10 @@
             }
             if (refused.length) {
               showImportError(
-                refused.length + ' of ' + files.length + ' files were not imported.',
+                refused.length +
+                  ' of ' +
+                  files.length +
+                  (refused.length === 1 ? ' files was not imported.' : ' files were not imported.'),
                 refused.map(
                   ([name, message, problems]) => name + ': ' + message + (problems.length ? ' ' + problems[0] : ''),
                 ),

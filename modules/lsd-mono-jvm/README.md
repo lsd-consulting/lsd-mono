@@ -147,7 +147,8 @@ It is off when the property is unset, and it works the same from JUnit, Cucumber
   Only `report.done` waits, for up to two seconds, for LSD Studio to say it stored the report.
 - **When something goes wrong:** if LSD Studio is not running, refuses the protocol version or
   cannot keep up, LSD logs one warning and the tests carry on. If it cannot be reached at all,
-  live capture stays off for the rest of the run.
+  or stalls so that a connect, send or the stored reply times out, live capture stays off for the
+  rest of the run.
 - **The protocol:** `lsd-live` 0.1.0, from lsd-mono-studio's
   [protocol](../lsd-mono-studio/README.md#live-capture-protocol-152). The sender's tests check
   every frame against that schema and fixtures.

@@ -539,6 +539,24 @@ describe('report list page', () => {
     expect(page.byId<HTMLButtonElement>('import').disabled).toBe(false)
   })
 
+  it('says one refused file was not imported, in the singular', async () => {
+    const page = await openPage([], (body) =>
+      Promise.resolve(
+        body === 'good'
+          ? json(entry('a', 'Checkout'))
+          : new Response(JSON.stringify({ error: 'Not a valid OTLP/JSON trace export', errors: ['no spans'] }), {
+              status: 422,
+            }),
+      ),
+    )
+    page.drag('drop', [
+      { name: 'one.json', text: 'good' },
+      { name: 'trace.json', text: 'bad' },
+    ])
+    await page.settle()
+    expect(page.byId('import-error').querySelector('p')?.textContent).toBe('1 of 2 files was not imported.')
+  })
+
   it('says so when a dropped file cannot reach the server, and ignores drops while importing', async () => {
     let finish: (response: Response) => void = () => undefined
     let calls = 0
