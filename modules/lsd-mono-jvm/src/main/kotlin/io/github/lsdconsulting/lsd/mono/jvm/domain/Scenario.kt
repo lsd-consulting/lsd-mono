@@ -24,7 +24,7 @@ public class ScenarioError internal constructor(
 
     override fun toString(): String = describe("ScenarioError", fields())
 
-    private fun fields(): List<Pair<String, Any?>> = listOf("headline" to headline, "message" to message, "stack" to stack)
+    private fun fields(): Map<String, Any?> = mapOf("headline" to headline, "message" to message, "stack" to stack)
 
     /** Holds the factories. */
     public companion object {

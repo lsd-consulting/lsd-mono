@@ -36,8 +36,8 @@ public class Participant internal constructor(
 
     override fun toString(): String = describe("Participant", fields())
 
-    private fun fields(): List<Pair<String, Any?>> =
-        listOf("name" to name, "id" to id, "type" to type, "displayName" to displayName, "colour" to colour)
+    private fun fields(): Map<String, Any?> =
+        mapOf("name" to name, "id" to id, "type" to type, "displayName" to displayName, "colour" to colour)
 }
 
 /** The shape of a participant's header on the diagram. */

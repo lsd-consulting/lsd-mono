@@ -118,15 +118,18 @@ internal class LsdExchangeFilter(
                 val query = uri.rawQuery?.let { "?$it" } ?: ""
                 val sent = headers ?: original.headers()
                 scenario.ingest(
-                    Interaction
-                        .builder(InteractionKind.REQUEST, caller, target, "${original.method().name()} ${uri.rawPath.ifEmpty { "/" }}$query")
-                        .interactionId(id)
-                        .trace(Trace(scenario.correlationId, id, parent))
-                        .source(SpringScenarios.SOURCE)
-                        .startedAt(started)
-                        .data(body?.let { if (overflowed) Bodies.head(it, sent.contentType?.toString()) else Bodies.read(it, sent.contentType?.toString()) })
-                        .headers(flatten(sent))
-                        .build(),
+                    Interaction(
+                        kind = InteractionKind.REQUEST,
+                        from = caller,
+                        to = target,
+                        label = "${original.method().name()} ${uri.rawPath.ifEmpty { "/" }}$query",
+                        interactionId = id,
+                        trace = Trace(scenario.correlationId, id, parent),
+                        source = SpringScenarios.SOURCE,
+                        startedAt = started,
+                        data = body?.let { if (overflowed) Bodies.head(it, sent.contentType?.toString()) else Bodies.read(it, sent.contentType?.toString()) },
+                        headers = flatten(sent),
+                    ),
                 )
             }
         }
@@ -162,15 +165,18 @@ internal class LsdExchangeFilter(
             if (!replied.compareAndSet(false, true)) return
             guarded(Unit) {
                 scenario.ingest(
-                    Interaction
-                        .builder(InteractionKind.RESPONSE, target, caller, label)
-                        .status(status)
-                        .replyTo(id)
-                        .source(SpringScenarios.SOURCE)
-                        .durationMs((System.nanoTime() - t0) / 1_000_000.0)
-                        .data(data)
-                        .headers(headers)
-                        .build(),
+                    Interaction(
+                        kind = InteractionKind.RESPONSE,
+                        from = target,
+                        to = caller,
+                        label = label,
+                        status = status,
+                        replyTo = id,
+                        source = SpringScenarios.SOURCE,
+                        durationMs = (System.nanoTime() - t0) / 1_000_000.0,
+                        data = data,
+                        headers = headers,
+                    ),
                 )
             }
         }

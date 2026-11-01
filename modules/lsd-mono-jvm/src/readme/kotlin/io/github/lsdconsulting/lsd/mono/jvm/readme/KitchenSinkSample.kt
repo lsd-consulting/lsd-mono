@@ -426,36 +426,56 @@ private fun timedCheckout(lsd: LsdContext) {
     )
     // Ingested from another library, which sends no ids: drawn, but not linked.
     lsd.ingest(
-        Interaction
-            .builder(InteractionKind.PUBLISH, "Notification Service", "Email", "send receipt")
-            .source("notification-service")
-            .startedAt(at(640))
-            .build(),
+        Interaction(
+            kind = InteractionKind.PUBLISH,
+            label = "send receipt",
+            from = "Notification Service",
+            to = "Email",
+            source = "notification-service",
+            startedAt = at(640),
+        ),
     )
     // The importer's status drives the Errors metric: the first send fails, the retry succeeds.
     // Its headers sit beside the body in the payload.
     lsd.ingest(
-        Interaction
-            .builder(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt")
-            .interactionId("smtp-1")
-            .data(mapOf("to" to "customer@example.test", "template" to "receipt"))
-            .headers(mapOf("content-type" to "message/rfc822", "x-request-id" to "smtp-1"))
-            .build(),
+        Interaction(
+            kind = InteractionKind.REQUEST,
+            from = "Email",
+            to = "SMTP Relay",
+            label = "deliver receipt",
+            interactionId = "smtp-1",
+            data = mapOf("to" to "customer@example.test", "template" to "receipt"),
+            headers = mapOf("content-type" to "message/rfc822", "x-request-id" to "smtp-1"),
+        ),
     )
     lsd.ingest(
-        Interaction
-            .builder(InteractionKind.RESPONSE, "SMTP Relay", "Email", "421 try again later")
-            .status("421")
-            .replyTo("smtp-1")
-            .build(),
+        Interaction(
+            kind = InteractionKind.RESPONSE,
+            from = "SMTP Relay",
+            to = "Email",
+            label = "421 try again later",
+            status = "421",
+            replyTo = "smtp-1",
+        ),
     )
-    lsd.ingest(Interaction.builder(InteractionKind.REQUEST, "Email", "SMTP Relay", "deliver receipt (retry)").interactionId("smtp-2").build())
     lsd.ingest(
-        Interaction
-            .builder(InteractionKind.RESPONSE, "SMTP Relay", "Email", "250 queued")
-            .status("250")
-            .replyTo("smtp-2")
-            .build(),
+        Interaction(
+            kind = InteractionKind.REQUEST,
+            from = "Email",
+            to = "SMTP Relay",
+            label = "deliver receipt (retry)",
+            interactionId = "smtp-2",
+        ),
+    )
+    lsd.ingest(
+        Interaction(
+            kind = InteractionKind.RESPONSE,
+            from = "SMTP Relay",
+            to = "Email",
+            label = "250 queued",
+            status = "250",
+            replyTo = "smtp-2",
+        ),
     )
     lsd.completeScenario(
         "Timed checkout (timing API)",

@@ -110,19 +110,18 @@ internal class ServerCapture(
         val data = guarded(null) { requestBody(call) }
         guarded(Unit) {
             inbound.scenario.ingest(
-                Interaction
-                    .builder(
-                        InteractionKind.REQUEST,
-                        inbound.caller,
-                        app,
-                        Calls.label(call.request.httpMethod.value, call.request.path(), call.request.queryString()),
-                    ).interactionId(inbound.id)
-                    .trace(Trace(inbound.scenario.correlationId, inbound.id, inbound.parent))
-                    .source(Calls.SOURCE)
-                    .startedAt(started)
-                    .data(data)
-                    .headers(Calls.headers(call.request.headers))
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.REQUEST,
+                    from = inbound.caller,
+                    to = app,
+                    label = Calls.label(call.request.httpMethod.value, call.request.path(), call.request.queryString()),
+                    interactionId = inbound.id,
+                    trace = Trace(inbound.scenario.correlationId, inbound.id, inbound.parent),
+                    source = Calls.SOURCE,
+                    startedAt = started,
+                    data = data,
+                    headers = Calls.headers(call.request.headers),
+                ),
             )
         }
         try {
@@ -203,15 +202,18 @@ internal class ServerCapture(
         headers: Map<String, String>?,
     ) = guarded(Unit) {
         inbound.scenario.ingest(
-            Interaction
-                .builder(InteractionKind.RESPONSE, app, inbound.caller, label)
-                .status(status)
-                .replyTo(inbound.id)
-                .source(Calls.SOURCE)
-                .durationMs(durationMs)
-                .data(data)
-                .headers(headers)
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = app,
+                to = inbound.caller,
+                label = label,
+                status = status,
+                replyTo = inbound.id,
+                source = Calls.SOURCE,
+                durationMs = durationMs,
+                data = data,
+                headers = headers,
+            ),
         )
     }
 

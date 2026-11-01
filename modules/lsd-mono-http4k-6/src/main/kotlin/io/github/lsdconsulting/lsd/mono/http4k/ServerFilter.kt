@@ -44,15 +44,18 @@ internal class ServerFilter(
         val sent = guarded(Captured(request, null)) { Bodies.capture(request) }
         guarded(Unit) {
             inbound.scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.REQUEST, inbound.caller, app, Calls.label(request))
-                    .interactionId(inbound.id)
-                    .trace(Trace(inbound.scenario.correlationId, inbound.id, inbound.parent))
-                    .source(Calls.SOURCE)
-                    .startedAt(started)
-                    .data(sent.data)
-                    .headers(Calls.headers(request))
-                    .build(),
+                Interaction(
+                    kind = (InteractionKind.REQUEST),
+                    from = inbound.caller,
+                    to = app,
+                    label = Calls.label(request),
+                    interactionId = (inbound.id),
+                    trace = (Trace(inbound.scenario.correlationId, inbound.id, inbound.parent)),
+                    source = (Calls.SOURCE),
+                    startedAt = (started),
+                    data = (sent.data),
+                    headers = (Calls.headers(request)),
+                ),
             )
         }
         val previousServing = Calls.serving.get()
@@ -102,15 +105,19 @@ internal class ServerFilter(
         headers: Map<String, String>?,
     ) = guarded(Unit) {
         inbound.scenario.ingest(
-            Interaction
-                .builder(InteractionKind.RESPONSE, app, inbound.caller, label)
-                .status(status)
-                .replyTo(inbound.id)
-                .source(Calls.SOURCE)
-                .durationMs(durationMs)
-                .data(data)
-                .headers(headers)
-                .build(),
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = app,
+                to = inbound.caller,
+                label = label,
+                status = status,
+                replyTo = inbound.id,
+                trace = (Trace(inbound.scenario.correlationId, inbound.id, inbound.parent)),
+                source = (Calls.SOURCE),
+                durationMs = (durationMs),
+                data = (data),
+                headers = (headers),
+            ),
         )
     }
 }

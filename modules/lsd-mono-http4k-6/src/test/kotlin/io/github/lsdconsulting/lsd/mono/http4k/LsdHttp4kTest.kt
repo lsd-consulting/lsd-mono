@@ -84,6 +84,8 @@ class LsdHttp4kTest {
         assertEquals("Inventory", drawn.nameOf(stockCall["to"]))
         val created = drawn.message("201 Created")
         assertEquals("201", created["status"].toString())
+        assertEquals(request["id"], created["replyTo"])
+        assertEquals("call_id", created["pairing"])
         assertEquals("o-1", created.obj("data")?.obj("headers")?.string("X-Order"), created.source)
         assertFalse(drawn.json.contains("lsd-"), "LSD's own headers stay out: ${drawn.json}")
     }
@@ -156,6 +158,8 @@ class LsdHttp4kTest {
         assertEquals(listOf("POST /orders/lamp-01?express=true", "IllegalStateException", "GET /rates", "ConnectException"), drawn.labels, drawn.json)
         val error = drawn.message("IllegalStateException")
         assertEquals("error", error["status"])
+        assertEquals(drawn.message("POST /orders/lamp-01?express=true")["id"], error["replyTo"])
+        assertEquals("call_id", error["pairing"])
         assertTrue(error.source.contains("boom"), error.source)
         assertEquals("Rates", drawn.nameOf(drawn.message("ConnectException")["from"]))
     }

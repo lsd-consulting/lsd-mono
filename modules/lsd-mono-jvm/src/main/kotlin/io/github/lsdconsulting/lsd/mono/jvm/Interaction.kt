@@ -21,11 +21,9 @@ public enum class InteractionKind {
 }
 
 /**
- * One interaction from a library that is not a test: an HTTP interceptor, a broker listener, an
- * importer such as lsd-distributed. Everything but [kind] is optional, and lsd-mono degrades
+ * One interaction from a library: an HTTP interceptor, a broker listener, or an
+ * importer such as lsd-distributed. Everything but [kind] and [label] is optional, and lsd-mono degrades
  * gracefully when it is missing (see the timing API notes).
- *
- * Made with [Interaction.builder]; change a copy with [toBuilder] or a `with…` method.
  *
  * @property from the caller or publisher; null only for an inbound edge.
  * @property to the callee or topic; null only for an outbound edge.
@@ -38,25 +36,33 @@ public enum class InteractionKind {
  *   `{ "headers": …, "body": data }`, the shape the inspector already lays out; redaction applies to
  *   header names as to any map key (`authorization`, `cookie` by default).
  */
-public class Interaction private constructor(
+public data class Interaction(
     public val kind: InteractionKind,
-    public val from: String?,
-    public val to: String?,
+    public val from: String? = null,
+    public val to: String? = null,
     public val label: String,
-    public val status: String?,
-    public val interactionId: String?,
-    public val replyTo: String?,
-    public val trace: Trace?,
-    public val source: String?,
-    public val startedAt: Instant?,
-    public val durationMs: Double?,
-    public val orderByStartedAt: Boolean?,
-    public val data: Any?,
-    public val headers: Map<String, String>?,
+    public val status: String? = null,
+    public val interactionId: String? = null,
+    public val replyTo: String? = null,
+    public val trace: Trace? = null,
+    public val source: String? = null,
+    public val startedAt: Instant? = null,
+    public val durationMs: Double? = null,
+    public val orderByStartedAt: Boolean? = null,
+    public val data: Any? = null,
+    public val headers: Map<String, String>? = null,
 ) {
     /** A builder holding this interaction's values, to make a changed copy. */
+    @Deprecated(
+        message = "Use .copy() instead if you are using Kotlin.",
+        level = DeprecationLevel.WARNING,
+    )
     public fun toBuilder(): Builder =
-        Builder(kind, from, to, label)
+        Builder()
+            .kind(kind)
+            .from(from)
+            .to(to)
+            .label(label)
             .status(status)
             .interactionId(interactionId)
             .replyTo(replyTo)
@@ -68,56 +74,10 @@ public class Interaction private constructor(
             .data(data)
             .headers(headers)
 
-    /** A copy with [kind] set. */
-    public fun withKind(kind: InteractionKind): Interaction = toBuilder().kind(kind).build()
-
-    /** A copy with [from] set. */
-    public fun withFrom(from: String?): Interaction = toBuilder().from(from).build()
-
-    /** A copy with [to] set. */
-    public fun withTo(to: String?): Interaction = toBuilder().to(to).build()
-
-    /** A copy with [label] set. */
-    public fun withLabel(label: String): Interaction = toBuilder().label(label).build()
-
-    /** A copy with [status] set. */
-    public fun withStatus(status: String?): Interaction = toBuilder().status(status).build()
-
-    /** A copy with [interactionId] set. */
-    public fun withInteractionId(interactionId: String?): Interaction = toBuilder().interactionId(interactionId).build()
-
-    /** A copy with [replyTo] set. */
-    public fun withReplyTo(replyTo: String?): Interaction = toBuilder().replyTo(replyTo).build()
-
-    /** A copy with [trace] set. */
-    public fun withTrace(trace: Trace?): Interaction = toBuilder().trace(trace).build()
-
-    /** A copy with [source] set. */
-    public fun withSource(source: String?): Interaction = toBuilder().source(source).build()
-
-    /** A copy with [startedAt] set. */
-    public fun withStartedAt(startedAt: Instant?): Interaction = toBuilder().startedAt(startedAt).build()
-
-    /** A copy with [durationMs] set. */
-    public fun withDurationMs(durationMs: Double?): Interaction = toBuilder().durationMs(durationMs).build()
-
-    /** A copy with [orderByStartedAt] set. */
-    public fun withOrderByStartedAt(orderByStartedAt: Boolean?): Interaction = toBuilder().orderByStartedAt(orderByStartedAt).build()
-
-    /** A copy with [data] set. */
-    public fun withData(data: Any?): Interaction = toBuilder().data(data).build()
-
-    /** A copy with [headers] set. */
-    public fun withHeaders(headers: Map<String, String>?): Interaction = toBuilder().headers(headers).build()
-
-    override fun equals(other: Any?): Boolean = other is Interaction && fields() == other.fields()
-
-    override fun hashCode(): Int = fields().hashCode()
-
     override fun toString(): String = describe("Interaction", fields())
 
-    private fun fields(): List<Pair<String, Any?>> =
-        listOf(
+    private fun fields(): Map<String, Any?> =
+        mapOf(
             "kind" to kind,
             "from" to from,
             "to" to to,
@@ -134,68 +94,101 @@ public class Interaction private constructor(
             "headers" to headers,
         )
 
-    /** Makes an [Interaction]. Every field but the four given to [Interaction.builder] is null until set. */
-    public class Builder internal constructor(
-        private var kind: InteractionKind,
-        private var from: String?,
-        private var to: String?,
-        private var label: String,
-    ) {
-        private var status: String? = null
-        private var interactionId: String? = null
-        private var replyTo: String? = null
-        private var trace: Trace? = null
-        private var source: String? = null
-        private var startedAt: Instant? = null
-        private var durationMs: Double? = null
-        private var orderByStartedAt: Boolean? = null
-        private var data: Any? = null
-        private var headers: Map<String, String>? = null
-
-        public fun kind(value: InteractionKind): Builder = apply { kind = value }
-
-        public fun from(value: String?): Builder = apply { from = value }
-
-        public fun to(value: String?): Builder = apply { to = value }
-
-        public fun label(value: String): Builder = apply { label = value }
-
-        public fun status(value: String?): Builder = apply { status = value }
-
-        public fun interactionId(value: String?): Builder = apply { interactionId = value }
-
-        public fun replyTo(value: String?): Builder = apply { replyTo = value }
-
-        public fun trace(value: Trace?): Builder = apply { trace = value }
-
-        public fun source(value: String?): Builder = apply { source = value }
-
-        public fun startedAt(value: Instant?): Builder = apply { startedAt = value }
-
-        public fun durationMs(value: Double?): Builder = apply { durationMs = value }
-
-        public fun orderByStartedAt(value: Boolean?): Builder = apply { orderByStartedAt = value }
-
-        public fun data(value: Any?): Builder = apply { data = value }
-
-        public fun headers(value: Map<String, String>?): Builder = apply { headers = value }
-
-        /** The interaction. */
-        public fun build(): Interaction =
-            Interaction(kind, from, to, label, status, interactionId, replyTo, trace, source, startedAt, durationMs, orderByStartedAt, data, headers)
-    }
-
-    /** Factory. */
+    /** Companion object */
     public companion object {
-        /** A builder for a [kind] interaction from [from] to [to], labelled [label]. */
-        @JvmStatic
-        @JvmOverloads
-        public fun builder(
-            kind: InteractionKind,
-            from: String?,
-            to: String?,
-            label: String = "",
-        ): Builder = Builder(kind, from, to, label)
+        /**
+         * Builder for [Interaction].
+         *
+         * To be used by Java libraries. Kotlin user should leverage [Interaction] with data class capabilities instead.
+         */
+        public class Builder @JvmOverloads internal constructor(
+            private var kind: InteractionKind? = null,
+            private var from: String? = null,
+            private var to: String? = null,
+            private var label: String? = null,
+            private var status: String? = null,
+            private var interactionId: String? = null,
+            private var replyTo: String? = null,
+            private var trace: Trace? = null,
+            private var source: String? = null,
+            private var startedAt: Instant? = null,
+            private var durationMs: Double? = null,
+            private var orderByStartedAt: Boolean? = null,
+            private var data: Any? = null,
+            private var headers: Map<String, String>? = null,
+        ) {
+            /** set [kind] */
+            public fun kind(kind: InteractionKind): Builder = apply { this.kind = kind }
+
+            /** set [from] */
+            public fun from(from: String?): Builder = apply { this.from = from }
+
+            /** set [to] */
+            public fun to(to: String?): Builder = apply { this.to = to }
+
+            /** set [label] */
+            public fun label(label: String): Builder = apply { this.label = label }
+
+            /** set [status] */
+            public fun status(status: String?): Builder = apply { this.status = status }
+
+            /** set [interactionId] */
+            public fun interactionId(interactionId: String?): Builder = apply { this.interactionId = interactionId }
+
+            /** set [replyTo] */
+            public fun replyTo(replyTo: String?): Builder = apply { this.replyTo = replyTo }
+
+            /** set [trace] */
+            public fun trace(trace: Trace?): Builder = apply { this.trace = trace }
+
+            /** set [source] */
+            public fun source(source: String?): Builder = apply { this.source = source }
+
+            /** set [startedAt] */
+            public fun startedAt(startedAt: Instant?): Builder = apply { this.startedAt = startedAt }
+
+            /** set [durationMs] */
+            public fun durationMs(durationMs: Double?): Builder = apply { this.durationMs = durationMs }
+
+            /** set [orderByStartedAt] */
+            public fun orderByStartedAt(orderByStartedAt: Boolean?): Builder = apply { this.orderByStartedAt = orderByStartedAt }
+
+            /** set [data] */
+            public fun data(data: Any?): Builder = apply { this.data = data }
+
+            /** set [headers] */
+            public fun headers(headers: Map<String, String>?): Builder = apply { this.headers = headers }
+
+            /** Create [Interaction] */
+            @Deprecated(
+                message = "Use Interaction constructor instead if using Kotlin",
+                level = DeprecationLevel.ERROR,
+            )
+            public fun build(): Interaction =
+                Interaction(
+                    kind = kind!!,
+                    from = from,
+                    to = to,
+                    label = label!!,
+                    status = status,
+                    interactionId = interactionId,
+                    replyTo = replyTo,
+                    trace = trace,
+                    source = source,
+                    startedAt = startedAt,
+                    durationMs = durationMs,
+                    orderByStartedAt = orderByStartedAt,
+                    data = data,
+                    headers = headers,
+                )
+        }
+
+        /** Builder object for [Interaction] */
+        @Deprecated(
+            message = "Use Interaction constructor instead if using Kotlin",
+            level = DeprecationLevel.ERROR,
+        )
+        public fun builder(): Builder = Builder()
     }
 }
 

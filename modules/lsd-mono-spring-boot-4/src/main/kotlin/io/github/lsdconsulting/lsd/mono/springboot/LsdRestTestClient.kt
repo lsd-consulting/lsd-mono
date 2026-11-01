@@ -91,15 +91,18 @@ public object LsdRestTestClient {
                 request.headers.set(ClientDrawnCalls.HEADER, id)
                 val query = uri.rawQuery?.let { "?$it" } ?: ""
                 scenario.ingest(
-                    Interaction
-                        .builder(InteractionKind.REQUEST, caller, names.app, "${request.method} ${uri.rawPath.ifEmpty { "/" }}$query")
-                        .interactionId(id)
-                        .trace(Trace(scenario.correlationId, id, parent))
-                        .source(SpringScenarios.SOURCE)
-                        .startedAt(Instant.now())
-                        .data(Bodies.read(body, request.headers.contentType?.toString()))
-                        .headers(flatten(request.headers))
-                        .build(),
+                    Interaction(
+                        kind = InteractionKind.REQUEST,
+                        from = caller,
+                        to = names.app,
+                        label = "${request.method} ${uri.rawPath.ifEmpty { "/" }}$query",
+                        interactionId = id,
+                        trace = Trace(scenario.correlationId, id, parent),
+                        source = SpringScenarios.SOURCE,
+                        startedAt = Instant.now(),
+                        data = Bodies.read(body, request.headers.contentType?.toString()),
+                        headers = flatten(request.headers),
+                    ),
                 )
             }
             val t0 = System.nanoTime()
@@ -134,15 +137,18 @@ public object LsdRestTestClient {
             headers: Map<String, String>?,
         ) = guarded(Unit) {
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.RESPONSE, from, to, label)
-                    .status(status)
-                    .replyTo(id)
-                    .source(SpringScenarios.SOURCE)
-                    .durationMs((System.nanoTime() - t0) / 1_000_000.0)
-                    .data(data)
-                    .headers(headers)
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.RESPONSE,
+                    from = from,
+                    to = to,
+                    label = label,
+                    status = status,
+                    replyTo = id,
+                    source = SpringScenarios.SOURCE,
+                    durationMs = (System.nanoTime() - t0) / 1_000_000.0,
+                    data = data,
+                    headers = headers,
+                ),
             )
         }
 

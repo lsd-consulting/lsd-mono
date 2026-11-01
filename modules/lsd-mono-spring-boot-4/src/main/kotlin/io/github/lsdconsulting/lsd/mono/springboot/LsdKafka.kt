@@ -150,15 +150,18 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
             val publisher = if (parent == null) client else app
             SpringScenarios.declare(scenario, ParticipantType.QUEUE.called(topic))
             scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.PUBLISH, publisher, topic, KafkaCapture.label(record.key()))
-                    .interactionId(id)
-                    .trace(Trace(scenario.correlationId, id, parent))
-                    .source(SpringScenarios.SOURCE)
-                    .startedAt(Instant.now())
-                    .data(KafkaCapture.payload(record.value()))
-                    .headers(KafkaCapture.headers(record.key(), record.headers()))
-                    .build(),
+                Interaction(
+                    kind = InteractionKind.PUBLISH,
+                    from = publisher,
+                    to = topic,
+                    label = KafkaCapture.label(record.key()),
+                    interactionId = id,
+                    trace = Trace(scenario.correlationId, id, parent),
+                    source = SpringScenarios.SOURCE,
+                    startedAt = Instant.now(),
+                    data = KafkaCapture.payload(record.value()),
+                    headers = KafkaCapture.headers(record.key(), record.headers()),
+                ),
             )
             SpringScenarios.published(id, scenario)
             // Read-only once a record has been sent before; then the consumer just goes unpaired and
@@ -197,18 +200,21 @@ internal class LsdKafkaProducerInterceptor : ProducerInterceptor<Any?, Any?> {
     ) {
         val name = exception.javaClass.simpleName.ifEmpty { exception.javaClass.name }
         sent.scenario.ingest(
-            Interaction
-                .builder(InteractionKind.RESPONSE, sent.topic, sent.publisher, name)
-                .status("error")
-                .replyTo(publishId)
-                .source(SpringScenarios.SOURCE)
-                .durationMs((System.nanoTime() - sent.sentAt) / 1_000_000.0)
-                .data(
+            Interaction(
+                kind = InteractionKind.RESPONSE,
+                from = sent.topic,
+                to = sent.publisher,
+                label = name,
+                status = "error",
+                replyTo = publishId,
+                source = SpringScenarios.SOURCE,
+                durationMs = (System.nanoTime() - sent.sentAt) / 1_000_000.0,
+                data =
                     buildMap {
                         put("exception", exception.javaClass.name)
                         KafkaCapture.shortMessage(exception)?.let { put("message", it) }
                     },
-                ).build(),
+            ),
         )
     }
 
@@ -244,25 +250,25 @@ internal class LsdKafkaConsumerInterceptor : ConsumerInterceptor<Any?, Any?> {
                 val id = SpringScenarios.newId()
                 SpringScenarios.declare(scenario, ParticipantType.QUEUE.called(record.topic()))
                 scenario.ingest(
-                    Interaction
-                        .builder(
-                            InteractionKind.CONSUME,
-                            record.topic(),
-                            app,
-                            if (record.key() ==
-                                null
-                            )
-                                "consume"
-                            else
-                                "consume ${Summaries.of(record.key())}",
-                        ).interactionId(id)
-                        .replyTo(publishId)
-                        .trace(Trace(scenario.correlationId, id, publishId))
-                        .source(SpringScenarios.SOURCE)
-                        .startedAt(Instant.now())
-                        .data(KafkaCapture.payload(record.value()))
-                        .headers(KafkaCapture.headers(record.key(), record.headers(), KafkaCapture.place(index, count)))
-                        .build(),
+                    Interaction(
+                        kind = InteractionKind.CONSUME,
+                        from = record.topic(),
+                        to = app,
+                        label = if (record.key() ==
+                            null
+                        ) {
+                            "consume"
+                        } else {
+                            "consume ${Summaries.of(record.key())}"
+                        },
+                        interactionId = id,
+                        replyTo = publishId,
+                        trace = Trace(scenario.correlationId, id, publishId),
+                        source = SpringScenarios.SOURCE,
+                        startedAt = Instant.now(),
+                        data = KafkaCapture.payload(record.value()),
+                        headers = KafkaCapture.headers(record.key(), record.headers(), KafkaCapture.place(index, count)),
+                    ),
                 )
                 last = scenario to id
                 drawn[record] = last

@@ -28,12 +28,12 @@ import java.nio.file.Path
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 @ExtendWith(LsdTestConfigExtension::class)
-public annotation class LsdTestConfig(
+annotation class LsdTestConfig(
     /** Number ids 1, 2, 3… instead of random ones. */
     val deterministicIds: Boolean = false,
 )
 
-public class LsdTestConfigExtension :
+class LsdTestConfigExtension :
     BeforeAllCallback,
     BeforeEachCallback,
     AfterEachCallback,
@@ -73,7 +73,7 @@ public class LsdTestConfigExtension :
         throw AssertionError("${context.displayName} left LSD system properties changed: $drift")
     }
 
-    public companion object {
+    companion object {
         private val NAMESPACE = ExtensionContext.Namespace.create(LsdTestConfigExtension::class.java)
         private const val SAVED = "saved"
         private const val OWN_DIR = "ownDir"
@@ -83,7 +83,7 @@ public class LsdTestConfigExtension :
         private val START: Map<String, String> = snapshot()
 
         /** Every `lsd.*` and `cucumber.*` system property, by key. */
-        public fun snapshot(): Map<String, String> =
+        fun snapshot(): Map<String, String> =
             System
                 .getProperties()
                 .stringPropertyNames()
@@ -91,7 +91,7 @@ public class LsdTestConfigExtension :
                 .associateWith { System.getProperty(it) }
 
         /** Put [saved] back: its values, and no value for any other `lsd.*` or `cucumber.*` key. */
-        public fun restore(saved: Map<String, String>) {
+        fun restore(saved: Map<String, String>) {
             (snapshot().keys - saved.keys).forEach { System.clearProperty(it) }
             saved.forEach { (key, value) -> System.setProperty(key, value) }
         }

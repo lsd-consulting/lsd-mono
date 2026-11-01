@@ -14,7 +14,16 @@ indent_size = 2
 [*.md]
 trim_trailing_whitespace = false
 
+[*.java]
+ij_java_use_single_class_imports = true
+ij_java_class_count_to_use_import_on_demand = 2147483647
+ij_java_names_count_to_use_import_on_demand = 2147483647
+ij_java_packages_to_use_import_on_demand =
+
 [*.{kt,kts}]
+ij_kotlin_name_count_to_use_star_import = 2147483647
+ij_kotlin_name_count_to_use_star_import_for_members = 2147483647
+ij_kotlin_packages_to_use_import_on_demand =
 ktlint_code_style = ktlint_official
 max_line_length = 160
 # Keep the author's layout where it is a readability choice rather than a defect.
