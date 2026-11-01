@@ -11,6 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -24,7 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * go through a bounded queue to one daemon thread, every network step has a short timeout, and
  * only `report.done` waits, for at most [flushTimeout]. The first problem (LSD Studio not
  * running, a refused version, a full queue) is warned about once; the stream it hit stops, and
- * if LSD Studio could not be reached at all, live capture is off for the rest of the run.
+ * if LSD Studio could not be reached or anything timed out, live capture is off for the rest of
+ * the run, so a stalled LSD Studio costs at most one wait.
  */
 internal class LiveCapture(
     private val frames: LiveFrames,
@@ -32,18 +34,26 @@ internal class LiveCapture(
     private val connector: LiveConnector = JdkLiveConnector(),
     private val flushTimeout: Duration = Duration.ofSeconds(2),
     queueCapacity: Int = 10_000,
+    keepAlive: Duration = Duration.ofSeconds(30),
+    private val warn: (String) -> Unit = { message -> logger.log(WARNING, message) },
 ) {
     private val streams = ConcurrentHashMap<String, Stream>()
     private val titles = ConcurrentHashMap<String, String>()
     private val warned = AtomicBoolean()
 
+    /** Live capture is off for the rest of the run: LSD Studio could not be reached, or timed out. */
     @Volatile
-    private var unreachable = false
+    internal var off = false
+        private set
 
     private val worker =
-        ThreadPoolExecutor(0, 1, 30, TimeUnit.SECONDS, LinkedBlockingQueue(queueCapacity)) { task ->
+        ThreadPoolExecutor(0, 1, keepAlive.toMillis(), TimeUnit.MILLISECONDS, LinkedBlockingQueue(queueCapacity)) { task ->
             Thread(task, "lsd-studio-live").apply { isDaemon = true }
         }
+
+    /** The worker threads now and at most, for tests: none until a stream opens, and none once idle. */
+    internal val workerThreads get() = worker.poolSize
+    internal val mostWorkerThreads get() = worker.largestPoolSize
 
     /** The title [reportKey]'s report will have, for its hello. */
     fun title(
@@ -66,14 +76,19 @@ internal class LiveCapture(
             titles.remove(key(reportKey))
             val stream = streams.remove(key(reportKey)) ?: return@quietly
             stream.submit { stream.finish() }
-            stream.done.await(flushTimeout.toMillis(), TimeUnit.MILLISECONDS)
+            if (!stream.done.await(flushTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                off = true
+                warnOnce("LSD Studio did not answer in time, so live capture is off for this run.")
+            }
         }
 
     private fun stream(reportKey: String?): Stream? {
-        if (unreachable) return null
+        if (off) return null
         val target = url()?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         return streams.computeIfAbsent(key(reportKey)) { k ->
-            Stream(target).also { s -> s.submit { s.open(titles[k]) } }
+            // The title is read here, on the test's thread, before a later title() can change it.
+            val title = titles[k]
+            Stream(target).also { s -> s.submit { s.open(title) } }
         }
     }
 
@@ -81,7 +96,7 @@ internal class LiveCapture(
 
     private fun warnOnce(message: String) {
         if (warned.compareAndSet(false, true)) {
-            logger.log(WARNING, "LSD: $message Tests and report files are not affected.")
+            warn("LSD: $message Tests and report files are not affected.")
         }
     }
 
@@ -102,6 +117,8 @@ internal class LiveCapture(
         private val target: String,
     ) {
         val done = CountDownLatch(1)
+
+        @Volatile
         private var socket: LiveSocket? = null
         private val scenarioIds = AtomicInteger()
 
@@ -112,7 +129,8 @@ internal class LiveCapture(
             try {
                 worker.execute { if (!broken) guard(task) }
             } catch (_: RejectedExecutionException) {
-                stop("LSD Studio is not keeping up with this test run, so its live report stops here.")
+                // On the test's thread: drop the socket rather than wait for a clean close.
+                stop("LSD Studio is not keeping up with this test run, so its live report stops here.", abort = true)
             }
         }
 
@@ -126,7 +144,7 @@ internal class LiveCapture(
                         done.countDown()
                     }
                 } catch (e: Exception) {
-                    unreachable = true
+                    off = true
                     stop("could not reach LSD Studio at $target ($e), so live capture is off for this run.")
                     return
                 }
@@ -140,7 +158,10 @@ internal class LiveCapture(
         fun finish() {
             send(LiveFrames.DONE)
             // The server answers stored and closes; done counts down then, or after the wait.
-            if (!done.await(flushTimeout.toMillis(), TimeUnit.MILLISECONDS)) socket?.close()
+            if (!done.await(flushTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                off = true
+                stop("LSD Studio at $target did not answer in time, so live capture is off for this run.")
+            }
         }
 
         private fun send(frame: String) {
@@ -167,15 +188,25 @@ internal class LiveCapture(
             } catch (e: VirtualMachineError) {
                 throw e
             } catch (e: Throwable) {
-                stop("live capture to LSD Studio at $target stopped ($e).")
+                if (timedOut(e)) {
+                    off = true
+                    stop("LSD Studio at $target timed out, so live capture is off for this run.")
+                } else {
+                    stop("live capture to LSD Studio at $target stopped ($e).")
+                }
             }
         }
 
-        private fun stop(message: String) {
+        private fun timedOut(e: Throwable): Boolean = generateSequence(e) { it.cause }.take(10).any { it is TimeoutException }
+
+        private fun stop(
+            message: String,
+            abort: Boolean = false,
+        ) {
             broken = true
-            done.countDown()
             warnOnce(message)
-            socket?.let { s -> runCatching { s.close() } }
+            done.countDown()
+            socket?.let { s -> runCatching { if (abort) s.abort() else s.close() } }
         }
     }
 
