@@ -3,8 +3,8 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net'
 import { WebSocketServer } from 'ws'
 import type { ServerConfig } from './config.ts'
-import { detectImport, reportErrors } from './import.ts'
-import { otlpToReport } from './otlp.ts'
+import { importBody } from './import.ts'
+import { readSample } from './sample.ts'
 import { isReportId, type ReportStore } from './store.ts'
 import { checkOverride, findShell, MESSAGES, messagePage, renderReportPage, viewerShells } from './viewer.ts'
 
@@ -84,27 +84,14 @@ async function route(
   }
   if (method === 'GET' && path === '/api/reports') return sendJson(res, 200, await store.list())
   if (method === 'POST' && path === '/api/reports/import') {
-    const body = await readRequest(req)
-    switch (detectImport(body)) {
-      case 'lsd-report': {
-        const errors = reportErrors(body)
-        if (errors.length > 0) return sendJson(res, 422, { error: 'Not a valid LSD report', errors })
-        return sendJson(res, 201, await store.save(body, 'import'))
-      }
-      case 'otlp': {
-        const converted = otlpToReport(body)
-        if (converted.report === undefined) {
-          return sendJson(res, 422, { error: 'Not a valid OTLP/JSON trace export', errors: converted.errors })
-        }
-        const json = JSON.stringify(converted.report)
-        // The converted report goes through the same check as an imported one.
-        const errors = reportErrors(json)
-        if (errors.length > 0) return sendJson(res, 500, { error: 'The converted report is not valid', errors })
-        return sendJson(res, 201, await store.save(json, 'otlp'))
-      }
-      default:
-        return send(res, 415, 'Not an LSD report or OTLP JSON (OTLP protobuf is not supported)')
-    }
+    const result = await importBody(await readRequest(req), store)
+    if (result.status === 201) return sendJson(res, 201, result.report)
+    if (result.status === 415) return send(res, 415, result.error ?? '')
+    return sendJson(res, result.status, { error: result.error, errors: result.errors })
+  }
+  // The bundled sample trace, which the list page imports through the import route above.
+  if (method === 'GET' && path === '/samples/sample-trace.json') {
+    return send(res, 200, await readSample(), 'application/json')
   }
   if (method === 'POST' && path === '/api/reports/bulk-delete') {
     const ids = parseIds(await readRequest(req))

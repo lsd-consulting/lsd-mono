@@ -141,6 +141,9 @@
         padding: 1.5rem 0 0.5rem;
         text-align: center;
       }
+      #empty p {
+        margin-bottom: 0.75rem;
+      }
       [role='status']:empty,
       [role='alert']:empty {
         display: none;
@@ -252,7 +255,10 @@
           <p id="bulk-hint">Select reports first</p>
         </div>
         <ul id="reports" aria-labelledby="reports-heading"></ul>
-        <p id="empty" hidden>No reports yet. Import one above.</p>
+        <div id="empty" hidden>
+          <p>No reports yet. Import one above, or try a sample: an order placed through four services.</p>
+          <button id="try-sample" type="button">Try a sample</button>
+        </div>
         <p id="list-status" role="status"></p>
       </section>
     </main>
@@ -453,15 +459,16 @@
           return [text.trim() || 'The import failed (' + response.status + ').', []]
         }
 
-        importButton.addEventListener('click', async () => {
-          const file = byId('import-file').files[0]
-          if (!file || importButton.disabled) return
-          importButton.disabled = true
-          importButton.textContent = 'Importing…'
+        // Imports what read() gives, with the button busy meanwhile so it cannot run twice.
+        async function runImport(button, read) {
+          if (button.disabled) return
+          const label = button.textContent
+          button.disabled = true
+          button.textContent = 'Importing…'
           importStatus.textContent = ''
           importError.replaceChildren()
           try {
-            const response = await fetch('/api/reports/import', { method: 'POST', body: await file.text() })
+            const response = await fetch('/api/reports/import', { method: 'POST', body: await read() })
             if (response.ok) {
               const report = await response.json()
               importStatus.textContent = 'Imported "' + report.title + '".'
@@ -471,11 +478,26 @@
           } catch {
             showImportError('Could not reach LSD Studio. Is it still running?')
           } finally {
-            importButton.disabled = false
-            importButton.textContent = 'Import'
+            button.disabled = false
+            button.textContent = label
           }
           await load()
+        }
+
+        importButton.addEventListener('click', () => {
+          const file = byId('import-file').files[0]
+          if (file) return runImport(importButton, () => file.text())
         })
+
+        // The bundled sample trace, through the same import as a chosen file.
+        const trySample = byId('try-sample')
+        trySample.addEventListener('click', () =>
+          runImport(trySample, async () => {
+            const response = await fetch('/samples/sample-trace.json')
+            if (!response.ok) throw new Error('No sample')
+            return response.text()
+          }),
+        )
 
         byId('reports-heading').tabIndex = -1
         window.lsdReady = load()

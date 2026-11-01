@@ -38,6 +38,11 @@ describe('parseConfig', () => {
     expect(parseConfig([], { LSD_STUDIO_VIEWER: 'd.html', LSD_SERVER_VIEWER: 'c.html' }).viewer).toBe('d.html')
   })
 
+  it('imports the sample trace at startup only with --demo', () => {
+    expect(parseConfig([]).demo).toBeUndefined()
+    expect(parseConfig(['--demo']).demo).toBe(true)
+  })
+
   it('rejects a bad port or an unknown option', () => {
     expect(() => parseConfig(['--port', 'x'])).toThrow(/--port/)
     expect(() => parseConfig(['--port'])).toThrow(/--port/)

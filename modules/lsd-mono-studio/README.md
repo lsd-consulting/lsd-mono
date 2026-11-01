@@ -19,6 +19,7 @@ npm start                          # http://127.0.0.1:7357
 npm start -- --port 8080           # another port (or LSD_STUDIO_PORT=8080)
 npm start -- --expose              # every interface (or LSD_STUDIO_EXPOSE=1)
 npm start -- --viewer <file>       # a report viewer to try first (or LSD_STUDIO_VIEWER=<file>)
+npm start -- --demo                # import the sample trace at startup, once
 ```
 
 The `LSD_SERVER_*` names from before the rename still work. When both are set, `LSD_STUDIO_*` wins.
@@ -101,6 +102,15 @@ Validation mirrors what the report UI can open:
 - **2.0.0 and later** are refused with 422: the report UI would only say to upgrade lsd-mono.
 
 The schema is the bundled copy in `schema/`, or the checkout's when that is missing, see [Packaging](#packaging).
+
+## Sample trace
+
+The package ships `samples/sample-trace.json`, a small OTLP/JSON trace of a made-up order placed
+through four services (storefront, orders, inventory and payments). The empty report list offers
+it with **Try a sample**, which fetches it from `GET /samples/sample-trace.json` and imports it
+through `POST /api/reports/import` like a chosen file. `--demo` imports it at startup unless a
+report with its title converted from OTLP is already stored, so repeated runs keep one copy; after
+it is deleted, the next `--demo` run imports it again.
 
 ## OTLP import (#96)
 

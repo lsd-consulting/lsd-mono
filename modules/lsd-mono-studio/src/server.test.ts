@@ -45,6 +45,15 @@ describe('the server', () => {
     expect(await response.text()).toMatch(/id="import-file" type="file"/)
   })
 
+  it('serves the bundled sample trace, which imports as an OTLP report', async () => {
+    const sample = await fetch(`${base}/samples/sample-trace.json`)
+    expect(sample.status).toBe(200)
+    expect(sample.headers.get('content-type')).toBe('application/json')
+    const imported = await fetch(`${base}/api/reports/import`, { method: 'POST', body: await sample.text() })
+    expect(imported.status).toBe(201)
+    expect(await imported.json()).toMatchObject({ title: 'POST /orders (trace 5a3c1e0b)', source: 'otlp' })
+  })
+
   it('imports, lists, reads and deletes an LSD report', async () => {
     const body = MINIMAL
     const imported = await fetch(`${base}/api/reports/import`, { method: 'POST', body })
