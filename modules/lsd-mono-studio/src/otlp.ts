@@ -320,6 +320,13 @@ function toScenario(spans: Span[]): Json {
   const root = spans.find((span) => !span.parentSpanId || !byId.has(span.parentSpanId)) ?? spans[0]
   const hidden = spans.filter((span) => span.kind === 'INTERNAL' || span.kind === 'UNSPECIFIED').length
   const services = [...new Set(spans.map((span) => span.service))]
+  // The report UI's Accuracy card reads these shares; a JVM report gets them from the core.
+  // Calls are the synchronous messages; one is paired when a reply names it, as the core counts.
+  const calls = events.filter((event) => event.type === 'synchronous')
+  const answered = new Set(events.map((event) => event.replyTo))
+  const share = (count: number) => (calls.length ? { value: count / calls.length } : undefined)
+  const measured = share(calls.filter((call) => call.durationMs !== undefined).length)
+  const paired = share(calls.filter((call) => answered.has(call.id)).length)
   return {
     id: `trace-${traceId}`,
     title: `${root.name} (trace ${traceId.slice(0, 8)})`,
@@ -340,6 +347,8 @@ function toScenario(spans: Span[]): Json {
     participants: participants.all(),
     events,
     accuracy: 'traced',
+    ...(measured && { measuredRatio: measured.value }),
+    ...(paired && { pairedRatio: paired.value }),
     sources: services,
   }
 }

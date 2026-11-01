@@ -123,6 +123,8 @@ describe('OTLP to an LSD report', () => {
       status: 'error',
       error: { headline: 'POST /checkout failed', message: 'Payment failed' },
       accuracy: 'traced',
+      measuredRatio: 1,
+      pairedRatio: 1,
       sources: ['checkout', 'payments'],
     })
     expect(scenario.facts).toEqual([
@@ -177,6 +179,9 @@ describe('OTLP to an LSD report', () => {
       ],
     })
     const report = convert(body)
+    // No calls, so no shares: the Accuracy card says so rather than 0%.
+    expect(scenarios(report)[0]).not.toHaveProperty('measuredRatio')
+    expect(scenarios(report)[0]).not.toHaveProperty('pairedRatio')
     expect(events(report).map((e) => [e.from, e.to, e.type, e.label, e.pairing])).toEqual([
       ['a', 'b', 'asynchronous', 'receive', 'trace'],
       ['receive', 'b', 'asynchronous', 'receive', undefined],
