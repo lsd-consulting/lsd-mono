@@ -1,5 +1,6 @@
 package io.github.lsdconsulting.lsd.mono.jvm.properties
 
+import io.github.lsdconsulting.lsd.mono.jvm.ExperimentalLsdStudioApi
 import io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi
 import java.time.Instant
 import java.time.format.DateTimeParseException
@@ -85,7 +86,18 @@ public object LsdProperties {
     /** Comma-separated key names to redact as well as the built-in ones, for example `ssn,x-session`. */
     public const val PAYLOAD_REDACT_KEYS: String = "lsd.mono.payload.redactKeys"
 
+    /**
+     * Experimental. The LSD Studio URL to stream reports to while tests run, for example
+     * `ws://127.0.0.1:7357/ws/captures`. Unset (the default) streams nothing. Best effort: when LSD Studio
+     * is not running or refuses the protocol version, it warns once and the tests carry on.
+     */
+    @ExperimentalLsdStudioApi
+    public const val STUDIO_URL: String = "lsd.mono.studio.url"
+
     internal fun outputDirectory(): String = checkNotNull(LsdKey.OUTPUT_DIR.value())
+
+    @OptIn(ExperimentalLsdStudioApi::class)
+    internal fun studioUrl(): String? = LsdKey.STUDIO_URL.value()
 
     internal fun deterministicIds(): Boolean = LsdKey.DETERMINISTIC_IDS.boolean()
 

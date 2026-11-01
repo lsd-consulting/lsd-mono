@@ -352,6 +352,7 @@ a feature off.
 | `lsd.mono.propagation.allowedHosts` | `localhost,127.0.0.1,::1` | Hosts `scenarioHeaderValue` gives the scenario header for: names, `*.domain` or `*`. See [Interceptors](#interceptors) |
 | `lsd.mono.scenario.inheritBinding` | `true` | `false` stops threads inheriting the scenario of the thread that started them, see [Threads](#threads-and-parallel-tests) |
 | `lsd.mono.timing.orderByStartedAt` | `source` | Clock ordering of events with a start time but no measured duration: `false`, `source` (same source; also `true`) or `all`. Moved events are marked `order: CLOCK`, see [Timing](#timing) |
+| `lsd.mono.studio.url` | unset | Experimental: stream each report to LSD Studio while tests run, for example `ws://127.0.0.1:7357/ws/captures`, see [Live capture to LSD Studio](../modules/lsd-mono-jvm/README.md#live-capture-to-lsd-studio-experimental) |
 
 Settings made in code rather than by property:
 
@@ -506,12 +507,16 @@ The public API of each module is checked against an ABI dump in every build. Mem
 (JUnit, Cucumber, Spring, coroutines, http4k and Ktor) and can change in any release. They need
 `-opt-in=io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi`, and an integration module must be
 the same lsd-mono version as lsd-mono-jvm. Today they are `LsdContext.runningScenario`,
-`LsdContext.completeReport(title, reportKey, source, …)`, `LsdHeaders.CALLER`,
+`LsdContext.completeReport(title, reportKey, source, …)`, `LsdContext.reportTitle`, `LsdHeaders.CALLER`,
 `LsdHeaders.PARENT_SPAN`, `LsdProperties.useConfigurationSource` and
 `LsdProperties.cucumberSplitBySteps`. Java callers see no opt-in check, so the same rule applies:
 do not call them. `LsdHeaders.CALLER` and `LsdHeaders.PARENT_SPAN` are also a wire contract
 between services under test: their header names stay stable across versions even though the
 Kotlin members may move.
+
+Members marked `@ExperimentalLsdStudioApi` (today `LsdProperties.STUDIO_URL`) are in the dump but
+can change in any release until the live capture protocol reaches 1.0. Kotlin warns where they
+are used unless you opt in with `@OptIn(ExperimentalLsdStudioApi::class)`.
 
 Value types (`FactJson`, `MetricJson`, `Trace`) are Kotlin data classes whose fields are frozen:
 their `copy` and `componentN` methods are part of the API, so a new field would only ever be added

@@ -50,7 +50,13 @@ import java.time.temporal.ChronoUnit
  * id. Report options are read once per report.
  */
 internal class ReportJsonMapper(private val nextId: () -> String) {
-    fun toReportJson(title: String, scenarios: List<Scenario>, source: String = KnownReportSource.API): ReportJson {
+    /** [scenarioId] gives each scenario's id instead of [nextId], for a live capture's own ids. */
+    fun toReportJson(
+        title: String,
+        scenarios: List<Scenario>,
+        source: String = KnownReportSource.API,
+        scenarioId: (() -> String)? = null,
+    ): ReportJson {
         val options = ReportOptions.fromProperties()
         return ReportJson
             .builder(
@@ -61,7 +67,7 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
                 generator = LsdVersion.generator,
                 status = determineOverallStatus(scenarios),
             ).options(options.toJson(source))
-            .scenarios(scenarios.map { scenario -> scenario.toJsonModel(options) })
+            .scenarios(scenarios.map { scenario -> scenario.toJsonModel(options, scenarioId?.invoke() ?: nextId()) })
             .build()
     }
 
@@ -74,9 +80,12 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
             .source(knownSource(source))
             .build()
 
-    private fun Scenario.toJsonModel(options: ReportOptions): ScenarioJson =
+    private fun Scenario.toJsonModel(
+        options: ReportOptions,
+        id: String,
+    ): ScenarioJson =
         ScenarioJson
-            .builder(id = nextId(), title = title, status = status.toJson())
+            .builder(id = id, title = title, status = status.toJson())
             .description(description)
             .facts(facts.map { FactJson(it.key, it.value) })
             .error(error?.let { ScenarioErrorJson.builder(it.headline, it.message).stack(it.stack).build() })

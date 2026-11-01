@@ -123,6 +123,38 @@ Click an arrow to open its JSON. `method`, `path`, and `status` stay on the arro
 
 The participant type is the header shape. `ACTOR` is a person, `DATABASE` a cylinder, `QUEUE` stacked plates. `ENTITY` is a circle and `BOUNDARY` a circle with a bar. Anything else, including `PARTICIPANT`, is a rounded box. Sync responses and async messages draw an arrow head at the destination.
 
+## Live capture to LSD Studio (experimental)
+
+Set `lsd.mono.studio.url` (or the `LSD_MONO_STUDIO_URL` environment variable) to a running
+[LSD Studio](../lsd-mono-studio/README.md)'s live endpoint, and each report streams there while
+its tests run, as well as being written to a file:
+
+```properties
+# src/test/resources/lsd-mono.properties, or -Dlsd.mono.studio.url=…
+lsd.mono.studio.url=ws://127.0.0.1:7357/ws/captures
+```
+
+It is off when the property is unset, and it works the same from JUnit, Cucumber, Spring Boot or
+`LsdContext` by hand, because it hangs off `LsdContext` itself.
+
+- **What is sent:** a report opens its own WebSocket when its first scenario begins. Each
+  scenario is sent when it completes (its start, its events, its end), and `report.done` once
+  the report file is written. A scenario is sent whole because reply pairing and timing are only
+  known when it completes. It is mapped exactly as the file report is, so the live report and
+  the `*-report.json` hold the same participants, events, statuses and errors.
+- **Best effort:** it never fails a test or a report and hardly slows one. Frames go through a
+  bounded queue to one background thread, and every connect and send has a two-second timeout.
+  Only `report.done` waits, for up to two seconds, for LSD Studio to say it stored the report.
+- **When something goes wrong:** if LSD Studio is not running, refuses the protocol version or
+  cannot keep up, LSD logs one warning and the tests carry on. If it cannot be reached at all,
+  live capture stays off for the rest of the run.
+- **The protocol:** `lsd-live` 0.1.0, from lsd-mono-studio's
+  [protocol](../lsd-mono-studio/README.md#live-capture-protocol-152). The sender's tests check
+  every frame against that schema and fixtures.
+
+`LsdProperties.STUDIO_URL` is marked `@ExperimentalLsdStudioApi`: the name and behaviour can
+change in any release until the protocol reaches 1.0.
+
 ## API reference
 
 The full Kotlin API is in [docs/jvm-api.md](../../docs/jvm-api.md):
