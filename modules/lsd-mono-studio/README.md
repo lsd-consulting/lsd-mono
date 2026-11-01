@@ -150,6 +150,12 @@ says that reports are stored on this machine and nothing is uploaded.
 - **Import** a file with the picker and **Import**. While it runs, the button says "Importing…"
   and is disabled, so a double click imports once. Success is announced politely. A refusal is
   an alert that takes focus: a plain reason, then the first five problems and "and N more".
+- **Drop** one or more `.json` files (LSD reports or OTLP JSON) anywhere on the page to import
+  them. While files are dragged over it, the page shows a dashed drop zone. They are imported one
+  after another through the same import. One file gets the same messages as the picker; several
+  get "Imported 2 of 3 files." with a line per file, and an alert listing each refused file with
+  its reason and first problem. Files not named `.json` are refused without being sent. The file
+  picker is the keyboard way to do the same.
 - Each row shows when it was imported, in the report UI's date format plus seconds ("31 Oct 2026,
   21:47:05 GMT"). The time is also in the checkbox, Delete button and dialog wording, so reports
   with the same title can be told apart.
