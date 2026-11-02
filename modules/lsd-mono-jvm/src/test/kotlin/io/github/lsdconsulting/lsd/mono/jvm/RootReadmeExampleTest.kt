@@ -127,6 +127,9 @@ class RootReadmeExampleTest {
                 .of("../../settings.gradle.kts")
                 .readLines()
                 .mapNotNull { Regex("""^include\("modules:([\w-]+)"\)""").find(it.trim())?.groupValues?.get(1) }
+                // The LSD Studio Gradle plugin is not published yet; it goes to the Gradle Plugin
+                // Portal, not Maven Central, in a later slice of #210.
+                .filterNot { it == "lsd-mono-studio-gradle-plugin" }
         assertTrue(modules.size >= 6, "the modules in settings.gradle.kts: $modules")
         val count = listOf("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")[modules.size]
         val readmeText = readme.readText()

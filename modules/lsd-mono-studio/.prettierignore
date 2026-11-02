@@ -4,3 +4,4 @@ package-lock.json
 viewer/
 dist/
 schema/
+gradle-plugin/
