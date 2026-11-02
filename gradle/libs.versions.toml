@@ -18,7 +18,7 @@ spring-boot-junit = "6.0.3"
 http4k = "6.61.0.0"
 # Ktor 3. Only lsd-mono-ktor-3 uses it, compileOnly: the app brings its own Ktor (built for Java 8,
 # so that module stays on the repo's baseline).
-ktor = "3.6.0"
+ktor = "3.6.1"
 json-schema-validator = "3.0.8"
 spotless = "8.10.4"
 ktlint = "1.8.0"
