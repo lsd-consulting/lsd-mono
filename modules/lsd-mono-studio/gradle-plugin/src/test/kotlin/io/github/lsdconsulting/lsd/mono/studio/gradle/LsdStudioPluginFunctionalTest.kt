@@ -105,6 +105,23 @@ class LsdStudioPluginFunctionalTest {
     }
 
     @Test
+    fun `works with the configuration cache, and reuses it on the next run`() {
+        buildFile("port = 0")
+        val args = arrayOf("lsdStudio", "--configuration-cache", "-Plsd.studio.package=${studioDir.path}", stopArg())
+        repeat(2) { attempt ->
+            val run = Running(projectDir, runner(*args))
+            val url = run.awaitUrl()
+            assertEquals(200, get("$url/api/reports"))
+            val result = run.stop()
+            assertEquals(TaskOutcome.SUCCESS, result.task(":lsdStudio")?.outcome)
+            assertTrue(result.output.contains("LSD Studio: stopped."), result.output)
+            val cache = if (attempt == 0) "Configuration cache entry stored" else "Reusing configuration cache"
+            assertTrue(result.output.contains(cache), result.output)
+            assertGone(run.pid(), url)
+        }
+    }
+
+    @Test
     fun `installs a packed lsd-mono-studio into the cache once and runs it with node`() {
         val packs = projectDir.resolve("packs").apply { mkdirs() }
         val pack = npm(studioDir, "pack", "--ignore-scripts", "--pack-destination", packs.path)

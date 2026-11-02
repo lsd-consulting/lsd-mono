@@ -17,9 +17,9 @@ public class LsdStudioPlugin : Plugin<Project> {
         extension.nodeCommand.convention("node")
         extension.npmCommand.convention("npm")
         extension.studioPackage.convention(gradleProperty)
-        extension.cacheDir.convention(
-            project.layout.dir(project.provider { project.gradle.gradleUserHomeDir.resolve("caches/lsd-mono-studio") }),
-        )
+        // Resolve the Gradle user home now: providers that capture the Project break the configuration cache.
+        val cacheDir = project.gradle.gradleUserHomeDir.resolve("caches/lsd-mono-studio")
+        extension.cacheDir.convention(project.layout.dir(project.provider { cacheDir }))
         val processes =
             project.gradle.sharedServices.registerIfAbsent("lsdStudioProcesses", StudioProcesses::class.java) {}
         project.tasks.register("lsdStudio", LsdStudioTask::class.java) { task ->
@@ -33,7 +33,7 @@ public class LsdStudioPlugin : Plugin<Project> {
             task.studioPackage.convention(extension.studioPackage)
             task.cacheDir.convention(extension.cacheDir)
             task.stopFile.convention(
-                project.layout.file(project.providers.gradleProperty(STOP_FILE_PROPERTY).map { project.file(it) }),
+                project.layout.projectDirectory.file(project.providers.gradleProperty(STOP_FILE_PROPERTY)),
             )
             task.projectDir.set(project.layout.projectDirectory)
             task.ci.set(

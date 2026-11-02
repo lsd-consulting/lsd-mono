@@ -210,7 +210,7 @@ public abstract class LsdStudioTask : DefaultTask() {
             Thread({
                 process.inputStream.bufferedReader().useLines { lines ->
                     lines.forEach { line ->
-                        logger.lifecycle(line)
+                        logger.lifecycle("{}", line)
                         STARTED.find(line)?.let { match ->
                             val url = match.groupValues[1].replace("0.0.0.0", "localhost")
                             logger.lifecycle("LSD Studio is running at {}", url)
