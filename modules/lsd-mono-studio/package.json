@@ -1,8 +1,25 @@
 {
   "name": "lsd-mono-studio",
   "version": "0.0.0",
-  "private": true,
-  "description": "LSD Studio: import, keep, compare and watch LSD reports locally (early scaffold, #186)",
+  "description": "LSD Studio: import, keep, compare and watch LSD reports locally",
+  "keywords": [
+    "lsd",
+    "living-sequence-diagrams",
+    "sequence-diagram",
+    "testing",
+    "tracing",
+    "opentelemetry"
+  ],
+  "homepage": "https://github.com/lsd-consulting/lsd-mono/tree/main/modules/lsd-mono-studio#readme",
+  "bugs": {
+    "url": "https://github.com/lsd-consulting/lsd-mono/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lsd-consulting/lsd-mono.git",
+    "directory": "modules/lsd-mono-studio"
+  },
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22.6"

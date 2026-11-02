@@ -27,6 +27,7 @@ name: Release
 # GitHub release. A failed publish leaves no tag; a failed tag after a publish is retagged by hand.
 # After a new release, the `pages` job deploys the sample site from the new tag (pages.yml), and the
 # `readme` job opens a pull request that moves the README install snippets to the new version.
+# The `npm` job publishes LSD Studio (modules/lsd-mono-studio) to npm at the same version.
 on:
   schedule:
     # Tuesday 07:00 Europe/London: 06:00 UTC during BST, 07:00 UTC during GMT. `plan` skips the other.
@@ -159,6 +160,8 @@ jobs:
     outputs:
       # Set only when this run made a new release (not when it published a tag again).
       version: ${{ steps.released.outputs.version }}
+      # The version this run published to Maven Central, a new release or a tag published again.
+      published: ${{ steps.next.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -257,6 +260,60 @@ jobs:
     uses: ./.github/workflows/pages.yml
     with:
       ref: v${{ needs.release.outputs.version }}
+
+  npm:
+    # Publishes LSD Studio (modules/lsd-mono-studio) to npm at the release version, from the tag.
+    # npm trusted publishing (OIDC, set up on the package for this workflow): no npm token, and the
+    # package gets provenance. A version already on npm is skipped, so publishing a tag again works.
+    needs: release
+    if: needs.release.outputs.published
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: v${{ needs.release.outputs.published }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+      - name: Check whether npm has this version
+        id: check
+        env:
+          VERSION: ${{ needs.release.outputs.published }}
+        run: |
+          if npm view "lsd-mono-studio@$VERSION" version 2>/dev/null | grep -qx "$VERSION"; then
+            echo "lsd-mono-studio@$VERSION is already on npm." >> "$GITHUB_STEP_SUMMARY"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Trusted publishing needs npm 11.5.1 or newer.
+      - name: Update npm
+        if: steps.check.outputs.publish == 'true'
+        run: |
+          current=$(npm --version)
+          if [ "$(printf '%s\n' 11.5.1 "$current" | sort -V | head -1)" != 11.5.1 ]; then npm install -g npm@11; fi
+          npm --version
+      # The viewer build (prepack) needs the report UI's dependencies.
+      - name: Install
+        if: steps.check.outputs.publish == 'true'
+        run: |
+          npm ci --prefix modules/lsd-mono-report-html/ui
+          npm ci --prefix modules/lsd-mono-studio
+      - name: Publish to npm
+        if: steps.check.outputs.publish == 'true'
+        working-directory: modules/lsd-mono-studio
+        env:
+          VERSION: ${{ needs.release.outputs.published }}
+        run: |
+          npm version "$VERSION" --no-git-tag-version
+          npm publish --access public --provenance
+          echo "Published lsd-mono-studio@$VERSION to npm." >> "$GITHUB_STEP_SUMMARY"
 
   readme:
     # Opens a docs pull request that writes the new version into the README install snippets (the

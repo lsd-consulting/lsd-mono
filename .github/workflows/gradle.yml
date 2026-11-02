@@ -257,7 +257,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.studio == 'true'
     # LSD Studio (modules/lsd-mono-studio, #186): typecheck, lint and its Vitest tests.
-    # It is private and nothing here or in release.yml publishes it.
+    # release.yml publishes it to npm; the pack check here makes sure the package still builds.
     name: studio (LSD Studio)
     runs-on: ubuntu-26.04
     timeout-minutes: 10
@@ -280,6 +280,13 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      # What `npm publish` would ship, viewer stand-in aside: prepack builds dist/ and the files list.
+      - name: Check the npm package
+        env:
+          LSD_STUDIO_SKIP_VIEWER: '1'
+        run: |
+          npm pack --dry-run --json --ignore-scripts > "$RUNNER_TEMP/pack.json"
+          node -e 'const [p]=require(process.argv[1]); const f=p.files.map(x=>x.path); for (const n of ["bin/lsd-mono-studio.js","README.md","package.json"]) if (!f.includes(n)) { console.error("missing " + n); process.exit(1) }; console.log(p.name, p.version, f.length + " files")' "$RUNNER_TEMP/pack.json"
 
   gate:
     # The one check to require. Passes when every job passed or was skipped (a docs-only change,
