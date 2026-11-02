@@ -123,7 +123,7 @@ A thread that is not bound to a test, such as an HTTP server thread, captures in
 
 ## LSD Studio
 
-LSD Studio runs on your machine and turns LSD reports and traces into sequence diagrams: start it and choose **Try a sample**. See [LSD Studio](modules/lsd-mono-studio/README.md).
+LSD Studio runs on your machine and turns LSD reports and traces into sequence diagrams. Start it with `npx lsd-mono-studio` and choose **Try a sample**. See [LSD Studio](modules/lsd-mono-studio/README.md).
 
 ## Configuration
 

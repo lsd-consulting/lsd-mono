@@ -10,9 +10,15 @@ is uploaded. It is early: work is tracked in [#186](https://github.com/lsd-consu
 
 ## Start it
 
-LSD Studio is not published yet: the package is private (`0.0.0`), and whether it goes to npm is
-still to be decided. Until then, run it from a checkout of this repo, with the Node version in the
-repo's `.nvmrc`:
+```sh
+npx lsd-mono-studio      # then open http://127.0.0.1:7357
+```
+
+It needs Node 22.6 or newer. `npx lsd-mono-studio --demo` imports a sample trace at startup, so there
+is something to open straight away. Without it, an empty list offers **Try a sample**, which does the
+same.
+
+To run it from a checkout of this repo instead, with the Node version in the repo's `.nvmrc`:
 
 ```sh
 cd modules/lsd-mono-studio
@@ -21,8 +27,7 @@ npm install      # once: installs dependencies and builds the report viewer
 npm start        # then open http://127.0.0.1:7357
 ```
 
-`npm start -- --demo` imports a sample trace at startup, so there is something to open straight
-away. Without it, an empty list offers **Try a sample**, which does the same.
+`npm start -- --demo` does the same as `--demo` above.
 
 | Option            | Environment variable       | What                                         |
 | ----------------- | -------------------------- | -------------------------------------------- |
@@ -98,8 +103,11 @@ and compiles `src` to `dist/` with `tsc -p tsconfig.build.json`, because Node do
 from files under `node_modules`. The `files` list ships `bin/`, `dist/`, `public/`,
 `viewer/lsd-report.html`, `schema/lsd-report.schema.json`, `samples/`, `protocol/` and this README, so installing a
 packed tarball builds nothing, and its `lsd-mono-studio` command (`bin/lsd-mono-studio.js`) runs
-`dist/main.js`. The package stays `"private": true` and unpublished until publishing to npm is
-decided.
+`dist/main.js`.
+
+The weekly release publishes it to npm at the release version (`release.yml`, the `npm` job), with
+provenance, through npm trusted publishing. The repo keeps `0.0.0` in `package.json`; the job sets
+the version before it publishes, and skips a version that is already on npm.
 
 The report schema is copied from `modules/lsd-mono-report-schema` to `schema/` (gitignored) by
 `prepare` and `prepack` (`scripts/copy-schema.mjs`). At runtime the bundled copy is used first,
