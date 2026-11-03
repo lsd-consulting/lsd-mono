@@ -22,9 +22,25 @@ It needs Node 22.6 or newer. `npx lsd-mono-studio --demo` imports a sample trace
 is something to open straight away. Without it, an empty list offers **Try a sample**, which does the
 same.
 
+Options for `npx lsd-mono-studio`, each also settable as an environment variable:
+
+| Option            | Environment variable       | What                                         |
+| ----------------- | -------------------------- | -------------------------------------------- |
+| `--port 8080`     | `LSD_STUDIO_PORT=8080`     | Another port (default 7357)                  |
+| `--expose`        | `LSD_STUDIO_EXPOSE=1`      | Listen on every interface, not only this one |
+| `--demo`          |                            | Import the sample trace at startup, once     |
+| `--viewer <file>` | `LSD_STUDIO_VIEWER=<file>` | A report viewer build to try first           |
+
+> [!WARNING]
+> `--expose` has no access control yet: anyone who can reach the port can read and delete your
+> reports. Only use it on a network you trust.
+
+Reports are kept in `~/.lsd/server/reports`.
+
 From a Gradle build, the `io.github.lsd-consulting.lsd-mono-studio` plugin adds an `lsdStudio`
-task that installs and runs LSD Studio with the Node on your `PATH`. It is not published yet
-([#210](https://github.com/lsd-consulting/lsd-mono/issues/210)); once it is:
+task that installs and runs LSD Studio for you. It needs Node 22.6 or newer on your `PATH`. The
+plugin is not published yet ([#210](https://github.com/lsd-consulting/lsd-mono/issues/210)); once
+it is:
 
 ```kotlin
 plugins {
@@ -36,17 +52,7 @@ plugins {
 ./gradlew lsdStudio      # opens LSD Studio in your browser
 ```
 
-| Option            | Environment variable       | What                                         |
-| ----------------- | -------------------------- | -------------------------------------------- |
-| `--port 8080`     | `LSD_STUDIO_PORT=8080`     | Another port (default 7357)                  |
-| `--expose`        | `LSD_STUDIO_EXPOSE=1`      | Listen on every interface, not only this one |
-| `--demo`          |                            | Import the sample trace at startup, once     |
-| `--viewer <file>` | `LSD_STUDIO_VIEWER=<file>` | A report viewer build to try first           |
-
-`--expose` has no access control yet: anyone who can reach the port can read and delete your
-reports, so only use it on a network you trust.
-
-Reports are kept in `~/.lsd/server/reports`.
+Set the `port` and `expose` options in an `lsdStudio { }` block in your build file.
 
 ## Three ways in
 
@@ -127,8 +133,8 @@ With none of them, the page says how to build it.
 and compiles `src` to `dist/` with `tsc -p tsconfig.build.json`, because Node does not strip types
 from files under `node_modules`. The `files` list ships `bin/`, `dist/`, `public/`,
 `viewer/lsd-report.html`, `schema/lsd-report.schema.json`, `samples/`, `protocol/` and this README,
-so installing a packed tarball builds nothing, and its `lsd-mono-studio` command (`bin/lsd-mono-studio.js`) runs
-`dist/main.js`.
+so installing a packed tarball builds nothing, and its `lsd-mono-studio` command
+(`bin/lsd-mono-studio.js`) runs `dist/main.js`.
 
 The weekly release publishes it to npm at the release version (`release.yml`, the `npm` job), with
 provenance, through npm trusted publishing. The repo keeps `0.0.0` in `package.json`; the job sets
@@ -325,8 +331,8 @@ is otherwise ignored: the capture goes on. `report.done` gets `stored` and close
 **The live report.** It is stored at the hello and rewritten after every accepted message. A
 report carries each scenario's `measuredRatio` and `pairedRatio`, computed as for OTLP imports, so
 the Accuracy card reads them. A running scenario shows as `warn` with the fact "Live: still
-capturing"; until the first scenario starts, a placeholder scenario says it is waiting. If the socket closes before `report.done`,
-running scenarios become `aborted` ("Capture cut off") and the report is kept.
+capturing"; until the first scenario starts, a placeholder scenario says it is waiting. If the
+socket closes before `report.done`, running scenarios become `aborted` ("Capture cut off") and the report is kept.
 
 **Watching it.** An open live report page polls `GET /api/reports/<id>/live` once a second and
 reloads when the revision changes, keeping its scroll position; it stops once the capture is done.
