@@ -167,7 +167,18 @@ class LsdStudioPluginFunctionalTest {
                 Thread {
                     runCatching {
                         while (true) {
-                            socket.accept().use { it.getOutputStream().write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n".toByteArray()) }
+                            socket.accept().use { client ->
+                                // Read the whole request first: closing with unread data resets the connection on Windows.
+                                val input = client.getInputStream()
+                                var tail = 0
+                                while (tail != 0x0d0a0d0a) {
+                                    val b = input.read()
+                                    if (b < 0) break
+                                    tail = (tail shl 8) or b
+                                }
+                                client.getOutputStream().write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray())
+                                client.shutdownOutput()
+                            }
                         }
                     }
                 }.apply {

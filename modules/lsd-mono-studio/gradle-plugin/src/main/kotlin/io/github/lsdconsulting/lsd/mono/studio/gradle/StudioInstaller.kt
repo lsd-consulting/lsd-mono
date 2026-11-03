@@ -1,6 +1,7 @@
 package io.github.lsdconsulting.lsd.mono.studio.gradle
 
 import org.gradle.api.GradleException
+import org.gradle.api.logging.Logging
 import java.io.File
 import java.io.IOException
 import java.nio.channels.FileChannel
@@ -49,7 +50,11 @@ internal object StudioInstaller {
 
     private val recursiveDelete = Deleter { it.deleteRecursively() }
 
-    /** How old a moved-aside folder must be before a later install deletes it. */
+    /**
+     * How old a moved-aside folder must be before a later install deletes it. The age compares
+     * this machine's clock with the folder's time, so a shared cache on a machine with a skewed
+     * clock may delete a little early or late.
+     */
     val OLD_INSTALL_AGE: Duration = Duration.ofHours(1)
 
     /**
@@ -168,7 +173,10 @@ internal object StudioInstaller {
                 e,
             )
         }
-        aside.setLastModified(System.currentTimeMillis())
+        // A rename keeps the folder's own time, so restart the clock that removeLeftovers reads.
+        if (!aside.setLastModified(System.currentTimeMillis())) {
+            Logging.getLogger(StudioInstaller::class.java).warn("LSD Studio: could not set the time of {}; it may be removed early.", aside)
+        }
     }
 
     /** The first file a run needs that [installDir] lacks: package.json, the entry script or the built dist/main.js. */

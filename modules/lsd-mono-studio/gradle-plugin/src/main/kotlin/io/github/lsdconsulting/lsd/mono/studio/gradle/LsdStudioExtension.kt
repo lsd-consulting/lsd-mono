@@ -14,7 +14,11 @@ public abstract class LsdStudioExtension {
     /** Open Studio in the browser once it is up (default true). Never on CI (the `CI` variable is set). */
     public abstract val openBrowser: Property<Boolean>
 
-    /** The Node.js to run, `node` on the `PATH` by default. It must be 22.6 or newer. */
+    /**
+     * The Node.js to run, `node` on the `PATH` by default. It must be 22.6 or newer. Studio is
+     * started without a shell, so on Windows this must be `node` or a path to `node.exe`, not a
+     * .cmd or .bat wrapper.
+     */
     public abstract val nodeCommand: Property<String>
 
     /** The npm that installs lsd-mono-studio, `npm` on the `PATH` by default. */

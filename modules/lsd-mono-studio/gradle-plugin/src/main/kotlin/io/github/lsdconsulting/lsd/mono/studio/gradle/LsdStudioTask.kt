@@ -80,33 +80,13 @@ public abstract class LsdStudioTask : DefaultTask() {
     }
 
     private fun checkNode(node: String) {
-        fun notFound(
-            reason: String?,
-            cause: Throwable? = null,
-        ) = GradleException(
-            "LSD Studio needs Node.js ${NodeVersion.MINIMUM} or newer, and '$node' was not found " +
-                "($reason). Install Node.js (https://nodejs.org) and put it on the PATH, or set " +
-                "lsdStudio { nodeCommand = \"/path/to/node\" }.",
-            cause,
-        )
         val result =
             try {
-                ProcessRunner.run(Commands.resolve(node) + "--version", timeout = ProcessRunner.NODE_VERSION_TIMEOUT)
+                ProcessRunner.run(Commands.resolve(node, listOf("--version")), timeout = ProcessRunner.NODE_VERSION_TIMEOUT)
             } catch (e: IOException) {
-                throw notFound(e.message, e)
+                throw NodeCheck.notFound(node, e.message, e)
             }
-        // Through cmd /c on Windows, a missing command is an exit code rather than an IOException.
-        if (result.exitCode != 0) throw notFound("exit ${result.exitCode}: ${result.output.trim()}")
-        val output = result.output
-        val version =
-            NodeVersion.parse(output.lineSequence().firstOrNull { it.isNotBlank() } ?: "")
-                ?: throw GradleException("Could not read the Node.js version from '$node --version': '${output.trim()}'")
-        if (version < NodeVersion.MINIMUM) {
-            throw GradleException(
-                "LSD Studio needs Node.js ${NodeVersion.MINIMUM} or newer, and '$node' is $version. " +
-                    "Install a newer Node.js, or point lsdStudio { nodeCommand = … } at one.",
-            )
-        }
+        val version = NodeCheck.version(node, result)
         logger.info("LSD Studio: using Node.js {} ({})", version, node)
     }
 
@@ -135,7 +115,8 @@ public abstract class LsdStudioTask : DefaultTask() {
                 logger.lifecycle("LSD Studio: installing {} into {}", spec, installDir)
                 val result =
                     ProcessRunner.runChecked(
-                        Commands.resolve(npmCommand.get()) +
+                        Commands.resolve(
+                            npmCommand.get(),
                             listOf(
                                 "install",
                                 "--prefix",
@@ -147,6 +128,7 @@ public abstract class LsdStudioTask : DefaultTask() {
                                 "--omit=dev",
                                 localFile?.path ?: spec,
                             ),
+                        ),
                         directory = target,
                         timeout = ProcessRunner.NPM_INSTALL_TIMEOUT,
                     )
@@ -192,6 +174,9 @@ public abstract class LsdStudioTask : DefaultTask() {
             return false
         } catch (e: java.net.SocketTimeoutException) {
             throw GradleException("Port $port is in use, and not by LSD Studio (no answer). Choose another port.", e)
+        } catch (e: java.net.SocketException) {
+            // Something that is not an HTTP server can reset the connection instead of answering.
+            throw GradleException("Port $port is in use, and not by LSD Studio ($e). Choose another port.", e)
         } finally {
             connection.disconnect()
         }
@@ -205,11 +190,17 @@ public abstract class LsdStudioTask : DefaultTask() {
     ) {
         val command = mutableListOf(node, bin.path, "--port", port.toString())
         if (host == "0.0.0.0") command += "--expose"
+        // Node is started directly, not through cmd, so stopping it leaves no wrapper behind; on
+        // Windows nodeCommand must therefore name node.exe (or a command that resolves to it).
         val process =
-            ProcessBuilder(command)
-                .directory(bin.parentFile)
-                .redirectErrorStream(true)
-                .start()
+            try {
+                ProcessBuilder(command)
+                    .directory(bin.parentFile)
+                    .redirectErrorStream(true)
+                    .start()
+            } catch (e: IOException) {
+                throw NodeCheck.notFound(node, e.message, e)
+            }
         val service = processes.get()
         service.add(process)
         logger.lifecycle("LSD Studio: started (pid {}). Press Ctrl+C to stop it.", process.pid())
