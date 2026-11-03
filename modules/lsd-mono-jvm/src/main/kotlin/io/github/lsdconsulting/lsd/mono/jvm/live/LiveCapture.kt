@@ -45,6 +45,10 @@ internal class LiveCapture(
 
     /** How many scenarios are being sent as they run: each leaves when it completes, is discarded, or its stream ends. */
     internal val runningCount: Int get() = running.size
+
+    /** Runs in [started] between finding the stream and adding the scenario; tests use it to hit that window. */
+    @Volatile
+    internal var afterStreamLookup: () -> Unit = {}
     private val warned = AtomicBoolean()
 
     /** Live capture is off for the rest of the run: LSD Studio could not be reached, or timed out. */
@@ -81,7 +85,10 @@ internal class LiveCapture(
         title: String,
         snapshot: (title: String) -> Scenario?,
     ) = quietly {
+        // A started() after written() for the same report opens a fresh stream, which is not
+        // finished unless written() runs again. This predates live scenarios.
         val stream = stream(reportKey) ?: return@quietly
+        afterStreamLookup()
         running.computeIfAbsent(scenario) { stream.Running(title, snapshot) }
         // The stream may have stopped, or its report been written, since stream() returned it; its
         // forget() then ran before this add. Both flags are set before forget(), so checking them

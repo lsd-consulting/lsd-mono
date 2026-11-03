@@ -23,11 +23,12 @@ class LiveRunningTest {
         url: String,
         connector: LiveConnector = JdkLiveConnector(Duration.ofSeconds(30)),
         queueCapacity: Int = 100,
+        flushTimeout: Duration = Duration.ofSeconds(30),
     ) = LiveCapture(
         LiveFrames(ReportJsonMapper { "id${ids.incrementAndGet()}" }),
         url = { url },
         connector = connector,
-        flushTimeout = Duration.ofSeconds(30),
+        flushTimeout = flushTimeout,
         queueCapacity = queueCapacity,
         warn = warnings::add,
     )
@@ -139,6 +140,19 @@ class LiveRunningTest {
         assertTrue(connected.await(30, TimeUnit.SECONDS))
         assertEquals(2, live.runningCount)
         connector.close(1011)
+        assertEquals(0, live.runningCount)
+    }
+
+    @Test
+    fun `a scenario whose report is written while it starts is let go of`() {
+        // LSD Studio never closes, so written() leaves the stream unbroken: only its closed flag says so.
+        val live = capture("ws://studio", FakeConnector(), flushTimeout = Duration.ofMillis(100))
+        live.begun("a")
+        live.afterStreamLookup = {
+            live.afterStreamLookup = {}
+            live.written("a")
+        }
+        live.started("a", Any(), "Written as it starts", nothingYet)
         assertEquals(0, live.runningCount)
     }
 }
