@@ -70,7 +70,7 @@ val buildStudio =
 // Most of the plugin runs only in the functional tests, which Gradle TestKit runs in a separate
 // Gradle process that Kover does not see; the floor covers the unit-tested parts.
 lsdCoverage {
-    lineFloor.set(49)
+    lineFloor.set(52)
 }
 
 dependencies {

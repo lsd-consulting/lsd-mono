@@ -57,6 +57,18 @@ internal object StudioPackage {
     /** Where npm puts the package inside [installDir]. */
     fun packageDir(installDir: File): File = installDir.resolve("node_modules").resolve(StudioVersion.NPM_PACKAGE)
 
+    /** The `version` in the package.json nearest above [script], or null when there is none to read. */
+    fun version(script: File): String? {
+        val packageJson =
+            generateSequence(script.absoluteFile.parentFile) { it.parentFile }
+                .map { it.resolve("package.json") }
+                .firstOrNull { it.isFile } ?: return null
+
+        @Suppress("UNCHECKED_CAST")
+        val json = runCatching { JsonSlurper().parse(packageJson) as Map<String, Any?> }.getOrNull() ?: return null
+        return (json["version"] as? String)?.takeIf { it.isNotBlank() }
+    }
+
     /** The script package.json's `bin` names, which `node <script>` runs without npx or a .cmd shim. */
     fun binScript(packageDir: File): File {
         val packageJson = packageDir.resolve("package.json")

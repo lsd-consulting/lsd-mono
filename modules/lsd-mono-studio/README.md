@@ -376,6 +376,20 @@ directory without an index gets one rebuilt from its report files.
 Deletes are idempotent: repeating one succeeds. Duplicate ids count once. `DELETE /api/reports/<id>`
 answers 204 whether or not the report existed, and 400 for an id that is not a report id.
 
+### Telling Studio apart
+
+Studio answers every HTTP request it handles, errors such as 404, 413 and 500 included, with an
+`X-LSD-Studio` header, and adds it to the `101 Switching Protocols` that opens `/ws/captures`. The
+value is Studio's npm package version, in semver (for example `X-LSD-Studio: 0.16.0`; `0.0.0` from
+a checkout). Responses Studio does not write itself lack it: Node's own `400` for a malformed
+request, and the `400` for a WebSocket upgrade on any other path.
+
+The header name is stable. Clients use it to tell a running Studio from anything else on the port,
+and may compare the value with the version they expect. The Gradle plugin reuses a server only when
+`GET /api/reports` answers 200 with a non-empty header. When the version differs from the one the
+build runs, it still reuses it but warns that the live view may not line up. The live-capture
+protocol version is agreed separately, in the WebSocket `hello`.
+
 ### Design decisions
 
 The choices behind LSD Studio so far, discussed on

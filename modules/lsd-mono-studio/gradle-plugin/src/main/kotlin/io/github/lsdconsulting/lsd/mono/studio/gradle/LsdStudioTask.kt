@@ -73,9 +73,10 @@ public abstract class LsdStudioTask : DefaultTask() {
         val node = nodeCommand.get()
         checkNode(node)
         val bin = studioScript(node)
+        val expected = StudioPackage.version(bin)
         val host = if (expose.get()) "0.0.0.0" else "127.0.0.1"
         val port = port.get()
-        if (port != 0 && alreadyRunning(port)) return
+        if (port != 0 && alreadyRunning(port, expected)) return
         launch(node, bin, port, host)
     }
 
@@ -154,34 +155,49 @@ public abstract class LsdStudioTask : DefaultTask() {
         }
     }
 
-    /** True when an LSD Studio already answers on [port]; fails when something else holds it. */
-    private fun alreadyRunning(port: Int): Boolean {
+    /**
+     * True when an LSD Studio already answers on [port], warning when its version is not [expected];
+     * fails when an older Studio or something else holds it.
+     */
+    private fun alreadyRunning(
+        port: Int,
+        expected: String?,
+    ): Boolean {
         val url = "http://127.0.0.1:$port"
         val connection = URI("$url/api/reports").toURL().openConnection() as HttpURLConnection
         connection.connectTimeout = 2000
         connection.readTimeout = 2000
+        // A redirect could lead to a Studio elsewhere while this build would open and wire this port.
+        connection.instanceFollowRedirects = false
         try {
             val status = connection.responseCode
-            val json = connection.contentType?.contains("json") == true
-            if (status == 200 && json) {
-                logger.lifecycle("LSD Studio is already running on {}: using it. Stop that one to start a new one here.", url)
-                browse(url)
-                return true
+            when (val verdict = StudioProbe.judge(url, port, status, connection.getHeaderField(StudioProbe.STUDIO_HEADER), expected)) {
+                is StudioProbe.Verdict.InUse -> throw verdict.failure
+                is StudioProbe.Verdict.Reuse -> {
+                    verdict.warning?.let { logger.warn(it) }
+                    logger.lifecycle(
+                        "LSD Studio {} is already running on {}: using it. Stop that one to start a new one here.",
+                        verdict.version,
+                        url,
+                    )
+                    browse(url)
+                    return true
+                }
             }
-            throw GradleException(
-                "Port $port is in use, and not by LSD Studio (GET /api/reports answered $status). " +
-                    "Stop what is using it, or choose another port: lsdStudio { port = 7358 }.",
-            )
         } catch (e: ConnectException) {
             return false
         } catch (e: java.net.SocketTimeoutException) {
-            throw GradleException("Port $port is in use, and not by LSD Studio (no answer). Choose another port.", e)
-        } catch (e: java.net.SocketException) {
+            throw StudioProbe.portInUse(port, expected, "no answer", e)
+        } catch (e: IOException) {
             // Something that is not an HTTP server can reset the connection instead of answering.
-            throw GradleException("Port $port is in use, and not by LSD Studio ($e). Choose another port.", e)
+            throw StudioProbe.portInUse(port, expected, e.toString(), e)
         } finally {
             connection.disconnect()
         }
+    }
+
+    private companion object {
+        val STARTED = Regex("""LSD Studio on (https?://\S+)""")
     }
 
     private fun launch(
@@ -264,9 +280,5 @@ public abstract class LsdStudioTask : DefaultTask() {
         } catch (e: IOException) {
             logger.info("LSD Studio: could not open a browser ({}); open {} yourself.", e.message, url)
         }
-    }
-
-    private companion object {
-        val STARTED = Regex("""LSD Studio on (https?://\S+)""")
     }
 }

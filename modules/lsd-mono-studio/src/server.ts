@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -12,6 +13,12 @@ import { checkOverride, findShell, MESSAGES, messagePage, renderReportPage, view
 const INDEX_HTML = new URL('../public/index.html', import.meta.url)
 const CAPTURES_PATH = '/ws/captures'
 const HTML = 'text/html; charset=utf-8'
+/** The header Studio's responses carry, so a client can tell LSD Studio from anything else on the port. */
+export const STUDIO_HEADER = 'X-LSD-Studio'
+/** The value of [STUDIO_HEADER]: this package's version. */
+export const STUDIO_VERSION = (
+  JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }
+).version
 export const MAX_BULK_IDS = 1000
 /** The largest request body the server reads, in bytes; a bigger one gets 413. */
 export const DEFAULT_MAX_BODY_BYTES = 50 * 1024 * 1024
@@ -40,6 +47,7 @@ export async function startServer(
   if (options.viewerShells === undefined) await checkOverride(config.viewer)
   const live = new LiveReports()
   const server = createServer((req, res) => {
+    res.setHeader(STUDIO_HEADER, STUDIO_VERSION)
     route(req, res, store, live, (r) => readBody(r, limit), options.viewerShells ?? viewerShells(config.viewer)).catch(
       (error: unknown) => {
         if (error instanceof BodyTooLarge) {
@@ -141,6 +149,7 @@ async function route(
  */
 function attachCaptures(server: Server, store: ReportStore, live: LiveReports): void {
   const sockets = new WebSocketServer({ server, path: CAPTURES_PATH, maxPayload: DEFAULT_MAX_BODY_BYTES })
+  sockets.on('headers', (headers) => headers.push(`${STUDIO_HEADER}: ${STUDIO_VERSION}`))
   sockets.on('connection', (socket) => {
     const session = new CaptureSession(store, live)
     let queue: Promise<unknown> = Promise.resolve()
