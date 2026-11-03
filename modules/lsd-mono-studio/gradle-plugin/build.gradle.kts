@@ -87,4 +87,6 @@ tasks.named<Test>("test") {
     inputs.dir(studioDir.dir("dist")).withPathSensitivity(PathSensitivity.RELATIVE)
     // Each test starts a Gradle build that runs Node.
     maxParallelForks = 1
+    // Lists every test, so CI shows that the Windows-only ones ran there.
+    testLogging { events("passed", "skipped", "failed") }
 }
