@@ -120,7 +120,8 @@ public abstract class LsdStudioTask : DefaultTask() {
         }
         val localFile = StudioPackage.localFile(spec, projectDir)
         val installDir = StudioPackage.installDir(cacheDir.get().asFile, spec, localFile)
-        if (StudioInstaller.isComplete(installDir)) {
+        // Only decides what to log: ensureInstalled checks again under its lock.
+        if (StudioInstaller.isComplete(installDir, spec)) {
             logger.info("LSD Studio: {} is already installed in {}", spec, installDir)
         } else {
             StudioInstaller.ensureInstalled(installDir, spec) { target ->
