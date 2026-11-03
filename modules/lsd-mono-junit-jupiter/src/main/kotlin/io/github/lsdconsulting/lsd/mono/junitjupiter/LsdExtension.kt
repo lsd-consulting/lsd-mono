@@ -54,7 +54,8 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
         useConfigurationParameters(context)
         lsdContext.findScenario(context.uniqueId)?.discard()
         lsdContext.reportTitle(reportKey(context), reportContext(context).displayName)
-        lsdContext.beginScenario(reportKey = reportKey(context), key = context.uniqueId)
+        val scenario = lsdContext.beginScenario(reportKey = reportKey(context), key = context.uniqueId)
+        lsdContext.scenarioTitle(scenario, prefixParentDisplayName(context))
     }
 
     override fun testSuccessful(context: ExtensionContext) {

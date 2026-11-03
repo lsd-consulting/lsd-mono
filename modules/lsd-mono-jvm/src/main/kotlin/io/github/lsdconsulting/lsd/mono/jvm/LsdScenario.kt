@@ -117,6 +117,9 @@ public class LsdScenario internal constructor(
 
     internal fun addEvents(added: List<SequenceEvent>): Boolean = add { events.addAll(added) }
 
+    /** What has been captured so far, or null once closed. */
+    internal fun captured(): List<SequenceEvent>? = synchronized(lock) { if (closed) null else events.toList() }
+
     /** Close and return what was captured. Later adds are refused. */
     internal fun close(): Pair<List<Fact>, List<SequenceEvent>> =
         synchronized(lock) {

@@ -176,7 +176,7 @@ class LiveCaptureTest {
 
     private fun shares(scenario: JsonObject): List<Double?> = listOf("measuredRatio", "pairedRatio").map { (scenario[it] as Number?)?.toDouble() }
 
-    private fun fixture(name: String): List<String> = PROTOCOL.resolve("fixtures/streams/$name.jsonl").readLines().filter(String::isNotBlank)
+    internal fun fixture(name: String): List<String> = PROTOCOL.resolve("fixtures/streams/$name.jsonl").readLines().filter(String::isNotBlank)
 
     internal fun assertValidFrame(frame: String) {
         val errors = liveSchema.validate(frame, InputFormat.JSON).map { "${it.instanceLocation}: ${it.message}" }
@@ -189,7 +189,7 @@ class LiveCaptureTest {
      * participants their names and types, and timestamps and the sender go. `timing: "none"` is
      * the same as no timing, and `pairing` is compared on replies, where it says how they were paired.
      */
-    private fun project(stream: List<String>): List<Map<String, Any?>> {
+    internal fun project(stream: List<String>): List<Map<String, Any?>> {
         val frames = stream.map { Json.parse(it) as JsonObject }
         val scenarioIds = frames.mapNotNull { it.string("scenarioId") }.distinct()
         val events = frames.filter { it.string("type") == "event" }.groupBy({ it.string("scenarioId") }, { checkNotNull(it.obj("event")) })

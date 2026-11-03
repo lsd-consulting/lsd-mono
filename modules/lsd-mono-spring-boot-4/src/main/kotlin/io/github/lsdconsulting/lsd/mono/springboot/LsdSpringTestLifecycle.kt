@@ -30,6 +30,7 @@ public class LsdSpringTestLifecycle {
             val reportKey = reportKey(testContext.testClass)
             lsd.reportTitle(reportKey, classTitle(outerClass(testContext.testClass)))
             val scenario = lsd.beginScenario(reportKey = reportKey, key = key)
+            lsd.scenarioTitle(scenario, title(testContext))
             val environment = testContext.applicationContext.environment
             val client = environment.getProperty("lsd.mono.spring.client-name") ?: ParticipantNames.DEFAULT_CLIENT
             lsd.addParticipants(ParticipantType.ACTOR.called(client))
@@ -39,12 +40,15 @@ public class LsdSpringTestLifecycle {
         }
     }
 
+    /** The scenario's title: its class and method, as the report shows them. */
+    private fun title(testContext: TestContext): String = "${classTitle(testContext.testClass)}: ${methodTitle(testContext)}"
+
     public fun afterTestMethod(testContext: TestContext) {
         val scenario = testContext.removeAttribute(ATTRIBUTE) as? LsdScenario ?: return
         guarded(Unit) { SpringScenarios.settle(scenario) }
         SpringScenarios.finished(scenario)
         guarded(Unit) {
-            val title = "${classTitle(testContext.testClass)}: ${methodTitle(testContext)}"
+            val title = title(testContext)
             val description = "${testContext.testClass.simpleName}.${testContext.testMethod.name}(), drawn by the Spring Boot starter"
             when (val e = testContext.testException) {
                 null -> scenario.complete(title, description, Status.SUCCESS)

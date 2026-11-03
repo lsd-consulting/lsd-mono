@@ -137,11 +137,26 @@ lsd.mono.studio.url=ws://127.0.0.1:7357/ws/captures
 It is off when the property is unset, and it works the same from JUnit, Cucumber, Spring Boot or
 `LsdContext` by hand, because it hangs off `LsdContext` itself.
 
-- **What is sent:** a report opens its own WebSocket when its first scenario begins. Each
-  scenario is sent when it completes (its start, its events, its end), and `report.done` once
-  the report file is written. A scenario is sent whole because reply pairing and timing are only
-  known when it completes. It is mapped exactly as the file report is, so the live report and
-  the `*-report.json` hold the same participants, events, statuses and errors.
+- **What is sent:** a report opens its own WebSocket when its first scenario begins, and sends
+  `report.done` once the report file is written. A scenario run by JUnit, Cucumber, Spring Boot or
+  `lsd.scenario(title) { }` is sent as it runs, because its title is known when it begins: its
+  start goes with its first settled event, and each event follows once it has settled, that is,
+  once every call before it has its reply. A call's arrow appears when it is answered, with its
+  duration. The rest, and the scenario's end, follow when it completes. A scenario begun with
+  `beginScenario` by hand is sent whole when it completes.
+- **A call with no reply holds the view back:** a synchronous call (`call()`, or `message()`,
+  which is synchronous by default) that is never answered, because it timed out, threw, or was
+  fire-and-forget, holds back every later event of its scenario until the scenario completes;
+  they then all arrive at once. Capture fire-and-forget messages as asynchronous to keep them
+  flowing.
+- **The same as the report file:** events are mapped exactly as the file report maps them. The
+  file maps a scenario again as it completes, and events can still change then: a clock that orders
+  events by `startedAt` can move one, and a reply can pair with a different call. If what was sent
+  no longer matches the file, or the title changed, the remaining events are still sent once each
+  and LSD Studio shows a sender error on that scenario saying the live view differs and the file
+  is right. A participant first named after the start shows under its id until the file is opened
+  (protocol 0.1.0 cannot declare one later), and a scenario its test discards (a retried test)
+  ends as skipped, as the file leaves it out.
 - **Best effort:** it never fails a test or a report and hardly slows one. Frames go through a
   bounded queue to one background thread, and every connect and send has a two-second timeout.
   Only `report.done` waits, for up to two seconds, for LSD Studio to say it stored the report.
