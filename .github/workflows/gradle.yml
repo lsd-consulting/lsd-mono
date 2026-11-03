@@ -6,7 +6,8 @@ name: Gradle
 # without building the report UI three times. check-ux runs the report UI's Playwright checks
 # (npm run check:ux) in parallel with them, only when the report UI or this workflow changed.
 # Changes that only touch what the build never reads (Markdown, docs/, which the Pages workflow
-# handles, and the README images under each module) skip the build jobs. The workflow itself
+# handles, and the README images under each module) skip the build jobs, except the READMEs and
+# docs lsd-mono-jvm's tests check (its test task's `readmes` inputs). The workflow itself
 # always runs, so the `gate` job always reports: require `gate` in branch protection, not the
 # build jobs (see docs/ci.md). Keep the ignored paths in `changes` and pages.yml in step.
 # `commits` checks conventional commit messages, and is part of gate. Nothing here releases: the
@@ -51,8 +52,12 @@ jobs:
             { echo "code=true"; echo "report=true"; echo "studio=true"; } >> "$GITHUB_OUTPUT"; exit 0
           fi
           changed=$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '(\.md$|^docs/|^modules/[^/]+/docs/)' || true)
+          # The Markdown lsd-mono-jvm's tests read (the `readmes` inputs of its test task in
+          # modules/lsd-mono-jvm/build.gradle.kts): keep this list in step with them.
+          readmes=$(git diff --name-only "$BASE" "$HEAD" | grep -E '^(README\.md|modules/README\.md|modules/[^/]+/README\.md|docs/jvm-api\.md|docs/releasing\.md|docs/versioning-notes\.md)$' || true)
           echo "Build-relevant changes:"; echo "${changed:-none}"
-          if [ -n "$changed" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
+          echo "READMEs the JVM tests read:"; echo "${readmes:-none}"
+          if [ -n "$changed$readmes" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
           # The report UI, the shared test reports its checks open, the Node version it runs on, or
           # this workflow.
           if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-report-html/ui/|modules/lsd-mono-report-schema/conformance/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
