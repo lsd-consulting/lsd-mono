@@ -41,11 +41,12 @@ class LiveCaptureFailureTest {
         url: String?,
         connector: LiveConnector = JdkLiveConnector(SHORT),
         queueCapacity: Int = 100,
+        flushTimeout: Duration = SHORT,
     ) = LiveCapture(
         frames,
         url = { url },
         connector = connector,
-        flushTimeout = SHORT,
+        flushTimeout = flushTimeout,
         queueCapacity = queueCapacity,
         keepAlive = Duration.ofMillis(50),
         warn = warnings::add,
@@ -106,10 +107,14 @@ class LiveCaptureFailureTest {
     @Test
     fun `a non-fatal error is warned about and the stream goes on`() {
         TestStudio(TestStudio.Mode.NON_FATAL_ERROR).use { studio ->
-            val live = capture(studio.url)
+            // This test is about the error reply, not timing: a budget no loaded runner uses up, and
+            // the assertions wait for LSD Studio to have closed the stream, not for written() alone.
+            val live = capture(studio.url, JdkLiveConnector(GENEROUS), flushTimeout = GENEROUS)
             live.begun("a")
             live.completed("a", Scenario("one"))
             live.written("a")
+            assertTrue(studio.awaitClosed(GENEROUS.seconds), warnings.toString())
+            eventually { warnings.isNotEmpty() }
             assertEquals(listOf("hello", "scenario.start", "scenario.end", "report.done"), types(studio), warnings.toString())
             assertTrue(warnings.single().contains("refused a message: \"Not a valid hello message.\""), warnings.toString())
             assertFalse(live.off)
@@ -302,5 +307,8 @@ class LiveCaptureFailureTest {
     private companion object {
         // Long enough for a loaded CI runner to connect and answer, short enough to wait out.
         val SHORT: Duration = Duration.ofMillis(3_000)
+
+        // For tests that check what was sent, not how long it took.
+        val GENEROUS: Duration = Duration.ofSeconds(30)
     }
 }
