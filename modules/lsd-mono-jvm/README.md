@@ -144,6 +144,11 @@ It is off when the property is unset, and it works the same from JUnit, Cucumber
   once every call before it has its reply. A call's arrow appears when it is answered, with its
   duration. The rest, and the scenario's end, follow when it completes. A scenario begun with
   `beginScenario` by hand is sent whole when it completes.
+- **A call with no reply holds the view back:** a synchronous call (`call()`, or `message()`,
+  which is synchronous by default) that is never answered, because it timed out, threw, or was
+  fire-and-forget, holds back every later event of its scenario until the scenario completes;
+  they then all arrive at once. Capture fire-and-forget messages as asynchronous to keep them
+  flowing.
 - **The same as the report file:** events are mapped exactly as the file report maps them. The
   file maps a scenario again as it completes, and events can still change then: a clock that orders
   events by `startedAt` can move one, and a reply can pair with a different call. If what was sent
