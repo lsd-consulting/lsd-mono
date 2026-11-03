@@ -93,6 +93,13 @@
       "about": "The report UI's built-in demo (src/data/sample-report.ts imports it): three scenarios of a checkout, with HTML in the descriptions. Its JSON bodies are in the UI's sample-payloads.ts."
     },
     {
+      "file": "reports/every-field.json",
+      "schema": "lsd-report.schema.json",
+      "valid": true,
+      "source": "hand-written",
+      "about": "Every optional field of 1.0.0 set (every event kind, attribute value form and enum the options take), and an unknown key on every object, so a later 1.x schema that closes an object or narrows an optional field rejects it."
+    },
+    {
       "file": "reports/future-minor.json",
       "schema": "lsd-report.schema.json",
       "valid": true,

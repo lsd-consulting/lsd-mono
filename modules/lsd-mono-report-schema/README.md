@@ -30,7 +30,18 @@ anything else takes a new major version. How it lines up with OpenTelemetry is d
 - 1.0.0 is a clean break from 0.x (see the table). The report UI still opens any 0.x report,
   and one with no `schemaVersion`: it upgrades it to 1.0.0's shape when it reads it.
 - To change the format: edit the schema, raise the version in both `$id`s and in
-  `ReportSchema.VERSION` (lsd-mono-report-model), and regenerate the UI's types (below).
+  `ReportSchema.VERSION` (lsd-mono-report-model), regenerate the UI's types (below), and copy
+  both schemas to `published/<new version>/`.
+- `published/x.y.z/` keeps each released schema, byte for byte, and the Pages workflow
+  publishes every one at its `$id`, so an older report's schema URL keeps resolving. The report
+  UI's `published-schemas.test.ts` fails when the current version has no `published/` folder or
+  differs from it, when a corpus report valid under an earlier schema of the same major version
+  is not valid under the current one (the main guard: `reports/every-field.json` sets every
+  optional field and an unknown key on every object), and when a newer minor schema makes a
+  field required, closes an object or removes a property, type, branch or enum value. Versions
+  of different major versions are never compared: a new major may break anything.
+  Only plain `x.y.z` versions are supported: a pre-release version such as `1.1.0-rc.1` can
+  never pass, because pre-release folders in `published/` are ignored.
 
 | Version | Change |
 |---------|--------|
