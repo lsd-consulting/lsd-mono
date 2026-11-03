@@ -120,33 +120,33 @@ public abstract class LsdStudioTask : DefaultTask() {
         }
         val localFile = StudioPackage.localFile(spec, projectDir)
         val installDir = StudioPackage.installDir(cacheDir.get().asFile, spec, localFile)
-        val marker = StudioPackage.installedMarker(installDir)
-        if (marker.isFile) {
+        if (StudioInstaller.isComplete(installDir)) {
             logger.info("LSD Studio: {} is already installed in {}", spec, installDir)
         } else {
-            logger.lifecycle("LSD Studio: installing {} into {}", spec, installDir)
-            installDir.mkdirs()
-            val result =
-                runAndRead(
-                    npm(npmCommand.get()) +
-                        listOf(
-                            "install",
-                            "--prefix",
-                            installDir.path,
-                            "--no-save",
-                            "--no-audit",
-                            "--no-fund",
-                            "--no-package-lock",
-                            "--omit=dev",
-                            localFile?.path ?: spec,
-                        ),
-                    directory = installDir,
-                    check = true,
-                )
-            logger.info(result)
-            marker.writeText("$spec\n")
+            StudioInstaller.ensureInstalled(installDir, spec) { target ->
+                logger.lifecycle("LSD Studio: installing {} into {}", spec, installDir)
+                val result =
+                    runAndRead(
+                        npm(npmCommand.get()) +
+                            listOf(
+                                "install",
+                                "--prefix",
+                                target.path,
+                                "--no-save",
+                                "--no-audit",
+                                "--no-fund",
+                                "--no-package-lock",
+                                "--omit=dev",
+                                localFile?.path ?: spec,
+                            ),
+                        directory = target,
+                        check = true,
+                    )
+                logger.info("{}", result)
+            }
         }
-        return StudioPackage.binScript(StudioPackage.packageDir(installDir)).also { checkBuilt(it, installDir) }
+        // ensureInstalled only leaves a complete install in place, with its entry script and dist/main.js.
+        return StudioPackage.binScript(StudioPackage.packageDir(installDir))
     }
 
     private fun checkBuilt(
@@ -154,8 +154,7 @@ public abstract class LsdStudioTask : DefaultTask() {
         dir: File,
     ) {
         if (!script.isFile) throw GradleException("lsd-mono-studio's entry script $script is missing in $dir.")
-        // bin/lsd-mono-studio.js imports the compiled dist/main.js, which only a packed package or a build has.
-        val main = script.parentFile.resolveSibling("dist").resolve("main.js")
+        val main = StudioPackage.builtMain(script)
         if (!main.isFile) {
             throw GradleException(
                 "lsd-mono-studio in $dir is not built ($main is missing): run npm ci and npm run build there.",

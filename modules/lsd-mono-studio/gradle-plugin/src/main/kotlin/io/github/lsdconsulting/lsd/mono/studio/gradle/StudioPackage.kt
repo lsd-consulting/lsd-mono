@@ -51,6 +51,9 @@ internal object StudioPackage {
     /** The marker a finished install leaves, so later runs skip npm (and work offline). */
     fun installedMarker(installDir: File): File = installDir.resolve(".lsd-studio-installed")
 
+    /** The compiled dist/main.js that the entry [script] imports, which only a packed package or a build has. */
+    fun builtMain(script: File): File = script.parentFile.resolveSibling("dist").resolve("main.js")
+
     /** Where npm puts the package inside [installDir]. */
     fun packageDir(installDir: File): File = installDir.resolve("node_modules").resolve(StudioVersion.NPM_PACKAGE)
 
