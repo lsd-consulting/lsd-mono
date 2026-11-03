@@ -162,6 +162,35 @@ public class LsdContext internal constructor() :
         }
 
         /**
+         * The title [scenario] will be completed with, given when it begins, so a live capture to
+         * LSD Studio can show it, and each of its events, while it runs. For integrations.
+         */
+        @InternalLsdApi
+        public fun scenarioTitle(
+            scenario: LsdScenario,
+            title: String,
+        ): Unit = streamLive(scenario, title)
+
+        private fun streamLive(
+            scenario: LsdScenario,
+            title: String,
+        ) {
+            if (scenario === defaultScenario || !scenario.isActive) return
+            live.started(scenario.reportKey, scenario, title) { titled -> soFar(scenario, titled) }
+        }
+
+        /** [scenario] as its report would have it if it completed now, titled [title]; null once it has. */
+        private fun soFar(
+            scenario: LsdScenario,
+            title: String,
+        ): Scenario? {
+            val captured = scenario.captured() ?: return null
+            val (events, timing) = orderAndAnalyse(captured, timingConfig.effectiveOrderByStartedAt())
+            val participants = synchronized(lock) { registryOf(scenario).usedBy(events, sharedWith(scenario)) }
+            return Scenario(title = title, participants = participants, events = events, timing = timing)
+        }
+
+        /**
          * The scenario the calling thread is bound to, if it is still running. That is the one
          * bound on this thread, or else one inherited from the thread that started it (see
          * [LsdScenario.bind] and the README on threads; pool workers do not inherit).
@@ -243,6 +272,7 @@ public class LsdContext internal constructor() :
             block: LsdScenario.() -> T,
         ): T {
             val scenario = beginScenario(reportKey ?: openReport.get()?.key, bindCurrentThread = false)
+            streamLive(scenario, title)
             return scenario.bind().use {
                 val result =
                     try {
@@ -459,7 +489,11 @@ public class LsdContext internal constructor() :
             guarded(if (events.size == 1) "event" else "batch of events", { }) {
                 val resolve = { ref: String -> resolve(scenario, ref) }
                 val bound = events.map { binder.bind(if (dataCopied) it else copyData(it), resolve) }
-                if (!scenario.addEvents(bound)) CaptureLog.late(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
+                if (scenario.addEvents(bound)) {
+                    live.captured(scenario)
+                } else {
+                    CaptureLog.late(scenario, if (bound.size == 1) "event" else "batch of ${bound.size} events")
+                }
             }
         }
 
@@ -527,7 +561,7 @@ public class LsdContext internal constructor() :
                     reports.add(scenario.reportKey, order, stored)
                     stored
                 }
-            live.completed(scenario.reportKey, stored)
+            live.completed(scenario.reportKey, stored, scenario)
         }
 
         internal fun discard(scenario: LsdScenario) {
@@ -538,6 +572,7 @@ public class LsdContext internal constructor() :
             }
             if (scenarios.remove(scenario)) scenario.close()
             scenarios.forget(scenario)
+            live.discarded(scenario)
         }
 
         /**

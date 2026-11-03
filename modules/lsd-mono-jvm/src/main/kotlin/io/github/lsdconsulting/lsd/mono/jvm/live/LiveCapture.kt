@@ -20,8 +20,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * `lsd.mono.studio.url` is set. Off by default.
  *
  * A report gets its own socket: the hello when its first scenario begins, then each scenario
- * (start, events, end) when it completes, mapped as the written report maps it, and `report.done`
- * once the report file is written. It is best effort and never fails or holds up a test: frames
+ * (start, events, end), mapped as the written report maps it, and `report.done` once the report
+ * file is written. A scenario whose title is known when it begins ([started]) is sent as it runs:
+ * its start and each event once it has settled, then the rest and its end when it completes (see
+ * [Running]). Any other scenario is sent whole when it completes. It is best effort and never fails or holds up a test: frames
  * go through a bounded queue to one daemon thread, every network step has a short timeout, and
  * only `report.done` waits, for at most [flushTimeout]. The first problem (LSD Studio not
  * running, a refused version, a full queue) is warned about once; the stream it hit stops, and
@@ -39,6 +41,7 @@ internal class LiveCapture(
 ) {
     private val streams = ConcurrentHashMap<String, Stream>()
     private val titles = ConcurrentHashMap<String, String>()
+    private val running = ConcurrentHashMap<Any, Stream.Running>()
     private val warned = AtomicBoolean()
 
     /** Live capture is off for the rest of the run: LSD Studio could not be reached, or timed out. */
@@ -64,11 +67,40 @@ internal class LiveCapture(
     /** A scenario of [reportKey]'s report began: open its stream, if it has none. */
     fun begun(reportKey: String?) = quietly { stream(reportKey) }
 
-    /** [scenario] of [reportKey]'s report completed. */
+    /**
+     * [scenario] of [reportKey]'s report began, titled [title]: send it as it runs. [snapshot] maps
+     * what it has captured so far as its report would (null once it has completed); it is called
+     * on the worker thread.
+     */
+    fun started(
+        reportKey: String?,
+        scenario: Any,
+        title: String,
+        snapshot: (title: String) -> Scenario?,
+    ) = quietly {
+        val stream = stream(reportKey) ?: return@quietly
+        running.computeIfAbsent(scenario) { stream.Running(title, snapshot) }
+    }
+
+    /** [scenario] captured more: send what has settled, soon, on the worker thread. */
+    fun captured(scenario: Any) = quietly { running[scenario]?.changed() }
+
+    /** [scenario] of [reportKey]'s report completed, as [stored]. */
     fun completed(
         reportKey: String?,
-        scenario: Scenario,
-    ) = quietly { stream(reportKey)?.let { s -> s.submit { s.sendScenario(scenario) } } }
+        stored: Scenario,
+        scenario: Any? = null,
+    ) = quietly {
+        val live = scenario?.let(running::remove)
+        if (live != null) {
+            live.stream.submit { live.complete(stored) }
+        } else {
+            stream(reportKey)?.let { s -> s.submit { s.sendScenario(stored) } }
+        }
+    }
+
+    /** [scenario] was discarded: it is not in the report file, so a live view of it ends saying so. */
+    fun discarded(scenario: Any) = quietly { running.remove(scenario)?.let { live -> live.stream.submit { live.discard() } } }
 
     /** [reportKey]'s report was written: finish its stream, waiting at most [flushTimeout]. */
     fun written(reportKey: String?) =
@@ -153,6 +185,83 @@ internal class LiveCapture(
 
         fun sendScenario(scenario: Scenario) {
             frames.scenario(scenarioIds.incrementAndGet().toString(), scenario).forEach(::send)
+        }
+
+        /**
+         * A scenario sent as it runs. Its report maps events again as later ones arrive (a call's
+         * duration and pairing come from its reply, the clock can order events again, and its
+         * participants are the ones its events use), so only settled events are sent: those before
+         * the first call that has no reply yet, mapped as the report would map them so far. The
+         * start goes with the first of them, so it lists the participants they use. On completion
+         * the rest follow, and if the report's own mapping no longer begins with what was sent, or
+         * its title differs, a sender error says so. A participant first named after the start is
+         * one LSD Studio adds by its id, as protocol v0 has no way to declare it later. All but
+         * [changed] runs on the worker thread.
+         */
+        inner class Running(
+            private val title: String,
+            private val snapshot: (String) -> Scenario?,
+        ) {
+            val stream: Stream get() = this@Stream
+            private val id = scenarioIds.incrementAndGet().toString()
+            private val pending = AtomicBoolean()
+            private var start: LiveScenario? = null
+            private val sent = ArrayList<LiveEvent>()
+            private var differs = false
+
+            /** Something was captured: one flush is queued at a time, and it sends all that has settled. */
+            fun changed() {
+                if (pending.compareAndSet(false, true)) submit { flush() }
+            }
+
+            private fun flush() {
+                pending.set(false)
+                if (differs) return
+                val now = frames.parts(id, snapshot(title) ?: return)
+                val settled = settled(now.events)
+                if (settled == 0 && start == null) return
+                if (sent.indices.any { i -> now.events.getOrNull(i)?.frame != sent[i].frame }) {
+                    differs = true
+                    return
+                }
+                if (start == null) {
+                    start = now
+                    send(now.start)
+                }
+                for (event in now.events.subList(sent.size.coerceAtMost(settled), settled)) {
+                    send(event.frame)
+                    sent.add(event)
+                }
+            }
+
+            fun complete(stored: Scenario) {
+                val final = frames.parts(id, stored)
+                val shown = start
+                if (shown == null) {
+                    send(final.start)
+                    final.events.forEach { send(it.frame) }
+                    send(final.end)
+                    return
+                }
+                val agrees = !differs && final.events.take(sent.size).map(LiveEvent::frame) == sent.map(LiveEvent::frame)
+                val rest = if (agrees) final.events.drop(sent.size) else final.events.filter { e -> sent.none { it.id == e.id } }
+                rest.forEach { send(it.frame) }
+                if (!agrees || final.title != shown.title) {
+                    send(frames.error(id, LiveFrames.DIFFERS))
+                }
+                send(final.end)
+            }
+
+            fun discard() {
+                if (start != null) send(frames.discarded(id))
+            }
+
+            /** The events before the first call with no reply. */
+            private fun settled(events: List<LiveEvent>): Int {
+                val answered = events.mapNotNullTo(HashSet()) { it.replyTo }
+                val open = events.indexOfFirst { it.call && it.id !in answered }
+                return if (open < 0) events.size else open
+            }
         }
 
         fun finish() {

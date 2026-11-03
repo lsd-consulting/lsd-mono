@@ -70,6 +70,9 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
      */
     private val stepResults = ConcurrentHashMap<UUID, MutableMap<UUID, Result>>()
 
+    /** Each running test case's scenario title, numbered once when it starts. */
+    private val titles = ConcurrentHashMap<UUID, String>()
+
     /** `uri:line` of each undefined step to the step definitions Cucumber suggests for it. */
     private val snippets = ConcurrentHashMap<String, List<String>>()
 
@@ -125,7 +128,8 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
         // A retried test case starts again under the same id: only its last attempt is reported.
         lsd.findScenario(event.testCase.scenarioKey())?.discard()
         stepResults.remove(event.testCase.id)
-        begin(event.testCase, bindCurrentThread = true)
+        val title = event.testCase.scenarioTitle().also { titles[event.testCase.id] = it }
+        lsd.scenarioTitle(begin(event.testCase, bindCurrentThread = true), title)
     }
 
     /** Begin [testCase]'s scenario in its feature's report, noting the feature for the end of the run. */
@@ -177,7 +181,7 @@ public class LsdCucumberPlugin : ConcurrentEventListener {
             }
         // The step (or hook) that gave the test case its result is the one to explain.
         val cause = testCase.testSteps.firstOrNull { results[it.id]?.status == result.status }
-        scenario.complete(testCase.scenarioTitle(), description, status, reason(testCase, result, cause))
+        scenario.complete(titles.remove(testCase.id) ?: testCase.scenarioTitle(), description, status, reason(testCase, result, cause))
     }
 
     /**
