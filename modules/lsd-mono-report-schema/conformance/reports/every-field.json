@@ -1,0 +1,221 @@
+{
+  "schemaVersion": "1.0.0",
+  "title": "Every field",
+  "generatedAt": "2026-01-01T12:00:00Z",
+  "generator": {
+    "name": "hand-written",
+    "version": "1",
+    "xFromANewerMinor": true
+  },
+  "status": "error",
+  "options": {
+    "metricsEnabled": true,
+    "labelMaxChars": 80,
+    "usagePing": true,
+    "source": "api",
+    "xFromANewerMinor": true
+  },
+  "scenarios": [
+    {
+      "id": "every-field",
+      "title": "Every field",
+      "status": "error",
+      "error": {
+        "headline": "Boom",
+        "message": "it failed",
+        "stack": "at line 1",
+        "xFromANewerMinor": true
+      },
+      "facts": [
+        {
+          "key": "orderId",
+          "value": "ord-1",
+          "xFromANewerMinor": true
+        }
+      ],
+      "metrics": [
+        {
+          "key": "calls",
+          "value": "1",
+          "xFromANewerMinor": true
+        }
+      ],
+      "participants": [
+        {
+          "id": "api",
+          "name": "Api",
+          "type": "boundary",
+          "displayName": "The API",
+          "color": "#2563eb",
+          "attributes": {
+            "http.method": "POST",
+            "retry": false,
+            "bytes": 12,
+            "tags": [
+              "a"
+            ],
+            "flags": [
+              true
+            ],
+            "sizes": [
+              1.5
+            ]
+          },
+          "xFromANewerMinor": true
+        },
+        {
+          "id": "db",
+          "name": "Orders DB",
+          "type": "database",
+          "xFromANewerMinor": true
+        }
+      ],
+      "events": [
+        {
+          "kind": "message",
+          "id": "m1",
+          "from": "api",
+          "to": "db",
+          "label": "insert",
+          "type": "synchronous",
+          "color": "#2563eb",
+          "durationMs": 1.5,
+          "data": {
+            "sku": "HAT-3"
+          },
+          "seq": 1,
+          "callId": "c1",
+          "causedBy": "m0",
+          "trace": {
+            "traceId": "t1",
+            "spanId": "s2",
+            "parentSpanId": "s1",
+            "xFromANewerMinor": true
+          },
+          "source": "http",
+          "capturedAt": "2026-01-01T12:00:00Z",
+          "status": "201",
+          "timing": "measured",
+          "pairing": "trace",
+          "order": "clock",
+          "parentId": "m0",
+          "attributes": {
+            "http.method": "POST",
+            "retry": false,
+            "bytes": 12,
+            "tags": [
+              "a"
+            ],
+            "flags": [
+              true
+            ],
+            "sizes": [
+              1.5
+            ]
+          },
+          "origin": "captured",
+          "startedAt": "2026-01-01T12:00:00Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "message",
+          "id": "m2",
+          "from": "db",
+          "to": "api",
+          "label": "1 row",
+          "type": "synchronous_response",
+          "replyTo": "m1",
+          "callId": "c1",
+          "startedAt": "2026-01-01T12:00:00.002Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "note",
+          "id": "n1",
+          "text": "a note",
+          "over": "api",
+          "placement": "over",
+          "startedAt": "2026-01-01T12:00:00Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "divider",
+          "id": "d1",
+          "label": "then",
+          "startedAt": "2026-01-01T12:00:00Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "section",
+          "id": "s1",
+          "title": "Place the order",
+          "startedAt": "2026-01-01T12:00:00Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "delay",
+          "id": "w1",
+          "label": "later",
+          "startedAt": "2026-01-01T12:00:00Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "spacer",
+          "id": "sp1",
+          "heightPx": 12,
+          "startedAt": "2026-01-01T12:00:00Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "activate",
+          "id": "a1",
+          "participantId": "api",
+          "color": "#c026d3",
+          "startedAt": "2026-01-01T12:00:00Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "deactivate",
+          "id": "a2",
+          "participantId": "api",
+          "startedAt": "2026-01-01T12:00:00Z",
+          "xFromANewerMinor": true
+        },
+        {
+          "kind": "hologram",
+          "id": "h1",
+          "xFromANewerMinor": true
+        }
+      ],
+      "accuracy": "traced",
+      "measuredRatio": 0.5,
+      "pairedRatio": 1,
+      "sources": [
+        "http"
+      ],
+      "wallClockMs": 3,
+      "clockOrdering": "all_sources",
+      "clockOrderedCount": 1,
+      "warnings": [
+        {
+          "kind": "skew",
+          "message": "clocks differ",
+          "xFromANewerMinor": true
+        }
+      ],
+      "reorderedByClock": [
+        "m1"
+      ],
+      "pairAccuracy": [
+        {
+          "from": "api",
+          "to": "db",
+          "accuracy": "traced",
+          "xFromANewerMinor": true
+        }
+      ],
+      "xFromANewerMinor": true
+    }
+  ],
+  "xFromANewerMinor": true
+}

@@ -34,9 +34,12 @@ anything else takes a new major version. How it lines up with OpenTelemetry is d
   both schemas to `published/<new version>/`.
 - `published/x.y.z/` keeps each released schema, byte for byte, and the Pages workflow
   publishes every one at its `$id`, so an older report's schema URL keeps resolving. The report
-  UI's `published-schemas.test.ts` fails when the current schema differs from its released copy,
-  when a corpus report valid under an earlier 1.x schema is not valid under the current one, and
-  when a newer 1.x schema makes a field required or removes a property or enum value.
+  UI's `published-schemas.test.ts` fails when the current version has no `published/` folder or
+  differs from it, when a corpus report valid under an earlier schema of the same major version
+  is not valid under the current one (the main guard: `reports/every-field.json` sets every
+  optional field and an unknown key on every object), and when a newer minor schema makes a
+  field required, closes an object or removes a property, type, branch or enum value. Versions
+  of different major versions are never compared: a new major may break anything.
 
 | Version | Change |
 |---------|--------|
