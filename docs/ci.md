@@ -63,7 +63,8 @@ usage ping. It needs no Gradle build, so it runs alongside
 ## Required check: `gate`
 
 `gradle.yml` runs on every push and pull request. A `changes` job decides whether anything the
-build reads changed (everything except Markdown, `docs/` and `modules/*/docs/`). If not, `build`
+build reads changed (everything except Markdown, `docs/` and `modules/*/docs/`, but counting
+the READMEs and docs lsd-mono-jvm's tests check: its test task's `readmes` inputs). If not, `build`
 and `jvm-tests` are skipped. It also decides whether the report UI, or the shared test reports its checks open
 (`modules/lsd-mono-report-schema/conformance/`), changed; if not, `check-ux` is skipped. A `commits` job checks that every pushed commit, and a pull request's title, is a conventional commit (commitlint,
 `tools/release/commitlint.config.mjs`; see [releasing.md](releasing.md)). The `gate` job always runs and passes only when every job passed or
