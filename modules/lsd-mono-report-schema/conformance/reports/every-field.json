@@ -19,6 +19,7 @@
     {
       "id": "every-field",
       "title": "Every field",
+      "description": "Given every field\nWhen it is read\nThen nothing is lost",
       "status": "error",
       "error": {
         "headline": "Boom",

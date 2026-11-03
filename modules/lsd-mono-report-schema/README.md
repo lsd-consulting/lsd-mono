@@ -40,6 +40,8 @@ anything else takes a new major version. How it lines up with OpenTelemetry is d
   optional field and an unknown key on every object), and when a newer minor schema makes a
   field required, closes an object or removes a property, type, branch or enum value. Versions
   of different major versions are never compared: a new major may break anything.
+  Only plain `x.y.z` versions are supported: a pre-release version such as `1.1.0-rc.1` can
+  never pass, because pre-release folders in `published/` are ignored.
 
 | Version | Change |
 |---------|--------|

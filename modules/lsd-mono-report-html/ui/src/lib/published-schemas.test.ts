@@ -52,8 +52,17 @@ function validators(text: (file: string) => string) {
 }
 
 const isObject = (v: unknown): v is Json => !!v && typeof v === 'object' && !Array.isArray(v)
-const list = (v: unknown) =>
-  Array.isArray(v) ? v.map((x) => JSON.stringify(x)) : v === undefined ? [] : [JSON.stringify(v)]
+/** JSON with object keys sorted, so a branch with its keys reordered compares equal. */
+const canonical = (v: unknown): string =>
+  Array.isArray(v)
+    ? `[${v.map(canonical).join(',')}]`
+    : isObject(v)
+      ? `{${Object.keys(v)
+          .sort()
+          .map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`)
+          .join(',')}}`
+      : JSON.stringify(v)
+const list = (v: unknown) => (Array.isArray(v) ? v.map(canonical) : v === undefined ? [] : [canonical(v)])
 
 /**
  * Where [after] takes away from [before]: a grown `required` list; a removed property, `$defs`
@@ -161,5 +170,6 @@ describe('the released schemas', () => {
       '/properties/c/enum added',
     ])
     expect(narrowings({ anyOf: [{ a: 1 }, { b: 2 }] }, { anyOf: [{ b: 2 }, { a: 1 }, { c: 3 }] })).toEqual([])
+    expect(narrowings({ oneOf: [{ type: 'array', items: {} }] }, { oneOf: [{ items: {}, type: 'array' }] })).toEqual([])
   })
 })
