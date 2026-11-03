@@ -59,6 +59,7 @@ class ProcessRunnerTest {
         while (!file.isFile && System.nanoTime() < deadline) Thread.sleep(50)
     }
 
+    // The budget covers starting two source-file JVMs (each compiles first), which is slow on a busy machine.
     @Test
     fun `a command that runs too long is stopped with its children, and fails with its last output`(
         @TempDir dir: File,
@@ -66,7 +67,7 @@ class ProcessRunnerTest {
         val pids = File(dir, "pids")
         val e =
             assertThrows<GradleException> {
-                ProcessRunner.run(parentAndChild(dir, pids, "x".repeat(5000) + "the last words"), timeout = Duration.ofSeconds(15))
+                ProcessRunner.run(parentAndChild(dir, pids, "x".repeat(5000) + "the last words"), timeout = Duration.ofSeconds(40))
             }
         assertTrue(e.message!!.contains("did not finish within"), e.message)
         assertTrue(e.message!!.endsWith("the last words"), e.message)

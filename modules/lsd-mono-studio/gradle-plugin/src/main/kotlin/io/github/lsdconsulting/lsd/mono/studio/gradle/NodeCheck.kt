@@ -17,8 +17,7 @@ internal object NodeCheck {
         )
 
     /**
-     * The version [node] reported in [result]. A non-zero exit, such as cmd's 9009 for a command
-     * it cannot find, counts as not found.
+     * The version [node] reported in [result]. A non-zero exit counts as not found.
      */
     fun version(
         node: String,

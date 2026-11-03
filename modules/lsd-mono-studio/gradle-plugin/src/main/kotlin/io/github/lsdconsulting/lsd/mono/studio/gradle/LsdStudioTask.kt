@@ -112,12 +112,7 @@ public abstract class LsdStudioTask : DefaultTask() {
         if (StudioInstaller.isComplete(installDir, spec)) {
             logger.info("LSD Studio: {} is already installed in {}", spec, installDir)
         } else {
-            // Checked before the install lock, so a bad value fails at once and names its setting.
-            if (!npmCommand.get().lowercase().endsWith(".exe")) {
-                Commands.requireCmdSafe(npmCommand.get(), "npmCommand")
-                Commands.requireCmdSafe(localFile?.path ?: spec, "the lsd-mono-studio package")
-                Commands.requireCmdSafe(installDir.path, "the install folder under cacheDir")
-            }
+            Commands.requireInstallSafe(npmCommand.get(), localFile?.path ?: spec, installDir.path)
             StudioInstaller.ensureInstalled(installDir, spec) { target ->
                 logger.lifecycle("LSD Studio: installing {} into {}", spec, installDir)
                 val result =

@@ -11,8 +11,21 @@ import kotlin.concurrent.thread
 internal object Commands {
     val WINDOWS: Boolean = System.getProperty("os.name").lowercase().contains("windows")
 
+    /** [text] with carriage returns and line feeds written as `\r` and `\n`, so a message stays on one line. */
+    private fun visible(text: String): String = text.replace("\r", "\\r").replace("\n", "\\n")
+
     /** Characters cmd would act on rather than pass on, even where Java does not quote the argument. */
     private const val CMD_SPECIAL = "\"%&|<>^\r\n"
+
+    /**
+     * Whether Java builds Windows command lines in its default (legacy) way, which passes a lone
+     * `"` through as it is. With `-Djdk.lang.Process.allowAmbiguousCommands=false`, or a
+     * SecurityManager on JDK 17, Java quotes and escapes it instead, which [resolve] allows for.
+     */
+    @Suppress("DEPRECATION", "removal")
+    val LEGACY_QUOTING: Boolean =
+        System.getProperty("jdk.lang.Process.allowAmbiguousCommands")?.let { !it.equals("false", ignoreCase = true) }
+            ?: (System.getSecurityManager() == null)
 
     /**
      * On Windows, npm is a .cmd script, which only cmd runs, so anything not ending in .exe goes
@@ -20,18 +33,39 @@ internal object Commands {
      * delayed expansion (`!`) even where the registry turns it on, and `/s` makes cmd drop just
      * the outer pair of quotes. Without that outer pair, cmd strips the first and last quote of
      * the line whenever the command is quoted, which breaks a command path with a space followed
-     * by any argument with a space. Java quotes each part that has a space; nothing else is
-     * escaped, so a part holding one of `" % & | < > ^` or a line break is refused (see
-     * [requireCmdSafe]). Elsewhere, and for an .exe, the command and its arguments run as they are.
+     * by any argument with a space. The outer pair relies on Java's default [legacy] quoting,
+     * which passes a lone `"` through; under strict quoting it falls back to
+     * `cmd /d /v:off /c command args`, where a spaced command path with a spaced argument still
+     * fails. Java quotes each part that has a space; nothing else is escaped, so a part holding
+     * one of `" % & | < > ^`, a carriage return or a line feed is refused (see [requireCmdSafe]).
+     * Elsewhere, and for an .exe, the command and its arguments run as they are.
      */
     fun resolve(
         command: String,
         args: List<String> = emptyList(),
         windows: Boolean = WINDOWS,
+        legacy: Boolean = LEGACY_QUOTING,
     ): List<String> {
         if (!windows || command.lowercase().endsWith(".exe")) return listOf(command) + args
         (listOf(command) + args).forEach { requireCmdSafe(it, "this command", windows) }
+        if (!legacy) return listOf("cmd", "/d", "/v:off", "/c", command) + args
         return listOf("cmd", "/d", "/v:off", "/s", "/c", "\"", command) + args + "\""
+    }
+
+    /**
+     * Checks what an npm install passes through cmd, before anything is locked, so a bad value
+     * fails at once and names its setting. The package and the install folder are checked even
+     * for an npm .exe, since shims such as Scoop's hand their arguments on to npm.cmd.
+     */
+    fun requireInstallSafe(
+        npmCommand: String,
+        packageArg: String,
+        installDir: String,
+        windows: Boolean = WINDOWS,
+    ) {
+        if (!npmCommand.lowercase().endsWith(".exe")) requireCmdSafe(npmCommand, "npmCommand", windows)
+        requireCmdSafe(packageArg, "the lsd-mono-studio package", windows)
+        requireCmdSafe(installDir, "the install folder under cacheDir", windows)
     }
 
     /**
@@ -46,16 +80,9 @@ internal object Commands {
         if (!windows) return
         val bad = value.filter { it in CMD_SPECIAL }.toSet()
         if (bad.isEmpty()) return
-        val shown =
-            bad.joinToString(" ") {
-                when (it) {
-                    '\r' -> "\\r"
-                    '\n' -> "\\n"
-                    else -> it.toString()
-                }
-            }
+        val shown = bad.joinToString(" ") { visible(it.toString()) }
         throw GradleException(
-            "LSD Studio cannot pass '$value' ($setting) to npm through cmd on Windows: it contains $shown. " +
+            "LSD Studio cannot pass '${visible(value)}' ($setting) to npm through cmd on Windows: it contains $shown. " +
                 "Use a value without them, for example an exact lsd-mono-studio version, " +
                 "or lsdStudio { cacheDir = file(\"C:/lsd-studio\") } for a cache path.",
         )
