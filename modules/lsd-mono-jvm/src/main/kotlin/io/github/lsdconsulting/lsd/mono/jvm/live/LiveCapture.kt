@@ -42,6 +42,9 @@ internal class LiveCapture(
     private val streams = ConcurrentHashMap<String, Stream>()
     private val titles = ConcurrentHashMap<String, String>()
     private val running = ConcurrentHashMap<Any, Stream.Running>()
+
+    /** How many scenarios are being sent as they run: each leaves when it completes, is discarded, or its stream ends. */
+    internal val runningCount: Int get() = running.size
     private val warned = AtomicBoolean()
 
     /** Live capture is off for the rest of the run: LSD Studio could not be reached, or timed out. */
@@ -80,6 +83,8 @@ internal class LiveCapture(
     ) = quietly {
         val stream = stream(reportKey) ?: return@quietly
         running.computeIfAbsent(scenario) { stream.Running(title, snapshot) }
+        // If the stream stopped before this was added, its forget() missed it.
+        stream.forgetIfStopped()
     }
 
     /** [scenario] captured more: send what has settled, soon, on the worker thread. */
@@ -107,6 +112,8 @@ internal class LiveCapture(
         quietly {
             titles.remove(key(reportKey))
             val stream = streams.remove(key(reportKey)) ?: return@quietly
+            // A scenario that began but never completed (its adapter failed, say) goes with its report.
+            stream.forget()
             stream.submit { stream.finish() }
             if (!stream.done.await(flushTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
                 off = true
@@ -306,6 +313,16 @@ internal class LiveCapture(
             }
         }
 
+        /** Runs [forget] on the worker, after the tasks before it, if the stream has stopped by then. */
+        fun forgetIfStopped() {
+            runCatching { worker.execute { if (broken) forget() } }
+        }
+
+        /** Drops this stream's running scenarios, so nothing holds on to their events. */
+        fun forget() {
+            running.values.removeIf { it.stream === this }
+        }
+
         private fun timedOut(e: Throwable): Boolean = generateSequence(e) { it.cause }.take(10).any { it is TimeoutException }
 
         private fun stop(
@@ -313,6 +330,7 @@ internal class LiveCapture(
             abort: Boolean = false,
         ) {
             broken = true
+            forget()
             warnOnce(message)
             done.countDown()
             socket?.let { s -> runCatching { if (abort) s.abort() else s.close() } }
