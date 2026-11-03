@@ -83,8 +83,10 @@ internal class LiveCapture(
     ) = quietly {
         val stream = stream(reportKey) ?: return@quietly
         running.computeIfAbsent(scenario) { stream.Running(title, snapshot) }
-        // If the stream stopped before this was added, its forget() missed it.
-        stream.forgetIfStopped()
+        // The stream may have stopped, or its report been written, since stream() returned it; its
+        // forget() then ran before this add. Both flags are set before forget(), so checking them
+        // after the add catches every order.
+        if (stream.broken || stream.closed) stream.forget()
     }
 
     /** [scenario] captured more: send what has settled, soon, on the worker thread. */
@@ -113,6 +115,7 @@ internal class LiveCapture(
             titles.remove(key(reportKey))
             val stream = streams.remove(key(reportKey)) ?: return@quietly
             // A scenario that began but never completed (its adapter failed, say) goes with its report.
+            stream.closed = true
             stream.forget()
             stream.submit { stream.finish() }
             if (!stream.done.await(flushTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
@@ -161,8 +164,14 @@ internal class LiveCapture(
         private var socket: LiveSocket? = null
         private val scenarioIds = AtomicInteger()
 
+        /** The stream stopped: set before [forget], see [started]. */
         @Volatile
-        private var broken = false
+        var broken = false
+            private set
+
+        /** Its report was written: set before [forget], see [started]. */
+        @Volatile
+        var closed = false
 
         fun submit(task: () -> Unit) {
             try {
@@ -180,6 +189,7 @@ internal class LiveCapture(
                 try {
                     connector.connect(uri, ::reply) { code ->
                         if (code != 1000) broken = true
+                        forget()
                         done.countDown()
                     }
                 } catch (e: Exception) {
@@ -311,11 +321,6 @@ internal class LiveCapture(
                     stop("live capture to LSD Studio at $target stopped ($e).")
                 }
             }
-        }
-
-        /** Runs [forget] on the worker, after the tasks before it, if the stream has stopped by then. */
-        fun forgetIfStopped() {
-            runCatching { worker.execute { if (broken) forget() } }
         }
 
         /** Drops this stream's running scenarios, so nothing holds on to their events. */
