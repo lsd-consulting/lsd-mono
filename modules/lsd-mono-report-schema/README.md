@@ -32,7 +32,7 @@ anything else takes a new major version. How it lines up with OpenTelemetry is d
 - To change the format: edit the schema, raise the version in both `$id`s and in
   `ReportSchema.VERSION` (lsd-mono-report-model), regenerate the UI's types (below), and copy
   both schemas to `published/<new version>/`.
-- `published/<version>/` keeps each released schema, byte for byte, and the Pages workflow
+- `published/x.y.z/` keeps each released schema, byte for byte, and the Pages workflow
   publishes every one at its `$id`, so an older report's schema URL keeps resolving. The report
   UI's `published-schemas.test.ts` fails when the current schema differs from its released copy,
   when a corpus report valid under an earlier 1.x schema is not valid under the current one, and

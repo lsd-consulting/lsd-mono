@@ -44,7 +44,7 @@ it is:
 
 ```kotlin
 plugins {
-    id("io.github.lsd-consulting.lsd-mono-studio") version "<version>"
+    id("io.github.lsd-consulting.lsd-mono-studio") version "x.y.z"
 }
 ```
 
