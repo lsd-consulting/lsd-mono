@@ -162,26 +162,40 @@ public abstract class LsdStudioTask : DefaultTask() {
         connection.readTimeout = 2000
         try {
             val status = connection.responseCode
-            val json = connection.contentType?.contains("json") == true
-            if (status == 200 && json) {
+            if (status == 200 && connection.getHeaderField(STUDIO_HEADER) != null) {
                 logger.lifecycle("LSD Studio is already running on {}: using it. Stop that one to start a new one here.", url)
                 browse(url)
                 return true
             }
-            throw GradleException(
-                "Port $port is in use, and not by LSD Studio (GET /api/reports answered $status). " +
-                    "Stop what is using it, or choose another port: lsdStudio { port = 7358 }.",
-            )
+            throw portInUse(port, "GET /api/reports answered $status without an $STUDIO_HEADER header")
         } catch (e: ConnectException) {
             return false
         } catch (e: java.net.SocketTimeoutException) {
-            throw GradleException("Port $port is in use, and not by LSD Studio (no answer). Choose another port.", e)
-        } catch (e: java.net.SocketException) {
+            throw portInUse(port, "no answer", e)
+        } catch (e: IOException) {
             // Something that is not an HTTP server can reset the connection instead of answering.
-            throw GradleException("Port $port is in use, and not by LSD Studio ($e). Choose another port.", e)
+            throw portInUse(port, e.toString(), e)
         } finally {
             connection.disconnect()
         }
+    }
+
+    internal companion object {
+        private val STARTED = Regex("""LSD Studio on (https?://\S+)""")
+
+        /** The header LSD Studio puts on every response; documented in the lsd-mono-studio README. */
+        const val STUDIO_HEADER = "X-LSD-Studio"
+
+        /** The failure for a [port] held by something that is not LSD Studio, suggesting the next port. */
+        fun portInUse(
+            port: Int,
+            why: String,
+            cause: Throwable? = null,
+        ) = GradleException(
+            "Port $port is in use, and not by LSD Studio ($why). " +
+                "Stop what is using it, or choose another port: lsdStudio { port = ${port + 1} }.",
+            cause,
+        )
     }
 
     private fun launch(
@@ -264,9 +278,5 @@ public abstract class LsdStudioTask : DefaultTask() {
         } catch (e: IOException) {
             logger.info("LSD Studio: could not open a browser ({}); open {} yourself.", e.message, url)
         }
-    }
-
-    private companion object {
-        val STARTED = Regex("""LSD Studio on (https?://\S+)""")
     }
 }

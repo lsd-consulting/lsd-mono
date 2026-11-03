@@ -7,7 +7,7 @@ import { writeFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import { WebSocket } from 'ws'
 import { parseConfig } from './config.ts'
-import { startServer, type LsdServer } from './server.ts'
+import { startServer, STUDIO_HEADER, type LsdServer } from './server.ts'
 import { FileReportStore } from './store.ts'
 
 const fixture = (file: string) =>
@@ -88,6 +88,15 @@ describe('the server', () => {
     const imported = await fetch(`${base}/api/reports/import`, { method: 'POST', body: await sample.text() })
     expect(imported.status).toBe(201)
     expect(await imported.json()).toMatchObject({ title: 'POST /orders (trace 5a3c1e0b)', source: 'otlp' })
+  })
+
+  it('names itself on every response, errors included, with its package version', async () => {
+    const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version: string
+    }
+    expect(STUDIO_HEADER).toBe('X-LSD-Studio')
+    expect((await fetch(`${base}/api/reports`)).headers.get('x-lsd-studio')).toBe(version)
+    expect((await fetch(`${base}/no-such-page`)).headers.get('x-lsd-studio')).toBe(version)
   })
 
   it('imports, lists, reads and deletes an LSD report', async () => {

@@ -161,8 +161,30 @@ class LsdStudioPluginFunctionalTest {
 
     @Test
     fun `fails clearly when something else holds the port`() {
+        imposter("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n") { port ->
+            buildFile("port = $port")
+            val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").buildAndFail()
+            assertTrue(result.output.contains("is in use, and not by LSD Studio"), result.output)
+        }
+    }
+
+    @Test
+    fun `a JSON answer without the Studio header is not taken for Studio, and the next port is suggested`() {
+        val ok = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"
+        imposter(ok) { port ->
+            buildFile("port = $port")
+            val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").buildAndFail()
+            assertTrue(result.output.contains("is in use, and not by LSD Studio (GET /api/reports answered 200 without"), result.output)
+            assertTrue(result.output.contains("lsdStudio { port = ${port + 1} }"), result.output)
+        }
+    }
+
+    /** Runs [block] with the port of a server that reads each request and answers [response]. */
+    private fun imposter(
+        response: String,
+        block: (Int) -> Unit,
+    ) {
         ServerSocket(0).use { socket ->
-            // Accepts and answers garbage: in use, but not by Studio.
             val server =
                 Thread {
                     runCatching {
@@ -176,7 +198,7 @@ class LsdStudioPluginFunctionalTest {
                                     if (b < 0) break
                                     tail = (tail shl 8) or b
                                 }
-                                client.getOutputStream().write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray())
+                                client.getOutputStream().write(response.toByteArray())
                                 client.shutdownOutput()
                             }
                         }
@@ -185,9 +207,7 @@ class LsdStudioPluginFunctionalTest {
                     isDaemon = true
                     start()
                 }
-            buildFile("port = ${socket.localPort}")
-            val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").buildAndFail()
-            assertTrue(result.output.contains("is in use, and not by LSD Studio"), result.output)
+            block(socket.localPort)
             server.interrupt()
         }
     }

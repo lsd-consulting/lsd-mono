@@ -376,6 +376,13 @@ directory without an index gets one rebuilt from its report files.
 Deletes are idempotent: repeating one succeeds. Duplicate ids count once. `DELETE /api/reports/<id>`
 answers 204 whether or not the report existed, and 400 for an id that is not a report id.
 
+### Telling Studio apart
+
+Every HTTP response from Studio, errors included, carries an `X-LSD-Studio` header whose value is
+the Studio version (for example `X-LSD-Studio: 0.16.0`). Tools use it to tell a running Studio from
+anything else on the port: the Gradle plugin reuses a server only when `GET /api/reports` answers
+200 with this header. The header name is stable; check that it is there, not its value.
+
 ### Design decisions
 
 The choices behind LSD Studio so far, discussed on
