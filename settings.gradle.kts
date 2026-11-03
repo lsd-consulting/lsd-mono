@@ -33,3 +33,7 @@ include("modules:lsd-mono-http4k-6")
 include("modules:lsd-mono-ktor-3")
 include("modules:lsd-mono-report-model")
 include("modules:lsd-mono-report-html")
+// The LSD Studio Gradle plugin (#210) lives beside the npm package it launches, so it is the one
+// project whose directory does not follow its path.
+include("modules:lsd-mono-studio-gradle-plugin")
+project(":modules:lsd-mono-studio-gradle-plugin").projectDir = file("modules/lsd-mono-studio/gradle-plugin")

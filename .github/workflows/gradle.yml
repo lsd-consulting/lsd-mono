@@ -60,7 +60,7 @@ jobs:
           else
             echo "report=false" >> "$GITHUB_OUTPUT"
           fi
-          # LSD Studio (#186), the report schema it validates imports against and ships, the
+          # LSD Studio (#186) and its Gradle plugin, the report schema it validates imports against and ships, the
           # Node version it runs on, or this workflow.
           if printf '%s\n' "$changed" | grep -Eq '^(modules/lsd-mono-studio/|modules/lsd-mono-report-schema/|\.nvmrc$|\.github/workflows/gradle\.yml$)'; then
             echo "studio=true" >> "$GITHUB_OUTPUT"
@@ -288,11 +288,55 @@ jobs:
           npm pack --dry-run --json --ignore-scripts > "$RUNNER_TEMP/pack.json"
           node -e 'const [p]=require(process.argv[1]); const f=p.files.map(x=>x.path); for (const n of ["bin/lsd-mono-studio.js","README.md","package.json"]) if (!f.includes(n)) { console.error("missing " + n); process.exit(1) }; console.log(p.name, p.version, f.length + " files")' "$RUNNER_TEMP/pack.json"
 
+  studio-gradle-plugin:
+    needs: changes
+    if: needs.changes.outputs.studio == 'true'
+    # The LSD Studio Gradle plugin (modules/lsd-mono-studio/gradle-plugin, #210): its TestKit tests
+    # start and stop the local Studio with Node, so they run on Windows as well as Linux, where
+    # stopping a Node process tree behaves differently. The build job also runs them on Linux.
+    name: studio-gradle-plugin (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-26.04, windows-2025]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: modules/lsd-mono-studio/package-lock.json
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+      - name: Plugin tests
+        run: ./gradlew :modules:lsd-mono-studio-gradle-plugin:test
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-studio-gradle-plugin-${{ matrix.os }}
+          path: |
+            modules/lsd-mono-studio/gradle-plugin/build/reports/tests/
+            modules/lsd-mono-studio/gradle-plugin/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   gate:
     # The one check to require. Passes when every job passed or was skipped (a docs-only change,
     # or check-ux when the report UI did not change, or studio when LSD Studio did not).
     if: always()
-    needs: [changes, commits, build, jvm-tests, check-ux, studio]
+    needs: [changes, commits, build, jvm-tests, check-ux, studio, studio-gradle-plugin]
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
