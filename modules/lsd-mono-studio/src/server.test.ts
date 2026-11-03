@@ -99,6 +99,19 @@ describe('the server', () => {
     expect((await fetch(`${base}/no-such-page`)).headers.get('x-lsd-studio')).toBe(version)
   })
 
+  it('names itself when it opens a capture socket', async () => {
+    const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version: string
+    }
+    const socket = new WebSocket(`ws://127.0.0.1:${running.address.port}/ws/captures`)
+    const header = await new Promise<string | string[] | undefined>((resolve, reject) => {
+      socket.once('upgrade', (response) => resolve(response.headers['x-lsd-studio']))
+      socket.once('error', reject)
+    })
+    socket.close()
+    expect(header).toBe(version)
+  })
+
   it('imports, lists, reads and deletes an LSD report', async () => {
     const body = MINIMAL
     const imported = await fetch(`${base}/api/reports/import`, { method: 'POST', body })

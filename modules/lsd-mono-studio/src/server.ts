@@ -13,7 +13,7 @@ import { checkOverride, findShell, MESSAGES, messagePage, renderReportPage, view
 const INDEX_HTML = new URL('../public/index.html', import.meta.url)
 const CAPTURES_PATH = '/ws/captures'
 const HTML = 'text/html; charset=utf-8'
-/** The header every response carries, so a client can tell LSD Studio from anything else on the port. */
+/** The header Studio's responses carry, so a client can tell LSD Studio from anything else on the port. */
 export const STUDIO_HEADER = 'X-LSD-Studio'
 /** The value of [STUDIO_HEADER]: this package's version. */
 export const STUDIO_VERSION = (
@@ -149,6 +149,7 @@ async function route(
  */
 function attachCaptures(server: Server, store: ReportStore, live: LiveReports): void {
   const sockets = new WebSocketServer({ server, path: CAPTURES_PATH, maxPayload: DEFAULT_MAX_BODY_BYTES })
+  sockets.on('headers', (headers) => headers.push(`${STUDIO_HEADER}: ${STUDIO_VERSION}`))
   sockets.on('connection', (socket) => {
     const session = new CaptureSession(store, live)
     let queue: Promise<unknown> = Promise.resolve()
