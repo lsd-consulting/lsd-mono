@@ -82,7 +82,7 @@ public abstract class LsdStudioTask : DefaultTask() {
     private fun checkNode(node: String) {
         val output =
             try {
-                runAndRead(listOf(node, "--version"))
+                ProcessRunner.run(Commands.resolve(node) + "--version", timeout = ProcessRunner.NODE_VERSION_TIMEOUT).output
             } catch (e: IOException) {
                 throw GradleException(
                     "LSD Studio needs Node.js ${NodeVersion.MINIMUM} or newer, and '$node' was not found " +
@@ -127,8 +127,8 @@ public abstract class LsdStudioTask : DefaultTask() {
             StudioInstaller.ensureInstalled(installDir, spec) { target ->
                 logger.lifecycle("LSD Studio: installing {} into {}", spec, installDir)
                 val result =
-                    runAndRead(
-                        npm(npmCommand.get()) +
+                    ProcessRunner.runChecked(
+                        Commands.resolve(npmCommand.get()) +
                             listOf(
                                 "install",
                                 "--prefix",
@@ -141,7 +141,7 @@ public abstract class LsdStudioTask : DefaultTask() {
                                 localFile?.path ?: spec,
                             ),
                         directory = target,
-                        check = true,
+                        timeout = ProcessRunner.NPM_INSTALL_TIMEOUT,
                     )
                 logger.info("{}", result)
             }
@@ -268,28 +268,5 @@ public abstract class LsdStudioTask : DefaultTask() {
 
     private companion object {
         val STARTED = Regex("""LSD Studio on (https?://\S+)""")
-
-        val WINDOWS = System.getProperty("os.name").lowercase().contains("windows")
-
-        /** npm is a .cmd script on Windows, which only cmd runs. Only the install goes through it. */
-        fun npm(command: String): List<String> = if (WINDOWS && !command.contains('.')) listOf("cmd", "/c", command) else listOf(command)
-
-        fun runAndRead(
-            command: List<String>,
-            directory: File? = null,
-            check: Boolean = false,
-        ): String {
-            val process =
-                ProcessBuilder(command)
-                    .apply { directory?.let { directory(it) } }
-                    .redirectErrorStream(true)
-                    .start()
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor()
-            if (check && process.exitValue() != 0) {
-                throw GradleException("'${command.joinToString(" ")}' failed (exit ${process.exitValue()}):\n$output")
-            }
-            return output
-        }
     }
 }
