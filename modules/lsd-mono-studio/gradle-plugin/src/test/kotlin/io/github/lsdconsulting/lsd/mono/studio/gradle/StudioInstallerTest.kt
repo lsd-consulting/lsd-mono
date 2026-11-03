@@ -145,6 +145,17 @@ class StudioInstallerTest {
     }
 
     @Test
+    fun `a moved-aside install counts its age from the move, not from when it was installed`() {
+        StudioInstaller.ensureInstalled(installDir, SPEC) { FakeNpm.install(it) }
+        installDir.setLastModified(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(2))
+        FakeNpm.main(installDir).delete()
+        assertTrue(StudioInstaller.ensureInstalled(installDir, SPEC) { FakeNpm.install(it) })
+        val aside = leftovers().single { it.startsWith("${installDir.name}.old-") }
+        assertFalse(StudioInstaller.ensureInstalled(installDir, SPEC) { FakeNpm.install(it) })
+        assertTrue(cache.resolve(aside).isDirectory, "a folder installed long ago but moved aside just now is kept")
+    }
+
+    @Test
     fun `folders left by a killed build are removed under the lock`() {
         val tmp = cache.resolve("${installDir.name}.tmp-123").apply { mkdirs() }
         val old = cache.resolve("${installDir.name}.old-abc").apply { mkdirs() }
