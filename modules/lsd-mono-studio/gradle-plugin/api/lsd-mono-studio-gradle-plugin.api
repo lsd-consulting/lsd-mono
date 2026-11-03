@@ -7,6 +7,7 @@ public abstract class io/github/lsdconsulting/lsd/mono/studio/gradle/LsdStudioEx
 	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getStudioPackage ()Lorg/gradle/api/provider/Property;
+	public abstract fun getWireTests ()Lorg/gradle/api/provider/Property;
 }
 
 public final class io/github/lsdconsulting/lsd/mono/studio/gradle/LsdStudioPlugin : org/gradle/api/Plugin {

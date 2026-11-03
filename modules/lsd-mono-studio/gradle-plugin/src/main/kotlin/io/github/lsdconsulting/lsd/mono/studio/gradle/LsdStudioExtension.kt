@@ -32,6 +32,13 @@ public abstract class LsdStudioExtension {
      */
     public abstract val studioPackage: Property<String>
 
+    /**
+     * Point the project's `Test` tasks at LSD Studio when it is running on [port] as they start, by
+     * passing `-Dlsd.mono.studio.url` (default true). Needs a fixed port; a task that already sets
+     * the URL is left alone, and a test task never fails because Studio is not running.
+     */
+    public abstract val wireTests: Property<Boolean>
+
     /** Where installed lsd-mono-studio versions are kept (default `<Gradle user home>/caches/lsd-mono-studio`). */
     public abstract val cacheDir: DirectoryProperty
 }

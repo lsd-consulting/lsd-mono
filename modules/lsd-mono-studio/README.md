@@ -54,6 +54,20 @@ plugins {
 
 Set the `port` and `expose` options in an `lsdStudio { }` block in your build file.
 
+While LSD Studio is running on that port, the plugin also points the project's `Test` tasks at it,
+so `./gradlew test` in another terminal streams its reports live (see **Live from your tests**
+below). Each test task checks the port as it starts, for at most 300 ms, and only a server that
+answers as LSD Studio counts. When Studio is not running the tests run as usual. A test task that
+already sets `lsd.mono.studio.url` or `LSD_MONO_STUDIO_URL` is left alone. A URL in `lsd-mono.properties`
+or JUnit configuration is not seen, and the plugin's system property wins over it. It needs a fixed port,
+so not `port = 0`, and it always uses `127.0.0.1`, even with `expose`. To turn it off:
+
+```kotlin
+lsdStudio {
+    wireTests = false
+}
+```
+
 ## Three ways in
 
 1. **The sample.** **Try a sample** on the empty list, or `--demo`: a small trace of an order placed
@@ -66,6 +80,9 @@ Set the `port` and `expose` options in an `lsdStudio { }` block in your build fi
 3. **Live from your tests (experimental).** Point a JVM test run at LSD Studio and each report
    appears in the list while its tests run, marked "Capturing…", from JUnit, Cucumber or Spring
    Boot alike:
+
+    With the Gradle plugin above and Studio running, `./gradlew test` does this for you. Without
+    the plugin, set the URL yourself:
 
     ```sh
     LSD_MONO_STUDIO_URL=ws://127.0.0.1:7357/ws/captures ./gradlew test
