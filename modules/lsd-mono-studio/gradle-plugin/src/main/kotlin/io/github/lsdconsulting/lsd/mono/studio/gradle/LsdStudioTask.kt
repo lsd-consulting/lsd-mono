@@ -80,17 +80,24 @@ public abstract class LsdStudioTask : DefaultTask() {
     }
 
     private fun checkNode(node: String) {
-        val output =
+        fun notFound(
+            reason: String?,
+            cause: Throwable? = null,
+        ) = GradleException(
+            "LSD Studio needs Node.js ${NodeVersion.MINIMUM} or newer, and '$node' was not found " +
+                "($reason). Install Node.js (https://nodejs.org) and put it on the PATH, or set " +
+                "lsdStudio { nodeCommand = \"/path/to/node\" }.",
+            cause,
+        )
+        val result =
             try {
-                ProcessRunner.run(Commands.resolve(node) + "--version", timeout = ProcessRunner.NODE_VERSION_TIMEOUT).output
+                ProcessRunner.run(Commands.resolve(node) + "--version", timeout = ProcessRunner.NODE_VERSION_TIMEOUT)
             } catch (e: IOException) {
-                throw GradleException(
-                    "LSD Studio needs Node.js ${NodeVersion.MINIMUM} or newer, and '$node' was not found " +
-                        "(${e.message}). Install Node.js (https://nodejs.org) and put it on the PATH, or set " +
-                        "lsdStudio { nodeCommand = \"/path/to/node\" }.",
-                    e,
-                )
+                throw notFound(e.message, e)
             }
+        // Through cmd /c on Windows, a missing command is an exit code rather than an IOException.
+        if (result.exitCode != 0) throw notFound("exit ${result.exitCode}: ${result.output.trim()}")
+        val output = result.output
         val version =
             NodeVersion.parse(output.lineSequence().firstOrNull { it.isNotBlank() } ?: "")
                 ?: throw GradleException("Could not read the Node.js version from '$node --version': '${output.trim()}'")
