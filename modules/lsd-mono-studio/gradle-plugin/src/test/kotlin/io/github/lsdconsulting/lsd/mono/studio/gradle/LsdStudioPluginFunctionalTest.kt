@@ -134,7 +134,7 @@ class LsdStudioPluginFunctionalTest {
         val firstResult = first.stop()
         assertTrue(firstResult.output.contains("LSD Studio: installing"), firstResult.output)
         assertGone(first.pid(), url)
-        val installed = projectDir.resolve("studio-cache").listFiles()!!.single()
+        val installed = projectDir.resolve("studio-cache").listFiles { file -> file.isDirectory }!!.single()
         assertTrue(installed.resolve("node_modules/lsd-mono-studio/bin/lsd-mono-studio.js").isFile)
 
         val second = Running(projectDir, runner("lsdStudio", stopArg()))
