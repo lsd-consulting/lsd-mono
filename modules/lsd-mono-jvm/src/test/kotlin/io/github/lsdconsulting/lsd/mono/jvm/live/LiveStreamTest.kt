@@ -119,6 +119,39 @@ class LiveStreamTest {
     }
 
     @Test
+    fun `once what was sent no longer matches the mapping, nothing more is sent until the scenario completes`() {
+        TestStudio().use { studio ->
+            val lsd = context(studio)
+            val scenario = lsd.beginScenario("diverged")
+            lsd.scenarioTitle(scenario, "Diverged")
+            val t = Instant.parse("2026-11-01T11:00:00Z")
+            val clocked = { at: Instant -> Timing(startedAt = at, orderByStartedAt = true) }
+            lsd.message("A", "B", "second", type = MessageType.ASYNCHRONOUS, timing = clocked(t.plusMillis(10)))
+            awaitFrames(studio) { events(it).size == 1 }
+            // "first" sorts before "second", which was already sent: the mapping has diverged.
+            lsd.message("A", "B", "first", type = MessageType.ASYNCHRONOUS, timing = clocked(t))
+            lsd.message("A", "B", "third", type = MessageType.ASYNCHRONOUS, timing = clocked(t.plusMillis(20)))
+            // A second scenario on the same stream: its event is sent on the same worker, after the
+            // flushes the first scenario's captures queued, so once it arrives they have all run.
+            Thread {
+                val marker = lsd.beginScenario("diverged")
+                lsd.scenarioTitle(marker, "Marker")
+                lsd.message("C", "D", "marker", type = MessageType.ASYNCHRONOUS)
+                marker.complete("Marker")
+            }.apply { start() }.join(10_000)
+            awaitFrames(studio) { events(it).any { e -> e.string("label") == "marker" } }
+            lsd.message("A", "B", "fourth", type = MessageType.ASYNCHRONOUS, timing = clocked(t.plusMillis(30)))
+            assertEquals(listOf("second", "marker"), events(studio.frames).map { it.string("label") })
+            scenario.complete("Diverged")
+            lsd.completeReport("Diverged", "diverged")
+            assertTrue(studio.awaitClosed())
+            studio.frames.forEach(contract::assertValidFrame)
+            assertEquals(1, events(studio.frames).count { it.string("label") == "second" })
+            assertEquals(listOf("second", "marker", "first", "third", "fourth"), events(studio.frames).map { it.string("label") })
+        }
+    }
+
+    @Test
     fun `a title that changes after the start is reported as a difference`() {
         TestStudio().use { studio ->
             val lsd = context(studio)
