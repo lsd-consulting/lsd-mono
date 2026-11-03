@@ -137,17 +137,24 @@ class StudioInstallerTest {
         assertFalse(StudioInstaller.isComplete(installDir, SPEC))
         assertTrue(StudioInstaller.ensureInstalled(installDir, SPEC) { FakeNpm.install(it) })
         assertEquals("$SPEC\n", StudioPackage.installedMarker(installDir).readText())
-        assertEquals(listOf(installDir.name), leftovers())
+        val aside = leftovers().single { it.startsWith("${installDir.name}.old-") }
+        assertEquals(listOf(installDir.name, aside), leftovers(), "the old install stays for a while")
+        cache.resolve(aside).setLastModified(System.currentTimeMillis() - StudioInstaller.OLD_INSTALL_AGE.toMillis() - 60_000)
+        assertFalse(StudioInstaller.ensureInstalled(installDir, SPEC) { FakeNpm.install(it) })
+        assertEquals(listOf(installDir.name), leftovers(), "a later install removes it once it is old")
     }
 
     @Test
     fun `folders left by a killed build are removed under the lock`() {
         val tmp = cache.resolve("${installDir.name}.tmp-123").apply { mkdirs() }
         val old = cache.resolve("${installDir.name}.old-abc").apply { mkdirs() }
+        old.setLastModified(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(2))
+        val recent = cache.resolve("${installDir.name}.old-def").apply { mkdirs() }
         val other = cache.resolve("other.tmp-1").apply { mkdirs() }
         StudioInstaller.ensureInstalled(installDir, SPEC) { FakeNpm.install(it) }
         assertFalse(tmp.exists())
         assertFalse(old.exists())
+        assertTrue(recent.exists(), "a recently moved-aside install may still be in use")
         assertTrue(other.exists(), "folders of other installs are left alone")
     }
 
@@ -156,9 +163,31 @@ class StudioInstallerTest {
         FakeNpm.install(installDir)
         val failing = StudioInstaller.Mover { _, _ -> throw IOException("in use") }
         val e = assertThrows<GradleException> { StudioInstaller.ensureInstalled(installDir, SPEC, mover = failing) { FakeNpm.install(it) } }
-        assertTrue(e.message!!.contains("in use") && e.message!!.contains("Stop any LSD Studio"), e.message)
+        assertTrue(e.message!!.contains("cannot be moved aside (probably in use: java.io.IOException: in use)"), e.message)
+        assertTrue(e.message!!.contains("Stop any LSD Studio"), e.message)
+        assertFalse(e.message!!.contains("incomplete"), e.message)
         assertTrue(installDir.isDirectory)
         assertEquals(listOf(installDir.name), leftovers())
+    }
+
+    @Test
+    fun `a broken install on a file system without atomic moves is not reported as in use`() {
+        FakeNpm.install(installDir)
+        val unsupported = StudioInstaller.Mover { from, to -> throw AtomicMoveNotSupportedException(from.toString(), to.toString(), "no") }
+        val e = assertThrows<GradleException> { StudioInstaller.ensureInstalled(installDir, SPEC, mover = unsupported) { FakeNpm.install(it) } }
+        assertTrue(e.message!!.contains("cannot move the lsd-mono-studio install aside in one step"), e.message)
+        assertTrue(installDir.isDirectory)
+    }
+
+    @Test
+    fun `a folder that cannot be deleted does not fail the install, and goes next time`() {
+        val tmp = cache.resolve("${installDir.name}.tmp-123").apply { mkdirs() }
+        val refusing = StudioInstaller.Deleter { throw java.nio.file.AccessDeniedException(it.toString()) }
+        assertTrue(StudioInstaller.ensureInstalled(installDir, SPEC, deleter = refusing) { FakeNpm.install(it) })
+        assertTrue(StudioInstaller.isComplete(installDir, SPEC))
+        assertTrue(tmp.exists())
+        assertFalse(StudioInstaller.ensureInstalled(installDir, SPEC) { FakeNpm.install(it) })
+        assertFalse(tmp.exists())
     }
 
     @Test

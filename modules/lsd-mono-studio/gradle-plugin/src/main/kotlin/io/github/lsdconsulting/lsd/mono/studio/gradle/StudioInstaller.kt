@@ -23,8 +23,10 @@ import kotlin.io.path.deleteRecursively
  * npm installs into a temporary sibling folder, which is checked and then moved into place in one
  * step. A lock file next to the folder (plus a lock per folder inside this JVM, since file locks
  * belong to the whole process) makes concurrent builds wait for one install. A cached install
- * that is incomplete, from a crash or a deleted file, is renamed aside and installed again, so a
- * Studio still running from it keeps its files on Linux and macOS, and Windows fails clearly.
+ * that is incomplete, from a crash or a deleted file, is renamed aside and installed again. The
+ * renamed folder is only deleted an hour later, by a later install, so a Studio still running from
+ * it can keep reading its files meanwhile; on Windows a folder in use cannot be renamed, and the
+ * install fails clearly instead.
  */
 @OptIn(ExperimentalPathApi::class)
 internal object StudioInstaller {
@@ -40,6 +42,16 @@ internal object StudioInstaller {
 
     private val atomicMove = Mover { from, to -> Files.move(from, to, StandardCopyOption.ATOMIC_MOVE) }
 
+    /** Deletes a folder and everything in it; the tests replace it to make deletes fail. */
+    internal fun interface Deleter {
+        fun delete(path: Path)
+    }
+
+    private val recursiveDelete = Deleter { it.deleteRecursively() }
+
+    /** How old a moved-aside folder must be before a later install deletes it. */
+    val OLD_INSTALL_AGE: Duration = Duration.ofHours(1)
+
     /**
      * Makes sure [installDir] holds a complete install of [spec], running [npm] (which installs
      * into the folder it is given) only when it does not. Returns true when it installed.
@@ -49,14 +61,16 @@ internal object StudioInstaller {
         spec: String,
         lockTimeout: Duration = Duration.ofMinutes(15),
         mover: Mover = atomicMove,
+        deleter: Deleter = recursiveDelete,
         npm: (File) -> Unit,
     ): Boolean {
         val parent = installDir.absoluteFile.parentFile.apply { mkdirs() }
         val lockFile = parent.resolve("${installDir.name}.lock")
+        // The file lock alone is enough; synchronizing first only saves this JVM's threads from polling.
         synchronized(locks.computeIfAbsent(lockFile.canonicalPath) { Any() }) {
             FileChannel.open(lockFile.toPath(), CREATE, WRITE).use { channel ->
                 lock(channel, lockFile, lockTimeout).use {
-                    removeLeftovers(parent, installDir.name)
+                    removeLeftovers(parent, installDir.name, deleter)
                     if (isComplete(installDir, spec)) return false
                     if (installDir.exists()) moveAside(installDir, mover)
                     val tmp = Files.createTempDirectory(parent.toPath(), "${installDir.name}.tmp-")
@@ -71,7 +85,7 @@ internal object StudioInstaller {
                         StudioPackage.installedMarker(tmp.toFile()).writeText("$spec\n")
                         move(tmp, installDir.toPath(), mover)
                     } finally {
-                        deleteQuietly(tmp)
+                        deleteQuietly(tmp, deleter)
                     }
                     return true
                 }
@@ -92,9 +106,9 @@ internal object StudioInstaller {
     }
 
     /**
-     * Takes the lock on [channel]. Another class loader in this JVM (an included build, or a
-     * different buildscript classpath) has its own [locks], and the JVM then reports the overlap
-     * instead of waiting, so poll until it is free.
+     * Takes the lock on [channel], polling until [timeout] so that a hung build elsewhere fails
+     * clearly. Another class loader in this JVM (an included build, or a different buildscript
+     * classpath) has its own [locks], and the JVM reports that overlap rather than waiting.
      */
     private fun lock(
         channel: FileChannel,
@@ -103,43 +117,58 @@ internal object StudioInstaller {
     ): FileLock {
         val deadline = System.nanoTime() + timeout.toNanos()
         while (true) {
-            try {
-                return channel.lock()
-            } catch (_: OverlappingFileLockException) {
-                if (System.nanoTime() > deadline) {
-                    throw GradleException("Waited $timeout for another lsd-mono-studio install to finish ($lockFile).")
+            val lock =
+                try {
+                    channel.tryLock()
+                } catch (_: OverlappingFileLockException) {
+                    null
                 }
-                Thread.sleep(100)
+            if (lock != null) return lock
+            if (System.nanoTime() > deadline) {
+                throw GradleException("Waited $timeout for another lsd-mono-studio install to finish ($lockFile).")
             }
+            Thread.sleep(LOCK_POLL.toMillis())
         }
     }
 
-    /** Removes temporary and moved-aside folders that a killed build left behind. Only called under the lock. */
+    /**
+     * Removes temporary folders that a killed build left behind, and moved-aside installs older
+     * than [OLD_INSTALL_AGE]. Only called under the lock.
+     */
     private fun removeLeftovers(
         parent: File,
         name: String,
+        deleter: Deleter,
     ) {
+        val oldBefore = System.currentTimeMillis() - OLD_INSTALL_AGE.toMillis()
         parent
-            .listFiles { file -> file.isDirectory && (file.name.startsWith("$name.tmp-") || file.name.startsWith("$name.old-")) }
-            ?.forEach { deleteQuietly(it.toPath()) }
+            .listFiles { file ->
+                file.isDirectory &&
+                    (file.name.startsWith("$name.tmp-") || (file.name.startsWith("$name.old-") && file.lastModified() < oldBefore))
+            }?.forEach { deleteQuietly(it.toPath(), deleter) }
     }
 
-    /** Renames a broken install aside in one step, then deletes it as far as it can. */
+    /**
+     * Renames an install that is incomplete, or for another spec, aside in one step. It stays until
+     * a later install finds it older than [OLD_INSTALL_AGE], so the clock starts now.
+     */
     private fun moveAside(
         installDir: File,
         mover: Mover,
     ) {
-        val aside = installDir.resolveSibling("${installDir.name}.old-${UUID.randomUUID()}").toPath()
+        val aside = installDir.resolveSibling("${installDir.name}.old-${UUID.randomUUID()}")
         try {
-            mover.move(installDir.toPath(), aside)
+            mover.move(installDir.toPath(), aside.toPath())
+        } catch (e: AtomicMoveNotSupportedException) {
+            throw GradleException("The file system of $installDir cannot move the lsd-mono-studio install aside in one step: $e", e)
         } catch (e: IOException) {
             throw GradleException(
-                "The lsd-mono-studio install at $installDir is incomplete and in use, so it cannot be replaced. " +
-                    "Stop any LSD Studio running from it and run the task again.",
+                "The lsd-mono-studio install at $installDir needs replacing, but cannot be moved aside " +
+                    "(probably in use: $e). Stop any LSD Studio running from it and run the task again.",
                 e,
             )
         }
-        deleteQuietly(aside)
+        aside.setLastModified(System.currentTimeMillis())
     }
 
     /** The first file a run needs that [installDir] lacks: package.json, the entry script or the built dist/main.js. */
@@ -176,13 +205,19 @@ internal object StudioInstaller {
         }
     }
 
-    /** Best effort: a file still held open (Windows) stays until the next install removes leftovers. */
-    private fun deleteQuietly(path: Path) {
+    /** Best effort: a file still held open (Windows) stays until a later install removes leftovers. */
+    private fun deleteQuietly(
+        path: Path,
+        deleter: Deleter,
+    ) {
         try {
-            path.deleteRecursively()
+            deleter.delete(path)
         } catch (_: IOException) {
         }
     }
 
     const val MOVE_ATTEMPTS: Int = 3
+
+    /** How long to wait between attempts to take a lock that someone else holds. */
+    val LOCK_POLL: Duration = Duration.ofMillis(100)
 }
