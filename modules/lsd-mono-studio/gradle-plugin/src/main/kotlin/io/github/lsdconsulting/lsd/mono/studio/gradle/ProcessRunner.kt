@@ -11,34 +11,29 @@ import kotlin.concurrent.thread
 internal object Commands {
     val WINDOWS: Boolean = System.getProperty("os.name").lowercase().contains("windows")
 
+    /** Characters cmd would act on rather than pass on, even where Java does not quote the argument. */
+    private const val CMD_SPECIAL = "\"%&|<>^"
+
     /**
      * On Windows, npm and often node are .cmd scripts, which only cmd runs, so anything not
-     * ending in .exe goes through cmd, as one command line built by [cmdLine]. Elsewhere, and
-     * for an .exe, the command and its arguments run as they are.
+     * ending in .exe goes through `cmd /d /c` (`/d` skips AutoRun), with each argument passed
+     * separately. cmd re-reads that line, so a token holding one of `" % & | < > ^` is refused
+     * rather than risk it being run as something else. Elsewhere, and for an .exe, the command
+     * and its arguments run as they are.
      */
     fun resolve(
         command: String,
         args: List<String> = emptyList(),
         windows: Boolean = WINDOWS,
-    ): List<String> =
-        if (windows && !command.lowercase().endsWith(".exe")) {
-            listOf("cmd", "/d", "/s", "/c", cmdLine(listOf(command) + args))
-        } else {
-            listOf(command) + args
+    ): List<String> {
+        if (!windows || command.lowercase().endsWith(".exe")) return listOf(command) + args
+        (listOf(command) + args).forEach { token ->
+            require(token.none { it in CMD_SPECIAL }) {
+                "Cannot pass '$token' through cmd on Windows: it contains one of $CMD_SPECIAL. Use a path without them."
+            }
         }
-
-    /**
-     * Builds the line that `cmd /d /s /c` runs. Every token is quoted, so spaces and the
-     * characters `& | < > ( ) ^` are taken literally, and the whole line is quoted once more,
-     * which `/s` strips again without touching the inner quotes (`/d` skips AutoRun). cmd still
-     * expands `%NAME%` inside quotes, so a `%` is written outside them, escaped as `^%`. A token
-     * holding a double quote cannot be passed safely, and is refused.
-     */
-    fun cmdLine(tokens: List<String>): String =
-        tokens.joinToString(" ", prefix = "\"", postfix = "\"") { token ->
-            require('"' !in token) { "Cannot pass an argument containing a double quote through cmd: $token" }
-            "\"" + token.replace("%", "\"^%\"") + "\""
-        }
+        return listOf("cmd", "/d", "/c", command) + args
+    }
 }
 
 /** The result of a finished command: its exit code and its combined output. */
