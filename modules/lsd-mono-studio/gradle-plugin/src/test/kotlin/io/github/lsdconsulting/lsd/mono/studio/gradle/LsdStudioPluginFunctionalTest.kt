@@ -29,6 +29,7 @@ class LsdStudioPluginFunctionalTest {
     lateinit var home: File
 
     private val studioDir = File(System.getProperty("lsd.studio.dir")).canonicalFile
+    private val studioVersion = StudioPackage.version(studioDir.resolve("package.json"))!!
     private val windows = System.getProperty("os.name").lowercase().contains("windows")
 
     @BeforeEach
@@ -152,7 +153,7 @@ class LsdStudioPluginFunctionalTest {
         val url = first.awaitUrl()
         try {
             val second = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").build()
-            assertTrue(second.output.contains("LSD Studio is already running on http://127.0.0.1:$port"), second.output)
+            assertTrue(second.output.contains("LSD Studio $studioVersion is already running on http://127.0.0.1:$port"), second.output)
         } finally {
             first.stop()
         }
@@ -164,7 +165,7 @@ class LsdStudioPluginFunctionalTest {
         imposter("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n") { port ->
             buildFile("port = $port")
             val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").buildAndFail()
-            assertTrue(result.output.contains("is in use, and not by LSD Studio"), result.output)
+            assertTrue(result.output.contains("An LSD Studio older than $studioVersion, or another app, is using port $port"), result.output)
         }
     }
 
@@ -174,10 +175,50 @@ class LsdStudioPluginFunctionalTest {
         imposter(ok) { port ->
             buildFile("port = $port")
             val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").buildAndFail()
-            assertTrue(result.output.contains("is in use, and not by LSD Studio (GET /api/reports answered 200 without"), result.output)
+            assertTrue(result.output.contains("or another app, is using port $port (GET /api/reports answered 200 without"), result.output)
             assertTrue(result.output.contains("lsdStudio { port = ${port + 1} }"), result.output)
         }
     }
+
+    @Test
+    fun `a Studio that answers with an error is refused, naming the status rather than the header`() {
+        imposter(studioReply("404 Not Found", studioVersion)) { port ->
+            buildFile("port = $port")
+            val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").buildAndFail()
+            assertTrue(result.output.contains("LSD Studio $studioVersion is on port $port, but GET /api/reports answered 404"), result.output)
+            assertFalse(result.output.contains("without an X-LSD-Studio header"), result.output)
+        }
+    }
+
+    @Test
+    fun `a running Studio of the same version is reused without a warning`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            buildFile("port = $port")
+            val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").build()
+            assertTrue(result.output.contains("LSD Studio $studioVersion is already running on http://127.0.0.1:$port"), result.output)
+            assertFalse(result.output.contains("may not line up"), result.output)
+        }
+    }
+
+    @Test
+    fun `a running Studio of another version is reused with a warning naming both`() {
+        imposter(studioReply("200 OK", "9.9.9")) { port ->
+            buildFile("port = $port")
+            val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").build()
+            assertTrue(
+                result.output.contains("LSD Studio 9.9.9 is running on http://127.0.0.1:$port, but this build runs LSD Studio $studioVersion"),
+                result.output,
+            )
+            assertTrue(result.output.contains("may not line up"), result.output)
+            assertTrue(result.output.contains("LSD Studio 9.9.9 is already running on http://127.0.0.1:$port"), result.output)
+        }
+    }
+
+    /** An HTTP reply with [status] and the Studio header valued [version]. */
+    private fun studioReply(
+        status: String,
+        version: String,
+    ) = "HTTP/1.1 $status\r\nX-LSD-Studio: $version\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n[]"
 
     /** Runs [block] with the port of a server that reads each request and answers [response]. */
     private fun imposter(
@@ -238,7 +279,7 @@ class LsdStudioPluginFunctionalTest {
                 }
             buildFile("port = ${socket.localPort}")
             val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").buildAndFail()
-            assertTrue(result.output.contains("is in use, and not by LSD Studio (java.net.SocketException"), result.output)
+            assertTrue(result.output.contains("or another app, is using port ${socket.localPort} (java.net.SocketException"), result.output)
             server.interrupt()
         }
     }
