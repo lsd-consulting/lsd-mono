@@ -12,14 +12,17 @@ internal object Commands {
     val WINDOWS: Boolean = System.getProperty("os.name").lowercase().contains("windows")
 
     /** Characters cmd would act on rather than pass on, even where Java does not quote the argument. */
-    private const val CMD_SPECIAL = "\"%&|<>^"
+    private const val CMD_SPECIAL = "\"%&|<>^\r\n"
 
     /**
-     * On Windows, npm and often node are .cmd scripts, which only cmd runs, so anything not
-     * ending in .exe goes through `cmd /d /c` (`/d` skips AutoRun), with each argument passed
-     * separately. cmd re-reads that line, so a token holding one of `" % & | < > ^` is refused
-     * rather than risk it being run as something else. Elsewhere, and for an .exe, the command
-     * and its arguments run as they are.
+     * On Windows, npm is a .cmd script, which only cmd runs, so anything not ending in .exe goes
+     * through `cmd /d /v:off /s /c " command args "`: `/d` skips AutoRun, `/v:off` turns off
+     * delayed expansion (`!`) even where the registry turns it on, and `/s` makes cmd drop just
+     * the outer pair of quotes. Without that outer pair, cmd strips the first and last quote of
+     * the line whenever the command is quoted, which breaks a command path with a space followed
+     * by any argument with a space. Java quotes each part that has a space; nothing else is
+     * escaped, so a part holding one of `" % & | < > ^` or a line break is refused (see
+     * [requireCmdSafe]). Elsewhere, and for an .exe, the command and its arguments run as they are.
      */
     fun resolve(
         command: String,
@@ -27,12 +30,35 @@ internal object Commands {
         windows: Boolean = WINDOWS,
     ): List<String> {
         if (!windows || command.lowercase().endsWith(".exe")) return listOf(command) + args
-        (listOf(command) + args).forEach { token ->
-            require(token.none { it in CMD_SPECIAL }) {
-                "Cannot pass '$token' through cmd on Windows: it contains one of $CMD_SPECIAL. Use a path without them."
+        (listOf(command) + args).forEach { requireCmdSafe(it, "this command", windows) }
+        return listOf("cmd", "/d", "/v:off", "/s", "/c", "\"", command) + args + "\""
+    }
+
+    /**
+     * Fails, naming [setting], when [value] cannot be passed through cmd on Windows. Called for
+     * each setting before anything is locked or installed, so the message says what to change.
+     */
+    fun requireCmdSafe(
+        value: String,
+        setting: String,
+        windows: Boolean = WINDOWS,
+    ) {
+        if (!windows) return
+        val bad = value.filter { it in CMD_SPECIAL }.toSet()
+        if (bad.isEmpty()) return
+        val shown =
+            bad.joinToString(" ") {
+                when (it) {
+                    '\r' -> "\\r"
+                    '\n' -> "\\n"
+                    else -> it.toString()
+                }
             }
-        }
-        return listOf("cmd", "/d", "/c", command) + args
+        throw GradleException(
+            "LSD Studio cannot pass '$value' ($setting) to npm through cmd on Windows: it contains $shown. " +
+                "Use a value without them, for example an exact lsd-mono-studio version, " +
+                "or lsdStudio { cacheDir = file(\"C:/lsd-studio\") } for a cache path.",
+        )
     }
 }
 
@@ -42,7 +68,11 @@ internal data class ProcessResult(
     val output: String,
 )
 
-/** Runs short-lived commands, such as `node --version` and `npm install`, with a time limit. */
+/**
+ * Runs short-lived commands, such as `node --version` and `npm install`, with a time limit. Build
+ * the command with [Commands.resolve], which on Windows routes .cmd scripts through cmd and
+ * refuses arguments cmd would misread.
+ */
 internal object ProcessRunner {
     val NODE_VERSION_TIMEOUT: Duration = Duration.ofSeconds(30)
     val NPM_INSTALL_TIMEOUT: Duration = Duration.ofMinutes(10)
@@ -83,6 +113,7 @@ internal object ProcessRunner {
         try {
             val finished = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)
             if (!finished) {
+                // Stop before waiting for the reader: the open pipe would otherwise hold it.
                 StudioProcesses.stop(process)
                 awaitReader(reader, command)
                 val tail = synchronized(output) { output.takeLast(OUTPUT_TAIL).toString() }
@@ -96,8 +127,6 @@ internal object ProcessRunner {
             StudioProcesses.stop(process)
             Thread.currentThread().interrupt()
             throw e
-        } finally {
-            if (process.isAlive) StudioProcesses.stop(process)
         }
         awaitReader(reader, command)
         return ProcessResult(process.exitValue(), synchronized(output) { output.toString() })

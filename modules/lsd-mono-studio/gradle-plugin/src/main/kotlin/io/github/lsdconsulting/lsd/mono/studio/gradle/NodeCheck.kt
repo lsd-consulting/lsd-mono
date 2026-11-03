@@ -17,8 +17,8 @@ internal object NodeCheck {
         )
 
     /**
-     * The version [node] reported in [result]. Through cmd on Windows, a missing command is a
-     * non-zero exit (9009, "is not recognized") rather than a failure to start.
+     * The version [node] reported in [result]. A non-zero exit, such as cmd's 9009 for a command
+     * it cannot find, counts as not found.
      */
     fun version(
         node: String,

@@ -82,7 +82,8 @@ public abstract class LsdStudioTask : DefaultTask() {
     private fun checkNode(node: String) {
         val result =
             try {
-                ProcessRunner.run(Commands.resolve(node, listOf("--version")), timeout = ProcessRunner.NODE_VERSION_TIMEOUT)
+                // Run directly, like the launch, so the check and the launch find the same node.
+                ProcessRunner.run(listOf(node, "--version"), timeout = ProcessRunner.NODE_VERSION_TIMEOUT)
             } catch (e: IOException) {
                 throw NodeCheck.notFound(node, e.message, e)
             }
@@ -111,6 +112,12 @@ public abstract class LsdStudioTask : DefaultTask() {
         if (StudioInstaller.isComplete(installDir, spec)) {
             logger.info("LSD Studio: {} is already installed in {}", spec, installDir)
         } else {
+            // Checked before the install lock, so a bad value fails at once and names its setting.
+            if (!npmCommand.get().lowercase().endsWith(".exe")) {
+                Commands.requireCmdSafe(npmCommand.get(), "npmCommand")
+                Commands.requireCmdSafe(localFile?.path ?: spec, "the lsd-mono-studio package")
+                Commands.requireCmdSafe(installDir.path, "the install folder under cacheDir")
+            }
             StudioInstaller.ensureInstalled(installDir, spec) { target ->
                 logger.lifecycle("LSD Studio: installing {} into {}", spec, installDir)
                 val result =

@@ -192,6 +192,37 @@ class LsdStudioPluginFunctionalTest {
         }
     }
 
+    @Test
+    fun `fails clearly when something on the port resets the connection`() {
+        ServerSocket(0).use { socket ->
+            // Reads the request, then closes with SO_LINGER 0, which sends a reset instead of an answer on every OS.
+            val server =
+                Thread {
+                    runCatching {
+                        while (true) {
+                            socket.accept().use { client ->
+                                client.setSoLinger(true, 0)
+                                val input = client.getInputStream()
+                                var tail = 0
+                                while (tail != 0x0d0a0d0a) {
+                                    val b = input.read()
+                                    if (b < 0) break
+                                    tail = (tail shl 8) or b
+                                }
+                            }
+                        }
+                    }
+                }.apply {
+                    isDaemon = true
+                    start()
+                }
+            buildFile("port = ${socket.localPort}")
+            val result = runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}").buildAndFail()
+            assertTrue(result.output.contains("is in use, and not by LSD Studio (java.net.SocketException"), result.output)
+            server.interrupt()
+        }
+    }
+
     private fun stopArg() = "-Plsd.studio.stopFile=${projectDir.resolve("stop").path}"
 
     private fun npm(
