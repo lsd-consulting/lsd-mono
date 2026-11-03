@@ -1,12 +1,16 @@
 # LSD Studio
 
+[![npm: lsd-mono-studio](https://img.shields.io/npm/v/lsd-mono-studio?label=lsd-mono-studio)](https://www.npmjs.com/package/lsd-mono-studio)
+
 LSD Studio runs locally on your machine and turns LSD reports and traces into sequence diagrams.
 
 Part of [LSD: living sequence diagrams](../../README.md). It keeps the reports you give it on this
 machine, lists them, and opens any of them in the same interactive report the tests write. Nothing
-is uploaded. It is early: work is tracked in [#186](https://github.com/lsd-consulting/lsd-mono/issues/186).
+is uploaded. LSD Studio is a preview: tell us what you need on
+[#186](https://github.com/lsd-consulting/lsd-mono/issues/186).
 
-![The LSD Studio report list with the sample trace imported](docs/report-list.png)
+![The sample trace's sequence diagram in LSD Studio: a caller, four services, a database and an
+async order.placed event](docs/sample-diagram.png)
 
 ## Start it
 
@@ -18,16 +22,7 @@ It needs Node 22.6 or newer. `npx lsd-mono-studio --demo` imports a sample trace
 is something to open straight away. Without it, an empty list offers **Try a sample**, which does the
 same.
 
-To run it from a checkout of this repo instead, with the Node version in the repo's `.nvmrc`:
-
-```sh
-cd modules/lsd-mono-studio
-nvm use
-npm install      # once: installs dependencies and builds the report viewer
-npm start        # then open http://127.0.0.1:7357
-```
-
-`npm start -- --demo` does the same as `--demo` above.
+Options for `npx lsd-mono-studio`, each also settable as an environment variable:
 
 | Option            | Environment variable       | What                                         |
 | ----------------- | -------------------------- | -------------------------------------------- |
@@ -36,7 +31,28 @@ npm start        # then open http://127.0.0.1:7357
 | `--demo`          |                            | Import the sample trace at startup, once     |
 | `--viewer <file>` | `LSD_STUDIO_VIEWER=<file>` | A report viewer build to try first           |
 
+> [!WARNING]
+> `--expose` has no access control yet: anyone who can reach the port can read and delete your
+> reports. Only use it on a network you trust.
+
 Reports are kept in `~/.lsd/server/reports`.
+
+From a Gradle build, the `io.github.lsd-consulting.lsd-mono-studio` plugin adds an `lsdStudio`
+task that installs and runs LSD Studio for you. It needs Node 22.6 or newer on your `PATH`. The
+plugin is not published yet ([#210](https://github.com/lsd-consulting/lsd-mono/issues/210)); once
+it is:
+
+```kotlin
+plugins {
+    id("io.github.lsd-consulting.lsd-mono-studio") version "<version>"
+}
+```
+
+```sh
+./gradlew lsdStudio      # opens LSD Studio in your browser
+```
+
+Set the `port` and `expose` options in an `lsdStudio { }` block in your build file.
 
 ## Three ways in
 
@@ -62,9 +78,24 @@ Reports are kept in `~/.lsd/server/reports`.
 The list checks for new and growing reports every few seconds. Select a title to open the report;
 **Delete** removes one, or tick several and **Delete selected**.
 
+![The LSD Studio report list with the sample trace imported](docs/report-list.png)
+
 ## For contributors
 
 The rest of this page is how LSD Studio is built and what it speaks.
+
+### Run it from a checkout
+
+To run it from a checkout of this repo, with the Node version in the repo's `.nvmrc`:
+
+```sh
+cd modules/lsd-mono-studio
+nvm use
+npm install      # once: installs dependencies and builds the report viewer
+npm start        # then open http://127.0.0.1:7357
+```
+
+`npm start -- --demo` does the same as `--demo` above.
 
 ### Options and older names
 
@@ -82,8 +113,8 @@ and `npm ci` build it for you: the `prepare` script (`scripts/build-viewer.mjs`)
 while the copy is newer than the UI's sources (it copies the UI's own `dist` build instead when that
 is up to date). If the build fails, installing still succeeds with a warning, and reports show the
 "Report viewer not built" page until `npm run build:viewer` (always rebuilds) succeeds.
-`LSD_STUDIO_SKIP_VIEWER=1` (or `LSD_SERVER_SKIP_VIEWER=1`) skips the build, which the studio CI job does since its tests bring
-their own viewer.
+`LSD_STUDIO_SKIP_VIEWER=1` (or `LSD_SERVER_SKIP_VIEWER=1`) skips the build, which the studio CI job
+does since its tests bring their own viewer.
 
 When opening a report LSD Studio uses the first viewer it finds:
 
@@ -93,17 +124,17 @@ When opening a report LSD Studio uses the first viewer it finds:
 3. The report UI's build in the checkout, `modules/lsd-mono-report-html/ui/dist/lsd-report.html`.
 
 A file that is not the report viewer is passed over. When the override is missing or is not the
-viewer, LSD Studio says so on stderr at startup, naming the path, and falls back to the next one. With none of them, the page says how to build
-it.
+viewer, LSD Studio says so on stderr at startup, naming the path, and falls back to the next one.
+With none of them, the page says how to build it.
 
 ### Packaging
 
 `npm pack` runs `prepack`. It copies the report schema, builds the viewer (failing if it can't),
 and compiles `src` to `dist/` with `tsc -p tsconfig.build.json`, because Node does not strip types
 from files under `node_modules`. The `files` list ships `bin/`, `dist/`, `public/`,
-`viewer/lsd-report.html`, `schema/lsd-report.schema.json`, `samples/`, `protocol/` and this README, so installing a
-packed tarball builds nothing, and its `lsd-mono-studio` command (`bin/lsd-mono-studio.js`) runs
-`dist/main.js`.
+`viewer/lsd-report.html`, `schema/lsd-report.schema.json`, `samples/`, `protocol/` and this README,
+so installing a packed tarball builds nothing, and its `lsd-mono-studio` command
+(`bin/lsd-mono-studio.js`) runs `dist/main.js`.
 
 The weekly release publishes it to npm at the release version (`release.yml`, the `npm` job), with
 provenance, through npm trusted publishing. The repo keeps `0.0.0` in `package.json`; the job sets
@@ -299,9 +330,9 @@ is otherwise ignored: the capture goes on. `report.done` gets `stored` and close
 
 **The live report.** It is stored at the hello and rewritten after every accepted message. A
 report carries each scenario's `measuredRatio` and `pairedRatio`, computed as for OTLP imports, so
-the Accuracy card reads them. A running scenario shows as `warn` with the fact "Live: still capturing"; until the first scenario
-starts, a placeholder scenario says it is waiting. If the socket closes before `report.done`,
-running scenarios become `aborted` ("Capture cut off") and the report is kept.
+the Accuracy card reads them. A running scenario shows as `warn` with the fact "Live: still
+capturing"; until the first scenario starts, a placeholder scenario says it is waiting. If the
+socket closes before `report.done`, running scenarios become `aborted` ("Capture cut off") and the report is kept.
 
 **Watching it.** An open live report page polls `GET /api/reports/<id>/live` once a second and
 reloads when the revision changes, keeping its scroll position; it stops once the capture is done.
@@ -345,13 +376,19 @@ directory without an index gets one rebuilt from its report files.
 Deletes are idempotent: repeating one succeeds. Duplicate ids count once. `DELETE /api/reports/<id>`
 answers 204 whether or not the report existed, and 400 for an id that is not a report id.
 
-### Decisions (#186)
+### Design decisions
+
+The choices behind LSD Studio so far, discussed on
+[#186](https://github.com/lsd-consulting/lsd-mono/issues/186):
 
 1. **Secure by default.** Binds to `127.0.0.1`. Only `--expose` (or `LSD_STUDIO_EXPOSE=1`) binds every interface.
 2. **Import** takes exported LSD report JSON and OTLP JSON telemetry exports. Both land as stored reports.
 3. **Storage** is a directory the server owns, hard-coded to `~/.lsd/server/reports` for v1.
-4. **No access control** yet. It comes later, after the expose flag.
+4. **No access control** yet. It comes later, after the expose flag, so only use `--expose` on a
+   network you trust.
 5. **Cleanup is manual:** delete per report and bulk delete. No maximum count, no auto-expiry.
-6. **Real-time captures** use a WebSocket interface defined by its protocol, not by any capture
-   library. A Ktor filter pointed at the server is one example of a client. The message shape is
-   the `lsd-live` protocol, v0 (#152).
+6. **Real-time captures** use a WebSocket interface defined by its protocol, the `lsd-live`
+   protocol v0 ([#152](https://github.com/lsd-consulting/lsd-mono/issues/152)), not by any capture
+   library. The JVM sender in `lsd-mono-jvm`
+   ([#203](https://github.com/lsd-consulting/lsd-mono/pull/203)) is the first client; any library
+   that speaks the protocol can be another.
