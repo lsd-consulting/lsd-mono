@@ -105,8 +105,9 @@ jobs:
           # The Ktor integration's sample report, under ktor-3/ (its README links there).
           mkdir -p modules/lsd-mono-jvm/build/pages/ktor-3
           cp -R modules/lsd-mono-ktor-3/build/pages/. modules/lsd-mono-jvm/build/pages/ktor-3/
-          # Each JSON Schema at its $id, so a validator can fetch it by that URL.
-          for schema in modules/lsd-mono-report-schema/lsd-report.schema.json modules/lsd-mono-report-schema/lsd-index.schema.json; do
+          # Each JSON Schema at its $id, so a validator can fetch it by that URL: the current ones and
+          # every released one under published/, so an older report's schema URL keeps resolving.
+          for schema in modules/lsd-mono-report-schema/*.schema.json modules/lsd-mono-report-schema/published/*/*.schema.json; do
             path=$(jq -r '."$id" | sub("^https://lsd-consulting.github.io/lsd-mono/"; "")' "$schema")
             case "$path" in schema/*/*.schema.json) ;; *) echo "::error::$schema has an unexpected \$id"; exit 1 ;; esac
             mkdir -p "modules/lsd-mono-jvm/build/pages/$(dirname "$path")"
@@ -122,7 +123,7 @@ jobs:
             test -s "$site/$f" || { echo "missing $site/$f"; exit 1; }
           done
           grep -qF 'window.__LSD_INDEX__=' "$site/index.html" || { echo "index.html has no report manifest"; exit 1; }
-          for schema in modules/lsd-mono-report-schema/*.schema.json; do
+          for schema in modules/lsd-mono-report-schema/*.schema.json modules/lsd-mono-report-schema/published/*/*.schema.json; do
             published="$site/$(jq -r '."$id" | sub("^https://lsd-consulting.github.io/lsd-mono/"; "")' "$schema")"
             cmp -s "$schema" "$published" || { echo "missing or different $published"; exit 1; }
           done
