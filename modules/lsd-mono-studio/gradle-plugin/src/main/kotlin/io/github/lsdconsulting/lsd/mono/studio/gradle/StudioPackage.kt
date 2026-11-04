@@ -28,7 +28,8 @@ internal object StudioPackage {
      * `lsd-mono-studio@x.y.z`, optionally with a pre-release: the only npm specs that never move. The
      * name is fixed, as the install is looked for at `node_modules/lsd-mono-studio`.
      */
-    private val EXACT = Regex("""^${Regex.escape(StudioVersion.NPM_PACKAGE)}@(\d+\.\d+\.\d+(?:-[\w.]+)?)$""")
+    private val EXACT =
+        Regex("""^${Regex.escape(StudioVersion.NPM_PACKAGE)}@((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)$""")
 
     /**
      * A git spec pinned to a full 40-character commit, e.g. `github:org/repo#<sha>`. A shorter ref
@@ -36,8 +37,11 @@ internal object StudioPackage {
      */
     private val GIT_COMMIT = Regex("""^(git\+[a-z]+://|git://|github:|gitlab:|bitbucket:)[^\s#]+#[0-9a-fA-F]{40}$""")
 
-    /** An https tarball URL, with no `#` or `?` that could make it a git ref or a range. */
-    private val TARBALL_URL = Regex("""^https://[^\s#?]+\.(tgz|tar\.gz)$""")
+    /**
+     * An https tarball URL, with no `#` or `?` that could make it a git ref or a range, and no
+     * `user:password@` to end up in the build's logs.
+     */
+    private val TARBALL_URL = Regex("""^https://(?![^/\s#?]*@)[^\s#?]+\.(tgz|tar\.gz)$""", RegexOption.IGNORE_CASE)
 
     /** The version an exact npm [spec] (`lsd-mono-studio@0.17.0`) names, else null. */
     fun exactVersion(spec: String): String? = EXACT.matchEntire(spec.trim())?.groupValues?.get(1)
