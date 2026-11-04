@@ -272,22 +272,10 @@ public abstract class LsdStudioTask : DefaultTask() {
 
     private fun browse(url: String) {
         if (!openBrowser.get() || ci.get()) return
-        val os = System.getProperty("os.name").lowercase()
-        val command =
-            when {
-                os.contains("mac") -> listOf("open", url)
-                os.contains("windows") -> listOf("rundll32", "url.dll,FileProtocolHandler", url)
-                else -> listOf("xdg-open", url)
-            }
-        // Off the output reader, so a slow or hung launcher cannot stall Studio's output; the
-        // timeout reaps the launcher either way.
+        // Off the output reader, so a slow or hung launcher cannot stall Studio's output.
         val log = logger
-        Thread({
-            try {
-                ProcessRunner.run(command, timeout = ProcessRunner.BROWSER_TIMEOUT)
-            } catch (e: Exception) {
-                log.info("LSD Studio: could not open a browser ({}); open {} yourself.", e.message, url)
-            }
-        }, "lsd-studio-browser").apply { isDaemon = true }.start()
+        BrowserLauncher.launch(BrowserLauncher.command(System.getProperty("os.name"), url)) { e ->
+            log.info("LSD Studio: could not open a browser ({}); open {} yourself.", e.message, url)
+        }
     }
 }
