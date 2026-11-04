@@ -70,7 +70,7 @@ val buildStudio =
 // Most of the plugin runs only in the functional tests, which Gradle TestKit runs in a separate
 // Gradle process that Kover does not see; the floor covers the unit-tested parts.
 lsdCoverage {
-    lineFloor.set(58)
+    lineFloor.set(61)
 }
 
 dependencies {
@@ -83,6 +83,15 @@ dependencies {
 tasks.named<Test>("test") {
     dependsOn(buildStudio)
     systemProperty("lsd.studio.dir", studioDir.asFile.absolutePath)
+    // The cancellation test drives Gradle through the Tooling API: this Gradle, with its own user home.
+    systemProperty("lsd.gradle.home", gradle.gradleHomeDir!!.absolutePath)
+    systemProperty(
+        "lsd.tooling.home",
+        layout.buildDirectory
+            .dir("tooling-api-home")
+            .get()
+            .asFile.absolutePath,
+    )
     inputs.dir(studioDir.dir("bin")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(studioDir.dir("dist")).withPathSensitivity(PathSensitivity.RELATIVE)
     // Each test starts a Gradle build that runs Node.

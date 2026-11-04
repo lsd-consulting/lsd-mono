@@ -245,18 +245,21 @@ public abstract class LsdStudioTask : DefaultTask() {
         reader.isDaemon = true
         reader.start()
         val stop = stopFile.orNull?.asFile
+        // True only when this task stopped a live Studio. A stop request that races Studio exiting
+        // by itself does not count, so its own exit code is still reported.
         var stopped = false
+        var requested = false
         try {
             while (process.isAlive) {
                 if (stop != null && stop.exists()) {
-                    stopped = true
+                    requested = true
                     break
                 }
                 process.waitFor(200, TimeUnit.MILLISECONDS)
             }
         } catch (e: InterruptedException) {
             // Ctrl+C or a cancelled build.
-            stopped = true
+            requested = true
             Thread.currentThread().interrupt()
         } finally {
             if (process.isAlive) {
@@ -266,10 +269,11 @@ public abstract class LsdStudioTask : DefaultTask() {
             service.remove(process)
             reader.join(2000)
         }
-        if (stopped) {
-            logger.lifecycle("LSD Studio: stopped.")
-        } else if (process.exitValue() != 0) {
-            throw GradleException("LSD Studio exited with code ${process.exitValue()}; its output is above.")
+        val exit = process.exitValue()
+        when (StudioOutcome.of(stopped, requested || stop?.exists() == true, exit)) {
+            StudioOutcome.STOPPED -> logger.lifecycle("LSD Studio: stopped.")
+            StudioOutcome.FAILED -> throw GradleException("LSD Studio exited with code $exit; its output is above.")
+            StudioOutcome.ENDED_ON_ITS_OWN -> logger.warn("LSD Studio exited on its own; its output is above.")
         }
     }
 
