@@ -4,6 +4,9 @@ import org.gradle.api.GradleException
 
 /** Turns what `node --version` did into the Node.js version, or a clear failure. */
 internal object NodeCheck {
+    /** How much of unreadable output an error echoes. */
+    private const val OUTPUT_LIMIT = 500
+
     fun notFound(
         node: String,
         reason: String?,
@@ -26,8 +29,8 @@ internal object NodeCheck {
         if (result.exitCode != 0) throw notFound(node, "exit ${result.exitCode}: ${result.output.trim()}")
         val output = result.output
         val version =
-            NodeVersion.parse(output.lineSequence().firstOrNull { it.isNotBlank() } ?: "")
-                ?: throw GradleException("Could not read the Node.js version from '$node --version': '${output.trim()}'")
+            NodeVersion.parse(output)
+                ?: throw GradleException("Could not read the Node.js version from '$node --version': '${output.trim().take(OUTPUT_LIMIT)}'")
         if (version < NodeVersion.MINIMUM) {
             throw GradleException(
                 "LSD Studio needs Node.js ${NodeVersion.MINIMUM} or newer, and '$node' is $version. " +
