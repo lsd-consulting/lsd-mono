@@ -26,7 +26,7 @@ internal object NodeCheck {
         if (result.exitCode != 0) throw notFound(node, "exit ${result.exitCode}: ${result.output.trim()}")
         val output = result.output
         val version =
-            NodeVersion.parse(output.lineSequence().firstOrNull { it.isNotBlank() } ?: "")
+            NodeVersion.parse(output)
                 ?: throw GradleException("Could not read the Node.js version from '$node --version': '${output.trim()}'")
         if (version < NodeVersion.MINIMUM) {
             throw GradleException(

@@ -14,10 +14,11 @@ internal data class NodeVersion(
         /** lsd-mono-studio's `engines.node`. */
         val MINIMUM = NodeVersion(22, 6, 0)
 
-        private val PATTERN = Regex("""v?(\d+)\.(\d+)\.(\d+).*""")
+        /** The first line that starts with a version, so banner lines before it don't matter. */
+        private val PATTERN = Regex("""(?m)^\s*v?(\d+)\.(\d+)\.(\d+)\b""")
 
         fun parse(text: String): NodeVersion? =
-            PATTERN.matchEntire(text.trim())?.destructured?.let { (major, minor, patch) ->
+            PATTERN.find(text)?.destructured?.let { (major, minor, patch) ->
                 NodeVersion(major.toInt(), minor.toInt(), patch.toInt())
             }
     }
