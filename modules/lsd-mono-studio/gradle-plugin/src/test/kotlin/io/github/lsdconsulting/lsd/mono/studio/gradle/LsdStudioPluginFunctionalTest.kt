@@ -105,6 +105,38 @@ class LsdStudioPluginFunctionalTest {
         assertGone(run.pid(), url)
     }
 
+    /** A stand-in lsd-mono-studio that runs [script] instead of serving anything. */
+    private fun fakeStudio(script: String): File {
+        val dir = home.resolve("fake-studio")
+        dir.resolve("bin").mkdirs()
+        dir.resolve("dist").mkdirs()
+        dir.resolve("package.json").writeText(
+            """{ "name": "lsd-mono-studio", "version": "$studioVersion", "type": "module", """ +
+                """"bin": { "lsd-mono-studio": "bin/lsd-mono-studio.js" } }""",
+        )
+        dir.resolve("dist/main.js").writeText("")
+        dir.resolve("bin/lsd-mono-studio.js").writeText(script)
+        return dir
+    }
+
+    @Test
+    fun `fails with the exit code when Studio exits on its own`() {
+        buildFile("port = 0")
+        val studio = fakeStudio("console.log('giving up'); process.exit(3)")
+        val result = runner("lsdStudio", "-Plsd.studio.package=${studio.path}").buildAndFail()
+        assertTrue(result.output.contains("giving up"), result.output)
+        assertTrue(result.output.contains("LSD Studio exited with code 3"), result.output)
+    }
+
+    @Test
+    fun `warns when Studio exits on its own without an error`() {
+        buildFile("port = 0")
+        val studio = fakeStudio("console.log('done already')")
+        val result = runner("lsdStudio", "-Plsd.studio.package=${studio.path}").build()
+        assertTrue(result.output.contains("LSD Studio exited on its own"), result.output)
+        assertFalse(result.output.contains("LSD Studio: stopped."), result.output)
+    }
+
     @Test
     fun `works with the configuration cache, and reuses it on the next run`() {
         buildFile("port = 0")

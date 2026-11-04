@@ -263,6 +263,9 @@ public abstract class LsdStudioTask : DefaultTask() {
             logger.lifecycle("LSD Studio: stopped.")
         } else if (process.exitValue() != 0) {
             throw GradleException("LSD Studio exited with code ${process.exitValue()}; its output is above.")
+        } else {
+            // Studio is a server: ending with code 0 when nobody asked it to stop is still unexpected.
+            logger.warn("LSD Studio exited on its own; its output is above.")
         }
     }
 

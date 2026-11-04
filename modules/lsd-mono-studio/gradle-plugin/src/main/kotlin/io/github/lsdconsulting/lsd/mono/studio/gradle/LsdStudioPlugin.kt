@@ -26,7 +26,7 @@ public class LsdStudioPlugin : Plugin<Project> {
             project.gradle.sharedServices.registerIfAbsent("lsdStudioProcesses", StudioProcesses::class.java) {}
         project.tasks.register("lsdStudio", LsdStudioTask::class.java) { task ->
             task.group = "lsd"
-            task.description = "Runs LSD Studio in the foreground until you stop it (Ctrl+C)."
+            task.description = "Runs LSD Studio in the foreground until you stop it (Ctrl+C). Killing the Gradle daemon outright leaves it running."
             task.port.convention(extension.port)
             task.expose.convention(extension.expose)
             task.openBrowser.convention(extension.openBrowser)

@@ -8,12 +8,13 @@ import java.util.concurrent.TimeUnit
 /**
  * The Studio processes this build started. Stops any still running when the build ends, however it
  * ends (finished, cancelled or failed); a JVM shutdown hook covers the Gradle daemon exiting.
+ * A daemon killed outright (`kill -9`) runs neither, so a Studio it started keeps running.
  */
 public abstract class StudioProcesses :
     BuildService<BuildServiceParameters.None>,
     AutoCloseable {
     private val running = ConcurrentHashMap.newKeySet<Process>()
-    private val hook = Thread({ running.toList().forEach(::stop) }, "lsd-studio-shutdown")
+    private val hook = Thread(::stopAll, "lsd-studio-shutdown")
 
     init {
         Runtime.getRuntime().addShutdownHook(hook)
@@ -27,8 +28,16 @@ public abstract class StudioProcesses :
         running -= process
     }
 
+    /** Stops every process still running; the shutdown hook and [close] both come here. */
+    internal fun stopAll() {
+        running.toList().forEach {
+            stop(it)
+            running -= it
+        }
+    }
+
     override fun close() {
-        running.toList().forEach(::stop)
+        stopAll()
         runCatching { Runtime.getRuntime().removeShutdownHook(hook) }
     }
 
@@ -39,15 +48,17 @@ public abstract class StudioProcesses :
          * Windows too there is no wrapper left holding the port.
          */
         fun stop(process: Process) {
-            val descendants = process.toHandle().descendants().toList()
-            descendants.forEach { it.destroy() }
+            val seen = process.toHandle().descendants().toList()
+            seen.forEach { it.destroy() }
             process.destroy()
             if (!process.waitFor(5, TimeUnit.SECONDS)) {
-                descendants.forEach { it.destroyForcibly() }
+                // List them again: a child started since the first look would be missed, and one whose
+                // parent has died no longer shows, so keep the first list too.
+                (seen + process.toHandle().descendants().toList()).forEach { it.destroyForcibly() }
                 process.destroyForcibly()
                 process.waitFor(5, TimeUnit.SECONDS)
             }
-            descendants.forEach { handle ->
+            (seen + process.toHandle().descendants().toList()).forEach { handle ->
                 if (handle.isAlive) handle.destroyForcibly()
             }
         }
