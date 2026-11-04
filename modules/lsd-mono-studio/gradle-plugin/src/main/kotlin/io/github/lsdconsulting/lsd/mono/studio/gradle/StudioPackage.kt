@@ -24,26 +24,37 @@ internal object StudioPackage {
         return file.takeIf { it.isFile }?.canonicalFile
     }
 
-    /** `name@x.y.z`, optionally scoped and with a pre-release: the only npm specs that never move. */
-    private val EXACT = Regex("""^((?:@[\w.-]+/)?[\w.-]+)@(\d+\.\d+\.\d+(?:-[\w.]+)?)$""")
+    /**
+     * `lsd-mono-studio@x.y.z`, optionally with a pre-release: the only npm specs that never move. The
+     * name is fixed, as the install is looked for at `node_modules/lsd-mono-studio`.
+     */
+    private val EXACT = Regex("""^${Regex.escape(StudioVersion.NPM_PACKAGE)}@(\d+\.\d+\.\d+(?:-[\w.]+)?)$""")
 
-    /** A git spec pinned to a commit, e.g. `github:org/repo#<sha>`. */
-    private val GIT_COMMIT = Regex("""^(git\+[a-z]+://|git://|github:|gitlab:|bitbucket:)\S+#[0-9a-fA-F]{7,40}$""")
+    /**
+     * A git spec pinned to a full 40-character commit, e.g. `github:org/repo#<sha>`. A shorter ref
+     * could also be a branch or tag, so it is refused.
+     */
+    private val GIT_COMMIT = Regex("""^(git\+[a-z]+://|git://|github:|gitlab:|bitbucket:)[^\s#]+#[0-9a-fA-F]{40}$""")
+
+    /** An https tarball URL, with no `#` or `?` that could make it a git ref or a range. */
+    private val TARBALL_URL = Regex("""^https://[^\s#?]+\.(tgz|tar\.gz)$""")
 
     /** The version an exact npm [spec] (`lsd-mono-studio@0.17.0`) names, else null. */
-    fun exactVersion(spec: String): String? = EXACT.matchEntire(spec.trim())?.groupValues?.get(2)
+    fun exactVersion(spec: String): String? = EXACT.matchEntire(spec.trim())?.groupValues?.get(1)
 
     /**
      * Fails unless [spec], which is neither a local directory nor a local file, names something that
-     * cannot change: an exact npm version, a tarball URL or a git commit. The install is cached by
+     * cannot change: an exact npm version, an https .tgz URL or a git commit. The install is cached by
      * spec, so a tag (`@latest`) or a range (`@^1.0.0`) would stay on whatever it first resolved to.
      */
     fun requireFixed(spec: String) {
-        if (exactVersion(spec) != null || GIT_COMMIT.matches(spec) || Regex("""^https?://\S+$""").matches(spec)) return
+        val trimmed = spec.trim()
+        if (exactVersion(trimmed) != null || GIT_COMMIT.matches(trimmed) || TARBALL_URL.matches(trimmed)) return
         throw IllegalArgumentException(
             "lsd.studio.package '$spec' is not a directory or file here, and not an exact npm version. Use an exact " +
                 "version such as ${StudioVersion.NPM_PACKAGE}@1.2.3 (not a tag such as @latest, or a range), a directory " +
-                "holding a built lsd-mono-studio, or a .tgz from npm pack.",
+                "holding a built lsd-mono-studio, a .tgz from npm pack, an https .tgz URL, or a git URL pinned to " +
+                "a full commit sha.",
         )
     }
 
