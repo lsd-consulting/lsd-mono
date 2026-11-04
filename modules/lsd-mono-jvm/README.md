@@ -11,7 +11,7 @@ Part of [LSD: living sequence diagrams](../../README.md).
 [![Maven Central: lsd-mono-jvm](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-jvm?label=lsd-mono-jvm)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-jvm)
 
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-jvm:0.15.0")
+testImplementation("io.github.lsd-consulting:lsd-mono-jvm:0.16.0")
 ```
 
 <!-- release-version:end -->
