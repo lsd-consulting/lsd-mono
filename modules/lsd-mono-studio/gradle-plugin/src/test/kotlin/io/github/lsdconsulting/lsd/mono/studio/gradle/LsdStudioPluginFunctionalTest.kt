@@ -93,6 +93,15 @@ class LsdStudioPluginFunctionalTest {
     }
 
     @Test
+    fun `refuses an npm tag before installing anything`() {
+        buildFile("port = 0")
+        val result = runner("lsdStudio", "-Plsd.studio.package=lsd-mono-studio@latest").buildAndFail()
+        assertTrue(result.output.contains("'lsd-mono-studio@latest' is not a directory or file here"), result.output)
+        assertFalse(result.output.contains("LSD Studio: installing"), result.output)
+        assertFalse(projectDir.resolve("studio-cache").exists(), "it touched the cache")
+    }
+
+    @Test
     fun `runs a local lsd-mono-studio in place, serves it, and stops it cleanly`() {
         buildFile("port = 0")
         val run = Running(projectDir, runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}", stopArg()))

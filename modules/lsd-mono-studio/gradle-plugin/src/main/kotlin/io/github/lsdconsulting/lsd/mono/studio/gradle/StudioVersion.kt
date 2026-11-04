@@ -27,7 +27,7 @@ internal object StudioVersion {
                 "released versions of $NPM_PACKAGE. Point it at one: set lsdStudio { studioPackage = \"…\" } or " +
                 "-P${LsdStudioPlugin.STUDIO_PACKAGE_PROPERTY}=… to a directory with a built lsd-mono-studio " +
                 "(modules/lsd-mono-studio in an lsd-mono checkout, after npm ci and npm run build), a .tgz from " +
-                "npm pack, or an npm spec such as $NPM_PACKAGE@latest.",
+                "npm pack, or an exact released version such as $NPM_PACKAGE@1.2.3.",
         )
     }
 

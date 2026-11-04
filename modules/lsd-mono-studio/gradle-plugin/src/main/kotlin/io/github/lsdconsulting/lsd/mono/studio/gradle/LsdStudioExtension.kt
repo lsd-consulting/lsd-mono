@@ -25,8 +25,9 @@ public abstract class LsdStudioExtension {
     public abstract val npmCommand: Property<String>
 
     /**
-     * Which lsd-mono-studio to run instead of the one matching the plugin's version: an npm spec
-     * (`lsd-mono-studio@0.17.0`), a packed `.tgz`, or a directory holding a built lsd-mono-studio
+     * Which lsd-mono-studio to run instead of the one matching the plugin's version: an exact npm
+     * version (`lsd-mono-studio@0.17.0`; a tag or range is refused, as the install is cached), a
+     * packed `.tgz`, or a directory holding a built lsd-mono-studio
      * (`modules/lsd-mono-studio` in an lsd-mono checkout), which runs in place. Also set by the
      * `lsd.studio.package` Gradle property. Unset, a released plugin runs its own version.
      */
