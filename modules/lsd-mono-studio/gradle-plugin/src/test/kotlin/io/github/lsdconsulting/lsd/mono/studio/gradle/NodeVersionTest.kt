@@ -31,13 +31,27 @@ class NodeVersionTest {
         assertNull(NodeVersion.parse("v24"))
         assertNull(NodeVersion.parse("v24.1"))
         assertNull(NodeVersion.parse("node v24.1.0"))
+        assertNull(NodeVersion.parse("v22.6.0abc"))
+        assertNull(NodeVersion.parse("v22.6.0.1"))
+        assertNull(NodeVersion.parse("v99999999999.0.0"))
     }
 
     @Test
-    fun `compares to the patch`() {
-        assertTrue(NodeVersion.parse("v22.5.9")!! < NodeVersion.parse("v22.6.0")!!)
-        assertTrue(NodeVersion.parse("v22.6.0")!! < NodeVersion.parse("v22.6.1")!!)
-        assertTrue(NodeVersion.parse("v22.6.1")!! > NodeVersion.MINIMUM)
+    fun `a banner line that starts with numbers is not the version`() {
+        assertEquals(NodeVersion(24, 1, 0), NodeVersion.parse("127.0.0.1:9229 inspector\nv24.1.0\n"))
+        assertEquals(NodeVersion(24, 1, 0), NodeVersion.parse("v22.6.0.1\nv24.1.0"))
+    }
+
+    @Test
+    fun `the first of several version lines wins`() {
+        assertEquals(NodeVersion(24, 1, 0), NodeVersion.parse("v24.1.0\nv22.0.0"))
+    }
+
+    @Test
+    fun `tolerates whitespace around the version and a suffix after it`() {
+        assertEquals(NodeVersion(22, 6, 0), NodeVersion.parse("  v22.6.0\r\n"))
+        assertEquals(NodeVersion(22, 6, 0), NodeVersion.parse("v22.6.0-rc.1"))
+        assertEquals(NodeVersion(23, 0, 0), NodeVersion.parse("v23.0.0-nightly20240410abc"))
     }
 
     @Test
@@ -46,6 +60,8 @@ class NodeVersionTest {
         assertTrue(NodeVersion.parse("v20.19.0")!! < NodeVersion.MINIMUM)
         assertTrue(NodeVersion.parse("v22.6.0")!! >= NodeVersion.MINIMUM)
         assertTrue(NodeVersion.parse("v23.0.0")!! > NodeVersion.MINIMUM)
+        assertTrue(NodeVersion.parse("v22.5.9")!! < NodeVersion.parse("v22.6.0")!!)
+        assertTrue(NodeVersion.parse("v22.6.0")!! < NodeVersion.parse("v22.6.1")!!)
         assertEquals("v22.6.0", NodeVersion.MINIMUM.toString())
     }
 }
