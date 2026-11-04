@@ -15,7 +15,9 @@ public abstract class StudioProcesses :
     BuildService<BuildServiceParameters.None>,
     AutoCloseable {
     private val running = ConcurrentHashMap.newKeySet<Process>()
-    private val hook = Thread(::stopAll, "lsd-studio-shutdown")
+
+    /** Unregistered by [close]; internal so tests can check that. */
+    internal val hook = Thread(::stopAll, "lsd-studio-shutdown")
 
     init {
         Runtime.getRuntime().addShutdownHook(hook)
@@ -76,16 +78,18 @@ public abstract class StudioProcesses :
         fun stop(process: Process) {
             // Called after Ctrl+C too: the thread is interrupted then, and waiting would throw at
             // once and skip the forced kill. Clear the flag while stopping and set it again after.
-            val interrupted = Thread.interrupted()
+            var interrupted = Thread.interrupted()
             try {
-                stopTree(process)
+                interrupted = stopTree(process) || interrupted
             } finally {
                 if (interrupted) Thread.currentThread().interrupt()
             }
         }
 
-        private fun stopTree(process: Process) {
+        /** True if the thread was interrupted again while stopping: the forced kill still runs. */
+        private fun stopTree(process: Process): Boolean {
             val seen = LinkedHashSet<ProcessHandle>()
+            var interrupted = false
 
             // Politely stops any child not seen before; true if there was one.
             fun stopNewChildren(): Boolean =
@@ -97,27 +101,42 @@ public abstract class StudioProcesses :
                     .onEach { it.destroy() }
                     .isNotEmpty()
 
-            val deadline = System.nanoTime() + GRACE_NANOS
-            // Until none are new, so one started since the first look is not missed.
-            var more = stopNewChildren()
-            while (more && System.nanoTime() < deadline) more = stopNewChildren()
-            process.destroy()
-            // Keep looking while it shuts down: it may start a child even in its SIGTERM handler.
-            // One started in the instant before it exits can still be missed.
-            while (!process.waitFor(POLL_MILLIS, TimeUnit.MILLISECONDS) && System.nanoTime() < deadline) {
-                stopNewChildren()
+            try {
+                val deadline = System.nanoTime() + GRACE_NANOS
+                // Until none are new, so one started since the first look is not missed.
+                var more = stopNewChildren()
+                while (more && System.nanoTime() < deadline) {
+                    Thread.sleep(POLL_MILLIS)
+                    more = stopNewChildren()
+                }
+                process.destroy()
+                // Keep looking while it shuts down: it may start a child even in its SIGTERM handler.
+                // One started in the instant before it exits can still be missed.
+                while (!process.waitFor(POLL_MILLIS, TimeUnit.MILLISECONDS) && System.nanoTime() < deadline) {
+                    stopNewChildren()
+                }
+                // Children that outlive the process get what is left of the grace period.
+                if (!process.isAlive) {
+                    while (seen.any { it.isAlive } && System.nanoTime() < deadline) Thread.sleep(POLL_MILLIS)
+                }
+            } catch (e: InterruptedException) {
+                // Cancelled twice: skip the rest of the grace period, but still force what is left.
+                interrupted = true
             }
             if (process.isAlive) {
                 stopNewChildren()
-                (seen + process.toHandle().descendants().toList()).forEach { it.destroyForcibly() }
+                seen.forEach { it.destroyForcibly() }
                 process.destroyForcibly()
-                process.waitFor(5, TimeUnit.SECONDS)
+                try {
+                    process.waitFor(5, TimeUnit.SECONDS)
+                } catch (e: InterruptedException) {
+                    interrupted = true
+                }
             }
-            // Children that outlive the process get what is left of the grace period, then are forced.
-            while (seen.any { it.isAlive } && System.nanoTime() < deadline) Thread.sleep(POLL_MILLIS)
             (seen + process.toHandle().descendants().toList()).forEach { handle ->
                 if (handle.isAlive) handle.destroyForcibly()
             }
+            return interrupted
         }
     }
 }

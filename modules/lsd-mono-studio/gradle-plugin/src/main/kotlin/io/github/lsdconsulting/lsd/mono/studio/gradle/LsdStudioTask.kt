@@ -270,16 +270,10 @@ public abstract class LsdStudioTask : DefaultTask() {
             reader.join(2000)
         }
         val exit = process.exitValue()
-        if (stopped) {
-            logger.lifecycle("LSD Studio: stopped.")
-        } else if (exit != 0) {
-            throw GradleException("LSD Studio exited with code $exit; its output is above.")
-        } else if (requested || stop?.exists() == true) {
-            // Asked to stop just as it ended cleanly by itself.
-            logger.lifecycle("LSD Studio: stopped.")
-        } else {
-            // Studio is a server: ending with code 0 when nobody asked it to stop is still unexpected.
-            logger.warn("LSD Studio exited on its own; its output is above.")
+        when (StudioOutcome.of(stopped, requested || stop?.exists() == true, exit)) {
+            StudioOutcome.STOPPED -> logger.lifecycle("LSD Studio: stopped.")
+            StudioOutcome.FAILED -> throw GradleException("LSD Studio exited with code $exit; its output is above.")
+            StudioOutcome.ENDED_ON_ITS_OWN -> logger.warn("LSD Studio exited on its own; its output is above.")
         }
     }
 

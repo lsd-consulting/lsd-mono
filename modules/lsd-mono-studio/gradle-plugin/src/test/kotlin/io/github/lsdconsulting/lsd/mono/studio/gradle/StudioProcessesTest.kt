@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.io.InputStream
@@ -179,6 +180,85 @@ class StudioProcessesTest {
             Thread.interrupted()
         }
         assertGone(process.pid())
+    }
+
+    @Test
+    fun `a child still shutting down after its parent has gone is given the rest of the grace period`() {
+        assumeFalse(windows, "Windows has no SIGTERM: destroy ends the process at once")
+        // The child takes about a second over SIGTERM, then exits 5; a forced kill would leave no file.
+        val code = dir.resolve("child.exit")
+        val slow =
+            "process.on('SIGTERM', () => setTimeout(() => process.exit(5), 1000)); " +
+                "process.on('exit', (c) => ${write(code, "c")}); ${print("'up'")}; setInterval(() => {}, 1000)"
+        // The parent keeps node's default SIGTERM handling, so it exits at once.
+        val process =
+            node(
+                "const c = ${spawn(slow)}; c.stdout.once('data', () => ${print("c.pid")}); " +
+                    "setInterval(() => {}, 1000)",
+            )
+        val child = process.line().toLong()
+        StudioProcesses.stop(process)
+        assertGone(process.pid(), child)
+        assertTrue(code.exists(), "the child was killed rather than left to exit")
+        assertEquals("5", code.readText())
+    }
+
+    @Test
+    fun `a second interrupt while stopping still forces a stubborn process, and keeps the interrupt`() {
+        assumeFalse(windows, "Windows has no SIGTERM: destroy ends the process at once")
+        val process = node("process.on('SIGTERM', () => {}); ${print("'ready'")}; setInterval(() => {}, 1000)")
+        assertEquals("ready", process.line())
+        var failure: Throwable? = null
+        var keptInterrupt = false
+        val stopper =
+            Thread {
+                try {
+                    StudioProcesses.stop(process)
+                    keptInterrupt = Thread.currentThread().isInterrupted
+                } catch (e: Throwable) {
+                    failure = e
+                }
+            }
+        stopper.start()
+        // Well inside the 5 s grace period, while stop is waiting for the process.
+        Thread.sleep(500)
+        stopper.interrupt()
+        stopper.join(TimeUnit.SECONDS.toMillis(30))
+        assertEquals(null, failure, "the interrupt escaped stop")
+        assertTrue(keptInterrupt, "the interrupt was swallowed")
+        assertGone(process.pid())
+    }
+
+    @Test
+    fun `closing the service unregisters its shutdown hook`() {
+        val service = service()
+        service.close()
+        assertFalse(Runtime.getRuntime().removeShutdownHook(service.hook), "the hook is still registered")
+    }
+
+    @Test
+    fun `closing the service unregisters its shutdown hook even when stopping fails`() {
+        val service = service()
+        // An Error is not caught per process, so it escapes stopAll.
+        val failing =
+            object : Process() {
+                override fun getOutputStream(): OutputStream = OutputStream.nullOutputStream()
+
+                override fun getInputStream(): InputStream = InputStream.nullInputStream()
+
+                override fun getErrorStream(): InputStream = InputStream.nullInputStream()
+
+                override fun waitFor(): Int = 0
+
+                override fun exitValue(): Int = 0
+
+                override fun destroy() = Unit
+
+                override fun toHandle(): ProcessHandle = throw AssertionError("cannot stop")
+            }
+        service.add(failing)
+        assertThrows<AssertionError> { service.close() }
+        assertFalse(Runtime.getRuntime().removeShutdownHook(service.hook), "the hook is still registered")
     }
 
     @Test
