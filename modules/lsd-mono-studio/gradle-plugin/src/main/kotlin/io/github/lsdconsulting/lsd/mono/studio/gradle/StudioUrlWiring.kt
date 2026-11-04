@@ -106,12 +106,11 @@ internal class StudioUrlWiring(
 
         private val logger = Logging.getLogger(StudioUrlWiring::class.java)
 
-        private val NPM_VERSION = Regex("""${StudioVersion.NPM_PACKAGE}@(\d+\.\d+\.\d+.*)""")
         private val RELEASE = Regex("""\d+\.\d+\.\d+""")
 
         /**
          * The Studio version this build runs, or null when it is not known without installing it:
-         * a local directory's package.json, an `lsd-mono-studio@x.y.z` spec, or a released plugin's own version.
+         * a local directory's package.json, an exact `lsd-mono-studio@x.y.z` spec, or a released plugin's own version.
          */
         fun expectedVersion(
             studioPackage: String?,
@@ -121,7 +120,8 @@ internal class StudioUrlWiring(
             val spec = studioPackage?.trim()?.takeIf { it.isNotEmpty() }
             if (spec == null) return pluginVersion.takeIf { RELEASE.matches(it) }
             StudioPackage.localDirectory(spec, projectDir)?.let { return StudioPackage.version(it.resolve("package.json")) }
-            return NPM_VERSION.matchEntire(spec)?.groupValues?.get(1)
+            // Only an exact version names one; lsdStudio refuses a tag or a range, so nothing to compare.
+            return StudioPackage.exactVersion(spec)
         }
 
         /** Whether the task already sets the URL, as a system property, a JVM argument or an environment variable. */

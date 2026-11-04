@@ -53,12 +53,15 @@ class LsdStudioPluginFunctionalTest {
     private fun path(file: File) = file.path.replace("\\", "\\\\")
 
     /** Studio keeps its reports under the home directory: give it a temporary one. */
-    private fun runner(vararg args: String): GradleRunner =
+    private fun runner(
+        vararg args: String,
+        env: Map<String, String> = emptyMap(),
+    ): GradleRunner =
         GradleRunner
             .create()
             .withProjectDir(projectDir)
             .withPluginClasspath()
-            .withEnvironment(System.getenv() + mapOf("HOME" to home.path, "USERPROFILE" to home.path))
+            .withEnvironment(System.getenv() + mapOf("HOME" to home.path, "USERPROFILE" to home.path) + env)
             .withArguments(*args, "--stacktrace")
 
     @Test
@@ -90,6 +93,17 @@ class LsdStudioPluginFunctionalTest {
         buildFile("")
         val result = runner("lsdStudio").buildAndFail()
         assertTrue(result.output.contains("lsd.studio.package"), result.output)
+    }
+
+    @Test
+    fun `refuses an npm tag before installing anything`() {
+        buildFile("port = 0")
+        // An unreachable registry, so that if the check were lost npm fails at once instead of installing.
+        val offline = mapOf("npm_config_registry" to "http://127.0.0.1:9", "npm_config_fetch_retries" to "0")
+        val result = runner("lsdStudio", "-Plsd.studio.package=lsd-mono-studio@latest", env = offline).buildAndFail()
+        assertTrue(result.output.contains("'lsd-mono-studio@latest' is not a directory or file here"), result.output)
+        assertFalse(result.output.contains("LSD Studio: installing"), result.output)
+        assertFalse(projectDir.resolve("studio-cache").exists(), "it touched the cache")
     }
 
     @Test
