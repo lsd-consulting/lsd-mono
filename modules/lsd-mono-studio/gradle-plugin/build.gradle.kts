@@ -83,6 +83,15 @@ dependencies {
 tasks.named<Test>("test") {
     dependsOn(buildStudio)
     systemProperty("lsd.studio.dir", studioDir.asFile.absolutePath)
+    // The cancellation test drives Gradle through the Tooling API: this Gradle, with its own user home.
+    systemProperty("lsd.gradle.home", gradle.gradleHomeDir!!.absolutePath)
+    systemProperty(
+        "lsd.tooling.home",
+        layout.buildDirectory
+            .dir("tooling-api-home")
+            .get()
+            .asFile.absolutePath,
+    )
     inputs.dir(studioDir.dir("bin")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(studioDir.dir("dist")).withPathSensitivity(PathSensitivity.RELATIVE)
     // Each test starts a Gradle build that runs Node.

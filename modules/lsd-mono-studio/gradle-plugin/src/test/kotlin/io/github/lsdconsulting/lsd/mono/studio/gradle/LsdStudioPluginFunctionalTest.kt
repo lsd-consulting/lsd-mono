@@ -3,6 +3,10 @@ package io.github.lsdconsulting.lsd.mono.studio.gradle
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import org.gradle.tooling.BuildCancelledException
+import org.gradle.tooling.GradleConnectionException
+import org.gradle.tooling.GradleConnector
+import org.gradle.tooling.ResultHandler
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -10,10 +14,12 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.io.OutputStream
 import java.io.Writer
 import java.net.HttpURLConnection
 import java.net.ServerSocket
 import java.net.URI
+import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
@@ -103,6 +109,105 @@ class LsdStudioPluginFunctionalTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":lsdStudio")?.outcome)
         assertTrue(result.output.contains("LSD Studio: stopped."), result.output)
         assertGone(run.pid(), url)
+    }
+
+    /**
+     * Ctrl+C, or an IDE's stop button: the Tooling API cancels the build, which interrupts the task;
+     * Studio must not outlive it. TestKit cannot cancel a build, so this drives Gradle directly.
+     */
+    @Test
+    fun `cancelling the build stops Studio`() {
+        val metadata = Properties()
+        javaClass.classLoader.getResourceAsStream("plugin-under-test-metadata.properties")!!.use { metadata.load(it) }
+        val classpath =
+            metadata
+                .getProperty("implementation-classpath")
+                .split(File.pathSeparator)
+                .joinToString(", ") { "'" + it.replace("\\", "/") + "'" }
+        projectDir.resolve("build.gradle").writeText(
+            """
+            buildscript { dependencies { classpath files($classpath) } }
+            apply plugin: 'io.github.lsd-consulting.lsd-mono-studio'
+            lsdStudio {
+                openBrowser.set(false)
+                port.set(0)
+                cacheDir.set(layout.projectDirectory.dir('studio-cache'))
+            }
+            """.trimIndent(),
+        )
+        val connector =
+            GradleConnector
+                .newConnector()
+                .forProjectDirectory(projectDir)
+                .useInstallation(File(System.getProperty("lsd.gradle.home")))
+                .useGradleUserHomeDir(File(System.getProperty("lsd.tooling.home")))
+        val output = StringBuffer()
+        val outcome = CompletableFuture<Throwable?>()
+        val cancel = GradleConnector.newCancellationTokenSource()
+        try {
+            connector.connect().use { connection ->
+                connection
+                    .newBuild()
+                    .forTasks("lsdStudio")
+                    .withArguments("-Plsd.studio.package=${studioDir.path}", "--stacktrace")
+                    .setEnvironmentVariables(System.getenv() + mapOf("HOME" to home.path, "USERPROFILE" to home.path))
+                    .withCancellationToken(cancel.token())
+                    .setStandardOutput(Collect(output))
+                    .setStandardError(Collect(output))
+                    .run(
+                        object : ResultHandler<Void> {
+                            override fun onComplete(result: Void?) {
+                                outcome.complete(null)
+                            }
+
+                            override fun onFailure(failure: GradleConnectionException) {
+                                outcome.complete(failure)
+                            }
+                        },
+                    )
+                val pid = awaitOutput(output, outcome, Regex("""LSD Studio: started \(pid (\d+)\)""")).toLong()
+                val url = awaitOutput(output, outcome, Regex("""LSD Studio is running at (\S+)"""))
+                cancel.cancel()
+                val failure = outcome.get(60, TimeUnit.SECONDS)
+                assertTrue(failure is BuildCancelledException, "expected the build to be cancelled, got $failure\n$output")
+                assertGone(pid, url, seconds = 30)
+                // The task itself stopped it (the interrupt path), not the daemon going away.
+                assertTrue(output.contains("LSD Studio: stopped."), output.toString())
+            }
+        } finally {
+            connector.disconnect()
+        }
+    }
+
+    /** Collects a Tooling API build's output; its lines are ASCII, which is all the tests look for. */
+    private class Collect(
+        private val into: StringBuffer,
+    ) : OutputStream() {
+        override fun write(b: Int) {
+            into.append(b.toChar())
+        }
+
+        override fun write(
+            b: ByteArray,
+            off: Int,
+            len: Int,
+        ) {
+            into.append(String(b, off, len))
+        }
+    }
+
+    private fun awaitOutput(
+        output: StringBuffer,
+        outcome: CompletableFuture<Throwable?>,
+        pattern: Regex,
+    ): String {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(180)
+        while (System.nanoTime() < deadline) {
+            pattern.find(output)?.let { return it.groupValues[1] }
+            if (outcome.isDone) error("The build ended before Studio started (${outcome.get()}):\n$output")
+            Thread.sleep(100)
+        }
+        error("Studio did not start within 180s:\n$output")
     }
 
     /** A stand-in lsd-mono-studio that runs [script] instead of serving anything. */
@@ -545,8 +650,9 @@ class LsdStudioPluginFunctionalTest {
     private fun assertGone(
         pid: Long,
         url: String,
+        seconds: Long = 10,
     ) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(seconds)
         while (ProcessHandle.of(pid).map { it.isAlive }.orElse(false) && System.nanoTime() < deadline) Thread.sleep(100)
         assertFalse(ProcessHandle.of(pid).map { it.isAlive }.orElse(false), "Studio (pid $pid) is still running")
         assertTrue(runCatching { get(url) }.isFailure, "$url still answers")
