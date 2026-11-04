@@ -108,6 +108,13 @@ public abstract class LsdStudioTask : DefaultTask() {
             return script
         }
         val localFile = StudioPackage.localFile(spec, projectDir)
+        if (localFile == null) {
+            try {
+                StudioPackage.requireFixed(spec)
+            } catch (e: IllegalArgumentException) {
+                throw GradleException(e.message ?: "lsd.studio.package '$spec' is not an exact version", e)
+            }
+        }
         val installDir = StudioPackage.installDir(cacheDir.get().asFile, spec, localFile)
         // Only decides what to log: ensureInstalled checks again under its lock.
         if (StudioInstaller.isComplete(installDir, spec)) {
