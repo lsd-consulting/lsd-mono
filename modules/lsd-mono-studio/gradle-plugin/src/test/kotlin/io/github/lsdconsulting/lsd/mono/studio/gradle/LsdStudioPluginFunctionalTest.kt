@@ -388,6 +388,24 @@ class LsdStudioPluginFunctionalTest {
     }
 
     @Test
+    fun `an argument provider that fails when checked does not stop the tests`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            // Throws on its first call only, the plugin's check; Gradle's own call for the command line works.
+            testProject(
+                "port = $port",
+                test =
+                    "val calls = intArrayOf(0)\n" +
+                        "jvmArgumentProviders.add(CommandLineArgumentProvider { " +
+                        "if (calls[0]++ == 0) throw IllegalStateException(\"not yet\") else listOf(\"-Dother=1\") })",
+            )
+            val result = runner("test", "--info").build()
+            assertEquals(TaskOutcome.SUCCESS, result.task(":test")?.outcome, result.output)
+            assertTrue(result.output.contains("a JVM argument provider of :test failed when checked"), result.output)
+            assertTrue(testJvmArgs().contains(studioUrlArg(port)), testJvmArgs().toString())
+        }
+    }
+
+    @Test
     fun `whether Studio is running does not make the tests out of date`() {
         imposter(studioReply("200 OK", studioVersion)) { port ->
             testProject("port = $port")

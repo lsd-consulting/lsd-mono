@@ -38,7 +38,15 @@ internal class StudioUrlWiring(
         val fromProviders =
             test.jvmArgumentProviders
                 .filter { it !== this }
-                .flatMap { provider -> runCatching { provider.asArguments().toList() }.getOrDefault(emptyList()) }
+                .flatMap { provider ->
+                    try {
+                        provider.asArguments().toList()
+                    } catch (e: Exception) {
+                        // Not the plugin's to fail: Gradle calls it again for the command line.
+                        logger.info("LSD Studio: a JVM argument provider of {} failed when checked ({}), so it is skipped.", task.path, e.toString())
+                        emptyList()
+                    }
+                }
         if (userSet(test.systemProperties, test.environment, test.jvmArgs.orEmpty() + fromProviders)) {
             logger.info("LSD Studio: {} already sets {}, so it is left as it is.", task.path, STUDIO_URL_PROPERTY)
             return
