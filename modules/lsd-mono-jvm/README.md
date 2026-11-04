@@ -134,7 +134,8 @@ its tests run, as well as being written to a file:
 lsd.mono.studio.url=ws://127.0.0.1:7357/ws/captures
 ```
 
-It is off when the property is unset, and it works the same from JUnit, Cucumber, Spring Boot or
+The [LSD Studio Gradle plugin](../lsd-mono-studio/README.md#start-it) sets it for a build's tests while
+Studio is running. It is off when the property is unset, and it works the same from JUnit, Cucumber, Spring Boot or
 `LsdContext` by hand, because it hangs off `LsdContext` itself.
 
 - **What is sent:** a report opens its own WebSocket when its first scenario begins, and sends

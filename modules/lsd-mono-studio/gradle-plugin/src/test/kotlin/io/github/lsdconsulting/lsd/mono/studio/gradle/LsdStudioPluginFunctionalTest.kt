@@ -214,6 +214,208 @@ class LsdStudioPluginFunctionalTest {
         }
     }
 
+    /**
+     * A Java project with the plugin, one class under src/test and no tests in it, whose test
+     * task writes the JVM arguments it ran with to jvm-args.txt.
+     */
+    private fun testProject(
+        lsdStudio: String,
+        test: String = "",
+    ) {
+        projectDir.resolve("build.gradle.kts").writeText(
+            """
+            plugins {
+                java
+                id("io.github.lsd-consulting.lsd-mono-studio")
+            }
+            lsdStudio {
+                $lsdStudio
+            }
+            tasks.test {
+                failOnNoDiscoveredTests = false
+                $test
+                val out = file("jvm-args.txt")
+                doLast { out.writeText((this as Test).allJvmArgs.joinToString("\n")) }
+            }
+            """.trimIndent(),
+        )
+        projectDir.resolve("src/test/java/Empty.java").apply { parentFile.mkdirs() }.writeText("class Empty {}\n")
+    }
+
+    private fun testJvmArgs() = projectDir.resolve("jvm-args.txt").readLines()
+
+    private fun studioUrlArg(port: Int) = "-Dlsd.mono.studio.url=ws://127.0.0.1:$port/ws/captures"
+
+    @Test
+    fun `tests are pointed at a running Studio`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            testProject("port = $port")
+            val result = runner("test").build()
+            assertEquals(TaskOutcome.SUCCESS, result.task(":test")?.outcome, result.output)
+            assertTrue(testJvmArgs().contains(studioUrlArg(port)), testJvmArgs().toString())
+            assertTrue(result.output.contains("LSD Studio is running: :test streams its reports to ws://127.0.0.1:$port/ws/captures"), result.output)
+        }
+    }
+
+    @Test
+    fun `tests run as usual when Studio is not running`() {
+        val port = ServerSocket(0).use { it.localPort }
+        testProject("port = $port")
+        val result = runner("test").build()
+        assertEquals(TaskOutcome.SUCCESS, result.task(":test")?.outcome, result.output)
+        assertFalse(testJvmArgs().any { it.contains("lsd.mono.studio.url") }, testJvmArgs().toString())
+    }
+
+    @Test
+    fun `something on the port that is not Studio does not get the tests`() {
+        imposter("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n[]") { port ->
+            testProject("port = $port")
+            runner("test").build()
+            assertFalse(testJvmArgs().any { it.contains("lsd.mono.studio.url") }, testJvmArgs().toString())
+        }
+    }
+
+    @Test
+    fun `wireTests = false leaves the tests alone`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            testProject("port = $port\nwireTests = false")
+            runner("test").build()
+            assertFalse(testJvmArgs().any { it.contains("lsd.mono.studio.url") }, testJvmArgs().toString())
+        }
+    }
+
+    @Test
+    fun `a URL the build already sets is kept`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            testProject("port = $port", test = "systemProperty(\"lsd.mono.studio.url\", \"ws://elsewhere/ws/captures\")")
+            runner("test").build()
+            assertEquals(listOf("-Dlsd.mono.studio.url=ws://elsewhere/ws/captures"), testJvmArgs().filter { it.contains("lsd.mono.studio.url") })
+        }
+    }
+
+    @Test
+    fun `an LSD_MONO_STUDIO_URL the build already sets is kept`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            testProject("port = $port", test = "environment(\"LSD_MONO_STUDIO_URL\", \"ws://elsewhere/ws/captures\")")
+            runner("test").build()
+            assertFalse(testJvmArgs().any { it.contains("lsd.mono.studio.url") }, testJvmArgs().toString())
+        }
+    }
+
+    @Test
+    fun `port = 0 leaves the tests alone`() {
+        testProject("port = 0")
+        val result = runner("test").build()
+        assertEquals(TaskOutcome.SUCCESS, result.task(":test")?.outcome, result.output)
+        assertFalse(testJvmArgs().any { it.contains("lsd.mono.studio.url") }, testJvmArgs().toString())
+    }
+
+    @Test
+    fun `points the tests at Studio with the configuration cache, and checks again when it is reused`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            testProject("port = $port")
+            val first = runner("test", "--configuration-cache").build()
+            assertTrue(first.output.contains("Configuration cache entry stored"), first.output)
+            assertTrue(testJvmArgs().contains(studioUrlArg(port)), testJvmArgs().toString())
+            val second = runner("test", "--configuration-cache", "--rerun-tasks").build()
+            assertTrue(second.output.contains("Configuration cache entry reused"), second.output)
+            assertTrue(testJvmArgs().contains(studioUrlArg(port)), testJvmArgs().toString())
+        }
+        // The same cached configuration, with Studio gone: whether it runs is checked as the test starts.
+        val third = runner("test", "--configuration-cache", "--rerun-tasks").build()
+        assertTrue(third.output.contains("Configuration cache entry reused"), third.output)
+        assertEquals(TaskOutcome.SUCCESS, third.task(":test")?.outcome, third.output)
+        assertFalse(testJvmArgs().any { it.contains("lsd.mono.studio.url") }, testJvmArgs().toString())
+    }
+
+    @Test
+    fun `tests still stream to a Studio of another version, with a warning naming both`() {
+        imposter(studioReply("200 OK", "0.0.1")) { port ->
+            testProject("port = $port\nstudioPackage = \"${path(studioDir)}\"")
+            val result = runner("test").build()
+            assertTrue(testJvmArgs().contains(studioUrlArg(port)), testJvmArgs().toString())
+            assertTrue(
+                result.output.contains("LSD Studio 0.0.1 is running on http://127.0.0.1:$port, but this build runs LSD Studio $studioVersion"),
+                result.output,
+            )
+        }
+    }
+
+    @Test
+    fun `a Studio of the same version gets no warning`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            testProject("port = $port\nstudioPackage = \"${path(studioDir)}\"")
+            val result = runner("test").build()
+            assertTrue(testJvmArgs().contains(studioUrlArg(port)), testJvmArgs().toString())
+            assertFalse(result.output.contains("may not line up"), result.output)
+        }
+    }
+
+    @Test
+    fun `a redirect is not followed to a Studio elsewhere`() {
+        imposter(studioReply("200 OK", studioVersion)) { studio ->
+            imposter("HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:$studio/api/reports\r\nContent-Length: 0\r\nConnection: close\r\n\r\n") { port ->
+                testProject("port = $port")
+                runner("test").build()
+                assertFalse(testJvmArgs().any { it.contains("lsd.mono.studio.url") }, testJvmArgs().toString())
+            }
+        }
+    }
+
+    @Test
+    fun `a port that takes the connection but never answers is reported, and the tests still run`() {
+        ServerSocket(0).use { socket ->
+            testProject("port = ${socket.localPort}")
+            val result = runner("test").build()
+            assertEquals(TaskOutcome.SUCCESS, result.task(":test")?.outcome, result.output)
+            assertTrue(result.output.contains("LSD Studio: something on port ${socket.localPort} did not answer in time"), result.output)
+            assertFalse(testJvmArgs().any { it.contains("lsd.mono.studio.url") }, testJvmArgs().toString())
+        }
+    }
+
+    @Test
+    fun `a URL from the build's own argument provider is kept`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            testProject(
+                "port = $port",
+                test = "jvmArgumentProviders.add(CommandLineArgumentProvider { listOf(\"-Dlsd.mono.studio.url=ws://elsewhere/ws/captures\") })",
+            )
+            val result = runner("test").build()
+            // Detected, not just winning by argument order: the plugin adds no URL of its own.
+            assertFalse(result.output.contains("streams its reports to"), result.output)
+            assertEquals(listOf("-Dlsd.mono.studio.url=ws://elsewhere/ws/captures"), testJvmArgs().filter { it.contains("lsd.mono.studio.url") })
+        }
+    }
+
+    @Test
+    fun `an argument provider that fails when checked does not stop the tests`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            // Throws on its first call only, the plugin's check; Gradle's own call for the command line works.
+            testProject(
+                "port = $port",
+                test =
+                    "val calls = intArrayOf(0)\n" +
+                        "jvmArgumentProviders.add(CommandLineArgumentProvider { " +
+                        "if (calls[0]++ == 0) throw IllegalStateException(\"not yet\") else listOf(\"-Dother=1\") })",
+            )
+            val result = runner("test", "--info").build()
+            assertEquals(TaskOutcome.SUCCESS, result.task(":test")?.outcome, result.output)
+            assertTrue(result.output.contains("a JVM argument provider of :test failed when checked"), result.output)
+            assertTrue(testJvmArgs().contains(studioUrlArg(port)), testJvmArgs().toString())
+        }
+    }
+
+    @Test
+    fun `whether Studio is running does not make the tests out of date`() {
+        imposter(studioReply("200 OK", studioVersion)) { port ->
+            testProject("port = $port")
+            runner("test").build()
+        }
+        // Studio has gone from that port.
+        val again = runner("test").build()
+        assertEquals(TaskOutcome.UP_TO_DATE, again.task(":test")?.outcome, again.output)
+    }
+
     /** An HTTP reply with [status] and the Studio header valued [version]. */
     private fun studioReply(
         status: String,

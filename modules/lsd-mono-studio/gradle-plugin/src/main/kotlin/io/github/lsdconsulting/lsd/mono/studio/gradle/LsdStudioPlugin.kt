@@ -2,6 +2,7 @@ package io.github.lsdconsulting.lsd.mono.studio.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.testing.Test
 
 /**
  * `io.github.lsd-consulting.lsd-mono-studio`: adds the [lsdStudio][LsdStudioExtension] extension and
@@ -17,6 +18,7 @@ public class LsdStudioPlugin : Plugin<Project> {
         extension.nodeCommand.convention("node")
         extension.npmCommand.convention("npm")
         extension.studioPackage.convention(gradleProperty)
+        extension.wireTests.convention(true)
         // Resolve the Gradle user home now: providers that capture the Project break the configuration cache.
         val cacheDir = project.gradle.gradleUserHomeDir.resolve("caches/lsd-mono-studio")
         extension.cacheDir.convention(project.layout.dir(project.provider { cacheDir }))
@@ -44,6 +46,11 @@ public class LsdStudioPlugin : Plugin<Project> {
             )
             task.processes.set(processes)
             task.usesService(processes)
+        }
+        project.tasks.withType(Test::class.java).configureEach { task ->
+            val wiring = StudioUrlWiring(extension.port, extension.wireTests, extension.studioPackage, project.layout.projectDirectory.asFile)
+            task.doFirst(wiring)
+            task.jvmArgumentProviders.add(wiring)
         }
     }
 
