@@ -56,9 +56,13 @@ Set the `port` and `expose` options in an `lsdStudio { }` block in your build fi
 
 While LSD Studio is running on that port, the plugin also points the project's `Test` tasks at it,
 so `./gradlew test` in another terminal streams its reports live (see **Live from your tests**
-below). Each test task checks the port as it starts, for at most 300 ms, and only a server that
-answers as LSD Studio counts. When Studio is not running the tests run as usual. A test task that
-already sets `lsd.mono.studio.url` or `LSD_MONO_STUDIO_URL` is left alone. A URL in `lsd-mono.properties`
+below). Each test task checks the port as it starts: 300 ms to connect and 1.5 s to answer. Only a
+server that answers as LSD Studio counts, and one of another version gets the tests with a warning
+naming both versions. When Studio is not running the tests run as usual. A test task that is up to
+date or comes from the build cache does not run, so nothing streams: use `./gradlew test --rerun` or
+`./gradlew cleanTest test` to watch a live run. A test task that already sets
+`lsd.mono.studio.url` or `LSD_MONO_STUDIO_URL`, as a system property, a JVM argument (including
+from its own `jvmArgumentProviders`) or in its environment, is left alone. A URL in `lsd-mono.properties`
 or JUnit configuration is not seen, and the plugin's system property wins over it. It needs a fixed port,
 so not `port = 0`, and it always uses `127.0.0.1`, even with `expose`. To turn it off:
 
