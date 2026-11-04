@@ -54,7 +54,9 @@ sourceSets.main {
 // schema/. The report viewer is skipped (Studio shows its "viewer not built" page without it).
 val studioDir = layout.projectDirectory.dir("..")
 val windows = System.getProperty("os.name").lowercase().contains("windows")
-// npm is a .cmd script on Windows, which only cmd runs; node runs directly everywhere.
+// npm is a .cmd script on Windows, which only cmd runs; node runs directly everywhere. cmd /c
+// re-parses metacharacters, so this is injection-safe only because every argument passed after it
+// is a constant in this file: never pass user input or project properties through it.
 val npm = if (windows) listOf("cmd", "/c", "npm") else listOf("npm")
 val studioNpmCi =
     tasks.register<Exec>("studioNpmCi") {
@@ -63,7 +65,10 @@ val studioNpmCi =
         commandLine(npm + listOf("ci", "--ignore-scripts", "--no-audit", "--no-fund"))
         inputs.file(studioDir.file("package.json")).withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.file(studioDir.file("package-lock.json")).withPathSensitivity(PathSensitivity.RELATIVE)
-        // npm's own record of what node_modules holds: a cheap stand-in for the whole directory.
+        // npm's own record of what node_modules holds (npm 7+, rewritten by every npm ci): a cheap
+        // stand-in for the whole directory. It does not notice hand damage inside node_modules,
+        // such as a deleted package, and a developer's own `npm install` rewrites it, so the next
+        // build runs `npm ci` again, which replaces their node_modules.
         outputs.file(studioDir.file("node_modules/.package-lock.json"))
     }
 val studioCopySchema =
@@ -82,8 +87,8 @@ val studioBuildViewer =
         environment("LSD_STUDIO_SKIP_VIEWER", "1")
         commandLine("node", "scripts/build-viewer.mjs")
         inputs.file(studioDir.file("scripts/build-viewer.mjs")).withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs.property("skipViewer", "1")
-        outputs.dir(studioDir.dir("viewer"))
+        // With the skip set it writes nothing, so it declares no output and runs each time (it
+        // only checks the variable and returns).
     }
 val buildStudio =
     tasks.register<Exec>("buildStudio") {
@@ -98,6 +103,10 @@ val buildStudio =
         inputs.dir(studioDir.dir("src")).withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.file(studioDir.file("package-lock.json")).withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.file(studioDir.file("tsconfig.build.json")).withPathSensitivity(PathSensitivity.RELATIVE)
+        // tsconfig.build.json extends it.
+        inputs.file(studioDir.file("tsconfig.json")).withPathSensitivity(PathSensitivity.RELATIVE)
+        // studioNpmCi's output: ties the build to the installed tsc, not only to the lockfile.
+        inputs.file(studioDir.file("node_modules/.package-lock.json")).withPathSensitivity(PathSensitivity.RELATIVE)
         outputs.dir(dist)
         outputs.cacheIf { true }
     }
@@ -105,7 +114,7 @@ val buildStudio =
 // Most of the plugin runs only in the functional tests, which Gradle TestKit runs in a separate
 // Gradle process that Kover does not see; the floor covers the unit-tested parts.
 lsdCoverage {
-    lineFloor.set(63)
+    lineFloor.set(66)
 }
 
 dependencies {
@@ -129,6 +138,8 @@ tasks.named<Test>("test") {
     )
     inputs.dir(studioDir.dir("bin")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(studioDir.dir("dist")).withPathSensitivity(PathSensitivity.RELATIVE)
+    // The tests validate reports against the copied schema.
+    inputs.dir(studioDir.dir("schema")).withPathSensitivity(PathSensitivity.RELATIVE)
     // Each test starts a Gradle build that runs Node.
     maxParallelForks = 1
     // Lists every test, so CI shows that the Windows-only ones ran there.

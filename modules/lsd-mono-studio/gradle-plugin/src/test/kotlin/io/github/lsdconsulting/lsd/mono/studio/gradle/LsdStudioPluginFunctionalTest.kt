@@ -127,7 +127,10 @@ class LsdStudioPluginFunctionalTest {
         assertGone(run.pid(), url)
     }
 
-    /** The oldest Gradle the plugin supports (see the README): 9.0, alongside the build's own. */
+    /**
+     * The oldest Gradle the plugin supports (see the README): 9.0, alongside the build's own.
+     * TestKit downloads the 9.0 distribution on first use, so this test needs network access.
+     */
     @Test
     fun `runs on the minimum supported Gradle, 9_0`() {
         buildFile("port = 0")
