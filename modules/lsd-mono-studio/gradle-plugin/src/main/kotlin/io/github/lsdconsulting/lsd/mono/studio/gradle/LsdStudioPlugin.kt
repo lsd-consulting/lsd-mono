@@ -48,7 +48,7 @@ public class LsdStudioPlugin : Plugin<Project> {
             task.usesService(processes)
         }
         project.tasks.withType(Test::class.java).configureEach { task ->
-            val wiring = StudioUrlWiring(extension.port, extension.wireTests)
+            val wiring = StudioUrlWiring(extension.port, extension.wireTests, extension.studioPackage, project.layout.projectDirectory.asFile)
             task.doFirst(wiring)
             task.jvmArgumentProviders.add(wiring)
         }
