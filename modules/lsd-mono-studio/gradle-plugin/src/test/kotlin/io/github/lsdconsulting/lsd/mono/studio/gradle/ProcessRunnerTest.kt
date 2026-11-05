@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
+import org.slf4j.LoggerFactory
 import java.io.File
+import java.lang.reflect.Proxy
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -175,5 +177,98 @@ class ProcessRunnerTest {
         assertFalse(e.message!!.contains(outputSecret), e.message)
         assertFalse(e.message!!.contains(commandSecret), e.message)
         assertAllGone(pids)
+    }
+
+    /**
+     * The parent exits while a child still holds its output pipe, which is the case the warning
+     * exists for. The wait is the runner's own few seconds, then the child is stopped.
+     */
+    @Test
+    fun `a command that leaves its output open redacts credentials in the warning`(
+        @TempDir dir: File,
+    ) {
+        val pids = File(dir, "pids")
+        val secret = "fakewarnzz"
+        val warnings = mutableListOf<String>()
+        val restore = captureLogMessages(warnings)
+        try {
+            val result =
+                ProcessRunner.run(
+                    leavingOutputOpen(dir, pids) + "https://fakeuser:$secret@registry.example/x",
+                    timeout = Duration.ofMinutes(1),
+                )
+            assertEquals(0, result.exitCode)
+            val text = warnings.joinToString("\n")
+            assertTrue(text.contains("still open"), text)
+            assertTrue(text.contains("https://***@registry.example/x"), text)
+            assertFalse(text.contains(secret), text)
+        } finally {
+            restore()
+            if (pids.isFile) {
+                pids.readLines().map { it.trim().toLong() }.forEach { pid ->
+                    ProcessHandle.of(pid).ifPresent { handle ->
+                        if (handle.isAlive) handle.destroyForcibly()
+                    }
+                }
+            }
+        }
+        assertAllGone(pids)
+    }
+
+    /** A parent that exits as soon as a child has inherited its output. */
+    private fun leavingOutputOpen(
+        dir: File,
+        pids: File,
+    ): List<String> {
+        val child =
+            File(dir, "Hold.java").apply {
+                writeText("public class Hold { public static void main(String[] a) throws Exception { Thread.sleep(120000); } }")
+            }
+        val p = pids.path.replace("\\", "\\\\")
+        val j = java.replace("\\", "\\\\")
+        val hold = child.path.replace("\\", "\\\\")
+        return javaRunning(
+            "ProcessBuilder b = new ProcessBuilder(\"$j\", \"$hold\");" +
+                " b.redirectOutput(ProcessBuilder.Redirect.INHERIT);" +
+                " b.redirectError(ProcessBuilder.Redirect.INHERIT);" +
+                " Process c = b.start();" +
+                " java.nio.file.Files.writeString(java.nio.file.Path.of(\"$p\"), ProcessHandle.current().pid() + \"\\n\" + c.pid());" +
+                " System.exit(0);",
+            dir,
+        )
+    }
+
+    /** Gradle's log listener for the duration of a call. Restores the previous listener. */
+    private fun captureLogMessages(into: MutableList<String>): () -> Unit {
+        val factory = LoggerFactory.getILoggerFactory()
+        val getter = factory.javaClass.methods.find { it.name == "getOutputEventListener" && it.parameterCount == 0 }
+        val setter = factory.javaClass.methods.find { it.name == "setOutputEventListener" && it.parameterCount == 1 }
+        check(getter != null && setter != null) { "Gradle log listener is not available (${factory.javaClass.name})" }
+        val previous = getter.invoke(factory)
+        val listenerType = setter.parameterTypes[0]
+        val listener =
+            Proxy.newProxyInstance(listenerType.classLoader, arrayOf(listenerType)) { _, method, args ->
+                when (method.name) {
+                    "onOutput" -> {
+                        val event = args[0]
+                        val message =
+                            event.javaClass.methods
+                                .find { it.name == "getMessage" && it.parameterCount == 0 }
+                                ?.invoke(event) as? String
+                        if (message != null) into.add(message)
+                        previous
+                            ?.javaClass
+                            ?.methods
+                            ?.find { it.name == "onOutput" && it.parameterCount == 1 }
+                            ?.invoke(previous, event)
+                        null
+                    }
+                    "hashCode" -> System.identityHashCode(this)
+                    "equals" -> false
+                    else -> null
+                }
+            }
+        setter.invoke(factory, listener)
+        return { setter.invoke(factory, previous) }
     }
 }

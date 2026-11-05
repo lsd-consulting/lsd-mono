@@ -68,8 +68,8 @@ public abstract class LsdStudioExtension {
      *
      * The URL has to be `https` or `file`. node-gradle sets the repository's `allowInsecureProtocol`
      * only when its own property is set, and this plugin leaves that property unset, so Gradle refuses
-     * a plain `http` URL. For an http mirror, set this to `""` and declare the repository in settings,
-     * as below, with `isAllowInsecureProtocol = true`.
+     * a plain `http` URL. For an http mirror, set this to `""` and declare the repository in settings
+     * with the opt-in in the second example.
      *
      * Set it in the build script. It is read once the build script has run, and setting it later fails.
      *
@@ -81,12 +81,23 @@ public abstract class LsdStudioExtension {
      *     repositories {
      *         ivy {
      *             name = "Node.js"
-     *             setUrl("https://nodejs.org/dist") // https or file; http also needs isAllowInsecureProtocol = true
+     *             setUrl("https://nodejs.org/dist") // https or file
      *             patternLayout { artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]") }
      *             metadataSources { artifact() }
      *             content { includeModule("org.nodejs", "node") }
      *         }
      *     }
+     * }
+     * ```
+     * An http mirror is the same repository with the insecure-protocol opt-in set on it:
+     * ```
+     * ivy {
+     *     name = "Node.js"
+     *     setUrl("http://mirror.example/node")
+     *     isAllowInsecureProtocol = true
+     *     patternLayout { artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]") }
+     *     metadataSources { artifact() }
+     *     content { includeModule("org.nodejs", "node") }
      * }
      * ```
      */
