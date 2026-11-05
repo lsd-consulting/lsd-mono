@@ -21,11 +21,14 @@ class BrowserLauncherTest {
     @TempDir
     lateinit var dir: File
 
-    /** A launcher that writes its own pid and a forked child's pid, then sleeps for a minute. */
+    /**
+     * A launcher that writes its own pid and a forked child's pid, then sleeps for a minute. The
+     * child exits by itself after two minutes, so a failed test cannot leak it.
+     */
     private fun fakeLauncher(): List<String> {
         val pids = File(dir, "pids").path.replace("\\", "\\\\")
         val script =
-            "const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], " +
+            "const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000); setTimeout(() => process.exit(), 120000)'], " +
                 "{ stdio: 'ignore', detached: true }); c.unref(); " +
                 "require('fs').writeFileSync('$pids', process.pid + ' ' + c.pid); " +
                 "setTimeout(() => {}, 60000)"
@@ -54,11 +57,12 @@ class BrowserLauncherTest {
         assumeFalse(windows, "signals and detached children differ on Windows")
         val started = System.nanoTime()
         val thread = BrowserLauncher.launch(fakeLauncher(), timeout = Duration.ofSeconds(2))
-        assertTrue(Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(1), "launch blocked the caller")
-        assertNotSame(Thread.currentThread(), thread)
-        assertTrue(thread.isDaemon)
+        val elapsed = Duration.ofNanos(System.nanoTime() - started)
         val (launcher, child) = pids()
         try {
+            assertTrue(elapsed < Duration.ofSeconds(1), "launch blocked the caller")
+            assertNotSame(Thread.currentThread(), thread)
+            assertTrue(thread.isDaemon)
             thread.join(Duration.ofSeconds(15).toMillis())
             assertFalse(thread.isAlive, "the launcher was not reaped within the timeout")
             assertFalse(alive(launcher), "the launcher is still running")
@@ -80,6 +84,24 @@ class BrowserLauncherTest {
     @Test
     fun `the default timeout is bounded`() {
         assertEquals(Duration.ofSeconds(10), ProcessRunner.BROWSER_TIMEOUT)
+    }
+
+    @Test
+    fun `browses only when asked to and not on CI`() {
+        assertTrue(BrowserLauncher.shouldBrowse(openBrowser = true, ci = false))
+        assertFalse(BrowserLauncher.shouldBrowse(openBrowser = false, ci = false))
+        assertFalse(BrowserLauncher.shouldBrowse(openBrowser = true, ci = true))
+        assertFalse(BrowserLauncher.shouldBrowse(openBrowser = false, ci = true))
+    }
+
+    @Test
+    fun `browse launches the OS launcher for the url only when allowed`() {
+        val launched = mutableListOf<List<String>>()
+        assertTrue(BrowserLauncher.browse("http://x", openBrowser = true, ci = false, os = "Linux") { launched += it })
+        assertEquals(listOf(listOf("xdg-open", "http://x")), launched)
+        assertFalse(BrowserLauncher.browse("http://y", openBrowser = false, ci = false, os = "Linux") { launched += it })
+        assertFalse(BrowserLauncher.browse("http://z", openBrowser = true, ci = true, os = "Linux") { launched += it })
+        assertEquals(1, launched.size)
     }
 
     @Test
