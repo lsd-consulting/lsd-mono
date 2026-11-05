@@ -9,7 +9,16 @@ import kotlin.concurrent.thread
 
 /** How a short-lived command and its arguments are turned into a process command line. */
 internal object Commands {
-    val WINDOWS: Boolean = System.getProperty("os.name").lowercase().contains("windows")
+    /**
+     * Set by tests that wire the other operating system's node layout. Production leaves it null,
+     * so [WINDOWS] stays the host.
+     */
+    internal var windowsOverride: Boolean? = null
+
+    private val HOST_WINDOWS: Boolean = System.getProperty("os.name").lowercase().contains("windows")
+
+    val WINDOWS: Boolean
+        get() = windowsOverride ?: HOST_WINDOWS
 
     /** [text] with carriage returns and line feeds written as `\r` and `\n`, so a message stays on one line. */
     private fun visible(text: String): String = text.replace("\r", "\\r").replace("\n", "\\n")
@@ -148,8 +157,10 @@ internal object ProcessRunner {
                 awaitReader(reader, command)
                 val tail = synchronized(output) { output.takeLast(OUTPUT_TAIL).toString() }
                 throw GradleException(
-                    "'${command.joinToString(" ")}' did not finish within $timeout and was stopped. " +
-                        "The end of its output:\n$tail",
+                    redact(
+                        "'${command.joinToString(" ")}' did not finish within $timeout and was stopped. " +
+                            "The end of its output:\n$tail",
+                    ),
                 )
             }
         } catch (e: InterruptedException) {
@@ -169,7 +180,7 @@ internal object ProcessRunner {
     ) {
         reader.join(READER_WAIT.toMillis())
         if (reader.isAlive) {
-            logger.warn("LSD Studio: output of '{}' was still open after it exited; it may be cut short.", command.joinToString(" "))
+            logger.warn("LSD Studio: output of '{}' was still open after it exited; it may be cut short.", redact(command.joinToString(" ")))
         }
     }
 
@@ -182,12 +193,12 @@ internal object ProcessRunner {
     ): String {
         val result = run(command, directory, timeout, environment)
         if (result.exitCode != 0) {
-            throw GradleException("'${command.joinToString(" ")}' failed (exit ${result.exitCode}):\n${redact(result.output)}")
+            throw GradleException(redact("'${command.joinToString(" ")}' failed (exit ${result.exitCode}):\n${result.output}"))
         }
         return result.output
     }
 
-    /** [text] with the user and password in any `scheme://user:password@host` replaced, in case a proxy URL is echoed. */
+    /** [text] with the user and password in any `scheme://user:password@host` replaced, in case a proxy or registry URL is echoed. */
     fun redact(text: String): String = CREDENTIALS.replace(text, "$1***@")
 
     private val CREDENTIALS = Regex("""([a-zA-Z][a-zA-Z0-9+.-]*://)[^/\s@]+@""")

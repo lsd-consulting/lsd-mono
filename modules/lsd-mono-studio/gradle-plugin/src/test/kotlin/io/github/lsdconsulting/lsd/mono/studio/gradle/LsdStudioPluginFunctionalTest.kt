@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.io.OutputStream
@@ -140,6 +141,77 @@ class LsdStudioPluginFunctionalTest {
         assertTrue(result.output.contains(Regex("property 'downloadNode' is final")), result.output)
     }
 
+    @Test
+    fun `setting nodeDistUrl after the build script fails instead of being ignored`() {
+        buildFile("downloadNode = true\n}\nafterEvaluate { lsdStudio { nodeDistUrl = \"https://later.example/node\" }")
+        val result = runner("help").buildAndFail()
+        assertTrue(result.output.contains(Regex("property 'nodeDistUrl' is final")), result.output)
+    }
+
+    @Test
+    fun `a nodeVersion set after the build script still reaches the download`() {
+        buildFile(
+            """
+            downloadNode = true
+            nodeDistUrl = "https://mirror.example/node"
+            }
+            afterEvaluate {
+                lsdStudio { nodeVersion = "9.9.9" }
+                val node = extensions.getByType(com.github.gradle.node.NodeExtension::class.java)
+                println("LATE_VERSION " + node.version.get())
+            """.trimIndent(),
+        )
+        val result = runner("help").build()
+        assertTrue(result.output.contains("LATE_VERSION 9.9.9"), result.output)
+    }
+
+    @Test
+    fun `downloadNode wires node and npm for this operating system`() {
+        buildFile(
+            """
+            downloadNode = true
+            nodeDistUrl = "https://mirror.example/node"
+            }
+            afterEvaluate {
+                val studio = tasks.getByName("lsdStudio") as io.github.lsdconsulting.lsd.mono.studio.gradle.LsdStudioTask
+                val node = extensions.getByType(com.github.gradle.node.NodeExtension::class.java)
+                println("NODE_DIR=" + node.resolvedNodeDir.get().asFile)
+                println("BIN_DIR=" + studio.nodeBinDir.get().asFile)
+                println("NODE_CMD=" + studio.nodeCommand.get())
+                println("NPM_CMD=" + studio.npmCommand.get())
+            """.trimIndent(),
+        )
+        val result = runner("help").build()
+
+        fun value(key: String): String {
+            val match = Regex("$key=(.+)").find(result.output) ?: error(result.output)
+            return match.groupValues[1].trim()
+        }
+
+        val nodeDir = File(value("NODE_DIR"))
+        val binDir = File(value("BIN_DIR"))
+        val nodeCmd = value("NODE_CMD")
+        val npmCmd = value("NPM_CMD")
+        if (windows) {
+            assertEquals(nodeDir, binDir)
+            assertEquals(File(nodeDir, "node.exe").path, nodeCmd)
+            assertEquals(File(nodeDir, "npm.cmd").path, npmCmd)
+        } else {
+            assertEquals(File(nodeDir, "bin"), binDir)
+            assertEquals(File(nodeDir, "bin/node").path, nodeCmd)
+            assertEquals(File(nodeDir, "bin/npm").path, npmCmd)
+        }
+    }
+
+    @Test
+    @Timeout(60)
+    fun `an http node mirror is refused`() {
+        buildFile("downloadNode = true\n    nodeDistUrl = \"http://mirror.example/node\"")
+        val result = runner("nodeSetup").buildAndFail()
+        assertTrue(result.output.contains("insecure protocol", ignoreCase = true), result.output)
+        assertTrue(result.output.contains("Node.js"), result.output)
+    }
+
     /**
      * A fake Node.js [version] in nodejs.org's layout under `mirror/`: its node answers `--version`,
      * and its npm (bin/npm, a link into lib/node_modules as in the real archive) records its own
@@ -228,6 +300,22 @@ class LsdStudioPluginFunctionalTest {
         val result = runner("lsdStudio", "-Plsd.studio.package=lsd-mono-studio@1.2.3").buildAndFail()
         assertFalse(result.output.contains("was added by plugin"), result.output)
         assertDownloadedNodeRan(name, record, result)
+    }
+
+    @Test
+    fun `a successful npm install log redacts credentials`() {
+        assumeFalse(windows, "the fake npm is a shell script")
+        val secret = "fakepasszz"
+        val npm =
+            projectDir.resolve("fake-npm").apply {
+                writeText("#!/bin/sh\necho \"registry http://fakeuser:$secret@p:1\"\nexit 0\n")
+                setExecutable(true)
+            }
+        buildFile("npmCommand = \"${path(npm)}\"")
+        val result = runner("lsdStudio", "--info", "-Plsd.studio.package=lsd-mono-studio@1.2.3").buildAndFail()
+        assertTrue(result.output.contains("registry http://***@p:1"), result.output)
+        assertTrue(result.output.contains("incomplete"), result.output)
+        assertFalse(result.output.contains(secret), result.output)
     }
 
     @Test

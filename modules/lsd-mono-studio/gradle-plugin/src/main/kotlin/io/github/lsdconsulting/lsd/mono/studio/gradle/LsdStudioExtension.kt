@@ -48,17 +48,30 @@ public abstract class LsdStudioExtension {
      * Download Node.js for the `lsdStudio` task instead of using one on the `PATH` (default false),
      * through the node-gradle plugin, which is applied only when this is on. It then also sets
      * [nodeCommand] and [npmCommand] to the downloaded ones. Set it in the build script: it is read once
-     * the build script has run, and setting it later fails.
+     * the build script has run, and setting it later fails. [nodeDistUrl] fails the same way.
+     * [nodeVersion] is passed through to node-gradle, so a later change still updates the version
+     * that is downloaded.
      */
     public abstract val downloadNode: Property<Boolean>
 
-    /** The Node.js version [downloadNode] fetches (default [LsdStudioPlugin.DEFAULT_NODE_VERSION]). */
+    /**
+     * The Node.js version [downloadNode] fetches (default [LsdStudioPlugin.DEFAULT_NODE_VERSION]).
+     * It is passed through to node-gradle and stays writable after the build script, so a later
+     * change still updates the version that is downloaded.
+     */
     public abstract val nodeVersion: Property<String>
 
     /**
      * Where [downloadNode] fetches Node.js from, for a mirror inside a restricted network (node-gradle's
      * `distBaseUrl`, default https://nodejs.org/dist). A mirror keeps nodejs.org's layout,
      * `v<version>/node-v<version>-<os>-<arch>.tar.gz` (`.zip` on Windows).
+     *
+     * The URL has to be `https` or `file`. node-gradle sets the repository's `allowInsecureProtocol`
+     * only when its own property is set, and this plugin leaves that property unset, so Gradle refuses
+     * a plain `http` URL. For an http mirror, set this to `""` and declare the repository in settings,
+     * as below, with `isAllowInsecureProtocol = true`.
+     *
+     * Set it in the build script. It is read once the build script has run, and setting it later fails.
      *
      * node-gradle adds this as a project repository, which a build with
      * `RepositoriesMode.FAIL_ON_PROJECT_REPOS` refuses. There, set it to `""` and declare the
@@ -68,7 +81,7 @@ public abstract class LsdStudioExtension {
      *     repositories {
      *         ivy {
      *             name = "Node.js"
-     *             setUrl("https://nodejs.org/dist") // or the mirror
+     *             setUrl("https://nodejs.org/dist") // https or file; http also needs isAllowInsecureProtocol = true
      *             patternLayout { artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]") }
      *             metadataSources { artifact() }
      *             content { includeModule("org.nodejs", "node") }

@@ -134,17 +134,46 @@ class ProcessRunnerTest {
     }
 
     @Test
-    fun `a failure does not repeat credentials from the output`(
+    fun `a failure does not repeat credentials from the command or the output`(
         @TempDir dir: File,
     ) {
+        val outputSecret = "fakepasszz"
+        val commandSecret = "fakecmdzz"
         val e =
             assertThrows<GradleException> {
                 ProcessRunner.runChecked(
-                    javaRunning("System.out.print(\"proxy http://me:pw@p:1\"); System.exit(2);", dir),
+                    javaRunning("System.out.print(\"proxy http://fakeuser:$outputSecret@p:1\"); System.exit(2);", dir) +
+                        "https://fakeuser:$commandSecret@registry.example/x",
                     timeout = Duration.ofMinutes(1),
                 )
             }
         assertTrue(e.message!!.contains("proxy http://***@p:1"), e.message)
-        assertFalse(e.message!!.contains("pw"), e.message)
+        assertTrue(e.message!!.contains("https://***@registry.example/x"), e.message)
+        assertTrue(e.message!!.contains("exit 2"), e.message)
+        assertFalse(e.message!!.contains(outputSecret), e.message)
+        assertFalse(e.message!!.contains(commandSecret), e.message)
+    }
+
+    @Test
+    fun `a timeout does not repeat credentials from the command or its output`(
+        @TempDir dir: File,
+    ) {
+        val pids = File(dir, "pids")
+        val outputSecret = "fakepasszz"
+        val commandSecret = "fakecmdzz"
+        val e =
+            assertThrows<GradleException> {
+                ProcessRunner.run(
+                    parentAndChild(dir, pids, "http://fakeuser:$outputSecret@p:1") +
+                        "https://fakeuser:$commandSecret@registry.example/x",
+                    timeout = Duration.ofSeconds(40),
+                )
+            }
+        assertTrue(e.message!!.contains("did not finish within"), e.message)
+        assertTrue(e.message!!.contains("http://***@p:1"), e.message)
+        assertTrue(e.message!!.contains("https://***@registry.example/x"), e.message)
+        assertFalse(e.message!!.contains(outputSecret), e.message)
+        assertFalse(e.message!!.contains(commandSecret), e.message)
+        assertAllGone(pids)
     }
 }

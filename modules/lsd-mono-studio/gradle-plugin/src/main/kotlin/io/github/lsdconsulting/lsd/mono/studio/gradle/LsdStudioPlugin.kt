@@ -61,7 +61,8 @@ public class LsdStudioPlugin : Plugin<Project> {
             task.usesService(processes)
         }
         // After the build script, so downloadNode is known: node-gradle is applied only when it is on.
-        // Finalised first, so setting either later (a later afterEvaluate, say) fails instead of being ignored.
+        // downloadNode and nodeDistUrl are acted on once here, so a later set fails instead of being ignored.
+        // nodeVersion is handed to node-gradle as a provider and stays writable.
         project.afterEvaluate {
             extension.downloadNode.finalizeValue()
             extension.nodeDistUrl.finalizeValue()
@@ -71,28 +72,6 @@ public class LsdStudioPlugin : Plugin<Project> {
             val wiring = StudioUrlWiring(extension.port, extension.wireTests, extension.studioPackage, project.layout.projectDirectory.asFile)
             task.doFirst(wiring)
             task.jvmArgumentProviders.add(wiring)
-        }
-    }
-
-    private fun useDownloadedNode(
-        project: Project,
-        extension: LsdStudioExtension,
-    ) {
-        project.pluginManager.apply(NodePlugin::class.java)
-        val node = project.extensions.getByType(NodeExtension::class.java)
-        node.download.set(true)
-        node.version.set(extension.nodeVersion)
-        extension.nodeDistUrl.orNull?.let { url ->
-            // Blank: no repository of node-gradle's own, so Node resolves from the settings' repositories.
-            if (url.isBlank()) node.distBaseUrl.set(null as String?) else node.distBaseUrl.set(url)
-        }
-        val windows = Commands.WINDOWS
-        val binDir = project.layout.dir(node.resolvedNodeDir.map { NodeLayout.binDir(it.asFile, windows) })
-        extension.nodeCommand.convention(binDir.map { NodeLayout.node(it.asFile, windows).path })
-        extension.npmCommand.convention(binDir.map { NodeLayout.npm(it.asFile, windows).path })
-        project.tasks.named("lsdStudio", LsdStudioTask::class.java) { task ->
-            task.dependsOn("nodeSetup")
-            task.nodeBinDir.convention(binDir)
         }
     }
 
@@ -110,5 +89,39 @@ public class LsdStudioPlugin : Plugin<Project> {
 
         /** The Gradle property that sets [LsdStudioTask.stopFile]. */
         public const val STOP_FILE_PROPERTY: String = "lsd.studio.stopFile"
+    }
+
+    private fun useDownloadedNode(
+        project: Project,
+        extension: LsdStudioExtension,
+    ) {
+        project.pluginManager.apply(NodePlugin::class.java)
+        val node = project.extensions.getByType(NodeExtension::class.java)
+        node.download.set(true)
+        node.version.set(extension.nodeVersion)
+        extension.nodeDistUrl.orNull?.let { url ->
+            // Blank: no repository of node-gradle's own, so Node resolves from the settings' repositories.
+            if (url.isBlank()) node.distBaseUrl.set(null as String?) else node.distBaseUrl.set(url)
+        }
+        wireDownloadedNodeLayout(project, extension, node)
+    }
+}
+
+/**
+ * Points [extension] at the downloaded node and npm. [Commands.WINDOWS] chooses the archive layout,
+ * so a test can stand in for the other operating system.
+ */
+internal fun wireDownloadedNodeLayout(
+    project: Project,
+    extension: LsdStudioExtension,
+    node: NodeExtension,
+) {
+    val windows = Commands.WINDOWS
+    val binDir = project.layout.dir(node.resolvedNodeDir.map { NodeLayout.binDir(it.asFile, windows) })
+    extension.nodeCommand.convention(binDir.map { NodeLayout.node(it.asFile, windows).path })
+    extension.npmCommand.convention(binDir.map { NodeLayout.npm(it.asFile, windows).path })
+    project.tasks.named("lsdStudio", LsdStudioTask::class.java) { task ->
+        task.dependsOn("nodeSetup")
+        task.nodeBinDir.convention(binDir)
     }
 }
