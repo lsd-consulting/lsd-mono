@@ -10,6 +10,7 @@ import org.gradle.tooling.ResultHandler
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -101,6 +102,53 @@ class LsdStudioPluginFunctionalTest {
         buildFile("")
         val result = runner("lsdStudio").buildAndFail()
         assertTrue(result.output.contains("lsd.studio.package"), result.output)
+    }
+
+    @Test
+    fun `leaves node-gradle out unless downloadNode is on`() {
+        buildFile("")
+        val result = runner("tasks", "--all").build()
+        assertFalse(result.output.contains("nodeSetup"), result.output)
+    }
+
+    @Test
+    fun `downloadNode sets up Node through node-gradle, from the mirror, before lsdStudio`() {
+        buildFile(
+            """
+            downloadNode = true
+            nodeVersion = "22.22.0"
+            nodeDistUrl = "https://mirror.example/node"
+            }
+            afterEvaluate {
+                val node = extensions.getByType(com.github.gradle.node.NodeExtension::class.java)
+                println("node: " + node.download.get() + " " + node.version.get() + " " + node.distBaseUrl.get())
+                println("lsdStudio after: " + tasks.getByName("lsdStudio").dependsOn.toList())
+            """.trimIndent(),
+        )
+        // Resolving the task graph would fetch Node from the mirror, so this checks the wiring only.
+        val result = runner("help").build()
+        assertTrue(result.output.contains("node: true 22.22.0 https://mirror.example/node"), result.output)
+        assertTrue(result.output.contains(Regex("lsdStudio after: .*nodeSetup")), result.output)
+    }
+
+    @Test
+    fun `passes npmRegistry and Gradle's proxy settings to npm`() {
+        assumeFalse(windows, "the fake npm is a shell script")
+        val record = projectDir.resolve("npm-call.txt")
+        val npm =
+            projectDir.resolve("fake-npm").apply {
+                writeText("#!/bin/sh\necho \"$*\" > '${record.path}'\necho \"proxy=${'$'}HTTPS_PROXY no=${'$'}NO_PROXY\" >> '${record.path}'\nexit 3\n")
+                setExecutable(true)
+            }
+        buildFile("npmCommand = \"${path(npm)}\"\n    npmRegistry = \"https://npm.example/\"")
+        projectDir.resolve("gradle.properties").writeText(
+            "systemProp.https.proxyHost=proxy.example\nsystemProp.https.proxyPort=3128\nsystemProp.http.nonProxyHosts=localhost|*.corp\n",
+        )
+        val result = runner("lsdStudio", "-Plsd.studio.package=lsd-mono-studio@1.2.3", env = mapOf("HTTPS_PROXY" to "", "https_proxy" to "")).buildAndFail()
+        val lines = record.readLines()
+        assertTrue(lines[0].contains("--registry https://npm.example/ lsd-mono-studio@1.2.3"), lines.toString())
+        assertTrue(lines[1].contains("proxy=http://proxy.example:3128 no=localhost,.corp"), lines.toString())
+        assertFalse(result.output.contains("proxy.example"), result.output)
     }
 
     @Test

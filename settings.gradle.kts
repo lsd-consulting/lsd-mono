@@ -16,6 +16,10 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()
+        // node-gradle, which the LSD Studio Gradle plugin uses, is only on the Gradle Plugin Portal.
+        gradlePluginPortal {
+            content { includeGroup("com.github.node-gradle") }
+        }
     }
 }
 

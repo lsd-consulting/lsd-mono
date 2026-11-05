@@ -43,4 +43,27 @@ public abstract class LsdStudioExtension {
 
     /** Where installed lsd-mono-studio versions are kept (default `<Gradle user home>/caches/lsd-mono-studio`). */
     public abstract val cacheDir: DirectoryProperty
+
+    /**
+     * Download Node.js for the `lsdStudio` task instead of using one on the `PATH` (default false),
+     * through the node-gradle plugin, which is applied only when this is on. It then also sets
+     * [nodeCommand] and [npmCommand] to the downloaded ones. Set it in the build script, not later.
+     */
+    public abstract val downloadNode: Property<Boolean>
+
+    /** The Node.js version [downloadNode] fetches (default [LsdStudioPlugin.DEFAULT_NODE_VERSION]). */
+    public abstract val nodeVersion: Property<String>
+
+    /**
+     * Where [downloadNode] fetches Node.js from, for a mirror inside a restricted network (node-gradle's
+     * `distBaseUrl`, default https://nodejs.org/dist).
+     */
+    public abstract val nodeDistUrl: Property<String>
+
+    /**
+     * The npm registry that lsd-mono-studio is installed from, passed as `--registry`. Unset, npm's
+     * own configuration (.npmrc) applies untouched. Gradle's proxy settings (`systemProp.http.proxyHost`
+     * and the rest) are passed to npm either way, unless its proxy variables are already set.
+     */
+    public abstract val npmRegistry: Property<String>
 }

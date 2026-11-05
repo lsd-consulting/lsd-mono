@@ -118,6 +118,8 @@ lsdCoverage {
 }
 
 dependencies {
+    // Applied only when downloadNode is on, so it stays inert otherwise.
+    implementation(libs.node.gradle.plugin)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(gradleTestKit())

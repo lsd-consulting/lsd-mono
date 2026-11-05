@@ -20,6 +20,14 @@ class NpmInstallTest {
     }
 
     @Test
+    fun `passes the registry only when one is set`() {
+        assertTrue("--registry" !in NpmInstall.args(target, SPEC, offline = false))
+        assertTrue("--registry" !in NpmInstall.args(target, SPEC, offline = false, registry = " "))
+        val args = NpmInstall.args(target, SPEC, offline = false, registry = "https://npm.example/")
+        assertEquals(listOf("--registry", "https://npm.example/", SPEC), args.takeLast(3))
+    }
+
+    @Test
     fun `explains a cache miss when offline`() {
         val e =
             assertThrows<GradleException> {

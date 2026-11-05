@@ -4,6 +4,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -47,6 +48,19 @@ public abstract class LsdStudioTask : DefaultTask() {
     @get:Input
     @get:Optional
     public abstract val studioPackage: Property<String>
+
+    /** See [LsdStudioExtension.npmRegistry]. */
+    @get:Input
+    @get:Optional
+    public abstract val npmRegistry: Property<String>
+
+    /** Gradle's proxy system properties, which npm gets as its proxy variables (see [NpmEnvironment]). */
+    @get:Internal
+    public abstract val proxyProperties: MapProperty<String, String>
+
+    /** A downloaded Node's folder of executables, put first on npm's `PATH` (see [LsdStudioExtension.downloadNode]). */
+    @get:Internal
+    public abstract val nodeBinDir: DirectoryProperty
 
     /** See [LsdStudioExtension.cacheDir]. */
     @get:Internal
@@ -125,14 +139,18 @@ public abstract class LsdStudioTask : DefaultTask() {
             logger.info("LSD Studio: {} is already installed in {}", spec, installDir)
         } else {
             Commands.requireInstallSafe(npmCommand.get(), localFile?.path ?: spec, installDir.path)
+            val registry = npmRegistry.orNull?.trim()?.takeIf { it.isNotEmpty() }
+            registry?.let { Commands.requireCmdSafe(it, "npmRegistry") }
+            val environment = NpmEnvironment.of(proxyProperties.getOrElse(emptyMap()), System.getenv(), nodeBinDir.orNull?.asFile)
             StudioInstaller.ensureInstalled(installDir, spec) { target ->
                 logger.lifecycle("LSD Studio: installing {} into {}", spec, installDir)
                 val result =
                     NpmInstall.explainOfflineMiss(offline.get(), spec) {
                         ProcessRunner.runChecked(
-                            Commands.resolve(npmCommand.get(), NpmInstall.args(target, localFile?.path ?: spec, offline.get())),
+                            Commands.resolve(npmCommand.get(), NpmInstall.args(target, localFile?.path ?: spec, offline.get(), registry)),
                             directory = target,
                             timeout = ProcessRunner.NPM_INSTALL_TIMEOUT,
+                            environment = environment,
                         )
                     }
                 logger.info("{}", result)

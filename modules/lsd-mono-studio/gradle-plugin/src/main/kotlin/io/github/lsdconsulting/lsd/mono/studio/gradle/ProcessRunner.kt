@@ -120,10 +120,12 @@ internal object ProcessRunner {
         command: List<String>,
         directory: File? = null,
         timeout: Duration,
+        environment: Map<String, String> = emptyMap(),
     ): ProcessResult {
         val process =
             ProcessBuilder(command)
                 .apply { directory?.let { directory(it) } }
+                .apply { environment().putAll(environment) }
                 .redirectErrorStream(true)
                 .start()
         val output = StringBuilder()
@@ -176,8 +178,9 @@ internal object ProcessRunner {
         command: List<String>,
         directory: File? = null,
         timeout: Duration,
+        environment: Map<String, String> = emptyMap(),
     ): String {
-        val result = run(command, directory, timeout)
+        val result = run(command, directory, timeout, environment)
         if (result.exitCode != 0) {
             throw GradleException("'${command.joinToString(" ")}' failed (exit ${result.exitCode}):\n${result.output}")
         }

@@ -9,9 +9,11 @@ internal object NpmInstall {
         target: File,
         pkg: String,
         offline: Boolean,
+        registry: String? = null,
     ): List<String> =
         listOf("install", "--prefix", target.path, "--no-save", "--no-audit", "--no-fund", "--no-package-lock", "--omit=dev") +
             (if (offline) listOf("--offline") else emptyList()) +
+            (registry?.trim()?.takeIf { it.isNotEmpty() }?.let { listOf("--registry", it) } ?: emptyList()) +
             pkg
 
     /** Under `--offline`, turns npm's cache miss (ENOTCACHED) into an error that says what to do. */
