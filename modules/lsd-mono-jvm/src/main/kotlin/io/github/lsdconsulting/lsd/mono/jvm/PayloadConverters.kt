@@ -45,6 +45,10 @@ internal val DEFAULT_REDACTED_KEYS: List<String> =
  *
  * **Redaction.** A value whose key looks like a secret is written as `[lsd: redacted]`.
  * The key is a map key (header maps included), an object field or a record component.
+ * Matching uses the key as captured. A map key is shortened for display only after that
+ * decision, so `lsd.mono.payload.maxStringLength` cannot hide a sensitive name, and a
+ * [redactWhen] rule sees the captured key rather than the truncation marker. A redacted
+ * value is not read.
  * Keys are compared ignoring case and the separators `-`, `_`, `.` and spaces, and a key
  * matches a name when it equals it or ends with it: `token` also covers `accessToken`
  * and `refresh_token`, and `apiKey` covers `X-Api-Key`. Built in, on by default:
@@ -151,7 +155,8 @@ public class PayloadConverters internal constructor(
 
     /**
      * Also redact a value when [rule] returns true for its key, given exactly as captured
-     * (a map key's text, or a field name): `lsd.payloads.redactWhen { it.startsWith("x-internal-") }`.
+     * (a map key's text, or a field name) and not shortened for display:
+     * `lsd.payloads.redactWhen { it.startsWith("x-internal-") }`.
      * A rule that throws redacts.
      */
     public fun redactWhen(rule: Predicate<String>): PayloadConverters = apply { redactRules.add(rule) }
@@ -193,6 +198,12 @@ public class PayloadConverters internal constructor(
     private inner class Walk(private val limits: Limits) {
         private val path = IdentityHashMap<Any, Unit>()
         private var budget = limits.maxTotalSize
+
+        /**
+         * When false, [text] keeps the whole string. Set while a non-string key is rendered
+         * again for redaction, so the match is the text from before a truncation suffix.
+         */
+        private var includeStringTruncation = true
 
         fun copy(value: Any?, depth: Int, convert: Boolean = true): Any? {
             if (value == null) return null
@@ -277,8 +288,10 @@ public class PayloadConverters internal constructor(
                     out[TRUNCATED_KEY] = tooLarge()
                     break
                 }
+                val budgetBeforeKey = budget
                 val name = keyText(key, depth)
-                out[uniqueKey(out, name)] = if (isRedacted(name)) REDACTED else copy(item, depth + 1)
+                val captured = redactionKey(key, name, depth, budgetBeforeKey)
+                out[uniqueKey(out, name)] = if (isRedacted(captured)) REDACTED else copy(item, depth + 1)
                 kept++
             }
             return FrozenMap(out)
@@ -342,6 +355,7 @@ public class PayloadConverters internal constructor(
             FrozenMap(linkedMapOf("exception" to value.javaClass.name, "message" to safe { value.message }?.let(::text)))
 
         private fun text(value: String): String {
+            if (!includeStringTruncation) return value
             budget -= value.length.coerceAtMost(limits.maxStringLength)
             if (value.length <= limits.maxStringLength) return value
             return value.substring(0, limits.maxStringLength) + "… [lsd: truncated ${value.length - limits.maxStringLength} characters]"
@@ -356,17 +370,19 @@ public class PayloadConverters internal constructor(
             val maxBytes = (limits.maxStringLength.toLong() * 4).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             val cut = size > maxBytes
             val head = ByteArray(if (cut) utf8Boundary(buffer, maxBytes) else size).also { buffer.get(it) }
-            utf8Text(head)?.let { text ->
-                if (!cut) return text(text)
-                var end = text.length.coerceAtMost(limits.maxStringLength)
-                if (end in 1 until text.length && text[end - 1].isHighSurrogate()) end--
+            utf8Text(head)?.let { decoded ->
+                if (!cut) return text(decoded)
+                var end = decoded.length.coerceAtMost(limits.maxStringLength)
+                if (end in 1 until decoded.length && decoded[end - 1].isHighSurrogate()) end--
+                val kept = decoded.substring(0, end)
+                if (!includeStringTruncation) return kept
                 budget -= end
-                return text.substring(0, end) + "… [lsd: truncated, $size bytes in total]"
+                return kept + "… [lsd: truncated, $size bytes in total]"
             }
             val keep = (limits.maxStringLength.toLong() * 3 / 4).toInt().coerceAtMost(head.size)
             val encoded = Base64.getEncoder().encodeToString(head.copyOf(keep)).take(limits.maxStringLength)
             budget -= encoded.length
-            val marker = if (keep < size) "… [lsd: truncated]" else ""
+            val marker = if (keep < size && includeStringTruncation) "… [lsd: truncated]" else ""
             return "[lsd: binary, $size bytes] base64:$encoded$marker"
         }
 
@@ -389,13 +405,52 @@ public class PayloadConverters internal constructor(
                 marker("toString() of ${value.javaClass.name} threw ${describe(e)}")
             }
 
-        /** Strings as they are; other keys by the text of their snapshot (`1`, `RED`, `{a=1}`). */
+        /** Strings shortened for display; other keys by the text of their snapshot (`1`, `RED`, `{a=1}`). */
         private fun keyText(key: Any?, depth: Int): String =
             when (key) {
                 null -> "null"
                 is String -> text(key)
                 else -> copy(key, depth + 1)?.toString() ?: "null"
             }
+
+        /**
+         * The key [isRedacted] sees. A string is the captured characters. Any other key is
+         * [display] when that text was not shortened, otherwise the same rendering with string
+         * truncation left off, so a truncation suffix is not what the match is decided on.
+         */
+        private fun redactionKey(
+            key: Any?,
+            display: String,
+            depth: Int,
+            budgetBeforeKey: Int,
+        ): String =
+            when (key) {
+                is String -> key
+                else ->
+                    if (includeStringTruncation && STRING_TRUNCATION in display) {
+                        fullKeyText(key, depth, budgetBeforeKey)
+                    } else {
+                        display
+                    }
+            }
+
+        /** [keyText] from the budget the display render started with, without shortening strings. */
+        private fun fullKeyText(
+            key: Any?,
+            depth: Int,
+            budgetBeforeKey: Int,
+        ): String {
+            val savedBudget = budget
+            val savedTruncation = includeStringTruncation
+            budget = budgetBeforeKey
+            includeStringTruncation = false
+            return try {
+                keyText(key, depth)
+            } finally {
+                includeStringTruncation = savedTruncation
+                budget = savedBudget
+            }
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -429,6 +484,9 @@ public class PayloadConverters internal constructor(
 
         /** Key added to a map or object whose remaining entries were dropped. */
         const val TRUNCATED_KEY: String = "[lsd: truncated]"
+
+        /** Prefix of the suffix appended when a string is shortened to the string limit. */
+        private const val STRING_TRUNCATION: String = "… [lsd: truncated"
 
         /** Default limits and no converters. Used for data that was never captured. */
         val default: PayloadConverters = PayloadConverters(Limits())
