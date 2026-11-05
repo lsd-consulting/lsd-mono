@@ -524,6 +524,34 @@ class PayloadRedactionTest {
     }
 
     @Test
+    fun `a map key with an unreadable nested key is redacted without asking the rule`() {
+        val seen = mutableListOf<String>()
+        val payloads = PayloadConverters(Limits(), Redaction(keys = emptySet()))
+        payloads.redactWhen { key ->
+            seen += key
+            false
+        }
+        val snapshot = payloads.snapshot(linkedMapOf(linkedMapOf(UnreadableKey() to "v") to "zq9-nested-unreadable")) as Map<*, *>
+        assertEquals(REDACTED, snapshot.values.single(), snapshot.toString())
+        assertTrue(seen.isEmpty(), seen.toString())
+        assertNoLeak(snapshot, 100, "zq9-nested-unreadable")
+    }
+
+    @Test
+    fun `a map key with a cut byte key inside it is redacted without asking the rule`() {
+        val seen = mutableListOf<String>()
+        val payloads = PayloadConverters(Limits(maxStringLength = 4), Redaction(keys = emptySet()))
+        payloads.redactWhen { key ->
+            seen += key
+            false
+        }
+        val snapshot = payloads.snapshot(linkedMapOf(linkedMapOf("Proxy-Authorization".toByteArray() to "v") to "zq9-nested-bytes")) as Map<*, *>
+        assertEquals(REDACTED, snapshot.values.single(), snapshot.toString())
+        assertTrue(seen.isEmpty(), seen.toString())
+        assertNoLeak(snapshot, 4, "zq9-nested-bytes")
+    }
+
+    @Test
     fun `a key that refers to itself is redacted without asking the rule`() {
         val cycle = mutableMapOf<String, Any?>()
         cycle["self"] = cycle

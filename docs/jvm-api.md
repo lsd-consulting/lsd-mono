@@ -493,9 +493,10 @@ lsd.getPayloads().redactWhen(key -> key.startsWith("x-internal-"));
 A `redactWhen` rule sees the key as captured, and a rule that throws redacts.
 A key that cannot be fully read is redacted without asking the rule. That is a byte key
 longer than `lsd.mono.payload.maxStringLength` × 4 bytes, a map, list or object cut by
-the item limit, the depth limit or the size budget, a key that refers to itself, or a key
-whose read fails. A harmless value can be redacted when its composite key sits on the
-depth limit: the key is not walked far enough to know that it is harmless.
+the item limit, the depth limit or the size budget, a key whose read cycles back to an
+object already being read, or a key whose read fails. A harmless value can be redacted
+when its composite key sits on the depth limit: the key is not walked far enough to
+know that it is harmless.
 `lsd.payloads.clearRedaction()` removes the rules added in code; `lsd.clear()` re-reads
 the properties and keeps them.
 

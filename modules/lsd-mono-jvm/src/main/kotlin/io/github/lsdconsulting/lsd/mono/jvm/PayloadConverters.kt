@@ -48,7 +48,8 @@ internal val DEFAULT_REDACTED_KEYS: List<String> =
  * Matching uses the key as captured, from one read. A string is matched before its
  * display is shortened. Any other key is matched on the text of that read. When the
  * read cannot see the whole key — the byte cap, the item or depth cap, the size budget,
- * or a failure while reading it — the value is redacted and a [redactWhen] rule is not
+ * a cycle back to an object already being read, or a failure while reading it — the value
+ * is redacted and a [redactWhen] rule is not
  * asked to judge the partial text. A redacted value is not read.
  * Keys are compared ignoring case and the separators `-`, `_`, `.` and spaces, and a key
  * matches a name when it equals it or ends with it: `token` also covers `accessToken`
