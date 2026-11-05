@@ -30,6 +30,7 @@ public abstract class io/github/lsdconsulting/lsd/mono/studio/gradle/LsdStudioTa
 	public abstract fun getExpose ()Lorg/gradle/api/provider/Property;
 	public abstract fun getNodeCommand ()Lorg/gradle/api/provider/Property;
 	public abstract fun getNpmCommand ()Lorg/gradle/api/provider/Property;
+	public abstract fun getOffline ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getProcesses ()Lorg/gradle/api/provider/Property;

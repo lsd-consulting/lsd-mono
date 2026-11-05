@@ -103,6 +103,7 @@ internal data class ProcessResult(
 internal object ProcessRunner {
     val NODE_VERSION_TIMEOUT: Duration = Duration.ofSeconds(30)
     val NPM_INSTALL_TIMEOUT: Duration = Duration.ofMinutes(10)
+    val BROWSER_TIMEOUT: Duration = Duration.ofSeconds(10)
 
     /** How much of the end of the output a timeout error shows. */
     const val OUTPUT_TAIL: Int = 2048

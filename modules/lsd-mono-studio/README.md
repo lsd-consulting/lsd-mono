@@ -38,7 +38,8 @@ Options for `npx lsd-mono-studio`, each also settable as an environment variable
 Reports are kept in `~/.lsd/server/reports`.
 
 From a Gradle build, the `io.github.lsd-consulting.lsd-mono-studio` plugin adds an `lsdStudio`
-task that installs and runs LSD Studio for you. It needs Node 22.6 or newer on your `PATH`. The
+task that installs and runs LSD Studio for you. It needs Gradle 9.0 or newer, and Node 22.6 or newer
+on your `PATH`. Under `--offline` it installs LSD Studio from npm's cache only. The
 plugin is not published yet ([#210](https://github.com/lsd-consulting/lsd-mono/issues/210)). Once
 it is on the Gradle Plugin Portal, add its version to the `id(...)` line:
 

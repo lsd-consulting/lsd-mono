@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit
  * Runs the `lsdStudio` task in real Gradle builds (TestKit) against the repo's own LSD Studio
  * (modules/lsd-mono-studio, built by the buildStudio task), never the published package.
  */
+private const val MINIMUM_GRADLE = "9.0"
+
 class LsdStudioPluginFunctionalTest {
     @TempDir
     lateinit var projectDir: File
@@ -123,6 +125,39 @@ class LsdStudioPluginFunctionalTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":lsdStudio")?.outcome)
         assertTrue(result.output.contains("LSD Studio: stopped."), result.output)
         assertGone(run.pid(), url)
+    }
+
+    /**
+     * The oldest Gradle the plugin supports (see the README): 9.0, alongside the build's own.
+     * TestKit downloads the 9.0 distribution on first use, so this test needs network access.
+     */
+    @Test
+    fun `runs on the minimum supported Gradle, 9_0`() {
+        buildFile("port = 0")
+        val run =
+            Running(
+                projectDir,
+                runner("lsdStudio", "-Plsd.studio.package=${studioDir.path}", stopArg()).withGradleVersion(MINIMUM_GRADLE),
+            )
+        val url = run.awaitUrl()
+        assertEquals(200, get("$url/api/reports"))
+        val result = run.stop()
+        assertEquals(TaskOutcome.SUCCESS, result.task(":lsdStudio")?.outcome)
+        assertGone(run.pid(), url)
+    }
+
+    @Test
+    fun `under --offline npm installs from its cache only, and a miss says so`() {
+        buildFile("port = 0")
+        // An empty npm cache and an unreachable registry: if --offline were lost npm fails differently.
+        val env =
+            mapOf(
+                "npm_config_cache" to projectDir.resolve("npm-cache").path,
+                "npm_config_registry" to "http://127.0.0.1:9",
+                "npm_config_fetch_retries" to "0",
+            )
+        val result = runner("lsdStudio", "--offline", "-Plsd.studio.package=lsd-mono-studio@9.9.9", env = env).buildAndFail()
+        assertTrue(result.output.contains("Gradle is offline (--offline) and npm's cache has no copy of lsd-mono-studio@9.9.9"), result.output)
     }
 
     /**

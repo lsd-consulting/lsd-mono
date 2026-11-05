@@ -64,6 +64,10 @@ public abstract class LsdStudioTask : DefaultTask() {
     @get:Internal
     public abstract val ci: Property<Boolean>
 
+    /** Whether Gradle runs offline (`--offline`): npm then installs from its cache only. */
+    @get:Internal
+    public abstract val offline: Property<Boolean>
+
     /** The build service that stops Studio when the build ends. */
     @get:Internal
     public abstract val processes: Property<StudioProcesses>
@@ -124,24 +128,13 @@ public abstract class LsdStudioTask : DefaultTask() {
             StudioInstaller.ensureInstalled(installDir, spec) { target ->
                 logger.lifecycle("LSD Studio: installing {} into {}", spec, installDir)
                 val result =
-                    ProcessRunner.runChecked(
-                        Commands.resolve(
-                            npmCommand.get(),
-                            listOf(
-                                "install",
-                                "--prefix",
-                                target.path,
-                                "--no-save",
-                                "--no-audit",
-                                "--no-fund",
-                                "--no-package-lock",
-                                "--omit=dev",
-                                localFile?.path ?: spec,
-                            ),
-                        ),
-                        directory = target,
-                        timeout = ProcessRunner.NPM_INSTALL_TIMEOUT,
-                    )
+                    NpmInstall.explainOfflineMiss(offline.get(), spec) {
+                        ProcessRunner.runChecked(
+                            Commands.resolve(npmCommand.get(), NpmInstall.args(target, localFile?.path ?: spec, offline.get())),
+                            directory = target,
+                            timeout = ProcessRunner.NPM_INSTALL_TIMEOUT,
+                        )
+                    }
                 logger.info("{}", result)
             }
         }
@@ -278,18 +271,12 @@ public abstract class LsdStudioTask : DefaultTask() {
     }
 
     private fun browse(url: String) {
-        if (!openBrowser.get() || ci.get()) return
-        val os = System.getProperty("os.name").lowercase()
-        val command =
-            when {
-                os.contains("mac") -> listOf("open", url)
-                os.contains("windows") -> listOf("rundll32", "url.dll,FileProtocolHandler", url)
-                else -> listOf("xdg-open", url)
+        // Off the output reader, so a slow or hung launcher cannot stall Studio's output.
+        val log = logger
+        BrowserLauncher.browse(url, openBrowser.get(), ci.get(), System.getProperty("os.name")) { command ->
+            BrowserLauncher.launch(command) { e ->
+                log.info("LSD Studio: could not open a browser ({}); open {} yourself.", e.message, url)
             }
-        try {
-            ProcessBuilder(command).redirectErrorStream(true).start()
-        } catch (e: IOException) {
-            logger.info("LSD Studio: could not open a browser ({}); open {} yourself.", e.message, url)
         }
     }
 }

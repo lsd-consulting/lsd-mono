@@ -7,6 +7,7 @@ import org.gradle.api.tasks.testing.Test
 /**
  * `io.github.lsd-consulting.lsd-mono-studio`: adds the [lsdStudio][LsdStudioExtension] extension and
  * the [lsdStudio][LsdStudioTask] task, which runs LSD Studio with the Node on the `PATH` (#210).
+ * Needs Gradle 9.0 or newer.
  */
 public class LsdStudioPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -38,6 +39,7 @@ public class LsdStudioPlugin : Plugin<Project> {
                 project.layout.projectDirectory.file(project.providers.gradleProperty(STOP_FILE_PROPERTY)),
             )
             task.projectDir.set(project.layout.projectDirectory)
+            task.offline.set(project.gradle.startParameter.isOffline)
             task.ci.set(
                 project.providers
                     .environmentVariable("CI")
