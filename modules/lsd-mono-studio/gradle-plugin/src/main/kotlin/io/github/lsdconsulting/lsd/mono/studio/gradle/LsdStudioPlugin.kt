@@ -1,5 +1,7 @@
 package io.github.lsdconsulting.lsd.mono.studio.gradle
 
+import com.github.gradle.node.NodeExtension
+import com.github.gradle.node.NodePlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test
@@ -20,6 +22,8 @@ public class LsdStudioPlugin : Plugin<Project> {
         extension.npmCommand.convention("npm")
         extension.studioPackage.convention(gradleProperty)
         extension.wireTests.convention(true)
+        extension.downloadNode.convention(false)
+        extension.nodeVersion.convention(DEFAULT_NODE_VERSION)
         // Resolve the Gradle user home now: providers that capture the Project break the configuration cache.
         val cacheDir = project.gradle.gradleUserHomeDir.resolve("caches/lsd-mono-studio")
         extension.cacheDir.convention(project.layout.dir(project.provider { cacheDir }))
@@ -34,6 +38,13 @@ public class LsdStudioPlugin : Plugin<Project> {
             task.nodeCommand.convention(extension.nodeCommand)
             task.npmCommand.convention(extension.npmCommand)
             task.studioPackage.convention(extension.studioPackage)
+            task.npmRegistry.convention(extension.npmRegistry)
+            // Each named property on its own, so other http.* properties are not configuration-cache inputs.
+            task.proxyProperties.convention(
+                NpmEnvironment.PROXY_PROPERTIES.fold(project.providers.provider { emptyMap<String, String>() }) { all, name ->
+                    all.zip(project.providers.systemProperty(name).orElse(UNSET)) { map, value -> if (value == UNSET) map else map + (name to value) }
+                },
+            )
             task.cacheDir.convention(extension.cacheDir)
             task.stopFile.convention(
                 project.layout.projectDirectory.file(project.providers.gradleProperty(STOP_FILE_PROPERTY)),
@@ -49,6 +60,14 @@ public class LsdStudioPlugin : Plugin<Project> {
             task.processes.set(processes)
             task.usesService(processes)
         }
+        // After the build script, so downloadNode is known: node-gradle is applied only when it is on.
+        // downloadNode and nodeDistUrl are acted on once here, so a later set fails instead of being ignored.
+        // nodeVersion is handed to node-gradle as a provider and stays writable.
+        project.afterEvaluate {
+            extension.downloadNode.finalizeValue()
+            extension.nodeDistUrl.finalizeValue()
+            if (extension.downloadNode.get()) useDownloadedNode(project, extension)
+        }
         project.tasks.withType(Test::class.java).configureEach { task ->
             val wiring = StudioUrlWiring(extension.port, extension.wireTests, extension.studioPackage, project.layout.projectDirectory.asFile)
             task.doFirst(wiring)
@@ -57,6 +76,11 @@ public class LsdStudioPlugin : Plugin<Project> {
     }
 
     public companion object {
+        private const val UNSET = "\u0000unset"
+
+        /** The Node.js version [LsdStudioExtension.downloadNode] fetches by default. */
+        public const val DEFAULT_NODE_VERSION: String = "22.22.0"
+
         /** LSD Studio's own default port. */
         public const val DEFAULT_PORT: Int = 7357
 
@@ -65,5 +89,39 @@ public class LsdStudioPlugin : Plugin<Project> {
 
         /** The Gradle property that sets [LsdStudioTask.stopFile]. */
         public const val STOP_FILE_PROPERTY: String = "lsd.studio.stopFile"
+    }
+
+    private fun useDownloadedNode(
+        project: Project,
+        extension: LsdStudioExtension,
+    ) {
+        project.pluginManager.apply(NodePlugin::class.java)
+        val node = project.extensions.getByType(NodeExtension::class.java)
+        node.download.set(true)
+        node.version.set(extension.nodeVersion)
+        extension.nodeDistUrl.orNull?.let { url ->
+            // Blank: no repository of node-gradle's own, so Node resolves from the settings' repositories.
+            if (url.isBlank()) node.distBaseUrl.set(null as String?) else node.distBaseUrl.set(url)
+        }
+        wireDownloadedNodeLayout(project, extension, node)
+    }
+}
+
+/**
+ * Points [extension] at the downloaded node and npm. [Commands.WINDOWS] chooses the archive layout,
+ * so a test can stand in for the other operating system.
+ */
+internal fun wireDownloadedNodeLayout(
+    project: Project,
+    extension: LsdStudioExtension,
+    node: NodeExtension,
+) {
+    val windows = Commands.WINDOWS
+    val binDir = project.layout.dir(node.resolvedNodeDir.map { NodeLayout.binDir(it.asFile, windows) })
+    extension.nodeCommand.convention(binDir.map { NodeLayout.node(it.asFile, windows).path })
+    extension.npmCommand.convention(binDir.map { NodeLayout.npm(it.asFile, windows).path })
+    project.tasks.named("lsdStudio", LsdStudioTask::class.java) { task ->
+        task.dependsOn("nodeSetup")
+        task.nodeBinDir.convention(binDir)
     }
 }

@@ -1,9 +1,13 @@
 public abstract class io/github/lsdconsulting/lsd/mono/studio/gradle/LsdStudioExtension {
 	public fun <init> ()V
 	public abstract fun getCacheDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getDownloadNode ()Lorg/gradle/api/provider/Property;
 	public abstract fun getExpose ()Lorg/gradle/api/provider/Property;
 	public abstract fun getNodeCommand ()Lorg/gradle/api/provider/Property;
+	public abstract fun getNodeDistUrl ()Lorg/gradle/api/provider/Property;
+	public abstract fun getNodeVersion ()Lorg/gradle/api/provider/Property;
 	public abstract fun getNpmCommand ()Lorg/gradle/api/provider/Property;
+	public abstract fun getNpmRegistry ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getStudioPackage ()Lorg/gradle/api/provider/Property;
@@ -12,6 +16,7 @@ public abstract class io/github/lsdconsulting/lsd/mono/studio/gradle/LsdStudioEx
 
 public final class io/github/lsdconsulting/lsd/mono/studio/gradle/LsdStudioPlugin : org/gradle/api/Plugin {
 	public static final field Companion Lio/github/lsdconsulting/lsd/mono/studio/gradle/LsdStudioPlugin$Companion;
+	public static final field DEFAULT_NODE_VERSION Ljava/lang/String;
 	public static final field DEFAULT_PORT I
 	public static final field STOP_FILE_PROPERTY Ljava/lang/String;
 	public static final field STUDIO_PACKAGE_PROPERTY Ljava/lang/String;
@@ -28,13 +33,16 @@ public abstract class io/github/lsdconsulting/lsd/mono/studio/gradle/LsdStudioTa
 	public abstract fun getCacheDir ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getCi ()Lorg/gradle/api/provider/Property;
 	public abstract fun getExpose ()Lorg/gradle/api/provider/Property;
+	public abstract fun getNodeBinDir ()Lorg/gradle/api/file/DirectoryProperty;
 	public abstract fun getNodeCommand ()Lorg/gradle/api/provider/Property;
 	public abstract fun getNpmCommand ()Lorg/gradle/api/provider/Property;
+	public abstract fun getNpmRegistry ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOffline ()Lorg/gradle/api/provider/Property;
 	public abstract fun getOpenBrowser ()Lorg/gradle/api/provider/Property;
 	public abstract fun getPort ()Lorg/gradle/api/provider/Property;
 	public abstract fun getProcesses ()Lorg/gradle/api/provider/Property;
 	public abstract fun getProjectDir ()Lorg/gradle/api/file/DirectoryProperty;
+	public abstract fun getProxyProperties ()Lorg/gradle/api/provider/MapProperty;
 	public abstract fun getStopFile ()Lorg/gradle/api/file/RegularFileProperty;
 	public abstract fun getStudioPackage ()Lorg/gradle/api/provider/Property;
 	public final fun run ()V
