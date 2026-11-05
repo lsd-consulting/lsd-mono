@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.IdentityHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
@@ -50,6 +51,11 @@ class PayloadRedactionTest {
 
     /** A password field inside an object used as a map key. */
     data class FieldSecret(val user: String, val password: String)
+
+    /** No fields, so the key is its text, and that text cannot be read. */
+    class UnreadableKey {
+        override fun toString(): String = error("unreadable")
+    }
 
     /** No fields. [reads] counts toString calls, including a second call that throws. */
     class OnceName {
@@ -498,6 +504,35 @@ class PayloadRedactionTest {
     }
 
     @Test
+    fun `a key whose read runs out of budget is redacted without asking the rule`() {
+        // The nested value's copy is what finds the budget already spent.
+        assertClosed(
+            linkedMapOf(linkedMapOf("abcdefghij" to "x") to "zq9-copy-budget"),
+            Limits(maxStringLength = 10, maxTotalSize = 12),
+            "zq9-copy-budget",
+        )
+        // The next map entry, list item or field is where the budget is noticed.
+        val limits = Limits(maxStringLength = 100, maxTotalSize = 5)
+        assertClosed(linkedMapOf(linkedMapOf("a" to "x", "b" to "y") to "zq9-map-budget"), limits, "zq9-map-budget")
+        assertClosed(linkedMapOf(listOf("a", "b") to "zq9-list-budget"), Limits(maxStringLength = 100, maxTotalSize = 4), "zq9-list-budget")
+        assertClosed(linkedMapOf(ItemKey("a", "b") to "zq9-field-budget"), Limits(maxStringLength = 100, maxTotalSize = 4), "zq9-field-budget")
+    }
+
+    @Test
+    fun `a key whose toString throws on the first call is redacted without asking the rule`() {
+        assertClosed(linkedMapOf(UnreadableKey() to "zq9-unreadable-key"), "zq9-unreadable-key")
+    }
+
+    @Test
+    fun `a key that refers to itself is redacted without asking the rule`() {
+        val cycle = mutableMapOf<String, Any?>()
+        cycle["self"] = cycle
+        val outer = IdentityHashMap<Any, Any>()
+        outer[cycle] = "zq9-cycle-key"
+        assertClosed(outer, "zq9-cycle-key")
+    }
+
+    @Test
     fun `a key hidden by the item or depth cap is redacted`() {
         val hiddenItems = snap(linkedMapOf(ItemKey("one", "two") to "zq9-hidden-items"), Limits(maxStringLength = 100, maxItems = 1)) as Map<*, *>
         assertEquals(REDACTED, hiddenItems.values.single(), hiddenItems.toString())
@@ -647,6 +682,19 @@ class PayloadRedactionTest {
         limits: Limits,
         redaction: Redaction = Redaction(),
     ): Any? = PayloadConverters(limits, redaction).snapshot(value)
+
+    /** Built-in names off and every rule returns false, so only an incomplete key redacts. */
+    private fun assertClosed(value: Any?, secret: String) {
+        assertClosed(value, Limits(), secret)
+    }
+
+    private fun assertClosed(value: Any?, limits: Limits, secret: String) {
+        val payloads = PayloadConverters(limits, Redaction(keys = emptySet()))
+        payloads.redactWhen { false }
+        val snapshot = payloads.snapshot(value) as Map<*, *>
+        assertEquals(REDACTED, snapshot.values.single(), snapshot.toString())
+        assertNoLeak(snapshot, limits.maxStringLength, secret)
+    }
 
     private fun assertRedactedByteKey(limit: Int, key: Any, secret: String) {
         val snapshot = snap(linkedMapOf(key to secret), limit) as Map<*, *>

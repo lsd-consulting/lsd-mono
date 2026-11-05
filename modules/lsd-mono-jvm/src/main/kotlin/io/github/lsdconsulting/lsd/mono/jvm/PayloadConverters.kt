@@ -201,6 +201,11 @@ public class PayloadConverters internal constructor(
         private val path = IdentityHashMap<Any, Unit>()
         private var budget = limits.maxTotalSize
 
+        /**
+         * When [keyRead] is set, this read decides whether that key is complete.
+         * A [FrozenMap] or [FrozenList] produced by an earlier snapshot is already text:
+         * it is treated as complete, even when that text was shortened.
+         */
         fun copy(value: Any?, depth: Int, convert: Boolean = true, keyRead: KeyRead? = null): Any? {
             if (value == null) return null
             if (value is FrozenMap || value is FrozenList) return value.also { budget -= 1 }
@@ -284,6 +289,7 @@ public class PayloadConverters internal constructor(
             }
         }
 
+        /** A map used as a value. A map used as a key is [mapAsKey]. */
         private fun map(value: Map<*, *>, depth: Int, keyRead: KeyRead?): Any {
             if (keyRead != null) return mapAsKey(value, depth, keyRead)
             val out = LinkedHashMap<String, Any?>()
@@ -305,7 +311,7 @@ public class PayloadConverters internal constructor(
             return FrozenMap(out)
         }
 
-        /** One read of a map that is itself a key. Incomplete reads are marked on [keyRead]. */
+        /** One read of a map that is itself a key. The value-map twin is [map]. */
         private fun mapAsKey(value: Map<*, *>, depth: Int, keyRead: KeyRead): Both {
             val identity = LinkedHashMap<String, Any?>()
             val display = LinkedHashMap<String, Any?>()
@@ -325,13 +331,15 @@ public class PayloadConverters internal constructor(
                     display[TRUNCATED_KEY] = rest
                     break
                 }
-                val names = namesOf(key, depth, keyRead)
+                val names = namesOf(key, depth)
                 if (names.identity != null && isRedacted(names.identity)) {
                     identity[uniqueKey(identity, names.identity)] = REDACTED
                     display[uniqueKey(display, names.display)] = REDACTED
                 } else {
                     if (names.identity == null) keyRead.complete = false
                     val child = if (names.identity == null) REDACTED else copy(item, depth + 1, keyRead = keyRead)
+                    // No identity text for an incomplete nested key. Its display text is kept only
+                    // so the key can still be shown; this key is incomplete, so the value is redacted.
                     val shown = if (names.identity == null) names.display else names.identity
                     identity[uniqueKey(identity, shown)] = plainIdentity(child)
                     display[uniqueKey(display, names.display)] = plainDisplay(child)
@@ -341,6 +349,7 @@ public class PayloadConverters internal constructor(
             return Both(FrozenMap(identity), FrozenMap(display))
         }
 
+        /** A list used as a value. A list used as a key is [listAsKey]. */
         private fun list(items: Iterator<*>, size: Int?, depth: Int, keyRead: KeyRead?): Any {
             if (keyRead != null) return listAsKey(items, size, depth, keyRead)
             val out = ArrayList<Any?>()
@@ -358,6 +367,7 @@ public class PayloadConverters internal constructor(
             return FrozenList(out)
         }
 
+        /** One read of a list that is itself a key. The value-list twin is [list]. */
         private fun listAsKey(items: Iterator<*>, size: Int?, depth: Int, keyRead: KeyRead): Both {
             val identity = ArrayList<Any?>()
             val display = ArrayList<Any?>()
@@ -394,6 +404,7 @@ public class PayloadConverters internal constructor(
             return fields(readable.map { f -> f.name to { f.get(value) } }, depth, keyRead)
         }
 
+        /** Fields of a value. Fields of an object used as a key are [fieldsAsKey]. */
         private fun fields(readers: List<Pair<String, () -> Any?>>, depth: Int, keyRead: KeyRead?): Any {
             if (keyRead != null) return fieldsAsKey(readers, depth, keyRead)
             val out = LinkedHashMap<String, Any?>()
@@ -420,6 +431,7 @@ public class PayloadConverters internal constructor(
             return FrozenMap(out)
         }
 
+        /** One read of an object's fields when that object is a key. The value twin is [fields]. */
         private fun fieldsAsKey(readers: List<Pair<String, () -> Any?>>, depth: Int, keyRead: KeyRead): Both {
             val identity = LinkedHashMap<String, Any?>()
             val display = LinkedHashMap<String, Any?>()
@@ -541,8 +553,11 @@ public class PayloadConverters internal constructor(
             return KeyMatch(plainIdentity(rendered)?.toString() ?: "null", display)
         }
 
-        /** One read of a nested key while a map is being used as a key. */
-        private fun namesOf(key: Any?, depth: Int, parent: KeyRead): KeyMatch {
+        /**
+         * One read of a nested key while a map is being used as a key.
+         * [mapAsKey] marks this key incomplete when the result has no identity.
+         */
+        private fun namesOf(key: Any?, depth: Int): KeyMatch {
             if (key == null) return KeyMatch("null", "null")
             if (key is String) {
                 budget -= key.length.coerceAtMost(limits.maxStringLength)
@@ -550,7 +565,6 @@ public class PayloadConverters internal constructor(
             }
             val nested = KeyRead()
             val rendered = copy(key, depth + 1, keyRead = nested)
-            if (!nested.complete) parent.complete = false
             val display = plainDisplay(rendered)?.toString() ?: "null"
             if (!nested.complete) return KeyMatch(null, display)
             return KeyMatch(plainIdentity(rendered)?.toString() ?: "null", display)
