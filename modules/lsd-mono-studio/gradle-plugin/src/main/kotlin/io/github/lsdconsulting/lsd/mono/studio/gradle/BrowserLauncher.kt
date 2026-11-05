@@ -24,9 +24,32 @@ internal object BrowserLauncher {
         }
     }
 
+    /** Whether to open a browser: only when asked to, and never on CI. */
+    fun shouldBrowse(
+        openBrowser: Boolean,
+        ci: Boolean,
+    ): Boolean = openBrowser && !ci
+
+    /**
+     * Opens [url] through [launch] when [shouldBrowse] allows it, with the launcher for [os].
+     * Returns whether a launch was requested.
+     */
+    fun browse(
+        url: String,
+        openBrowser: Boolean,
+        ci: Boolean,
+        os: String,
+        launch: (List<String>) -> Unit,
+    ): Boolean {
+        if (!shouldBrowse(openBrowser, ci)) return false
+        launch(command(os, url))
+        return true
+    }
+
     /**
      * Runs [command] on a daemon thread and returns that thread. A launcher that fails to start
-     * goes to [onFailure]; one still running after [timeout] is destroyed, its children left alone.
+     * goes to [onFailure]; one still running after [timeout] is destroyed (forcibly if it ignores that
+     * for a second), its children left alone.
      */
     fun launch(
         command: List<String>,
@@ -35,6 +58,8 @@ internal object BrowserLauncher {
     ): Thread =
         Thread({
             try {
+                // DISCARD and the stdin close matter for real browsers: one forked by the launcher
+                // inherits its pipes and could otherwise hold them open for as long as it runs.
                 val process =
                     ProcessBuilder(command)
                         .redirectOutput(ProcessBuilder.Redirect.DISCARD)
@@ -44,7 +69,7 @@ internal object BrowserLauncher {
                 if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
                     // The launcher only: its descendants may be the browser it just opened.
                     process.destroy()
-                    process.waitFor(1, TimeUnit.SECONDS)
+                    if (!process.waitFor(1, TimeUnit.SECONDS)) process.destroyForcibly()
                 }
             } catch (e: Exception) {
                 onFailure(e)

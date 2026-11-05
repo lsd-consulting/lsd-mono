@@ -271,11 +271,12 @@ public abstract class LsdStudioTask : DefaultTask() {
     }
 
     private fun browse(url: String) {
-        if (!openBrowser.get() || ci.get()) return
         // Off the output reader, so a slow or hung launcher cannot stall Studio's output.
         val log = logger
-        BrowserLauncher.launch(BrowserLauncher.command(System.getProperty("os.name"), url)) { e ->
-            log.info("LSD Studio: could not open a browser ({}); open {} yourself.", e.message, url)
+        BrowserLauncher.browse(url, openBrowser.get(), ci.get(), System.getProperty("os.name")) { command ->
+            BrowserLauncher.launch(command) { e ->
+                log.info("LSD Studio: could not open a browser ({}); open {} yourself.", e.message, url)
+            }
         }
     }
 }
