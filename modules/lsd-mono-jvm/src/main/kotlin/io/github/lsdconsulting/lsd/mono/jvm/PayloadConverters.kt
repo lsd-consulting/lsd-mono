@@ -45,10 +45,11 @@ internal val DEFAULT_REDACTED_KEYS: List<String> =
  *
  * **Redaction.** A value whose key looks like a secret is written as `[lsd: redacted]`.
  * The key is a map key (header maps included), an object field or a record component.
- * Matching uses the key as captured. A map key is shortened for display only after that
- * decision, so `lsd.mono.payload.maxStringLength` cannot hide a sensitive name, and a
- * [redactWhen] rule sees the captured key rather than the truncation marker. A redacted
- * value is not read.
+ * Matching uses the key as captured, from one read. A string is matched before its
+ * display is shortened. Any other key is matched on the text of that read. When the
+ * read cannot see the whole key — the byte cap, the item or depth cap, the size budget,
+ * or a failure while reading it — the value is redacted and a [redactWhen] rule is not
+ * asked to judge the partial text. A redacted value is not read.
  * Keys are compared ignoring case and the separators `-`, `_`, `.` and spaces, and a key
  * matches a name when it equals it or ends with it: `token` also covers `accessToken`
  * and `refresh_token`, and `apiKey` covers `X-Api-Key`. Built in, on by default:
@@ -155,9 +156,10 @@ public class PayloadConverters internal constructor(
 
     /**
      * Also redact a value when [rule] returns true for its key, given exactly as captured
-     * (a map key's text, or a field name) and not shortened for display:
+     * (a map key's text, or a field name), not the shortened display:
      * `lsd.payloads.redactWhen { it.startsWith("x-internal-") }`.
-     * A rule that throws redacts.
+     * A rule that throws redacts. A key that could not be fully read is redacted
+     * without asking the rule.
      */
     public fun redactWhen(rule: Predicate<String>): PayloadConverters = apply { redactRules.add(rule) }
 
@@ -199,37 +201,37 @@ public class PayloadConverters internal constructor(
         private val path = IdentityHashMap<Any, Unit>()
         private var budget = limits.maxTotalSize
 
-        /**
-         * When false, [text] keeps the whole string. Set while a non-string key is rendered
-         * again for redaction, so the match is the text from before a truncation suffix.
-         */
-        private var includeStringTruncation = true
-
-        fun copy(value: Any?, depth: Int, convert: Boolean = true): Any? {
+        fun copy(value: Any?, depth: Int, convert: Boolean = true, keyRead: KeyRead? = null): Any? {
             if (value == null) return null
             if (value is FrozenMap || value is FrozenList) return value.also { budget -= 1 }
-            if (budget <= 0) return marker(tooLarge())
+            if (budget <= 0) {
+                keyRead?.complete = false
+                return marker(tooLarge())
+            }
             budget -= 1
             return try {
-                copyValue(value, depth, convert)
+                copyValue(value, depth, convert, keyRead)
             } catch (e: StackOverflowError) {
+                keyRead?.complete = false
                 marker("${value.javaClass.name} could not be read: nesting too deep")
             } catch (e: Exception) {
+                keyRead?.complete = false
                 marker("${value.javaClass.name} could not be read: ${describe(e)}")
             } catch (e: LinkageError) {
+                keyRead?.complete = false
                 marker("${value.javaClass.name} could not be read: ${describe(e)}")
             }
         }
 
-        private fun copyValue(value: Any, depth: Int, convert: Boolean): Any? {
+        private fun copyValue(value: Any, depth: Int, convert: Boolean, keyRead: KeyRead?): Any? {
             if (convert) {
                 converterFor(value)?.let { converter ->
-                    return copy(converter.apply(value), depth, convert = false)
+                    return copy(converter.apply(value), depth, convert = false, keyRead = keyRead)
                 }
             }
             when (value) {
-                is String -> return text(value)
-                is CharSequence -> return text(value.toString())
+                is String -> return text(value, keyRead)
+                is CharSequence -> return text(value.toString(), keyRead)
                 is Char -> return value.toString()
                 is Boolean -> return value
                 is Byte, is Short, is Int, is Long -> return (value as Number).toLong()
@@ -238,45 +240,52 @@ public class PayloadConverters internal constructor(
                 is BigInteger, is BigDecimal -> return value
                 is Number -> return number(value)
                 is Enum<*> -> return value.name
-                is ByteArray -> return bytes(ByteBuffer.wrap(value))
-                is ByteBuffer -> return bytes(value.duplicate())
+                is ByteArray -> return bytes(ByteBuffer.wrap(value), keyRead)
+                is ByteBuffer -> return bytes(value.duplicate(), keyRead)
                 is AtomicBoolean -> return value.get()
-                is Optional<*> -> return copy(value.orElse(null), depth)
+                is Optional<*> -> return copy(value.orElse(null), depth, keyRead = keyRead)
                 is OptionalInt -> return if (value.isPresent) value.asInt.toLong() else null
                 is OptionalLong -> return if (value.isPresent) value.asLong else null
                 is OptionalDouble -> return if (value.isPresent) finite(value.asDouble, value.asDouble.toString()) else null
-                is AtomicReference<*> -> return copy(value.get(), depth)
-                is TemporalAccessor, is TemporalAmount -> return text(value.toString())
-                is Date -> return text(runCatching { value.toInstant().toString() }.getOrElse { value.toString() })
-                is Calendar -> return text(value.toInstant().toString())
+                is AtomicReference<*> -> return copy(value.get(), depth, keyRead = keyRead)
+                is TemporalAccessor, is TemporalAmount -> return text(value.toString(), keyRead)
+                is Date -> return text(runCatching { value.toInstant().toString() }.getOrElse { value.toString() }, keyRead)
+                is Calendar -> return text(value.toInstant().toString(), keyRead)
                 is Class<*> -> return value.name
-                is Throwable -> return throwable(value)
+                is Throwable -> return throwable(value, keyRead)
             }
-            if (isPlainValue(value)) return safeString(value)
-            if (depth >= limits.maxDepth) return marker("max depth ${limits.maxDepth} reached")
-            if (path.put(value, Unit) != null) return marker("cycle back to ${value.javaClass.name}")
+            if (isPlainValue(value)) return safeString(value, keyRead)
+            if (depth >= limits.maxDepth) {
+                keyRead?.complete = false
+                return marker("max depth ${limits.maxDepth} reached")
+            }
+            if (path.put(value, Unit) != null) {
+                keyRead?.complete = false
+                return marker("cycle back to ${value.javaClass.name}")
+            }
             try {
                 return when (value) {
-                    is Map<*, *> -> map(value, depth)
-                    is Iterable<*> -> list(value.iterator(), (value as? Collection<*>)?.size, depth)
-                    is Array<*> -> list(value.iterator(), value.size, depth)
-                    is IntArray -> list(value.iterator(), value.size, depth)
-                    is LongArray -> list(value.iterator(), value.size, depth)
-                    is ShortArray -> list(value.iterator(), value.size, depth)
-                    is DoubleArray -> list(value.iterator(), value.size, depth)
-                    is FloatArray -> list(value.iterator(), value.size, depth)
-                    is BooleanArray -> list(value.iterator(), value.size, depth)
-                    is CharArray -> text(String(value))
-                    is Pair<*, *> -> fields(listOf("first" to { value.first }, "second" to { value.second }), depth)
-                    is Triple<*, *, *> -> fields(listOf("first" to { value.first }, "second" to { value.second }, "third" to { value.third }), depth)
-                    else -> structure(value, depth)
+                    is Map<*, *> -> map(value, depth, keyRead)
+                    is Iterable<*> -> list(value.iterator(), (value as? Collection<*>)?.size, depth, keyRead)
+                    is Array<*> -> list(value.iterator(), value.size, depth, keyRead)
+                    is IntArray -> list(value.iterator(), value.size, depth, keyRead)
+                    is LongArray -> list(value.iterator(), value.size, depth, keyRead)
+                    is ShortArray -> list(value.iterator(), value.size, depth, keyRead)
+                    is DoubleArray -> list(value.iterator(), value.size, depth, keyRead)
+                    is FloatArray -> list(value.iterator(), value.size, depth, keyRead)
+                    is BooleanArray -> list(value.iterator(), value.size, depth, keyRead)
+                    is CharArray -> text(String(value), keyRead)
+                    is Pair<*, *> -> fields(listOf("first" to { value.first }, "second" to { value.second }), depth, keyRead)
+                    is Triple<*, *, *> -> fields(listOf("first" to { value.first }, "second" to { value.second }, "third" to { value.third }), depth, keyRead)
+                    else -> structure(value, depth, keyRead)
                 }
             } finally {
                 path.remove(value)
             }
         }
 
-        private fun map(value: Map<*, *>, depth: Int): Any {
+        private fun map(value: Map<*, *>, depth: Int, keyRead: KeyRead?): Any {
+            if (keyRead != null) return mapAsKey(value, depth, keyRead)
             val out = LinkedHashMap<String, Any?>()
             var kept = 0
             for ((key, item) in value) {
@@ -288,16 +297,52 @@ public class PayloadConverters internal constructor(
                     out[TRUNCATED_KEY] = tooLarge()
                     break
                 }
-                val budgetBeforeKey = budget
-                val name = keyText(key, depth)
-                val captured = redactionKey(key, name, depth, budgetBeforeKey)
-                out[uniqueKey(out, name)] = if (isRedacted(captured)) REDACTED else copy(item, depth + 1)
+                val match = keyMatch(key, depth)
+                val redacted = match.identity == null || isRedacted(match.identity)
+                out[uniqueKey(out, match.display)] = if (redacted) REDACTED else copy(item, depth + 1)
                 kept++
             }
             return FrozenMap(out)
         }
 
-        private fun list(items: Iterator<*>, size: Int?, depth: Int): Any {
+        /** One read of a map that is itself a key. Incomplete reads are marked on [keyRead]. */
+        private fun mapAsKey(value: Map<*, *>, depth: Int, keyRead: KeyRead): Both {
+            val identity = LinkedHashMap<String, Any?>()
+            val display = LinkedHashMap<String, Any?>()
+            var kept = 0
+            for ((key, item) in value) {
+                if (kept == limits.maxItems) {
+                    keyRead.complete = false
+                    val rest = "${value.size - kept} more entries"
+                    identity[TRUNCATED_KEY] = rest
+                    display[TRUNCATED_KEY] = rest
+                    break
+                }
+                if (budget <= 0) {
+                    keyRead.complete = false
+                    val rest = tooLarge()
+                    identity[TRUNCATED_KEY] = rest
+                    display[TRUNCATED_KEY] = rest
+                    break
+                }
+                val names = namesOf(key, depth, keyRead)
+                if (names.identity != null && isRedacted(names.identity)) {
+                    identity[uniqueKey(identity, names.identity)] = REDACTED
+                    display[uniqueKey(display, names.display)] = REDACTED
+                } else {
+                    if (names.identity == null) keyRead.complete = false
+                    val child = if (names.identity == null) REDACTED else copy(item, depth + 1, keyRead = keyRead)
+                    val shown = if (names.identity == null) names.display else names.identity
+                    identity[uniqueKey(identity, shown)] = plainIdentity(child)
+                    display[uniqueKey(display, names.display)] = plainDisplay(child)
+                }
+                kept++
+            }
+            return Both(FrozenMap(identity), FrozenMap(display))
+        }
+
+        private fun list(items: Iterator<*>, size: Int?, depth: Int, keyRead: KeyRead?): Any {
+            if (keyRead != null) return listAsKey(items, size, depth, keyRead)
             val out = ArrayList<Any?>()
             while (items.hasNext()) {
                 if (out.size == limits.maxItems) {
@@ -313,18 +358,44 @@ public class PayloadConverters internal constructor(
             return FrozenList(out)
         }
 
-        /** Records by component; other classes by instance field. No fields: their text. */
-        private fun structure(value: Any, depth: Int): Any? {
-            val type = value.javaClass
-            if (type.isRecord) {
-                return fields(type.recordComponents.map { c -> c.name to { c.accessor.also { it.trySetAccessible() }.invoke(value) } }, depth)
+        private fun listAsKey(items: Iterator<*>, size: Int?, depth: Int, keyRead: KeyRead): Both {
+            val identity = ArrayList<Any?>()
+            val display = ArrayList<Any?>()
+            while (items.hasNext()) {
+                if (identity.size == limits.maxItems) {
+                    keyRead.complete = false
+                    val rest = marker(if (size != null) "${size - identity.size} more items" else "more items not read")
+                    identity += rest
+                    display += rest
+                    break
+                }
+                if (budget <= 0) {
+                    keyRead.complete = false
+                    val rest = marker(tooLarge())
+                    identity += rest
+                    display += rest
+                    break
+                }
+                val child = copy(items.next(), depth + 1, keyRead = keyRead)
+                identity += plainIdentity(child)
+                display += plainDisplay(child)
             }
-            val readable = instanceFields(type)
-            if (readable.isEmpty()) return safeString(value)
-            return fields(readable.map { f -> f.name to { f.get(value) } }, depth)
+            return Both(FrozenList(identity), FrozenList(display))
         }
 
-        private fun fields(readers: List<Pair<String, () -> Any?>>, depth: Int): Any {
+        /** Records by component; other classes by instance field. No fields: their text. */
+        private fun structure(value: Any, depth: Int, keyRead: KeyRead?): Any? {
+            val type = value.javaClass
+            if (type.isRecord) {
+                return fields(type.recordComponents.map { c -> c.name to { c.accessor.also { it.trySetAccessible() }.invoke(value) } }, depth, keyRead)
+            }
+            val readable = instanceFields(type)
+            if (readable.isEmpty()) return safeString(value, keyRead)
+            return fields(readable.map { f -> f.name to { f.get(value) } }, depth, keyRead)
+        }
+
+        private fun fields(readers: List<Pair<String, () -> Any?>>, depth: Int, keyRead: KeyRead?): Any {
+            if (keyRead != null) return fieldsAsKey(readers, depth, keyRead)
             val out = LinkedHashMap<String, Any?>()
             for ((name, read) in readers) {
                 if (out.size == limits.maxItems) {
@@ -349,14 +420,58 @@ public class PayloadConverters internal constructor(
             return FrozenMap(out)
         }
 
+        private fun fieldsAsKey(readers: List<Pair<String, () -> Any?>>, depth: Int, keyRead: KeyRead): Both {
+            val identity = LinkedHashMap<String, Any?>()
+            val display = LinkedHashMap<String, Any?>()
+            for ((name, read) in readers) {
+                if (identity.size == limits.maxItems) {
+                    keyRead.complete = false
+                    val rest = "${readers.size - identity.size} more fields"
+                    identity[TRUNCATED_KEY] = rest
+                    display[TRUNCATED_KEY] = rest
+                    break
+                }
+                if (budget <= 0) {
+                    keyRead.complete = false
+                    val rest = tooLarge()
+                    identity[TRUNCATED_KEY] = rest
+                    display[TRUNCATED_KEY] = rest
+                    break
+                }
+                if (isRedacted(name)) {
+                    identity[name] = REDACTED
+                    display[name] = REDACTED
+                    continue
+                }
+                val child =
+                    try {
+                        copy(read(), depth + 1, keyRead = keyRead)
+                    } catch (e: Exception) {
+                        keyRead.complete = false
+                        marker("$name could not be read: ${describe(unwrap(e))}")
+                    }
+                identity[name] = plainIdentity(child)
+                display[name] = plainDisplay(child)
+            }
+            return Both(FrozenMap(identity), FrozenMap(display))
+        }
+
         private fun tooLarge() = "payload larger than ${limits.maxTotalSize} characters, rest dropped"
 
-        private fun throwable(value: Throwable): Any =
-            FrozenMap(linkedMapOf("exception" to value.javaClass.name, "message" to safe { value.message }?.let(::text)))
+        private fun throwable(value: Throwable, keyRead: KeyRead?): Any {
+            val message = safe { value.message }?.let { text(it, keyRead) }
+            val identity = linkedMapOf("exception" to value.javaClass.name, "message" to plainIdentity(message))
+            if (keyRead == null) return FrozenMap(identity)
+            return Both(FrozenMap(identity), FrozenMap(linkedMapOf("exception" to value.javaClass.name, "message" to plainDisplay(message))))
+        }
 
-        private fun text(value: String): String {
-            if (!includeStringTruncation) return value
+        private fun text(value: String, keyRead: KeyRead? = null): Any {
             budget -= value.length.coerceAtMost(limits.maxStringLength)
+            return if (keyRead == null) shorten(value) else Kept(value)
+        }
+
+        /** Display form of [value]. Does not change the size budget. */
+        private fun shorten(value: String): String {
             if (value.length <= limits.maxStringLength) return value
             return value.substring(0, limits.maxStringLength) + "… [lsd: truncated ${value.length - limits.maxStringLength} characters]"
         }
@@ -365,25 +480,30 @@ public class PayloadConverters internal constructor(
          * Reads at most [maxBytes] bytes of [buffer], so a large body is never decoded or
          * base64-encoded whole. That is enough UTF-8 for [Limits.maxStringLength] characters.
          */
-        private fun bytes(buffer: ByteBuffer): String {
+        private fun bytes(buffer: ByteBuffer, keyRead: KeyRead?): Any {
             val size = buffer.remaining()
             val maxBytes = (limits.maxStringLength.toLong() * 4).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             val cut = size > maxBytes
+            if (cut) keyRead?.complete = false
             val head = ByteArray(if (cut) utf8Boundary(buffer, maxBytes) else size).also { buffer.get(it) }
             utf8Text(head)?.let { decoded ->
-                if (!cut) return text(decoded)
+                if (!cut) return text(decoded, keyRead)
                 var end = decoded.length.coerceAtMost(limits.maxStringLength)
                 if (end in 1 until decoded.length && decoded[end - 1].isHighSurrogate()) end--
                 val kept = decoded.substring(0, end)
-                if (!includeStringTruncation) return kept
                 budget -= end
                 return kept + "… [lsd: truncated, $size bytes in total]"
             }
             val keep = (limits.maxStringLength.toLong() * 3 / 4).toInt().coerceAtMost(head.size)
             val encoded = Base64.getEncoder().encodeToString(head.copyOf(keep)).take(limits.maxStringLength)
             budget -= encoded.length
-            val marker = if (keep < size && includeStringTruncation) "… [lsd: truncated]" else ""
-            return "[lsd: binary, $size bytes] base64:$encoded$marker"
+            val marker = if (keep < size) "… [lsd: truncated]" else ""
+            val display = "[lsd: binary, $size bytes] base64:$encoded$marker"
+            if (keyRead != null && keyRead.complete) {
+                val full = Base64.getEncoder().encodeToString(head)
+                return Both("[lsd: binary, $size bytes] base64:$full", display)
+            }
+            return display
         }
 
         /**
@@ -398,60 +518,70 @@ public class PayloadConverters internal constructor(
             return end
         }
 
-        private fun safeString(value: Any): String =
+        private fun safeString(value: Any, keyRead: KeyRead?): Any =
             try {
-                text(value.toString())
+                text(value.toString(), keyRead)
             } catch (e: Exception) {
+                keyRead?.complete = false
                 marker("toString() of ${value.javaClass.name} threw ${describe(e)}")
             }
 
-        /** Strings shortened for display; other keys by the text of their snapshot (`1`, `RED`, `{a=1}`). */
-        private fun keyText(key: Any?, depth: Int): String =
-            when (key) {
-                null -> "null"
-                is String -> text(key)
-                else -> copy(key, depth + 1)?.toString() ?: "null"
-            }
-
         /**
-         * The key [isRedacted] sees. A string is the captured characters. Any other key is
-         * [display] when that text was not shortened, otherwise the same rendering with string
-         * truncation left off, so a truncation suffix is not what the match is decided on.
+         * Display text and, when the key was fully read, the text [isRedacted] sees.
+         * [KeyMatch.identity] is null when the read was cut short or failed: the value is then
+         * redacted without matching a partial name.
          */
-        private fun redactionKey(
-            key: Any?,
-            display: String,
-            depth: Int,
-            budgetBeforeKey: Int,
-        ): String =
-            when (key) {
-                is String -> key
-                else ->
-                    if (includeStringTruncation && STRING_TRUNCATION in display) {
-                        fullKeyText(key, depth, budgetBeforeKey)
-                    } else {
-                        display
-                    }
-            }
+        private fun keyMatch(key: Any?, depth: Int): KeyMatch {
+            if (key == null) return KeyMatch("null", "null")
+            if (key is String) return KeyMatch(key, text(key) as String)
+            val read = KeyRead()
+            val rendered = copy(key, depth + 1, keyRead = read)
+            val display = plainDisplay(rendered)?.toString() ?: "null"
+            if (!read.complete) return KeyMatch(null, display)
+            return KeyMatch(plainIdentity(rendered)?.toString() ?: "null", display)
+        }
 
-        /** [keyText] from the budget the display render started with, without shortening strings. */
-        private fun fullKeyText(
-            key: Any?,
-            depth: Int,
-            budgetBeforeKey: Int,
-        ): String {
-            val savedBudget = budget
-            val savedTruncation = includeStringTruncation
-            budget = budgetBeforeKey
-            includeStringTruncation = false
-            return try {
-                keyText(key, depth)
-            } finally {
-                includeStringTruncation = savedTruncation
-                budget = savedBudget
+        /** One read of a nested key while a map is being used as a key. */
+        private fun namesOf(key: Any?, depth: Int, parent: KeyRead): KeyMatch {
+            if (key == null) return KeyMatch("null", "null")
+            if (key is String) {
+                budget -= key.length.coerceAtMost(limits.maxStringLength)
+                return KeyMatch(key, shorten(key))
             }
+            val nested = KeyRead()
+            val rendered = copy(key, depth + 1, keyRead = nested)
+            if (!nested.complete) parent.complete = false
+            val display = plainDisplay(rendered)?.toString() ?: "null"
+            if (!nested.complete) return KeyMatch(null, display)
+            return KeyMatch(plainIdentity(rendered)?.toString() ?: "null", display)
+        }
+
+        private fun plainIdentity(value: Any?): Any? = when (value) {
+            is Kept -> value.value
+            is Both -> value.identity
+            else -> value
+        }
+
+        private fun plainDisplay(value: Any?): Any? = when (value) {
+            is Kept -> shorten(value.value)
+            is Both -> value.display
+            else -> value
         }
     }
+
+    /** Set false when a key read stops early or fails. One per read, not a mode flag on [Walk]. */
+    private class KeyRead {
+        var complete: Boolean = true
+    }
+
+    /** A string kept whole so matching is not the shortened display. */
+    private class Kept(val value: String)
+
+    /** Identity and display produced by one read of a composite key. */
+    private class Both(val identity: Any?, val display: Any?)
+
+    /** [identity] null means the key could not be fully read, so the value is redacted. */
+    private class KeyMatch(val identity: String?, val display: String)
 
     @Suppress("UNCHECKED_CAST")
     private fun converterFor(value: Any): Function<Any, out Any?>? {
@@ -484,9 +614,6 @@ public class PayloadConverters internal constructor(
 
         /** Key added to a map or object whose remaining entries were dropped. */
         const val TRUNCATED_KEY: String = "[lsd: truncated]"
-
-        /** Prefix of the suffix appended when a string is shortened to the string limit. */
-        private const val STRING_TRUNCATION: String = "… [lsd: truncated"
 
         /** Default limits and no converters. Used for data that was never captured. */
         val default: PayloadConverters = PayloadConverters(Limits())

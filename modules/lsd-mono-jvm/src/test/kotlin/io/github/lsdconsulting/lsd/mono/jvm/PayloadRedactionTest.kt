@@ -12,8 +12,10 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.io.path.readText
@@ -42,6 +44,25 @@ class PayloadRedactionTest {
 
     /** Structured map key. Its display text is the field map, which a short limit shortens. */
     data class HeaderName(val raw: String)
+
+    /** Two fields, so an item cap of one hides the second. */
+    data class ItemKey(val first: String, val second: String)
+
+    /** A password field inside an object used as a map key. */
+    data class FieldSecret(val user: String, val password: String)
+
+    /** No fields. [reads] counts toString calls, including a second call that throws. */
+    class OnceName {
+        override fun toString(): String {
+            val n = reads.incrementAndGet()
+            if (n > 1) error("second read")
+            return "Proxy-Authorization"
+        }
+
+        companion object {
+            val reads = AtomicInteger()
+        }
+    }
 
     @Test
     fun `every built-in name is redacted in maps, ignoring case and separators`() {
@@ -238,22 +259,31 @@ class PayloadRedactionTest {
         assertEquals(listOf(REDACTED, "applicatio… [lsd: truncated 6 characters]"), snapshot.values.toList())
         assertEquals(shortened("X-Request-Token", limit), snapshot.keys.first())
         assertNoLeak(snapshot, limit, secret)
+    }
 
-        val named = PayloadConverters(Limits(maxStringLength = limit), Redaction(keys = emptySet()))
+    @Test
+    fun `an added redact name matches the captured key when the display is truncated`() {
+        val named = PayloadConverters(Limits(maxStringLength = 10), Redaction(keys = emptySet()))
         named.redact("traceid")
         val trace = named.snapshot(linkedMapOf("user-traceid" to "zq9-traceid-value")) as Map<*, *>
         assertEquals(REDACTED, trace.values.single(), trace.toString())
-        assertNoLeak(trace, limit, "zq9-traceid-value")
+        assertNoLeak(trace, 10, "zq9-traceid-value")
+    }
 
-        // A rule written against the truncation marker must not see that marker.
-        val marker = PayloadConverters(Limits(maxStringLength = limit), Redaction(keys = emptySet()))
+    @Test
+    fun `a rule that matches only the truncation marker does not redact a public key`() {
+        val marker = PayloadConverters(Limits(maxStringLength = 10), Redaction(keys = emptySet()))
         marker.redactWhen { it.contains("… [lsd: truncated") }
         val kept = marker.snapshot(linkedMapOf("Content-Type" to "application/json")) as Map<*, *>
         assertEquals("applicatio… [lsd: truncated 6 characters]", kept.values.single())
+    }
 
-        val failing = PayloadConverters(Limits(maxStringLength = limit), Redaction(keys = emptySet()))
+    @Test
+    fun `a rule that throws redacts even when the key is longer than the string limit`() {
+        val failing = PayloadConverters(Limits(maxStringLength = 10), Redaction(keys = emptySet()))
         failing.redactWhen { error("broken rule") }
         assertEquals(REDACTED, (failing.snapshot(linkedMapOf("X-Trace-Label" to "zq9-thrown-value")) as Map<*, *>).values.single())
+        assertNoLeak(failing.snapshot(linkedMapOf("X-Trace-Label" to "zq9-thrown-value")), 10, "zq9-thrown-value")
     }
 
     @Test
@@ -284,7 +314,7 @@ class PayloadRedactionTest {
     }
 
     @Test
-    fun `a non-string map key is matched before the truncation suffix is appended`() {
+    fun `a fully read non-string key is matched whole and displayed shortened`() {
         val limit = 10
         val secret = "zq9-non-string-key"
         val seen = mutableListOf<String>()
@@ -317,37 +347,24 @@ class PayloadRedactionTest {
         // A structured key is the field map's text. Field names are also shown to the rule.
         assertTrue(seen.contains("{raw=X-Trace-Label}"), seen.toString())
         assertFalse(seen.any { "… [lsd: truncated" in it }, seen.toString())
+    }
 
-        // The second render used for matching must not spend the payload budget.
+    @Test
+    fun `a character sequence key does not consume the budget twice`() {
         val beside =
-            PayloadConverters(Limits(maxStringLength = limit, maxTotalSize = 20), Redaction()).snapshot(
+            PayloadConverters(Limits(maxStringLength = 10, maxTotalSize = 20), Redaction()).snapshot(
                 linkedMapOf(
-                    StringBuilder("Authorization") to secret,
+                    StringBuilder("Authorization") to "zq9-non-string-key",
                     "note" to "012345678901234",
                 ),
             ) as Map<*, *>
         assertEquals(REDACTED, beside.values.first(), beside.toString())
         assertEquals("0123456789… [lsd: truncated 5 characters]", beside.values.last(), beside.toString())
-        assertNoLeak(beside, limit, secret)
+        assertNoLeak(beside, 10, "zq9-non-string-key")
+    }
 
-        val cutSeen = mutableListOf<String>()
-        val cut = PayloadConverters(Limits(maxStringLength = limit), Redaction(keys = emptySet()))
-        cut.redactWhen { key ->
-            cutSeen += key
-            key == "A".repeat(limit)
-        }
-        val cutSnapshot = cut.snapshot(linkedMapOf(ByteArray(50) { 'A'.code.toByte() } to "zq9-cut-bytes")) as Map<*, *>
-        assertEquals(listOf("A".repeat(limit)), cutSeen)
-        assertEquals(REDACTED, cutSnapshot.values.single(), cutSnapshot.toString())
-        assertTrue(
-            cutSnapshot.keys
-                .single()
-                .toString()
-                .contains("bytes in total"),
-            cutSnapshot.keys.toString(),
-        )
-        assertNoLeak(cutSnapshot, limit, "zq9-cut-bytes")
-
+    @Test
+    fun `a fully read binary key is matched without its display truncation marker`() {
         val binarySeen = mutableListOf<String>()
         val binary = PayloadConverters(Limits(maxStringLength = 4), Redaction(keys = emptySet()))
         binary.redactWhen { key ->
@@ -365,6 +382,173 @@ class PayloadRedactionTest {
             binarySnapshot.keys.toString(),
         )
         assertNoLeak(binarySnapshot, 4, "zq9-binary")
+    }
+
+    @Test
+    fun `a byte key that cannot be fully read is redacted`() {
+        val proxy = "Proxy-Authorization".also { assertEquals(19, it.length) }.toByteArray()
+        val apiKey = "x-vendor-integration-partner-gateway-api-key".also { assertEquals(44, it.length) }.toByteArray()
+        assertRedactedByteKey(4, proxy, "zq9-proxy-bytes")
+        assertRedactedByteKey(4, ByteBuffer.wrap(proxy), "zq9-proxy-buffer")
+        assertRedactedByteKey(10, apiKey, "zq9-apikey-bytes")
+        // A rule that rejects every key must not be shown a short prefix and then trusted.
+        val closed = PayloadConverters(Limits(maxStringLength = 4), Redaction(keys = emptySet()))
+        val seen = mutableListOf<String>()
+        closed.redactWhen { key ->
+            seen += key
+            false
+        }
+        val snapshot = closed.snapshot(linkedMapOf(proxy to "zq9-closed-bytes")) as Map<*, *>
+        assertEquals(REDACTED, snapshot.values.single(), snapshot.toString())
+        assertTrue(seen.isEmpty(), seen.toString())
+        assertNoLeak(snapshot, 4, "zq9-closed-bytes")
+    }
+
+    @Test
+    fun `a byte key that is fully read is matched in full and still truncated for display`() {
+        val token = snap(linkedMapOf("token".toByteArray() to "zq9-token-bytes"), 4) as Map<*, *>
+        assertEquals(REDACTED, token.values.single(), token.toString())
+        assertNoLeak(token, 4, "zq9-token-bytes")
+
+        val plain = snap(linkedMapOf("plain".toByteArray() to "kept"), 4) as Map<*, *>
+        assertEquals("kept", plain.values.single(), plain.toString())
+        assertEquals(shortened("plain", 4), plain.keys.single())
+    }
+
+    @Test
+    fun `a non-string key is read once and a failed read redacts the value`() {
+        OnceName.reads.set(0)
+        val snapshot = snap(linkedMapOf(OnceName() to "zq9-once-name"), 4) as Map<*, *>
+        assertEquals(1, OnceName.reads.get())
+        assertEquals(REDACTED, snapshot.values.single(), snapshot.toString())
+        assertNoLeak(snapshot, 4, "zq9-once-name")
+
+        var conversions = 0
+
+        class TokenKey
+        val payloads = PayloadConverters(Limits(maxStringLength = 4), Redaction())
+        payloads.register(TokenKey::class.java) {
+            conversions += 1
+            if (conversions > 1) error("second conversion")
+            "Proxy-Authorization"
+        }
+        val converted = payloads.snapshot(linkedMapOf(TokenKey() to "zq9-once-converter")) as Map<*, *>
+        assertEquals(1, conversions)
+        assertEquals(REDACTED, converted.values.single(), converted.toString())
+        assertNoLeak(converted, 4, "zq9-once-converter")
+    }
+
+    @Test
+    fun `a map or list used as a key is read once and a cap still redacts`() {
+        val nested = snap(linkedMapOf(linkedMapOf("Authorization" to "zq9-inside-key", "note" to "hello") to "outer")) as Map<*, *>
+        assertEquals("outer", nested.values.single(), nested.toString())
+        assertFalse(nested.toString().contains("zq9-inside-key"), nested.toString())
+        assertTrue(
+            nested.keys
+                .single()
+                .toString()
+                .contains(REDACTED),
+            nested.toString(),
+        )
+
+        val cappedMap = snap(
+            linkedMapOf(linkedMapOf("a" to "1", "b" to "2") to "zq9-map-items"),
+            Limits(maxStringLength = 100, maxItems = 1),
+        ) as Map<*, *>
+        assertEquals(REDACTED, cappedMap.values.single(), cappedMap.toString())
+        assertNoLeak(cappedMap, 100, "zq9-map-items")
+
+        val asList = snap(linkedMapOf(listOf("alpha", "beta") to "list-value")) as Map<*, *>
+        assertEquals("list-value", asList.values.single(), asList.toString())
+        assertEquals("{[alpha, beta]=list-value}", asList.toString())
+
+        val cappedList = snap(
+            linkedMapOf(listOf("a", "b") to "zq9-list-items"),
+            Limits(maxStringLength = 100, maxItems = 1),
+        ) as Map<*, *>
+        assertEquals(REDACTED, cappedList.values.single(), cappedList.toString())
+        assertNoLeak(cappedList, 100, "zq9-list-items")
+
+        val nestedName = snap(linkedMapOf(linkedMapOf(StringBuilder("note") to "inside") to "outer-note")) as Map<*, *>
+        assertEquals("outer-note", nestedName.values.single(), nestedName.toString())
+        assertTrue(nestedName.toString().contains("note=inside"), nestedName.toString())
+    }
+
+    @Test
+    fun `a key that fails while it is read is redacted`() {
+        val thrown = snap(linkedMapOf(FailingRecord("ann", "hidden") to "zq9-failing-record")) as Map<*, *>
+        assertEquals(REDACTED, thrown.values.single(), thrown.toString())
+        assertNoLeak(thrown, 100, "zq9-failing-record")
+
+        val field = snap(linkedMapOf(FieldSecret("ann", "zq9-field-password") to "visible")) as Map<*, *>
+        assertEquals("visible", field.values.single(), field.toString())
+        assertFalse(field.toString().contains("zq9-field-password"), field.toString())
+        assertTrue(field.toString().contains(REDACTED), field.toString())
+
+        class Boom
+        val payloads = PayloadConverters(Limits(), Redaction())
+        payloads.register(Boom::class.java) { error("nope") }
+        val converted = payloads.snapshot(linkedMapOf(Boom() to "zq9-boom-key")) as Map<*, *>
+        assertEquals(REDACTED, converted.values.single(), converted.toString())
+        assertNoLeak(converted, 100, "zq9-boom-key")
+
+        val errorKey = snap(linkedMapOf(IllegalStateException("hello") to "kept-error")) as Map<*, *>
+        assertEquals("kept-error", errorKey.values.single(), errorKey.toString())
+        assertTrue(errorKey.toString().contains("hello"), errorKey.toString())
+    }
+
+    @Test
+    fun `a key hidden by the item or depth cap is redacted`() {
+        val hiddenItems = snap(linkedMapOf(ItemKey("one", "two") to "zq9-hidden-items"), Limits(maxStringLength = 100, maxItems = 1)) as Map<*, *>
+        assertEquals(REDACTED, hiddenItems.values.single(), hiddenItems.toString())
+        assertNoLeak(hiddenItems, 100, "zq9-hidden-items")
+
+        val hiddenDepth = snap(linkedMapOf(ItemKey("one", "two") to "zq9-hidden-depth"), Limits(maxStringLength = 100, maxDepth = 1)) as Map<*, *>
+        assertEquals(REDACTED, hiddenDepth.values.single(), hiddenDepth.toString())
+        assertNoLeak(hiddenDepth, 100, "zq9-hidden-depth")
+    }
+
+    @Test
+    fun `a structured key is charged once, so the following value stops on the budget boundary`() {
+        val note = "012345678901234"
+        val shown = "0123456789… [lsd: truncated 5 characters]"
+        val key = "{first=abcdefghij, second=klmnopqrst}"
+        // 26 leaves nothing for "note". Resetting the budget after the key would keep it.
+        assertEquals(
+            mapOf(key to "v", PayloadConverters.TRUNCATED_KEY to "payload larger than 26 characters, rest dropped"),
+            snap(linkedMapOf(ItemKey("abcdefghij", "klmnopqrst") to "v", "note" to note, "tail" to "z"), Limits(maxStringLength = 10, maxTotalSize = 26)),
+        )
+        // 31 keeps the shortened note and drops "tail". Charging the key twice would drop the note.
+        assertEquals(
+            mapOf(key to "v", "note" to shown, PayloadConverters.TRUNCATED_KEY to "payload larger than 31 characters, rest dropped"),
+            snap(linkedMapOf(ItemKey("abcdefghij", "klmnopqrst") to "v", "note" to note, "tail" to "z"), Limits(maxStringLength = 10, maxTotalSize = 31)),
+        )
+        assertFalse(shown.contains(note))
+    }
+
+    @Test
+    fun `a sensitive structured key is redacted without giving its budget back`() {
+        val secret = "zq9-budget-secret"
+        val note = "012345678901234"
+        val payloads = PayloadConverters(Limits(maxStringLength = 10, maxTotalSize = 29), Redaction(keys = emptySet()))
+        payloads.redactWhen { it.contains("Proxy-Authorization") }
+        val snapshot =
+            payloads.snapshot(
+                linkedMapOf(
+                    ItemKey("Proxy-Authorization", "klmnopqrst") to secret,
+                    "note" to note,
+                    "tail" to "z",
+                ),
+            )
+        assertEquals(
+            mapOf(
+                "{first=Proxy-Auth… [lsd: truncated 9 characters], second=klmnopqrst}" to REDACTED,
+                "note" to "0123456789… [lsd: truncated 5 characters]",
+                PayloadConverters.TRUNCATED_KEY to "payload larger than 29 characters, rest dropped",
+            ),
+            snapshot,
+        )
+        assertNoLeak(snapshot, 10, secret)
     }
 
     @Test
@@ -456,7 +640,19 @@ class PayloadRedactionTest {
         value: Any?,
         maxStringLength: Int,
         redaction: Redaction = Redaction(),
-    ): Any? = PayloadConverters(Limits(maxStringLength = maxStringLength), redaction).snapshot(value)
+    ): Any? = snap(value, Limits(maxStringLength = maxStringLength), redaction)
+
+    private fun snap(
+        value: Any?,
+        limits: Limits,
+        redaction: Redaction = Redaction(),
+    ): Any? = PayloadConverters(limits, redaction).snapshot(value)
+
+    private fun assertRedactedByteKey(limit: Int, key: Any, secret: String) {
+        val snapshot = snap(linkedMapOf(key to secret), limit) as Map<*, *>
+        assertEquals(REDACTED, snapshot.values.single(), "limit=$limit snapshot=$snapshot")
+        assertNoLeak(snapshot, limit, secret)
+    }
 
     /** The display string a string limit keeps, including the truncation suffix when the text is longer. */
     private fun shortened(value: String, limit: Int): String =
