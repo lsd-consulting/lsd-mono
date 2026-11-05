@@ -63,4 +63,10 @@ class NpmEnvironmentTest {
         val windows = NpmEnvironment.of(emptyMap(), mapOf("Path" to "C:\\w"), bin, windows = true)
         assertEquals(bin.path + sep + "C:\\w", windows["Path"])
     }
+
+    @Test
+    fun `a proxy user without a password has no colon, and a password without a user is dropped`() {
+        assertEquals("http://me@p:443", NpmEnvironment.proxyUrl(mapOf("https.proxyHost" to "p", "https.proxyUser" to "me"), "https"))
+        assertEquals("http://p:443", NpmEnvironment.proxyUrl(mapOf("https.proxyHost" to "p", "https.proxyPassword" to "pw"), "https"))
+    }
 }

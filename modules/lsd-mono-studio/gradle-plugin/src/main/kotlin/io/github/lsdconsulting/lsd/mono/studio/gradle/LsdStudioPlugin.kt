@@ -39,11 +39,11 @@ public class LsdStudioPlugin : Plugin<Project> {
             task.npmCommand.convention(extension.npmCommand)
             task.studioPackage.convention(extension.studioPackage)
             task.npmRegistry.convention(extension.npmRegistry)
-            val proxy = NpmEnvironment.PROXY_PROPERTIES.toSet()
+            // Each named property on its own, so other http.* properties are not configuration-cache inputs.
             task.proxyProperties.convention(
-                project.providers
-                    .systemPropertiesPrefixedBy("http.")
-                    .zip(project.providers.systemPropertiesPrefixedBy("https.")) { http, https -> (http + https).filterKeys { it in proxy } },
+                NpmEnvironment.PROXY_PROPERTIES.fold(project.providers.provider { emptyMap<String, String>() }) { all, name ->
+                    all.zip(project.providers.systemProperty(name).orElse(UNSET)) { map, value -> if (value == UNSET) map else map + (name to value) }
+                },
             )
             task.cacheDir.convention(extension.cacheDir)
             task.stopFile.convention(
@@ -61,7 +61,12 @@ public class LsdStudioPlugin : Plugin<Project> {
             task.usesService(processes)
         }
         // After the build script, so downloadNode is known: node-gradle is applied only when it is on.
-        project.afterEvaluate { if (extension.downloadNode.get()) useDownloadedNode(project, extension) }
+        // Finalised first, so setting either later (a later afterEvaluate, say) fails instead of being ignored.
+        project.afterEvaluate {
+            extension.downloadNode.finalizeValue()
+            extension.nodeDistUrl.finalizeValue()
+            if (extension.downloadNode.get()) useDownloadedNode(project, extension)
+        }
         project.tasks.withType(Test::class.java).configureEach { task ->
             val wiring = StudioUrlWiring(extension.port, extension.wireTests, extension.studioPackage, project.layout.projectDirectory.asFile)
             task.doFirst(wiring)
@@ -77,12 +82,14 @@ public class LsdStudioPlugin : Plugin<Project> {
         val node = project.extensions.getByType(NodeExtension::class.java)
         node.download.set(true)
         node.version.set(extension.nodeVersion)
-        if (extension.nodeDistUrl.isPresent) node.distBaseUrl.set(extension.nodeDistUrl)
+        extension.nodeDistUrl.orNull?.let { url ->
+            // Blank: no repository of node-gradle's own, so Node resolves from the settings' repositories.
+            if (url.isBlank()) node.distBaseUrl.set(null as String?) else node.distBaseUrl.set(url)
+        }
         val windows = Commands.WINDOWS
-        // Node's own archives keep node.exe and npm.cmd at the top on Windows, and both under bin/ elsewhere.
-        val binDir = node.resolvedNodeDir.map { if (windows) it else it.dir("bin") }
-        extension.nodeCommand.convention(binDir.map { it.file(if (windows) "node.exe" else "node").asFile.path })
-        extension.npmCommand.convention(binDir.map { it.file(if (windows) "npm.cmd" else "npm").asFile.path })
+        val binDir = project.layout.dir(node.resolvedNodeDir.map { NodeLayout.binDir(it.asFile, windows) })
+        extension.nodeCommand.convention(binDir.map { NodeLayout.node(it.asFile, windows).path })
+        extension.npmCommand.convention(binDir.map { NodeLayout.npm(it.asFile, windows).path })
         project.tasks.named("lsdStudio", LsdStudioTask::class.java) { task ->
             task.dependsOn("nodeSetup")
             task.nodeBinDir.convention(binDir)
@@ -90,6 +97,8 @@ public class LsdStudioPlugin : Plugin<Project> {
     }
 
     public companion object {
+        private const val UNSET = "\u0000unset"
+
         /** The Node.js version [LsdStudioExtension.downloadNode] fetches by default. */
         public const val DEFAULT_NODE_VERSION: String = "22.22.0"
 

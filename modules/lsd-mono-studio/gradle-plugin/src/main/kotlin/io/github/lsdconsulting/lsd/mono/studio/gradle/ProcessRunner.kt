@@ -182,8 +182,13 @@ internal object ProcessRunner {
     ): String {
         val result = run(command, directory, timeout, environment)
         if (result.exitCode != 0) {
-            throw GradleException("'${command.joinToString(" ")}' failed (exit ${result.exitCode}):\n${result.output}")
+            throw GradleException("'${command.joinToString(" ")}' failed (exit ${result.exitCode}):\n${redact(result.output)}")
         }
         return result.output
     }
+
+    /** [text] with the user and password in any `scheme://user:password@host` replaced, in case a proxy URL is echoed. */
+    fun redact(text: String): String = CREDENTIALS.replace(text, "$1***@")
+
+    private val CREDENTIALS = Regex("""([a-zA-Z][a-zA-Z0-9+.-]*://)[^/\s@]+@""")
 }

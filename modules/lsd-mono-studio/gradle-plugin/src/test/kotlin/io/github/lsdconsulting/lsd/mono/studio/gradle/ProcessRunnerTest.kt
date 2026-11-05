@@ -124,4 +124,27 @@ class ProcessRunnerTest {
         assertEquals(0, result.exitCode)
         assertEquals(2 * 1024 * 1024, result.output.length)
     }
+
+    @Test
+    fun `redacts credentials in URLs, leaving the rest`() {
+        assertEquals(
+            "via http://***@proxy:3128 and https://***@h/x, not https://h/x or me@corp",
+            ProcessRunner.redact("via http://me:s3cr%40t@proxy:3128 and https://tok@h/x, not https://h/x or me@corp"),
+        )
+    }
+
+    @Test
+    fun `a failure does not repeat credentials from the output`(
+        @TempDir dir: File,
+    ) {
+        val e =
+            assertThrows<GradleException> {
+                ProcessRunner.runChecked(
+                    javaRunning("System.out.print(\"proxy http://me:pw@p:1\"); System.exit(2);", dir),
+                    timeout = Duration.ofMinutes(1),
+                )
+            }
+        assertTrue(e.message!!.contains("proxy http://***@p:1"), e.message)
+        assertFalse(e.message!!.contains("pw"), e.message)
+    }
 }

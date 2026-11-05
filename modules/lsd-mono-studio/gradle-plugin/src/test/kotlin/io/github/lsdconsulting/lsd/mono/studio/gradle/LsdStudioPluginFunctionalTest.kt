@@ -20,6 +20,8 @@ import java.io.Writer
 import java.net.HttpURLConnection
 import java.net.ServerSocket
 import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -129,6 +131,103 @@ class LsdStudioPluginFunctionalTest {
         val result = runner("help").build()
         assertTrue(result.output.contains("node: true 22.22.0 https://mirror.example/node"), result.output)
         assertTrue(result.output.contains(Regex("lsdStudio after: .*nodeSetup")), result.output)
+    }
+
+    @Test
+    fun `setting downloadNode after the build script fails instead of being ignored`() {
+        buildFile("}\nafterEvaluate { lsdStudio { downloadNode = true }")
+        val result = runner("help").buildAndFail()
+        assertTrue(result.output.contains(Regex("property 'downloadNode' is final")), result.output)
+    }
+
+    /**
+     * A fake Node.js [version] in nodejs.org's layout under `mirror/`: its node answers `--version`,
+     * and its npm (bin/npm, a link into lib/node_modules as in the real archive) records its own
+     * path and the first node on the `PATH` in [record], then fails. Returns the archive's name.
+     */
+    private fun nodeMirror(
+        version: String,
+        record: File,
+    ): String {
+        val os = if (System.getProperty("os.name").lowercase().contains("mac")) "darwin" else "linux"
+        val arch = if (System.getProperty("os.arch") in setOf("aarch64", "arm64")) "arm64" else "x64"
+        val name = "node-v$version-$os-$arch"
+        val root = projectDir.resolve("fixture/$name")
+        root.resolve("bin").mkdirs()
+        root.resolve("bin/node").apply {
+            writeText("#!/bin/sh\necho v$version\n")
+            setExecutable(true)
+        }
+        root.resolve("lib/node_modules/npm/bin/npm-cli.js").apply {
+            parentFile.mkdirs()
+            writeText("#!/bin/sh\necho \"npm=$0\" > '${record.path}'\necho \"node=$(command -v node)\" >> '${record.path}'\nexit 3\n")
+            setExecutable(true)
+        }
+        Files.createSymbolicLink(root.resolve("bin/npm").toPath(), Paths.get("../lib/node_modules/npm/bin/npm-cli.js"))
+        val archive = projectDir.resolve("mirror/v$version/$name.tar.gz").apply { parentFile.mkdirs() }
+        val tar = ProcessBuilder("tar", "czf", archive.path, "-C", root.parentFile.path, name).redirectErrorStream(true).start()
+        val output = tar.inputStream.bufferedReader().readText()
+        assertTrue(tar.waitFor(60, TimeUnit.SECONDS) && tar.exitValue() == 0, output)
+        return name
+    }
+
+    private fun mirrorUrl() = projectDir
+        .resolve("mirror")
+        .toURI()
+        .toString()
+        .removeSuffix("/")
+
+    /** The downloaded npm ran, with the downloaded node first on the PATH, both from node-gradle's install. */
+    private fun assertDownloadedNodeRan(
+        name: String,
+        record: File,
+        result: BuildResult,
+    ) {
+        assertTrue(record.exists(), result.output)
+        val lines = record.readLines()
+        val bin = "/.gradle/nodejs/$name/bin/"
+        assertTrue(lines[0].startsWith("npm=") && lines[0].endsWith(bin + "npm"), lines.toString())
+        assertTrue(lines[1].startsWith("node=") && lines[1].endsWith(bin + "node"), lines.toString())
+        assertTrue(result.output.contains("exit 3"), result.output)
+    }
+
+    @Test
+    fun `downloadNode fetches the default Node from the mirror and runs its npm with its node first on the PATH`() {
+        assumeFalse(windows, "the fake Node is a shell script")
+        val record = projectDir.resolve("npm-call.txt")
+        // The default, written out, so a change to it is a deliberate change to this test too.
+        val name = nodeMirror("22.22.0", record)
+        buildFile("downloadNode = true\n    nodeDistUrl = \"${mirrorUrl()}\"")
+        val result = runner("lsdStudio", "-Plsd.studio.package=lsd-mono-studio@1.2.3").buildAndFail()
+        assertDownloadedNodeRan(name, record, result)
+    }
+
+    @Test
+    fun `under FAIL_ON_PROJECT_REPOS a blank nodeDistUrl takes Node from the settings repositories`() {
+        assumeFalse(windows, "the fake Node is a shell script")
+        val record = projectDir.resolve("npm-call.txt")
+        val name = nodeMirror("22.22.0", record)
+        projectDir.resolve("settings.gradle.kts").writeText(
+            """
+            rootProject.name = "studio-user"
+            dependencyResolutionManagement {
+                repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+                repositories {
+                    ivy {
+                        name = "Node.js"
+                        setUrl("${mirrorUrl()}")
+                        patternLayout { artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]") }
+                        metadataSources { artifact() }
+                        content { includeModule("org.nodejs", "node") }
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+        buildFile("downloadNode = true\n    nodeDistUrl = \"\"")
+        val result = runner("lsdStudio", "-Plsd.studio.package=lsd-mono-studio@1.2.3").buildAndFail()
+        assertFalse(result.output.contains("was added by plugin"), result.output)
+        assertDownloadedNodeRan(name, record, result)
     }
 
     @Test

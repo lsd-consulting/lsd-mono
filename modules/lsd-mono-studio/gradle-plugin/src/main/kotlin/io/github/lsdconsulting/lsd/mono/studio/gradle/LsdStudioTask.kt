@@ -153,7 +153,7 @@ public abstract class LsdStudioTask : DefaultTask() {
                             environment = environment,
                         )
                     }
-                logger.info("{}", result)
+                logger.info("{}", ProcessRunner.redact(result))
             }
         }
         // ensureInstalled only leaves a complete install in place, with its entry script and dist/main.js.
