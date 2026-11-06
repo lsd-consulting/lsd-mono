@@ -19,8 +19,8 @@ http4k = "6.61.0.0"
 # Ktor 3. Only lsd-mono-ktor-3 uses it, compileOnly: the app brings its own Ktor (built for Java 8,
 # so that module stays on the repo's baseline).
 ktor = "3.6.1"
-json-schema-validator = "3.0.8"
-spotless = "8.10.4"
+json-schema-validator = "3.0.9"
+spotless = "8.11.0"
 ktlint = "1.8.0"
 kover = "0.9.11"
 # Javadoc jars for Maven Central (Dokka's javadoc format), as lsd-core does.
