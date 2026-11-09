@@ -1,7 +1,7 @@
 package io.github.lsdconsulting.lsd.mono.http4k.fixture
 
-import io.github.lsdconsulting.lsd.mono.http4k.JsonText
 import io.github.lsdconsulting.lsd.mono.http4k.LsdHttp4k
+import io.github.lsdconsulting.lsd.mono.jvm.JsonText
 import org.http4k.lens.BiDiWsMessageLens
 import org.http4k.lens.string
 import org.http4k.websocket.WsMessage

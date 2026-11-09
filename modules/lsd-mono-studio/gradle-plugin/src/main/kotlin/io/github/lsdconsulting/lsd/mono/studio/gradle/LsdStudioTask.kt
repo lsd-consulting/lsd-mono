@@ -92,7 +92,7 @@ public abstract class LsdStudioTask : DefaultTask() {
         checkNode(node)
         val bin = studioScript(node)
         val expected = StudioPackage.version(bin)
-        val host = if (expose.get()) "0.0.0.0" else "127.0.0.1"
+        val host = StudioLaunch.host(expose.get())
         val port = port.get()
         if (port != 0 && alreadyRunning(port, expected)) return
         launch(node, bin, port, host)
@@ -214,18 +214,13 @@ public abstract class LsdStudioTask : DefaultTask() {
         }
     }
 
-    private companion object {
-        val STARTED = Regex("""LSD Studio on (https?://\S+)""")
-    }
-
     private fun launch(
         node: String,
         bin: File,
         port: Int,
         host: String,
     ) {
-        val command = mutableListOf(node, bin.path, "--port", port.toString())
-        if (host == "0.0.0.0") command += "--expose"
+        val command = StudioLaunch.command(node, bin.path, port, host)
         // Node is started directly, not through cmd, so stopping it leaves no wrapper behind; on
         // Windows nodeCommand must therefore name node.exe (or a command that resolves to it).
         val process =
@@ -245,8 +240,7 @@ public abstract class LsdStudioTask : DefaultTask() {
                 process.inputStream.bufferedReader().useLines { lines ->
                     lines.forEach { line ->
                         logger.lifecycle("{}", line)
-                        STARTED.find(line)?.let { match ->
-                            val url = match.groupValues[1].replace("0.0.0.0", "localhost")
+                        StudioLaunch.startedUrl(line)?.let { url ->
                             logger.lifecycle("LSD Studio is running at {}", url)
                             browse(url)
                         }

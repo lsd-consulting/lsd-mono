@@ -24,10 +24,24 @@ describe('top bar on a narrow screen', () => {
     expect(rule('#app')).toMatch(/grid-template-rows:\s*auto\s+1fr/)
   })
 
-  it('sizes the one-row bar from its token, not from the tracked --topbar-h', () => {
-    // --topbar-h follows the measured bar. Sizing the bar from it would keep a phone's
-    // three-row height after the window widens.
-    expect(rule('.topbar')).toMatch(/height:\s*var\(--topbar-row-h\)/)
+  it('grows from its token when search and the chips wrap, and never from the tracked --topbar-h', () => {
+    // --topbar-h follows the measured bar. Sizing the bar from it would keep a wrapped
+    // height after the window widens.
+    expect(rule('.topbar')).toMatch(/min-height:\s*var\(--topbar-row-h\)/)
+    expect(rule('.topbar')).toMatch(/height:\s*auto/)
+    expect(rule('.topbar')).toMatch(/min-width:\s*0/)
+    expect(rule('.topbar')).not.toMatch(/height:\s*var\(--topbar-h\)/)
+  })
+
+  it('keeps search wide enough to read the placeholder or typed text (#229)', () => {
+    expect(rule('.search-wrap')).toMatch(/min-width:\s*160px/)
+  })
+
+  it('keeps the theme and help buttons with the chips when the bar wraps (#229)', () => {
+    expect(rule('.topbar-end')).toMatch(/display:\s*flex/)
+    expect(rule('.topbar-end')).toMatch(/flex-wrap:\s*nowrap/)
+    expect(rule('.topbar-end')).toMatch(/min-width:\s*min\(\s*max-content,\s*100%\s*\)/)
+    expect(rule('.topbar-end')).toMatch(/max-width:\s*100%/)
   })
 
   it('stops in-page jumps below the sticky bar', () => {

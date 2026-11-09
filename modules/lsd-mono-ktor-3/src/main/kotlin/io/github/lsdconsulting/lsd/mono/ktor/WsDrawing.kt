@@ -2,6 +2,7 @@ package io.github.lsdconsulting.lsd.mono.ktor
 
 import io.github.lsdconsulting.lsd.mono.jvm.Interaction
 import io.github.lsdconsulting.lsd.mono.jvm.InteractionKind
+import io.github.lsdconsulting.lsd.mono.jvm.JsonText
 import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario
 import io.github.lsdconsulting.lsd.mono.ktor.Calls.guarded
 import io.ktor.websocket.CloseReason
