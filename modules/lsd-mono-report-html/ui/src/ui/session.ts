@@ -15,6 +15,11 @@ export interface Session {
   reportPayloadsSrc: string | null
   /** Index page: the report being loaded, so a slower earlier load cannot replace a later choice. */
   loadingReportId: string | null
+  /**
+   * Index page: incremented at the start of each report load and whenever navigation chooses
+   * what the page shows, so an in-flight load cannot overwrite a newer selection (#236).
+   */
+  loadGeneration: number
   /** Scenario whose card is in the main column now. Null while the empty state shows. */
   renderedId: string | null
   /** True while a selection change closes the side panel: its focus return has nowhere to go. */
@@ -43,6 +48,7 @@ export function createSession(report: Report): Session {
     reportId: null,
     reportPayloadsSrc: null,
     loadingReportId: null,
+    loadGeneration: 0,
     renderedId: null,
     diagramView: 'sequence',
     switchingScenario: false,

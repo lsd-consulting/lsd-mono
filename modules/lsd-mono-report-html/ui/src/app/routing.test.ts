@@ -2,7 +2,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // applyHash's branches, without the report around it: what it opens for each hash.
-const nav = vi.hoisted(() => ({ openReport: vi.fn(), revealFiltered: vi.fn(), selectScenario: vi.fn() }))
+const nav = vi.hoisted(() => ({
+  openReport: vi.fn(),
+  revealFiltered: vi.fn(),
+  selectScenario: vi.fn(),
+  invalidateReportLoad: vi.fn(),
+}))
 const panel = vi.hoisted(() => ({ openMessage: vi.fn() }))
 const diagram = vi.hoisted(() => ({ findMessage: vi.fn(), focusDiagramMessage: vi.fn() }))
 interface Context {
