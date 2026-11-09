@@ -15,6 +15,7 @@ describe('createSession', () => {
       null,
       null,
     ])
+    expect(session.loadGeneration).toBe(0)
     expect(session.inspector).toBeNull()
     expect(session.invoker).toBeNull()
     expect(() => session.stopTopbarTracking()).not.toThrow()
