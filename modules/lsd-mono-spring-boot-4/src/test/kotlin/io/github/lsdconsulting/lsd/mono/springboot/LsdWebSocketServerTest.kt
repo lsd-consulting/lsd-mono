@@ -5,12 +5,14 @@ import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario
 import io.github.lsdconsulting.lsd.mono.jvm.testing.LsdTestConfig
 import io.github.lsdconsulting.lsd.mono.jvm.testing.ReportJson
 import io.github.lsdconsulting.lsd.mono.jvm.testing.ScenarioJson
+import io.github.lsdconsulting.lsd.mono.report.model.testing.JsonObject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
@@ -18,7 +20,11 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.http.HttpHeaders
 import org.springframework.http.server.ServletServerHttpRequest
 import org.springframework.http.server.ServletServerHttpResponse
+import org.springframework.messaging.Message
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor
+import org.springframework.messaging.simp.stomp.StompCommand
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor
+import org.springframework.messaging.support.ExecutorSubscribableChannel
 import org.springframework.messaging.support.MessageBuilder
 import org.springframework.mock.env.MockEnvironment
 import org.springframework.mock.web.MockHttpServletRequest
@@ -27,13 +33,21 @@ import org.springframework.web.socket.BinaryMessage
 import org.springframework.web.socket.CloseStatus
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketHandler
+import org.springframework.web.socket.WebSocketMessage
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.adapter.standard.StandardWebSocketSession
 import org.springframework.web.socket.handler.AbstractWebSocketHandler
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator
 import org.springframework.web.socket.handler.TextWebSocketHandler
 import org.springframework.web.socket.handler.WebSocketHandlerDecorator
+import org.springframework.web.socket.handler.WebSocketSessionDecorator
+import org.springframework.web.socket.messaging.StompSubProtocolErrorHandler
+import org.springframework.web.socket.messaging.StompSubProtocolHandler
+import org.springframework.web.socket.messaging.SubProtocolWebSocketHandler
 import org.springframework.web.socket.server.support.WebSocketHandlerMapping
 import org.springframework.web.socket.server.support.WebSocketHttpRequestHandler
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @LsdTestConfig(deterministicIds = true)
 class LsdWebSocketServerTest {
@@ -136,6 +150,149 @@ class LsdWebSocketServerTest {
     }
 
     @Test
+    fun `an ERROR the concurrent session drops while another send is in flight is still drawn`() {
+        val scenario = start()
+        val handler = LsdWebSocketHandler(TextWebSocketHandler(), names, shown = 20, frames = false)
+        val blocking = BlockingSession(session(scenario))
+        handler.afterConnectionEstablished(blocking)
+        val drawn = DrawnSession.of(blocking)!!
+        // Production order: SubProtocolWebSocketHandler wraps DrawnSession in this decorator.
+        val concurrent = ConcurrentWebSocketSessionDecorator(drawn, 10_000, 64 * 1024)
+
+        val sender = Thread({ concurrent.sendMessage(TextMessage("CONNECTED\n\n\u0000")) }, "connected-send")
+        sender.start()
+        assertEquals(true, blocking.entered.await(5, TimeUnit.SECONDS), "the first send should hold the decorator's flush lock")
+
+        // The protocol handler decides to send ERROR (drawn here) and then writes and closes.
+        // The write stays in the decorator's buffer; close drops it, so DrawnSession.sendMessage never sees it.
+        val clientMessage =
+            MessageBuilder.withPayload(ByteArray(0)).setHeader(SimpMessageHeaderAccessor.SESSION_ID_HEADER, blocking.id).build()
+        LsdStompErrorHandler().handleClientMessageProcessingError(clientMessage, IllegalStateException("not allowed"))
+        concurrent.sendMessage(TextMessage("ERROR\nmessage:not allowed\n\n\u0000"))
+        concurrent.close(CloseStatus.PROTOCOL_ERROR)
+        blocking.release.countDown()
+        sender.join(5_000)
+        handler.afterConnectionClosed(blocking, CloseStatus.PROTOCOL_ERROR)
+
+        val report = report(scenario)
+        assertEquals(listOf("ERROR", "close 1002"), report.labels, report.json)
+        val error = report.message("ERROR")
+        assertEquals(listOf("shop", "client", "error"), listOf(error["from"], error["to"], error["status"]), report.json)
+        assertEquals("not allowed", (error["data"] as JsonObject)["message"], report.json)
+    }
+
+    @Test
+    fun `an ERROR drawn by the protocol handler is not drawn again when the write reaches the socket`() {
+        val scenario = start()
+        val handler = LsdWebSocketHandler(TextWebSocketHandler(), names, shown = 20, frames = false)
+        val session = BlockingSession(session(scenario)).also { it.release.countDown() }
+        handler.afterConnectionEstablished(session)
+        val drawn = DrawnSession.of(session)!!
+        val clientMessage =
+            MessageBuilder.withPayload(ByteArray(0)).setHeader(SimpMessageHeaderAccessor.SESSION_ID_HEADER, session.id).build()
+
+        LsdStompErrorHandler().handleClientMessageProcessingError(clientMessage, IllegalStateException("not allowed"))
+        drawn.sendMessage(TextMessage("ERROR\nmessage:not allowed\n\n\u0000"))
+        handler.afterConnectionClosed(session, CloseStatus.PROTOCOL_ERROR)
+
+        val report = report(scenario)
+        assertEquals(listOf("ERROR", "close 1002"), report.labels, report.json)
+    }
+
+    @Test
+    fun `a STOMP endpoint's protocol error handler is wrapped once and still consults the app's`() {
+        val inbound = ExecutorSubscribableChannel()
+        val outbound = ExecutorSubscribableChannel()
+        val sub = SubProtocolWebSocketHandler(inbound, outbound)
+        val protocol = StompSubProtocolHandler()
+        var delegated = false
+        val app =
+            object : StompSubProtocolErrorHandler() {
+                override fun handleClientMessageProcessingError(
+                    clientMessage: Message<ByteArray>?,
+                    ex: Throwable,
+                ) = super.handleClientMessageProcessingError(clientMessage, ex).also { delegated = true }
+            }
+        protocol.setErrorHandler(app)
+        sub.addProtocolHandler(protocol)
+        sub.defaultProtocolHandler = protocol
+
+        Stomp.installErrorDrawing(sub)
+        val wrapped = protocol.errorHandler as LsdStompErrorHandler
+        Stomp.installErrorDrawing(sub)
+        assertSame(wrapped, protocol.errorHandler)
+
+        val scenario = start()
+        val handler = LsdWebSocketHandler(TextWebSocketHandler(), names, shown = 20, frames = false)
+        val session = session(scenario)
+        handler.afterConnectionEstablished(session)
+        val clientMessage =
+            MessageBuilder.withPayload(ByteArray(0)).setHeader(SimpMessageHeaderAccessor.SESSION_ID_HEADER, session.id).build()
+        assertNotNull(wrapped.handleClientMessageProcessingError(clientMessage, IllegalStateException("not allowed")))
+        assertTrue(delegated)
+
+        val report = report(scenario)
+        assertEquals(listOf("ERROR"), report.labels, report.json)
+        handler.afterConnectionClosed(session, CloseStatus.PROTOCOL_ERROR)
+    }
+
+    @Test
+    fun `an ERROR frame that reaches the socket without the protocol handler is still drawn`() {
+        val scenario = start()
+        val handler = LsdWebSocketHandler(TextWebSocketHandler(), names, shown = 20, frames = false)
+        val session = BlockingSession(session(scenario)).also { it.release.countDown() }
+        handler.afterConnectionEstablished(session)
+
+        DrawnSession.of(session)!!.sendMessage(TextMessage("ERROR\nmessage:gone\n\n\u0000"))
+        handler.afterConnectionClosed(session, CloseStatus.PROTOCOL_ERROR)
+
+        val report = report(scenario)
+        assertEquals(listOf("ERROR", "close 1002"), report.labels, report.json)
+        assertEquals("gone", (report.message("ERROR")["data"] as JsonObject)["message"], report.json)
+    }
+
+    @Test
+    fun `an ERROR message to the client is drawn from the protocol handler`() {
+        val scenario = start()
+        val handler = LsdWebSocketHandler(TextWebSocketHandler(), names, shown = 20, frames = false)
+        val session = session(scenario)
+        handler.afterConnectionEstablished(session)
+        val accessor = StompHeaderAccessor.create(StompCommand.ERROR)
+        accessor.setMessage("gone")
+        accessor.sessionId = session.id
+        accessor.setLeaveMutable(true)
+
+        LsdStompErrorHandler().handleErrorMessageToClient(MessageBuilder.createMessage(ByteArray(0), accessor.messageHeaders))
+        handler.afterConnectionClosed(session, CloseStatus.PROTOCOL_ERROR)
+
+        val report = report(scenario)
+        assertEquals(listOf("ERROR", "close 1002"), report.labels, report.json)
+        assertEquals("gone", (report.message("ERROR")["data"] as JsonObject)["message"], report.json)
+    }
+
+    @Test
+    fun `an app error handler that suppresses the ERROR draws nothing`() {
+        val scenario = start()
+        val handler = LsdWebSocketHandler(TextWebSocketHandler(), names, shown = 20, frames = false)
+        val session = session(scenario)
+        handler.afterConnectionEstablished(session)
+        val clientMessage =
+            MessageBuilder.withPayload(ByteArray(0)).setHeader(SimpMessageHeaderAccessor.SESSION_ID_HEADER, session.id).build()
+        val app =
+            object : StompSubProtocolErrorHandler() {
+                override fun handleClientMessageProcessingError(
+                    clientMessage: Message<ByteArray>?,
+                    ex: Throwable,
+                ): Message<ByteArray>? = null
+            }
+
+        assertNull(LsdStompErrorHandler(app).handleClientMessageProcessingError(clientMessage, IllegalStateException("not allowed")))
+        handler.afterConnectionClosed(session, CloseStatus.NORMAL)
+
+        assertEquals(listOf("close 1000"), report(scenario).labels)
+    }
+
+    @Test
     fun `a STOMP session is forgotten once it closes`() {
         val scenario = start()
         val handler = LsdWebSocketHandler(TextWebSocketHandler(), names, shown = 20, frames = false)
@@ -209,6 +366,26 @@ class LsdWebSocketServerTest {
 
         assertEquals(3, seen.size)
         seen.forEach { assertSame(session, it) }
+    }
+
+    /**
+     * A session whose [sendMessage] blocks until [release], like a slow CONNECTED write
+     * holding ConcurrentWebSocketSessionDecorator's flush lock (#224).
+     */
+    private class BlockingSession(
+        session: WebSocketSession,
+    ) : WebSocketSessionDecorator(session) {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+
+        override fun sendMessage(message: WebSocketMessage<*>) {
+            entered.countDown()
+            check(release.await(5, TimeUnit.SECONDS)) { "release the blocking send" }
+        }
+
+        override fun close() = Unit
+
+        override fun close(status: CloseStatus) = Unit
     }
 
     private companion object {

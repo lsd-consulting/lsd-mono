@@ -19,6 +19,7 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor
 import org.springframework.messaging.simp.SimpMessageType
 import org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler
 import org.springframework.messaging.simp.config.ChannelRegistration
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 import org.springframework.messaging.support.ExecutorChannelInterceptor
 import org.springframework.messaging.support.MessageBuilder
 import org.springframework.messaging.support.MessageHeaderAccessor
@@ -28,6 +29,8 @@ import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.WebSocketMessage
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
 import org.springframework.web.socket.handler.WebSocketHandlerDecorator
+import org.springframework.web.socket.messaging.StompSubProtocolErrorHandler
+import org.springframework.web.socket.messaging.StompSubProtocolHandler
 import org.springframework.web.socket.messaging.SubProtocolWebSocketHandler
 import java.security.Principal
 import java.util.concurrent.ConcurrentHashMap
@@ -62,6 +65,24 @@ internal object Stomp {
     }
 
     fun session(message: Message<*>): DrawnSession? = SimpMessageHeaderAccessor.getSessionId(message.headers)?.let { sessions[it] }
+
+    /**
+     * Draws rejected STOMP frames from the protocol handler's decision, before
+     * [org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator]
+     * can buffer an ERROR and then drop it when the close follows immediately (#224).
+     */
+    fun installErrorDrawing(handler: WebSocketHandler) {
+        val sub = WebSocketHandlerDecorator.unwrap(handler) as? SubProtocolWebSocketHandler ?: return
+        val protocols = LinkedHashSet<StompSubProtocolHandler>()
+        sub.protocolHandlerMap.values.filterIsInstanceTo(protocols)
+        (sub.defaultProtocolHandler as? StompSubProtocolHandler)?.let(protocols::add)
+        for (protocol in protocols) {
+            val existing = protocol.errorHandler
+            if (existing !is LsdStompErrorHandler) {
+                protocol.setErrorHandler(LsdStompErrorHandler(existing))
+            }
+        }
+    }
 
     /**
      * What the popup shows of an ERROR frame the app writes to the socket: its `message` header and
@@ -101,6 +122,57 @@ internal object Stomp {
             is String -> if (payload.isEmpty()) null else WsDrawing.popup(payload.toByteArray())
             else -> null
         }
+}
+
+/**
+ * Draws an ERROR when the protocol handler decides to send one, before the socket write
+ * that [org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator] may
+ * drop if a close follows while another send (typically CONNECTED) still holds the flush
+ * lock. Wraps the app's handler when it has one, otherwise Spring's default.
+ */
+internal class LsdStompErrorHandler(
+    private val delegate: StompSubProtocolErrorHandler? = null,
+) : StompSubProtocolErrorHandler() {
+    override fun handleClientMessageProcessingError(
+        clientMessage: Message<ByteArray>?,
+        ex: Throwable,
+    ): Message<ByteArray>? {
+        val error =
+            if (delegate != null) {
+                delegate.handleClientMessageProcessingError(clientMessage, ex)
+            } else {
+                super.handleClientMessageProcessingError(clientMessage, ex)
+            }
+        draw(clientMessage, error)
+        return error
+    }
+
+    override fun handleErrorMessageToClient(errorMessage: Message<ByteArray>): Message<ByteArray>? {
+        val error =
+            if (delegate != null) {
+                delegate.handleErrorMessageToClient(errorMessage)
+            } else {
+                super.handleErrorMessageToClient(errorMessage)
+            }
+        draw(errorMessage, error)
+        return error
+    }
+
+    private fun draw(
+        sessionMessage: Message<*>?,
+        error: Message<ByteArray>?,
+    ) {
+        guarded(Unit) {
+            if (error == null) return@guarded
+            val drawn = (sessionMessage?.let { Stomp.session(it) } ?: Stomp.session(error)) ?: return@guarded
+            if (!drawn.noteError()) return@guarded
+            val accessor = MessageHeaderAccessor.getAccessor(error, StompHeaderAccessor::class.java)
+                ?: StompHeaderAccessor.wrap(error)
+            val data = linkedMapOf("message" to accessor.message, "body" to Stomp.body(error.payload))
+                .filterValues { it != null }
+            drawn.drawing.arrow(drawn.app, drawn.call.caller, "ERROR", data.ifEmpty { null }, status = "error")
+        }
+    }
 }
 
 /** Puts the starter's interceptors on the broker's client channels. Ordered first, so it sees frames as they arrive. */
@@ -184,7 +256,7 @@ internal class LsdStompInbound(
     }
 }
 
-/** Frames to the caller: the messages its subscriptions receive. ERROR frames are drawn by [DrawnSession], which sees them all. */
+/** Frames to the caller: the messages its subscriptions receive. ERROR frames are drawn by [LsdStompErrorHandler] and [DrawnSession]. */
 internal class LsdStompOutbound : ExecutorChannelInterceptor {
     override fun preSend(
         message: Message<*>,
