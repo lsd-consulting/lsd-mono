@@ -5,14 +5,18 @@ import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario
 import io.github.lsdconsulting.lsd.mono.jvm.domain.ScenarioError
 import io.github.lsdconsulting.lsd.mono.jvm.domain.Status
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdProperties
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.BeforeAllCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
+import org.junit.jupiter.api.extension.DynamicTestInvocationContext
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.extension.InvocationInterceptor
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolutionException
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.junit.jupiter.api.extension.TestWatcher
+import org.opentest4j.TestAbortedException
 import java.lang.reflect.Method
 import java.util.Optional
 
@@ -42,7 +46,7 @@ import java.util.Optional
  * parameter, for example in `src/test/resources/junit-platform.properties`. These come after
  * system properties and environment variables, and before `lsd-mono.properties`.
  */
-public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, AfterAllCallback, ParameterResolver {
+public class LsdExtension : BeforeAllCallback, BeforeEachCallback, InvocationInterceptor, TestWatcher, AfterAllCallback, ParameterResolver {
     private val lsdContext: LsdContext = LsdContext.instance
 
     override fun beforeAll(context: ExtensionContext) {
@@ -54,8 +58,40 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
         useConfigurationParameters(context)
         lsdContext.findScenario(context.uniqueId)?.discard()
         lsdContext.reportTitle(reportKey(context), reportContext(context).displayName)
+        // Dynamic tests are completed from interceptDynamicTest; beginning a factory scenario here
+        // would leave it running as Warn. @BeforeAll captures stay on the default scenario until
+        // the first real test (a child or an ordinary @Test) begins.
+        if (isTestFactory(context)) return
         val scenario = lsdContext.beginScenario(reportKey = reportKey(context), key = context.uniqueId)
         lsdContext.scenarioTitle(scenario, prefixParentDisplayName(context))
+    }
+
+    /**
+     * Jupiter does not call [TestWatcher] for `@TestFactory` methods or their dynamic children.
+     * Each child's executable runs here, so outcomes and captures belong to that child.
+     */
+    @OptIn(io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi::class)
+    override fun interceptDynamicTest(
+        invocation: InvocationInterceptor.Invocation<Void?>,
+        @Suppress("UNUSED_PARAMETER") invocationContext: DynamicTestInvocationContext,
+        extensionContext: ExtensionContext,
+    ) {
+        useConfigurationParameters(extensionContext)
+        lsdContext.findScenario(extensionContext.uniqueId)?.discard()
+        val scenario =
+            lsdContext.beginScenario(reportKey = reportKey(extensionContext), key = extensionContext.uniqueId)
+        val title = prefixParentDisplayName(extensionContext)
+        lsdContext.scenarioTitle(scenario, title)
+        try {
+            invocation.proceed()
+            scenario.complete(title, "Test passed", Status.SUCCESS)
+        } catch (e: TestAbortedException) {
+            scenario.complete(title, "Test aborted", Status.ABORTED, ScenarioError.of("Test aborted", e))
+            throw e
+        } catch (e: Throwable) {
+            scenario.complete(title, "Test failed", Status.ERROR, ScenarioError.of("Failed", e))
+            throw e
+        }
     }
 
     override fun testSuccessful(context: ExtensionContext) {
@@ -123,6 +159,9 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, TestWatcher, 
         val root = context.root
         LsdProperties.useConfigurationSource { key -> root.getConfigurationParameter(key).orElse(null) }
     }
+
+    private fun isTestFactory(context: ExtensionContext): Boolean =
+        context.testMethod.map { it.isAnnotationPresent(TestFactory::class.java) }.orElse(false)
 
     /** The test's running scenario. A disabled test never ran beforeEach, so it gets an empty one. */
     private fun scenarioFor(context: ExtensionContext): LsdScenario =
