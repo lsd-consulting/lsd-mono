@@ -172,6 +172,10 @@
     padding: 8px 12px;
     gap: 6px 8px;
   }
+  /* Brand, search, chips and actions keep their own phone flex order. */
+  .topbar-end {
+    display: contents;
+  }
   /* Search and the status chips share one row; the chips show their count, and the
      status word stays for screen readers. */
   .search-wrap {

@@ -67,27 +67,29 @@ export function renderShell(): void {
       </div>
       <div class="search-wrap">
         <span class="search-icon" aria-hidden="true">⌕</span>
-        <input type="search" id="search" placeholder="${index ? 'Search reports, scenarios…' : 'Search scenarios, facts…'}" value="${escapeAttr(state.query)}" aria-label="Search scenarios" autocomplete="off"/>
+        <input type="search" id="search" placeholder="Search…" value="${escapeAttr(state.query)}" aria-label="Search scenarios" autocomplete="off"/>
         <button type="button" class="search-clear" id="search-clear" aria-label="Clear search" title="Clear search"${state.query ? '' : ' hidden'}>×</button>
         <span class="kbd"${state.query ? ' hidden' : ''}>/</span>
         <span class="visually-hidden" id="search-status" role="status" aria-live="polite"></span>
       </div>
-      <div class="filters" role="group" aria-label="Status filters">
-        ${(['success', 'warn', 'error', 'skipped', 'aborted'] as Status[])
-          // Skipped and aborted only get a filter when the report has some.
-          .filter((s) => s === 'success' || s === 'warn' || s === 'error' || c[s] > 0)
-          .map(
-            (s) => `
-          <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}" aria-describedby="${escapeAttr(statusDefinitionId(s))}">
-            <span class="chip-glyph" aria-hidden="true">${escapeHtml(statusGlyph(s))}</span><span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
-          </button>`,
-          )
-          .join('')}
-        ${statusLegendHtml()}
-      </div>
-      <div class="top-actions">
-        ${themeControlHtml(mode, theme)}
-        <button type="button" class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Show keyboard help">?</button>
+      <div class="topbar-end">
+        <div class="filters" role="group" aria-label="Status filters">
+          ${(['success', 'warn', 'error', 'skipped', 'aborted'] as Status[])
+            // Skipped and aborted only get a filter when the report has some.
+            .filter((s) => s === 'success' || s === 'warn' || s === 'error' || c[s] > 0)
+            .map(
+              (s) => `
+            <button type="button" class="chip ${s}" data-filter="${s}" aria-pressed="${state.status[s]}" aria-describedby="${escapeAttr(statusDefinitionId(s))}">
+              <span class="chip-glyph" aria-hidden="true">${escapeHtml(statusGlyph(s))}</span><span class="chip-label">${escapeHtml(statusLabel(s))}</span> <span class="count">${c[s]}</span>
+            </button>`,
+            )
+            .join('')}
+          ${statusLegendHtml()}
+        </div>
+        <div class="top-actions">
+          ${themeControlHtml(mode, theme)}
+          <button type="button" class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Show keyboard help">?</button>
+        </div>
       </div>
     </header>
     ${helpDialogHtml(`

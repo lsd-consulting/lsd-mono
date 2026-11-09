@@ -12,6 +12,7 @@
   min-height: var(--topbar-row-h);
   height: auto;
   flex-wrap: wrap;
+  min-width: 0;
   background: color-mix(in oklab, var(--bg-elevated) 82%, transparent);
   backdrop-filter: blur(14px) saturate(1.2);
   border-bottom: 1px solid var(--border);
@@ -98,6 +99,24 @@
   background: var(--surface-2);
 }
 
+/* Chips and the theme/help buttons wrap as one unit, so the buttons stay on the
+   chip row instead of dropping onto a third row just above the phone breakpoint (#229). */
+.topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  /* Wrap as one unit onto the next row, but never wider than the bar (#229). */
+  min-width: min(max-content, 100%);
+  max-width: 100%;
+  flex-wrap: nowrap;
+}
+.topbar-end .filters {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
 .filters {
   display: flex;
   gap: 6px;
