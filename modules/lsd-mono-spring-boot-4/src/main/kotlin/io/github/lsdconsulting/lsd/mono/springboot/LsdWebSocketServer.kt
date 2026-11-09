@@ -18,6 +18,7 @@ import org.springframework.web.socket.handler.WebSocketSessionDecorator
 import org.springframework.web.socket.server.HandshakeInterceptor
 import org.springframework.web.socket.server.support.WebSocketHandlerMapping
 import org.springframework.web.socket.server.support.WebSocketHttpRequestHandler
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Puts every WebSocket endpoint the app registers (`@EnableWebSocket`, or a STOMP endpoint) behind
@@ -52,6 +53,7 @@ internal class LsdWebSocketPostProcessor(
             if (app is LsdWebSocketHandler) continue
             // A STOMP endpoint's frames are drawn from its channels (see LsdStompInterceptor); this draws its close.
             val frames = !Stomp.isEndpoint(app)
+            if (!frames) Stomp.installErrorDrawing(app)
             val wrapped = WebSocketHttpRequestHandler(LsdWebSocketHandler(app, names, shown, frames), handler.handshakeHandler)
             wrapped.setHandshakeInterceptors(listOf(LsdHandshakeInterceptor(names)) + handler.handshakeInterceptors)
             mapping.unregisterHandler(path)
@@ -189,12 +191,18 @@ internal class DrawnSession(
     val app: String,
     private val frames: Boolean,
 ) : WebSocketSessionDecorator(session) {
+    private val errorDrawn = AtomicBoolean()
+
     override fun sendMessage(message: WebSocketMessage<*>) {
         if (frames) {
             drawing.message(app, call.caller, message)
         } else {
-            // STOMP writes its ERROR frames here, some (an inbound interceptor's rejection) without the outbound channel.
-            guarded(null) { Stomp.error(message) }?.let { drawing.arrow(app, call.caller, "ERROR", it, status = "error") }
+            // STOMP ERROR frames that reach the socket are drawn here. An interceptor's
+            // rejection is also drawn by LsdStompErrorHandler before the concurrent session
+            // may drop the write (#224); noteError() keeps that to one arrow.
+            guarded(null) { Stomp.error(message) }?.let {
+                if (noteError()) drawing.arrow(app, call.caller, "ERROR", it, status = "error")
+            }
         }
         super.sendMessage(message)
     }
@@ -219,6 +227,12 @@ internal class DrawnSession(
             throw e
         }
     }
+
+    /**
+     * True the first time an ERROR is drawn for this socket, so the protocol error
+     * handler and a later socket write do not both add one.
+     */
+    fun noteError(): Boolean = errorDrawn.compareAndSet(false, true)
 
     companion object {
         const val ATTRIBUTE: String = "io.github.lsdconsulting.lsd.mono.springboot.DrawnSession"
