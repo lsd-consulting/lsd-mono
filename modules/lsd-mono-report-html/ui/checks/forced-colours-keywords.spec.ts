@@ -42,21 +42,44 @@ const report: Report = {
   ],
 }
 
-/** Text and background of every visible description <mark>, as sRGB bytes. */
+/** Text and background of every visible description <mark>, as sRGB bytes.
+ *  The background is composited over the mark's actual backdrop (or Canvas), so a
+ *  translucent fill is not treated as an opaque colour when measuring contrast (#230). */
 function narrativeMarks(page: Page): Promise<{ text: string; fg: number[]; bg: number[] }[]> {
   return page.evaluate(() => {
     const canvas = document.createElement('canvas')
     canvas.width = canvas.height = 1
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!
-    const rgba = (color: string) => {
-      ctx.clearRect(0, 0, 1, 1)
+    const paint = (color: string) => {
       ctx.fillStyle = color
       ctx.fillRect(0, 0, 1, 1)
-      return [...ctx.getImageData(0, 0, 1, 1).data]
+    }
+    const read = () => [...ctx.getImageData(0, 0, 1, 1).data]
+    const isOpaque = (color: string) => {
+      ctx.clearRect(0, 0, 1, 1)
+      paint(color)
+      return read()[3] === 255
+    }
+    const backdrop = (el: HTMLElement) => {
+      let node: HTMLElement | null = el.parentElement
+      while (node) {
+        const bg = getComputedStyle(node).backgroundColor
+        if (isOpaque(bg)) return bg
+        node = node.parentElement
+      }
+      return 'Canvas'
     }
     return [...document.querySelectorAll<HTMLElement>('.narrative mark')].map((el) => {
       const cs = getComputedStyle(el)
-      return { text: el.textContent ?? '', fg: rgba(cs.color), bg: rgba(cs.backgroundColor) }
+      const under = backdrop(el)
+      ctx.clearRect(0, 0, 1, 1)
+      paint(under)
+      paint(cs.backgroundColor)
+      const bg = read()
+      ctx.clearRect(0, 0, 1, 1)
+      paint(cs.color)
+      const fg = read()
+      return { text: el.textContent ?? '', fg, bg }
     })
   })
 }
