@@ -11,7 +11,7 @@ Part of [LSD: living sequence diagrams](../../README.md).
 [![Maven Central: lsd-mono-cucumber-8](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-cucumber-8?label=lsd-mono-cucumber-8)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-cucumber-8)
 
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-cucumber-8:0.15.0")
+testImplementation("io.github.lsd-consulting:lsd-mono-cucumber-8:0.16.0")
 ```
 
 <!-- release-version:end -->
