@@ -54,7 +54,7 @@ public class LsdStudioPlugin : Plugin<Project> {
             task.ci.set(
                 project.providers
                     .environmentVariable("CI")
-                    .map { it.isNotBlank() && it != "false" }
+                    .map { StudioEnvironment.isCi(it) }
                     .orElse(false),
             )
             task.processes.set(processes)
@@ -101,11 +101,14 @@ public class LsdStudioPlugin : Plugin<Project> {
         node.version.set(extension.nodeVersion)
         extension.nodeDistUrl.orNull?.let { url ->
             // Blank: no repository of node-gradle's own, so Node resolves from the settings' repositories.
-            if (url.isBlank()) node.distBaseUrl.set(null as String?) else node.distBaseUrl.set(url)
+            node.distBaseUrl.set(nodeDistBaseUrl(url))
         }
         wireDownloadedNodeLayout(project, extension, node)
     }
 }
+
+/** node-gradle's distBaseUrl: a blank value means no bundled repository. */
+internal fun nodeDistBaseUrl(url: String): String? = url.takeIf { it.isNotBlank() }
 
 /**
  * Points [extension] at the downloaded node and npm. [Commands.WINDOWS] chooses the archive layout,

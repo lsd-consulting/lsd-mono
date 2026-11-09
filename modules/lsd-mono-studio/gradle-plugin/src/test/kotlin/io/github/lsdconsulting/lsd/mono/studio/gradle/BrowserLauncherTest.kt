@@ -105,6 +105,24 @@ class BrowserLauncherTest {
     }
 
     @Test
+    fun `closes the launcher stdin so a forked browser cannot hold the pipe`() {
+        val flag = File(dir, "stdin")
+        val out = flag.path.replace("\\", "\\\\")
+        val script =
+            "const fs = require('fs');" +
+                "let done = false;" +
+                "const report = (s) => { if (!done) { done = true; fs.writeFileSync('$out', s); } };" +
+                "process.stdin.on('end', () => report('closed'));" +
+                "process.stdin.resume();" +
+                "setTimeout(() => report('open'), 3000)"
+        val thread = BrowserLauncher.launch(listOf("node", "-e", script), timeout = Duration.ofSeconds(8))
+        val deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos()
+        while (System.nanoTime() < deadline && !flag.isFile) Thread.sleep(50)
+        thread.join(Duration.ofSeconds(15).toMillis())
+        assertEquals("closed", if (flag.isFile) flag.readText() else "missing")
+    }
+
+    @Test
     fun `picks the OS launcher`() {
         assertEquals(listOf("open", "u"), BrowserLauncher.command("Mac OS X", "u"))
         assertEquals(listOf("rundll32", "url.dll,FileProtocolHandler", "u"), BrowserLauncher.command("Windows 11", "u"))

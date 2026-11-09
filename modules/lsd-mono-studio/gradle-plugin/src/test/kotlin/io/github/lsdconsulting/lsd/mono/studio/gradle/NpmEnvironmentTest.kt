@@ -69,4 +69,11 @@ class NpmEnvironmentTest {
         assertEquals("http://me@p:443", NpmEnvironment.proxyUrl(mapOf("https.proxyHost" to "p", "https.proxyUser" to "me"), "https"))
         assertEquals("http://p:443", NpmEnvironment.proxyUrl(mapOf("https.proxyHost" to "p", "https.proxyPassword" to "pw"), "https"))
     }
+
+    @Test
+    fun `leaves PATH alone when there is no downloaded Node`() {
+        val env = NpmEnvironment.of(emptyMap(), mapOf("PATH" to "/usr/bin"), nodeBinDir = null)
+        assertNull(env["PATH"])
+        assertTrue(env.isEmpty())
+    }
 }
