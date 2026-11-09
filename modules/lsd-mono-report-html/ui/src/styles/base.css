@@ -66,4 +66,13 @@ html {
     outline: 2px solid Highlight !important;
     outline-offset: -2px !important;
   }
+  /* Description keywords (and any other <mark> in a narrative) keep system Mark on MarkText.
+     Without this, Chromium maps the translucent --accent-soft background onto Mark at ~15%
+     over a dark canvas, so Given/When/Then become black on near-black (#230). Payload hits
+     already set this themselves. */
+  mark {
+    forced-color-adjust: none;
+    background: Mark;
+    color: MarkText;
+  }
 }
