@@ -414,6 +414,7 @@ public class LsdContext internal constructor() :
             completeStillRunning(title, reportKey)
             val taken =
                 synchronized(lock) {
+                    awaitCompletionsLocked(reportKey)
                     // Writing a report has always dropped captures that no scenario was completed for.
                     // Keep that when nothing is running, but say so.
                     if (reportKey == null || scenarios.isEmpty()) dropStrayCaptures(title)
@@ -447,6 +448,7 @@ public class LsdContext internal constructor() :
                 reports.clear()
                 participants.clear()
                 scenarios.clear()
+                notifyLock()
             }
             scenarios.unbindCurrentThread()
         }
@@ -538,7 +540,12 @@ public class LsdContext internal constructor() :
                 if (scenario === defaultScenario) {
                     defaultScenario.drain()
                 } else {
-                    if (!scenarios.remove(scenario)) return
+                    // Leave the running set and enter the in-flight set under the same lock as
+                    // reports.add / reports.take, so a concurrent completeReport cannot miss it.
+                    synchronized(lock) {
+                        if (!scenarios.remove(scenario)) return
+                        scenarios.startCompleting(scenario)
+                    }
                     scenario.close()
                 }
             scenarios.forget(scenario)
@@ -559,6 +566,10 @@ public class LsdContext internal constructor() :
                         )
                     val order = if (scenario === defaultScenario) scenarios.nextOrder() else scenario.sequence
                     reports.add(scenario.reportKey, order, stored)
+                    if (scenario !== defaultScenario) {
+                        scenarios.finishCompleting(scenario)
+                        notifyLock()
+                    }
                     stored
                 }
             live.completed(scenario.reportKey, stored, scenario)
@@ -585,6 +596,31 @@ public class LsdContext internal constructor() :
             if (running.isEmpty()) return
             CaptureLog.stillRunning(title, running)
             running.forEach { complete(it, it.key, NOT_COMPLETED_NOTE, Status.WARN, null) }
+        }
+
+        /**
+         * A scenario that has left the running set but is still being analysed is invisible to
+         * [completeStillRunning] and not yet in [reports]. Call with [lock] held: [waitLock]
+         * releases it while [orderAndAnalyse] runs on the completing thread.
+         */
+        private fun awaitCompletionsLocked(reportKey: String?) {
+            while (scenarios.isCompleting(reportKey)) {
+                waitLock()
+            }
+        }
+
+        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+        private fun monitor(): java.lang.Object = lock as java.lang.Object
+
+        private fun notifyLock() = monitor().notifyAll()
+
+        private fun waitLock() {
+            try {
+                monitor().wait()
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw IllegalStateException("Interrupted while waiting for in-flight scenario completions", e)
+            }
         }
 
         private fun dropStrayCaptures(report: String) {

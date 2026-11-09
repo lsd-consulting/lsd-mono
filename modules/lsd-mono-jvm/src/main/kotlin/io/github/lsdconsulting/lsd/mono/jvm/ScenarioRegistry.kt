@@ -15,6 +15,7 @@ internal class ScenarioRegistry(
 ) {
     private val sequence = AtomicLong()
     private val active = ConcurrentHashMap<String, LsdScenario>()
+    private val completing = ConcurrentHashMap.newKeySet<LsdScenario>()
     private val bound = ThreadBindings()
 
     /** Unbound captures with no scenario running. Completed by `completeScenario`, as before. */
@@ -59,6 +60,17 @@ internal class ScenarioRegistry(
     /** Take [scenario] out of the running set. False if it was not running (already completed). */
     fun remove(scenario: LsdScenario): Boolean = active.remove(scenario.key, scenario)
 
+    /** Visible to report writing from the moment [scenario] leaves [active] until it is stored. */
+    fun startCompleting(scenario: LsdScenario) {
+        completing.add(scenario)
+    }
+
+    fun finishCompleting(scenario: LsdScenario) {
+        completing.remove(scenario)
+    }
+
+    fun isCompleting(reportKey: String?): Boolean = completing.any { it.reportKey == reportKey }
+
     /** Unbind [scenario] from every thread that still points at it. */
     fun forget(scenario: LsdScenario) = bound.forget(scenario)
 
@@ -83,6 +95,7 @@ internal class ScenarioRegistry(
     fun clear() {
         active.values.forEach { it.abandonCalls() }
         active.clear()
+        completing.clear()
         defaultScenario.abandonCalls()
         defaultScenario.drain()
         warnedAmbiguous = false
