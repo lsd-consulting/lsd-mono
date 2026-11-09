@@ -7,7 +7,11 @@
   align-items: center;
   gap: 12px;
   padding: 0 16px;
-  height: var(--topbar-row-h);
+  /* Grow when search and the chips cannot share one row (tablets, landscape, 200% zoom)
+     rather than clamp to one 56px row and spill over the page (#229). */
+  min-height: var(--topbar-row-h);
+  height: auto;
+  flex-wrap: wrap;
   background: color-mix(in oklab, var(--bg-elevated) 82%, transparent);
   backdrop-filter: blur(14px) saturate(1.2);
   border-bottom: 1px solid var(--border);
@@ -51,7 +55,8 @@
 }
 
 .search-wrap {
-  flex: 1;
+  flex: 1 1 160px;
+  min-width: 160px;
   max-width: 420px;
   position: relative;
 }
