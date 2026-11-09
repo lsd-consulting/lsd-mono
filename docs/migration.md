@@ -69,8 +69,8 @@ Each report writes:
 - `<name>-<id>-report.js` and `<name>-<id>-payloads.js`, loaded on demand
 - `<name>-<id>-diagram.html`, the interactive page for that report
 
-The 8-character id is a hash of the title, so two titles that read the same as file names never
-overwrite each other. `completeReport` returns the paths as `ReportFiles` (`diagramHtml`,
+The 8-character id is a hash of the report key (or the title if there is no key), so two
+reports never share a file. `completeReport` returns the paths as `ReportFiles` (`diagramHtml`,
 `reportJson`).
 
 `createIndex()` writes one `index.html` per output directory. It is the report app for every report
@@ -89,7 +89,7 @@ The on-disk JSON follows [report schema 1.0.0](../modules/lsd-mono-report-schema
 The report shows one scenario at a time, chosen from the sidebar. Each scenario has:
 
 - a sequence diagram whose header shapes come from the captured participant types (actor, database,
-  queue, entity, boundary, component);
+  queue, entity, boundary, and participant (the default box; the header calls it a component));
 - zoom, fit, an overview of the whole width, in-diagram find, and hiding participants;
 - a **Sequence | Components** switch for the scenario's component diagram;
 - a side panel for an arrow's JSON (payloads load when the panel opens; secret-looking keys are
