@@ -125,7 +125,7 @@ jobs:
       # 17 is the toolchain (the baseline), 21 the toolchain of a module that needs it (lsd-mono-http4k-6's
       # lsd.jvm); the last one listed, 25, runs Gradle itself.
       # gradle.properties points Gradle at the JAVA_HOME_<n>_X64 variables setup-java exports.
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           java-version: |
@@ -140,7 +140,7 @@ jobs:
       # Validates the Gradle wrapper jar and caches the Gradle user home (dependencies, wrapper,
       # build cache). "basic" is the MIT-licensed provider on actions/cache; the default provider
       # is a proprietary component under Gradle's terms of use. Pull requests only read the cache.
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - name: Build, then check the build left no changed or new files
@@ -176,7 +176,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           java-version: |
@@ -189,7 +189,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: modules/lsd-mono-report-html/ui/package-lock.json
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - name: JVM tests on Java ${{ matrix.java }}
@@ -310,7 +310,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           java-version: |
@@ -321,7 +321,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: modules/lsd-mono-studio/package-lock.json
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - name: Plugin tests
