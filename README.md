@@ -155,7 +155,7 @@ To move:
 
 ### Coming from the earlier LSD libraries
 
-Their behaviour is upstream at [lsd-core](https://github.com/lsd-consulting/lsd-core); it is not in this tree.
+The [migration guide](docs/migration.md) covers moving from the earlier PlantUML-based LSD reports to lsd-mono: the new artifacts, what the report files look like, the report UI, and the configuration names.
 
 ## Contributing
 
