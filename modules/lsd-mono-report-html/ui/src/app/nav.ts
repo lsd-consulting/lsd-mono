@@ -151,7 +151,8 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
   }
   session.loadingReportId = id
   state.expanded.add(id)
-  const main = document.querySelector('#main')!
+  const main = document.querySelector('#main')
+  if (!main) return
   if (session.reportId !== id) {
     main.innerHTML = `<div class="empty" role="status"><p>Loading ${escapeHtml(entry.title)}…</p></div>`
   }
@@ -187,6 +188,10 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
   // The linked scenario, else a failed report's first failure, else the first scenario.
   const { wanted, selectedId } = openingScenario(session.report.scenarios, ref)
   state.selectedId = selectedId
+  // The view the URL names (#237): Components when asked and there is no message, else Sequence.
+  // Set before the card is drawn, including the index page's first open (context setup
+  // cannot set it: no report is open yet).
+  session.diagramView = ref?.view === 'components' && !ref.messageId ? 'components' : 'sequence'
   if (wanted) revealFiltered(wanted)
   renderNav()
   renderMain()
@@ -218,7 +223,8 @@ function selectedNavButton(): HTMLButtonElement | null {
  */
 export function selectScenario(id: string): void {
   if (!session.report.scenarios.some((s) => s.id === id)) return
-  const main = document.querySelector('#main')!
+  const main = document.querySelector('#main')
+  if (!main) return
   const focusInMain = main.contains(document.activeElement)
   forgetSearchOrigin()
   state.selectedId = id
