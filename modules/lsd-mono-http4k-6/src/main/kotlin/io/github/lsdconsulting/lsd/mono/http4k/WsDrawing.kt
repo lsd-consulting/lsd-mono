@@ -1,9 +1,9 @@
 package io.github.lsdconsulting.lsd.mono.http4k
 
 import io.github.lsdconsulting.lsd.mono.http4k.Calls.guarded
-import io.github.lsdconsulting.lsd.mono.json.JsonText
 import io.github.lsdconsulting.lsd.mono.jvm.Interaction
 import io.github.lsdconsulting.lsd.mono.jvm.InteractionKind
+import io.github.lsdconsulting.lsd.mono.jvm.JsonText
 import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario
 import org.http4k.core.MemoryBody
 import org.http4k.websocket.WsMessage

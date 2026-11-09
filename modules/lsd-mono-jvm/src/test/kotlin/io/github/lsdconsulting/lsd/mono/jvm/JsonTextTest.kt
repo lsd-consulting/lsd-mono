@@ -1,4 +1,4 @@
-package io.github.lsdconsulting.lsd.mono.json
+package io.github.lsdconsulting.lsd.mono.jvm
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.math.BigInteger
 
+@OptIn(InternalLsdApi::class)
 class JsonTextTest {
     private fun parse(text: String) = JsonText.parse(text.toByteArray())
 

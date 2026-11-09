@@ -1,6 +1,6 @@
 package io.github.lsdconsulting.lsd.mono.http4k
 
-import io.github.lsdconsulting.lsd.mono.json.JsonText
+import io.github.lsdconsulting.lsd.mono.jvm.JsonText
 import org.http4k.core.Body
 import org.http4k.core.HttpMessage
 import org.http4k.core.MemoryBody

@@ -1,6 +1,6 @@
 package io.github.lsdconsulting.lsd.mono.ktor
 
-import io.github.lsdconsulting.lsd.mono.json.JsonText
+import io.github.lsdconsulting.lsd.mono.jvm.JsonText
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders

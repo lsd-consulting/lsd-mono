@@ -18,11 +18,6 @@ kotlin {
     compilerOptions {
         optIn.add("io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi")
     }
-    // One JsonText for both HTTP adapters, so they cannot drift (#240). Internal in each
-    // module; not a published API.
-    val adapterShared = rootProject.layout.projectDirectory.dir("modules/adapter-shared")
-    sourceSets.named("main") { kotlin.srcDir(adapterShared.dir("src/main/kotlin")) }
-    sourceSets.named("test") { kotlin.srcDir(adapterShared.dir("src/test/kotlin")) }
 }
 
 // Built against Ktor 3. The exact version is the catalog's `ktor`; this only stops a resolve from

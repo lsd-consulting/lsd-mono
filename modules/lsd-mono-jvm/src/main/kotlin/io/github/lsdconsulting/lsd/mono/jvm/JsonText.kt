@@ -1,4 +1,4 @@
-package io.github.lsdconsulting.lsd.mono.json
+package io.github.lsdconsulting.lsd.mono.jvm
 
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -12,20 +12,21 @@ import java.nio.charset.CodingErrorAction
  * their own (the app picks one), so this is a small strict reader: anything that is not a
  * complete JSON object or array in UTF-8 is left as it was.
  */
-internal object JsonText {
+@InternalLsdApi
+public object JsonText {
     private const val MAX_DEPTH = 64
 
     /**
      * Whether a body of [contentType] is read as JSON: `application/json` and any `+json` type
      * (`application/problem+json`), parameters aside. The Spring Boot starter's rule.
      */
-    fun isJson(contentType: String?): Boolean {
+    public fun isJson(contentType: String?): Boolean {
         val type = contentType?.substringBefore(';')?.trim()?.lowercase() ?: return false
         return type == "application/json" || type.endsWith("+json")
     }
 
     /** [bytes] as maps, lists, strings, numbers, booleans and nulls; null when they are not a JSON object or array. */
-    fun parse(bytes: ByteArray): Any? {
+    public fun parse(bytes: ByteArray): Any? {
         val text = utf8(bytes)?.trim() ?: return null
         if (text.isEmpty() || (text[0] != '{' && text[0] != '[')) return null
         return try {
