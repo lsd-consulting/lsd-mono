@@ -1,6 +1,6 @@
 package io.github.lsdconsulting.lsd.mono.ktor.fixture
 
-import io.github.lsdconsulting.lsd.mono.ktor.JsonText
+import io.github.lsdconsulting.lsd.mono.json.JsonText
 import io.github.lsdconsulting.lsd.mono.ktor.LsdKtor
 import io.ktor.serialization.WebsocketContentConverter
 import io.ktor.util.reflect.TypeInfo

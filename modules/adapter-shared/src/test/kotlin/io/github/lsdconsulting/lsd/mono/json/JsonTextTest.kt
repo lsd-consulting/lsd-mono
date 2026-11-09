@@ -1,4 +1,4 @@
-package io.github.lsdconsulting.lsd.mono.http4k
+package io.github.lsdconsulting.lsd.mono.json
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

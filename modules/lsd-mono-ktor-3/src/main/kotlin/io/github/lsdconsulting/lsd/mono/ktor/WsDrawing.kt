@@ -1,5 +1,6 @@
 package io.github.lsdconsulting.lsd.mono.ktor
 
+import io.github.lsdconsulting.lsd.mono.json.JsonText
 import io.github.lsdconsulting.lsd.mono.jvm.Interaction
 import io.github.lsdconsulting.lsd.mono.jvm.InteractionKind
 import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario

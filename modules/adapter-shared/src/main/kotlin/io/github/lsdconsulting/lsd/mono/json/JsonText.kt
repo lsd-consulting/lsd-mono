@@ -1,4 +1,4 @@
-package io.github.lsdconsulting.lsd.mono.http4k
+package io.github.lsdconsulting.lsd.mono.json
 
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -8,9 +8,9 @@ import java.nio.charset.CodingErrorAction
 
 /**
  * A JSON body as maps and lists, so the inspector shows it as a structure (as the Spring Boot
- * starter's are) rather than as one escaped string. http4k has no JSON library of its own (the
- * app picks one), so this is a small strict reader: anything that is not a complete JSON object
- * or array in UTF-8 is left as it was.
+ * starter's are) rather than as one escaped string. The HTTP adapters have no JSON library of
+ * their own (the app picks one), so this is a small strict reader: anything that is not a
+ * complete JSON object or array in UTF-8 is left as it was.
  */
 internal object JsonText {
     private const val MAX_DEPTH = 64
@@ -79,7 +79,7 @@ internal object JsonText {
             skipSpace()
             if (at >= text.length) throw Invalid
             return when (text[at]) {
-                '{' -> obj(depth)
+                '{' -> jsonObject(depth)
                 '[' -> array(depth)
                 '"' -> string()
                 't' -> true.also { expect("true") }
@@ -89,7 +89,7 @@ internal object JsonText {
             }
         }
 
-        private fun obj(depth: Int): Map<String, Any?> {
+        private fun jsonObject(depth: Int): Map<String, Any?> {
             at++
             val map = LinkedHashMap<String, Any?>()
             skipSpace()
