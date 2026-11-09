@@ -27,7 +27,7 @@ Each part switches on only when its classes are on the test classpath. Nothing b
 [![Maven Central: lsd-mono-spring-boot-4](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-spring-boot-4?label=lsd-mono-spring-boot-4)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-spring-boot-4)
 
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:0.15.0")
+testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:0.16.0")
 ```
 
 <!-- release-version:end -->
