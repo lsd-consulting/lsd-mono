@@ -1,5 +1,5 @@
 // Reading the URL hash: open the report, scenario or message it names.
-import { openReport, revealFiltered, selectScenario } from './nav'
+import { invalidateReportLoad, openReport, revealFiltered, selectScenario } from './nav'
 import { defaultReportId } from '../lib/report-index'
 import { parseReportHash, type HashRef } from '../lib/report-hash'
 import { findMessage, focusDiagramMessage } from '../lib/sequence-diagram'
@@ -33,6 +33,7 @@ export function applyHash(): void {
 export function applyRef(ref: HashRef): void {
   const scenario = session.report.scenarios.find((item) => item.id === ref.scenarioId)
   if (!scenario) return
+  invalidateReportLoad()
   // A scenario the filters hide is shown anyway: the link asked for it.
   revealFiltered(scenario.id)
   // The view the URL names (#105): a message, or no view, is Sequence. Set before the card is drawn.

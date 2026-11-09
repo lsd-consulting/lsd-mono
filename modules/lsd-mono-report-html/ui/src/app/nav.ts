@@ -149,9 +149,11 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
     window.location.href = entry.href
     return
   }
+  const generation = ++session.loadGeneration
   session.loadingReportId = id
   state.expanded.add(id)
-  const main = document.querySelector('#main')!
+  const main = document.querySelector('#main')
+  if (!main) return
   if (session.reportId !== id) {
     main.innerHTML = `<div class="empty" role="status"><p>Loading ${escapeHtml(entry.title)}…</p></div>`
   }
@@ -159,7 +161,7 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
   try {
     data = await loadReportData(entry)
   } catch (error) {
-    if (session.loadingReportId !== id) return
+    if (generation !== session.loadGeneration) return
     session.loadingReportId = null
     if (error instanceof UnreadableReportError) {
       main.innerHTML = upgradeHtml(error.fit, 'report', 'h2')
@@ -168,7 +170,7 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
     main.innerHTML = `<div class="empty" role="alert"><p>Could not load ${escapeHtml(entry.title)}. Its data file, <code>${escapeHtml(entry.data)}</code>, should be next to this page.</p></div>`
     return
   }
-  if (session.loadingReportId !== id) return
+  if (generation !== session.loadGeneration) return
   session.loadingReportId = null
   pingSource(data.report)
   if (session.reportId !== id) {
@@ -216,9 +218,17 @@ function selectedNavButton(): HTMLButtonElement | null {
  * from it, otherwise on the new scenario's heading when the old card had focus.
  * The page scrolls back to the scenario's top.
  */
+/** Invalidate loads already in flight: a newer selection chooses what the page shows. */
+export function invalidateReportLoad(): void {
+  session.loadGeneration += 1
+  session.loadingReportId = null
+}
+
 export function selectScenario(id: string): void {
   if (!session.report.scenarios.some((s) => s.id === id)) return
-  const main = document.querySelector('#main')!
+  invalidateReportLoad()
+  const main = document.querySelector('#main')
+  if (!main) return
   const focusInMain = main.contains(document.activeElement)
   forgetSearchOrigin()
   state.selectedId = id

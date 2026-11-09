@@ -27,10 +27,10 @@ export default defineConfig({
       // rises more than 3 points above its threshold, and lists files under 50% of lines.
       thresholds: {
         // 91.8 / 84.0 / 94.4 / 94.8 (the page booted on each schema version and shared test report; Find's reveal cancelled, #165)
-        statements: 89,
+        statements: 90,
         branches: 82,
         functions: 92,
-        lines: 92,
+        lines: 93,
         // src/lib 93.8 / 85.2 / 96.3 / 97.0 (the repaint path tests, #104; column wrap and 1:1, #115, #120)
         'src/lib/**': { statements: 92, branches: 84, functions: 95, lines: 95 },
         // src/ui 92.7 / 85.6 / 97.6 / 94.6 (the link panel tests, #105)
@@ -38,7 +38,7 @@ export default defineConfig({
         // src/app 77.9 / 73.3 / 79.6 / 81.7 (src/conformance.test.ts boots the page): the decisions are pure functions with unit tests (intents.ts,
         // #99, the key handlers, #102, Escape in text fields, #114, and the view switch, its hash and reveal, #105); the rest is
         // covered end to end by check:ux, which does not count here.
-        'src/app/**': { statements: 76, branches: 72, functions: 78, lines: 80 },
+        'src/app/**': { statements: 76, branches: 72, functions: 79, lines: 80 },
       },
     },
   },
