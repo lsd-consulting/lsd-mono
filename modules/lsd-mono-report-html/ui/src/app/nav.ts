@@ -189,6 +189,10 @@ export async function openReport(id: string, ref?: HashRef, scroll = true): Prom
   // The linked scenario, else a failed report's first failure, else the first scenario.
   const { wanted, selectedId } = openingScenario(session.report.scenarios, ref)
   state.selectedId = selectedId
+  // The view the URL names (#237): Components when asked and there is no message, else Sequence.
+  // Set before the card is drawn, including the index page's first open (context setup
+  // cannot set it: no report is open yet).
+  session.diagramView = ref?.view === 'components' && !ref.messageId ? 'components' : 'sequence'
   if (wanted) revealFiltered(wanted)
   renderNav()
   renderMain()
