@@ -3,6 +3,7 @@ import type { Report } from '../src/types'
 import { uxFixture } from './ux-fixture'
 import { startPrint, endPrint } from './ux-helpers'
 import { openReport } from './open-report'
+import { openExample } from './example-report'
 
 // Print: what prints from an open panel, diagrams at page width.
 
@@ -212,7 +213,7 @@ test('a wide diagram prints at full size in strips of lanes that cover the whole
     const labels = [...document.querySelectorAll<SVGTextElement>('.print-slices .msg-label')]
     return {
       strips: strips.length,
-      stripWidth: strips[0].querySelector('.seq-svg')!.getBoundingClientRect().width,
+      stripWidth: Math.max(...strips.map((strip) => strip.querySelector('.seq-svg')!.getBoundingClientRect().width)),
       tallest: Math.max(...strips.map((strip) => strip.getBoundingClientRect().height)),
       // Where each page's lanes start in the drawing: 0, then 1000, 2000…
       starts: [
@@ -238,12 +239,92 @@ test('a wide diagram prints at full size in strips of lanes that cover the whole
   // Every page carries its lanes' header and fits A4 landscape inside 10mm margins (190mm, 718px).
   expect(printed.headed).toBe(true)
   expect(printed.stripWidth).toBeLessThanOrEqual(1047)
-  expect(printed.starts).toEqual(
-    Array.from({ length: printed.starts.length }, (_, i) => printed.bodyX + i * printed.stripWidth),
-  )
-  expect(printed.starts.length * printed.stripWidth).toBeGreaterThanOrEqual(printed.width)
+  // Strips start at the left edge and then between lanes (#117), not every 1000px.
+  expect(printed.starts[0]).toBe(printed.bodyX)
+  expect(printed.starts.length).toBeGreaterThan(1)
   expect(printed.tallest).toBeLessThanOrEqual(718)
   await endPrint(page)
   await expect(page.locator('.print-slices')).toHaveCount(0)
   await expect(page.locator('.seq-stage')).toBeVisible()
+})
+
+// #117: the example's Timed checkout (14 lanes, 2141px) printed on 10 A4 pages: strips of 1000,
+// 1000 and 141px (one lane over three pages), and four pages with no words, only lifelines.
+test('the 14-lane example prints in balanced strips cut between lanes, every page with something on it, every label whole once', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openExample(page)
+  await expect(page.locator('.seq-svg').first()).toBeVisible()
+  await startPrint(page)
+  const diagram = page.locator('.seq-diagram').first()
+  await expect(diagram.locator('.print-slices')).toBeVisible()
+  const printed = await diagram.evaluate((root) => {
+    const body = root.querySelector('.seq-window .seq-svg')!
+    const bodyBox = body.getAttribute('viewBox')!.split(' ').map(Number)
+    const bodyX = bodyBox[0]
+    // The header may be fitted to the screen; the drawing's own viewBox is the printed width.
+    const width = bodyBox[2]
+    const lanes = [...body.querySelectorAll('.lifeline-line')].map((l) => Number(l.getAttribute('x1')) - bodyX)
+    const tiles = [...root.querySelectorAll<HTMLElement>('.print-slice')].map((tile) => {
+      const svg = tile.querySelector<SVGSVGElement>('.seq-svg')!
+      const [x, , w] = svg.getAttribute('viewBox')!.split(' ').map(Number)
+      const frame = svg.getBoundingClientRect()
+      const inside = (el: Element) => {
+        const r = el.getBoundingClientRect()
+        return (
+          r.width > 0 &&
+          r.left >= frame.left - 0.5 &&
+          r.right <= frame.right + 0.5 &&
+          r.top >= frame.top - 0.5 &&
+          r.bottom <= frame.bottom + 0.5
+        )
+      }
+      const touches = (el: Element) => {
+        const r = el.getBoundingClientRect()
+        return (
+          r.width > 0 && r.right > frame.left && r.left < frame.right && r.bottom > frame.top && r.top < frame.bottom
+        )
+      }
+      const labels = [...svg.querySelectorAll('.msg-label')]
+      return {
+        left: x - bodyX,
+        width: w,
+        stripLeft: Number(tile.dataset.stripLeft),
+        stripRight: Number(tile.dataset.stripRight),
+        height: tile.getBoundingClientRect().height,
+        words: [...svg.querySelectorAll('.msg-label, .section-title, .note-text')].filter(touches).length,
+        whole: labels.map(inside),
+      }
+    })
+    return { width, lanes, tiles, labels: body.querySelectorAll('.msg-label').length }
+  })
+  // Balanced: no strip is one narrow lane; logical widths within a lane's spacing of each other.
+  // Use the strip edges, not the crop: a crop can widen toward a lane so a crossing label prints whole.
+  const starts = [...new Set(printed.tiles.map((t) => Math.round(t.stripLeft)))]
+  expect(starts).toHaveLength(3)
+  const widths = [...new Map(printed.tiles.map((t) => [Math.round(t.stripLeft), t.stripRight - t.stripLeft])).values()]
+  expect(Math.min(...widths)).toBeGreaterThan(printed.width / 3 - 160)
+  expect(Math.max(...widths)).toBeLessThanOrEqual(1000)
+  expect(Math.max(...printed.tiles.map((t) => t.width))).toBeLessThanOrEqual(1000)
+  // Each logical cut falls between two lanes, well clear of either lifeline.
+  for (const cut of starts.slice(1))
+    expect(Math.min(...printed.lanes.map((x) => Math.abs(x - cut)))).toBeGreaterThan(40)
+  // At most five diagram pages (with the summary page, six), and none without a word.
+  expect(printed.tiles.length).toBeLessThanOrEqual(5)
+  for (const tile of printed.tiles) expect(tile.words).toBeGreaterThan(0)
+  for (const tile of printed.tiles) expect(tile.height).toBeLessThanOrEqual(718)
+  // Every arrow label is whole on at least one page.
+  for (let i = 0; i < printed.labels; i++)
+    expect(
+      printed.tiles.some((t) => t.whole[i]),
+      `label ${i}`,
+    ).toBe(true)
+  await endPrint(page)
+
+  // The PDF itself: six A4 pages at most (a summary page and the strips).
+  const pdf = await page.pdf({ format: 'A4', printBackground: true })
+  const pages = pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g)?.length ?? 0
+  expect(pages).toBeGreaterThan(1)
+  expect(pages).toBeLessThanOrEqual(6)
 })
