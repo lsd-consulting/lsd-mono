@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
  * ends (finished, cancelled or failed); a JVM shutdown hook covers the Gradle daemon exiting.
  * A daemon killed outright (`kill -9`) runs neither, so a Studio it started keeps running.
  */
-public abstract class StudioProcesses :
+internal abstract class StudioProcesses :
     BuildService<BuildServiceParameters.None>,
     AutoCloseable {
     private val running = ConcurrentHashMap.newKeySet<Process>()

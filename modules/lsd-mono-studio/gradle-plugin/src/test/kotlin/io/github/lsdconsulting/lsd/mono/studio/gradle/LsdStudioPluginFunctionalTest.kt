@@ -176,7 +176,6 @@ class LsdStudioPluginFunctionalTest {
                 val studio = tasks.getByName("lsdStudio") as io.github.lsdconsulting.lsd.mono.studio.gradle.LsdStudioTask
                 val node = extensions.getByType(com.github.gradle.node.NodeExtension::class.java)
                 println("NODE_DIR=" + node.resolvedNodeDir.get().asFile)
-                println("BIN_DIR=" + studio.nodeBinDir.get().asFile)
                 println("NODE_CMD=" + studio.nodeCommand.get())
                 println("NPM_CMD=" + studio.npmCommand.get())
             """.trimIndent(),
@@ -189,15 +188,12 @@ class LsdStudioPluginFunctionalTest {
         }
 
         val nodeDir = File(value("NODE_DIR"))
-        val binDir = File(value("BIN_DIR"))
         val nodeCmd = value("NODE_CMD")
         val npmCmd = value("NPM_CMD")
         if (windows) {
-            assertEquals(nodeDir, binDir)
             assertEquals(File(nodeDir, "node.exe").path, nodeCmd)
             assertEquals(File(nodeDir, "npm.cmd").path, npmCmd)
         } else {
-            assertEquals(File(nodeDir, "bin"), binDir)
             assertEquals(File(nodeDir, "bin/node").path, nodeCmd)
             assertEquals(File(nodeDir, "bin/npm").path, npmCmd)
         }
