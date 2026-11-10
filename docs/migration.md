@@ -22,14 +22,14 @@ has the full map.
 
 <!-- release-version:start (the release workflow updates the versions up to the end marker) -->
 
-The snippets below match the root README and show 0.16.0. They run on Java 17 or later
+The snippets below match the root README and show 0.17.0. They run on Java 17 or later
 (`lsd-mono-http4k-6` needs Java 21, as http4k 6 does).
 
 Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:0.16.0")
+    testImplementation("io.github.lsd-consulting:lsd-mono-spring-boot-4:0.17.0")
 }
 ```
 
@@ -39,7 +39,7 @@ Maven:
 <dependency>
     <groupId>io.github.lsd-consulting</groupId>
     <artifactId>lsd-mono-spring-boot-4</artifactId>
-    <version>0.16.0</version>
+    <version>0.17.0</version>
     <scope>test</scope>
 </dependency>
 ```

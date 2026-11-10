@@ -13,8 +13,8 @@ Part of [LSD: living sequence diagrams](../../README.md).
 [![Maven Central: lsd-mono-ktor-3](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-ktor-3?label=lsd-mono-ktor-3)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-ktor-3) [![Maven Central: lsd-mono-junit-jupiter](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-junit-jupiter?label=lsd-mono-junit-jupiter)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-junit-jupiter)
 
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-ktor-3:0.16.0")
-testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:0.16.0") // or lsd-mono-cucumber-8
+testImplementation("io.github.lsd-consulting:lsd-mono-ktor-3:0.17.0")
+testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:0.17.0") // or lsd-mono-cucumber-8
 ```
 
 <!-- release-version:end -->
