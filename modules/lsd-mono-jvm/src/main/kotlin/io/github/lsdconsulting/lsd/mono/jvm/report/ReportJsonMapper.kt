@@ -123,71 +123,85 @@ internal class ReportJsonMapper(private val nextId: () -> String) {
 
     private fun SequenceEvent.toEventJson(timing: ScenarioTiming): EventJson =
         when (this) {
-            is Message ->
-                MessageEventJson
-                    // A diagram-edge end is null, and not written.
-                    .builder(id = id, from = from?.takeIf { it.isNotEmpty() }, to = to?.takeIf { it.isNotEmpty() }, label = label, type = type.name.lowercase())
-                    .color(colour?.takeIf { it.isNotBlank() })
-                    .durationMs(timing.reportedMs(this))
-                    .data(data?.let(::jsonData))
-                    .startedAt(startedAt?.toString())
-                    .seq(seq.takeIf { it > 0 })
-                    // callId is the key a call and its reply share; replyTo is the call's message id.
-                    .callId(callRef?.id ?: replyTo?.id)
-                    .replyTo(timing.replyOf[id])
-                    .causedBy(causedBy?.id)
-                    .trace(trace?.let { TraceJson(it.traceId, it.spanId, it.parentSpanId) })
-                    .source(source)
-                    .capturedAt(capturedAt?.takeIf { writeCapturedAt }?.toString())
-                    .status(status?.takeIf { it.isNotEmpty() })
-                    .timing(
-                        timing.perEvent[id]
-                            ?.timing
-                            ?.name
-                            ?.lowercase(),
-                    ).pairing(
-                        timing.perEvent[id]
-                            ?.pairing
-                            ?.name
-                            ?.lowercase(),
-                    ).order(
-                        timing.perEvent[id]
-                            ?.order
-                            ?.name
-                            ?.lowercase(),
-                    ).parentId(timing.parentOf[id])
-                    .build()
-            is Note ->
-                NoteEventJson
-                    .builder(id = id, text = text)
-                    .over(over)
-                    .placement(NotePlacementJson.valueOf(placement.name))
-                    .startedAt(startedAt?.toString())
-                    .build()
-            is Divider -> DividerEventJson.builder(id = id, label = label).startedAt(startedAt?.toString()).build()
-            is Section -> SectionEventJson.builder(id = id, title = title).startedAt(startedAt?.toString()).build()
-            is Delay ->
-                DelayEventJson
-                    .builder(id = id)
-                    .label(label)
-                    .startedAt(startedAt?.toString())
-                    .build()
-            is Spacer ->
-                SpacerEventJson
-                    .builder(id = id)
-                    .heightPx(heightPx)
-                    .startedAt(startedAt?.toString())
-                    .build()
-            is Lifeline ->
-                LifelineEventJson
-                    .builder(
-                        kind = if (action == LifelineAction.ACTIVATE) LifelineKindJson.ACTIVATE else LifelineKindJson.DEACTIVATE,
-                        id = id,
-                        participantId = participantId,
-                    ).color(if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null)
-                    .startedAt(startedAt?.toString())
-                    .build()
+            is Message -> toJson(timing)
+            is Note -> toJson()
+            is Divider -> toJson()
+            is Section -> toJson()
+            is Delay -> toJson()
+            is Spacer -> toJson()
+            is Lifeline -> toJson()
         }
+
+    private fun Message.toJson(timing: ScenarioTiming): EventJson =
+        MessageEventJson
+            // A diagram-edge end is null, and not written.
+            .builder(id = id, from = from?.takeIf { it.isNotEmpty() }, to = to?.takeIf { it.isNotEmpty() }, label = label, type = type.name.lowercase())
+            .color(colour?.takeIf { it.isNotBlank() })
+            .durationMs(timing.reportedMs(this))
+            .data(data?.let(::jsonData))
+            .startedAt(startedAt?.toString())
+            .seq(seq.takeIf { it > 0 })
+            // callId is the key a call and its reply share; replyTo is the call's message id.
+            .callId(callRef?.id ?: replyTo?.id)
+            .replyTo(timing.replyOf[id])
+            .causedBy(causedBy?.id)
+            .trace(trace?.let { TraceJson(it.traceId, it.spanId, it.parentSpanId) })
+            .source(source)
+            .capturedAt(capturedAt?.takeIf { writeCapturedAt }?.toString())
+            .status(status?.takeIf { it.isNotEmpty() })
+            .timing(
+                timing.perEvent[id]
+                    ?.timing
+                    ?.name
+                    ?.lowercase(),
+            ).pairing(
+                timing.perEvent[id]
+                    ?.pairing
+                    ?.name
+                    ?.lowercase(),
+            ).order(
+                timing.perEvent[id]
+                    ?.order
+                    ?.name
+                    ?.lowercase(),
+            ).parentId(timing.parentOf[id])
+            .build()
+
+    private fun Note.toJson(): EventJson =
+        NoteEventJson
+            .builder(id = id, text = text)
+            .over(over)
+            .placement(NotePlacementJson.valueOf(placement.name))
+            .startedAt(startedAt?.toString())
+            .build()
+
+    private fun Divider.toJson(): EventJson = DividerEventJson.builder(id = id, label = label).startedAt(startedAt?.toString()).build()
+
+    private fun Section.toJson(): EventJson = SectionEventJson.builder(id = id, title = title).startedAt(startedAt?.toString()).build()
+
+    private fun Delay.toJson(): EventJson =
+        DelayEventJson
+            .builder(id = id)
+            .label(label)
+            .startedAt(startedAt?.toString())
+            .build()
+
+    private fun Spacer.toJson(): EventJson =
+        SpacerEventJson
+            .builder(id = id)
+            .heightPx(heightPx)
+            .startedAt(startedAt?.toString())
+            .build()
+
+    private fun Lifeline.toJson(): EventJson =
+        LifelineEventJson
+            .builder(
+                kind = if (action == LifelineAction.ACTIVATE) LifelineKindJson.ACTIVATE else LifelineKindJson.DEACTIVATE,
+                id = id,
+                participantId = participantId,
+            ).color(if (action == LifelineAction.ACTIVATE) colour?.takeIf { it.isNotBlank() } else null)
+            .startedAt(startedAt?.toString())
+            .build()
 
     /**
      * [data] as the model's JSON value: a scalar as it is, anything else copied by the default
