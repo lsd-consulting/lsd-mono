@@ -160,19 +160,7 @@ internal class LsdExchangeFilter(
             headers: Map<String, String>?,
         ) {
             if (!replied.compareAndSet(false, true)) return
-            guarded(Unit) {
-                scenario.ingest(
-                    Interaction
-                        .builder(InteractionKind.RESPONSE, target, caller, label)
-                        .status(status)
-                        .replyTo(id)
-                        .source(SpringScenarios.SOURCE)
-                        .durationMs((System.nanoTime() - t0) / 1_000_000.0)
-                        .data(data)
-                        .headers(headers)
-                        .build(),
-                )
-            }
+            ingestReply(scenario, target, caller, id, status, label, data, t0, headers)
         }
     }
 

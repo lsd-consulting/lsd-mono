@@ -2,8 +2,6 @@ package io.github.lsdconsulting.lsd.mono.springboot
 
 import io.github.lsdconsulting.lsd.mono.jvm.Interaction
 import io.github.lsdconsulting.lsd.mono.jvm.InteractionKind
-import io.github.lsdconsulting.lsd.mono.jvm.LsdContext
-import io.github.lsdconsulting.lsd.mono.jvm.LsdHeaders
 import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario
 import io.github.lsdconsulting.lsd.mono.jvm.Trace
 import io.github.lsdconsulting.lsd.mono.springboot.SpringScenarios.guarded
@@ -56,13 +54,7 @@ public object LsdRestTestClient {
                     guarded(false) { SpringScenarios.clientSettingsOf(scenario)?.names?.isLoopbackWithoutServer(uri) == true }
             if (!inJvm) {
                 // A server's own filter draws the request; this only says which scenario it is in.
-                guarded(Unit) {
-                    if (!request.headers.containsHeader(LsdHeaders.SCENARIO)) {
-                        scenario.bind().use { LsdContext.instance.scenarioHeaderValue(uri) }?.let {
-                            request.headers.set(LsdHeaders.SCENARIO, it)
-                        }
-                    }
-                }
+                guarded(Unit) { propagateScenarioHeaders(request.headers, uri, scenario, onlyIfMissing = true) }
                 return execution.execute(request, body)
             }
             return inJvm(scenario, request, body, execution)
@@ -132,19 +124,7 @@ public object LsdRestTestClient {
             label: String,
             data: Any?,
             headers: Map<String, String>?,
-        ) = guarded(Unit) {
-            scenario.ingest(
-                Interaction
-                    .builder(InteractionKind.RESPONSE, from, to, label)
-                    .status(status)
-                    .replyTo(id)
-                    .source(SpringScenarios.SOURCE)
-                    .durationMs((System.nanoTime() - t0) / 1_000_000.0)
-                    .data(data)
-                    .headers(headers)
-                    .build(),
-            )
-        }
+        ) = ingestReply(scenario, from, to, id, status, label, data, t0, headers)
 
         private fun flatten(headers: HttpHeaders): Map<String, String> =
             headers

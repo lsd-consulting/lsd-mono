@@ -191,6 +191,27 @@ internal class LsdStompConfigurer(
     }
 }
 
+/** Session, destination and body shared by inbound and outbound STOMP drawing. */
+private class StompFrame(
+    val drawn: DrawnSession,
+    val headers: MessageHeaders,
+    val destination: String?,
+    val type: SimpMessageType?,
+    val body: Any?,
+)
+
+private fun stompFrame(message: Message<*>): StompFrame? {
+    val drawn = Stomp.session(message) ?: return null
+    val headers = message.headers
+    return StompFrame(
+        drawn,
+        headers,
+        SimpMessageHeaderAccessor.getDestination(headers),
+        SimpMessageHeaderAccessor.getMessageType(headers),
+        Stomp.body(message.payload),
+    )
+}
+
 /** Frames from the caller: drawn as they arrive; the app's handling of a SEND is drawn under it. */
 internal class LsdStompInbound(
     private val types: PayloadTypes,
@@ -211,20 +232,18 @@ internal class LsdStompInbound(
     }
 
     private fun draw(message: Message<*>) {
-        val drawn = Stomp.session(message) ?: return
-        val headers = message.headers
-        val destination = SimpMessageHeaderAccessor.getDestination(headers)
+        val frame = stompFrame(message) ?: return
         val (label, data) =
-            when (SimpMessageHeaderAccessor.getMessageType(headers)) {
-                SimpMessageType.SUBSCRIBE -> "SUBSCRIBE $destination" to null
+            when (frame.type) {
+                SimpMessageType.SUBSCRIBE -> "SUBSCRIBE ${frame.destination}" to null
                 SimpMessageType.UNSUBSCRIBE -> "UNSUBSCRIBE" to null
-                SimpMessageType.MESSAGE -> "${types.of(destination) ?: "SEND"} $destination" to Stomp.body(message.payload)
+                SimpMessageType.MESSAGE -> "${types.of(frame.destination) ?: "SEND"} ${frame.destination}" to frame.body
                 else -> return
             }
-        val id = drawn.drawing.arrow(drawn.call.caller, drawn.app, label, data) ?: return
-        val messageId = headers.id ?: return
+        val id = frame.drawn.drawing.arrow(frame.drawn.call.caller, frame.drawn.app, label, data) ?: return
+        val messageId = frame.headers.id ?: return
         // Each of the channel's handlers (the app's methods, the broker) runs it on a thread of its own.
-        synchronized(spans) { spans[messageId] = SpringScenarios.Current(drawn.drawing.scenario, id) }
+        synchronized(spans) { spans[messageId] = SpringScenarios.Current(frame.drawn.drawing.scenario, id) }
     }
 
     override fun beforeHandle(
@@ -267,12 +286,15 @@ internal class LsdStompOutbound : ExecutorChannelInterceptor {
     }
 
     private fun draw(message: Message<*>) {
-        val drawn = Stomp.session(message) ?: return
-        val headers = message.headers
-        val destination = SimpMessageHeaderAccessor.getDestination(headers)
-        if (SimpMessageHeaderAccessor.getMessageType(headers) != SimpMessageType.MESSAGE) return
-        val name = headers[MessageNames.HEADER] as? String
-        drawn.drawing.arrow(drawn.app, drawn.call.caller, "${name ?: "MESSAGE"} $destination", Stomp.body(message.payload))
+        val frame = stompFrame(message) ?: return
+        if (frame.type != SimpMessageType.MESSAGE) return
+        val name = frame.headers[MessageNames.HEADER] as? String
+        frame.drawn.drawing.arrow(
+            frame.drawn.app,
+            frame.drawn.call.caller,
+            "${name ?: "MESSAGE"} ${frame.destination}",
+            frame.body,
+        )
     }
 }
 
