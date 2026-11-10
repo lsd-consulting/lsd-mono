@@ -3,7 +3,6 @@ package io.github.lsdconsulting.lsd.mono.http4k
 import io.github.lsdconsulting.lsd.mono.http4k.Calls.guarded
 import io.github.lsdconsulting.lsd.mono.jvm.Interaction
 import io.github.lsdconsulting.lsd.mono.jvm.InteractionKind
-import io.github.lsdconsulting.lsd.mono.jvm.LsdHeaders
 import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario
 import io.github.lsdconsulting.lsd.mono.jvm.Trace
 import org.http4k.core.Request
@@ -31,31 +30,11 @@ internal class WsCapture(
 ) : WsFilter {
     override fun invoke(next: WsHandler): WsHandler = { request -> handshake(next, request) }
 
-    private class Inbound(
-        val scenario: LsdScenario,
-        val id: String,
-        val caller: String,
-        val parent: String?,
-    )
-
-    private fun inbound(request: Request): Inbound? {
-        val call =
-            Calls.pendingHere.get()?.takeIf { it.take() }
-                ?: request.header(Calls.CALL_HEADER)?.let { Calls.pending[it] }?.takeIf { it.take() }
-        if (call != null) return Inbound(call.scenario, call.id, call.caller, call.parent)
-        val scenario =
-            Calls.lsd.findScenarioByHeader(request.header(LsdHeaders.SCENARIO))
-                ?: Calls.lsd.runningScenario()
-                ?: return null
-        val caller = request.header(Calls.CALLER_HEADER)?.takeIf { it.isNotBlank() } ?: client
-        return Inbound(scenario, Calls.newId(), caller, request.header(Calls.PARENT_SPAN_HEADER))
-    }
-
     private fun handshake(
         next: WsHandler,
         request: Request,
     ): WsResponse {
-        val inbound = guarded(null) { inbound(request) } ?: return next(request)
+        val inbound = guarded(null) { Calls.inbound(request, client) } ?: return next(request)
         val scenario = inbound.scenario
         val caller = inbound.caller
         val id = inbound.id

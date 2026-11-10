@@ -107,6 +107,23 @@ class LsdHttp4kTest {
     }
 
     @Test
+    fun `inbound takes the same-thread pending call when the request names no call id`() {
+        val scenario = start()
+        val pending = PendingCall("call-1", scenario, "Shop", "parent-1")
+        Calls.pendingHere.set(pending)
+        try {
+            val inbound = Calls.inbound(Request(GET, "/stock/lamp-01"), "fallback")
+            assertEquals("call-1", inbound?.id)
+            assertEquals("Shop", inbound?.caller)
+            assertEquals("parent-1", inbound?.parent)
+            assertSame(scenario, inbound?.scenario)
+            assertTrue(pending.isTaken)
+        } finally {
+            Calls.pendingHere.remove()
+        }
+    }
+
+    @Test
     fun `a call nobody else draws is drawn by the client filter, named by target or host`() {
         val scenario = start()
         val sent = AtomicReference<Request>()

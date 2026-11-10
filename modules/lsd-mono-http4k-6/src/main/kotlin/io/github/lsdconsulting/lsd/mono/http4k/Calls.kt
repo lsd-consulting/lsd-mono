@@ -66,6 +66,27 @@ internal object Calls {
 
     fun newId(): String = "%016x".format(ThreadLocalRandom.current().nextLong())
 
+    /** The scenario and caller a handshake or request belongs to, or null if none is running. */
+    class Inbound(
+        val scenario: LsdScenario,
+        val id: String,
+        val caller: String,
+        val parent: String?,
+    )
+
+    fun inbound(request: Request, client: String): Inbound? {
+        val call =
+            pendingHere.get()?.takeIf { it.take() }
+                ?: request.header(CALL_HEADER)?.let { pending[it] }?.takeIf { it.take() }
+        if (call != null) return Inbound(call.scenario, call.id, call.caller, call.parent)
+        val scenario =
+            lsd.findScenarioByHeader(request.header(LsdHeaders.SCENARIO))
+                ?: lsd.runningScenario()
+                ?: return null
+        val caller = request.header(CALLER_HEADER)?.takeIf { it.isNotBlank() } ?: client
+        return Inbound(scenario, newId(), caller, request.header(PARENT_SPAN_HEADER))
+    }
+
     /** `lsd-scenario`, `lsd-caller` and the rest are ours: never drawn as the app's headers. */
     fun isOwnHeader(name: String): Boolean = name.lowercase().startsWith("lsd-")
 
