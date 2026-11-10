@@ -56,11 +56,11 @@ public abstract class LsdStudioTask : DefaultTask() {
 
     /** Gradle's proxy system properties, which npm gets as its proxy variables (see [NpmEnvironment]). */
     @get:Internal
-    public abstract val proxyProperties: MapProperty<String, String>
+    internal abstract val proxyProperties: MapProperty<String, String>
 
     /** A downloaded Node's folder of executables, put first on npm's `PATH` (see [LsdStudioExtension.downloadNode]). */
     @get:Internal
-    public abstract val nodeBinDir: DirectoryProperty
+    internal abstract val nodeBinDir: DirectoryProperty
 
     /** See [LsdStudioExtension.cacheDir]. */
     @get:Internal
@@ -68,23 +68,23 @@ public abstract class LsdStudioTask : DefaultTask() {
 
     /** Stops Studio when this file appears, for scripts (and the plugin's tests) that cannot press Ctrl+C. */
     @get:Internal
-    public abstract val stopFile: RegularFileProperty
+    internal abstract val stopFile: RegularFileProperty
 
     /** The project directory a relative [studioPackage] path is resolved against. */
     @get:Internal
-    public abstract val projectDir: DirectoryProperty
+    internal abstract val projectDir: DirectoryProperty
 
     /** Whether this is a CI run (the `CI` variable), where the browser is never opened. */
     @get:Internal
-    public abstract val ci: Property<Boolean>
+    internal abstract val ci: Property<Boolean>
 
     /** Whether Gradle runs offline (`--offline`): npm then installs from its cache only. */
     @get:Internal
-    public abstract val offline: Property<Boolean>
+    internal abstract val offline: Property<Boolean>
 
     /** The build service that stops Studio when the build ends. */
     @get:Internal
-    public abstract val processes: Property<StudioProcesses>
+    internal abstract val processes: Property<StudioProcesses>
 
     @TaskAction
     public fun run() {

@@ -88,7 +88,7 @@ public class LsdStudioPlugin : Plugin<Project> {
         public const val STUDIO_PACKAGE_PROPERTY: String = "lsd.studio.package"
 
         /** The Gradle property that sets [LsdStudioTask.stopFile]. */
-        public const val STOP_FILE_PROPERTY: String = "lsd.studio.stopFile"
+        internal const val STOP_FILE_PROPERTY: String = "lsd.studio.stopFile"
     }
 
     private fun useDownloadedNode(
