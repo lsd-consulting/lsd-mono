@@ -108,60 +108,70 @@ test('Expand and Shrink still glide: a person asked for that width', async ({ pa
   await openWithMotion(page)
   await (await firstArrow(page)).click()
   await expect(page.locator('#inspector')).toBeVisible()
-  const glide = await page.evaluate(async () => {
-    const shell = document.querySelector<HTMLElement>('.shell')!
-    const button = document.querySelector<HTMLElement>('#inspector-json-expand')!
-    const property = '--inspector-w'
-    const now = () => parseFloat(getComputedStyle(shell).getPropertyValue(property))
-    // Scrub the CSS transition to its midpoint instead of sampling rAF frames. A busy runner
-    // can skip every intermediate frame of the 160 ms glide (seeing only the start and end),
-    // which is what failed on main; the Web Animations timeline does not depend on that.
-    const press = async () => {
-      const from = now()
-      const mid = await new Promise<number>((resolve, reject) => {
-        const timer = window.setTimeout(() => {
-          shell.removeEventListener('transitionrun', onRun)
-          reject(new Error(`no ${property} transition started`))
-        }, 1000)
-        const onRun = (event: TransitionEvent) => {
-          if (event.propertyName !== property) return
-          window.clearTimeout(timer)
-          shell.removeEventListener('transitionrun', onRun)
-          const trans = shell
-            .getAnimations()
-            .find((a): a is CSSTransition => a instanceof CSSTransition && a.transitionProperty === property)
-          const effect = trans?.effect
-          if (!trans || !effect) {
-            reject(new Error(`no ${property} CSSTransition after transitionrun`))
-            return
+  const glide = await page.evaluate(
+    async ({ after }) => {
+      const shell = document.querySelector<HTMLElement>('.shell')!
+      const button = document.querySelector<HTMLElement>('#inspector-json-expand')!
+      const property = '--inspector-w'
+      const now = () => parseFloat(getComputedStyle(shell).getPropertyValue(property))
+      // Scrub the CSS transition to its midpoint instead of sampling rAF frames. A busy runner
+      // can skip every intermediate frame of the 160 ms glide (seeing only the start and end),
+      // which is what failed on main; the Web Animations timeline does not depend on that.
+      const press = async () => {
+        const from = now()
+        const mid = await new Promise<number>((resolve, reject) => {
+          let framesLeft = after
+          let raf = 0
+          const fail = () => {
+            shell.removeEventListener('transitionrun', onRun)
+            reject(new Error(`no ${property} transition started`))
           }
-          const duration = effect.getComputedTiming().duration
-          const ms = typeof duration === 'number' ? duration : Number.parseFloat(String(duration))
-          if (!Number.isFinite(ms) || ms <= 0) {
-            reject(new Error(`unexpected ${property} duration: ${String(duration)}`))
-            return
+          const tick = () => {
+            if (--framesLeft <= 0) return fail()
+            raf = requestAnimationFrame(tick)
           }
-          trans.pause()
-          trans.currentTime = ms / 2
-          const width = now()
-          trans.play()
-          void trans.finished.then(() => resolve(width), reject)
+          const onRun = (event: TransitionEvent) => {
+            if (event.propertyName !== property) return
+            cancelAnimationFrame(raf)
+            shell.removeEventListener('transitionrun', onRun)
+            const trans = shell
+              .getAnimations()
+              .find((a): a is CSSTransition => a instanceof CSSTransition && a.transitionProperty === property)
+            const effect = trans?.effect
+            if (!trans || !effect) {
+              reject(new Error(`no ${property} CSSTransition after transitionrun`))
+              return
+            }
+            const duration = effect.getComputedTiming().duration
+            const ms = typeof duration === 'number' ? duration : Number.parseFloat(String(duration))
+            if (!Number.isFinite(ms) || ms <= 0) {
+              reject(new Error(`unexpected ${property} duration: ${String(duration)}`))
+              return
+            }
+            trans.pause()
+            trans.currentTime = ms / 2
+            const width = now()
+            trans.play()
+            void trans.finished.then(() => resolve(width), reject)
+          }
+          shell.addEventListener('transitionrun', onRun)
+          raf = requestAnimationFrame(tick)
+          button.click()
+        })
+        return {
+          label: button.textContent,
+          from,
+          target: parseFloat(shell.style.getPropertyValue(property)),
+          mid,
+          end: now(),
         }
-        shell.addEventListener('transitionrun', onRun)
-        button.click()
-      })
-      return {
-        label: button.textContent,
-        from,
-        target: parseFloat(shell.style.getPropertyValue(property)),
-        mid,
-        end: now(),
       }
-    }
-    const expand = await press()
-    const shrink = await press()
-    return { expand, shrink }
-  })
+      const expand = await press()
+      const shrink = await press()
+      return { expand, shrink }
+    },
+    { after: AFTER_GLIDE_FRAMES },
+  )
   expect(glide.expand.label).toBe('Shrink')
   expect(glide.expand.from).toBe(INSPECTOR_NARROW_PX)
   expect(glide.expand.target).toBeGreaterThan(INSPECTOR_NARROW_PX)
