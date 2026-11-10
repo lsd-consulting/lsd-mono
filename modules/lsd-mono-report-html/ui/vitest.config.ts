@@ -28,7 +28,7 @@ export default defineConfig({
       thresholds: {
         // 91.8 / 84.0 / 95.05 / 94.8 (print-slice tests for balanced strips and skipped empty tiles, #117)
         statements: 90,
-        branches: 82,
+        branches: 83,
         functions: 94,
         lines: 93,
         // src/lib 93.8 / 85.2 / 96.3 / 97.0 (the repaint path tests, #104; column wrap and 1:1, #115, #120)
