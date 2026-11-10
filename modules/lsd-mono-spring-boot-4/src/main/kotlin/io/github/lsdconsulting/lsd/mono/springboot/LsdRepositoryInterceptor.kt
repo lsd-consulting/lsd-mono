@@ -98,16 +98,5 @@ internal class LsdRepositoryInterceptor(
         status: String,
         label: String,
         data: Any?,
-    ) = guarded(Unit) {
-        scenario.ingest(
-            Interaction
-                .builder(InteractionKind.RESPONSE, target, caller, label)
-                .status(status)
-                .replyTo(id)
-                .source(SpringScenarios.SOURCE)
-                .durationMs((System.nanoTime() - t0) / 1_000_000.0)
-                .data(data)
-                .build(),
-        )
-    }
+    ) = ingestReply(scenario, target, caller, id, status, label, data, t0)
 }

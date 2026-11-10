@@ -2,8 +2,6 @@ package io.github.lsdconsulting.lsd.mono.springboot
 
 import io.github.lsdconsulting.lsd.mono.jvm.Interaction
 import io.github.lsdconsulting.lsd.mono.jvm.InteractionKind
-import io.github.lsdconsulting.lsd.mono.jvm.LsdContext
-import io.github.lsdconsulting.lsd.mono.jvm.LsdHeaders
 import io.github.lsdconsulting.lsd.mono.jvm.Trace
 import io.github.lsdconsulting.lsd.mono.springboot.SpringScenarios.guarded
 import org.springframework.http.HttpHeaders
@@ -37,14 +35,7 @@ internal class LsdClientInterceptor(
         // Inside a request or a listener the app is the caller; otherwise it is the test calling the app.
         val parent = SpringScenarios.parentOf(scenario)
         val caller = if (parent == null) names.client else names.app
-        guarded(Unit) {
-            val allowed = scenario.bind().use { LsdContext.instance.scenarioHeaderValue(uri) }
-            if (allowed != null) {
-                request.headers.set(LsdHeaders.SCENARIO, allowed)
-                request.headers.set(SpringScenarios.CALLER_HEADER, caller)
-                parent?.let { request.headers.set(LsdInboundFilter.PARENT_SPAN_HEADER, it) }
-            }
-        }
+        guarded(Unit) { propagateScenarioHeaders(request.headers, uri, scenario, caller, parent) }
         // A call into this app's own server is drawn once, by its inbound filter.
         if (names.isSelf(uri)) return execution.execute(request, body)
 
@@ -103,19 +94,7 @@ internal class LsdClientInterceptor(
         label: String,
         data: Any?,
         headers: Map<String, String>? = null,
-    ) = guarded(Unit) {
-        scenario.ingest(
-            Interaction
-                .builder(InteractionKind.RESPONSE, from, to, label)
-                .status(status)
-                .replyTo(id)
-                .source(SpringScenarios.SOURCE)
-                .durationMs((System.nanoTime() - t0) / 1_000_000.0)
-                .data(data)
-                .headers(headers)
-                .build(),
-        )
-    }
+    ) = ingestReply(scenario, from, to, id, status, label, data, t0, headers)
 
     private fun flatten(headers: HttpHeaders): Map<String, String> =
         headers
