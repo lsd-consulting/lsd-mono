@@ -112,20 +112,59 @@ test('Expand and Shrink still glide: a person asked for that width', async ({ pa
     async ({ after }) => {
       const shell = document.querySelector<HTMLElement>('.shell')!
       const button = document.querySelector<HTMLElement>('#inspector-json-expand')!
-      const now = () => parseFloat(getComputedStyle(shell).getPropertyValue('--inspector-w'))
-      // The computed width on every frame after a click, well past the 160 ms glide. Any frame
-      // between the two ends shows a glide, however slow the runner.
+      const property = '--inspector-w'
+      const now = () => parseFloat(getComputedStyle(shell).getPropertyValue(property))
+      // Scrub the CSS transition to its midpoint instead of sampling rAF frames. A busy runner
+      // can skip every intermediate frame of the 160 ms glide (seeing only the start and end),
+      // which is what failed on main; the Web Animations timeline does not depend on that.
       const press = async () => {
         const from = now()
-        button.click()
-        const target = parseFloat(shell.style.getPropertyValue('--inspector-w'))
-        const frames: number[] = []
-        await new Promise((r) => {
-          const tick = (left: number): void =>
-            void (left ? requestAnimationFrame(() => (frames.push(now()), tick(left - 1))) : r(null))
-          tick(after)
+        const mid = await new Promise<number>((resolve, reject) => {
+          let framesLeft = after
+          let raf = 0
+          const fail = () => {
+            shell.removeEventListener('transitionrun', onRun)
+            reject(new Error(`no ${property} transition started`))
+          }
+          const tick = () => {
+            if (--framesLeft <= 0) return fail()
+            raf = requestAnimationFrame(tick)
+          }
+          const onRun = (event: TransitionEvent) => {
+            if (event.propertyName !== property) return
+            cancelAnimationFrame(raf)
+            shell.removeEventListener('transitionrun', onRun)
+            const trans = shell
+              .getAnimations()
+              .find((a): a is CSSTransition => a instanceof CSSTransition && a.transitionProperty === property)
+            const effect = trans?.effect
+            if (!trans || !effect) {
+              reject(new Error(`no ${property} CSSTransition after transitionrun`))
+              return
+            }
+            const duration = effect.getComputedTiming().duration
+            const ms = typeof duration === 'number' ? duration : Number.parseFloat(String(duration))
+            if (!Number.isFinite(ms) || ms <= 0) {
+              reject(new Error(`unexpected ${property} duration: ${String(duration)}`))
+              return
+            }
+            trans.pause()
+            trans.currentTime = ms / 2
+            const width = now()
+            trans.play()
+            void trans.finished.then(() => resolve(width), reject)
+          }
+          shell.addEventListener('transitionrun', onRun)
+          raf = requestAnimationFrame(tick)
+          button.click()
         })
-        return { label: button.textContent, from, target, frames }
+        return {
+          label: button.textContent,
+          from,
+          target: parseFloat(shell.style.getPropertyValue(property)),
+          mid,
+          end: now(),
+        }
       }
       const expand = await press()
       const shrink = await press()
@@ -133,16 +172,22 @@ test('Expand and Shrink still glide: a person asked for that width', async ({ pa
     },
     { after: AFTER_GLIDE_FRAMES },
   )
-  const between = (g: { from: number; target: number; frames: number[] }) =>
-    g.frames.filter((w) => w > Math.min(g.from, g.target) && w < Math.max(g.from, g.target))
   expect(glide.expand.label).toBe('Shrink')
   expect(glide.expand.from).toBe(INSPECTOR_NARROW_PX)
   expect(glide.expand.target).toBeGreaterThan(INSPECTOR_NARROW_PX)
-  expect(between(glide.expand), `widths: ${glide.expand.frames.join(', ')}`).not.toHaveLength(0)
-  expect(glide.expand.frames.at(-1)).toBe(glide.expand.target)
+  expect(
+    glide.expand.mid,
+    `expand midpoint ${glide.expand.mid} should sit between ${glide.expand.from} and ${glide.expand.target}`,
+  ).toBeGreaterThan(glide.expand.from)
+  expect(glide.expand.mid).toBeLessThan(glide.expand.target)
+  expect(glide.expand.end).toBe(glide.expand.target)
   expect(glide.shrink.label).toBe('Expand')
   expect(glide.shrink.from).toBe(glide.expand.target)
   expect(glide.shrink.target).toBe(INSPECTOR_NARROW_PX)
-  expect(between(glide.shrink), `widths: ${glide.shrink.frames.join(', ')}`).not.toHaveLength(0)
-  expect(glide.shrink.frames.at(-1)).toBe(INSPECTOR_NARROW_PX)
+  expect(
+    glide.shrink.mid,
+    `shrink midpoint ${glide.shrink.mid} should sit between ${glide.shrink.target} and ${glide.shrink.from}`,
+  ).toBeLessThan(glide.shrink.from)
+  expect(glide.shrink.mid).toBeGreaterThan(glide.shrink.target)
+  expect(glide.shrink.end).toBe(INSPECTOR_NARROW_PX)
 })
