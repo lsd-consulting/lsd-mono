@@ -70,6 +70,13 @@ internal object Stomp {
      * Draws rejected STOMP frames from the protocol handler's decision, before
      * [org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator]
      * can buffer an ERROR and then drop it when the close follows immediately (#224).
+     *
+     * Wraps whatever [org.springframework.web.socket.messaging.StompSubProtocolHandler.errorHandler]
+     * is already installed, so the app should call
+     * [org.springframework.web.socket.messaging.StompSubProtocolHandler.setErrorHandler] before the
+     * WebSocket handler mapping is initialized (typical configurer or bean setup). A later
+     * `setErrorHandler` replaces this wrapper, and only [DrawnSession.sendMessage] still draws an
+     * ERROR that reaches the socket.
      */
     fun installErrorDrawing(handler: WebSocketHandler) {
         val sub = WebSocketHandlerDecorator.unwrap(handler) as? SubProtocolWebSocketHandler ?: return
