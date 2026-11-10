@@ -141,6 +141,22 @@ class TimingApiTest {
     }
 
     @Test
+    fun `a reply whose replyTo matches no call is not guessed from a neighbour`() {
+        val events =
+            listOf(
+                msg("call"),
+                msg("reply", "B", "A", MessageType.SYNCHRONOUS_RESPONSE, replyTo = CallRef("missing")),
+            )
+        val (_, timing) = orderAndAnalyse(events, ClockOrdering.SAME_SOURCE)
+        assertEquals(PairingSource.NONE, timing.perEvent["e1"]?.pairing)
+        assertEquals(PairingSource.NONE, timing.perEvent["e2"]?.pairing)
+        assertTrue(
+            timing.warnings.any { it.kind == WarningKind.REPLY_WITHOUT_CALL && "'reply' (B to A)" in it.message },
+            timing.warnings.toString(),
+        )
+    }
+
+    @Test
     fun `same-source clock ordering moves timed unmeasured events into timed slots only`() {
         val events =
             listOf(
