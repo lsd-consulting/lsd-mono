@@ -7,8 +7,6 @@ import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.nio.ByteBuffer
-import java.nio.charset.CharacterCodingException
-import java.nio.charset.CodingErrorAction
 import java.time.temporal.TemporalAccessor
 import java.time.temporal.TemporalAmount
 import java.util.Base64
@@ -680,18 +678,9 @@ public class PayloadConverters internal constructor(
 
         private fun instanceFields(type: Class<*>): List<Field> = fieldCache.get(type)
 
+        @OptIn(InternalLsdApi::class)
         private fun utf8Text(bytes: ByteArray): String? {
-            val decoded =
-                try {
-                    Charsets.UTF_8
-                        .newDecoder()
-                        .onMalformedInput(CodingErrorAction.REPORT)
-                        .onUnmappableCharacter(CodingErrorAction.REPORT)
-                        .decode(ByteBuffer.wrap(bytes))
-                        .toString()
-                } catch (_: CharacterCodingException) {
-                    return null
-                }
+            val decoded = JsonText.decodeUtf8(bytes) ?: return null
             val binary = decoded.any { it.code < 0x20 && it != '\n' && it != '\r' && it != '\t' }
             return if (binary) null else decoded
         }

@@ -27,7 +27,7 @@ public object JsonText {
 
     /** [bytes] as maps, lists, strings, numbers, booleans and nulls; null when they are not a JSON object or array. */
     public fun parse(bytes: ByteArray): Any? {
-        val text = utf8(bytes)?.trim() ?: return null
+        val text = decodeUtf8(bytes)?.trim() ?: return null
         if (text.isEmpty() || (text[0] != '{' && text[0] != '[')) return null
         return try {
             Reader(text).run {
@@ -41,7 +41,8 @@ public object JsonText {
         }
     }
 
-    private fun utf8(bytes: ByteArray): String? =
+    /** [bytes] as a String, or null if they are not well-formed UTF-8. Shared with payload conversion. */
+    internal fun decodeUtf8(bytes: ByteArray): String? =
         try {
             Charsets.UTF_8
                 .newDecoder()

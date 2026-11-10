@@ -55,44 +55,16 @@ internal fun pairCalls(events: List<SequenceEvent>): Pairs {
         val e = events[i] as? Message ?: continue
         if (e.isCall()) {
             pairing[i] = PairingSource.NONE
-            e.trace?.let { t ->
-                t.spanId?.let { span ->
-                    val same = bySpan.getOrPut(t.traceId to span) { ArrayList() }
-                    seenSpan[t.traceId to span]?.let { first ->
-                        warnings += TimingWarning(
-                            WarningKind.DUPLICATE_SPAN,
-                            "'${(events[first] as Message).label}' and '${e.label}' share span $span " +
-                                "in trace ${t.traceId}; their replies pair with the latest open one",
-                        )
-                    } ?: seenSpan.put(t.traceId to span, i)
-                    same.add(i)
-                }
-            }
-            byDirection.getOrPut(e.from to e.to) { ArrayList() }.add(i)
+            indexCall(e, i, events, bySpan, byDirection, seenSpan, warnings)
         }
         e.callRef?.id?.let { byCallId.putIfAbsent(it, i) }
         if (!e.isReply()) continue
-        var c = -1
-        var how = PairingSource.NONE
-        val replyId = e.replyTo?.id
-        if (replyId != null) {
-            val j = byCallId[replyId]
-            if (j != null && j < i && unpairedCall(j)) {
-                c = j
-                how = PairingSource.CALL_ID
-            }
-        }
-        val trace = e.trace
-        val span = trace?.spanId
-        if (c < 0 && span != null) {
-            c = latest(bySpan[trace.traceId to span]) { true }
-            if (c >= 0) how = PairingSource.TRACE
-        }
-        if (c < 0 && replyId == null) {
-            c = latest(byDirection[e.to to e.from]) { m -> trace == null || m.trace == null || m.trace.traceId == trace.traceId }
-            if (c >= 0) how = PairingSource.GUESSED
-        }
-        if (c >= 0) {
+        val matched =
+            pairByCallId(e, i, byCallId, ::unpairedCall)
+                ?: pairByTrace(e, bySpan, ::latest)
+                ?: pairByDirection(e, byDirection, ::latest)
+        if (matched != null) {
+            val (c, how) = matched
             replyOf[c] = i
             callOf[i] = c
             pairing[c] = how
@@ -103,6 +75,78 @@ internal fun pairCalls(events: List<SequenceEvent>): Pairs {
         }
     }
     return Pairs(replyOf, callOf, pairing, byCallId, warnings)
+}
+
+/** Remember [e] as an open call, by span and by direction, and warn when its span is already open. */
+private fun indexCall(
+    e: Message,
+    i: Int,
+    events: List<SequenceEvent>,
+    bySpan: HashMap<Pair<String, String>, ArrayList<Int>>,
+    byDirection: HashMap<Pair<String?, String?>, ArrayList<Int>>,
+    seenSpan: HashMap<Pair<String, String>, Int>,
+    warnings: MutableList<TimingWarning>,
+) {
+    e.trace?.let { t ->
+        t.spanId?.let { span ->
+            val same = bySpan.getOrPut(t.traceId to span) { ArrayList() }
+            recordDuplicateSpan(events, i, e, span, t.traceId, seenSpan, warnings)
+            same.add(i)
+        }
+    }
+    byDirection.getOrPut(e.from to e.to) { ArrayList() }.add(i)
+}
+
+private fun recordDuplicateSpan(
+    events: List<SequenceEvent>,
+    i: Int,
+    e: Message,
+    span: String,
+    traceId: String,
+    seenSpan: HashMap<Pair<String, String>, Int>,
+    warnings: MutableList<TimingWarning>,
+) {
+    seenSpan[traceId to span]?.let { first ->
+        warnings += TimingWarning(
+            WarningKind.DUPLICATE_SPAN,
+            "'${(events[first] as Message).label}' and '${e.label}' share span $span " +
+                "in trace $traceId; their replies pair with the latest open one",
+        )
+    } ?: seenSpan.put(traceId to span, i)
+}
+
+private fun pairByCallId(
+    e: Message,
+    i: Int,
+    byCallId: Map<String, Int>,
+    unpairedCall: (Int) -> Boolean,
+): Pair<Int, PairingSource>? {
+    val replyId = e.replyTo?.id ?: return null
+    val j = byCallId[replyId]
+    return if (j != null && j < i && unpairedCall(j)) j to PairingSource.CALL_ID else null
+}
+
+private fun pairByTrace(
+    e: Message,
+    bySpan: Map<Pair<String, String>, ArrayList<Int>>,
+    latest: (ArrayList<Int>?, (Message) -> Boolean) -> Int,
+): Pair<Int, PairingSource>? {
+    val trace = e.trace ?: return null
+    val span = trace.spanId ?: return null
+    val c = latest(bySpan[trace.traceId to span]) { true }
+    return if (c >= 0) c to PairingSource.TRACE else null
+}
+
+private fun pairByDirection(
+    e: Message,
+    byDirection: Map<Pair<String?, String?>, ArrayList<Int>>,
+    latest: (ArrayList<Int>?, (Message) -> Boolean) -> Int,
+): Pair<Int, PairingSource>? {
+    // Guessed pairing is only for replies that named no call; a missed replyTo must not pick a neighbour.
+    if (e.replyTo?.id != null) return null
+    val trace = e.trace
+    val c = latest(byDirection[e.to to e.from]) { m -> trace == null || m.trace == null || m.trace.traceId == trace.traceId }
+    return if (c >= 0) c to PairingSource.GUESSED else null
 }
 
 /**
