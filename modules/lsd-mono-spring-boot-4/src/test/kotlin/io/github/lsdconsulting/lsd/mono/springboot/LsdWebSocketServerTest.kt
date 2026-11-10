@@ -237,6 +237,23 @@ class LsdWebSocketServerTest {
     }
 
     @Test
+    fun `a later setErrorHandler replaces the drawing wrapper`() {
+        val inbound = ExecutorSubscribableChannel()
+        val outbound = ExecutorSubscribableChannel()
+        val sub = SubProtocolWebSocketHandler(inbound, outbound)
+        val protocol = StompSubProtocolHandler()
+        sub.addProtocolHandler(protocol)
+        sub.defaultProtocolHandler = protocol
+
+        Stomp.installErrorDrawing(sub)
+        assertTrue(protocol.errorHandler is LsdStompErrorHandler)
+
+        val later = StompSubProtocolErrorHandler()
+        protocol.setErrorHandler(later)
+        assertSame(later, protocol.errorHandler)
+    }
+
+    @Test
     fun `an ERROR frame that reaches the socket without the protocol handler is still drawn`() {
         val scenario = start()
         val handler = LsdWebSocketHandler(TextWebSocketHandler(), names, shown = 20, frames = false)
