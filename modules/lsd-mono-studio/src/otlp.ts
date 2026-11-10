@@ -213,115 +213,24 @@ interface Interaction {
 function toScenario(spans: Span[]): Json {
   const traceId = spans[0].traceId
   const byId = new Map(spans.map((span) => [span.spanId, span]))
-  const children = (span: Span, kind: Kind) =>
+  const childrenOf = (span: Span, kind: Kind) =>
     spans.filter((child) => child.parentSpanId === span.spanId && child.kind === kind)
   const parentOf = (span: Span) => (span.parentSpanId ? byId.get(span.parentSpanId) : undefined)
 
   const participants = new Participants()
   const interactions: Interaction[] = []
   for (const span of spans) {
-    const parent = parentOf(span)
-    const service = participants.service(span)
-    if (span.kind === 'CLIENT') {
-      const servers = children(span, 'SERVER')
-      if (servers.length === 0) {
-        interactions.push({ anchor: span, from: service, to: participants.peer(span), async: false, children: [] })
-      }
-      for (const server of servers) {
-        const to = participants.service(server)
-        interactions.push({ anchor: span, receiver: server, from: service, to, async: false, children: [] })
-      }
-    } else if (span.kind === 'SERVER' && parent?.kind !== 'CLIENT') {
-      const from = parent && parent.service !== span.service ? participants.service(parent) : participants.caller()
-      interactions.push({ anchor: span, from, to: service, async: false, children: [] })
-    } else if (span.kind === 'PRODUCER') {
-      const consumers = children(span, 'CONSUMER')
-      if (consumers.length === 0) {
-        interactions.push({ anchor: span, from: service, to: participants.queue(span), async: true, children: [] })
-      }
-      for (const consumer of consumers) {
-        const to = participants.service(consumer)
-        interactions.push({ anchor: span, receiver: consumer, from: service, to, async: true, children: [] })
-      }
-    } else if (span.kind === 'CONSUMER' && parent?.kind !== 'PRODUCER') {
-      interactions.push({ anchor: span, from: participants.queue(span), to: service, async: true, children: [] })
-    }
+    interactions.push(...interactionFor(span, participants, parentOf(span), childrenOf))
   }
+  const roots = nestInteractions(interactions, parentOf)
 
-  // Nest each interaction under the one its nearest drawn ancestor span belongs to.
-  const owner = new Map<string, Interaction>()
-  for (const interaction of interactions) {
-    owner.set(interaction.anchor.spanId, interaction)
-    if (interaction.receiver) owner.set(interaction.receiver.spanId, interaction)
-  }
-  const roots: Interaction[] = []
-  for (const interaction of interactions) {
-    let parent = parentOf(interaction.anchor)
-    const seen = new Set<string>()
-    while (parent && !owner.has(parent.spanId) && !seen.has(parent.spanId)) {
-      seen.add(parent.spanId)
-      parent = parentOf(parent)
-    }
-    const into = parent ? owner.get(parent.spanId) : undefined
-    if (into && into !== interaction) into.children.push(interaction)
-    else roots.push(interaction)
-  }
-
-  const events: Json[] = []
-  let failure: Span | undefined
-  const emit = (interaction: Interaction, parentId: string | undefined) => {
-    const { anchor, receiver } = interaction
-    const failed = [anchor, receiver].find((span) => span?.error)
-    failure ??= failed
-    const attributes: Attributes = { ...anchor.attributes, ...receiver?.attributes, 'lsd.span.kind': anchor.kind }
-    const code = attributes['http.response.status_code'] ?? attributes['rpc.grpc.status_code']
-    const status = code !== undefined ? String(code) : failed ? 'error' : undefined
-    const id = `m${events.length + 1}`
-    const trace = { traceId, spanId: anchor.spanId, ...(anchor.parentSpanId && { parentSpanId: anchor.parentSpanId }) }
-    events.push({
-      kind: 'message',
-      id,
-      from: interaction.from,
-      to: interaction.to,
-      label: labelOf(anchor, receiver) + (failed ? ' · error' : ''),
-      type: interaction.async ? 'asynchronous' : 'synchronous',
-      ...(!interaction.async && { durationMs: millis(anchor.end - anchor.start) }),
-      callId: anchor.spanId,
-      trace,
-      source: anchor.service,
-      ...(status && { status }),
-      timing: 'measured',
-      ...(receiver && { pairing: 'trace' }),
-      ...(parentId && { parentId }),
-      attributes,
-      origin: 'imported',
-      startedAt: isoOf(anchor.start),
-    })
-    for (const child of bySpanStart(interaction.children)) emit(child, id)
-    if (!interaction.async) {
-      events.push({
-        kind: 'message',
-        id: `m${events.length + 1}`,
-        from: interaction.to,
-        to: interaction.from,
-        // The report UI marks a failed reply with its own ✕.
-        label: failed ? (status === 'error' ? 'error' : `${status} error`) : (status ?? 'ok'),
-        type: 'synchronous_response',
-        callId: anchor.spanId,
-        replyTo: id,
-        trace: { traceId, spanId: anchor.spanId },
-        source: anchor.service,
-        ...(status && { status }),
-        pairing: 'trace',
-        origin: 'imported',
-      })
-    }
-  }
-  for (const root of bySpanStart(roots)) emit(root, undefined)
+  const state: EmitState = { events: [], traceId }
+  for (const root of bySpanStart(roots)) emit(root, undefined, state)
 
   const root = spans.find((span) => !span.parentSpanId || !byId.has(span.parentSpanId)) ?? spans[0]
   const hidden = spans.filter((span) => span.kind === 'INTERNAL' || span.kind === 'UNSPECIFIED').length
   const services = [...new Set(spans.map((span) => span.service))]
+  const { events, failure } = state
   // The report UI's Accuracy card reads these shares; a JVM report gets them from the core.
   return {
     id: `trace-${traceId}`,
@@ -345,6 +254,128 @@ function toScenario(spans: Span[]): Json {
     accuracy: 'traced',
     ...callShares(events),
     sources: services,
+  }
+}
+
+function interactionFor(
+  span: Span,
+  participants: Participants,
+  parent: Span | undefined,
+  childrenOf: (span: Span, kind: Kind) => Span[],
+): Interaction[] {
+  const service = participants.service(span)
+  if (span.kind === 'CLIENT') {
+    const servers = childrenOf(span, 'SERVER')
+    if (servers.length === 0) {
+      return [{ anchor: span, from: service, to: participants.peer(span), async: false, children: [] }]
+    }
+    return servers.map((server) => ({
+      anchor: span,
+      receiver: server,
+      from: service,
+      to: participants.service(server),
+      async: false,
+      children: [],
+    }))
+  }
+  if (span.kind === 'SERVER' && parent?.kind !== 'CLIENT') {
+    const from = parent && parent.service !== span.service ? participants.service(parent) : participants.caller()
+    return [{ anchor: span, from, to: service, async: false, children: [] }]
+  }
+  if (span.kind === 'PRODUCER') {
+    const consumers = childrenOf(span, 'CONSUMER')
+    if (consumers.length === 0) {
+      return [{ anchor: span, from: service, to: participants.queue(span), async: true, children: [] }]
+    }
+    return consumers.map((consumer) => ({
+      anchor: span,
+      receiver: consumer,
+      from: service,
+      to: participants.service(consumer),
+      async: true,
+      children: [],
+    }))
+  }
+  if (span.kind === 'CONSUMER' && parent?.kind !== 'PRODUCER') {
+    return [{ anchor: span, from: participants.queue(span), to: service, async: true, children: [] }]
+  }
+  return []
+}
+
+/** Nest each interaction under the one its nearest drawn ancestor span belongs to. */
+function nestInteractions(interactions: Interaction[], parentOf: (span: Span) => Span | undefined): Interaction[] {
+  const owner = new Map<string, Interaction>()
+  for (const interaction of interactions) {
+    owner.set(interaction.anchor.spanId, interaction)
+    if (interaction.receiver) owner.set(interaction.receiver.spanId, interaction)
+  }
+  const roots: Interaction[] = []
+  for (const interaction of interactions) {
+    let parent = parentOf(interaction.anchor)
+    const seen = new Set<string>()
+    while (parent && !owner.has(parent.spanId) && !seen.has(parent.spanId)) {
+      seen.add(parent.spanId)
+      parent = parentOf(parent)
+    }
+    const into = parent ? owner.get(parent.spanId) : undefined
+    if (into && into !== interaction) into.children.push(interaction)
+    else roots.push(interaction)
+  }
+  return roots
+}
+
+type EmitState = { events: Json[]; traceId: string; failure?: Span }
+
+function emit(interaction: Interaction, parentId: string | undefined, state: EmitState): void {
+  const { anchor, receiver } = interaction
+  const failed = [anchor, receiver].find((span) => span?.error)
+  state.failure ??= failed
+  const attributes: Attributes = { ...anchor.attributes, ...receiver?.attributes, 'lsd.span.kind': anchor.kind }
+  const code = attributes['http.response.status_code'] ?? attributes['rpc.grpc.status_code']
+  const status = code !== undefined ? String(code) : failed ? 'error' : undefined
+  const id = `m${state.events.length + 1}`
+  const trace = {
+    traceId: state.traceId,
+    spanId: anchor.spanId,
+    ...(anchor.parentSpanId && { parentSpanId: anchor.parentSpanId }),
+  }
+  state.events.push({
+    kind: 'message',
+    id,
+    from: interaction.from,
+    to: interaction.to,
+    label: labelOf(anchor, receiver) + (failed ? ' · error' : ''),
+    type: interaction.async ? 'asynchronous' : 'synchronous',
+    ...(!interaction.async && { durationMs: millis(anchor.end - anchor.start) }),
+    callId: anchor.spanId,
+    trace,
+    source: anchor.service,
+    ...(status && { status }),
+    timing: 'measured',
+    ...(receiver && { pairing: 'trace' }),
+    ...(parentId && { parentId }),
+    attributes,
+    origin: 'imported',
+    startedAt: isoOf(anchor.start),
+  })
+  for (const child of bySpanStart(interaction.children)) emit(child, id, state)
+  if (!interaction.async) {
+    state.events.push({
+      kind: 'message',
+      id: `m${state.events.length + 1}`,
+      from: interaction.to,
+      to: interaction.from,
+      // The report UI marks a failed reply with its own ✕.
+      label: failed ? (status === 'error' ? 'error' : `${status} error`) : (status ?? 'ok'),
+      type: 'synchronous_response',
+      callId: anchor.spanId,
+      replyTo: id,
+      trace: { traceId: state.traceId, spanId: anchor.spanId },
+      source: anchor.service,
+      ...(status && { status }),
+      pairing: 'trace',
+      origin: 'imported',
+    })
   }
 }
 
