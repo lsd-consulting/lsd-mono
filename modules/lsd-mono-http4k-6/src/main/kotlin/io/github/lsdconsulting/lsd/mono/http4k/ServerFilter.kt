@@ -3,8 +3,6 @@ package io.github.lsdconsulting.lsd.mono.http4k
 import io.github.lsdconsulting.lsd.mono.http4k.Calls.guarded
 import io.github.lsdconsulting.lsd.mono.jvm.Interaction
 import io.github.lsdconsulting.lsd.mono.jvm.InteractionKind
-import io.github.lsdconsulting.lsd.mono.jvm.LsdHeaders
-import io.github.lsdconsulting.lsd.mono.jvm.LsdScenario
 import io.github.lsdconsulting.lsd.mono.jvm.Trace
 import org.http4k.core.Filter
 import org.http4k.core.HttpHandler
@@ -26,20 +24,13 @@ internal class ServerFilter(
 ) : Filter {
     override fun invoke(next: HttpHandler): HttpHandler = { request -> serve(next, request) }
 
-    private class Inbound(
-        val scenario: LsdScenario,
-        val id: String,
-        val caller: String,
-        val parent: String?,
-    )
-
     private fun serve(
         next: HttpHandler,
         request: Request,
     ): Response {
         // The same filter twice in one chain draws the request once.
         if (Calls.serving.get()?.passed === request) return next(request)
-        val inbound = guarded(null) { inbound(request) } ?: return next(request)
+        val inbound = guarded(null) { Calls.inbound(request, client) } ?: return next(request)
         val started = Instant.now()
         val sent = guarded(Captured(request, null)) { Bodies.capture(request) }
         guarded(Unit) {
@@ -80,21 +71,8 @@ internal class ServerFilter(
         }
     }
 
-    private fun inbound(request: Request): Inbound? {
-        val call =
-            Calls.pendingHere.get()?.takeIf { it.take() }
-                ?: request.header(Calls.CALL_HEADER)?.let { Calls.pending[it] }?.takeIf { it.take() }
-        if (call != null) return Inbound(call.scenario, call.id, call.caller, call.parent)
-        val scenario =
-            Calls.lsd.findScenarioByHeader(request.header(LsdHeaders.SCENARIO))
-                ?: Calls.lsd.runningScenario()
-                ?: return null
-        val caller = request.header(Calls.CALLER_HEADER)?.takeIf { it.isNotBlank() } ?: client
-        return Inbound(scenario, Calls.newId(), caller, request.header(Calls.PARENT_SPAN_HEADER))
-    }
-
     private fun reply(
-        inbound: Inbound,
+        inbound: Calls.Inbound,
         durationMs: Double,
         status: String,
         label: String,
