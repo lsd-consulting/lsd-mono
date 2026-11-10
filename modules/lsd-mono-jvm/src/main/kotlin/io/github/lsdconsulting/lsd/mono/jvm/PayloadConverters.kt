@@ -290,108 +290,78 @@ public class PayloadConverters internal constructor(
             }
         }
 
-        /** A map used as a value. A map used as a key is [mapAsKey]. */
+        /** A map used as a value, or as a key when [keyRead] is set (then a [Both] of identity and display). */
         private fun map(value: Map<*, *>, depth: Int, keyRead: KeyRead?): Any {
-            if (keyRead != null) return mapAsKey(value, depth, keyRead)
-            val out = LinkedHashMap<String, Any?>()
-            var kept = 0
-            for ((key, item) in value) {
-                if (kept == limits.maxItems) {
-                    out[TRUNCATED_KEY] = "${value.size - kept} more entries"
-                    break
-                }
-                if (budget <= 0) {
-                    out[TRUNCATED_KEY] = tooLarge()
-                    break
-                }
-                val match = keyMatch(key, depth)
-                val redacted = match.identity == null || isRedacted(match.identity)
-                out[uniqueKey(out, match.display)] = if (redacted) REDACTED else copy(item, depth + 1)
-                kept++
-            }
-            return FrozenMap(out)
-        }
-
-        /** One read of a map that is itself a key. The value-map twin is [map]. */
-        private fun mapAsKey(value: Map<*, *>, depth: Int, keyRead: KeyRead): Both {
             val identity = LinkedHashMap<String, Any?>()
-            val display = LinkedHashMap<String, Any?>()
+            val display = if (keyRead != null) LinkedHashMap<String, Any?>() else identity
             var kept = 0
             for ((key, item) in value) {
                 if (kept == limits.maxItems) {
-                    keyRead.complete = false
-                    val rest = "${value.size - kept} more entries"
-                    identity[TRUNCATED_KEY] = rest
-                    display[TRUNCATED_KEY] = rest
+                    putTruncated(identity, display, keyRead, "${value.size - kept} more entries")
                     break
                 }
                 if (budget <= 0) {
-                    keyRead.complete = false
-                    val rest = tooLarge()
-                    identity[TRUNCATED_KEY] = rest
-                    display[TRUNCATED_KEY] = rest
+                    putTruncated(identity, display, keyRead, tooLarge())
                     break
                 }
-                val names = namesOf(key, depth)
-                if (names.identity != null && isRedacted(names.identity)) {
-                    identity[uniqueKey(identity, names.identity)] = REDACTED
-                    display[uniqueKey(display, names.display)] = REDACTED
+                if (keyRead != null) {
+                    putMapKeyEntry(identity, display, key, item, depth, keyRead)
                 } else {
-                    if (names.identity == null) keyRead.complete = false
-                    val child = if (names.identity == null) REDACTED else copy(item, depth + 1, keyRead = keyRead)
-                    // No identity text for an incomplete nested key. Its display text is kept only
-                    // so the key can still be shown; this key is incomplete, so the value is redacted.
-                    val shown = if (names.identity == null) names.display else names.identity
-                    identity[uniqueKey(identity, shown)] = plainIdentity(child)
-                    display[uniqueKey(display, names.display)] = plainDisplay(child)
+                    val match = keyMatch(key, depth)
+                    val redacted = match.identity == null || isRedacted(match.identity)
+                    identity[uniqueKey(identity, match.display)] = if (redacted) REDACTED else copy(item, depth + 1)
                 }
                 kept++
             }
-            return Both(FrozenMap(identity), FrozenMap(display))
+            return if (keyRead != null) Both(FrozenMap(identity), FrozenMap(display)) else FrozenMap(identity)
         }
 
-        /** A list used as a value. A list used as a key is [listAsKey]. */
-        private fun list(items: Iterator<*>, size: Int?, depth: Int, keyRead: KeyRead?): Any {
-            if (keyRead != null) return listAsKey(items, size, depth, keyRead)
-            val out = ArrayList<Any?>()
-            while (items.hasNext()) {
-                if (out.size == limits.maxItems) {
-                    out += marker(if (size != null) "${size - out.size} more items" else "more items not read")
-                    break
-                }
-                if (budget <= 0) {
-                    out += marker(tooLarge())
-                    break
-                }
-                out += copy(items.next(), depth + 1)
+        private fun putMapKeyEntry(
+            identity: LinkedHashMap<String, Any?>,
+            display: LinkedHashMap<String, Any?>,
+            key: Any?,
+            item: Any?,
+            depth: Int,
+            keyRead: KeyRead,
+        ) {
+            val names = namesOf(key, depth)
+            if (names.identity != null && isRedacted(names.identity)) {
+                identity[uniqueKey(identity, names.identity)] = REDACTED
+                display[uniqueKey(display, names.display)] = REDACTED
+            } else {
+                if (names.identity == null) keyRead.complete = false
+                val child = if (names.identity == null) REDACTED else copy(item, depth + 1, keyRead = keyRead)
+                // No identity text for an incomplete nested key. Its display text is kept only
+                // so the key can still be shown; this key is incomplete, so the value is redacted.
+                val shown = if (names.identity == null) names.display else names.identity
+                identity[uniqueKey(identity, shown)] = plainIdentity(child)
+                display[uniqueKey(display, names.display)] = plainDisplay(child)
             }
-            return FrozenList(out)
         }
 
-        /** One read of a list that is itself a key. The value-list twin is [list]. */
-        private fun listAsKey(items: Iterator<*>, size: Int?, depth: Int, keyRead: KeyRead): Both {
+        /** A list used as a value, or as a key when [keyRead] is set (then a [Both] of identity and display). */
+        private fun list(items: Iterator<*>, size: Int?, depth: Int, keyRead: KeyRead?): Any {
             val identity = ArrayList<Any?>()
-            val display = ArrayList<Any?>()
+            val display = if (keyRead != null) ArrayList<Any?>() else identity
             while (items.hasNext()) {
                 if (identity.size == limits.maxItems) {
-                    keyRead.complete = false
                     val rest = marker(if (size != null) "${size - identity.size} more items" else "more items not read")
-                    identity += rest
-                    display += rest
+                    appendTruncated(identity, display, keyRead, rest)
                     break
                 }
                 if (budget <= 0) {
-                    keyRead.complete = false
-                    val rest = marker(tooLarge())
-                    identity += rest
-                    display += rest
+                    appendTruncated(identity, display, keyRead, marker(tooLarge()))
                     break
                 }
                 val child = copy(items.next(), depth + 1, keyRead = keyRead)
-                identity += plainIdentity(child)
-                display += plainDisplay(child)
+                if (keyRead != null) {
+                    identity += plainIdentity(child)
+                    display += plainDisplay(child)
+                } else {
+                    identity += child
+                }
             }
-            return Both(FrozenList(identity), FrozenList(display))
+            return if (keyRead != null) Both(FrozenList(identity), FrozenList(display)) else FrozenList(identity)
         }
 
         /** Records by component; other classes by instance field. No fields: their text. */
@@ -405,68 +375,61 @@ public class PayloadConverters internal constructor(
             return fields(readable.map { f -> f.name to { f.get(value) } }, depth, keyRead)
         }
 
-        /** Fields of a value. Fields of an object used as a key are [fieldsAsKey]. */
+        /** Fields of a value, or of an object used as a key when [keyRead] is set. */
         private fun fields(readers: List<Pair<String, () -> Any?>>, depth: Int, keyRead: KeyRead?): Any {
-            if (keyRead != null) return fieldsAsKey(readers, depth, keyRead)
-            val out = LinkedHashMap<String, Any?>()
-            for ((name, read) in readers) {
-                if (out.size == limits.maxItems) {
-                    out[TRUNCATED_KEY] = "${readers.size - out.size} more fields"
-                    break
-                }
-                if (budget <= 0) {
-                    out[TRUNCATED_KEY] = tooLarge()
-                    break
-                }
-                if (isRedacted(name)) {
-                    out[name] = REDACTED
-                    continue
-                }
-                out[name] =
-                    try {
-                        copy(read(), depth + 1)
-                    } catch (e: Exception) {
-                        marker("$name could not be read: ${describe(unwrap(e))}")
-                    }
-            }
-            return FrozenMap(out)
-        }
-
-        /** One read of an object's fields when that object is a key. The value twin is [fields]. */
-        private fun fieldsAsKey(readers: List<Pair<String, () -> Any?>>, depth: Int, keyRead: KeyRead): Both {
             val identity = LinkedHashMap<String, Any?>()
-            val display = LinkedHashMap<String, Any?>()
+            val display = if (keyRead != null) LinkedHashMap<String, Any?>() else identity
             for ((name, read) in readers) {
                 if (identity.size == limits.maxItems) {
-                    keyRead.complete = false
-                    val rest = "${readers.size - identity.size} more fields"
-                    identity[TRUNCATED_KEY] = rest
-                    display[TRUNCATED_KEY] = rest
+                    putTruncated(identity, display, keyRead, "${readers.size - identity.size} more fields")
                     break
                 }
                 if (budget <= 0) {
-                    keyRead.complete = false
-                    val rest = tooLarge()
-                    identity[TRUNCATED_KEY] = rest
-                    display[TRUNCATED_KEY] = rest
+                    putTruncated(identity, display, keyRead, tooLarge())
                     break
                 }
                 if (isRedacted(name)) {
                     identity[name] = REDACTED
-                    display[name] = REDACTED
+                    if (keyRead != null) display[name] = REDACTED
                     continue
                 }
                 val child =
                     try {
                         copy(read(), depth + 1, keyRead = keyRead)
                     } catch (e: Exception) {
-                        keyRead.complete = false
+                        if (keyRead != null) keyRead.complete = false
                         marker("$name could not be read: ${describe(unwrap(e))}")
                     }
-                identity[name] = plainIdentity(child)
-                display[name] = plainDisplay(child)
+                if (keyRead != null) {
+                    identity[name] = plainIdentity(child)
+                    display[name] = plainDisplay(child)
+                } else {
+                    identity[name] = child
+                }
             }
-            return Both(FrozenMap(identity), FrozenMap(display))
+            return if (keyRead != null) Both(FrozenMap(identity), FrozenMap(display)) else FrozenMap(identity)
+        }
+
+        private fun putTruncated(
+            identity: LinkedHashMap<String, Any?>,
+            display: LinkedHashMap<String, Any?>,
+            keyRead: KeyRead?,
+            rest: String,
+        ) {
+            if (keyRead != null) keyRead.complete = false
+            identity[TRUNCATED_KEY] = rest
+            if (keyRead != null) display[TRUNCATED_KEY] = rest
+        }
+
+        private fun appendTruncated(
+            identity: ArrayList<Any?>,
+            display: ArrayList<Any?>,
+            keyRead: KeyRead?,
+            rest: Any,
+        ) {
+            if (keyRead != null) keyRead.complete = false
+            identity += rest
+            if (keyRead != null) display += rest
         }
 
         private fun tooLarge() = "payload larger than ${limits.maxTotalSize} characters, rest dropped"
@@ -556,7 +519,7 @@ public class PayloadConverters internal constructor(
 
         /**
          * One read of a nested key while a map is being used as a key.
-         * [mapAsKey] marks this key incomplete when the result has no identity.
+         * [map] marks this key incomplete when the result has no identity.
          */
         private fun namesOf(key: Any?, depth: Int): KeyMatch {
             if (key == null) return KeyMatch("null", "null")
