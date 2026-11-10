@@ -11,7 +11,7 @@ Part of [LSD: living sequence diagrams](../../README.md).
 [![Maven Central: lsd-mono-coroutines](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-coroutines?label=lsd-mono-coroutines)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-coroutines)
 
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:0.16.0")
+testImplementation("io.github.lsd-consulting:lsd-mono-coroutines:0.17.0")
 ```
 
 <!-- release-version:end -->
