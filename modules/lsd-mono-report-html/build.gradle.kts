@@ -74,9 +74,12 @@ val reportSingle = tasks.register<Exec>("reportSingle") {
 val copyReportShell = tasks.register<Copy>("copyReportShell") {
     group = "build"
     description =
-        "Copy ui/dist/lsd-report.html into build/generated/resources as the classpath shell."
+        "Copy ui/dist/lsd-report.html into build/generated/resources as the classpath shell, " +
+        "with the shared-assets page and its script and styles (lsd.mono.report.assets=shared, #64)."
     dependsOn(reportSingle)
     from(reportShell) { rename { "lsd-report.single.html" } }
+    from(reportDir.file("dist/lsd-report.shared.html"))
+    from(reportDir.dir("dist/shared")) { into("shared") }
     into(generatedResourcesDir.map { it.dir("lsd-mono-report-html") })
 }
 

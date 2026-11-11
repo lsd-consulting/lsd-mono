@@ -1,3 +1,11 @@
+public final class io/github/lsdconsulting/lsd/mono/report/html/ReportAssets : java/lang/Enum {
+	public static final field INLINE Lio/github/lsdconsulting/lsd/mono/report/html/ReportAssets;
+	public static final field SHARED Lio/github/lsdconsulting/lsd/mono/report/html/ReportAssets;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/lsdconsulting/lsd/mono/report/html/ReportAssets;
+	public static fun values ()[Lio/github/lsdconsulting/lsd/mono/report/html/ReportAssets;
+}
+
 public final class io/github/lsdconsulting/lsd/mono/report/html/ReportFiles {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDiagramHtml ()Ljava/nio/file/Path;
@@ -28,7 +36,9 @@ public final class io/github/lsdconsulting/lsd/mono/report/html/ReportWriterSett
 	public fun <init> (Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;Ljava/time/Instant;)V
 	public fun <init> (Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;Ljava/time/Instant;Z)V
 	public synthetic fun <init> (Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;Ljava/time/Instant;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;Ljava/time/Instant;ZLio/github/lsdconsulting/lsd/mono/report/html/ReportAssets;)V
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAssets ()Lio/github/lsdconsulting/lsd/mono/report/html/ReportAssets;
 	public final fun getGeneratedAt ()Ljava/time/Instant;
 	public final fun getGenerator ()Lio/github/lsdconsulting/lsd/mono/report/model/GeneratorJson;
 	public final fun getUsagePing ()Z

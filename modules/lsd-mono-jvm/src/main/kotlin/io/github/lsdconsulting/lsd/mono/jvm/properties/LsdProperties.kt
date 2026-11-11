@@ -2,6 +2,7 @@ package io.github.lsdconsulting.lsd.mono.jvm.properties
 
 import io.github.lsdconsulting.lsd.mono.jvm.ExperimentalLsdStudioApi
 import io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi
+import io.github.lsdconsulting.lsd.mono.report.html.ReportAssets
 import java.time.Instant
 import java.time.format.DateTimeParseException
 
@@ -48,6 +49,13 @@ public object LsdProperties {
      * decides at open time. Snapshot builds never ping.
      */
     public const val USAGE_PING: String = "lsd.mono.report.usagePing"
+
+    /**
+     * `shared` writes the report app once per report directory (`lsd-report-<hash>.js` and
+     * `.css`) and makes each page a small file that loads it, instead of every page carrying its
+     * own copy. Default `inline`: self-contained pages, as before.
+     */
+    public const val REPORT_ASSETS: String = "lsd.mono.report.assets"
 
     /** `true` makes the Cucumber plugin start a section at each step. */
     public const val CUCUMBER_SPLIT_BY_STEPS: String = "lsd.mono.cucumber.splitBySteps"
@@ -119,6 +127,21 @@ public object LsdProperties {
                     "LSD: '$raw' is not valid for $TIMING_ORDER_BY_STARTED_AT, so 'source' is used. Use false, source or all."
                 }
                 io.github.lsdconsulting.lsd.mono.jvm.ClockOrdering.SAME_SOURCE
+            }
+        }
+    }
+
+    /** [REPORT_ASSETS]: `shared` or `inline`; anything else is warned about once and `inline` used. */
+    internal fun reportAssets(): ReportAssets {
+        val raw = LsdKey.REPORT_ASSETS.value()
+        return when (raw?.trim()?.lowercase()) {
+            "shared" -> ReportAssets.SHARED
+            "inline", null -> ReportAssets.INLINE
+            else -> {
+                LsdConfig.warnOnce(REPORT_ASSETS, raw) {
+                    "LSD: '$raw' is not valid for $REPORT_ASSETS, so 'inline' is used. Use inline or shared."
+                }
+                ReportAssets.INLINE
             }
         }
     }

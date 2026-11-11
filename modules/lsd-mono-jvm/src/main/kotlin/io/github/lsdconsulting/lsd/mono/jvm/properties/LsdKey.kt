@@ -21,6 +21,7 @@ internal enum class LsdKey(
     LABEL_MAX_WIDTH(LsdProperties.LABEL_MAX_WIDTH, "200"),
     GENERATED_AT(LsdProperties.GENERATED_AT, null),
     USAGE_PING(LsdProperties.USAGE_PING, "true"),
+    REPORT_ASSETS(LsdProperties.REPORT_ASSETS, "inline"),
     CUCUMBER_SPLIT_BY_STEPS(LsdProperties.CUCUMBER_SPLIT_BY_STEPS, "false"),
     PAYLOAD_MAX_DEPTH(LsdProperties.PAYLOAD_MAX_DEPTH, "32"),
     PAYLOAD_MAX_STRING_LENGTH(LsdProperties.PAYLOAD_MAX_STRING_LENGTH, "100000"),

@@ -27,6 +27,10 @@ import kotlin.concurrent.withLock
  * messages carry data, `<stem>-payloads.js`, which the page loads when the inspector opens.
  * [writeIndex] writes `index.html`, which lists every report in the directory.
  *
+ * With [ReportAssets.SHARED] in [settings] the pages do not carry the report app: it is written
+ * once per directory as `lsd-report-<hash>.js` and `lsd-report-<hash>.css`, and each page loads
+ * those and its `<stem>-report.js` (#64). The default, [ReportAssets.INLINE], writes self-contained pages.
+ *
  * ```kotlin
  * val writer = ReportWriter(ReportWriterSettings(generator = GeneratorJson("my-adapter", "1.0")))
  * val written = writer.writeReport(report, Path.of("build/reports/lsd"))
@@ -85,7 +89,7 @@ public class ReportWriter(
             Files.deleteIfExists(payloadsPath)
         }
         val payloadsSrc = payloadsName.takeIf { shellBundle.payloads.isNotEmpty() }
-        val shell = renderShell(shellBundle, payloadsSrc)
+        val shell = if (shared) renderSharedPage(outputDir, stem) else renderShell(shellBundle, payloadsSrc)
         val dataName = "$stem-report.js"
         writeAtomically(outputDir.resolve(dataName).toPath(), reportDataScript(stem, shellBundle, payloadsSrc))
 
@@ -141,7 +145,7 @@ public class ReportWriter(
                     .associateBy { it.filename }
                     .values
                     .sortedWith(indexOrder)
-            writeAtomically(index, renderIndex(all))
+            writeAtomically(index, renderIndex(all, outputDir))
         }
         return index
     }
@@ -157,7 +161,7 @@ public class ReportWriter(
      * `window.__LSD_INDEX__`. Each report's data loads from its `<stem>-report.js` when it is
      * opened, so the page stays small however many reports the directory holds.
      */
-    internal fun renderIndex(reportFiles: List<ReportFile>): String {
+    internal fun renderIndex(reportFiles: List<ReportFile>, outputDir: File? = null): String {
         val manifest =
             JsonObject(
                 listOf(
@@ -168,7 +172,9 @@ public class ReportWriter(
                     "reports" to JsonArray(reportFiles.map(::manifestEntry)),
                 ),
             )
-        return injectIntoShell("<script>window.__LSD_INDEX__=${manifest.render().trim()};</script>\n")
+        val injection = "<script>window.__LSD_INDEX__=${manifest.render().trim()};</script>\n"
+        val page = if (shared) injectIntoSharedPage(outputDir, body = injection) else injectIntoShell(injection)
+        return page
             .replaceFirst(Regex("<title>[^<]*</title>"), "<title>${Html.text(INDEX_TITLE)}</title>")
     }
 
@@ -348,6 +354,47 @@ public class ReportWriter(
         val marker = "<script>"
         val idx = template.indexOf(marker)
         return if (idx < 0) injection + template else template.substring(0, idx) + injection + template.substring(idx)
+    }
+
+    private val shared: Boolean get() = settings.assets == ReportAssets.SHARED
+
+    /**
+     * A [ReportAssets.SHARED] report page: the shared page template, naming its report in
+     * `<meta name="lsd-report">` and loading `<stem>-report.js` before the app, which takes the
+     * report from there (ui/src/app/shared-page.ts). It holds no report data itself.
+     */
+    private fun renderSharedPage(outputDir: File, stem: String): String =
+        injectIntoSharedPage(
+            outputDir,
+            head = "<meta name=\"lsd-report\" content=\"${Html.attribute(stem)}\" />\n",
+            body = "<script src=\"${Html.attribute("$stem-report.js")}\"></script>\n",
+        )
+
+    /**
+     * The shared page template with [head] added at the end of its head and [body] before the app's script, and the app's
+     * hashed file names in, after writing those files to [outputDir] if they are not there. A
+     * name is the hash of the content, so an existing file of that name already holds it.
+     */
+    private fun injectIntoSharedPage(
+        outputDir: File?,
+        head: String = "",
+        body: String,
+    ): String {
+        val assets = SharedAssets.packaged
+        if (outputDir != null) {
+            for (asset in listOf(assets.script, assets.styles)) {
+                val target = outputDir.resolve(asset.name).toPath()
+                if (!Files.isRegularFile(target)) writeAtomically(target, asset.text)
+            }
+        }
+        val page =
+            assets.page
+                .replace(SharedAssets.STYLES_HREF, "href=\"${Html.attribute(assets.styles.name)}\"")
+                .replace(SharedAssets.SCRIPT_TAG, "<script src=\"${Html.attribute(assets.script.name)}\"></script>")
+        val headEnd = page.indexOf("</head>")
+        val withHead = page.substring(0, headEnd) + head + page.substring(headEnd)
+        val app = withHead.indexOf("<script src=")
+        return withHead.substring(0, app) + body + withHead.substring(app)
     }
 
     /**

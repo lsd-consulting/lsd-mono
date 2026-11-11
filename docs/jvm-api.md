@@ -12,6 +12,7 @@ Part of [LSD: living sequence diagrams](../README.md). The reference for [lsd-mo
   - [Timing](#timing)
   - [Scenarios and reports in code](#scenarios-and-reports-in-code)
   - [Configuration reference](#configuration-reference)
+    - [Shared report assets](#shared-report-assets)
   - [Threads and parallel tests](#threads-and-parallel-tests)
   - [Message data](#message-data)
     - [Redaction](#redaction)
@@ -342,6 +343,7 @@ a feature off.
 | `lsd.mono.label.maxWidth` | `200` | Width the diagram cuts message labels to; the full label stays in the report and the side panel. Not a positive number: the default |
 | `lsd.mono.report.generatedAt` | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |
 | `lsd.mono.report.usagePing` | `true` | `false` stops the report page requesting the usage ping file from jsDelivr when it is opened, see [Usage ping](usage-ping.md) |
+| `lsd.mono.report.assets` | `inline` | `shared` writes the report app once per report directory and makes each page load it, see [Shared report assets](#shared-report-assets) |
 | `lsd.mono.cucumber.splitBySteps` | `false` | `true` makes the Cucumber plugin start a section at each step |
 | `lsd.mono.payload.maxDepth` | `32` | Payload limit, see [Message data](#message-data) |
 | `lsd.mono.payload.maxStringLength` | `100000` | Payload limit, see [Message data](#message-data) |
@@ -365,6 +367,28 @@ Settings made in code rather than by property:
 The report page remembers a few choices in the reader's browser, not in the report: the theme
 (`lsd-report-theme-v2`, local storage), the collapsed scenario list (`lsd-report-sidebar`, local storage) and the side
 panel width (`lsd-report-inspector-width`, session storage).
+
+#### Shared report assets
+
+By default every `<stem>-diagram.html` and `index.html` carries the whole report app, about 380 KB,
+so a directory of many reports holds many copies of it, and zipping does not shrink them away. With
+`lsd.mono.report.assets=shared` (for example in `junit-platform.properties`) the app is written once
+per report directory and each page is a small file that loads it:
+
+```text
+build/reports/lsd/
+  lsd-report-<hash>.js        the report app, written once
+  lsd-report-<hash>.css       its styles and fonts, written once
+  PlaceOrderTest-1a2b3c4d-diagram.html   a page of about 2 KB
+  PlaceOrderTest-1a2b3c4d-report.js      the report, which the page loads
+  index.html
+```
+
+A page now opens only next to those files: copy or publish the whole directory, not one
+`-diagram.html`. `<hash>` is of the file's content, so another lsd-mono version writing to the same
+directory writes its own pair beside it. Files a version no longer uses are not deleted. The pages
+are classic scripts in the same directory, so they still open from `file://`. `-report.json` is the
+same in both modes.
 
 ### Threads and parallel tests
 

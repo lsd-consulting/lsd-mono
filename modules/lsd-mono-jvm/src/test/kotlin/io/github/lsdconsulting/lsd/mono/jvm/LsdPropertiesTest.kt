@@ -4,6 +4,7 @@ import io.github.lsdconsulting.lsd.mono.jvm.domain.ScenarioError
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdKey
 import io.github.lsdconsulting.lsd.mono.jvm.properties.LsdProperties
 import io.github.lsdconsulting.lsd.mono.jvm.testing.LsdTestConfig
+import io.github.lsdconsulting.lsd.mono.report.html.ReportAssets
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -68,6 +69,22 @@ class LsdPropertiesTest {
         System.setProperty(LsdProperties.CUCUMBER_SPLIT_BY_STEPS, "true")
         @OptIn(InternalLsdApi::class)
         assertTrue(LsdProperties.cucumberSplitBySteps())
+    }
+
+    @Test
+    fun `report assets are inline unless set to shared`() {
+        try {
+            System.clearProperty(LsdProperties.REPORT_ASSETS)
+            assertEquals(ReportAssets.INLINE, LsdProperties.reportAssets())
+            System.setProperty(LsdProperties.REPORT_ASSETS, " Shared ")
+            assertEquals(ReportAssets.SHARED, LsdProperties.reportAssets())
+            System.setProperty(LsdProperties.REPORT_ASSETS, "inline")
+            assertEquals(ReportAssets.INLINE, LsdProperties.reportAssets())
+            System.setProperty(LsdProperties.REPORT_ASSETS, "split")
+            assertEquals(ReportAssets.INLINE, LsdProperties.reportAssets(), "an unknown value keeps the default")
+        } finally {
+            System.clearProperty(LsdProperties.REPORT_ASSETS)
+        }
     }
 
     @Test
