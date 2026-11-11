@@ -139,6 +139,212 @@ class TestSourceTest {
     }
 
     @Test
+    fun `an expression body wrapped onto the next lines is taken whole`() {
+        val text =
+            """
+            class Fixture {
+                @Test
+                fun `wrapped`() =
+                    runTest { step() }
+
+                @Test
+                fun `wrapped call`() =
+                    assertEquals(
+                        1,
+                        one(),
+                    )
+
+                @Test
+                fun `chained`(): Unit = parse("a")
+                    .let { check(it) }
+                @Test
+                fun `last`() =
+                    done()
+            }
+            """.trimIndent()
+
+        assertEquals(
+            "@Test\nfun `wrapped`() =\n    runTest { step() }",
+            TestSource.extract(text, listOf("Fixture"), "wrapped", kotlin = true),
+        )
+        assertEquals(
+            "@Test\nfun `wrapped call`() =\n    assertEquals(\n        1,\n        one(),\n    )",
+            TestSource.extract(text, listOf("Fixture"), "wrapped call", kotlin = true),
+        )
+        assertEquals(
+            "@Test\nfun `chained`(): Unit = parse(\"a\")\n    .let { check(it) }",
+            TestSource.extract(text, listOf("Fixture"), "chained", kotlin = true),
+        )
+        assertEquals("@Test\nfun `last`() =\n    done()", TestSource.extract(text, listOf("Fixture"), "last", kotlin = true))
+    }
+
+    @Test
+    fun `annotations whose arguments span lines are kept, with those above them`() {
+        val text =
+            """
+            class Fixture {
+                @ParameterizedTest
+                @CsvSource(
+                    "getURLs, get urls",
+                    "a(b), a b",
+                )
+                @Tag("slow")
+                fun `splits words`(input: String, expected: String) {
+                    check(input, expected)
+                }
+
+                fun helper() = listOf(
+                    1,
+                )
+                fun `after a call`() { go() }
+            }
+            """.trimIndent()
+
+        assertEquals(
+            "@ParameterizedTest\n@CsvSource(\n    \"getURLs, get urls\",\n    \"a(b), a b\",\n)\n@Tag(\"slow\")\n" +
+                "fun `splits words`(input: String, expected: String) {\n    check(input, expected)\n}",
+            TestSource.extract(text, listOf("Fixture"), "splits words", kotlin = true),
+        )
+        // A `)` above that closes a call, not an annotation, is not taken.
+        assertEquals("fun `after a call`() { go() }", TestSource.extract(text, listOf("Fixture"), "after a call", kotlin = true))
+    }
+
+    @Test
+    fun `a call inside another method's body is not taken for the declaration`() {
+        val text =
+            """
+            class OrderTest {
+                Object other() { return placesAnOrder(); }
+
+                @Test
+                void placesAnOrder() {
+                    go();
+                }
+            }
+            """.trimIndent()
+
+        assertEquals(
+            "@Test\nvoid placesAnOrder() {\n    go();\n}",
+            TestSource.extract(text, listOf("OrderTest"), "placesAnOrder", kotlin = false),
+        )
+    }
+
+    @Test
+    fun `a declaration inside a comment or string is not taken`() {
+        val text =
+            """
+            class Fixture {
+                /** Replaces fun same() { old() } */
+                val note = "fun same() { quoted() }"
+
+                @Test
+                fun same() { real() }
+            }
+            """.trimIndent()
+
+        assertEquals("@Test\nfun same() { real() }", TestSource.extract(text, listOf("Fixture"), "same", kotlin = true))
+    }
+
+    @Test
+    fun `kotlin block comments nest, java ones do not`() {
+        val kotlinText =
+            """
+            class Fixture {
+                @Test
+                fun nested() {
+                    /* a /* b */ } */
+                    go()
+                }
+            }
+            """.trimIndent()
+        assertEquals(
+            "@Test\nfun nested() {\n    /* a /* b */ } */\n    go()\n}",
+            TestSource.extract(kotlinText, listOf("Fixture"), "nested", kotlin = true),
+        )
+        val javaText =
+            """
+            class Fixture {
+                @Test
+                void flat() {
+                    /* a /* b */ go();
+                }
+            }
+            """.trimIndent()
+        assertEquals(
+            "@Test\nvoid flat() {\n    /* a /* b */ go();\n}",
+            TestSource.extract(javaText, listOf("Fixture"), "flat", kotlin = false),
+        )
+    }
+
+    @Test
+    fun `an internal method's module suffix is dropped from its name`() {
+        val method = WithInternal::class.java.declaredMethods.single { it.name.startsWith("probe") }
+        assertTrue('$' in method.name, method.name)
+
+        val source = TestSource.of(WithInternal::class.java, method, configuredRoots = emptyList())
+
+        assertEquals("internal fun probe() {\n    \"internal\"\n}", source)
+    }
+
+    @Test
+    fun `the source is found above the compiled classes when the working directory has none`() {
+        val method = TestSourceTest::class.java.getDeclaredMethod("finds its own source under src test kotlin")
+
+        val source = TestSource.of(TestSourceTest::class.java, method, configuredRoots = emptyList(), workingDir = tempDir)
+
+        assertEquals("fun `finds its own source under src test kotlin`() {", source?.lines()?.get(1), source)
+    }
+
+    @Test
+    fun `recent sources are kept up to their capacity, a missing one too`() {
+        val recent = TestSource.Recent<String, String>(capacity = 2)
+        var loads = 0
+        assertEquals(
+            "a",
+            recent.get("a") {
+                loads++
+                "a"
+            },
+        )
+        assertEquals(
+            "a",
+            recent.get("a") {
+                loads++
+                "again"
+            },
+        )
+        assertNull(
+            recent.get("none") {
+                loads++
+                null
+            },
+        )
+        assertNull(
+            recent.get("none") {
+                loads++
+                "late"
+            },
+        )
+        assertEquals(2, loads)
+        recent.get("b") { "b" }
+        assertEquals(2, recent.size)
+        assertEquals("reloaded", recent.get("a") { "reloaded" }, "the eldest went")
+    }
+
+    @Test
+    fun `sources it cannot cut give none, and a one-line body ends at the class`() {
+        fun cut(text: String, name: String = "x", kotlin: Boolean = true) = TestSource.extract(text, listOf("F"), name, kotlin)
+
+        assertEquals("fun x() = 1", cut("class F {\n    fun x() = 1 }"))
+        assertNull(cut("class F(val a: Int)\nfun x() {}"), "a class with no body")
+        assertNull(cut("abstract class F {\n    abstract void x();\n}", kotlin = false), "no body")
+        assertNull(cut("class F {\n    fun x(a: Int"), "an unfinished declaration")
+        assertNull(cut("class F {\n    /* never closed\n    fun x() {}\n}"), "inside an open Kotlin comment")
+        assertNull(cut("class F {\n    /* never closed\n    void x() {}\n}", kotlin = false), "inside an open Java comment")
+        assertEquals("fun x() {}", cut("class F {\n    )\n    fun x() {}\n}"), "a stray ) above")
+    }
+
+    @Test
     fun `a nested class's method is taken from that class`() {
         val text =
             """
@@ -178,5 +384,12 @@ class TestSourceTest {
 
             assertEquals("fun `a nested test class is found in its outer class's file`() {", source?.lines()?.get(1), source)
         }
+    }
+}
+
+/** For the `$module` suffix test: an internal function's JVM name is `probe$<module>`. */
+class WithInternal {
+    internal fun probe() {
+        "internal"
     }
 }

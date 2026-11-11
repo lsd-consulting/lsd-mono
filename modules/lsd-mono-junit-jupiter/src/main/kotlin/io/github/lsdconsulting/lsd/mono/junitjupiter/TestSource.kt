@@ -35,9 +35,43 @@ internal object TestSource {
         workingDir: File = File(System.getProperty("user.dir") ?: "."),
     ): String? =
         runCatching {
-            val file = sourceFile(testClass, configuredRoots, workingDir) ?: return null
-            extract(file.readText(), classChain(testClass), jvmName(method.name), file.name.endsWith(".kt"))
+            val top = generateSequence(testClass) { it.enclosingClass }.last()
+            val code = recent.get(Triple(top, configuredRoots, workingDir)) { parsedSource(top, configuredRoots, workingDir) } ?: return null
+            extract(code, classChain(testClass), jvmName(method.name))
         }.getOrNull()
+
+    /**
+     * The test class's source, read and marked once: each test of a class asks for it, and the
+     * `.kt` search can read every file in the package. A few classes are kept, so the tests of a
+     * class (or of the classes running in parallel) share it without holding every test source.
+     */
+    private val recent = Recent<Triple<Class<*>, List<String>, File>, Code>(capacity = 16)
+
+    private fun parsedSource(top: Class<*>, configuredRoots: List<String>, workingDir: File): Code? {
+        val file = sourceFile(top, configuredRoots, workingDir) ?: return null
+        return Code(file.readText(), kotlin = file.name.endsWith(".kt"))
+    }
+
+    /** A small least-recently-used map; a key whose value is null is remembered too. */
+    internal class Recent<K, V : Any>(
+        private val capacity: Int,
+    ) {
+        private val entries = object : LinkedHashMap<K, Any>(capacity, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, Any>?): Boolean = size > capacity
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        fun get(key: K, load: () -> V?): V? {
+            synchronized(entries) { entries[key] }?.let { return if (it === NONE) null else it as V }
+            val value = load()
+            synchronized(entries) { entries[key] = value ?: NONE }
+            return value
+        }
+
+        val size: Int get() = synchronized(entries) { entries.size }
+
+        private object NONE
+    }
 
     /** The outermost class first, then each nested class down to [testClass]. */
     private fun classChain(testClass: Class<*>): List<String> =
@@ -46,8 +80,7 @@ internal object TestSource {
     /** An `internal` Kotlin function's JVM name carries a `$module` suffix. */
     private fun jvmName(name: String): String = name.substringBefore('$')
 
-    private fun sourceFile(testClass: Class<*>, configuredRoots: List<String>, workingDir: File): File? {
-        val top = generateSequence(testClass) { it.enclosingClass }.last()
+    private fun sourceFile(top: Class<*>, configuredRoots: List<String>, workingDir: File): File? {
         val packagePath = top.packageName.replace('.', '/')
         return roots(top, configuredRoots, workingDir).firstNotNullOfOrNull { root ->
             val dir = File(root, packagePath)
@@ -89,8 +122,11 @@ internal object TestSource {
      * Cuts the method [name] out of [text]: within the body of each class in [classChain] in turn,
      * from the annotations above its declaration through the brace that closes its body.
      */
-    internal fun extract(text: String, classChain: List<String>, name: String, kotlin: Boolean): String? {
-        val code = Code(text)
+    internal fun extract(text: String, classChain: List<String>, name: String, kotlin: Boolean): String? =
+        extract(Code(text, kotlin), classChain, name)
+
+    private fun extract(code: Code, classChain: List<String>, name: String): String? {
+        val text = code.text
         var start = 0
         var end = text.length
         for (className in classChain) {
@@ -98,7 +134,7 @@ internal object TestSource {
             start = body.first
             end = body.last
         }
-        val declaration = declaration(name, kotlin)
+        val declaration = declaration(name, code.kotlin)
         val match =
             declaration
                 .findAll(text.substring(start, end))
@@ -106,7 +142,7 @@ internal object TestSource {
                 .firstOrNull { !code.isInsideStringOrComment(it) && code.depth(start, it) == 0 }
                 ?: return null
         val bodyEnd = code.methodEnd(match, end) ?: return null
-        val from = annotationsStart(text, lineStart(text, match))
+        val from = code.annotationsStart(lineStart(text, match))
         val lines = text.substring(from, bodyEnd).lines()
         if (lines.size > MAX_LINES) return null
         return lines.trimIndent().joinToString("\n").trimEnd()
@@ -126,17 +162,6 @@ internal object TestSource {
 
     private fun lineStart(text: String, index: Int): Int = text.lastIndexOf('\n', index - 1) + 1
 
-    /** Back up over annotation lines (and blank-free lines continuing them) directly above the declaration. */
-    private fun annotationsStart(text: String, declarationLine: Int): Int {
-        var from = declarationLine
-        while (from > 0) {
-            val previous = lineStart(text, from - 1)
-            val line = text.substring(previous, from).trim()
-            if (line.startsWith("@")) from = previous else break
-        }
-        return from
-    }
-
     private fun List<String>.trimIndent(): List<String> {
         val indent = filter { it.isNotBlank() }.minOfOrNull { line -> line.takeWhile { it == ' ' || it == '\t' }.length } ?: 0
         return map { if (it.isBlank()) "" else it.drop(indent).trimEnd() }
@@ -145,6 +170,8 @@ internal object TestSource {
     /** Source text with its strings and comments marked, so braces inside them are skipped. */
     private class Code(
         val text: String,
+        /** Kotlin: block comments nest. */
+        val kotlin: Boolean,
     ) {
         /** For each character, whether it is code (not inside a string, char literal or comment). */
         private val isCode: BooleanArray = mark()
@@ -162,6 +189,43 @@ internal object TestSource {
                 }
             }
             return depth
+        }
+
+        /**
+         * Back up over the annotations directly above the declaration line starting at [declarationLine]:
+         * lines starting with `@`, and an annotation whose arguments span lines, such as
+         * `@CsvSource(` … `)`, found from its closing parenthesis.
+         */
+        fun annotationsStart(declarationLine: Int): Int {
+            var from = declarationLine
+            while (from > 0) {
+                val previous = lineStart(text, from - 1)
+                val line = text.substring(previous, from).trim()
+                if (line.startsWith("@")) {
+                    from = previous
+                    continue
+                }
+                val close = (from - 1 downTo previous).firstOrNull { isCode[it] && !text[it].isWhitespace() }
+                if (close == null || text[close] != ')') break
+                val open = openingParen(close) ?: break
+                val annotationLine = lineStart(text, open)
+                if (!text.substring(annotationLine, open).trim().startsWith("@")) break
+                from = annotationLine
+            }
+            return from
+        }
+
+        /** The `(` that the `)` at [close] closes. */
+        private fun openingParen(close: Int): Int? {
+            var depth = 0
+            for (i in close downTo 0) {
+                if (!isCode[i]) continue
+                when (text[i]) {
+                    ')' -> depth++
+                    '(' -> if (--depth == 0) return i
+                }
+            }
+            return null
         }
 
         /** The inside of `class Name … { … }` (or object, interface), between [from] and [to]. */
@@ -202,7 +266,7 @@ internal object TestSource {
                         '(' -> parens++
                         ')' -> parens--
                         '{' -> if (parens == 0) return matching(i, to)?.plus(1)
-                        '=' -> if (parens == 0) return expressionEnd(i, to)
+                        '=' -> if (parens == 0) return expressionEnd(declaration, i, to)
                         ';' -> if (parens == 0) return null
                     }
                 }
@@ -211,11 +275,47 @@ internal object TestSource {
             return null
         }
 
-        /** A Kotlin `= …` body: through its matching brace when it opens one on that line, else to the line end. */
-        private fun expressionEnd(equals: Int, to: Int): Int {
-            val lineEnd = text.indexOf('\n', equals).let { if (it < 0 || it > to) to else it }
-            val open = (equals until lineEnd).firstOrNull { isCode[it] && text[it] == '{' } ?: return lineEnd
-            return matching(open, to)?.plus(1) ?: lineEnd
+        /**
+         * A Kotlin `= …` body, on the declaration's line or wrapped onto the lines below it: it ends at
+         * the end of a line where its brackets are all closed and the next non-blank line is
+         * indented no deeper than the declaration.
+         */
+        private fun expressionEnd(declaration: Int, equals: Int, to: Int): Int {
+            val indent = indentOf(lineStart(text, declaration))
+            var depth = 0
+            var i = equals
+            while (i < to) {
+                val c = text[i]
+                if (isCode[i]) {
+                    when (c) {
+                        '(', '{', '[' -> depth++
+                        ')', '}', ']' -> depth--
+                    }
+                }
+                if (c == '\n' && depth <= 0) {
+                    val next = nextNonBlankLine(i + 1, to)
+                    if (next == null || indentOf(next) <= indent) return i
+                }
+                i++
+            }
+            return to
+        }
+
+        private fun indentOf(lineStart: Int): Int {
+            var j = lineStart
+            while (j < text.length && (text[j] == ' ' || text[j] == '\t')) j++
+            return j - lineStart
+        }
+
+        /** The start of the first line from [from] with something on it, or null before [to]. */
+        private fun nextNonBlankLine(from: Int, to: Int): Int? {
+            var line = from
+            while (line < to) {
+                val end = text.indexOf('\n', line).let { if (it < 0) text.length else it }
+                if (text.substring(line, end).isNotBlank()) return line
+                line = end + 1
+            }
+            return null
         }
 
         /** The index of the brace closing the one at [open]. */
@@ -244,7 +344,7 @@ internal object TestSource {
                 val c = text[i]
                 when {
                     text.startsWith("//", i) -> skipTo(text.indexOf('\n', i).let { if (it < 0) text.length else it })
-                    text.startsWith("/*", i) -> skipTo(text.indexOf("*/", i + 2).let { if (it < 0) text.length else it + 2 })
+                    text.startsWith("/*", i) -> skipTo(blockCommentEnd(i))
                     text.startsWith("\"\"\"", i) -> skipTo(text.indexOf("\"\"\"", i + 3).let { if (it < 0) text.length else it + 3 })
                     // A backticked Kotlin name can hold a quote or a brace: skip it whole.
                     c == '`' -> skipTo(text.indexOf('`', i + 1).let { if (it < 0 || text.indexOf('\n', i) in i until it) i + 1 else it + 1 })
@@ -253,6 +353,27 @@ internal object TestSource {
                 }
             }
             return code
+        }
+
+        /** The index after the block comment at [start]; Kotlin's nest, Java's do not. */
+        private fun blockCommentEnd(start: Int): Int {
+            if (!kotlin) return text.indexOf("*/", start + 2).let { if (it < 0) text.length else it + 2 }
+            var depth = 0
+            var j = start
+            while (j < text.length) {
+                when {
+                    text.startsWith("/*", j) -> {
+                        depth++
+                        j += 2
+                    }
+                    text.startsWith("*/", j) -> {
+                        j += 2
+                        if (--depth == 0) return j
+                    }
+                    else -> j++
+                }
+            }
+            return text.length
         }
 
         /** The index after a "…" or '…' literal starting at [start], honouring backslash escapes. */
