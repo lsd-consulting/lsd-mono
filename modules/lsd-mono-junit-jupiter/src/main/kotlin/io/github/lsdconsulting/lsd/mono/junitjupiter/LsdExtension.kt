@@ -95,11 +95,7 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, InvocationInt
     }
 
     override fun testSuccessful(context: ExtensionContext) {
-        scenarioFor(context).complete(
-            prefixParentDisplayName(context),
-            "Test passed",
-            Status.SUCCESS,
-        )
+        finish(context, "Test passed", Status.SUCCESS)
     }
 
     override fun testDisabled(context: ExtensionContext, reason: Optional<String>) {
@@ -108,30 +104,35 @@ public class LsdExtension : BeforeAllCallback, BeforeEachCallback, InvocationInt
                 .filter { it.isNotBlank() }
                 .map { "Test disabled: $it" }
                 .orElse("Test disabled")
-        scenarioFor(context).complete(
-            prefixParentDisplayName(context),
-            description,
-            Status.SKIPPED,
-        )
+        finish(context, description, Status.SKIPPED)
     }
 
     override fun testAborted(context: ExtensionContext, cause: Throwable?) {
-        scenarioFor(context).complete(
-            prefixParentDisplayName(context),
-            "Test aborted",
-            Status.ABORTED,
-            ScenarioError.of("Test aborted", cause),
-        )
+        finish(context, "Test aborted", Status.ABORTED, ScenarioError.of("Test aborted", cause))
     }
 
     override fun testFailed(context: ExtensionContext, cause: Throwable?) {
-        scenarioFor(context).complete(
-            prefixParentDisplayName(context),
-            "Test failed",
-            Status.ERROR,
-            ScenarioError.of("Failed", cause),
-        )
+        finish(context, "Test failed", Status.ERROR, ScenarioError.of("Failed", cause))
     }
+
+    /** Completes the test's scenario, with the test method's source as its last fact (#72). */
+    private fun finish(context: ExtensionContext, description: String, status: Status, error: ScenarioError? = null) {
+        val scenario = scenarioFor(context)
+        testSource(context)?.let { scenario.addFact(TestSource.FACT_KEY, it) }
+        scenario.complete(prefixParentDisplayName(context), description, status, error)
+    }
+
+    /**
+     * The test method's source, unless `lsd.mono.junit.showSource` is false or it cannot be found. Never
+     * throws. A dynamic test has no method of its own and gets none.
+     */
+    @OptIn(io.github.lsdconsulting.lsd.mono.jvm.InternalLsdApi::class)
+    private fun testSource(context: ExtensionContext): String? =
+        runCatching {
+            if (!LsdProperties.junitShowSource()) return null
+            val method = context.testMethod.orElse(null) ?: return null
+            TestSource.of(method.declaringClass, method, LsdProperties.junitSourceRoots())
+        }.getOrNull()
 
     /** An [LsdScenario] parameter of a test, `@BeforeEach` or `@AfterEach` method. */
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =

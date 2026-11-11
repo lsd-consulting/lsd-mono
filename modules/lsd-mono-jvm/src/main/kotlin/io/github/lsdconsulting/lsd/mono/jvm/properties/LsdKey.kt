@@ -22,6 +22,8 @@ internal enum class LsdKey(
     GENERATED_AT(LsdProperties.GENERATED_AT, null),
     USAGE_PING(LsdProperties.USAGE_PING, "true"),
     CUCUMBER_SPLIT_BY_STEPS(LsdProperties.CUCUMBER_SPLIT_BY_STEPS, "false"),
+    JUNIT_SHOW_SOURCE(LsdProperties.JUNIT_SHOW_SOURCE, "true"),
+    JUNIT_SOURCE_ROOT(LsdProperties.JUNIT_SOURCE_ROOT, null),
     PAYLOAD_MAX_DEPTH(LsdProperties.PAYLOAD_MAX_DEPTH, "32"),
     PAYLOAD_MAX_STRING_LENGTH(LsdProperties.PAYLOAD_MAX_STRING_LENGTH, "100000"),
     PAYLOAD_MAX_ITEMS(LsdProperties.PAYLOAD_MAX_ITEMS, "1000"),

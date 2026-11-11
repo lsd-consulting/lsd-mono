@@ -139,6 +139,54 @@ class LsdExtensionOutcomesTest {
     }
 
     @Test
+    fun `each test's method source is its last fact`() {
+        execute(LsdOutcomeFixtures::class.java)
+
+        val report = reportJson("LsdOutcomeFixtures")
+        val prefix = "lsd outcome fixtures"
+        val passed = report.scenario("$prefix: records a passing scenario")
+        assertEquals(("framework" to "junit-jupiter-6"), passed.facts.first(), passed.json)
+        assertEquals(
+            listOf(
+                "@Test",
+                "@Order(1)",
+                "fun `records a passing scenario`() {",
+                "    lsd.addFact(\"framework\", \"junit-jupiter-6\")",
+                "    lsd.capture { \"Test\" calls \"LsdMono\" label \"ping\" }",
+                "}",
+            ).joinToString("\n"),
+            passed.facts
+                .last()
+                .takeIf { it.first == "Test source" }
+                ?.second,
+            passed.json,
+        )
+        val failed = report.scenario("$prefix: blows up with a structured failure")
+        assertEquals(
+            "@Test\n@Order(2)\nfun `blows up with a structured failure`(): Unit = throw IllegalStateException(\"boom: payload <script>\")",
+            failed.facts.single { it.first == "Test source" }.second,
+            failed.json,
+        )
+        val nested = report.scenario("$prefix: when grouped: adds a nested scenario")
+        assertTrue(
+            nested.facts
+                .single { it.first == "Test source" }
+                .second
+                .orEmpty()
+                .contains("lsd.note(\"from nested\", \"Test\")"),
+            nested.json,
+        )
+    }
+
+    @Test
+    fun `lsd mono junit showSource false leaves the source out`() {
+        execute(LsdOutcomeFixtures::class.java, mapOf("lsd.mono.junit.showSource" to "false"))
+
+        val report = reportJson("LsdOutcomeFixtures")
+        assertTrue(report.scenarios.none { scenario -> scenario.facts.any { it.first == "Test source" } }, report.text)
+    }
+
+    @Test
     fun `a throwing @AfterEach method fails the test with its own exception`() {
         val summary = execute(LsdAfterEachThrowsFixture::class.java)
 

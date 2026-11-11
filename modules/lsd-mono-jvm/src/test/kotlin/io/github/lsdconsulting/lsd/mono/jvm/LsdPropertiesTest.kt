@@ -71,6 +71,24 @@ class LsdPropertiesTest {
     }
 
     @Test
+    @OptIn(InternalLsdApi::class)
+    fun `the junit source readers follow their keys`() {
+        System.clearProperty(LsdProperties.JUNIT_SHOW_SOURCE)
+        System.clearProperty(LsdProperties.JUNIT_SOURCE_ROOT)
+        try {
+            assertTrue(LsdProperties.junitShowSource())
+            assertEquals(emptyList<String>(), LsdProperties.junitSourceRoots())
+            System.setProperty(LsdProperties.JUNIT_SHOW_SOURCE, "off")
+            System.setProperty(LsdProperties.JUNIT_SOURCE_ROOT, " src/it/kotlin, ,src/it/java ")
+            assertFalse(LsdProperties.junitShowSource())
+            assertEquals(listOf("src/it/kotlin", "src/it/java"), LsdProperties.junitSourceRoots())
+        } finally {
+            System.clearProperty(LsdProperties.JUNIT_SHOW_SOURCE)
+            System.clearProperty(LsdProperties.JUNIT_SOURCE_ROOT)
+        }
+    }
+
+    @Test
     fun `payload limits fall back to their defaults for invalid values`() {
         System.setProperty(LsdProperties.PAYLOAD_MAX_DEPTH, " 7 ")
         System.setProperty(LsdProperties.PAYLOAD_MAX_ITEMS, "-1")
