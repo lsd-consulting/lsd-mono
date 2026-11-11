@@ -344,12 +344,19 @@ jobs:
         run: |
           id=io.github.lsd-consulting.lsd-mono-studio
           marker="https://plugins.gradle.org/m2/${id//.//}/$id.gradle.plugin/$VERSION/$id.gradle.plugin-$VERSION.pom"
-          if curl -fsSL -o /dev/null "$marker"; then
-            echo "$id $VERSION is already on the Gradle Plugin Portal." >> "$GITHUB_STEP_SUMMARY"
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          fi
+          # 200: already published, so skip. 404: not yet. Anything else (an outage, a redirect
+          # loop, DNS): stop, rather than let a Portal problem look like a failed publish.
+          code=$(curl -sSL -o /dev/null -w '%{http_code}' "$marker" || true)
+          case "$code" in
+            200)
+              echo "$id $VERSION is already on the Gradle Plugin Portal." >> "$GITHUB_STEP_SUMMARY"
+              echo "publish=false" >> "$GITHUB_OUTPUT" ;;
+            404)
+              echo "publish=true" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::The Gradle Plugin Portal answered ${code:-nothing} for $marker; not publishing."
+              exit 1 ;;
+          esac
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: steps.check.outputs.publish == 'true'
         with:

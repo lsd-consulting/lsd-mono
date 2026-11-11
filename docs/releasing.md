@@ -141,8 +141,8 @@ The `io.github.lsd-consulting.lsd-mono-studio` Gradle plugin (`modules/lsd-mono-
 Studio README names another plugin id.
 
 The `gradle-plugin` job in release.yml publishes it after the `npm` job, from the release tag, with
-`./gradlew :modules:lsd-mono-studio-gradle-plugin:publishPlugins -Plsd.version=X.Y.Z`. A version already on the Portal is
-skipped, so publishing a tag again works. It is unsigned: the Portal does not require signatures.
+`./gradlew :modules:lsd-mono-studio-gradle-plugin:publishPlugins -Plsd.version=X.Y.Z`. A version the Portal already
+has is skipped. It is unsigned: the Portal does not require signatures.
 
 It is off until it is turned on, because a Portal version can never be deleted:
 
@@ -150,8 +150,16 @@ It is off until it is turned on, because a Portal version can never be deleted:
    create an API key (profile → API Keys).
 2. **Secrets.** Add the key as the repository secrets `GRADLE_PUBLISH_KEY` and `GRADLE_PUBLISH_SECRET`. Only the
    job's publish step sees them. The job fails before publishing if one is empty.
-3. **Turn it on.** Set the repository variable `GRADLE_PLUGIN_PUBLISH_ENABLED` to `true`. The next release (the Tuesday
-   run, or one by hand with a `tag` to publish an existing release) publishes the plugin.
+3. **Turn it on.** Set the repository variable `GRADLE_PLUGIN_PUBLISH_ENABLED` to `true`. The next new release (the
+   Tuesday run, or a run by hand without a `tag`) publishes the plugin, so the first Portal version is the first
+   release after this setup was merged.
+
+Releases from before this setup cannot be put on the Portal: their tags have no `publishPlugins` task. Do not run the
+workflow with a `tag` to publish the plugin for a release that already exists either: that run publishes the tag to
+Maven Central again first, which fails for a version Central already has (and then skips this job), and counts
+against Central's limits. The workflow has no plugin-only run; to re-publish just the plugin, run
+`publishPlugins -Plsd.version=X.Y.Z` from a checkout of that tag with the API key in `GRADLE_PUBLISH_KEY` and
+`GRADLE_PUBLISH_SECRET`.
 
 The first version waits for the Portal's manual review, which can take a few days: the id has to trace back to its
 owner (`io.github.lsd-consulting`, the GitHub organisation that owns `vcsUrl`) and share its top-level namespace with

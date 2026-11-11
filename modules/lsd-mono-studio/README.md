@@ -41,18 +41,15 @@ From a Gradle build, the `io.github.lsd-consulting.lsd-mono-studio` plugin adds 
 task that installs and runs LSD Studio for you. It needs Gradle 9.0 or newer, and Node 22.6 or newer
 on your `PATH` (or `downloadNode = true`, below). Under `--offline` it installs LSD Studio from npm's
 cache only. The plugin is not on the Gradle Plugin Portal yet
-([#210](https://github.com/lsd-consulting/lsd-mono/issues/210)); once it is, it is released with
-the rest of lsd-mono, at the same version:
-
-<!-- release-version:start (the release workflow updates the versions up to the end marker) -->
+([#210](https://github.com/lsd-consulting/lsd-mono/issues/210)), so no version of it can be
+used from there today. Once it is, it is released with the rest of lsd-mono, at the same version,
+and goes on the `id(...)` line:
 
 ```kotlin
 plugins {
-    id("io.github.lsd-consulting.lsd-mono-studio") version "0.16.0"
+    id("io.github.lsd-consulting.lsd-mono-studio") // version "<the lsd-mono version>", once on the Portal
 }
 ```
-
-<!-- release-version:end -->
 
 ```sh
 ./gradlew lsdStudio      # opens LSD Studio in your browser

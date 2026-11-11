@@ -51,6 +51,8 @@ val verifyPluginPublication =
         val declaration = gradlePlugin.plugins.getByName("lsdMonoStudio")
         val pluginId = declaration.id
         val tags = declaration.tags.get().toList()
+        val displayName = declaration.displayName.orEmpty()
+        val pluginDescription = declaration.description.orEmpty()
         val website = gradlePlugin.website.orNull
         val vcsUrl = gradlePlugin.vcsUrl.orNull
         val centralTasks = project.tasks
@@ -60,6 +62,8 @@ val verifyPluginPublication =
         val readme = layout.projectDirectory.file("../README.md").asFile
         inputs.property("pluginId", pluginId)
         inputs.property("tags", tags)
+        inputs.property("displayName", displayName)
+        inputs.property("pluginDescription", pluginDescription)
         inputs.property("website", website.orEmpty())
         inputs.property("vcsUrl", vcsUrl.orEmpty())
         inputs.property("centralTasks", centralTasks)
@@ -72,6 +76,8 @@ val verifyPluginPublication =
             if (website != "https://github.com/lsd-consulting/lsd-mono") problems += "website is $website"
             if (vcsUrl != "https://github.com/lsd-consulting/lsd-mono") problems += "vcsUrl is $vcsUrl"
             if (tags.isEmpty()) problems += "no Portal tags"
+            if (displayName.isBlank()) problems += "no displayName (the Portal requires one)"
+            if (pluginDescription.isBlank()) problems += "no description (the Portal requires one)"
             if (!readme.readText().contains("id(\"$pluginId\")")) problems += "README does not show id(\"$pluginId\")"
             check(problems.isEmpty()) { "Gradle Plugin Portal setup: " + problems.joinToString("; ") }
             marker.get().asFile.writeText("ok\n")
