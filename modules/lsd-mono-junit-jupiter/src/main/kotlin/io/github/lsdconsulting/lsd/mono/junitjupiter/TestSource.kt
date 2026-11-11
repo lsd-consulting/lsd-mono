@@ -193,15 +193,15 @@ internal object TestSource {
 
         /**
          * Back up over the annotations directly above the declaration line starting at [declarationLine]:
-         * lines starting with `@`, and an annotation whose arguments span lines, such as
-         * `@CsvSource(` … `)`, found from its closing parenthesis.
+         * lines holding only annotations, and an annotation whose arguments span lines, such as
+         * `@CsvSource(` … `)`, found from its closing parenthesis. A line that starts with an
+         * annotation but goes on to declare something, such as a one-line test above, is not one.
          */
         fun annotationsStart(declarationLine: Int): Int {
             var from = declarationLine
             while (from > 0) {
                 val previous = lineStart(text, from - 1)
-                val line = text.substring(previous, from).trim()
-                if (line.startsWith("@")) {
+                if (onlyAnnotations(previous, from)) {
                     from = previous
                     continue
                 }
@@ -209,10 +209,47 @@ internal object TestSource {
                 if (close == null || text[close] != ')') break
                 val open = openingParen(close) ?: break
                 val annotationLine = lineStart(text, open)
-                if (!text.substring(annotationLine, open).trim().startsWith("@")) break
+                if (!onlyAnnotations(annotationLine, close + 1)) break
                 from = annotationLine
             }
             return from
+        }
+
+        /**
+         * Whether [from] until [to] holds at least one annotation and nothing else in code: each is
+         * `@` and a (qualified, or use-site) name, optionally with its arguments in parentheses.
+         */
+        private fun onlyAnnotations(from: Int, to: Int): Boolean {
+            var i = from
+            var annotations = 0
+            while (i < to) {
+                when {
+                    !isCode[i] || text[i].isWhitespace() -> i++
+                    text[i] == '@' -> {
+                        i++
+                        while (i < to && isCode[i] && (text[i].isLetterOrDigit() || text[i] in "_.:")) i++
+                        var j = i
+                        while (j < to && text[j].isWhitespace()) j++
+                        if (j < to && isCode[j] && text[j] == '(') i = (closingParen(j, to) ?: return false) + 1
+                        annotations++
+                    }
+                    else -> return false
+                }
+            }
+            return annotations > 0
+        }
+
+        /** The `)` that closes the `(` at [open], before [to]. */
+        private fun closingParen(open: Int, to: Int): Int? {
+            var depth = 0
+            for (i in open until to) {
+                if (!isCode[i]) continue
+                when (text[i]) {
+                    '(' -> depth++
+                    ')' -> if (--depth == 0) return i
+                }
+            }
+            return null
         }
 
         /** The `(` that the `)` at [close] closes. */

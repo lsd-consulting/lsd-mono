@@ -210,6 +210,49 @@ class TestSourceTest {
     }
 
     @Test
+    fun `a one-line test directly above is not taken for an annotation`() {
+        val text =
+            """
+            class Fixture {
+                @Test fun first() = check(1)
+                @Test
+                fun second() { check(2) }
+                @Test @Tag("x") fun third() { check(3) }
+                @Tag("slow") @Test
+                fun fourth() = check(
+                    4,
+                )
+                @Test fun fifth() = check(
+                    5,
+                )
+                @Test
+                fun sixth() { check(6) }
+            }
+            """.trimIndent()
+        val javaText =
+            """
+            class Fixture {
+                @Test void first() { check(1); }
+                @Test
+                void second() { check(2); }
+            }
+            """.trimIndent()
+
+        assertEquals("@Test\nfun second() { check(2) }", TestSource.extract(text, listOf("Fixture"), "second", kotlin = true))
+        assertEquals(
+            "@Tag(\"slow\") @Test\nfun fourth() = check(\n    4,\n)",
+            TestSource.extract(text, listOf("Fixture"), "fourth", kotlin = true),
+            "a line of annotations is still taken",
+        )
+        assertEquals(
+            "@Test\nfun sixth() { check(6) }",
+            TestSource.extract(text, listOf("Fixture"), "sixth", kotlin = true),
+            "nor one whose call spans lines",
+        )
+        assertEquals("@Test\nvoid second() { check(2); }", TestSource.extract(javaText, listOf("Fixture"), "second", kotlin = false))
+    }
+
+    @Test
     fun `a call inside another method's body is not taken for the declaration`() {
         val text =
             """
