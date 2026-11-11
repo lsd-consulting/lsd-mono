@@ -47,6 +47,9 @@ describe('adoptSharedReport', () => {
       title: 'Report data not found: Shop-1a2b3c4d-report.js',
       status: 'error',
     })
+    expect((win.__LSD_REPORT__ as ReportJson).scenarios?.[0]?.description).toContain(
+      'copy or publish the whole directory',
+    )
   })
 
   it('changes nothing on a single-file page, an index or a page with no report named', () => {

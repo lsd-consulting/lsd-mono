@@ -15,7 +15,14 @@ internal class SharedAssets private constructor(
     class Asset(
         val name: String,
         val text: String,
-    )
+    ) {
+        /** Its size in bytes as written (UTF-8). */
+        val size: Long = Html
+            .wellFormed(text)
+            .toByteArray(Charsets.UTF_8)
+            .size
+            .toLong()
+    }
 
     companion object {
         private const val DIR = "/lsd-mono-report-html/"

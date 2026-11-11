@@ -20,7 +20,7 @@ export function adoptSharedReport(win: Window = window, doc: Document = document
   if (data.payloadsSrc) win.__LSD_PAYLOADS_SRC__ = data.payloadsSrc
 }
 
-/** An empty report whose title names the data file that did not load. */
+/** A report whose title names the data file that did not load, and says the likely cause. */
 function missingReport(stem: string): ReportJson {
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
@@ -28,5 +28,13 @@ function missingReport(stem: string): ReportJson {
     generatedAt: '',
     generator: { name: 'lsd-mono' },
     status: 'error',
+    scenarios: [
+      {
+        id: 'report-data-not-found',
+        title: 'This page opens only next to its report files',
+        status: 'error',
+        description: `Open it in its report directory, beside ${stem}-report.js and the lsd-report-*.js and lsd-report-*.css files: copy or publish the whole directory, not one page.`,
+      },
+    ],
   }
 }

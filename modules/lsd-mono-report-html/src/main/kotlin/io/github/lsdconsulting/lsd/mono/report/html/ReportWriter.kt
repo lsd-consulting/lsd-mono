@@ -372,8 +372,7 @@ public class ReportWriter(
 
     /**
      * The shared page template with [head] added at the end of its head and [body] before the app's script, and the app's
-     * hashed file names in, after writing those files to [outputDir] if they are not there. A
-     * name is the hash of the content, so an existing file of that name already holds it.
+     * hashed file names in, after writing those files to [outputDir] (see [writeSharedAsset]).
      */
     private fun injectIntoSharedPage(
         outputDir: File?,
@@ -382,10 +381,7 @@ public class ReportWriter(
     ): String {
         val assets = SharedAssets.packaged
         if (outputDir != null) {
-            for (asset in listOf(assets.script, assets.styles)) {
-                val target = outputDir.resolve(asset.name).toPath()
-                if (!Files.isRegularFile(target)) writeAtomically(target, asset.text)
-            }
+            for (asset in listOf(assets.script, assets.styles)) writeSharedAsset(outputDir.resolve(asset.name).toPath(), asset)
         }
         val page =
             assets.page
@@ -396,6 +392,25 @@ public class ReportWriter(
         val app = withHead.indexOf("<script src=")
         return withHead.substring(0, app) + body + withHead.substring(app)
     }
+
+    /**
+     * Write a shared asset unless [target] already holds it. Its name is the hash of its content, so
+     * a file of that name and size does; one of another size (cut short by an interrupted copy, or
+     * edited) is written again. Written to a temporary file and moved into place, like every file
+     * here. Several writers can do this at once with the same bytes: on Windows a move onto a file
+     * another process has open can fail, and that is fine when the file is now there in full.
+     */
+    internal fun writeSharedAsset(target: Path, asset: SharedAssets.Asset) {
+        if (holds(target, asset)) return
+        try {
+            writeAtomically(target, asset.text)
+        } catch (e: java.nio.file.FileSystemException) {
+            if (!holds(target, asset)) throw e
+        }
+    }
+
+    private fun holds(target: Path, asset: SharedAssets.Asset): Boolean =
+        Files.isRegularFile(target) && runCatching { Files.size(target) }.getOrNull() == asset.size
 
     /**
      * `<stem>-report.js`: a classic script that adds this report to `window.__LSD_REPORTS__`

@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import { uxFixture } from './ux-fixture'
+import { indexBase } from '../src/lib/report-fixture.test-util'
 
 /**
  * #64, lsd.mono.report.assets=shared: a report directory laid out as ReportWriter writes it in
@@ -78,5 +79,52 @@ test('a shared page shows its report with the shared script, styles and fonts, o
 test('a shared page whose report data is missing names the file, not the demo', async ({ page }) => {
   const { errors } = await open(page, sharedDirectory(false))
   await expect(page.locator('h1')).toHaveText(`Report data not found: ${stem}-report.js`)
+  await expect(page.locator('#app')).toContainText('copy or publish the whole directory')
   expect(errors).toEqual([])
+})
+
+test('a shared index lists the reports and opens one from its data script, offline', async ({ page }) => {
+  const dir = sharedDirectory(true)
+  // As ReportWriter writes a shared index: the manifest before the app script, no <meta name="lsd-report">.
+  const manifest = {
+    ...indexBase(),
+    title: 'LSD reports',
+    generatedAt: '2026-01-15T12:00:00+00:00',
+    generator: { name: 'lsd-mono-jvm', version: '0.2.0' },
+    reports: [
+      {
+        id: stem,
+        title: 'Orders, shared',
+        status: 'success',
+        href: `${stem}-diagram.html`,
+        data: `${stem}-report.js`,
+        counts: { success: 1, warn: 0, error: 0, skipped: 0, aborted: 0 },
+        scenarios: [
+          { id: uxFixture.scenarios[0].id, title: uxFixture.scenarios[0].title, status: 'success', messageCount: 1 },
+        ],
+      },
+    ],
+  }
+  const index = readFileSync(template, 'utf8')
+    .replace('href="lsd-report.css"', `href="${styles}"`)
+    .replace(
+      '<script src="lsd-report.js"></script>',
+      `<script>window.__LSD_INDEX__=${JSON.stringify(manifest)};</script>\n<script src="${script}"></script>`,
+    )
+  writeFileSync(join(dir, 'index.html'), index)
+  const requests: string[] = []
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  await page.context().route('**/*', (route) => {
+    const url = route.request().url()
+    if (url.startsWith('file:') || url.startsWith('data:')) return route.continue()
+    requests.push(url)
+    return route.abort()
+  })
+  await page.goto(pathToFileURL(join(dir, 'index.html')).href)
+  await expect(page.locator('#scenario-nav')).toContainText('Orders, shared')
+  await page.goto(pathToFileURL(join(dir, 'index.html')).href + `#report=${stem}`)
+  await expect(page.locator('.seq-svg').first()).toBeVisible()
+  expect(errors).toEqual([])
+  expect(requests).toEqual([])
 })

@@ -6,9 +6,11 @@ import io.github.lsdconsulting.lsd.mono.report.model.StatusJson
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.listDirectoryEntries
@@ -93,6 +95,36 @@ class SharedAssetsTest {
         assertTrue(other.exists())
         assertEquals("other version", other.readText())
         assertEquals(3, assetNames().size)
+    }
+
+    @Test
+    fun `a shared file cut short or edited is written again, a whole one is left alone`() {
+        shared.writeReport(report("Orders"), tempDir)
+        val script = tempDir.resolve(assetNames().single { it.endsWith(".js") })
+        val whole = script.readText()
+        script.writeText(whole.take(100))
+        shared.writeReport(report("Orders"), tempDir)
+        assertEquals(whole, script.readText(), "rewritten in full")
+
+        val modified = Files.getLastModifiedTime(script)
+        Thread.sleep(20)
+        shared.writeIndex(tempDir)
+        assertEquals(modified, Files.getLastModifiedTime(script), "not written again")
+        assertEquals(emptyList<String>(), tempDir.listDirectoryEntries(".*.tmp").map { it.name })
+    }
+
+    @Test
+    fun `a move that fails onto a file already there in full is fine, otherwise it fails`() {
+        val asset = SharedAssets.packaged.styles
+        // A directory of the asset's name: the move onto it fails as it can on Windows.
+        val blocked = tempDir.resolve(asset.name).also { Files.createDirectory(it) }
+        Files.writeString(blocked.resolve("x"), "x")
+        assertThrows(java.nio.file.FileSystemException::class.java) { shared.writeSharedAsset(blocked, asset) }
+
+        val whole = tempDir.resolve("whole.css")
+        Files.writeString(whole, asset.text)
+        shared.writeSharedAsset(whole, asset) // already there: nothing to do
+        assertEquals(asset.text, whole.readText())
     }
 
     @Test
