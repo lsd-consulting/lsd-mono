@@ -29,6 +29,8 @@ dokka = "2.3.0"
 nexus-publish = "2.0.0"
 # Downloads Node for the LSD Studio Gradle plugin when downloadNode is on (#210).
 node-gradle = "7.1.0"
+# Publishes the LSD Studio Gradle plugin to the Gradle Plugin Portal (#210 slice 4).
+plugin-publish = "2.2.1"
 [libraries]
 node-gradle-plugin = { module = "com.github.node-gradle:gradle-node-plugin", version.ref = "node-gradle" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -75,3 +77,4 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref =
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
+plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }

@@ -132,6 +132,34 @@ Keep any other version (such as Cucumber's) outside the markers, or the script r
 
 The artifacts show on Maven Central (`repo1.maven.org`) a few minutes to half an hour after the job.
 
+## The LSD Studio Gradle plugin
+
+The `io.github.lsd-consulting.lsd-mono-studio` Gradle plugin (`modules/lsd-mono-studio/gradle-plugin`) goes to the
+[Gradle Plugin Portal](https://plugins.gradle.org), not Maven Central, at the train version, the same version as the
+`lsd-mono-studio` npm package it runs. Its Maven publish tasks are disabled, so a Central release never ships it, and
+`verifyPluginPublication` (part of `check`) fails if one is turned back on, the Portal metadata goes missing, or the
+Studio README names another plugin id.
+
+The `gradle-plugin` job in release.yml publishes it after the `npm` job, from the release tag, with
+`./gradlew :modules:lsd-mono-studio-gradle-plugin:publishPlugins -Plsd.version=X.Y.Z`. A version already on the Portal is
+skipped, so publishing a tag again works. It is unsigned: the Portal does not require signatures.
+
+It is off until it is turned on, because a Portal version can never be deleted:
+
+1. **Account and key.** Sign in to the Portal (GitHub sign-in works) as the account that will own the plugin, and
+   create an API key (profile → API Keys).
+2. **Secrets.** Add the key as the repository secrets `GRADLE_PUBLISH_KEY` and `GRADLE_PUBLISH_SECRET`. Only the
+   job's publish step sees them. The job fails before publishing if one is empty.
+3. **Turn it on.** Set the repository variable `GRADLE_PLUGIN_PUBLISH_ENABLED` to `true`. The next release (the Tuesday
+   run, or one by hand with a `tag` to publish an existing release) publishes the plugin.
+
+The first version waits for the Portal's manual review, which can take a few days: the id has to trace back to its
+owner (`io.github.lsd-consulting`, the GitHub organisation that owns `vcsUrl`) and share its top-level namespace with
+the Maven group (`io.github.lsd-consulting`). Later versions are published straight away. Changing the group or the
+plugin id starts the review again.
+`publishPlugins --validate-only` checks a publication without uploading it, but it needs the API key too, so PR CI
+does not run it.
+
 ## One-off setup before the first release
 
 Done for 0.1.0 (17 October 2026); kept for reference.

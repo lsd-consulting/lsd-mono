@@ -27,7 +27,9 @@ name: Release
 # GitHub release. A failed publish leaves no tag; a failed tag after a publish is retagged by hand.
 # After a new release, the `pages` job deploys the sample site from the new tag (pages.yml), and the
 # `readme` job opens a pull request that moves the README install snippets to the new version.
-# The `npm` job publishes LSD Studio (modules/lsd-mono-studio) to npm at the same version.
+# The `npm` job publishes LSD Studio (modules/lsd-mono-studio) to npm at the same version, and then,
+# once GRADLE_PLUGIN_PUBLISH_ENABLED is "true", the `gradle-plugin` job publishes its Gradle plugin to
+# the Gradle Plugin Portal.
 on:
   schedule:
     # Tuesday 07:00 Europe/London: 06:00 UTC during BST, 07:00 UTC during GMT. `plan` skips the other.
@@ -314,6 +316,70 @@ jobs:
           npm version "$VERSION" --no-git-tag-version
           npm publish --access public --provenance
           echo "Published lsd-mono-studio@$VERSION to npm." >> "$GITHUB_STEP_SUMMARY"
+
+  gradle-plugin:
+    # Publishes the LSD Studio Gradle plugin (modules/lsd-mono-studio/gradle-plugin) to the Gradle
+    # Plugin Portal at the release version, from the tag, after the npm job, so the plugin never
+    # names an lsd-mono-studio version npm does not have yet. Off until the repository variable
+    # GRADLE_PLUGIN_PUBLISH_ENABLED is "true" (docs/releasing.md): the first publish is a decision,
+    # it goes through the Portal's manual review, and a Portal version can never be deleted.
+    # Credentials: the GRADLE_PUBLISH_KEY and GRADLE_PUBLISH_SECRET secrets (a Portal API key),
+    # given to this step only. A version already on the Portal is skipped, so publishing a tag
+    # again works.
+    needs: [release, npm]
+    if: needs.release.outputs.published && vars.GRADLE_PLUGIN_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: v${{ needs.release.outputs.published }}
+          persist-credentials: false
+      - name: Check whether the Portal has this version
+        id: check
+        env:
+          VERSION: ${{ needs.release.outputs.published }}
+        run: |
+          id=io.github.lsd-consulting.lsd-mono-studio
+          marker="https://plugins.gradle.org/m2/${id//.//}/$id.gradle.plugin/$VERSION/$id.gradle.plugin-$VERSION.pom"
+          if curl -fsSL -o /dev/null "$marker"; then
+            echo "$id $VERSION is already on the Gradle Plugin Portal." >> "$GITHUB_STEP_SUMMARY"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        if: steps.check.outputs.publish == 'true'
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+            25
+      # Reads the Gradle cache main's builds wrote; a job holding release secrets writes none.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        if: steps.check.outputs.publish == 'true'
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Publish to the Gradle Plugin Portal
+        if: steps.check.outputs.publish == 'true'
+        env:
+          VERSION: ${{ needs.release.outputs.published }}
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+        # No configuration cache, so the key is never written to it. Unsigned: the Portal does not
+        # require signatures, and this job gets no signing key.
+        run: |
+          for name in GRADLE_PUBLISH_KEY GRADLE_PUBLISH_SECRET; do
+            [ -n "${!name}" ] || { echo "::error::$name is empty: add the repository secret (docs/releasing.md)"; exit 1; }
+          done
+          built=$(./gradlew -q printVersion -Plsd.version="$VERSION" --no-configuration-cache)
+          [ "$built" = "$VERSION" ] || { echo "::error::Gradle would publish $built, not $VERSION"; exit 1; }
+          ./gradlew :modules:lsd-mono-studio-gradle-plugin:publishPlugins -Plsd.version="$VERSION" --no-configuration-cache
+          echo "Published io.github.lsd-consulting.lsd-mono-studio $VERSION to the Gradle Plugin Portal (the first version waits for the Portal's review)." >> "$GITHUB_STEP_SUMMARY"
 
   readme:
     # Opens a docs pull request that writes the new version into the README install snippets (the
