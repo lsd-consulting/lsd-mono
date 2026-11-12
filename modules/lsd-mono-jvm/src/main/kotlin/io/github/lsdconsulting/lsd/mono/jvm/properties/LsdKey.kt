@@ -21,6 +21,7 @@ internal enum class LsdKey(
     LABEL_MAX_WIDTH(LsdProperties.LABEL_MAX_WIDTH, "200"),
     GENERATED_AT(LsdProperties.GENERATED_AT, null),
     USAGE_PING(LsdProperties.USAGE_PING, "true"),
+    REPORT_ASSETS(LsdProperties.REPORT_ASSETS, "inline"),
     CUCUMBER_SPLIT_BY_STEPS(LsdProperties.CUCUMBER_SPLIT_BY_STEPS, "false"),
     JUNIT_SHOW_SOURCE(LsdProperties.JUNIT_SHOW_SOURCE, "true"),
     JUNIT_SOURCE_ROOT(LsdProperties.JUNIT_SOURCE_ROOT, null),
