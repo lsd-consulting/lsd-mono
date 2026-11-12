@@ -1,3 +1,5 @@
+// First: a shared-assets page (#64) takes its report from <stem>-report.js before anything reads it.
+import './app/shared-boot'
 import './styles/app.css'
 import './styles/timing.css'
 import './styles/diagram.css'
