@@ -452,6 +452,8 @@ public final class io/github/lsdconsulting/lsd/mono/jvm/properties/LsdProperties
 	public static final field HIDE_STACKTRACE Ljava/lang/String;
 	public static final field INHERIT_BINDING Ljava/lang/String;
 	public static final field INSTANCE Lio/github/lsdconsulting/lsd/mono/jvm/properties/LsdProperties;
+	public static final field JUNIT_SHOW_SOURCE Ljava/lang/String;
+	public static final field JUNIT_SOURCE_ROOT Ljava/lang/String;
 	public static final field LABEL_MAX_WIDTH Ljava/lang/String;
 	public static final field METRICS_ENABLED Ljava/lang/String;
 	public static final field OUTPUT_DIR Ljava/lang/String;

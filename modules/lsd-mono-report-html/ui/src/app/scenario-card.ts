@@ -14,6 +14,7 @@ import { formatGeneratedAt } from '../ui/format'
 import { newerMinorNoticeHtml } from '../lib/schema-version'
 import { escapeAttr, escapeHtml } from '../lib/escape'
 import { repoLinkAttrsHtml } from '../ui/repo-link'
+import { factsHtml } from '../ui/facts'
 import { index, session } from './context'
 import { VIEWER_VERSION, writtenBy } from '../lib/viewer-version'
 
@@ -62,7 +63,7 @@ export function scenarioHtml(s: Scenario): string {
         <section class="card">
           <h3>Key facts</h3>
           <dl class="kv">
-            ${s.facts.map((f) => `<dt>${escapeHtml(f.key)}</dt><dd>${escapeHtml(f.value)}</dd>`).join('')}
+            ${factsHtml(s.facts)}
           </dl>
         </section>
       </div>

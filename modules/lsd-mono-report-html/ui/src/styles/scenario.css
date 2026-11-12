@@ -169,6 +169,28 @@
   text-align: right;
   overflow-wrap: anywhere;
 }
+/* A value of several lines (a test method's source, #72): full width, left-aligned, its line
+   breaks and indentation kept, scrolled inside a capped box rather than stretching the card. */
+.kv dd.kv-block {
+  grid-column: 1 / -1;
+  text-align: left;
+  overflow-wrap: normal;
+}
+.kv-block pre {
+  margin: 0;
+  max-height: 20em;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  white-space: pre;
+  tab-size: 4;
+}
+.kv-block pre:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
 
 .diagram-panel {
   margin-top: 8px;

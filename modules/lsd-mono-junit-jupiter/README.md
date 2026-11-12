@@ -94,6 +94,26 @@ The parameter does not change the scenario's title. `LsdContext.instance` keeps 
 
 A passed test is stored as a successful scenario titled from the class and method display names (for example `place order test: places an order`). A default name, the class or method identifier, is split into lower-case words (`getURLsForIDs` becomes `get urls for ids`); a name you wrote, with `@DisplayName`, a backticked Kotlin name or a display name generator, is kept as written, capitals and brackets included. A failure or abort is stored with a structured error on the scenario. Nested test classes do not write a second report from the nested `afterAll`.
 
+## The test method's source
+
+Each scenario's Key facts end with `Test source`: the test method, from its annotations to its
+closing brace, read from the test's source file when the test finishes. In the report it shows as
+a scrollable block under the other facts, and prints in full.
+
+The file is looked for in `src/test/kotlin` and `src/test/java`, under the working directory and
+above the test's compiled classes, so it is found in a usual Gradle or Maven project. Tests in
+another source set name their directories, comma-separated, relative to the working directory or
+absolute:
+
+```properties
+# src/test/resources/junit-platform.properties
+lsd.mono.junit.sourceRoot=src/integrationTest/kotlin
+```
+
+Turn it off with `lsd.mono.junit.showSource=false`. A test whose source is not found (a jar with no
+sources, a generated class, or a method of more than 400 lines) just has no `Test source`; it never
+fails the test. Dynamic tests from a `@TestFactory` have no method of their own, so no source.
+
 ## Where the report is written
 
 After the class finishes, open:

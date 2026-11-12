@@ -343,6 +343,8 @@ a feature off.
 | `lsd.mono.report.generatedAt` | unset | A fixed ISO-8601 instant written as every report's time, for reproducible reports |
 | `lsd.mono.report.usagePing` | `true` | `false` stops the report page requesting the usage ping file from jsDelivr when it is opened, see [Usage ping](usage-ping.md) |
 | `lsd.mono.cucumber.splitBySteps` | `false` | `true` makes the Cucumber plugin start a section at each step |
+| `lsd.mono.junit.showSource` | `true` | `false` leaves the test method's source out of each JUnit scenario's Key facts, see [lsd-mono-junit-jupiter](../modules/lsd-mono-junit-jupiter/README.md#the-test-methods-source) |
+| `lsd.mono.junit.sourceRoot` | unset | Comma-separated test source directories searched for a JUnit test's source before `src/test/kotlin` and `src/test/java` |
 | `lsd.mono.payload.maxDepth` | `32` | Payload limit, see [Message data](#message-data) |
 | `lsd.mono.payload.maxStringLength` | `100000` | Payload limit, see [Message data](#message-data) |
 | `lsd.mono.payload.maxItems` | `1000` | Payload limit, see [Message data](#message-data) |

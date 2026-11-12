@@ -129,6 +129,13 @@
     white-space: normal;
     overflow-wrap: anywhere;
   }
+  /* Print a test method's source in full, wrapped, not cut off at the screen's scroll box. */
+  .kv-block pre {
+    max-height: none;
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
   .print-panel {
     display: block;
   }

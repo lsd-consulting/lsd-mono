@@ -52,6 +52,18 @@ public object LsdProperties {
     /** `true` makes the Cucumber plugin start a section at each step. */
     public const val CUCUMBER_SPLIT_BY_STEPS: String = "lsd.mono.cucumber.splitBySteps"
 
+    /**
+     * `false` leaves the test method's source out of each JUnit scenario's Key facts. Default
+     * `true`; a test whose source is not found just has no source.
+     */
+    public const val JUNIT_SHOW_SOURCE: String = "lsd.mono.junit.showSource"
+
+    /**
+     * Comma-separated test source directories the JUnit extension looks in for a test's source
+     * before `src/test/kotlin` and `src/test/java`, for example `src/integrationTest/kotlin`.
+     */
+    public const val JUNIT_SOURCE_ROOT: String = "lsd.mono.junit.sourceRoot"
+
     /** Payload nesting depth kept. Default 32. */
     public const val PAYLOAD_MAX_DEPTH: String = "lsd.mono.payload.maxDepth"
 
@@ -186,4 +198,20 @@ public object LsdProperties {
     @InternalLsdApi
     @JvmStatic
     public fun cucumberSplitBySteps(): Boolean = LsdKey.CUCUMBER_SPLIT_BY_STEPS.boolean()
+
+    /** Whether the JUnit extension adds each test method's source ([JUNIT_SHOW_SOURCE]). */
+    @InternalLsdApi
+    @JvmStatic
+    public fun junitShowSource(): Boolean = LsdKey.JUNIT_SHOW_SOURCE.boolean()
+
+    /** The [JUNIT_SOURCE_ROOT] directories, trimmed, blanks dropped. */
+    @InternalLsdApi
+    @JvmStatic
+    public fun junitSourceRoots(): List<String> =
+        LsdKey.JUNIT_SOURCE_ROOT
+            .value()
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
 }
