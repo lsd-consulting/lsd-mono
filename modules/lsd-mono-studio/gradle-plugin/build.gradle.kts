@@ -1,26 +1,89 @@
+import org.gradle.plugin.compatibility.compatibility
+
 plugins {
     id("lsd.kotlin-jvm")
-    `java-gradle-plugin`
+    // Applies java-gradle-plugin and maven-publish, and adds publishPlugins (the Gradle Plugin Portal).
+    alias(libs.plugins.plugin.publish)
 }
 
 description = "LSD Studio Gradle plugin: an lsdStudio task that runs LSD Studio (the lsd-mono-studio npm package) with local Node"
 
+// Published to the Gradle Plugin Portal only, by the release workflow's gradle-plugin job
+// (docs/releasing.md), at the train version. Its Portal id must match the README.
 gradlePlugin {
-    // Not published yet: publishing to the Gradle Plugin Portal is a later slice of #210. Until
-    // then no plugin marker or pluginMaven publication is created...
-    isAutomatedPublishing = false
+    website.set("https://github.com/lsd-consulting/lsd-mono")
+    vcsUrl.set("https://github.com/lsd-consulting/lsd-mono")
     plugins {
         register("lsdMonoStudio") {
             id = "io.github.lsd-consulting.lsd-mono-studio"
             implementationClass = "io.github.lsdconsulting.lsd.mono.studio.gradle.LsdStudioPlugin"
             displayName = "LSD Studio"
             description = project.description
+            tags.set(listOf("testing", "sequence-diagram", "lsd"))
+            compatibility {
+                features {
+                    // LsdStudioPluginFunctionalTest runs the plugin with --configuration-cache.
+                    configurationCache = true
+                }
+            }
         }
     }
 }
 
-// ...and lsd.publishing's Maven Central publication stays off, so a release does not ship it.
+// Not on Maven Central: lsd.publishing's publications (its own and the plugin's pluginMaven and
+// marker) stay off, so a Central release does not ship them. publishPlugins does not use these
+// tasks: it uploads to the Portal itself.
 tasks.withType<AbstractPublishToMaven>().configureEach { enabled = false }
+
+// plugin-publish signs the Portal upload whenever the signing plugin is applied (lsd.publishing
+// applies it). The Portal does not require signatures, so without lsd.publishing's signing key
+// (ORG_GRADLE_PROJECT_signingKey) the plugin is uploaded unsigned instead of failing.
+val signingKeySet = providers.gradleProperty("signingKey").isPresent
+tasks.withType<Sign>().configureEach { enabled = signingKeySet }
+
+// Guards what the Portal and users rely on, without the Portal: publishPlugins --validate-only
+// needs the real API key, so PR CI cannot run it. Fails when a Maven Central publish task is
+// enabled again, the Portal metadata is missing, or the README names another plugin id.
+val verifyPluginPublication =
+    tasks.register("verifyPluginPublication") {
+        group = "verification"
+        description = "Check the Gradle Plugin Portal metadata, and that nothing here publishes to Maven Central."
+        val declaration = gradlePlugin.plugins.getByName("lsdMonoStudio")
+        val pluginId = declaration.id
+        val tags = declaration.tags.get().toList()
+        val displayName = declaration.displayName.orEmpty()
+        val pluginDescription = declaration.description.orEmpty()
+        val website = gradlePlugin.website.orNull
+        val vcsUrl = gradlePlugin.vcsUrl.orNull
+        val centralTasks = project.tasks
+            .withType<AbstractPublishToMaven>()
+            .filter { it.enabled }
+            .map { it.name }
+        val readme = layout.projectDirectory.file("../README.md").asFile
+        inputs.property("pluginId", pluginId)
+        inputs.property("tags", tags)
+        inputs.property("displayName", displayName)
+        inputs.property("pluginDescription", pluginDescription)
+        inputs.property("website", website.orEmpty())
+        inputs.property("vcsUrl", vcsUrl.orEmpty())
+        inputs.property("centralTasks", centralTasks)
+        inputs.file(readme).withPathSensitivity(PathSensitivity.NONE)
+        val marker = layout.buildDirectory.file("verifyPluginPublication/ok")
+        outputs.file(marker)
+        doLast {
+            val problems = mutableListOf<String>()
+            if (centralTasks.isNotEmpty()) problems += "Maven publish tasks are enabled: $centralTasks"
+            if (website != "https://github.com/lsd-consulting/lsd-mono") problems += "website is $website"
+            if (vcsUrl != "https://github.com/lsd-consulting/lsd-mono") problems += "vcsUrl is $vcsUrl"
+            if (tags.isEmpty()) problems += "no Portal tags"
+            if (displayName.isBlank()) problems += "no displayName (the Portal requires one)"
+            if (pluginDescription.isBlank()) problems += "no description (the Portal requires one)"
+            if (!readme.readText().contains("id(\"$pluginId\")")) problems += "README does not show id(\"$pluginId\")"
+            check(problems.isEmpty()) { "Gradle Plugin Portal setup: " + problems.joinToString("; ") }
+            marker.get().asFile.writeText("ok\n")
+        }
+    }
+tasks.named("check") { dependsOn(verifyPluginPublication) }
 
 // Gradle runs plugins on the Kotlin it embeds, and build scripts read the plugin's classes with it.
 // Compile for Kotlin 2.2, what Gradle 9 embeds, so build scripts on any Gradle 9 can read them.

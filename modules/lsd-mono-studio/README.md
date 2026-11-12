@@ -39,13 +39,15 @@ Reports are kept in `~/.lsd/server/reports`.
 
 From a Gradle build, the `io.github.lsd-consulting.lsd-mono-studio` plugin adds an `lsdStudio`
 task that installs and runs LSD Studio for you. It needs Gradle 9.0 or newer, and Node 22.6 or newer
-on your `PATH`. Under `--offline` it installs LSD Studio from npm's cache only. The
-plugin is not published yet ([#210](https://github.com/lsd-consulting/lsd-mono/issues/210)). Once
-it is on the Gradle Plugin Portal, add its version to the `id(...)` line:
+on your `PATH` (or `downloadNode = true`, below). Under `--offline` it installs LSD Studio from npm's
+cache only. The plugin is not on the Gradle Plugin Portal yet
+([#210](https://github.com/lsd-consulting/lsd-mono/issues/210)), so no version of it can be
+used from there today. Once it is, it is released with the rest of lsd-mono, at the same version,
+and goes on the `id(...)` line:
 
 ```kotlin
 plugins {
-    id("io.github.lsd-consulting.lsd-mono-studio")
+    id("io.github.lsd-consulting.lsd-mono-studio") // version "<the lsd-mono version>", once on the Portal
 }
 ```
 
@@ -53,7 +55,31 @@ plugins {
 ./gradlew lsdStudio      # opens LSD Studio in your browser
 ```
 
-Set the `port` and `expose` options in an `lsdStudio { }` block in your build file.
+The plugin runs the lsd-mono-studio npm package at its own version; `studioPackage` runs another.
+Options, all optional, in an `lsdStudio { }` block in your build file:
+
+| Option          | Default                                     | What                                                                    |
+| --------------- | ------------------------------------------- | ----------------------------------------------------------------------- |
+| `port`          | `7357`                                      | The port Studio listens on (`0` picks a free one)                       |
+| `expose`        | `false`                                     | Listen on every interface, not only this one (see the warning above)    |
+| `openBrowser`   | `true`                                      | Open Studio in the browser once it is up (never on CI)                  |
+| `wireTests`     | `true`                                      | Point the project's `Test` tasks at a running Studio (below)            |
+| `studioPackage` | the plugin's version                        | Another lsd-mono-studio: an exact npm version, a `.tgz`, or a directory |
+| `cacheDir`      | `<Gradle user home>/caches/lsd-mono-studio` | Where installed lsd-mono-studio versions are kept                       |
+| `nodeCommand`   | `node`                                      | The Node.js to run                                                      |
+| `npmCommand`    | `npm`                                       | The npm that installs lsd-mono-studio                                   |
+
+On a restricted network:
+
+| Option         | Default                     | What                                                              |
+| -------------- | --------------------------- | ----------------------------------------------------------------- |
+| `npmRegistry`  | npm's own (`.npmrc`)        | The npm registry lsd-mono-studio is installed from (`--registry`) |
+| `downloadNode` | `false`                     | Download Node.js instead of using the one on the `PATH`           |
+| `nodeVersion`  | the plugin's pinned version | The Node.js version `downloadNode` fetches                        |
+| `nodeDistUrl`  | `https://nodejs.org/dist`   | A Node.js mirror for `downloadNode` (`https` or `file`)           |
+
+Gradle's proxy settings (`systemProp.https.proxyHost` and the rest, in `gradle.properties`) are passed
+to npm, unless npm's proxy variables are already set.
 
 While LSD Studio is running on that port, the plugin also points the project's `Test` tasks at it,
 so `./gradlew test` in another terminal streams its reports live (see **Live from your tests**
