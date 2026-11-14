@@ -43,7 +43,7 @@
     "prepack": "node scripts/copy-schema.mjs && node scripts/build-viewer.mjs --required && npm run build",
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "build:viewer": "node scripts/build-viewer.mjs --force",
-    "test": "vitest run --coverage",
+    "test": "vitest run --coverage && node --experimental-strip-types scripts/coverage-ratchet.mjs",
     "replay": "node scripts/replay-capture.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && prettier --check .",

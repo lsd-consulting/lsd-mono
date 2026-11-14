@@ -21,6 +21,7 @@ All of these run on `check`, so `./gradlew build` locally fails the same way CI 
 | Report UI lint | ESLint with typescript-eslint (type-checked rules) and `lsd/escaped-markup` | `npm run lint` |
 | Report UI formatting | Prettier (`.prettierrc.json`) | `npm run format` |
 | Report UI coverage | Vitest v8 coverage, thresholds in `vitest.config.ts` overall and per folder (`src/lib/**`, `src/ui/**`, `src/app/**`); `scripts/coverage-ratchet.mjs` fails when a metric is more than 3 points above its threshold and lists files under 50% of lines | `npm test`, then `modules/lsd-mono-jvm/build/reports/coverage/report-ui/` |
+| LSD Studio coverage | Vitest v8 coverage, overall thresholds in `modules/lsd-mono-studio/vitest.config.ts`; `scripts/coverage-ratchet.mjs` fails when a metric is more than 3 points above its threshold and lists files under 50% of lines. Run by the `studio` job, not `check` | `npm test` in `modules/lsd-mono-studio` |
 
 Coverage floors sit a little under the coverage when they were set, so they hold the line without
 failing on noise. Raise a floor when tests are added; lower one only with a reason in the commit.
