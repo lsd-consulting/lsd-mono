@@ -1,5 +1,8 @@
+import groovy.json.JsonSlurper
 import org.gradle.plugin.compatibility.compatibility
+import org.w3c.dom.Element
 import java.util.zip.ZipFile
+import javax.xml.parsers.DocumentBuilderFactory
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -123,9 +126,27 @@ val verifyPluginArtifacts =
                 if (studioVersion?.trim() != "version=$version") problems += "the jar runs lsd-mono-studio at ${studioVersion?.trim()}, not version=$version"
             }
             val pomText = pom.get().readText()
-            for (coordinate in listOf("io.github.lsd-consulting", "lsd-mono-studio-gradle-plugin", version)) {
-                if (!pomText.contains(">$coordinate<")) problems += "the POM does not name $coordinate"
-            }
+            val expected = listOf("io.github.lsd-consulting", "lsd-mono-studio-gradle-plugin", version)
+            // The project's own coordinates: <project>'s direct children, not a dependency's.
+            val pomRoot = DocumentBuilderFactory
+                .newInstance()
+                .apply { isNamespaceAware = true }
+                .newDocumentBuilder()
+                .parse(pom.get())
+                .documentElement
+
+            fun child(name: String): String? =
+                (0 until pomRoot.childNodes.length)
+                    .map(pomRoot.childNodes::item)
+                    .firstOrNull { it is Element && it.localName == name }
+                    ?.textContent
+                    ?.trim()
+            val pomCoordinates = listOf(child("groupId"), child("artifactId"), child("version"))
+            if (pomCoordinates != expected) problems += "the POM is ${pomCoordinates.joinToString(":")}, not ${expected.joinToString(":")}"
+            @Suppress("UNCHECKED_CAST")
+            val component = (JsonSlurper().parse(module.get().asFile) as Map<String, Any?>)["component"] as Map<String, Any?>?
+            val moduleCoordinates = listOf(component?.get("group"), component?.get("module"), component?.get("version"))
+            if (moduleCoordinates != expected) problems += "the Gradle module is ${moduleCoordinates.joinToString(":")}, not ${expected.joinToString(":")}"
             val kotlinLibrary = Regex("kotlin-(stdlib|reflect)")
             if (kotlinLibrary.containsMatchIn(pomText)) problems += "the POM depends on the Kotlin standard library (Gradle provides it)"
             if (kotlinLibrary.containsMatchIn(module.get().asFile.readText())) {
