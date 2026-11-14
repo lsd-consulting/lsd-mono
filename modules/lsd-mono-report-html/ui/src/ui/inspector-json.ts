@@ -161,6 +161,11 @@ function refreshMarks(state: JsonBodyState): void {
   if (state.shown !== null && !state.parts.pre.hidden) fill(state, state.shown)
 }
 
+/** On a phone, scroll the JSON into view the first time it shows. */
+function revealWhenShown(state: JsonBodyState): void {
+  state.revealJson = true
+}
+
 function toggleClicked(state: JsonBodyState): void {
   if (state.parts.toggle.getAttribute('aria-expanded') === 'true') {
     collapse(state)
@@ -189,9 +194,7 @@ export function bindJsonBody(parts: JsonBodyParts): JsonBody {
   parts.copy.addEventListener('click', () => void copyPayload(state))
   return {
     reset: (label) => reset(state, label),
-    revealWhenShown: () => {
-      state.revealJson = true
-    },
+    revealWhenShown: () => revealWhenShown(state),
     load: (value, token, onError) => load(state, value, token, onError),
     loaded: (value, token) => loaded(state, value, token),
     none: () => none(state),

@@ -99,6 +99,53 @@ describe('bindJsonBody', () => {
     expect(pre.textContent).toBe('')
   })
 
+  it("Copy gives the open view's payload, not one that settles late for a view already left", async () => {
+    const { copy, view, body } = setup()
+    const clipboard = stubClipboard()
+    body.reset('JSON')
+    let resolveStale: (value: unknown) => void = () => {}
+    body.load(
+      new Promise((r) => {
+        resolveStale = r
+      }),
+      1,
+    )
+    view.token = 2
+    body.reset('JSON')
+    body.load(Promise.resolve({ id: 'new' }), 2)
+    await settle()
+    resolveStale({ id: 'stale' })
+    await settle()
+    copy.click()
+    await settle()
+    expect(clipboard.copied).toHaveLength(1)
+    expect(clipboard.copied[0]).toContain('new')
+    expect(clipboard.copied[0]).not.toContain('stale')
+  })
+
+  it("Copy during the next view's load waits for its payload, not the last view's", async () => {
+    const { copy, view, body } = setup()
+    const clipboard = stubClipboard()
+    body.reset('JSON')
+    body.loaded({ id: 'old' }, 1)
+    await settle()
+    view.token = 2
+    body.reset('JSON')
+    let resolve: (value: unknown) => void = () => {}
+    body.load(
+      new Promise((r) => {
+        resolve = r
+      }),
+      2,
+    )
+    copy.click()
+    resolve({ id: 'new' })
+    await settle()
+    expect(clipboard.copied).toHaveLength(1)
+    expect(clipboard.copied[0]).toContain('new')
+    expect(clipboard.copied[0]).not.toContain('old')
+  })
+
   it('load runs onError and shows "(no payload)" when the payload fails, only for the open view', async () => {
     const { pre, view, body } = setup()
     body.reset('JSON')
@@ -201,6 +248,28 @@ describe('bindJsonBody', () => {
     found.body.loaded({ id: 'ord_1' }, 1)
     await settle()
     expect(found.view.revealed).toEqual([])
+  })
+
+  it('reset drops a reveal asked for by the view before', async () => {
+    const { view, body } = setup()
+    body.reset('JSON')
+    body.revealWhenShown()
+    view.token = 2
+    body.reset('JSON')
+    body.loaded({ id: 'ord_2' }, 2)
+    await settle()
+    expect(view.revealed).toEqual([])
+  })
+
+  it('stop forgets the shown JSON, so refreshMarks does not mark it again', async () => {
+    const { view, body } = setup('ord')
+    body.reset('JSON')
+    body.loaded({ id: 'ord_1' }, 1)
+    await settle()
+    expect(view.shown).toHaveLength(1)
+    body.stop()
+    body.refreshMarks()
+    expect(view.shown).toHaveLength(1)
   })
 
   it('refreshMarks re-marks the shown JSON for the new query, and does nothing while it is hidden', async () => {
