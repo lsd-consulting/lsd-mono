@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import { lowFiles, staleMetrics } from './coverage-ratchet.mjs'
+import { spawnSync } from 'node:child_process'
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { afterEach, describe, expect, it } from 'vitest'
+import { lowFiles, staleMetrics } from './coverage-ratchet-lib.mjs'
 
 const metrics = (statements, branches, functions, lines) => ({
   statements: { pct: statements },
@@ -34,5 +39,57 @@ describe('coverage ratchet', () => {
     const file = (pct, total = 10) => ({ lines: { pct, total } })
     const summary = { total: file(10), '/s/a.ts': file(49.9), '/s/b.ts': file(50), '/s/types.ts': file(0, 0) }
     expect(lowFiles(summary).map(([name]) => name)).toEqual(['/s/a.ts'])
+  })
+})
+
+describe('coverage ratchet script', () => {
+  const made = []
+  afterEach(() => {
+    for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true })
+  })
+
+  /** A package with the ratchet scripts, [thresholds] and a summary at [pct] for every metric. */
+  function fakePackage(thresholds, pct) {
+    const dir = mkdtempSync(join(tmpdir(), 'studio-ratchet-'))
+    made.push(dir)
+    const pkg = join(dir, 'pkg')
+    mkdirSync(join(pkg, 'scripts'), { recursive: true })
+    mkdirSync(join(pkg, 'coverage'))
+    for (const name of ['coverage-ratchet.mjs', 'coverage-ratchet-lib.mjs'])
+      copyFileSync(fileURLToPath(new URL(name, import.meta.url)), join(pkg, 'scripts', name))
+    writeFileSync(
+      join(pkg, 'vitest.config.ts'),
+      `export default { test: { coverage: { thresholds: ${JSON.stringify(thresholds)} } } }\n`,
+    )
+    const m = { total: 10, covered: 10, skipped: 0, pct }
+    const total = { statements: m, branches: m, functions: m, lines: m }
+    writeFileSync(join(pkg, 'coverage', 'coverage-summary.json'), JSON.stringify({ total }))
+    // A symlink to the package: Node runs the realpath, while process.argv[1] keeps the link.
+    const link = join(dir, 'link')
+    symlinkSync(pkg, link, process.platform === 'win32' ? 'junction' : 'dir')
+    return { pkg, link }
+  }
+
+  function run(script) {
+    return spawnSync(process.execPath, ['--experimental-strip-types', '--no-warnings', script], { encoding: 'utf8' })
+  }
+
+  it('fails a stale threshold however it is started, through a symlinked path too', () => {
+    const { pkg, link } = fakePackage({ statements: 90, branches: 90, functions: 90, lines: 90 }, 99)
+    for (const script of [
+      join(pkg, 'scripts', 'coverage-ratchet.mjs'),
+      join(link, 'scripts', 'coverage-ratchet.mjs'),
+    ]) {
+      const result = run(script)
+      expect(result.status, result.stderr).toBe(1)
+      expect(result.stderr).toContain('coverage ratchet: statements is 99%, more than 3 points above its threshold 90')
+    }
+  })
+
+  it('passes thresholds within 3 points', () => {
+    const { link } = fakePackage({ statements: 97, branches: 97, functions: 97, lines: 97 }, 99)
+    const result = run(join(link, 'scripts', 'coverage-ratchet.mjs'))
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.stderr).toBe('')
   })
 })
