@@ -22,6 +22,11 @@ All of these run on `check`, so `./gradlew build` locally fails the same way CI 
 | Report UI formatting | Prettier (`.prettierrc.json`) | `npm run format` |
 | Report UI coverage | Vitest v8 coverage, thresholds in `vitest.config.ts` overall and per folder (`src/lib/**`, `src/ui/**`, `src/app/**`); `scripts/coverage-ratchet.mjs` fails when a metric is more than 3 points above its threshold and lists files under 50% of lines | `npm test`, then `modules/lsd-mono-jvm/build/reports/coverage/report-ui/` |
 
+LSD Studio (`modules/lsd-mono-studio`) is outside `check`: the `studio` job runs its `npm test`, which includes its
+coverage. Its overall thresholds are in its `vitest.config.ts`, and its `scripts/coverage-ratchet.mjs` applies the same
+rule as the report UI's: it fails when a metric is more than 3 points above its threshold, and lists files under 50% of
+lines.
+
 Coverage floors sit a little under the coverage when they were set, so they hold the line without
 failing on noise. Raise a floor when tests are added; lower one only with a reason in the commit.
 When the build fails, CI uploads the Kover and Vitest coverage reports with the test reports.
