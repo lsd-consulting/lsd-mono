@@ -1,4 +1,8 @@
+import groovy.json.JsonSlurper
 import org.gradle.plugin.compatibility.compatibility
+import org.w3c.dom.Element
+import java.util.zip.ZipFile
+import javax.xml.parsers.DocumentBuilderFactory
 
 plugins {
     id("lsd.kotlin-jvm")
@@ -83,7 +87,76 @@ val verifyPluginPublication =
             marker.get().asFile.writeText("ok\n")
         }
     }
-tasks.named("check") { dependsOn(verifyPluginPublication) }
+
+// What publishPlugins uploads, checked without the Portal: the plugin jar's descriptor names the
+// implementation class, which is in the jar; the jar runs lsd-mono-studio at the version it is
+// published at; and the POM and Gradle module name the right coordinates and no Kotlin standard
+// library (Gradle provides it). Fails on the first publication that would differ.
+val verifyPluginArtifacts =
+    tasks.register("verifyPluginArtifacts") {
+        group = "verification"
+        description = "Check the plugin jar, POM and Gradle module that publishPlugins uploads to the Gradle Plugin Portal."
+        val declaration = gradlePlugin.plugins.getByName("lsdMonoStudio")
+        val pluginId = declaration.id
+        val implementationClass = declaration.implementationClass
+        val version = project.version.toString()
+        val jar = tasks.named<Jar>("jar").flatMap { it.archiveFile }
+        val pom = tasks.named<GenerateMavenPom>("generatePomFileForPluginMavenPublication").map { it.destination }
+        val module = tasks.named<GenerateModuleMetadata>("generateMetadataFileForPluginMavenPublication").flatMap { it.outputFile }
+        inputs.property("pluginId", pluginId)
+        inputs.property("implementationClass", implementationClass)
+        inputs.property("version", version)
+        inputs.file(jar).withPathSensitivity(PathSensitivity.NONE)
+        inputs.file(pom).withPathSensitivity(PathSensitivity.NONE)
+        inputs.file(module).withPathSensitivity(PathSensitivity.NONE)
+        val marker = layout.buildDirectory.file("verifyPluginArtifacts/ok")
+        outputs.file(marker)
+        doLast {
+            val problems = mutableListOf<String>()
+            ZipFile(jar.get().asFile).use { zip ->
+                fun entry(name: String): String? = zip.getEntry(name)?.let { e -> zip.getInputStream(e).use { it.readBytes().decodeToString() } }
+                val descriptor = entry("META-INF/gradle-plugins/$pluginId.properties")
+                if (descriptor == null) {
+                    problems += "the jar has no META-INF/gradle-plugins/$pluginId.properties"
+                } else if (descriptor.lines().none { it.trim() == "implementation-class=$implementationClass" }) {
+                    problems += "the jar's plugin descriptor does not name $implementationClass"
+                }
+                if (zip.getEntry(implementationClass.replace('.', '/') + ".class") == null) problems += "the jar has no $implementationClass"
+                val studioVersion = entry("io/github/lsdconsulting/lsd/mono/studio/gradle/version.properties")
+                if (studioVersion?.trim() != "version=$version") problems += "the jar runs lsd-mono-studio at ${studioVersion?.trim()}, not version=$version"
+            }
+            val pomText = pom.get().readText()
+            val expected = listOf("io.github.lsd-consulting", "lsd-mono-studio-gradle-plugin", version)
+            // The project's own coordinates: <project>'s direct children, not a dependency's.
+            val pomRoot = DocumentBuilderFactory
+                .newInstance()
+                .apply { isNamespaceAware = true }
+                .newDocumentBuilder()
+                .parse(pom.get())
+                .documentElement
+
+            fun child(name: String): String? =
+                (0 until pomRoot.childNodes.length)
+                    .map(pomRoot.childNodes::item)
+                    .firstOrNull { it is Element && it.localName == name }
+                    ?.textContent
+                    ?.trim()
+            val pomCoordinates = listOf(child("groupId"), child("artifactId"), child("version"))
+            if (pomCoordinates != expected) problems += "the POM is ${pomCoordinates.joinToString(":")}, not ${expected.joinToString(":")}"
+            @Suppress("UNCHECKED_CAST")
+            val component = (JsonSlurper().parse(module.get().asFile) as Map<String, Any?>)["component"] as Map<String, Any?>?
+            val moduleCoordinates = listOf(component?.get("group"), component?.get("module"), component?.get("version"))
+            if (moduleCoordinates != expected) problems += "the Gradle module is ${moduleCoordinates.joinToString(":")}, not ${expected.joinToString(":")}"
+            val kotlinLibrary = Regex("kotlin-(stdlib|reflect)")
+            if (kotlinLibrary.containsMatchIn(pomText)) problems += "the POM depends on the Kotlin standard library (Gradle provides it)"
+            if (kotlinLibrary.containsMatchIn(module.get().asFile.readText())) {
+                problems += "the Gradle module depends on the Kotlin standard library (Gradle provides it)"
+            }
+            check(problems.isEmpty()) { "Gradle Plugin Portal artifacts: " + problems.joinToString("; ") }
+            marker.get().asFile.writeText("ok\n")
+        }
+    }
+tasks.named("check") { dependsOn(verifyPluginPublication, verifyPluginArtifacts) }
 
 // Gradle runs plugins on the Kotlin it embeds, and build scripts read the plugin's classes with it.
 // Compile for Kotlin 2.2, what Gradle 9 embeds, so build scripts on any Gradle 9 can read them.
@@ -181,6 +254,12 @@ lsdCoverage {
 }
 
 dependencies {
+    // Gradle runs the plugin on the Kotlin standard library it embeds (2.2 on Gradle 9.0), so the
+    // plugin compiles against it but does not publish a dependency on it: a published kotlin-stdlib
+    // would put the build's Kotlin version on every user's build script classpath for nothing.
+    // verifyPluginArtifacts fails if it comes back. The tests run with it, as Gradle does.
+    compileOnly(kotlin("stdlib"))
+    testImplementation(kotlin("stdlib"))
     // Applied only when downloadNode is on, so it stays inert otherwise.
     implementation(libs.node.gradle.plugin)
     testImplementation(platform(libs.junit.bom))
