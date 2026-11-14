@@ -33,8 +33,8 @@ export default defineConfig({
         lines: 93,
         // src/lib 93.8 / 85.2 / 96.3 / 97.0 (the repaint path tests, #104; column wrap and 1:1, #115, #120)
         'src/lib/**': { statements: 92, branches: 84, functions: 95, lines: 95 },
-        // src/ui 92.7 / 85.6 / 97.6 / 94.6 (the link panel tests, #105)
-        'src/ui/**': { statements: 91, branches: 84, functions: 96, lines: 93 },
+        // src/ui 94.05 / 86.65 / 97.77 / 96.28 (the inspector JSON body tests, inspector-json.test.ts)
+        'src/ui/**': { statements: 92, branches: 84, functions: 96, lines: 94 },
         // src/app 79.7 / 75.8 / 82.6 / 83.1 (stale-load + index Components deep-link tests with main): the decisions are pure functions with unit tests (intents.ts,
         // #99, the key handlers, #102, Escape in text fields, #114, and the view switch, its hash and reveal, #105); the rest is
         // covered end to end by check:ux, which does not count here.

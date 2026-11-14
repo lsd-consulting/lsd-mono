@@ -100,6 +100,81 @@ async function copyPayload(state: JsonBodyState): Promise<void> {
   }
 }
 
+function reset(state: JsonBodyState, label: string): void {
+  const { parts } = state
+  state.label = label
+  state.ready = false
+  state.cached = undefined
+  state.showJson = true
+  state.revealJson = false
+  state.shown = null
+  parts.marks?.hide()
+  parts.pre.hidden = true
+  parts.pre.textContent = ''
+  parts.toggle.hidden = false
+  parts.toggle.setAttribute('aria-expanded', 'false')
+  parts.toggle.textContent = `Show ${state.label}`
+}
+
+/** Keep [value] for view [token]; show it once it settles, unless another view opened meanwhile. */
+function load(state: JsonBodyState, value: Promise<unknown>, token: number, onError?: () => void): void {
+  state.pending = value
+  void value.then(
+    (settled) => {
+      if (token !== state.parts.current()) return
+      state.cached = settled
+      state.ready = true
+      void show(state, token)
+    },
+    () => {
+      if (token !== state.parts.current()) return
+      state.cached = undefined
+      state.ready = true
+      onError?.()
+      void show(state, token)
+    },
+  )
+}
+
+function loaded(state: JsonBodyState, value: unknown, token: number): void {
+  state.pending = Promise.resolve(value)
+  state.cached = value
+  state.ready = true
+  void show(state, token)
+}
+
+function none(state: JsonBodyState): void {
+  state.showJson = false
+  state.parts.toggle.hidden = true
+  state.pending = Promise.resolve(undefined)
+  state.cached = undefined
+  state.ready = true
+}
+
+function stop(state: JsonBodyState): void {
+  state.showJson = false
+  state.shown = null
+  state.parts.marks?.hide()
+}
+
+function refreshMarks(state: JsonBodyState): void {
+  if (state.shown !== null && !state.parts.pre.hidden) fill(state, state.shown)
+}
+
+/** On a phone, scroll the JSON into view the first time it shows. */
+function revealWhenShown(state: JsonBodyState): void {
+  state.revealJson = true
+}
+
+function toggleClicked(state: JsonBodyState): void {
+  if (state.parts.toggle.getAttribute('aria-expanded') === 'true') {
+    collapse(state)
+    return
+  }
+  state.showJson = true
+  void show(state, state.parts.current())
+}
+
 /**
  * The panel's JSON body: the Show/Hide toggle, the pre, and Copy.
  * [current] is the open view's token, so a payload that settles after the view changed is dropped.
@@ -115,74 +190,15 @@ export function bindJsonBody(parts: JsonBodyParts): JsonBody {
     revealJson: false,
     shown: null,
   }
-
-  parts.toggle.addEventListener('click', () => {
-    if (parts.toggle.getAttribute('aria-expanded') === 'true') {
-      collapse(state)
-      return
-    }
-    state.showJson = true
-    void show(state, parts.current())
-  })
-
+  parts.toggle.addEventListener('click', () => toggleClicked(state))
   parts.copy.addEventListener('click', () => void copyPayload(state))
-
   return {
-    reset(next) {
-      state.label = next
-      state.ready = false
-      state.cached = undefined
-      state.showJson = true
-      state.revealJson = false
-      state.shown = null
-      parts.marks?.hide()
-      parts.pre.hidden = true
-      parts.pre.textContent = ''
-      parts.toggle.hidden = false
-      parts.toggle.setAttribute('aria-expanded', 'false')
-      parts.toggle.textContent = `Show ${state.label}`
-    },
-    revealWhenShown() {
-      state.revealJson = true
-    },
-    load(value, token, onError) {
-      state.pending = value
-      void value.then(
-        (settled) => {
-          if (token !== parts.current()) return
-          state.cached = settled
-          state.ready = true
-          void show(state, token)
-        },
-        () => {
-          if (token !== parts.current()) return
-          state.cached = undefined
-          state.ready = true
-          onError?.()
-          void show(state, token)
-        },
-      )
-    },
-    loaded(value, token) {
-      state.pending = Promise.resolve(value)
-      state.cached = value
-      state.ready = true
-      void show(state, token)
-    },
-    none() {
-      state.showJson = false
-      parts.toggle.hidden = true
-      state.pending = Promise.resolve(undefined)
-      state.cached = undefined
-      state.ready = true
-    },
-    stop() {
-      state.showJson = false
-      state.shown = null
-      parts.marks?.hide()
-    },
-    refreshMarks() {
-      if (state.shown !== null && !parts.pre.hidden) fill(state, state.shown)
-    },
+    reset: (label) => reset(state, label),
+    revealWhenShown: () => revealWhenShown(state),
+    load: (value, token, onError) => load(state, value, token, onError),
+    loaded: (value, token) => loaded(state, value, token),
+    none: () => none(state),
+    stop: () => stop(state),
+    refreshMarks: () => refreshMarks(state),
   }
 }
