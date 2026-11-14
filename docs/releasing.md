@@ -138,7 +138,11 @@ The `io.github.lsd-consulting.lsd-mono-studio` Gradle plugin (`modules/lsd-mono-
 [Gradle Plugin Portal](https://plugins.gradle.org), not Maven Central, at the train version, the same version as the
 `lsd-mono-studio` npm package it runs. Its Maven publish tasks are disabled, so a Central release never ships it, and
 `verifyPluginPublication` (part of `check`) fails if one is turned back on, the Portal metadata goes missing, or the
-Studio README names another plugin id.
+Studio README names another plugin id. `verifyPluginArtifacts` (also part of `check`) looks at what `publishPlugins`
+would upload: the jar's plugin descriptor and implementation class, the lsd-mono-studio version the jar runs, and the
+POM and Gradle module's own coordinates. It also fails if they depend on the Kotlin standard library, which Gradle
+provides to plugins. In CI both checks run in the Linux `build` job (`./gradlew build`); the `studio-gradle-plugin`
+jobs, Windows included, run only the plugin's tests. The artifacts do not depend on the OS.
 
 The `gradle-plugin` job in release.yml publishes it after the `npm` job, from the release tag, with
 `./gradlew :modules:lsd-mono-studio-gradle-plugin:publishPlugins -Plsd.version=X.Y.Z`. A version the Portal already
