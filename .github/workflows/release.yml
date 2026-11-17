@@ -305,11 +305,20 @@ jobs:
         env:
           VERSION: ${{ needs.release.outputs.published }}
         run: |
-          if npm view "lsd-mono-studio@$VERSION" version 2>/dev/null | grep -qx "$VERSION"; then
-            echo "lsd-mono-studio@$VERSION is already on npm." >> "$GITHUB_STEP_SUMMARY"
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-          else
+          json=$(npm view "lsd-mono-studio@$VERSION" version --json 2>/dev/null) && status=0 || status=$?
+          if [ "$status" -eq 0 ]; then
+            if printf '%s\n' "$json" | grep -qxF "\"$VERSION\""; then
+              echo "lsd-mono-studio@$VERSION is already on npm." >> "$GITHUB_STEP_SUMMARY"
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::npm view returned an unexpected value for lsd-mono-studio@$VERSION."
+              exit 1
+            fi
+          elif printf '%s\n' "$json" | grep -qF '"code": "E404"'; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::npm view failed for lsd-mono-studio@$VERSION (not a missing-version 404)."
+            exit 1
           fi
       # Trusted publishing needs npm 11.5.1 or newer.
       - name: Update npm
@@ -331,11 +340,13 @@ jobs:
           VERSION: ${{ needs.release.outputs.published }}
         run: |
           npm version "$VERSION" --no-git-tag-version
-          npm publish --access public --provenance
-          if ! npm view "lsd-mono-studio@$VERSION" version 2>/dev/null | grep -qx "$VERSION"; then
-            echo "::error::Published lsd-mono-studio@$VERSION, but npm does not list it."
-            exit 1
-          fi
+          npm publish --access public --provenance --loglevel verbose
+          listed=false
+          for attempt in $(seq 1 12); do
+            if npm view "lsd-mono-studio@$VERSION" version --prefer-online 2>/dev/null | grep -qxF "$VERSION"; then listed=true; break; fi
+            echo "npm does not list lsd-mono-studio@$VERSION yet (attempt $attempt)"; sleep 10
+          done
+          [ "$listed" = true ] || { echo "::error::Published lsd-mono-studio@$VERSION, but npm still does not list it."; exit 1; }
           echo "Published lsd-mono-studio@$VERSION to npm." >> "$GITHUB_STEP_SUMMARY"
 
   gradle-plugin:

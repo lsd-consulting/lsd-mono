@@ -215,6 +215,9 @@ Done for 0.1.0 (17 October 2026); kept for reference.
   release, the README pull request, Pages and the Plugin Portal. A version already on npm is skipped. If more
   than one version is missing, run them in order, oldest first, so the npm `latest` tag ends on the newest.
   This path must stay in `release.yml`: npm trusted publishing matches the workflow filename.
+  Provenance records the commit and ref the workflow ran from (`main` at dispatch), not the
+  tag's commit, because the workflow logic has to come from `main`. The package contents still
+  come from the tag.
 - **Gate was red on Tuesday**: the run stops with "gate on … is failure". Fix `main`, then run the workflow by hand.
 
 ## Building a version locally
