@@ -13,7 +13,7 @@ It replaces the earlier published `lsd-junit5` and `lsd-junit-jupiter` libraries
 [![Maven Central: lsd-mono-junit-jupiter](https://img.shields.io/maven-central/v/io.github.lsd-consulting/lsd-mono-junit-jupiter?label=lsd-mono-junit-jupiter)](https://central.sonatype.com/artifact/io.github.lsd-consulting/lsd-mono-junit-jupiter)
 
 ```kotlin
-testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:0.16.0")
+testImplementation("io.github.lsd-consulting:lsd-mono-junit-jupiter:0.17.0")
 ```
 
 <!-- release-version:end -->
