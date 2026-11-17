@@ -99,6 +99,12 @@ Or Actions → Release → Run workflow, leaving `tag` empty. The same checks ap
 5. Only then does `semantic-release` tag `vX.Y.Z` and write the GitHub release notes. A failed publish leaves no tag, so
    the next run (next Tuesday, or one by hand) tries again.
 6. The `pages` job deploys the sample site from the new tag (`pages.yml`).
+7. The `npm` job publishes LSD Studio (`modules/lsd-mono-studio`) to npm at the same version, from
+   the tag, with provenance, using npm trusted publishing (OIDC, no npm token). A version already on
+   npm is skipped. After a successful publish the job checks that `npm view` lists the version, so a
+   partial release fails the run. On the package's npmjs.com settings, the trusted publisher must be
+   organisation `lsd-consulting`, repository `lsd-mono`, workflow `release.yml`, with the environment
+   left blank, and must allow npm publish, not only staged publishing.
 
 The [GitHub release notes](https://github.com/lsd-consulting/lsd-mono/releases) are the changelog. There is no `CHANGELOG.md`.
 semantic-release writes them from the commits since the last tag: each `feat`, `fix` and `perf` subject under its
@@ -198,7 +204,17 @@ Done for 0.1.0 (17 October 2026); kept for reference.
   push it), otherwise the next release would try the same version again.
 - **Tag made, publish needs repeating**: run the Release workflow by hand (Actions → Release → Run workflow) with the
   tag, such as `v0.1.0`. It checks out the tag and publishes it; the gate and cap checks are skipped, and a repeated
-  publish counts towards Maven Central's limits again.
+  publish counts towards Maven Central's limits again. If Maven Central already has that version, this path fails
+  there before the npm job runs.
+- **Maven and GitHub released, but npm failed**: fix the trusted-publisher settings on the `lsd-mono-studio`
+  package (see step 7 above), then run the Release workflow by hand from `main` with the tag and `npm_only`:
+  ```sh
+  gh workflow run release.yml --ref main -f tag=v0.18.0 -f npm_only=true
+  ```
+  That checks out the tag and publishes `lsd-mono-studio` at that version, and skips Maven Central, the GitHub
+  release, the README pull request, Pages and the Plugin Portal. A version already on npm is skipped. If more
+  than one version is missing, run them in order, oldest first, so the npm `latest` tag ends on the newest.
+  This path must stay in `release.yml`: npm trusted publishing matches the workflow filename.
 - **Gate was red on Tuesday**: the run stops with "gate on … is failure". Fix `main`, then run the workflow by hand.
 
 ## Building a version locally

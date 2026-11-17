@@ -9,6 +9,8 @@ name: Release
 #   07:00 in London that day: 06:00 UTC while the UK is on BST, 07:00 UTC on GMT.
 # - By hand (Actions → Release → Run workflow, from main): an urgent release, such as a security fix.
 #   With `tag`, it publishes an existing tag again instead (when its publish failed after tagging).
+#   With `tag` and `npm_only`, it publishes only the lsd-mono-studio npm package for that tag
+#   (when npm failed after Maven Central and the GitHub release already succeeded).
 #
 # A release goes ahead only when all of these hold (the `plan` job):
 # 1. The repository variable RELEASE_ENABLED is "true".
@@ -52,6 +54,11 @@ on:
         required: false
         default: ""
         type: string
+      npm_only:
+        description: "Publish only lsd-mono-studio to npm for the given tag, skipping Maven Central. Requires tag."
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -89,6 +96,7 @@ jobs:
           TAG: ${{ inputs.tag }}
           OVERRIDE_CAP: ${{ inputs.override_cap }}
           REASON: ${{ inputs.reason }}
+          NPM_ONLY: ${{ inputs.npm_only }}
           ENABLED: ${{ vars.RELEASE_ENABLED }}
           CAP: ${{ vars.MAX_RELEASES_PER_MONTH || '4' }}
         run: |
@@ -96,11 +104,19 @@ jobs:
           fail() { echo "::error::$1"; echo "Release refused: $1" >> "$GITHUB_STEP_SUMMARY"; exit 1; }
 
           # Publishing an existing tag again: that tag was checked when it was released.
+          if [ "$NPM_ONLY" = true ]; then
+            [ -n "$TAG" ] || fail "npm_only needs a tag, such as v0.17.0"
+          fi
+
           if [ -n "$TAG" ]; then
             [[ "$TAG" =~ ^v0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail "$TAG is not a v0.y.z tag"
             git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || fail "there is no tag $TAG"
             [ "$ENABLED" = true ] || fail "RELEASE_ENABLED is not true"
-            echo "Publishing $TAG again${REASON:+: $REASON}" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$NPM_ONLY" = true ]; then
+              echo "Publishing $TAG to npm only${REASON:+: $REASON}" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "Publishing $TAG again${REASON:+: $REASON}" >> "$GITHUB_STEP_SUMMARY"
+            fi
             { echo "release=true"; echo "sha=$(git rev-parse "$TAG^{commit}")"; } >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -207,7 +223,7 @@ jobs:
           esac
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
-        if: steps.next.outputs.version
+        if: steps.next.outputs.version && !inputs.npm_only
         with:
           distribution: temurin
           java-version: |
@@ -216,12 +232,12 @@ jobs:
             25
       # Reads the Gradle cache main's builds wrote; a job holding release secrets writes none.
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-        if: steps.next.outputs.version
+        if: steps.next.outputs.version && !inputs.npm_only
         with:
           cache-provider: basic
           cache-read-only: true
       - name: Publish to Maven Central
-        if: steps.next.outputs.version
+        if: steps.next.outputs.version && !inputs.npm_only
         env:
           VERSION: ${{ steps.next.outputs.version }}
           ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
@@ -267,6 +283,7 @@ jobs:
     # Publishes LSD Studio (modules/lsd-mono-studio) to npm at the release version, from the tag.
     # npm trusted publishing (OIDC, set up on the package for this workflow): no npm token, and the
     # package gets provenance. A version already on npm is skipped, so publishing a tag again works.
+    # With npm_only (and a tag), this job is the only publisher in the run.
     needs: release
     if: needs.release.outputs.published
     runs-on: ubuntu-26.04
@@ -315,6 +332,10 @@ jobs:
         run: |
           npm version "$VERSION" --no-git-tag-version
           npm publish --access public --provenance
+          if ! npm view "lsd-mono-studio@$VERSION" version 2>/dev/null | grep -qx "$VERSION"; then
+            echo "::error::Published lsd-mono-studio@$VERSION, but npm does not list it."
+            exit 1
+          fi
           echo "Published lsd-mono-studio@$VERSION to npm." >> "$GITHUB_STEP_SUMMARY"
 
   gradle-plugin:
@@ -327,7 +348,7 @@ jobs:
     # given to this step only. A version already on the Portal is skipped, so publishing a tag
     # again works.
     needs: [release, npm]
-    if: needs.release.outputs.published && vars.GRADLE_PLUGIN_PUBLISH_ENABLED == 'true'
+    if: needs.release.outputs.published && vars.GRADLE_PLUGIN_PUBLISH_ENABLED == 'true' && !inputs.npm_only
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     permissions:
