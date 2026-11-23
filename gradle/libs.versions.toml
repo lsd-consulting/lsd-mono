@@ -8,7 +8,7 @@ cucumber = "8.0.4"
 kotlinx-coroutines = "1.11.0"
 # Spring Boot 4. Only lsd-mono-spring-boot-4 uses it, compileOnly: the app brings its own Boot.
 # Its BOM sets Spring Framework, Jackson and the rest; none of them is declared here.
-spring-boot = "4.1.2"
+spring-boot = "4.2.0"
 # The JUnit the spring-boot BOM above manages, which lsd-mono-spring-boot-4's tests run on. No
 # library uses it, so Renovate leaves it alone: it moves by hand with spring-boot, and
 # BootJunitVersionTest fails when the two disagree.
